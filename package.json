@@ -4,6 +4,8 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
+    "build:affected": "turbo build --affected",
+    "check:affected": "turbo ls --affected",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "tf": "pnpm run tf:dev",
