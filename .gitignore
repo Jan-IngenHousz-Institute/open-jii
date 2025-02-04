@@ -36,3 +36,75 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# OpenTofu
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+!example.tfvars
+.terraformrc
+terraform.rc
+.terraform.lock.hcl
+
+# OpenTofu
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+!example.tfvars
+.terraformrc
+terraform.rc
+.terraform.lock.hcl
+
+# OpenTofu
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+!example.tfvars
+.terraformrc
+terraform.rc
+.terraform.lock.hcl
+
+# OpenTofu
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+!example.tfvars
+.terraformrc
+terraform.rc
+.terraform.lock.hcl
+
+# OpenTofu
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+!example.tfvars
+.terraformrc
+terraform.rc
+.terraform.lock.hcl
+
+# OpenTofu
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+!example.tfvars
+.terraformrc
+terraform.rc
+.terraform.lock.hcl
