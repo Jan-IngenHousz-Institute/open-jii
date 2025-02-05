@@ -6,11 +6,8 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
-    "tf": "cd infrastructure && tofu",
-    "tf:dev": "cd infrastructure/env/dev && tofu",
-    "tf:prod": "cd infrastructure/env/prod && tofu",
-    "tf:bootstrap": "cd infrastructure/bootstrap && tofu init && tofu apply"
-
+    "tf": "pnpm run tf:dev",
+    "tf:dev": "cd infrastructure/env/dev && tofu init && tofu plan && tofu apply"
   },
   "devDependencies": {
     "prettier": "^3.2.5",

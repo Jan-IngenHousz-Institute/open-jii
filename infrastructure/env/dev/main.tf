@@ -1,12 +1,6 @@
-module "infrastructure" {
-  source = "../../"
-
+module "terraform_state_s3" {
+  source = "../../modules/s3"
 }
 
-module "s3_uploads" {
-  source            = "../../modules/s3"
-  bucket_name       = "jii-test-bucket-dev"
-  enable_versioning = true
-  sse_algorithm     = "AES256"
 }
   
