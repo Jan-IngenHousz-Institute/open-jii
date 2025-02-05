@@ -1,7 +1,7 @@
 {
   "semi": false,
-  "singleQuote": true,
-  "jsxSingleQuote": true,
+  "singleQuote": false,
+  "jsxSingleQuote": false,
   "trailingComma": "all",
   "endOfLine": "lf",
   "printWidth": 80,
