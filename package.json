@@ -5,10 +5,11 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
   },
   "devDependencies": {
     "prettier": "^3.2.5",
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "turbo": "^2.3.3",
     "typescript": "5.5.4"
   },
