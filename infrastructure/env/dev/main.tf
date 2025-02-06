@@ -1,3 +1,21 @@
+resource "aws_cloudfront_origin_access_identity" "oai" {
+  comment = "OAI for CloudFront distribution for bucket ${var.bucket_name}"
+}
+
+module "docusaurus_s3" {
+  source                = "../../modules/docusaurus-s3"
+  bucket_name           = var.bucket_name
+  oai_canonical_user_id = aws_cloudfront_origin_access_identity.oai.s3_canonical_user_id
+}
+
+module "cloudfront" {
+  source                  = "../../modules/cloudfront"
+  bucket_name             = module.docusaurus_s3.bucket_name
+  s3_bucket_rest_endpoint = module.docusaurus_s3.s3_bucket_rest_endpoint
+  default_root_object     = var.default_root_object
+  oai_access_identity     = aws_cloudfront_origin_access_identity.oai.cloudfront_access_identity_path
+}
+
 module "terraform_state_s3" {
   source = "../../modules/s3"
 }
