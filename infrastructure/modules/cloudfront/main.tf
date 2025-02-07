@@ -1,12 +1,16 @@
+resource "aws_cloudfront_origin_access_control" "oac" {
+  name                              = "docusaurus-oac"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
 resource "aws_cloudfront_distribution" "cdn" {
   origin {
-    domain_name = var.s3_bucket_rest_endpoint // e.g., "my-bucket.s3.us-east-1.amazonaws.com"
+    domain_name = format("%s.s3.%s.amazonaws.com", var.bucket_name, var.aws_region)
     origin_id   = "S3-${var.bucket_name}"
 
-    s3_origin_config {
-      // Use the OAI passed in from the root module.
-      origin_access_identity = var.oai_access_identity
-    }
+    origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
   }
 
   enabled             = true
