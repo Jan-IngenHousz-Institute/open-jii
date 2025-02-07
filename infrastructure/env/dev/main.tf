@@ -1,23 +1,16 @@
-resource "aws_cloudfront_origin_access_identity" "oai" {
-  comment = "OAI for CloudFront distribution for bucket ${var.bucket_name}"
-}
-
-module "docusaurus_s3" {
-  source                = "../../modules/docusaurus-s3"
-  bucket_name           = var.bucket_name
-  oai_canonical_user_id = aws_cloudfront_origin_access_identity.oai.s3_canonical_user_id
+module "terraform_state_s3" {
+  source = "../../modules/s3"
 }
 
 module "cloudfront" {
-  source                  = "../../modules/cloudfront"
-  bucket_name             = module.docusaurus_s3.bucket_name
-  s3_bucket_rest_endpoint = module.docusaurus_s3.s3_bucket_rest_endpoint
-  default_root_object     = var.default_root_object
-  oai_access_identity     = aws_cloudfront_origin_access_identity.oai.cloudfront_access_identity_path
+  source      = "../../modules/cloudfront"
+  bucket_name = var.bucket_name
 }
 
-module "terraform_state_s3" {
-  source = "../../modules/s3"
+module "docusaurus_s3" {
+  source                      = "../../modules/docusaurus-s3"
+  bucket_name                 = var.bucket_name
+  cloudfront_distribution_arn = module.cloudfront.cloudfront_distribution_arn
 }
 
 module "timestream" {
@@ -39,4 +32,3 @@ module "iot_core" {
   timestream_database = var.timestream_database_name
   timestream_table    = var.timestream_table_name
 }
-  

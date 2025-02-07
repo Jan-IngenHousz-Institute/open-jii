@@ -1,3 +1,14 @@
+variable "bucket_name" {
+  description = "Docusaurus S3 bucket name"
+  type        = string
+}
+
+variable "default_root_object" {
+  description = "Docusaurus S3 bucket name"
+  type        = string
+  default     = "index.html"
+}
+
 variable "timestream_database_name" {
   description = "Timestream database name"
   type        = string
