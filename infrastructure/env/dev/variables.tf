@@ -19,18 +19,6 @@ variable "timestream_table_name" {
   type        = string
 }
 
-variable "memory_retention_hours" {
-  description = "Memory retention period in hours"
-  type        = number
-  default     = 24
-}
-
-variable "magnetic_retention_days" {
-  description = "Magnetic retention period in days"
-  type        = number
-  default     = 7
-}
-
 variable "iot_policy_name" {
   description = "Name for the IoT policy"
   type        = string
@@ -53,5 +41,20 @@ variable "iot_rule_name" {
 
 variable "topic_filter" {
   description = "MQTT topic filter (e.g., 'sensors/+/data')"
+  type        = string
+}
+
+variable "kinesis_stream_name" {
+  description = "Name of the Kinesis Data Stream"
+  type        = string
+}
+
+variable "iot_kinesis_role_name" {
+  description = "Name for the IoT Kinesis IAM Role"
+  type        = string
+}
+
+variable "iot_kinesis_policy_name" {
+  description = "Name for the IoT Kinesis IAM Policy"
   type        = string
 }
