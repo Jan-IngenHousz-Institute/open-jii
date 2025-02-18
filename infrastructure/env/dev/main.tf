@@ -15,9 +15,9 @@ module "docusaurus_s3" {
 }
 
 module "timestream" {
-  source                  = "../../modules/timestream"
-  database_name           = var.timestream_database_name
-  table_name              = var.timestream_table_name
+  source        = "../../modules/timestream"
+  database_name = var.timestream_database_name
+  table_name    = var.timestream_table_name
 }
 
 module "kinesis" {
