@@ -40,3 +40,40 @@ module "iot_core" {
   topic_filter               = var.topic_filter
 }
 
+module "vpc" {
+  source = "../../modules/vpc"
+  tags   = var.tags
+}
+
+module "vpc_endpoints" {
+  source = "../../modules/vpc-endpoints"
+  tags   = var.tags
+  vpc_id = module.vpc.vpc_id
+  prefix = "jii-dev"
+
+  private_route_table_ids = module.vpc.private_rt_ids
+  public_route_table_ids  = module.vpc.public_rt_ids
+
+  private_subnet_ids = module.vpc.private_subnets
+
+  # Use the default security group for interface endpoints
+  security_group_ids = [module.vpc.default_sg_id]
+}
+
+module "databricks_s3" {
+  source = "../../modules/databricks-s3"
+  prefix = "jii-dev"
+  tags   = var.tags
+}
+
+module "workspace" {
+  source                = "../../modules/databricks"
+  prefix                = "jii-dev"
+  databricks_account_id = var.databricks_account_id
+  tags                  = var.tags
+  vpc_id                = module.vpc.vpc_id
+  private_subnets       = module.vpc.private_subnets
+  sg_id                 = module.vpc.default_sg_id
+  s3_bucket             = module.databricks_s3.bucket_name
+  iam_role_arn          = module.iam.role_arn
+}
