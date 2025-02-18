@@ -10,11 +10,16 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "tf": "pnpm run tf:dev",
     "tf:fmt": "cd infrastructure && tofu fmt --recursive",
-    "tf:dev": "cd infrastructure/env/dev && tofu init && tofu plan && tofu apply"
+    "tf:dev": "cd infrastructure/env/dev && tofu init && tofu plan && tofu apply",
+    "asyncapi:html": "asyncapi generate fromTemplate asyncapi.yaml @asyncapi/html-template@3.2.0 --use-new-generator -o ./apps/docs/api",
+    "asyncapi:md": "asyncapi generate fromTemplate asyncapi.yaml @asyncapi/markdown-template@1.6.6 -o ./apps/docs/api"
   },
   "devDependencies": {
-    "prettier": "^3.2.5",
+    "@asyncapi/cli": "^2.16.0",
+    "@asyncapi/html-template": "^3.2.0",
+    "@asyncapi/markdown-template": "^1.6.6",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "prettier": "^3.2.5",
     "turbo": "^2.3.3",
     "typescript": "5.5.4"
   },
