@@ -1,6 +1,6 @@
-output "iot_topic_rule_name" {
-  description = "Name of the IoT Topic Rule"
-  value       = aws_iot_topic_rule.iot_rule.name
+output "iot_topic_rule_names" {
+  description = "Names of the IoT Topic Rules"
+  value       = [for rule in aws_iot_topic_rule.iot_rules : rule.name]
 }
 
 output "iot_timestream_role_arn" {
