@@ -19,6 +19,10 @@ resource "aws_iot_policy" "iot_policy" {
 EOF
 }
 
+# --------------------------
+# Timestream Integration
+# --------------------------
+
 resource "aws_iam_role" "iot_timestream_role" {
   name = var.iot_timestream_role_name
   assume_role_policy = jsonencode({
@@ -57,11 +61,53 @@ resource "aws_iam_role_policy_attachment" "iot_timestream_attach" {
   policy_arn = aws_iam_policy.iot_timestream_policy.arn
 }
 
-# Create an IoT topic rule that sends data to Timestream.
-# This rule listens for messages matching the topic filter (e.g. "sensors/+/data"),
-# writes the data into the Timestream table defined in var.timestream_table,
-# and sets the "deviceId" dimension by extracting the second segment of the topic.
-resource "aws_iot_topic_rule" "timestream_rule" {
+# --------------------------
+# Kinesis Integration
+# --------------------------
+
+resource "aws_iam_role" "iot_kinesis_role" {
+  name = var.iot_kinesis_role_name
+  assume_role_policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Effect" : "Allow",
+        "Principal" : {
+          "Service" : "iot.amazonaws.com"
+        },
+        "Action" : "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_policy" "iot_kinesis_policy" {
+  name = var.iot_kinesis_policy_name
+  policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Effect" : "Allow",
+        "Action" : [
+          "kinesis:PutRecord",
+          "kinesis:PutRecords"
+        ],
+        "Resource" : var.kinesis_stream_arn
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "iot_kinesis_attach" {
+  role       = aws_iam_role.iot_kinesis_role.name
+  policy_arn = aws_iam_policy.iot_kinesis_policy.arn
+}
+
+# --------------------------
+# IoT Topic Rule with Dual Actions
+# --------------------------
+
+resource "aws_iot_topic_rule" "iot_rule" {
   name        = var.rule_name
   enabled     = true
   sql         = "SELECT * FROM '${var.topic_filter}'"
@@ -76,5 +122,11 @@ resource "aws_iot_topic_rule" "timestream_rule" {
       name  = "deviceId"
       value = "$${topic(2)}"
     }
+  }
+
+  kinesis {
+    role_arn      = aws_iam_role.iot_kinesis_role.arn
+    stream_name   = var.kinesis_stream_name
+    partition_key = "$${newuuid()}"
   }
 }
