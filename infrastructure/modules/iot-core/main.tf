@@ -102,7 +102,7 @@ resource "aws_iam_role_policy_attachment" "iot_kinesis_attach" {
 resource "aws_iot_topic_rule" "iot_rules" {
   for_each = { for k, v in local.asyncapi["channels"] : k => v }
 
-  name        = replace(replace(replace(each.key, "/", "_"), "{", ""), "}", "")
+  name        = "jii_iot_rule_${replace(trim(split("/{", each.key)[0], "/"), "/", "_")}"
   enabled     = true
   sql         = "SELECT * FROM '${each.key}'"
   sql_version = "2016-03-23"

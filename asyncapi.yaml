@@ -20,86 +20,65 @@ servers:
     description: AWS IoT Core production endpoint
 
 channels:
-  "devices/{deviceId}/status":
-    description: >
-      This channel is used for receiving device status updates.
-      Devices publish messages indicating their current operational status (e.g., online, offline, error).
+  experiment/data/ingest/v1/{experimentId}/{sensorType}/v{sensorVersion}/{sensorId}/{protocolId}:
+    description: |
+      Channel for ingesting experiment sensor data.
+      The path parameters represent:
+      <ul>
+        <li><strong>experimentId:</strong> Unique identifier of the experiment (e.g., exp123).</li>
+        <li><strong>sensorType:</strong> The type or family of sensor (e.g., MutlispeQ, Ambit...).</li>
+        <li><strong>sensorVersion:</strong> Sensor firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).</li>
+        <li><strong>sensorId:</strong> Unique sensor identifier (UUID format recommended).</li>
+        <li><strong>protocolId:</strong> Unique identifier for the sampling or measurement protocol (e.g., protoA).</li>
+      </ul>
     parameters:
-      deviceId:
-        description: Unique identifier for the device.
+      experimentId:
+        description: Unique identifier of the experiment (e.g., exp123).
+        schema:
+          type: string
+      sensorType:
+        description: The type or family of sensor (e.g., MutlispeQ, Ambit...).
+        schema:
+          type: string
+      sensorVersion:
+        description: Sensor firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).
+        schema:
+          type: string
+      sensorId:
+        description: Unique sensor identifier (UUID format recommended).
+        schema:
+          type: string
+      protocolId:
+        description: Unique identifier for the sampling or measurement protocol (e.g., protoA).
         schema:
           type: string
     subscribe:
-      operationId: onDeviceStatusUpdate
-      summary: Handle incoming device status updates.
+      operationId: ingestExperimentData
+      summary: Ingest experiment sensor data.
       message:
-        $ref: "#/components/messages/DeviceStatusMessage"
-
-  "devices/{deviceId}/data":
-    description: >
-      This channel receives sensor data from devices.
-      Devices publish readings such as temperature and humidity.
-    parameters:
-      deviceId:
-        description: Unique identifier for the device.
-        schema:
-          type: string
-    subscribe:
-      operationId: onDeviceSensorData
-      summary: Process incoming sensor data from devices.
-      message:
-        $ref: "#/components/messages/DeviceSensorDataMessage"
+        $ref: "#/components/messages/ExperimentDataMessage"
 
 components:
   messages:
-    DeviceStatusMessage:
+    ExperimentDataMessage:
       contentType: application/json
-      name: DeviceStatusMessage
-      title: Device Status Update
-      summary: A message sent by a device to indicate its status.
+      name: ExperimentDataMessage
+      title: Experiment Data Ingestion Message
+      summary: A message containing sensor data for an experiment.
       payload:
         type: object
         properties:
-          deviceId:
-            type: string
-            description: The unique identifier of the device.
-          status:
-            type: string
-            description: The current status of the device (e.g., online, offline, error).
+          data:
+            type: object
+            description: Sensor data payload.
+            additionalProperties: true
         required:
-          - deviceId
-          - status
+          - data
       examples:
         - payload:
-            deviceId: "device123"
-            status: "online"
-
-    DeviceSensorDataMessage:
-      contentType: application/json
-      name: DeviceSensorDataMessage
-      title: Device Sensor Data
-      summary: A message containing sensor readings from a device.
-      payload:
-        type: object
-        properties:
-          deviceId:
-            type: string
-            description: The unique identifier of the device.
-          temperature:
-            type: number
-            description: Temperature reading in Celsius.
-          humidity:
-            type: number
-            description: Humidity percentage.
-        required:
-          - deviceId
-          - temperature
-          - humidity
-      examples:
-        - payload:
-            deviceId: "device123"
-            temperature: 23.5
-            humidity: 55.0
+            data:
+              moisture: 30.5
+              temperature: 22.1
 
   securitySchemes:
     sigv4:
