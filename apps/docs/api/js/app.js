@@ -22,107 +22,75 @@
     }
   },
   "channels": {
-    "devices/{deviceId}/status": {
-      "description": "This channel is used for receiving device status updates. Devices publish messages indicating their current operational status (e.g., online, offline, error).\n",
+    "experiment/data/ingest/v1/{experimentId}/{sensorType}/v{sensorVersion}/{sensorId}/{protocolId}": {
+      "description": "Channel for ingesting experiment sensor data.\nThe path parameters represent:\n<ul>\n  <li><strong>experimentId:</strong> Unique identifier of the experiment (e.g., exp123).</li>\n  <li><strong>sensorType:</strong> The type or family of sensor (e.g., MutlispeQ, Ambit...).</li>\n  <li><strong>sensorVersion:</strong> Sensor firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).</li>\n  <li><strong>sensorId:</strong> Unique sensor identifier (UUID format recommended).</li>\n  <li><strong>protocolId:</strong> Unique identifier for the sampling or measurement protocol (e.g., protoA).</li>\n</ul>\n",
       "parameters": {
-        "deviceId": {
-          "description": "Unique identifier for the device.",
+        "experimentId": {
+          "description": "Unique identifier of the experiment (e.g., exp123).",
           "schema": {
             "type": "string",
-            "x-parser-schema-id": "deviceId"
+            "x-parser-schema-id": "experimentId"
+          }
+        },
+        "sensorType": {
+          "description": "The type or family of sensor (e.g., MutlispeQ, Ambit...).",
+          "schema": {
+            "type": "string",
+            "x-parser-schema-id": "sensorType"
+          }
+        },
+        "sensorVersion": {
+          "description": "Sensor firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).",
+          "schema": {
+            "type": "string",
+            "x-parser-schema-id": "sensorVersion"
+          }
+        },
+        "sensorId": {
+          "description": "Unique sensor identifier (UUID format recommended).",
+          "schema": {
+            "type": "string",
+            "x-parser-schema-id": "sensorId"
+          }
+        },
+        "protocolId": {
+          "description": "Unique identifier for the sampling or measurement protocol (e.g., protoA).",
+          "schema": {
+            "type": "string",
+            "x-parser-schema-id": "protocolId"
           }
         }
       },
       "subscribe": {
-        "operationId": "onDeviceStatusUpdate",
-        "summary": "Handle incoming device status updates.",
+        "operationId": "ingestExperimentData",
+        "summary": "Ingest experiment sensor data.",
         "message": {
           "contentType": "application/json",
-          "name": "DeviceStatusMessage",
-          "title": "Device Status Update",
-          "summary": "A message sent by a device to indicate its status.",
+          "name": "ExperimentDataMessage",
+          "title": "Experiment Data Ingestion Message",
+          "summary": "A message containing sensor data for an experiment.",
           "payload": {
             "type": "object",
             "properties": {
-              "deviceId": {
-                "type": "string",
-                "description": "The unique identifier of the device.",
+              "data": {
+                "type": "object",
+                "description": "Sensor data payload.",
+                "additionalProperties": true,
                 "x-parser-schema-id": "<anonymous-schema-2>"
-              },
-              "status": {
-                "type": "string",
-                "description": "The current status of the device (e.g., online, offline, error).",
-                "x-parser-schema-id": "<anonymous-schema-3>"
               }
             },
             "required": [
-              "deviceId",
-              "status"
+              "data"
             ],
             "x-parser-schema-id": "<anonymous-schema-1>"
           },
           "examples": [
             {
               "payload": {
-                "deviceId": "device123",
-                "status": "online"
-              }
-            }
-          ]
-        }
-      }
-    },
-    "devices/{deviceId}/data": {
-      "description": "This channel receives sensor data from devices. Devices publish readings such as temperature and humidity.\n",
-      "parameters": {
-        "deviceId": {
-          "description": "Unique identifier for the device.",
-          "schema": {
-            "type": "string",
-            "x-parser-schema-id": "deviceId"
-          }
-        }
-      },
-      "subscribe": {
-        "operationId": "onDeviceSensorData",
-        "summary": "Process incoming sensor data from devices.",
-        "message": {
-          "contentType": "application/json",
-          "name": "DeviceSensorDataMessage",
-          "title": "Device Sensor Data",
-          "summary": "A message containing sensor readings from a device.",
-          "payload": {
-            "type": "object",
-            "properties": {
-              "deviceId": {
-                "type": "string",
-                "description": "The unique identifier of the device.",
-                "x-parser-schema-id": "<anonymous-schema-5>"
-              },
-              "temperature": {
-                "type": "number",
-                "description": "Temperature reading in Celsius.",
-                "x-parser-schema-id": "<anonymous-schema-6>"
-              },
-              "humidity": {
-                "type": "number",
-                "description": "Humidity percentage.",
-                "x-parser-schema-id": "<anonymous-schema-7>"
-              }
-            },
-            "required": [
-              "deviceId",
-              "temperature",
-              "humidity"
-            ],
-            "x-parser-schema-id": "<anonymous-schema-4>"
-          },
-          "examples": [
-            {
-              "payload": {
-                "deviceId": "device123",
-                "temperature": 23.5,
-                "humidity": 55
+                "data": {
+                  "moisture": 30.5,
+                  "temperature": 22.1
+                }
               }
             }
           ]
@@ -132,8 +100,7 @@
   },
   "components": {
     "messages": {
-      "DeviceStatusMessage": "$ref:$.channels.devices/{deviceId}/status.subscribe.message",
-      "DeviceSensorDataMessage": "$ref:$.channels.devices/{deviceId}/data.subscribe.message"
+      "ExperimentDataMessage": "$ref:$.channels.experiment/data/ingest/v1/{experimentId}/{sensorType}/v{sensorVersion}/{sensorId}/{protocolId}.subscribe.message"
     },
     "securitySchemes": {
       "sigv4": {
