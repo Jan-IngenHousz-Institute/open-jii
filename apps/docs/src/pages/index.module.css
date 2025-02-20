@@ -1,23 +1,26 @@
-/**
- * CSS files with the .module.css suffix will be treated as CSS modules
- * and scoped locally.
- */
-
-.heroBanner {
-  padding: 4rem 0;
+/* Hero Section */
+.hero {
+  background: #ffffff; /* White background */
+  padding: 3rem 1rem;
   text-align: center;
-  position: relative;
-  overflow: hidden;
 }
 
-@media screen and (max-width: 996px) {
-  .heroBanner {
-    padding: 2rem;
-  }
+/* A container to limit content width */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.buttons {
+/* Search Container: Centered and with a max width */
+.searchContainer {
   display: flex;
-  align-items: center;
   justify-content: center;
+  margin: 2rem auto;
+  width: 100%;
 }
+
+.searchContainer > div {
+  width: 100%;
+  max-width: 800px; /* Makes the search bar longer */
+}
+
