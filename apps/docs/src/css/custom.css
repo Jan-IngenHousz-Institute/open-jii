@@ -1,0 +1,210 @@
+/* Import Google Fonts */
+@import url("https://fonts.googleapis.com/css2?family=Overpass:wght@400;500;700;800;900&family=Poppins:wght@700&display=swap");
+
+/* Light Mode */
+:root {
+  --ifm-font-family-base: "Overpass", sans-serif;
+  --ifm-font-family-monospace: "Overpass", sans-serif;
+  --ifm-heading-font-family: "Poppins", sans-serif;
+
+  /* Primary Colors */
+  --ifm-color-primary: #005e5e;
+  --ifm-color-primary-dark: #004b4b;
+  --ifm-color-primary-darker: #004040;
+  --ifm-color-primary-darkest: #003535;
+  --ifm-color-primary-light: #007373;
+  --ifm-color-primary-lighter: #008080;
+  --ifm-color-primary-lightest: #009090;
+
+  /* Corrected Highlight Color */
+  --ifm-color-highlight: #49e06d;
+  --ifm-highlighted-text: #49e06d;
+  --ifm-highlighted-text-bg: rgba(73, 224, 109, 0.2);
+
+  /* Code Block Highlights */
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(73, 224, 109, 0.2);
+  --ifm-pre-background: #f5f5f5; /* Code background */
+
+  /* Typography Colors */
+  --ifm-heading-color: var(--ifm-color-primary);
+  --ifm-font-color-base: var(--ifm-color-primary);
+
+  /* Navbar */
+  --ifm-navbar-background-color: #ffffff;
+  --ifm-navbar-shadow: none;
+  --ifm-navbar-link-color: var(--ifm-color-primary);
+  --ifm-navbar-link-hover-color: var(--ifm-color-highlight);
+  --ifm-navbar-link-active-color: var(--ifm-color-highlight);
+}
+
+/* Dark Mode */
+[data-theme="dark"] {
+  --ifm-color-primary: #ffffff;
+  --ifm-color-primary-dark: #e0e0e0;
+  --ifm-color-primary-darker: #cccccc;
+  --ifm-color-primary-darkest: #b3b3b3;
+  --ifm-color-primary-light: #ffffff;
+  --ifm-color-primary-lighter: #ffffff;
+  --ifm-color-primary-lightest: #ffffff;
+
+  /* Dark Mode Highlight Colors */
+  --ifm-color-highlight: #49e06d;
+  --ifm-highlighted-text: #49e06d;
+  --ifm-highlighted-text-bg: rgba(73, 224, 109, 0.3);
+
+  /* Code Block Highlights */
+  --docusaurus-highlighted-code-line-bg: rgba(73, 224, 109, 0.3);
+  --ifm-pre-background: #222222; /* Dark code background */
+
+  /* Typography */
+  --ifm-heading-color: var(--ifm-color-primary);
+  --ifm-font-color-base: var(--ifm-color-primary);
+
+  /* Navbar */
+  --ifm-navbar-background-color: #222222;
+  --ifm-navbar-link-color: var(--ifm-color-primary);
+  --ifm-navbar-link-hover-color: var(--ifm-color-highlight);
+  --ifm-navbar-link-active-color: var(--ifm-color-highlight);
+}
+
+/* Navbar Title */
+.navbar__title {
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  color: var(--ifm-color-primary);
+}
+
+/* Navbar Links */
+.navbar__link {
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  color: var(--ifm-navbar-link-color);
+}
+
+/* Navbar Hover & Active Effects */
+.navbar__link:hover {
+  color: var(--ifm-navbar-link-hover-color);
+  text-decoration: underline;
+}
+
+.navbar__link--active {
+  color: var(--ifm-navbar-link-active-color);
+}
+
+/* Headings */
+h1,
+h2,
+h3 {
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  color: var(--ifm-heading-color);
+}
+
+/* Subheaders */
+h4,
+h5,
+h6 {
+  font-family: "Overpass", sans-serif;
+  font-weight: 800;
+  color: var(--ifm-heading-color);
+}
+
+/* Body Text */
+body,
+p {
+  font-family: "Overpass", sans-serif;
+  font-weight: 400;
+  color: var(--ifm-font-color-base);
+}
+
+/* Lead Text */
+.lead {
+  font-family: "Overpass", sans-serif;
+  font-weight: 500;
+  font-size: 1.2rem;
+  color: var(--ifm-font-color-base);
+}
+
+/* Highlighted Text */
+.highlight {
+  font-weight: 700;
+  color: var(--ifm-highlighted-text);
+  background-color: var(--ifm-highlighted-text-bg);
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+}
+
+/* Blockquotes */
+blockquote {
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: var(--ifm-font-color-base);
+  border-left: 4px solid var(--ifm-color-highlight);
+  padding-left: 1rem;
+  margin-left: 0;
+}
+
+/* Code Blocks */
+pre {
+  background: var(--ifm-pre-background);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+code {
+  font-family: "Overpass", monospace;
+  font-size: var(--ifm-code-font-size);
+  background: var(--ifm-highlighted-text-bg);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.sidebar-divider {
+  margin: 0.5em;
+}
+
+.sidebar-divider-line {
+  border: none;
+  border-bottom: 1px solid #ccc;
+  margin: 2em 0 0 0;
+}
+
+.sidebar-divider-label {
+  margin-top: 4px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: #999;
+  text-align: left;
+}
+
+/* Light Mode Footer */
+.footer {
+  background-color: #005e5e; /* Change this to your preferred color */
+  color: #ffffff; /* Footer text color */
+}
+
+/* Dark Mode Footer */
+[data-theme="dark"] .footer {
+  background-color: #222222; /* Dark mode footer background */
+  color: #ffffff; /* Footer text color */
+}
+
+/* Footer Links */
+.footer a {
+  color: #49e06d; /* Highlighted link color */
+  text-decoration: none;
+}
+
+.footer a:hover {
+  color: #37b85b; /* Slightly darker on hover */
+  text-decoration: underline;
+}
+
+.DocSearch-Button {
+  font-size: 1.25rem; /* Larger font size */
+  padding: 0.75rem; /* Extra padding for a bigger input */
+  width: 60%;
+  box-sizing: border-box;
+}

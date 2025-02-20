@@ -49,3 +49,6 @@ crash.*.log
 terraform.rc
 .terraform.lock.hcl
 
+# Docusaurus
+.docusaurus
+.cache-loader
