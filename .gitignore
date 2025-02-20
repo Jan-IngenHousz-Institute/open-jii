@@ -26,7 +26,8 @@ coverage
 out/
 build
 dist
-
+.asyncapi
+.openapi
 
 # Debug
 npm-debug.log*
