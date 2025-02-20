@@ -40,9 +40,8 @@ const config: Config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/",
+            "https://github.com/Jan-IngenHousz-Institute/open-jii/tree/main/apps",
         },
-
         theme: {
           customCss: "./src/css/custom.css",
         },
@@ -128,15 +127,15 @@ const config: Config = {
             },
             {
               label: "Community Hub",
-              href: "https://google.com",
+              href: "/",
             },
             {
               label: "JII Contact",
-              href: "https://google.com",
+              href: "https://www.jan-ingenhousz-institute.org/contact",
             },
             {
               label: "Social Media",
-              href: "https://google.com",
+              href: "/",
             },
           ],
         },
@@ -145,11 +144,15 @@ const config: Config = {
           items: [
             {
               label: "Legal & Privacy",
-              href: "/",
+              href: "https://www.jan-ingenhousz-institute.org/privacy-policy",
+            },
+            {
+                label: "Security",
+              href: "https://github.com/Jan-IngenHousz-Institute/open-jii/security",
             },
             {
               label: "Report an Issue",
-              href: "/",
+              href: "https://github.com/Jan-IngenHousz-Institute/open-jii/issues",
             },
           ],
         },
