@@ -11,8 +11,7 @@ This AsyncAPI specification defines the MQTT topics and message schemas for AWS 
 * [Servers](#servers)
   * [production](#production-server)
 * [Operations](#operations)
-  * [SUB devices/{deviceId}/status](#sub-devicesdeviceidstatus-operation)
-  * [SUB devices/{deviceId}/data](#sub-devicesdeviceiddata-operation)
+  * [SUB experiment/data/ingest/v1/{experimentId}/{sensorType}/v{sensorVersion}/{sensorId}/{protocolId}](#sub-experimentdataingestv1experimentidsensortypevsensorversionsensoridprotocolid-operation)
 
 ## Servers
 
@@ -26,25 +25,37 @@ AWS IoT Core production endpoint
 
 ## Operations
 
-### SUB `devices/{deviceId}/status` Operation
+### SUB `experiment/data/ingest/v1/{experimentId}/{sensorType}/v{sensorVersion}/{sensorId}/{protocolId}` Operation
 
-*Handle incoming device status updates.*
+*Ingest experiment sensor data.*
 
-* Operation ID: `onDeviceStatusUpdate`
+* Operation ID: `ingestExperimentData`
 
-This channel is used for receiving device status updates. Devices publish messages indicating their current operational status (e.g., online, offline, error).
+Channel for ingesting experiment sensor data.
+The path parameters represent:
+<ul>
+  <li><strong>experimentId:</strong> Unique identifier of the experiment (e.g., exp123).</li>
+  <li><strong>sensorType:</strong> The type or family of sensor (e.g., MutlispeQ, Ambit...).</li>
+  <li><strong>sensorVersion:</strong> Sensor firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).</li>
+  <li><strong>sensorId:</strong> Unique sensor identifier (UUID format recommended).</li>
+  <li><strong>protocolId:</strong> Unique identifier for the sampling or measurement protocol (e.g., protoA).</li>
+</ul>
 
 
 #### Parameters
 
 | Name | Type | Description | Value | Constraints | Notes |
 |---|---|---|---|---|---|
-| deviceId | string | Unique identifier for the device. | - | - | **required** |
+| experimentId | string | Unique identifier of the experiment (e.g., exp123). | - | - | **required** |
+| sensorType | string | The type or family of sensor (e.g., MutlispeQ, Ambit...). | - | - | **required** |
+| sensorVersion | string | Sensor firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1). | - | - | **required** |
+| sensorId | string | Unique sensor identifier (UUID format recommended). | - | - | **required** |
+| protocolId | string | Unique identifier for the sampling or measurement protocol (e.g., protoA). | - | - | **required** |
 
 
-#### Message Device Status Update `DeviceStatusMessage`
+#### Message Experiment Data Ingestion Message `ExperimentDataMessage`
 
-*A message sent by a device to indicate its status.*
+*A message containing sensor data for an experiment.*
 
 * Content type: [application/json](https://www.iana.org/assignments/media-types/application/json)
 
@@ -53,58 +64,16 @@ This channel is used for receiving device status updates. Devices publish messag
 | Name | Type | Description | Value | Constraints | Notes |
 |---|---|---|---|---|---|
 | (root) | object | - | - | - | **additional properties are allowed** |
-| deviceId | string | The unique identifier of the device. | - | - | **required** |
-| status | string | The current status of the device (e.g., online, offline, error). | - | - | **required** |
+| data | object | Sensor data payload. | - | - | **required**, **additional properties are allowed** |
 
 > Examples of payload
 
 ```json
 {
-  "deviceId": "device123",
-  "status": "online"
-}
-```
-
-
-
-### SUB `devices/{deviceId}/data` Operation
-
-*Process incoming sensor data from devices.*
-
-* Operation ID: `onDeviceSensorData`
-
-This channel receives sensor data from devices. Devices publish readings such as temperature and humidity.
-
-
-#### Parameters
-
-| Name | Type | Description | Value | Constraints | Notes |
-|---|---|---|---|---|---|
-| deviceId | string | Unique identifier for the device. | - | - | **required** |
-
-
-#### Message Device Sensor Data `DeviceSensorDataMessage`
-
-*A message containing sensor readings from a device.*
-
-* Content type: [application/json](https://www.iana.org/assignments/media-types/application/json)
-
-##### Payload
-
-| Name | Type | Description | Value | Constraints | Notes |
-|---|---|---|---|---|---|
-| (root) | object | - | - | - | **additional properties are allowed** |
-| deviceId | string | The unique identifier of the device. | - | - | **required** |
-| temperature | number | Temperature reading in Celsius. | - | - | **required** |
-| humidity | number | Humidity percentage. | - | - | **required** |
-
-> Examples of payload
-
-```json
-{
-  "deviceId": "device123",
-  "temperature": 23.5,
-  "humidity": 55
+  "data": {
+    "moisture": 30.5,
+    "temperature": 22.1
+  }
 }
 ```
 
