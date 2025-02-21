@@ -1,3 +1,10 @@
+locals {
+  asyncapi = yamldecode(file("${path.module}/../../../asyncapi.yaml"))
+}
+
+# --------------------------
+# IoT Policy
+# --------------------------
 resource "aws_iot_policy" "iot_policy" {
   name   = var.policy_name
   policy = <<EOF
@@ -20,22 +27,17 @@ EOF
 }
 
 # --------------------------
-# Timestream Integration
+# IAM Role for Timestream
 # --------------------------
-
 resource "aws_iam_role" "iot_timestream_role" {
   name = var.iot_timestream_role_name
   assume_role_policy = jsonencode({
     "Version" : "2012-10-17",
-    "Statement" : [
-      {
-        "Effect" : "Allow",
-        "Principal" : {
-          "Service" : "iot.amazonaws.com"
-        },
-        "Action" : "sts:AssumeRole"
-      }
-    ]
+    "Statement" : [{
+      "Effect" : "Allow",
+      "Principal" : { "Service" : "iot.amazonaws.com" },
+      "Action" : "sts:AssumeRole"
+    }]
   })
 }
 
@@ -43,16 +45,14 @@ resource "aws_iam_policy" "iot_timestream_policy" {
   name = var.iot_timestream_policy_name
   policy = jsonencode({
     "Version" : "2012-10-17",
-    "Statement" : [
-      {
-        "Effect" : "Allow",
-        "Action" : [
-          "timestream:WriteRecords",
-          "timestream:DescribeEndpoints"
-        ],
-        "Resource" : "*"
-      }
-    ]
+    "Statement" : [{
+      "Effect" : "Allow",
+      "Action" : [
+        "timestream:WriteRecords",
+        "timestream:DescribeEndpoints"
+      ],
+      "Resource" : "*"
+    }]
   })
 }
 
@@ -62,22 +62,17 @@ resource "aws_iam_role_policy_attachment" "iot_timestream_attach" {
 }
 
 # --------------------------
-# Kinesis Integration
+# IAM Role for Kinesis
 # --------------------------
-
 resource "aws_iam_role" "iot_kinesis_role" {
   name = var.iot_kinesis_role_name
   assume_role_policy = jsonencode({
     "Version" : "2012-10-17",
-    "Statement" : [
-      {
-        "Effect" : "Allow",
-        "Principal" : {
-          "Service" : "iot.amazonaws.com"
-        },
-        "Action" : "sts:AssumeRole"
-      }
-    ]
+    "Statement" : [{
+      "Effect" : "Allow",
+      "Principal" : { "Service" : "iot.amazonaws.com" },
+      "Action" : "sts:AssumeRole"
+    }]
   })
 }
 
@@ -85,16 +80,14 @@ resource "aws_iam_policy" "iot_kinesis_policy" {
   name = var.iot_kinesis_policy_name
   policy = jsonencode({
     "Version" : "2012-10-17",
-    "Statement" : [
-      {
-        "Effect" : "Allow",
-        "Action" : [
-          "kinesis:PutRecord",
-          "kinesis:PutRecords"
-        ],
-        "Resource" : var.kinesis_stream_arn
-      }
-    ]
+    "Statement" : [{
+      "Effect" : "Allow",
+      "Action" : [
+        "kinesis:PutRecord",
+        "kinesis:PutRecords"
+      ],
+      "Resource" : var.kinesis_stream_arn
+    }]
   })
 }
 
@@ -104,13 +97,14 @@ resource "aws_iam_role_policy_attachment" "iot_kinesis_attach" {
 }
 
 # --------------------------
-# IoT Topic Rule with Dual Actions
+# IoT Topic Rules
 # --------------------------
+resource "aws_iot_topic_rule" "iot_rules" {
+  for_each = { for k, v in local.asyncapi["channels"] : k => v }
 
-resource "aws_iot_topic_rule" "iot_rule" {
-  name        = var.rule_name
+  name        = "jii_iot_rule_${replace(trim(split("/{", each.key)[0], "/"), "/", "_")}"
   enabled     = true
-  sql         = "SELECT * FROM '${var.topic_filter}'"
+  sql         = "SELECT * FROM '${each.key}'"
   sql_version = "2016-03-23"
 
   timestream {
