@@ -1,0 +1,12 @@
+name: Test Deployment
+
+on:
+  push:
+    branches:
+      - main
+jobs:
+  Deploy-Production:
+    uses: ./.github/workflows/deployment-template.yml
+    with:
+      environment: Test
+    secrets: inherit

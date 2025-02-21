@@ -1,0 +1,26 @@
+/* Hero Section */
+.hero {
+  background: #ffffff; /* White background */
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+/* A container to limit content width */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Search Container: Centered and with a max width */
+.searchContainer {
+  display: flex;
+  justify-content: center;
+  margin: 2rem auto;
+  width: 100%;
+}
+
+.searchContainer > div {
+  width: 100%;
+  max-width: 800px; /* Makes the search bar longer */
+}
+
