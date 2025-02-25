@@ -32,6 +32,17 @@ This Turborepo has some additional tools already setup for you:
 - [ESLint](https://eslint.org/) for code linting
 - [Prettier](https://prettier.io) for code formatting
 
+### After Cloning
+
+After cloning this repository, you should run the following command to install all dependencies and set your environment up:
+
+```
+cd open-jii
+nvm use # or `nvm install` if you don't have the right Node version
+corepack enable
+pnpm install
+```
+
 ### Build
 
 To build all apps and packages, run the following command:
@@ -49,7 +60,6 @@ To develop all apps and packages, run the following command:
 cd my-turborepo
 pnpm dev
 ```
-
 
 ### Remote Caching
 
