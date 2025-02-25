@@ -184,8 +184,22 @@ const sidebars: SidebarsConfig = {
           label: "Design Decisions",
           link: { type: "generated-index" },
           items: [
-            "for-developers/developers-guide/design-decisions/proposals",
-            "for-developers/developers-guide/design-decisions/ADRs",
+            {
+              type: "category",
+              label: "Proposals",
+              link: { type: "generated-index" },
+              items: [
+                "for-developers/developers-guide/design-decisions/proposals/mqtt-proposal",
+              ],
+            },
+            {
+              type: "category",
+              label: "ADRs",
+              link: { type: "generated-index" },
+              items: [
+                "for-developers/developers-guide/design-decisions/adrs/template",
+              ],
+            },
           ],
         },
         "for-developers/developers-guide/api-documentation",
