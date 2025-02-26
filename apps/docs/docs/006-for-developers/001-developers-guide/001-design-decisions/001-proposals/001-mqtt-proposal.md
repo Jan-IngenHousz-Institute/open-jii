@@ -21,12 +21,12 @@ We propose a structured topic format designed specifically for experiment data i
 #### Proposed Topic Name
 
 ```code
-experiment/data/ingest/v1/<experimentId>/<sensorType>/v<sensorVersion>/<sensorId>/<protocolId>
+experiment/data_ingest/v1/<experimentId>/<sensorType>/<sensorVersion>/<sensorId>/<protocolId>
 ```
 
 #### Topic Components
 
-- `experiment/data/ingest/v1`  
+- `experiment/data_ingest/v1`  
   This fixed prefix indicates that the topic pertains to experiment data ingestion and specifies that version 1 of the format is in use.
 
 - `<experimentId>`  
@@ -36,7 +36,7 @@ experiment/data/ingest/v1/<experimentId>/<sensorType>/v<sensorVersion>/<sensorId
   Specifies the category or type of sensor (for example, Ambit or MultispeQ). This component allows messages to be filtered based on sensor classification.
 
 - `v<sensorVersion>`  
-  Denotes the sensor's version, prefixed with "v" (for example, v1 or v2.1), which helps track firmware or hardware revisions.
+  Denotes the sensor's version (for example, v1 or v2.1), which helps track firmware or hardware revisions.
 
 - `<sensorId>`  
   A unique identifier for the sensor generating the data.
@@ -47,7 +47,7 @@ experiment/data/ingest/v1/<experimentId>/<sensorType>/v<sensorVersion>/<sensorId
 #### Example
 
 ```code
-experiment/data/ingest/v1/exp123/ambit/v2/sensor01/protoA
+experiment/data_ingest/v1/exp123/ambit/v2/sensor01/protoA
 ```
 
 In this example, data from experiment exp123 is collected from an Ambit-family device of version 2, with the device identifier sensor01, using protocol protoA.
@@ -71,7 +71,7 @@ sequenceDiagram
     end
 
     %% Data Publishing Process
-    S->>M: Publish data on topic "experiment/data/ingest/v1/exp123/ambit/v2/sensor01/protoA"
+    S->>M: Publish data on topic "experiment/data_ingest/v1/exp123/ambit/v2/sensor01/protoA"
     Note right of S: Message includes sensor readings and metadata.
     M->>K: Forward message to Kinesis Data Stream
     K->>D: Deliver message to Databricks for processing
