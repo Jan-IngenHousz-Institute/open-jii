@@ -15,14 +15,3 @@ variable "subnet_bits" {
   type        = number
   default     = 8
 }
-
-variable "prefix" {
-  description = "Prefix for resource names"
-  type        = string
-  default     = "demo"
-}
-
-variable "tags" {
-  description = "Common tags"
-  type        = map(string)
-}

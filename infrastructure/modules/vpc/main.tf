@@ -1,20 +1,29 @@
 data "aws_availability_zones" "available" {}
 
+# ----
+# VPC
+# ----
 resource "aws_vpc" "this" {
   cidr_block           = var.cidr_block
   enable_dns_support   = true
   enable_dns_hostnames = true
-  tags                 = merge(var.tags, { Name = var.prefix })
+  tags                 = { Name = "open-jii-vpc-dev" }
 }
 
+# -----------------
+# Internet Gateway
+# -----------------
 resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.this.id
-  tags   = merge(var.tags, { Name = "${var.prefix}-igw" })
+  tags   = { Name = "open-jii-igw-dev" }
 }
 
+# -----------------------
+# Default Security Group
+# -----------------------
 resource "aws_security_group" "default" {
-  name        = "${var.prefix}-sg"
-  description = "Default security group for ${var.prefix}"
+  name        = "open-jii-default-sg-dev"
+  description = "Default security group for OpenJII VPC"
   vpc_id      = aws_vpc.this.id
 
   ingress {
@@ -29,41 +38,49 @@ resource "aws_security_group" "default" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  tags = merge(var.tags, { Name = "${var.prefix}-sg" })
+  tags = { Name = "open-jii-default-sg-dev" }
 }
 
-# Public Subnets (for ALB and NAT Gateways)
+# ---------------
+# Public Subnets
+# ---------------
 resource "aws_subnet" "public" {
   count                   = var.az_count
   vpc_id                  = aws_vpc.this.id
   cidr_block              = cidrsubnet(var.cidr_block, var.subnet_bits, count.index)
   availability_zone       = element(data.aws_availability_zones.available.names, count.index)
   map_public_ip_on_launch = true
-  tags                    = merge(var.tags, { Name = "${var.prefix}-public-${count.index}" })
+  tags                    = { Name = "open-jii-public-subnet-${count.index}-dev" }
 }
 
-# Private Subnets (for Databricks clusters and ECS tasks needing NAT)
+# ----------------
+# Private Subnets 
+# ----------------
 resource "aws_subnet" "private" {
   count             = var.az_count
   vpc_id            = aws_vpc.this.id
   cidr_block        = cidrsubnet(var.cidr_block, var.subnet_bits, count.index + 100)
   availability_zone = element(data.aws_availability_zones.available.names, count.index)
-  tags              = merge(var.tags, { Name = "${var.prefix}-private-${count.index}" })
+  tags              = { Name = "open-jii-private-subnet-${count.index}-dev" }
 }
 
-# Isolated Subnets (for resources with no internet access, e.g., Nest.js backend)
+# -----------------
+# Isolated Subnets
+# -----------------
 resource "aws_subnet" "isolated" {
   count             = var.az_count
   vpc_id            = aws_vpc.this.id
   cidr_block        = cidrsubnet(var.cidr_block, var.subnet_bits, count.index + 200)
   availability_zone = element(data.aws_availability_zones.available.names, count.index)
-  tags              = merge(var.tags, { Name = "${var.prefix}-isolated-${count.index}" })
+  tags              = { Name = "open-jii-isolated-subnet-${count.index}-dev" }
 }
 
-# Public Route Table
+# -------------------
+# Public Route Table 
+# -------------------
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.this.id
-  tags   = merge(var.tags, { Name = "${var.prefix}-public-rt" })
+  tags   = { Name = "open-jii-public-rt-dev" }
 }
 
 resource "aws_route" "public_internet" {
@@ -78,7 +95,9 @@ resource "aws_route_table_association" "public_assoc" {
   route_table_id = aws_route_table.public.id
 }
 
-# NAT Gateways
+# -------------
+# NAT Gateways 
+# -------------
 resource "aws_eip" "nat" {
   count  = var.az_count
   domain = "vpc"
@@ -88,18 +107,21 @@ resource "aws_nat_gateway" "nat" {
   count         = var.az_count
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
-  tags          = merge(var.tags, { Name = "${var.prefix}-nat-${count.index}" })
+  tags          = { Name = "open-jii-nat-${count.index}-dev" }
 }
 
-# Private Route Table
+# ---------------------
+# Private Route Tables
+# ---------------------
 resource "aws_route_table" "private" {
+  count  = var.az_count
   vpc_id = aws_vpc.this.id
-  tags   = merge(var.tags, { Name = "${var.prefix}-private-rt" })
+  tags   = { Name = "open-jii-private-rt-${count.index}-dev" }
 }
 
 resource "aws_route" "private_nat" {
   count                  = var.az_count
-  route_table_id         = aws_route_table.private.id
+  route_table_id         = aws_route_table.private[count.index].id
   destination_cidr_block = "0.0.0.0/0"
   nat_gateway_id         = aws_nat_gateway.nat[count.index].id
 }
@@ -107,13 +129,15 @@ resource "aws_route" "private_nat" {
 resource "aws_route_table_association" "private_assoc" {
   count          = var.az_count
   subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private.id
+  route_table_id = aws_route_table.private[count.index].id
 }
 
-# Isolated Route Table (no internet access)
+# ---------------------
+# Isolated Route Table
+# ---------------------
 resource "aws_route_table" "isolated" {
   vpc_id = aws_vpc.this.id
-  tags   = merge(var.tags, { Name = "${var.prefix}-isolated-rt" })
+  tags   = { Name = "open-jii-isolated-rt-dev" }
 }
 
 resource "aws_route_table_association" "isolated_assoc" {

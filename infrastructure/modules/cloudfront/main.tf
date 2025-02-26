@@ -1,5 +1,5 @@
 resource "aws_cloudfront_origin_access_control" "oac" {
-  name                              = "docusaurus-oac"
+  name                              = "${var.bucket_name}-cloudfront-oac"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
@@ -13,7 +13,7 @@ resource "aws_cloudfront_distribution" "cdn" {
     origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
   }
 
-  enabled             = true
+  enabled             = false
   default_root_object = var.default_root_object
 
   default_cache_behavior {

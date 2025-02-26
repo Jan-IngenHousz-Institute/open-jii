@@ -1,12 +1,17 @@
-variable "bucket_name" {
-  description = "Docusaurus S3 bucket name"
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+  default     = "eu-central-1"
+}
+
+variable "terraform_state_s3_bucket_name" {
+  description = "Terraform state S3 Bucket name"
   type        = string
 }
 
-variable "default_root_object" {
-  description = "Docusaurus S3 bucket name"
+variable "docusaurus_s3_bucket_name" {
+  description = "Docusaurus S3 Bucket name"
   type        = string
-  default     = "index.html"
 }
 
 variable "timestream_database_name" {
@@ -19,11 +24,6 @@ variable "timestream_table_name" {
   type        = string
 }
 
-variable "iot_policy_name" {
-  description = "Name for the IoT policy"
-  type        = string
-}
-
 variable "iot_timestream_role_name" {
   description = "Name for the IAM role for IoT to write to Timestream"
   type        = string
@@ -31,16 +31,6 @@ variable "iot_timestream_role_name" {
 
 variable "iot_timestream_policy_name" {
   description = "Name for the IAM policy for IoT to write to Timestream"
-  type        = string
-}
-
-variable "iot_rule_name" {
-  description = "Name for the IoT topic rule"
-  type        = string
-}
-
-variable "topic_filter" {
-  description = "MQTT topic filter (e.g., 'sensors/+/data')"
   type        = string
 }
 
@@ -58,13 +48,25 @@ variable "iot_kinesis_policy_name" {
   description = "Name for the IoT Kinesis IAM Policy"
 }
 
-variable "tags" {
-  description = "Common tags for resources"
-  type        = map(string)
-  default     = {}
-}
-
 variable "databricks_account_id" {
   description = "Databricks Account ID (used as external_id in the assume role policy)"
+  type        = string
+  sensitive   = true
+}
+
+variable "databricks_client_id" {
+  description = "The service principal's client ID for Databricks authentication"
+  type        = string
+  sensitive   = true
+}
+
+variable "databricks_client_secret" {
+  description = "The service principal's client secret for Databricks authentication"
+  type        = string
+  sensitive   = true
+}
+
+variable "databricks_bucket_name" {
+  description = "Root Databricks configuration S3 Bucket name"
   type        = string
 }

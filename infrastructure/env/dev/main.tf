@@ -1,16 +1,17 @@
 module "terraform_state_s3" {
-  bucket_name = "open-jii-terraform-state-dev"
   source      = "../../modules/s3"
+  bucket_name = var.terraform_state_s3_bucket_name
 }
 
 module "cloudfront" {
   source      = "../../modules/cloudfront"
-  bucket_name = var.bucket_name
+  bucket_name = var.docusaurus_s3_bucket_name
+  aws_region  = var.aws_region
 }
 
 module "docusaurus_s3" {
   source                      = "../../modules/docusaurus-s3"
-  bucket_name                 = var.bucket_name
+  bucket_name                 = var.docusaurus_s3_bucket_name
   cloudfront_distribution_arn = module.cloudfront.cloudfront_distribution_arn
 }
 
@@ -26,54 +27,48 @@ module "kinesis" {
 }
 
 module "iot_core" {
-  source                     = "../../modules/iot-core"
-  policy_name                = var.iot_policy_name
-  rule_name                  = var.iot_rule_name
+  source = "../../modules/iot-core"
+
+  timestream_table           = var.timestream_table_name
+  timestream_database        = var.timestream_database_name
   iot_timestream_role_name   = var.iot_timestream_role_name
   iot_timestream_policy_name = var.iot_timestream_policy_name
-  timestream_database        = var.timestream_database_name
-  timestream_table           = var.timestream_table_name
-  iot_kinesis_role_name      = var.iot_kinesis_role_name
-  iot_kinesis_policy_name    = var.iot_kinesis_policy_name
-  kinesis_stream_name        = module.kinesis.kinesis_stream_name
-  kinesis_stream_arn         = module.kinesis.kinesis_stream_arn
-  topic_filter               = var.topic_filter
+
+  iot_kinesis_role_name   = var.iot_kinesis_role_name
+  iot_kinesis_policy_name = var.iot_kinesis_policy_name
+  kinesis_stream_name     = module.kinesis.kinesis_stream_name
+  kinesis_stream_arn      = module.kinesis.kinesis_stream_arn
 }
 
 module "vpc" {
   source = "../../modules/vpc"
-  tags   = var.tags
 }
 
 module "vpc_endpoints" {
-  source = "../../modules/vpc-endpoints"
-  tags   = var.tags
-  vpc_id = module.vpc.vpc_id
-  prefix = "jii-dev"
-
+  source                  = "../../modules/vpc-endpoints"
+  aws_region              = var.aws_region
+  vpc_id                  = module.vpc.vpc_id
   private_route_table_ids = module.vpc.private_rt_ids
   public_route_table_ids  = module.vpc.public_rt_ids
-
-  private_subnet_ids = module.vpc.private_subnets
-
-  # Use the default security group for interface endpoints
-  security_group_ids = [module.vpc.default_sg_id]
+  private_subnet_ids      = module.vpc.private_subnets
+  security_group_ids      = [module.vpc.default_sg_id]
 }
 
 module "databricks_s3" {
-  source = "../../modules/databricks-s3"
-  prefix = "jii-dev"
-  tags   = var.tags
+  source      = "../../modules/databricks-s3"
+  bucket_name = var.databricks_bucket_name
 }
 
-module "workspace" {
+module "databricks_workspace" {
   source                = "../../modules/databricks"
-  prefix                = "jii-dev"
+  aws_region            = var.aws_region
   databricks_account_id = var.databricks_account_id
-  tags                  = var.tags
+  bucket_name           = var.databricks_bucket_name
   vpc_id                = module.vpc.vpc_id
   private_subnets       = module.vpc.private_subnets
   sg_id                 = module.vpc.default_sg_id
-  s3_bucket             = module.databricks_s3.bucket_name
-  iam_role_arn          = module.iam.role_arn
+
+  providers = {
+    databricks.mws = databricks.mws
+  }
 }
