@@ -3,6 +3,13 @@ module "terraform_state_s3" {
   bucket_name = var.terraform_state_s3_bucket_name
 }
 
+module "iam_oidc" {
+  source     = "../../modules/iam-oidc"
+  role_name  = "GithubActionsDeployAccess"
+  repository = "Jan-IngenHousz-Institute/open-jii"
+  branch     = "main"
+}
+
 module "cloudfront" {
   source      = "../../modules/cloudfront"
   bucket_name = var.docusaurus_s3_bucket_name
