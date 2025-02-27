@@ -1,42 +1,87 @@
+data "aws_caller_identity" "current" {}
+
 locals {
+  # Load the AsyncAPI YAML file.
   asyncapi = yamldecode(file("${path.module}/../../../asyncapi.yaml"))
+
+  # Get all channel keys.
+  all_channels = keys(local.asyncapi.channels)
+
+  # Compute, for each channel, a mapping of parameter name to its topic index.
+  # Inline computation without "let":  
+  # For each channel, we first filter out the parameter segments and remove the braces.
+  # Then, the topic index for each parameter is: static_count + its index in the filtered list + 1.
+  iot_parameter_to_topic_index = {
+    for channel in local.all_channels : channel =>
+      { for idx, name in [
+          for seg in split("/", channel) : 
+          substr(seg, 1, length(seg)-2) if startswith(seg, "{") && endswith(seg, "}")
+        ] : name => ( length([
+          for seg in split("/", channel) : seg 
+          if !(startswith(seg, "{") && endswith(seg, "}"))
+        ]) + idx + 1 )
+      }
+  }
+
+  # Map each channel's operations to IoT actions.
+  actions_by_channel = {
+    for channel, details in local.asyncapi.channels : channel =>
+      concat(
+        contains(keys(details), "subscribe") ? ["iot:Publish"] : [],
+        contains(keys(details), "publish")   ? ["iot:Subscribe", "iot:Receive"] : []
+      )
+  }
+
+  # Compute a friendly name for each IoT policy based on the static portion of the channel.
+  iot_policy_names = {
+    for channel in local.all_channels : channel =>
+      "open_jii_dev_iot_policy_${replace(trim(split("/{", channel)[0], "/"), "/", "_")}"
+  }
+
+  # Compute a friendly name for each IoT topic rule based on the static portion of the channel.
+  iot_rule_names = {
+    for channel in local.all_channels : channel =>
+      "open_jii_dev_iot_rule_${replace(trim(split("/{", channel)[0], "/"), "/", "_")}"
+  }
+
+  # Convert the channel into a topic filter by replacing any parameter segment with "+"
+  iot_topic_filters = {
+    for channel in local.all_channels : channel =>
+      join("/", [
+        for segment in split("/", channel) :
+          (startswith(segment, "{") && endswith(segment, "}")) ? "+" : segment
+      ])
+  }
 }
 
-# --------------------------
-# IoT Policy
-# --------------------------
+# -----------------
+# AWS IoT Policies
+# -----------------
 resource "aws_iot_policy" "iot_policy" {
-  name   = var.policy_name
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": [
-        "iot:Connect",
-        "iot:Publish",
-        "iot:Subscribe",
-        "iot:Receive"
-      ],
-      "Effect": "Allow",
-      "Resource": "*"
-    }
-  ]
-}
-EOF
+  for_each = local.asyncapi.channels
+
+  name = local.iot_policy_names[each.key]
+  policy = jsonencode({
+    Version   = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Action = distinct(concat(["iot:Connect"], local.actions_by_channel[each.key])),
+      Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topic/${local.iot_topic_filters[each.key]}"
+    }]
+  })
 }
 
-# --------------------------
-# IAM Role for Timestream
-# --------------------------
+# -----------------------------------------------
+# IAM Role and Policy for Timestream Integration
+# -----------------------------------------------
 resource "aws_iam_role" "iot_timestream_role" {
   name = var.iot_timestream_role_name
   assume_role_policy = jsonencode({
-    "Version" : "2012-10-17",
-    "Statement" : [{
-      "Effect" : "Allow",
-      "Principal" : { "Service" : "iot.amazonaws.com" },
-      "Action" : "sts:AssumeRole"
+    Version   = "2012-10-17",
+    Statement = [{
+      Effect    = "Allow",
+      Principal = { Service = "iot.amazonaws.com" },
+      Action    = "sts:AssumeRole"
     }]
   })
 }
@@ -44,14 +89,14 @@ resource "aws_iam_role" "iot_timestream_role" {
 resource "aws_iam_policy" "iot_timestream_policy" {
   name = var.iot_timestream_policy_name
   policy = jsonencode({
-    "Version" : "2012-10-17",
-    "Statement" : [{
-      "Effect" : "Allow",
-      "Action" : [
+    Version   = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Action = [
         "timestream:WriteRecords",
         "timestream:DescribeEndpoints"
       ],
-      "Resource" : "*"
+      Resource = "*"
     }]
   })
 }
@@ -61,17 +106,17 @@ resource "aws_iam_role_policy_attachment" "iot_timestream_attach" {
   policy_arn = aws_iam_policy.iot_timestream_policy.arn
 }
 
-# --------------------------
-# IAM Role for Kinesis
-# --------------------------
+# --------------------------------------------
+# IAM Role and Policy for Kinesis Integration
+# --------------------------------------------
 resource "aws_iam_role" "iot_kinesis_role" {
   name = var.iot_kinesis_role_name
   assume_role_policy = jsonencode({
-    "Version" : "2012-10-17",
-    "Statement" : [{
-      "Effect" : "Allow",
-      "Principal" : { "Service" : "iot.amazonaws.com" },
-      "Action" : "sts:AssumeRole"
+    Version   = "2012-10-17",
+    Statement = [{
+      Effect    = "Allow",
+      Principal = { Service = "iot.amazonaws.com" },
+      Action    = "sts:AssumeRole"
     }]
   })
 }
@@ -79,14 +124,14 @@ resource "aws_iam_role" "iot_kinesis_role" {
 resource "aws_iam_policy" "iot_kinesis_policy" {
   name = var.iot_kinesis_policy_name
   policy = jsonencode({
-    "Version" : "2012-10-17",
-    "Statement" : [{
-      "Effect" : "Allow",
-      "Action" : [
+    Version   = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Action = [
         "kinesis:PutRecord",
         "kinesis:PutRecords"
       ],
-      "Resource" : var.kinesis_stream_arn
+      Resource = var.kinesis_stream_arn
     }]
   })
 }
@@ -96,15 +141,15 @@ resource "aws_iam_role_policy_attachment" "iot_kinesis_attach" {
   policy_arn = aws_iam_policy.iot_kinesis_policy.arn
 }
 
-# --------------------------
+# ----------------
 # IoT Topic Rules
-# --------------------------
+# ----------------
 resource "aws_iot_topic_rule" "iot_rules" {
-  for_each = { for k, v in local.asyncapi["channels"] : k => v }
+  for_each = local.asyncapi.channels
 
-  name        = "jii_iot_rule_${replace(trim(split("/{", each.key)[0], "/"), "/", "_")}"
+  name        = local.iot_rule_names[each.key]
   enabled     = true
-  sql         = "SELECT * FROM '${each.key}'"
+  sql         = "SELECT * FROM '${local.iot_topic_filters[each.key]}'"
   sql_version = "2016-03-23"
 
   timestream {
@@ -112,9 +157,12 @@ resource "aws_iot_topic_rule" "iot_rules" {
     database_name = var.timestream_database
     table_name    = var.timestream_table
 
-    dimension {
-      name  = "deviceId"
-      value = "$${topic(2)}"
+    dynamic "dimension" {
+      for_each = local.iot_parameter_to_topic_index[each.key]
+      content {
+        name  = dimension.key
+        value = format("$${topic(%d)}", dimension.value)
+      }
     }
   }
 

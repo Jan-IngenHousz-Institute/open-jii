@@ -18,14 +18,14 @@ output "isolated_subnets" {
   value       = aws_subnet.isolated[*].id
 }
 
-output "private_rt_id" {
-  description = "Private route table ID"
-  value       = aws_route_table.private.id
+output "public_rt_ids" {
+  description = "Public route table IDs"
+  value       = aws_route_table.public[*].id
 }
 
-output "isolated_rt_id" {
-  description = "Isolated route table ID"
-  value       = aws_route_table.isolated.id
+output "private_rt_ids" {
+  description = "Private route table IDs"
+  value       = aws_route_table.private[*].id
 }
 
 output "default_sg_id" {

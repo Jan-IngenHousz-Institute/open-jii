@@ -20,7 +20,7 @@ servers:
     description: AWS IoT Core production endpoint
 
 channels:
-  experiment/data/ingest/v1/{experimentId}/{sensorType}/v{sensorVersion}/{sensorId}/{protocolId}:
+  experiment/data_ingest/v1/{experimentId}/{sensorType}/{sensorVersion}/{sensorId}/{protocolId}:
     description: |
       Channel for ingesting experiment sensor data.
       The path parameters represent:
@@ -41,7 +41,7 @@ channels:
         schema:
           type: string
       sensorVersion:
-        description: Sensor firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).
+        description: Sensor firmware/hardware revision (e.g., v1, v2.1).
         schema:
           type: string
       sensorId:

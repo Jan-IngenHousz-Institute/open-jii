@@ -1,9 +1,4 @@
-variable "prefix" {
-  description = "Prefix for resource names"
+variable "bucket_name" {
+  description = "The name of the S3 bucket"
   type        = string
-}
-
-variable "tags" {
-  description = "Common tags"
-  type        = map(string)
 }
