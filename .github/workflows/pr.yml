@@ -1,0 +1,101 @@
+name: PR Workflow; Build, Lint, Test, AsyncAPI & Terraform Plan
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+permissions:
+  pull-requests: read
+
+jobs:
+  validate_pr:
+    name: Validate PR title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build_lint_test:
+    name: Build, Lint, Test & AsyncAPI
+    runs-on: ubuntu-latest
+    outputs:
+      docs_built: ${{ steps.check.outputs.docs_built }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js and Enable Corepack
+        uses: actions/setup-node@v3
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Enable Corepack & Prepare pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
+
+      - name: Cache pnpm Store
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Apps
+        run: pnpm turbo run build --affected
+
+      - name: Lint Code
+        run: pnpm turbo run lint --affected
+
+      - name: Run Tests
+        run: pnpm turbo run test --affected
+
+      - name: Generate AsyncAPI HTML
+        run: pnpm run asyncapi:html
+
+      - name: Check Affected Projects
+        id: check
+        run: |
+          pnpm turbo run print-affected --output=json > affected.json
+          if jq -e '.projects | index("docs")' affected.json > /dev/null; then
+            echo "docs_built=true" >> $GITHUB_OUTPUT
+          else
+            echo "docs_built=false" >> $GITHUB_OUTPUT
+
+  tofu:
+    name: OpenTofu
+    needs: build_lint_test
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      TF_VAR_terraform_state_s3_bucket_name: ${{ secrets.TERRAFORM_STATE_S3_BUCKET_NAME }}
+      TF_VAR_docusaurus_s3_bucket_name: ${{ secrets.DOCUSAURUS_S3_BUCKET_NAME }}
+      TF_VAR_databricks_bucket_name: ${{ secrets.DATABRICKS_S3_BUCKET_NAME }}
+      TF_VAR_timestream_database_name: ${{ secrets.TIMESTREAM_DB_NAME }}
+      TF_VAR_timestream_table_name: ${{ secrets.TIMESTREAM_TABLE_NAME }}
+      TF_VAR_iot_timestream_policy_name: ${{ secrets.IOT_TIMESTREAM_POLICY_NAME }}
+      TF_VAR_iot_timestream_role_name: ${{ secrets.IOT_TIMESTREAM_ROLE_NAME }}
+      TF_VAR_iot_kinesis_policy_name: ${{ secrets.IOT_KINESIS_POLICY_NAME }}
+      TF_VAR_iot_kinesis_role_name: ${{ secrets.IOT_KINESIS_ROLE_NAME }}
+      TF_VAR_kinesis_stream_name: ${{ secrets.KINESIS_STREAM_NAME }}
+      TF_VAR_databricks_account_id: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
+      TF_VAR_databricks_client_id: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      TF_VAR_databricks_client_secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+    steps:
+      - name: Run OpenTofu Operations
+        uses: ./github/actions/tofu
+        with:
+          tofu-version: "1.9.0"
+          environment: "dev"

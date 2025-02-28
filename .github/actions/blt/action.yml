@@ -1,0 +1,92 @@
+name: "Build, Lint, Test & AsyncAPI"
+description: "Runs build, lint, test, and AsyncAPI generation for affected projects"
+inputs:
+  node-version:
+    description: "Node.js version"
+    required: true
+    default: "22"
+
+outputs:
+  docs_built:
+    description: "Indicates if the docs project was built"
+    value: ${{ steps.check.outputs.docs_built }}
+  api_built:
+    description: "Indicates if the API project was built"
+    value: ${{ steps.check.outputs.api_built }}
+  frontend_built:
+    description: "Indicates if the frontend project was built"
+    value: ${{ steps.check.outputs.frontend_built }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js and Enable Corepack
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: "pnpm"
+
+    - name: Enable Corepack & Prepare pnpm
+      shell: bash
+      run: |
+        corepack enable
+        corepack prepare pnpm@latest --activate
+
+    - name: Cache pnpm Store
+      uses: actions/cache@v3
+      with:
+        path: ~/.pnpm-store
+        key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-
+
+    - name: Install Dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Build Apps
+      shell: bash
+      run: pnpm turbo run build --affected
+
+    - name: Lint Code
+      shell: bash
+      run: pnpm turbo run lint --affected
+
+    - name: Run Tests
+      shell: bash
+      run: pnpm turbo run test --affected
+
+    - name: Generate AsyncAPI HTML
+      shell: bash
+      run: pnpm run asyncapi:html --affected
+
+    - name: Check Affected Projects
+      id: check
+      shell: bash
+      run: |
+        pnpm turbo run print-affected --output=json > affected.json
+        if jq -e '.projects | index("docs")' affected.json > /dev/null; then
+          echo "docs_built=true" >> $GITHUB_OUTPUT
+        else
+          echo "docs_built=false" >> $GITHUB_OUTPUT
+        fi
+        if jq -e '.projects | index("api")' affected.json > /dev/null; then
+          echo "api_built=true" >> $GITHUB_OUTPUT
+        else
+          echo "api_built=false" >> $GITHUB_OUTPUT
+        fi
+        if jq -e '.projects | index("frontend")' affected.json > /dev/null; then
+          echo "frontend_built=true" >> $GITHUB_OUTPUT
+        else
+          echo "frontend_built=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Upload Docs Artifact
+      if: steps.check.outputs.docs_built == 'true'
+      uses: actions/upload-artifact@v3
+      with:
+        name: docs-artifact
+        path: apps/docs/build
