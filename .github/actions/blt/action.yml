@@ -1,4 +1,4 @@
-name: "Build, Lint, Test & AsyncAPI"
+name: "Build, Lint & Test"
 description: "Runs build, lint, test, and AsyncAPI generation for affected projects"
 inputs:
   node-version:
@@ -21,11 +21,12 @@ runs:
   using: "composite"
   steps:
     - name: Checkout Repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup Node.js and Enable Corepack
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
+        fetch-depth: 2
         node-version: ${{ inputs.node-version }}
         cache: "pnpm"
 
@@ -36,7 +37,7 @@ runs:
         corepack prepare pnpm@latest --activate
 
     - name: Cache pnpm Store
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.pnpm-store
         key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -86,7 +87,7 @@ runs:
 
     - name: Upload Docs Artifact
       if: steps.check.outputs.docs_built == 'true'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: docs-artifact
         path: apps/docs/build

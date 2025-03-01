@@ -13,7 +13,7 @@ runs:
   using: "composite"
   steps:
     - name: Checkout Repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup OpenTofu
       uses: opentofu/setup-opentofu@v1
@@ -21,7 +21,7 @@ runs:
         tofu-version: ${{ inputs.tofu-version }}
 
     - name: Cache OpenTofu Plugins
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.terraform.d/plugin-cache
         key: ${{ runner.os }}-tofu-${{ hashFiles('**/*.tf') }}
