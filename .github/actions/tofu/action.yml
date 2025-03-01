@@ -1,0 +1,50 @@
+name: "OpenTofu Operations"
+description: "Sets up OpenTofu, configures AWS credentials via OIDC, and runs OpenTofu commands in the specified environment"
+inputs:
+  tofu-version:
+    description: "OpenTofu version to use"
+    required: false
+    default: "1.6.0"
+  environment:
+    description: "Deployment environment (e.g., dev, staging, production)"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup OpenTofu
+      uses: opentofu/setup-opentofu@v1
+      with:
+        tofu-version: ${{ inputs.tofu-version }}
+
+    - name: Cache OpenTofu Plugins
+      uses: actions/cache@v4
+      with:
+        path: ~/.terraform.d/plugin-cache
+        key: ${{ runner.os }}-tofu-${{ hashFiles('**/*.tf') }}
+        restore-keys: |
+          ${{ runner.os }}-tofu-
+
+    - name: OpenTofu Fmt Check
+      shell: bash
+      working-directory: infrastructure/env/${{ inputs.environment }}
+      run: tofu fmt -check
+      continue-on-error: true
+
+    - name: OpenTofu Validate
+      shell: bash
+      working-directory: infrastructure/env/${{ inputs.environment }}
+      run: tofu validate
+
+    - name: OpenTofu Init
+      shell: bash
+      working-directory: infrastructure/env/${{ inputs.environment }}
+      run: tofu init
+
+    - name: OpenTofu Plan
+      shell: bash
+      working-directory: infrastructure/env/${{ inputs.environment }}
+      run: tofu plan -no-color

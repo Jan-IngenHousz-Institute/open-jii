@@ -1,20 +1,30 @@
-name: Deployment Template
+name: PR Workflow; Build, Lint, Test & Tofu Validation
 
 on:
-  workflow_call:
-    inputs:
-      environment:
-        description: "The deployment environment"
-        required: true
-        type: string
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
 
-# Job 1: Build, Lint, Test & AsyncAPI
+permissions:
+  pull-requests: read
+
 jobs:
+  validate_pr:
+    name: Validate PR title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build_lint_test:
     name: Build, Lint, Test & AsyncAPI
     runs-on: ubuntu-latest
     steps:
-      - name: Run Build, Lint, Test & AsyncAPI
+      - name: Build, Lint & Test
         id: build
         uses: ./github/actions/build-lint-test
         with:
@@ -26,7 +36,6 @@ jobs:
           echo "API built: ${{ env.api_built }}"
           echo "Frontend built: ${{ env.frontend_built }}"
 
-  # Job 2: Terraform (Plan & Apply)
   tofu:
     name: OpenTofu
     needs: build_lint_test
@@ -52,35 +61,5 @@ jobs:
       - name: Run OpenTofu Operations
         uses: ./github/actions/tofu
         with:
-          tofu-version: "1.6.0"
-          environment: "${{ inputs.environment }}"
-
-      - name: Apply Infrastructure
-        run: tofu apply -auto-approve
-
-  # Job 3: Deploy Artifacts
-  deploy:
-    name: Deploy Artifacts
-    needs: [build_lint_test, tofu]
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: Configure AWS Credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Download Docs Artifact
-        if: needs.build_lint_test.outputs.docs_built == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: docs-artifact
-
-      - name: Deploy Docs Artifact to S3
-        if: needs.build_lint_test.outputs.docs_built == 'true'
-        run: |
-          echo "Deploying docs from artifact..."
-          aws s3 cp docs-artifact s3://${{ secrets.S3_BUCKET_NAME }}/docs --recursive
+          tofu-version: "1.9.0"
+          environment: "dev"
