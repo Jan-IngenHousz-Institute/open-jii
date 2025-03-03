@@ -53,3 +53,25 @@ terraform.rc
 # Docusaurus
 .docusaurus
 .cache-loader
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python egg-info
+*.egg-info/
+*.egg-info
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+cert
+
+# Test/Coverage
+.tox/
+.pytest_cache/
+.coverage
+.coverage.*

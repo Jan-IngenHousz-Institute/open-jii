@@ -1,0 +1,9 @@
+{
+  "name": "multispeq-mqtt-interface",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "pip install .",
+    "dev": "PYTHONPATH=src python3 -m multispeq_mqtt_interface.main"
+  }
+}
