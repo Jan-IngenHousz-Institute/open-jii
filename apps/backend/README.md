@@ -39,7 +39,7 @@ $ pnpm install
 $ pnpm run start
 
 # watch mode
-$ pnpm run start:dev
+$ pnpm dev
 
 # production mode
 $ pnpm run start:prod
