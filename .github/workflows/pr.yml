@@ -24,6 +24,9 @@ jobs:
     name: Build, Lint, Test & AsyncAPI
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
       - name: Build, Lint & Test
         id: build
         uses: ./github/actions/build-lint-test

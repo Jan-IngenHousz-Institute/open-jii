@@ -118,6 +118,17 @@ p {
   color: var(--ifm-font-color-base);
 }
 
+/* Links */
+a {
+  color: var(--ifm-color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--ifm-color-highlight);
+  text-decoration: underline;
+}
+
 /* Lead Text */
 .lead {
   font-family: "Overpass", sans-serif;

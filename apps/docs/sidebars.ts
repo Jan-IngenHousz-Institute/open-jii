@@ -227,6 +227,51 @@ const sidebars: SidebarsConfig = {
       ],
     },
     {
+      type: "category",
+      label: "Tools",
+      link: { type: "generated-index" },
+      items: [
+        {
+          type: "category",
+          label: "MultispeQ MQTT Interface",
+          link: { type: "generated-index" },
+          items: [
+            "for-developers/tools/multispeq-mqtt-interface/introduction",
+            "for-developers/tools/multispeq-mqtt-interface/installation",
+            {
+              type: "category",
+              label: "Usage",
+              link: { type: "generated-index" },
+              items: [
+                "for-developers/tools/multispeq-mqtt-interface/usage/basic-usage",
+                "for-developers/tools/multispeq-mqtt-interface/usage/configuration",
+                "for-developers/tools/multispeq-mqtt-interface/usage/advanced-options",
+              ],
+            },
+            {
+              type: "category",
+              label: "MQTT Protocol",
+              link: { type: "generated-index" },
+              items: [
+                "for-developers/tools/multispeq-mqtt-interface/mqtt-protocol/topic-structure",
+                "for-developers/tools/multispeq-mqtt-interface/mqtt-protocol/message-format",
+              ],
+            },
+            {
+              type: "category",
+              label: "Debugging",
+              link: { type: "generated-index" },
+              items: [
+                "for-developers/tools/multispeq-mqtt-interface/debugging/common-issues",
+                "for-developers/tools/multispeq-mqtt-interface/debugging/troubleshooting",
+              ],
+            },
+            "for-developers/tools/multispeq-mqtt-interface/api-reference",
+          ],
+        },
+      ],
+    },
+    {
       type: "html",
       value: `
         <div class="sidebar-divider">
