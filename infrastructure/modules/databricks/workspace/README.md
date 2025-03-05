@@ -1,4 +1,4 @@
-# 🔥 Databricks Module
+# 🔥 Databricks Workspace Module
 
 This module provisions a **Databricks Workspace** in AWS using the **Databricks MWS (Managed Workspaces) API**. It sets up the required AWS IAM roles and policies for cross-account access, configures networking, storage, and credentials, and finally deploys a Databricks Workspace.
 

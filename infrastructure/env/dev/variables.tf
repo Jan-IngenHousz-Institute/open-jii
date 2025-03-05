@@ -70,3 +70,8 @@ variable "databricks_bucket_name" {
   description = "Root Databricks configuration S3 Bucket name"
   type        = string
 }
+
+variable "databricks_workspace_url" {
+  description = "Databricks workspace name"
+  type        = string
+}

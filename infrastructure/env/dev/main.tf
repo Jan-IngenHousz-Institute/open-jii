@@ -67,7 +67,7 @@ module "databricks_s3" {
 }
 
 module "databricks_workspace" {
-  source                = "../../modules/databricks"
+  source                = "../../modules/databricks/workspace"
   aws_region            = var.aws_region
   databricks_account_id = var.databricks_account_id
   bucket_name           = var.databricks_bucket_name
