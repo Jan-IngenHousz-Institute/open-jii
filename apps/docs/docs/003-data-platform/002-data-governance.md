@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Managing sensor data via the OpenJII platform calls for a structured approach that ensures consistency, security, and reproducibility. This document presents a data governance framework that uses catalogs, schemas, and tables to organize data from various field experiments. The framework aims to support data isolation, simplifies auditing, and scales as new experiments are added. Its key objectives are to preserve data lineage, control access, provide cross-experiment collaboration and optimize query performance.
+Managing sensor data via the OpenJII platform calls for a structured approach that ensures consistency, security, and reproducibility. The OpenJII data governance framework aims to support data isolation, simplifies auditing, and scales as new experiments are added. Its key objectives are to preserve data lineage, control access, provide cross-experiment collaboration and optimize query performance.
 
 ## Purpose & Objectives
 
