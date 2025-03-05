@@ -1,20 +1,20 @@
 # Data Ingestion Architecture
 
-**Date:** 2025-03-04  
+**Date:** 2025-03-05  
 **Status:** Accepted
 
 ---
 
 ## Context
 
-Agricultural sensor data from IoT devices must be ingested, processed, and analyzed in a way that supports both real-time and batch processing. The system requirements include:
+Sensor data from the OpenJII platform must be ingested, processed, and analyzed to support both real-time and batch processing. The system requirements include:
 
-- **Real-Time and Batch Processing:** Sensor data is streamed in real time via AWS Kinesis and processed in batches with Apache Spark.
-- **Dual Medallion Approach:** To ensure data quality and traceability, a dual medallion model (Bronze, Silver, Gold) is applied:
+- **Real-Time and Batch Processing:** Sensor data is ingested in real time via AWS Kinesis and processed in batch mode with Apache Spark.
+- **Dual Medallion Approach:** A dual medallion model (Bronze, Silver, Gold) ensures data quality and traceability by processing data in a centralized raw layer and further refining data per experiment.
   - **Central Schema:** Provides a holistic view of IoT, plant, and sensor data.
   - **Experiment-Specific Schemas:** Tailored pipelines route experiment-related records from the central raw layer into dedicated schemas for customized processing.
-- **Metadata-Driven Routing:** A metadata-driven pipeline dynamically directs data from the central raw layer to experiment-specific schemas.
-- **Scalability and Governance:** The architecture supports scalable ingestion, maintains a single source of truth, and ensures robust data governance with role-based access controls and clear data lineage.
+- **Metadata-Driven Routing:** A metadata-driven ingestion process dynamically routes records from the central raw layer to experiment-specific schemas via a dedicated transformation pipeline.
+- **Scalability and Governance:** The architecture supports scalable ingestion, maintains a single source of truth, and enforces governance with role-based access controls and clear data lineage.
 
 ---
 
