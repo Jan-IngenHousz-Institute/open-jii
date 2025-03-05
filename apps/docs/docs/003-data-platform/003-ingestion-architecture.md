@@ -31,6 +31,29 @@ The central schema evolves into a data warehouse that provides broad insights in
 
 Both streaming and batch processing are essential. Streaming data is captured immediately via AWS Kinesis, while batch processing with Apache Spark cleanses and organizes the data for deeper analysis. The transformation pipeline continuously monitors the central raw layer and automatically directs data to the appropriate experiment schema.
 
+### Data Pipelines
+
+The OpenJII data platform uses two types of pipelines that align with our schema structure:
+
+1. **Ingestion Pipeline**: Writes all sensor data into the central `raw_data` table (Bronze layer) in the central schema.
+
+2. **Transformation Pipeline**: 
+   - Processes data from central Bronze → Silver → Gold within the central schema
+   - Routes experiment-specific data from central schema to experiment-specific schemas
+   - Transforms data within each experiment schema through its own Bronze → Silver → Gold progression
+
+Each experiment schema contains views that filter data from the central raw layer, ensuring consistency while enabling experiment-specific processing.
+
+## Pipeline Implementation
+
+The pipelines are implemented as Apache Spark jobs that:
+
+1. Monitor the central raw layer for new data
+2. Process and validate the data according to quality rules
+3. Identify experiment IDs and route data accordingly
+4. Maintain data lineage information for traceability
+
+
 ### Visual Representation
 
 The diagram below shows the data flow, including how the transformation pipeline moves data from the central raw layer to experiment-specific schemas, highlighting the dual medallion structures and the integration of batch and streaming processes.
