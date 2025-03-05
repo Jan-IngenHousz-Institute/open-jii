@@ -87,29 +87,51 @@ const sidebars: SidebarsConfig = {
       value: `
         <div class="sidebar-divider">
           <hr class="sidebar-divider-line" />
-          <div class="sidebar-divider-label">Platform Usage</div>
+          <div class="sidebar-divider-label">Data Platform</div>
         </div>
       `,
       defaultStyle: false,
     },
     {
-      type: "category",
-      label: "Sensor Operation",
-      link: { type: "generated-index" },
-      items: [
-        "platform-usage/sensor-operation/performing-measurements",
-        "platform-usage/sensor-operation/data-ingestion-workflow",
-      ],
+      type: "doc",
+      id: "data-platform/overview",
+      label: "Overview",
+    },
+    {
+      type: "doc",
+      id: "data-platform/data-governance",
+      label: "Data Governence",
+    },
+    {
+      type: "doc",
+      id: "data-platform/ingestion-architecture",
+      label: "Ingestion Architecture",
     },
     {
       type: "category",
-      label: "Data Analysis & Exploration",
+      label: "Usage",
       link: { type: "generated-index" },
       items: [
-        "platform-usage/data-analysis/setup-databricks-environment",
-        "platform-usage/data-analysis/querying-data",
-        "platform-usage/data-analysis/visualization-reporting",
-        "platform-usage/data-analysis/notebook-best-practices",
+        {
+          type: "category",
+          label: "Sensor Operation",
+          link: { type: "generated-index" },
+          items: [
+            "data-platform/usage/sensor-operation/performing-measurements",
+            "data-platform/usage/sensor-operation/data-ingestion-workflow",
+          ],
+        },
+        {
+          type: "category",
+          label: "Data Analysis & Exploration",
+          link: { type: "generated-index" },
+          items: [
+            "data-platform/usage/data-analysis/setup-databricks-environment",
+            "data-platform/usage/data-analysis/querying-data",
+            "data-platform/usage/data-analysis/visualization-reporting",
+            "data-platform/usage/data-analysis/notebook-best-practices",
+          ],
+        },
       ],
     },
     {
@@ -117,9 +139,9 @@ const sidebars: SidebarsConfig = {
       label: "Experiments",
       link: { type: "generated-index" },
       items: [
-        "platform-usage/experiments-protocols/experiments/defining-an-experiment",
-        "platform-usage/experiments-protocols/experiments/experiment-management",
-        "platform-usage/experiments-protocols/experiments/integrating-experiments-data-analysis",
+        "data-platform/experiments-protocols/experiments/defining-an-experiment",
+        "data-platform/experiments-protocols/experiments/experiment-management",
+        "data-platform/experiments-protocols/experiments/integrating-experiments-data-analysis",
       ],
     },
     {
@@ -127,9 +149,9 @@ const sidebars: SidebarsConfig = {
       label: "Protocols",
       link: { type: "generated-index" },
       items: [
-        "platform-usage/experiments-protocols/protocols/defining-a-protocol",
-        "platform-usage/experiments-protocols/protocols/protocol-workflow",
-        "platform-usage/experiments-protocols/protocols/protocol-documentation-standards",
+        "data-platform/experiments-protocols/protocols/defining-a-protocol",
+        "data-platform/experiments-protocols/protocols/protocol-workflow",
+        "data-platform/experiments-protocols/protocols/protocol-documentation-standards",
       ],
     },
 
@@ -197,7 +219,8 @@ const sidebars: SidebarsConfig = {
               label: "ADRs",
               link: { type: "generated-index" },
               items: [
-                "for-developers/developers-guide/design-decisions/adrs/template",
+                "for-developers/developers-guide/design-decisions/adrs/data-governance-adr",
+                "for-developers/developers-guide/design-decisions/adrs/data-ingestion-adr",
               ],
             },
           ],
