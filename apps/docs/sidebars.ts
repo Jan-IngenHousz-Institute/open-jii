@@ -100,7 +100,7 @@ const sidebars: SidebarsConfig = {
     {
       type: "doc",
       id: "data-platform/data-governance",
-      label: "Data Governence",
+      label: "Data Governance",
     },
     {
       type: "doc",
