@@ -25,6 +25,7 @@ The data governance model is designed to:
 
 - **Provide Restricted Collaboration:**  
   Support cross-catalog and cross-schema collaboration, managed by access policies.
+
 ## Model Overview
 
 The framework takes advantage of Databricks Unity Catalog’s three-tier namespace: **Catalog → Schema → Table**. At the top level, a catalog represents the entire data domain. Within this catalog, individual schemas isolate each experiment, and tables hold the sensor data, plant data and other related metadata.
