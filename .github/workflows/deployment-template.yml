@@ -19,7 +19,7 @@ jobs:
 
       - name: Run Build, Lint, Test & AsyncAPI
         id: build
-        uses: ./github/actions/build-lint-test
+        uses: ./github/actions/blt
         with:
           node-version: "22"
 
