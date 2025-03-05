@@ -28,7 +28,19 @@ The data governance model is designed to:
 
 ## Model Overview
 
-The framework takes advantage of Databricks Unity Catalog’s three-tier namespace: **Catalog → Schema → Table**. At the top level, a catalog represents the entire data domain. Within this catalog, individual schemas isolate each experiment, and tables hold the sensor data, plant data and other related metadata.
+The framework takes advantage of Databricks Unity Catalog's three-tier namespace: **Catalog → Schema → Table**. At the top level, a catalog represents the entire data domain. Within this catalog, individual schemas isolate each experiment, and tables hold the sensor data, plant data and other related metadata.
+
+### Infrastructure Implementation
+
+The OpenJII platform uses Terraform to provision and maintain the following components:
+
+- A Databricks Unity Catalog **metastore** serving as the root container for all data assets
+- An S3 bucket dedicated to Unity Catalog with proper IAM role-based access controls
+- A central catalog named `open_jii` containing all schemas
+- A central schema (`centrum`) that follows the medallion architecture
+- Experiment-specific schemas that inherit data from the central schema
+
+All data assets are managed through well-defined Terraform modules that ensure consistency and prevent configuration drift.
 
 ### Reference Diagram
 
@@ -63,30 +75,38 @@ D --> I2[Table: plant_metadata]
 
 ### Catalogs (Top-Level Organizational Unit)
 
-A single catalog (e.g., `openjii_dev`, `growy_dev`) covers the entire high-level domain of OpenJII-managed experiments, leaving room to scale to environment-based or consumer-based catalog domains.
+A single catalog (`open_jii`) covers the entire domain of OpenJII-managed experiments, with additional catalogs possible for different environments (development, testing, production).
 
 A single catalog groups all related schemas and tables under one logical domain. This approach simplifies the enforcement of enterprise security policies, as permissions automatically apply to all underlying objects. It also minimizes complexity and prevents fragmentation, while still leaving room for additional catalogs if fundamentally different data domains arise in the future.
 
 ### Schemas (Logical Separation for Each Experiment)
 
-Within the `openjii_dev` catalog, create separate schemas for each experiment (e.g., `wageningen_2025_orchids`, `amsterdam_2021_tulips`). Each experiment’s data is contained in its own namespace.
+Within the `openjii_dev` catalog, we maintain:
 
-This separation prevents data mixing and avoids naming conflicts, while allowing each experiment to use its own data transformation logic. It also clarifies data provenance, supports granular access control, and makes it easier to archive or retire an experiment’s data without affecting others.
+1. A **central schema** (`centrum`) that serves as the primary ingestion point and single source of truth
+2. **Experiment-specific schemas** (e.g., `amsterdam_2023_tulips`) that contain experiment-specific data and views
+
+This two-tier schema approach ensures centralized governance while enabling experiment isolation.
 
 ### Tables (Data Storage & Management)
 
-Each experiment’s schema will include a standard set of tables:
+Each schema contains a standardized set of tables adhering to the medallion architecture:
 
-1. **Raw Data Table (`raw_data`):**  
-   Ingests and preserves sensor readings in their original form.
+1. **Bronze Layer (`raw_data`):**  
+   Contains unprocessed sensor readings with original timestamps, raw payload, and source tracking.
 
-2. **Clean Data Table (`clean_data`):**  
-   Contains validated, transformed data ready for analysis.
+2. **Silver Layer (`clean_data`):**  
+   Houses validated, transformed data with quality indicators for analysis readiness.
 
-3. **Metadata Tables:**  
-   Includes `experiment_metadata`, `sensor_metadata`, and `plant_metadata` to hold contextual and configuration information.
+3. **Gold Layer (`analytics_data`):**  
+   Provides aggregated metrics like min/max/avg values optimized for reporting and visualization.
 
-Storing raw data in its original state ensures reproducibility and serves as an immutable source of truth. The clean data table offers preprocessed data that boosts query performance and reduces the need for on-the-fly processing. Metadata tables centralize contextual information, support tracking, and help automate processing decisions.
+4. **Metadata Tables:**  
+   - `experiments` - Central registry of all experiment configurations
+   - `sensor_metadata` - Technical details about deployed sensors
+   - `plant_metadata` - Information about plant subjects, species, and treatments
+
+This table structure is automatically provisioned through the Terraform schema module for consistent implementation across all experiments.
 
 ### Volumes
 
@@ -96,9 +116,13 @@ As such, volumes allow for efficient storage management independent of the catal
 
 ### Views
 
-Views are created to offer virtual, analysis-ready representations of the data stored in tables.
+Views connect experiment-specific schemas to the central schema, enabling:
 
-Views enable users to query aggregated or filtered data without duplicating data. They provide an abstraction layer that simplifies complex queries and supports customized data presentations tailored to specific analytical needs. This approach reduces redundancy while improving query performance and flexibility.
+1. **Data Filtering:** Experiment schemas contain views that filter the central raw data relevant to their specific experiment ID
+2. **Cross-Experiment Analysis:** Views can join data across experiments for comparative analysis
+3. **Simplified Access:** Users can query views without understanding the underlying storage structure
+
+The platform uses Terraform to define SQL views that maintain these relationships automatically.
 
 ### Data Access & Security
 
@@ -112,5 +136,3 @@ Data access and security is based on the set of governance policies that include
   Detailed logs of all data operations are preserved to ensure accountability and support audits.
 
 RBAC minimizes risk by restricting data access. Data retention policies help balance legal requirements with storage costs, while audit logging enhances transparency and trust by providing a detailed record of data operations.
-
-.
