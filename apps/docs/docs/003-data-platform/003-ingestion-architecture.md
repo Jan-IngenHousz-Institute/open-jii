@@ -37,12 +37,30 @@ The OpenJII data platform uses two types of pipelines that align with our schema
 
 1. **Ingestion Pipeline**: Writes all sensor data into the central `raw_data` table (Bronze layer) in the central schema.
 
-2. **Transformation Pipeline**: 
+2. **Transformation Pipeline**:
    - Processes data from central Bronze → Silver → Gold within the central schema
    - Routes experiment-specific data from central schema to experiment-specific schemas
    - Transforms data within each experiment schema through its own Bronze → Silver → Gold progression
 
 Each experiment schema contains views that filter data from the central raw layer, ensuring consistency while enabling experiment-specific processing.
+
+### Infrastructure Components
+
+The OpenJII platform provisions all required Databricks components through Terraform:
+
+1. **Unity Catalog Metastore:** Secured S3 storage with IAM-based access control
+2. **Schemas and Tables:** Centrally defined with consistent structure across experiments
+3. **Views:** Automatically created SQL views that filter experiment-specific data
+
+The following table columns are standardized across all schemas:
+
+| Layer  | Key Tables/Columns                                                                                  | Purpose                            |
+| ------ | --------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| Bronze | `raw_data`: sensor_id, timestamp, value, experiment_id, raw_payload, source, ingest_timestamp       | Original, immutable data ingestion |
+| Silver | `clean_data`: sensor_id, timestamp, value, experiment_id, quality_check_passed, processed_timestamp | Validated and transformed data     |
+| Gold   | `analytics_data`: sensor_id, date, experiment_id, min_value, max_value, avg_value, reading_count    | Aggregated metrics for analysis    |
+
+Additional metadata tables provide context about experiments, sensors, and plants being studied.
 
 ## Pipeline Implementation
 
@@ -53,6 +71,15 @@ The pipelines are implemented as Apache Spark jobs that:
 3. Identify experiment IDs and route data accordingly
 4. Maintain data lineage information for traceability
 
+### Central Schema vs. Experiment Schemas
+
+The central schema (`centrum`) serves as the single source of truth containing all sensor data. Experiment schemas filter this data to provide isolation and specialized processing while maintaining data lineage back to the original source.
+
+For experiment schemas:
+
+- Views automatically filter by experiment_id
+- Data inheritance ensures experiments always work with the latest central schema data
+- Custom experiment-specific transformations can be applied without affecting the central data
 
 ### Visual Representation
 
