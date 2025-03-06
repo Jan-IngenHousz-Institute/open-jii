@@ -66,6 +66,15 @@ module "databricks_s3" {
   bucket_name = var.databricks_bucket_name
 }
 
+module "metastore_s3" {
+  source      = "../../modules/metastore-s3"
+  bucket_name = var.unity_catalog_bucket_name
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
 module "databricks_workspace" {
   source                = "../../modules/databricks/workspace"
   aws_region            = var.aws_region
@@ -80,37 +89,12 @@ module "databricks_workspace" {
   }
 }
 
-module "databricks_catalog" {
-  source = "../../modules/databricks/catalog"
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-}
-
-module "metastore_s3" {
-  source                  = "../../modules/metastore-s3"
-  bucket_name             = var.unity_catalog_bucket_name
-  storage_credential_name = "unity-catalog-storage-cred"
-  iam_role_name           = "unity-catalog-access-role"
-  force_destroy           = true
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-}
-
 module "databricks_metastore" {
-  source                      = "../../modules/databricks/metastore"
-  metastore_name              = "primary-metastore"
-  region                      = var.aws_region
-  owner                       = var.databricks_metastore_owner
-  workspace_ids               = [module.databricks_workspace.workspace_id]
-  bucket_name                 = module.metastore_s3.bucket_name
-  storage_credential_id       = module.metastore_s3.storage_credential_id
-  storage_credential_role_arn = module.metastore_s3.iam_role_arn
-  create_default_catalog      = true
-  default_catalog_name        = "open_jii"
+  source         = "../../modules/databricks/metastore"
+  metastore_name = "open_jii_metastore_aws_eu_central_1"
+  region         = var.aws_region
+  owner          = "account users"
+  workspace_ids  = [module.databricks_workspace.workspace_id]
 
   providers = {
     databricks.mws = databricks.mws
@@ -122,7 +106,7 @@ module "databricks_metastore" {
 module "databricks_catalog" {
   source             = "../../modules/databricks/catalog"
   catalog_name       = "open_jii_dev"
-  external_bucket_id = module.metastore_s3.bucket_name
+  external_bucket_id = module.metastore_s3.bucket_id
   providers = {
     databricks.workspace = databricks.workspace
   }

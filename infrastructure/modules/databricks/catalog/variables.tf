@@ -9,3 +9,9 @@ variable "catalog_comment" {
   type        = string
   default     = "Catalog for agricultural sensor data, containing schemas for various experiments."
 }
+
+variable "external_bucket_id" {
+  description = "The S3 bucket ID that will be used for external location storage."
+  type        = string
+  default     = null
+}
