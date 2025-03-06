@@ -57,6 +57,12 @@ resource "databricks_sql_table" "clean_data" {
   table_type         = "MANAGED"
   data_source_format = "DELTA"
 
+  properties = {
+    "delta.columnMapping.mode" = "name"
+    "delta.minReaderVersion"   = "2"
+    "delta.minWriterVersion"   = "5"
+  }
+
   depends_on = [databricks_schema.experiment]
 }
 
@@ -105,6 +111,10 @@ resource "databricks_sql_table" "analytics_data" {
   table_type         = "MANAGED"
   data_source_format = "DELTA"
 
+  properties = {
+    "delta.columnMapping.mode" = "name"
+  }
+
   depends_on = [databricks_schema.experiment]
 }
 
@@ -144,6 +154,10 @@ resource "databricks_sql_table" "experiment_metadata" {
 
   table_type         = "MANAGED"
   data_source_format = "DELTA"
+
+  properties = {
+    "delta.columnMapping.mode" = "name"
+  }
 
   depends_on = [databricks_schema.experiment]
 }
@@ -189,48 +203,8 @@ resource "databricks_sql_table" "plant_metadata" {
     name = "growth_stage"
     type = "STRING"
   }
-  column {
-    name = "health_status"
-    type = "STRING"
-  }
-  column {
-    name = "notes"
-    type = "STRING"
-  }
-  
-  # Plant genotype information from MQTT client
-  column {
-    name = "plant_genotype"
-    type = "STRING"
-  }
-  
-  # Additional annotation fields for data analysts
-  column {
-    name = "custom_annotations"
-    type = "MAP<STRING,STRING>"
-    comment = "Flexible key-value pairs for custom annotations"
-  }
-  column {
-    name = "phenotypic_observations"
-    type = "STRUCT<observation_date:DATE, height:DOUBLE, leaf_count:INT, color:STRING, additional_notes:STRING>"
-    comment = "Structured phenotypic observations over time"
-  }
-  column {
-    name = "environmental_conditions"
-    type = "MAP<STRING,DOUBLE>"
-    comment = "Environmental conditions specific to this plant's location"
-  }
-  column {
-    name = "image_references"
-    type = "ARRAY<STRUCT<image_date:DATE, image_url:STRING, image_type:STRING, notes:STRING>>"
-    comment = "References to plant images for visual tracking"
-  }
-  column {
-    name = "experimental_results"
-    type = "STRING"
-    comment = "Summary of experiment-specific results for this plant"
-  }
-  
+
+
   # Tracking columns
   column {
     name = "last_updated"
@@ -240,14 +214,14 @@ resource "databricks_sql_table" "plant_metadata" {
     name = "updated_by"
     type = "STRING"
   }
-  column {
-    name = "annotation_history"
-    type = "ARRAY<STRUCT<timestamp:TIMESTAMP, field:STRING, old_value:STRING, new_value:STRING, updated_by:STRING>>"
-    comment = "History of annotations and changes"
-  }
 
   table_type         = "MANAGED"
   data_source_format = "DELTA"
+
+  # Adding column mapping properties required for schema evolution
+  properties = {
+    "delta.columnMapping.mode" = "name"
+  }
 
   depends_on = [databricks_schema.experiment]
 }
