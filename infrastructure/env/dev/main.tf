@@ -79,3 +79,29 @@ module "databricks_workspace" {
     databricks.mws = databricks.mws
   }
 }
+
+module "databricks_ingest_job" {
+  source = "../../modules/databricks/job"
+
+  job_name = "ingest_job"
+
+  stream_config = {
+    kinesis_stream_name = module.kinesis.kinesis_stream_name
+    aws_region          = var.aws_region
+  }
+
+  catalog_config = {
+    catalog_name   = module.databricks_catalog.catalog_name
+    central_schema = module.central_schema.schema_name
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [
+    module.central_schema,
+    module.kinesis,
+    module.databricks_catalog
+  ]
+}
