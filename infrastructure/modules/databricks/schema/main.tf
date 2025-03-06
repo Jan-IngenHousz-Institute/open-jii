@@ -75,7 +75,27 @@ resource "databricks_sql_table" "raw_data" {
   comment      = "Bronze layer: Raw sensor data ingested from sources."
 
   column {
+    name = "topic"
+    type = "STRING"
+  }
+  column {
+    name = "experiment_id"
+    type = "STRING"
+  }
+  column {
+    name = "device_type"
+    type = "STRING"
+  }
+  column {
+    name = "device_version"
+    type = "STRING"
+  }
+  column {
     name = "sensor_id"
+    type = "STRING"
+  }
+  column {
+    name = "measurement_type"
     type = "STRING"
   }
   column {
@@ -83,19 +103,51 @@ resource "databricks_sql_table" "raw_data" {
     type = "TIMESTAMP"
   }
   column {
-    name = "value"
+    name = "measurement_value"
     type = "DOUBLE"
   }
   column {
-    name = "experiment_id"
+    name = "notes"
     type = "STRING"
+  }
+  column {
+    name = "protocol"
+    type = "STRING"
+  }
+  column {
+    name = "device_name"
+    type = "STRING"
+  }
+  column {
+    name = "device_id"
+    type = "STRING"
+  }
+  column {
+    name = "device_battery"
+    type = "DOUBLE"
+  }
+  column {
+    name = "device_firmware"
+    type = "DOUBLE"
+  }
+  column {
+    name = "plant_name"
+    type = "STRING"
+  }
+  column {
+    name = "plant_genotype"
+    type = "STRING"
+  }
+  column {
+    name = "plant_id"
+    type = "STRING"
+  }
+  column {
+    name = "plant_location"
+    type = "INT"
   }
   column {
     name = "raw_payload"
-    type = "STRING"
-  }
-  column {
-    name = "source"
     type = "STRING"
   }
   column {
@@ -269,22 +321,3 @@ resource "databricks_sql_table" "plant_metadata" {
   table_type         = "MANAGED"
   data_source_format = "DELTA"
 }
-
-# Create transformation views for experiment schemas
-resource "databricks_sql_view" "experiment_raw_view" {
-  provider     = databricks.workspace
-  count        = var.schema_type == "experiment" ? 1 : 0
-  catalog_name = var.catalog_name
-  schema_name  = var.schema_name
-  name         = "raw_data_view"
-  comment      = "View of central raw data filtered for this experiment"
-
-  sql = <<-EOF
-    SELECT * FROM ${var.catalog_name}.${var.experiment_source_schema}.raw_data 
-    WHERE experiment_id = '${var.schema_name}'
-  EOF
-
-  depends_on = [databricks_schema.this]
-}
-
-# Add similar views for other layers as needed
