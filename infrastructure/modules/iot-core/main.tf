@@ -156,7 +156,7 @@ resource "aws_iot_topic_rule" "iot_rules" {
 
   name        = local.iot_rule_names[each.key]
   enabled     = true
-  sql         = "SELECT * FROM '${local.iot_topic_filters[each.key]}'"
+  sql         = "SELECT topic() as topic, * FROM '${local.iot_topic_filters[each.key]}'"
   sql_version = "2016-03-23"
 
   timestream {

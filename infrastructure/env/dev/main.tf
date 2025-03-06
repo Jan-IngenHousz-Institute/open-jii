@@ -66,6 +66,15 @@ module "databricks_s3" {
   bucket_name = var.databricks_bucket_name
 }
 
+module "metastore_s3" {
+  source      = "../../modules/metastore-s3"
+  bucket_name = var.unity_catalog_bucket_name
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
 module "databricks_workspace" {
   source                = "../../modules/databricks/workspace"
   aws_region            = var.aws_region
