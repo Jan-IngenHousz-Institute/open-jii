@@ -27,19 +27,3 @@ variable "create_metadata_tables" {
   type        = bool
   default     = true
 }
-
-variable "schema_type" {
-  description = "Type of schema: 'central' or 'experiment'"
-  type        = string
-  default     = "central"
-  validation {
-    condition     = contains(["central", "experiment"], var.schema_type)
-    error_message = "Schema type must be either 'central' or 'experiment'."
-  }
-}
-
-variable "experiment_source_schema" {
-  description = "For experiment schemas, the source central schema to use in transformation views"
-  type        = string
-  default     = "central"
-}

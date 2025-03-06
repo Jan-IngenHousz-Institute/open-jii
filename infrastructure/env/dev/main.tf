@@ -106,7 +106,7 @@ module "databricks_metastore" {
 module "databricks_catalog" {
   source             = "../../modules/databricks/catalog"
   catalog_name       = "open_jii_dev"
-  external_bucket_id = module.metastore_s3.bucket_id
+  external_bucket_id = module.metastore_s3.bucket_name
   providers = {
     databricks.workspace = databricks.workspace
   }
@@ -174,7 +174,5 @@ module "databricks_ingest_job" {
   depends_on = [
     module.central_schema,
     module.kinesis,
-    module.databricks_catalog
   ]
-  depends_on = [module.metastore_s3, module.databricks_workspace]
 }

@@ -3,9 +3,14 @@ output "schema_id" {
   value       = databricks_schema.this.id
 }
 
-output "schema_full_name" {
-  description = "The fully qualified name of the schema."
-  value       = databricks_schema.this.full_name
+output "schema_name" {
+  description = "The name of the schema."
+  value       = databricks_schema.this.name
+}
+
+output "catalog_schema" {
+  description = "The fully qualified name of the schema in format catalog_name.schema_name"
+  value       = "${var.catalog_name}.${var.schema_name}"
 }
 
 output "experiments_table_id" {
