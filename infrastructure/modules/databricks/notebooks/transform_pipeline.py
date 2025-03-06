@@ -1,151 +1,212 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Sensor Data Transformation Pipeline (Per Experiment)
+# MAGIC # Sensor Data Transformation Pipeline
 # MAGIC 
-# MAGIC This notebook moves sensor data from the central bronze table into an experiment‐specific schema.
-# MAGIC It is designed to be triggered with an argument (experiment_id) and to process only new data.
+# MAGIC This notebook implements:
+# MAGIC 1. Data transformation from Bronze → Silver → Gold within the central schema
+# MAGIC 2. Experiment-specific data routing from central schema to experiment schemas
 # MAGIC 
-# MAGIC ## High-Level Steps
-# MAGIC 1. Read the "experiment_id" argument (and derive target schema if needed).
-# MAGIC 2. Read central bronze data filtered by experiment_id.
-# MAGIC 3. Exclude records already moved based on a unique key (e.g. kinesis_sequence_number).
-# MAGIC 4. Write new records into the experiment-specific Bronze table.
-# MAGIC 5. Perform Silver and Gold transformations as needed.
-# MAGIC 
-# MAGIC *Note: Adjust key names and transformation logic as required.*
+# MAGIC ## Architecture
+# MAGIC - **Source**: Central Bronze layer (`centrum.raw_data`)
+# MAGIC - **Destinations**: 
+# MAGIC   - Central Silver (`centrum.clean_data`) and Gold (`centrum.analytics_data`) layers
+# MAGIC   - Experiment-specific schemas (e.g., `exp_amsterdam_2023_tulips`)
+# MAGIC - **Processing**: Batch-based DLT pipeline with quality controls
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Configuration and Parameter Initialization
+# MAGIC ## Configuration
 
 # COMMAND ----------
 
+# DBTITLE 1,Pipeline Configuration
 import dlt
-from pyspark.sql import functions as F, SparkSession, Window
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
+from datetime import datetime, timedelta
 
-# In Databricks, "spark" is already available
-# Create a widget to supply the experiment_id; you could also add a widget for target_schema if needed.
+# Define constants
+CATALOG_NAME = "open_jii_dev"
+CENTRAL_SCHEMA = "centrum"
+BRONZE_TABLE = "raw_data"
+SILVER_TABLE = "clean_data"
+GOLD_TABLE = "analytics_data"
+
+# Create widgets for parameterization
 dbutils.widgets.text("experiment_id", "", "Experiment ID")
+dbutils.widgets.text("target_schema", "", "Target Schema")
+dbutils.widgets.text("processing_date", "", "Processing Date (YYYY-MM-DD)")
+
+# Get parameter values
 target_experiment = dbutils.widgets.get("experiment_id")
-if target_experiment == "":
-  raise Exception("A non-empty experiment_id must be provided.")
-
-# For simplicity, we assume target schema is the same as experiment_id.
-target_schema = target_experiment
-
-# Define catalog and central schema/table names (adjust as needed)
-CATALOG_NAME = "agriculture_sensors"
-CENTRAL_SCHEMA = "central"
-CENTRAL_BRONZE_TABLE = "raw_data"  # Our source table from the central intake
-
-# Unique key to identify records (adjust if needed)
-UNIQUE_KEY = "kinesis_sequence_number"
+target_schema = dbutils.widgets.get("target_schema") or target_experiment
+processing_date = dbutils.widgets.get("processing_date") or datetime.now().strftime("%Y-%m-%d")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Experiment-Specific Bronze Table
-# MAGIC 
-# MAGIC This table reads records for the target experiment from the central bronze table,
-# MAGIC but it removes rows that were already moved based on the unique key.
-# MAGIC 
-# MAGIC (If the destination table does not yet exist, all records are new.)
+# MAGIC ## Central Schema Silver Layer Processing
 
 # COMMAND ----------
 
 @dlt.table(
-  name=lambda: f"{target_experiment}_bronze",
-  schema=target_schema,
-  comment=lambda: f"Raw sensor data for experiment {target_experiment} (new records only)"
+  name=SILVER_TABLE,
+  schema=CENTRAL_SCHEMA,
+  comment="Silver layer: Cleaned and validated sensor data in the central schema."
 )
-def experiment_bronze():
+def central_silver():
   """
-  Read sensor data from the central Bronze table filtered by experiment_id.
-  Exclude any records whose unique key already exists in the destination.
+  Transform raw sensor data into cleaned, validated records.
+  Apply quality checks and standardize values.
   """
-  # Read the central bronze table
-  central_df = dlt.read(f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_BRONZE_TABLE}") \
-                 .filter(F.col("experiment_id") == target_experiment)
+  return (
+    # Read from bronze layer
+    dlt.read(f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{BRONZE_TABLE}")
+    # Basic cleaning operations
+    .withColumn("sensor_id", 
+                F.when(F.col("sensor_id").isNotNull(), F.col("sensor_id"))
+                 .otherwise(F.col("device_id")))
+    .withColumn("value", F.col("measurement_value"))
+    # Apply quality checks
+    .withColumn("quality_check_passed", 
+                (F.col("value").isNotNull() & 
+                 (F.col("value") > -1000) & 
+                 (F.col("value") < 1000) &
+                 F.col("sensor_id").isNotNull() &
+                 F.col("timestamp").isNotNull()))
+    # Add processing metadata
+    .withColumn("processed_timestamp", F.current_timestamp())
+    # Select the fields matching our Silver schema
+    .select(
+      "sensor_id",
+      "timestamp",
+      "value", 
+      "experiment_id",
+      "quality_check_passed",
+      "processed_timestamp"
+    )
+  )
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Central Schema Gold Layer Processing
+
+# COMMAND ----------
+
+@dlt.table(
+  name=GOLD_TABLE,
+  schema=CENTRAL_SCHEMA,
+  comment="Gold layer: Analytics-ready aggregated metrics in the central schema."
+)
+def central_gold():
+  """
+  Aggregate cleaned data into analytics-ready metrics.
+  Compute daily statistics by sensor and experiment.
+  """
+  return (
+    # Read from silver layer
+    dlt.read(f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{SILVER_TABLE}")
+    # Filter for quality data
+    .filter(F.col("quality_check_passed") == True)
+    # Group by date, sensor, and experiment
+    .withColumn("date", F.to_date("timestamp"))
+    .groupBy("date", "sensor_id", "experiment_id")
+    .agg(
+      F.min("value").alias("min_value"),
+      F.max("value").alias("max_value"),
+      F.avg("value").alias("avg_value"),
+      F.count("*").alias("reading_count")
+    )
+  )
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Experiment-Specific Data Routing
+# MAGIC 
+# MAGIC The following section handles routing data to experiment-specific schemas.
+# MAGIC This will only execute when an experiment_id is provided.
+
+# COMMAND ----------
+
+# Only execute experiment-specific processing when target_experiment is provided
+if target_experiment and target_schema:
   
-  # Try to read already moved records from the destination table.
-  try:
-      existing_df = spark.table(f"{CATALOG_NAME}.{target_schema}.{target_experiment}_bronze")
-  except Exception:
-      existing_df = None
-
-  if existing_df is not None:
-      # Exclude records that have been processed by left anti join using UNIQUE_KEY
-      new_records = central_df.join(
-          existing_df.select(UNIQUE_KEY),
-          on=UNIQUE_KEY,
-          how="left_anti"
+  # COMMAND ----------
+  
+  @dlt.table(
+    name=f"{target_experiment}_bronze",
+    schema=target_schema,
+    comment=f"Bronze layer: Raw sensor data for experiment {target_experiment}"
+  )
+  def experiment_bronze():
+    """
+    Extract experiment-specific data from the central bronze layer.
+    """
+    # Get the central bronze data for this experiment
+    return (
+      dlt.read(f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{BRONZE_TABLE}")
+      .filter(F.col("experiment_id") == target_experiment)
+    )
+  
+  # COMMAND ----------
+  
+  @dlt.table(
+    name="clean_data_exp",
+    schema=target_schema,
+    comment=f"Silver layer: Cleaned sensor data for experiment {target_experiment}"
+  )
+  def experiment_silver():
+    """
+    Create experiment-specific silver layer with additional experiment-specific processing.
+    """
+    # Start with central silver data for this experiment
+    return (
+      dlt.read(f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{SILVER_TABLE}")
+      .filter(F.col("experiment_id") == target_experiment)
+      # Add experiment-specific flags or transformations
+      .withColumn("experiment_specific_flag", 
+                 F.lit(f"Processed for {target_experiment}"))
+      # Select columns matching the experiment-specific silver schema
+      .select(
+        "sensor_id",
+        "timestamp",
+        "value",
+        "experiment_id",
+        "quality_check_passed",
+        "experiment_specific_flag",
+        "processed_timestamp"
       )
-  else:
-      new_records = central_df
-
-  return new_records
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Experiment-Specific Silver Table
-# MAGIC 
-# MAGIC This layer performs standard cleaning and enrichment.
-# MAGIC (Customize the logic as needed.)
-
-# COMMAND ----------
-
-@dlt.table(
-  name=lambda: f"{target_experiment}_silver",
-  schema=target_schema,
-  comment=lambda: f"Cleaned sensor data for experiment {target_experiment}"
-)
-def experiment_silver():
-  """
-  Transform experiment bronze data by cleaning and enriching sensor readings.
-  """
-  bronze_df = dlt.read(f"{target_experiment}_bronze")
-  return ( bronze_df
-           .withColumn("clean_reading", F.when(F.col("reading_value") > 0, F.col("reading_value")).otherwise(None))
-           .withColumn("event_date", F.to_date("kinesis_timestamp"))
-           # ... additional transformations ...
-         )
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Experiment-Specific Gold Table
-# MAGIC 
-# MAGIC This layer aggregates the clean data for analytics.
-# MAGIC (Customize aggregations as needed.)
-
-# COMMAND ----------
-
-@dlt.table(
-  name=lambda: f"{target_experiment}_gold",
-  schema=target_schema,
-  comment=lambda: f"Aggregated analytics-ready data for experiment {target_experiment}"
-)
-def experiment_gold():
-  """
-  Aggregate experiment silver data to compute analytics metrics.
-  """
-  silver_df = dlt.read(f"{target_experiment}_silver")
-  return ( silver_df
-           .groupBy("event_date", "device_id")
-           .agg(
-             F.count("*").alias("record_count"),
-             F.avg("clean_reading").alias("avg_reading"),
-             F.min("clean_reading").alias("min_reading"),
-             F.max("clean_reading").alias("max_reading")
-           )
-         )
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Summary
-# MAGIC 
-# MAGIC This pipeline uses a widget-supplied experiment_id to move only new sensor records from the central bronze table into the designated experiment schema.
-# MAGIC The process is idempotent since it excludes records already present in the destination.
+    )
+  
+  # COMMAND ----------
+  
+  @dlt.table(
+    name="analytics_data_exp",
+    schema=target_schema,
+    comment=f"Gold layer: Analytics-ready data for experiment {target_experiment}"
+  )
+  def experiment_gold():
+    """
+    Create experiment-specific gold layer with experiment-specific metrics.
+    """
+    # Start with experiment-specific silver data
+    silver_data = dlt.read(f"clean_data_exp")
+    
+    # Calculate experiment-specific metrics
+    return (
+      silver_data
+      .filter(F.col("quality_check_passed") == True)
+      .withColumn("date", F.to_date("timestamp"))
+      .groupBy("date", "sensor_id", "experiment_id")
+      .agg(
+        F.min("value").alias("min_value"),
+        F.max("value").alias("max_value"),
+        F.avg("value").alias("avg_value"),
+        F.count("*").alias("reading_count"),
+        # Experiment-specific metric (example: daily standard deviation)
+        F.stddev("value").alias("experiment_specific_metric")
+      )
+    )

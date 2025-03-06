@@ -79,3 +79,92 @@ module "databricks_workspace" {
     databricks.mws = databricks.mws
   }
 }
+
+module "databricks_metastore" {
+  source         = "../../modules/databricks/metastore"
+  metastore_name = "open_jii_metastore_aws_eu_central_1"
+  region         = var.aws_region
+  owner          = "account users"
+  workspace_ids  = [module.databricks_workspace.workspace_id]
+
+  providers = {
+    databricks.mws = databricks.mws
+  }
+
+  depends_on = [module.databricks_workspace]
+}
+
+module "databricks_catalog" {
+  source             = "../../modules/databricks/catalog"
+  catalog_name       = "open_jii_dev"
+  external_bucket_id = module.metastore_s3.bucket_name
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_metastore]
+}
+
+module "central_schema" {
+  source         = "../../modules/databricks/schema"
+  catalog_name   = "open_jii_dev"
+  schema_name    = "centrum"
+  schema_comment = "Central schema for OpenJII sensor data following the medallion architecture"
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
+module "test_experiment_schema_amsterdam" {
+  source         = "../../modules/databricks/experiment-schema"
+  catalog_name   = "open_jii_dev"
+  schema_name    = "exp_amsterdam_2023_tulips"
+  schema_comment = "Amsterdam 2023 Tulip Experiment Schema"
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.central_schema]
+}
+
+module "test_experiment_schema_wagenigen" {
+  source         = "../../modules/databricks/experiment-schema"
+  catalog_name   = "open_jii_dev"
+  schema_name    = "exp_wageningen_2025_orchids"
+  schema_comment = "Amsterdam 2023 Orchid Experiment Schema"
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.central_schema]
+}
+
+module "databricks_ingest_job" {
+  source = "../../modules/databricks/jobs"
+
+  job_name = "ingest_job"
+
+  stream_config = {
+    kinesis_stream_name = module.kinesis.kinesis_stream_name
+    aws_region          = var.aws_region
+  }
+
+  catalog_config = {
+    catalog_name   = module.databricks_catalog.catalog_name
+    central_schema = module.central_schema.schema_name
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [
+    module.central_schema,
+    module.kinesis,
+    module.databricks_catalog
+  ]
+}
