@@ -144,7 +144,7 @@ module "test_experiment_schema_wagenigen" {
 }
 
 module "databricks_ingest_job" {
-  source = "../../modules/databricks/jobs"
+  source = "../../modules/databricks/job"
 
   job_name = "ingest_job"
 
