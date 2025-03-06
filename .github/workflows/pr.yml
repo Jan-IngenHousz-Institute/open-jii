@@ -29,7 +29,7 @@ jobs:
 
       - name: Build, Lint & Test
         id: build
-        uses: ./github/actions/build-lint-test
+        uses: ./.github/actions/build-lint-test
         with:
           node-version: "22"
 
@@ -62,7 +62,7 @@ jobs:
       TF_VAR_databricks_client_secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
     steps:
       - name: Run OpenTofu Operations
-        uses: ./github/actions/tofu
+        uses: ./.github/actions/tofu
         with:
           tofu-version: "1.9.0"
           environment: "dev"
