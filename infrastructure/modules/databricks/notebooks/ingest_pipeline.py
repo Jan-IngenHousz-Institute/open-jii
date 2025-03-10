@@ -188,4 +188,12 @@ def bronze_monitoring():
             F.avg("device_battery").alias("avg_battery"),
             F.count(F.when(F.col("measurement_value").isNull(), 1)).alias("null_value_count")
         )
+        .agg(
+            F.count("*").alias("record_count"),
+            F.min("timestamp").alias("min_timestamp"),
+            F.max("timestamp").alias("max_timestamp"),
+            F.avg("measurement_value").alias("avg_value"),
+            F.avg("device_battery").alias("avg_battery"),
+            F.count(F.when(F.col("measurement_value").isNull(), 1)).alias("null_value_count")
+        )
     )
