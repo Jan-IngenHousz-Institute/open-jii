@@ -115,7 +115,7 @@ const sidebars: SidebarsConfig = {
         {
           type: "doc",
           id: "data-platform/usage/annotating-plant-data",
-          label: "Ingestion Architecture",
+          label: "Annotating Plant Data",
         },
         {
           type: "category",

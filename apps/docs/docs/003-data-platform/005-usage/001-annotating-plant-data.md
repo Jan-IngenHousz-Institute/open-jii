@@ -1,4 +1,4 @@
-# Adding Annotations in Databricks
+<!-- # Adding Annotations in Databricks
 
 This guide explains how to add and update annotations to experiment data through the Databricks UI, focusing on complex data types like maps, arrays, and structs that are used in experimental metadata tables.
 
@@ -272,4 +272,4 @@ The following workflow demonstrates a complete plant annotation process:
    WHERE plant_id = 'PLANT-001' AND experiment_id = 'EXP-2023-001';
    ```
 
-By following these guidelines, you can effectively manage complex annotations for your plant experiments in the OpenJII platform.
+By following these guidelines, you can effectively manage complex annotations for your plant experiments in the OpenJII platform. -->
