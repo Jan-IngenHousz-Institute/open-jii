@@ -99,7 +99,6 @@ module "ingest_pipeline" {
   }
 }
 
-# Example usage for transform pipeline
 module "transform_pipeline" {
   source = "../../modules/databricks/pipeline"
 
@@ -135,17 +134,6 @@ module "data_processing_job" {
     }
   ]
 
-  # Optional additional notebook task
-  notebook_tasks = [
-    {
-      name          = "send_notification"
-      notebook_path = "/Shared/notebooks/notify"
-      parameters = {
-        "status" : "complete"
-      }
-      depends_on = "transform_pipeline"
-    }
-  ]
 
   # Run daily at 2am
   schedule = "0 0 2 * * ?"
