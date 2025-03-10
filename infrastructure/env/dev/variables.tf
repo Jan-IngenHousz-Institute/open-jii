@@ -70,3 +70,13 @@ variable "databricks_bucket_name" {
   description = "Root Databricks configuration S3 Bucket name"
   type        = string
 }
+
+variable "databricks_workspace_url" {
+  description = "Databricks workspace name"
+  type        = string
+}
+
+variable "unity_catalog_bucket_name" {
+  description = "S3 bucket name for Unity Catalog metastore storage"
+  type        = string
+}
