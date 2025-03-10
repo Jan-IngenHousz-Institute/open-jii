@@ -9,7 +9,7 @@ Managing sensor data via the OpenJII platform calls for a structured approach th
 The data governance model is designed to:
 
 - **Ensure Reproducibility & Auditability:**  
-  Guarantee that each experiment’s data processing can be exactly repeated. Immutable copies of raw data and detailed logs provide complete traceability.
+  Guarantee that each experiment's data processing can be exactly repeated. Immutable copies of raw data and detailed logs provide complete traceability.
 
 - **Maintain Data Isolation & Access Control:**  
   Isolate data for individual experiments to prevent accidental interference and enforce role-based permissions, ensuring that users only see the data relevant to them.
@@ -50,27 +50,36 @@ The diagram below (adapted from Unity Catalog documentation) illustrates the hie
 graph TD
 A[Metastore]
 B[Catalog: openjii_dev]
-C[Schema: wageningen_2025_orchids]
-D[Schema: amsterdam_2021_tulips]
-E[Table: raw_data]
-F[Table: clean_data]
-G[Table: experiment_metadata]
-H[Table: sensor_metadata]
-I[Table: plant_metadata]
+C[Schema: centrum]
+D[Schema: experiment_a]
+E[Schema: experiment_b]
+F[Table: raw_data Bronze]
+G[Table: clean_data Silver]
+H[Table: analytics_data Gold]
+I[Table: experiments]
+J[Table: sensor_metadata]
+K[Table: plant_metadata]
 
 A --> B
 B --> C
 B --> D
-C --> E
+B --> E
 C --> F
 C --> G
 C --> H
 C --> I
-D --> E2[Table: raw_data]
-D --> F2[Table: clean_data]
-D --> G2[Table: experiment_metadata]
-D --> H2[Table: sensor_metadata]
-D --> I2[Table: plant_metadata]
+C --> J
+C --> K
+
+D --> D1[Table: bronze_data]
+D --> D2[Table: silver_data]
+D --> D3[Table: gold_data]
+D --> D4[Table: experiment_metadata]
+
+E --> E1[Table: bronze_data]
+E --> E2[Table: silver_data]
+E --> E3[Table: gold_data]
+E --> E4[Table: experiment_metadata]
 ```
 
 ### Catalogs (Top-Level Organizational Unit)
@@ -88,6 +97,25 @@ Within the `openjii_dev` catalog, we maintain:
 
 This two-tier schema approach ensures centralized governance while enabling experiment isolation.
 
+### Data Flow Between Schemas
+
+The central schema (`centrum`) not only serves as the single ingest point but provides standardized, cleansed data that serves as the foundation for all experiment schemas:
+
+1. **Data Inheritance Flow**:
+
+   - Raw data enters through central schema Bronze layer
+   - Central Silver layer applies standardized cleansing and conforming
+   - Experiment schemas receive relevant data from central Silver layer
+   - Experiment-specific transformations then build toward Gold tier analytics
+
+2. **Benefits of This Approach**:
+   - Consistent data quality foundation across all experiments
+   - Efficient resource utilization by centralizing common transformations
+   - Clear data lineage from raw data to experiment-specific analysis
+   - Accelerated research workflows starting from pre-cleaned data
+
+This approach establishes the central Silver tier as the handoff point between central platform processing and experiment-specific scientific analysis.
+
 ### Tables (Data Storage & Management)
 
 Each schema contains a standardized set of tables adhering to the medallion architecture:
@@ -101,12 +129,31 @@ Each schema contains a standardized set of tables adhering to the medallion arch
 3. **Gold Layer (`analytics_data`):**  
    Provides aggregated metrics like min/max/avg values optimized for reporting and visualization.
 
-4. **Metadata Tables:**  
+4. **Metadata Tables:**
    - `experiments` - Central registry of all experiment configurations
    - `sensor_metadata` - Technical details about deployed sensors
    - `plant_metadata` - Information about plant subjects, species, and treatments
 
 This table structure is automatically provisioned through the Terraform schema module for consistent implementation across all experiments.
+
+### Dual Gold Tier Approach
+
+Our architecture deliberately creates two specialized gold tiers:
+
+1. **Central Gold Tier**
+
+   - **Purpose**: Platform-wide, experiment-agnostic analytics
+   - **Users**: Platform administrators, cross-experiment analysts
+   - **Content**: Aggregated metrics, sensor performance data, system-wide patterns
+   - **Focus**: Operational insights and platform management
+
+2. **Experiment Gold Tier**
+   - **Purpose**: Scientific analysis specific to each experiment
+   - **Users**: Scientists, researchers focused on specific experiments
+   - **Content**: Experiment-specific calculations, specialized metrics
+   - **Focus**: Research outcomes and hypothesis testing
+
+This dual gold tier approach enables both operational excellence and scientific rigor within the same architecture.
 
 ### Volumes
 
