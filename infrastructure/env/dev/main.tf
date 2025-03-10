@@ -92,6 +92,31 @@ module "databricks_workspace" {
   }
 }
 
+module "databricks_metastore" {
+  source         = "../../modules/databricks/metastore"
+  metastore_name = "open_jii_metastore_aws_eu_central_1"
+  region         = var.aws_region
+  owner          = "account users"
+  workspace_ids  = [module.databricks_workspace.workspace_id]
+
+  providers = {
+    databricks.mws = databricks.mws
+  }
+
+  depends_on = [module.databricks_workspace]
+}
+
+module "databricks_catalog" {
+  source             = "../../modules/databricks/catalog"
+  catalog_name       = "open_jii_dev"
+  external_bucket_id = module.metastore_s3.bucket_name
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_metastore]
+}
+
 module "ingest_pipeline" {
   source = "../../modules/databricks/pipeline"
 
