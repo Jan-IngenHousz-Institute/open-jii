@@ -1,165 +1,126 @@
-# Databricks notebook source
-# MAGIC %md
-# MAGIC # Agricultural Sensor Data Ingestion Pipeline
-# MAGIC 
-# MAGIC This notebook implements the data ingestion process from AWS Kinesis streams to the central Bronze layer, following the medallion architecture. The pipeline:
-# MAGIC 
-# MAGIC 1. Reads streaming data from a Kinesis stream in real-time
-# MAGIC 2. Performs initial parsing and validation of the raw data
-# MAGIC 3. Preserves raw data in the Bronze layer with minimal transformations
-# MAGIC 4. Extracts experiment ID information for later routing
-# MAGIC 5. Creates monitoring views for data quality tracking
-# MAGIC 
-# MAGIC ## Architecture
-# MAGIC - **Source**: AWS Kinesis Stream containing raw sensor readings
-# MAGIC - **Destination**: Bronze layer tables in the central schema
-# MAGIC - **Processing**: Streaming ingest with minimal transformations to preserve raw data fidelity
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Configuration
-
-# COMMAND ----------
-
-# DBTITLE 1,Pipeline Configuration
-# Import required libraries
 import dlt
 from pyspark.sql import functions as F
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType, IntegerType
 
-# Define constants
-KINESIS_STREAM_NAME = "agricultural_sensors_stream"
-KINESIS_ENDPOINT = "https://kinesis.us-west-2.amazonaws.com"
-AWS_REGION = "us-west-2"
-CATALOG_NAME = "open_jii_dev"
-CENTRAL_SCHEMA = "centrum"
+# Configuration constants
+KINESIS_STREAM_NAME = "open-jii-dev-data-ingest-stream"  # Update with your actual stream name
+KINESIS_ENDPOINT = "https://kinesis.us-west-1.amazonaws.com"  # Update with your region
+CENTRAL_SCHEMA = "centrum"  # Your central schema name
 BRONZE_TABLE = "raw_data"
-BRONZE_PROCESSED_TABLE = "bronze_parsed"
-CHECKPOINT_PATH = "/tmp/checkpoints/kinesis_ingest"
 
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Schema Definitions
-
-# COMMAND ----------
-
-# Define the expected schema for sensor data
+# Define the expected schema for sensor data - will use this to parse JSON payloads
 sensor_schema = StructType([
     StructField("device_id", StringType(), False),
     StructField("timestamp", TimestampType(), False),
     StructField("experiment_id", StringType(), True),
-    StructField("sensor_type", StringType(), False),
-    StructField("reading_value", DoubleType(), False),
+    StructField("sensor_type", StringType(), True),
+    StructField("reading_value", DoubleType(), True),
     StructField("reading_unit", StringType(), True),
-    StructField("latitude", DoubleType(), True),
-    StructField("longitude", DoubleType(), True),
-    StructField("battery_level", IntegerType(), True),
-    StructField("signal_strength", IntegerType(), True),
-    StructField("firmware_version", StringType(), True),
-    StructField("plant_id", StringType(), True),
+    StructField("device_type", StringType(), True),
+    StructField("device_version", StringType(), True), 
+    StructField("device_name", StringType(), True),
+    StructField("device_battery", DoubleType(), True),
+    StructField("device_firmware", StringType(), True),
+    StructField("measurement_type", StringType(), True),
+    StructField("protocol", StringType(), True),
+    StructField("plant_name", StringType(), True),
     StructField("plant_genotype", StringType(), True),
-    StructField("error_code", StringType(), True)
+    StructField("plant_id", StringType(), True),
+    StructField("plant_location", IntegerType(), True),
+    StructField("notes", StringType(), True),
+    StructField("latitude", DoubleType(), True),
+    StructField("longitude", DoubleType(), True)
 ])
 
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Bronze Layer Ingestion
-
-# COMMAND ----------
-
-# DBTITLE 1,Initial Raw Data Ingestion
 @dlt.table(
     name="raw_kinesis_data",
-    comment="Raw unstructured data directly from Kinesis stream with no transformations",
+    comment="Raw binary data directly from Kinesis stream with no transformations",
+    table_properties={
+        "quality": "bronze",
+        "delta.autoOptimize.optimizeWrite": "true",
+        "delta.autoOptimize.autoCompact": "true"
+    },
+    temporary=True
+)
+def ingest_raw_kinesis():
+    """
+    Ingests raw binary data from the Kinesis stream.
+    This is a temporary table that captures the raw stream without modifications.
+    Uses Databricks service credential for secure AWS authentication.
+    """
+    return (
+        spark.readStream
+        .format("kinesis")
+        .option("streamName", KINESIS_STREAM_NAME)
+        .option("initialPosition", "TRIM_HORIZON")  # Start with earliest available data
+        # Use service credential instead of instance profile
+        .option("serviceCredential", "agricultural-iot-kinesis-credential")
+        # .option("awsUseInstanceProfile", "true")  # Removed in favor of service credential
+        .load()
+        .withColumn("ingestion_timestamp", F.current_timestamp())
+    )
+
+@dlt.table(
+    name=BRONZE_TABLE,
+    schema=CENTRAL_SCHEMA,
+    comment="Bronze layer: Raw sensor data ingested from Kinesis",
     table_properties={
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
         "delta.enableChangeDataFeed": "true"
-    }
+    },
+    partition_cols=["ingest_date"]
 )
-def ingest_raw_kinesis_data():
+@dlt.expect_or_drop("valid_data", "data IS NOT NULL")
+def raw_data():
     """
-    Ingest raw data directly from Kinesis with minimal processing.
-    This function captures the data exactly as received from Kinesis.
+    Transforms raw Kinesis data into the Bronze layer format.
+    Performs minimal transformations - mainly converting binary data to structured format.
     """
+    # Read from the temporary raw data table
     return (
-        spark.readStream
-            .format("kinesis")
-            .option("streamName", KINESIS_STREAM_NAME)
-            .option("endpointUrl", KINESIS_ENDPOINT)
-            .option("region", AWS_REGION)
-            # Start with the earliest available data
-            .option("startingPosition", "TRIM_HORIZON")
-            # Use IAM role attached to the cluster
-            .option("awsUseInstanceProfile", "true")
-            .load()
-            # Add ingestion metadata
-            .withColumn("kinesis_ingestion_time", F.current_timestamp())
-            .withColumn("kinesis_shard_id", F.col("shardId"))
-            .withColumn("kinesis_sequence_number", F.col("sequenceNumber"))
-    )
-
-# COMMAND ----------
-
-# DBTITLE 1,Process Raw Data to Bronze
-@dlt.table(
-    name=BRONZE_TABLE,
-    comment="Raw sensor data processed from Kinesis stream with initial parsing",
-    table_properties={
-        "quality": "bronze",
-        "pipelines.autoOptimize.managed": "true",
-        "delta.enableChangeDataFeed": "true",
-        "delta.partitionBy": "ingest_date,experiment_id"
-    }
-)
-def process_raw_sensor_data():
-    """
-    Process raw Kinesis data into the Bronze layer format.
-    Performs initial JSON parsing and extracts experiment_id for partitioning.
-    """
-    # Read from raw Kinesis data
-    return (
-        dlt.read("raw_kinesis_data")
-        # Convert binary data to string for JSON parsing
+        dlt.read_stream("raw_kinesis_data")
+        # Convert binary data to string and parse JSON
         .withColumn("raw_payload", F.col("data").cast("string"))
-        # Parse the JSON payload using our defined schema
         .withColumn("parsed_data", F.from_json(F.col("raw_payload"), sensor_schema))
-        # Extract experiment_id for two possible sources:
-        # 1. From the JSON payload
-        # 2. From a potential MQTT topic pattern using regex
+        
+        # Handle topic information (may come from Kinesis records)
+        .withColumn("topic", 
+                   F.coalesce(
+                       F.col("partitionKey"),  # Use partitionKey if available
+                       F.lit("default/topic")  # Default topic if not available
+                   ))
+        
+        # Extract experiment_id (could be from parsed data or from topic pattern)
         .withColumn("experiment_id", 
-            F.coalesce(
-                # Try to get from parsed JSON first
-                F.col("parsed_data.experiment_id"),
-                # If not found, try to extract from topic if present (MQTT pattern)
-                F.regexp_extract(F.col("topic"), r"/experiment/([^/]+)/", 1)
-            )
-        )
-        # Add date for partitioning
-        .withColumn("ingest_date", F.to_date(F.col("approximateArrivalTimestamp")))
-        # Extract fields from parsed data
+                   F.coalesce(
+                       F.col("parsed_data.experiment_id"),
+                       # Try to extract from topic if following MQTT pattern
+                       F.regexp_extract(F.col("topic"), r"/experiment/([^/]+)/", 1),
+                       F.lit(None).cast(StringType())
+                   ))
+        
+        # Extract all required fields from parsed data
         .withColumn("device_id", F.col("parsed_data.device_id"))
-        .withColumn("device_type", F.lit(null).cast(StringType()))
-        .withColumn("device_version", F.lit(null).cast(StringType()))
-        .withColumn("device_name", F.lit(null).cast(StringType()))
-        .withColumn("device_battery", F.col("parsed_data.battery_level"))
-        .withColumn("device_firmware", F.col("parsed_data.firmware_version"))
-        .withColumn("sensor_id", F.col("device_id"))
+        .withColumn("device_type", F.col("parsed_data.device_type"))
+        .withColumn("device_version", F.col("parsed_data.device_version"))
+        .withColumn("device_name", F.col("parsed_data.device_name"))
+        .withColumn("device_battery", F.col("parsed_data.device_battery"))
+        .withColumn("device_firmware", F.col("parsed_data.device_firmware"))
+        .withColumn("sensor_id", F.coalesce(F.col("parsed_data.device_id"), F.lit(None).cast(StringType())))
         .withColumn("measurement_type", F.col("parsed_data.sensor_type"))
         .withColumn("timestamp", F.col("parsed_data.timestamp"))
         .withColumn("measurement_value", F.col("parsed_data.reading_value"))
-        .withColumn("protocol", F.lit("MQTT").cast(StringType()))
-        .withColumn("plant_id", F.col("parsed_data.plant_id"))
-        .withColumn("plant_name", F.lit(null).cast(StringType()))
+        .withColumn("protocol", F.coalesce(F.col("parsed_data.protocol"), F.lit("MQTT")))
+        .withColumn("plant_name", F.col("parsed_data.plant_name"))
         .withColumn("plant_genotype", F.col("parsed_data.plant_genotype"))
-        .withColumn("plant_location", F.lit(null).cast(IntegerType()))
-        .withColumn("notes", F.lit(null).cast(StringType()))
-        .withColumn("topic", F.col("topic"))
-        .withColumn("ingest_timestamp", F.current_timestamp())
-        # Select final columns matching the raw_data schema
+        .withColumn("plant_id", F.col("parsed_data.plant_id"))
+        .withColumn("plant_location", F.col("parsed_data.plant_location"))
+        .withColumn("notes", F.col("parsed_data.notes"))
+        .withColumn("ingest_date", F.to_date(F.col("ingestion_timestamp")))
+        .withColumn("ingest_timestamp", F.col("ingestion_timestamp"))
+        
+        # Select final columns matching the raw_data table schema
         .select(
             "topic",
             "experiment_id",
@@ -173,7 +134,7 @@ def process_raw_sensor_data():
             "protocol",
             "device_name",
             "device_id",
-            "device_battery",
+            "device_battery", 
             "device_firmware",
             "plant_name",
             "plant_genotype",
@@ -185,94 +146,46 @@ def process_raw_sensor_data():
         )
     )
 
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Views for Data Exploration and Monitoring
-
-# COMMAND ----------
-
-# DBTITLE 1,Raw Data View
-@dlt.view(
-    name="raw_bronze_view",
-    comment="View of the raw bronze data for ad-hoc exploration"
+# Data quality expectations
+@dlt.table(
+    name="bronze_data_quality",
+    schema=CENTRAL_SCHEMA,
+    comment="Data quality metrics for Bronze layer ingestion"
 )
-def view_raw_bronze():
+@dlt.expect("has_device_id", "device_id IS NOT NULL")
+@dlt.expect("has_timestamp", "timestamp IS NOT NULL")
+@dlt.expect("has_measurement", "measurement_value IS NOT NULL")
+@dlt.expect_or_drop("valid_timestamp", "timestamp > '2020-01-01'")
+def bronze_quality():
     """
-    Create a view of raw bronze data for exploration and troubleshooting.
+    Apply data quality checks to the raw data.
+    Records all data, but flags records that don't meet quality expectations.
     """
-    return dlt.read(BRONZE_TABLE)
+    return dlt.read("raw_data")
 
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Data Quality Expectations
-
-# COMMAND ----------
-
-# Add data quality expectations for the bronze data
-@dlt.expect_or_drop("valid_device_id", "device_id IS NOT NULL")
-@dlt.expect_or_drop("valid_timestamp", "timestamp IS NOT NULL")
-@dlt.expect_or_drop("valid_measurement", "measurement_value IS NOT NULL")
-@dlt.expect("valid_experiment_id", "experiment_id IS NULL OR length(experiment_id) > 0")
-def bronze_with_expectations():
-    """
-    Apply basic data quality checks to the Bronze layer data.
-    Records that don't meet expectations will be dropped.
-    """
-    return dlt.read(BRONZE_TABLE)
-
-# COMMAND ----------
-
-# DBTITLE 1,Monitoring View
-@dlt.view(
+@dlt.table(
     name="bronze_monitoring",
-    comment="Monitoring view for bronze layer ingestion"
+    schema=CENTRAL_SCHEMA,
+    comment="Monitoring metrics for bronze layer data by device and experiment"
 )
-def monitor_bronze_ingest():
+def bronze_monitoring():
     """
-    Create a monitoring view to track data flow and quality metrics.
+    Create aggregated metrics to monitor data ingest by device and experiment.
+    Useful for tracking data volumes and basic statistics.
     """
     return (
-        dlt.read(BRONZE_TABLE)
-            .filter("device_id IS NOT NULL")  # Only include valid records
-            .groupBy(
-                F.window(F.col("timestamp"), "1 hour"),
-                "device_id",
-                "experiment_id"
-            )
-            .agg(
-                F.count("*").alias("record_count"),
-                F.avg("measurement_value").alias("avg_reading"),
-                F.min("measurement_value").alias("min_reading"),
-                F.max("measurement_value").alias("max_reading"),
-                F.stddev("measurement_value").alias("stddev_reading"),
-                F.avg("device_battery").alias("avg_battery_level")
-            )
-    )
-
-# COMMAND ----------
-
-# DBTITLE 1,Data Quality Metrics
-@dlt.view(
-    name="data_quality_metrics",
-    comment="View tracking data quality metrics and validation results"
-)
-def data_quality_metrics():
-    """
-    Create a view to track data quality metrics.
-    """
-    # Access system tables using the spark session
-    expectations = spark.table(f"{CATALOG_NAME}.system.events")
-    
-    return (
-        expectations
-        .filter("event_type = 'expectations'")
-        .select(
-            "timestamp", 
-            "details:flow_progress.metrics.num_output_rows",
-            "details:flow_progress.metrics.num_output_generated_bytes",
-            "details:flow_progress.data_quality.dropped_records",
-            "details:flow_progress.status"
+        dlt.read("raw_data")
+        .groupBy(
+            F.window(F.col("timestamp"), "1 hour").alias("time_window"),
+            "device_id",
+            "experiment_id"
+        )
+        .agg(
+            F.count("*").alias("record_count"),
+            F.min("timestamp").alias("min_timestamp"),
+            F.max("timestamp").alias("max_timestamp"),
+            F.avg("measurement_value").alias("avg_value"),
+            F.avg("device_battery").alias("avg_battery"),
+            F.count(F.when(F.col("measurement_value").isNull(), 1)).alias("null_value_count")
         )
     )

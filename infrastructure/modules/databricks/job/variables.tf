@@ -1,32 +1,37 @@
-variable "job_name" {
-  description = "Name of the Databricks job"
+variable "name" {
+  description = "Name of the job"
   type        = string
-  default     = "Sensor Data Ingestion Pipeline"
 }
 
-variable "job_description" {
-  description = "Description of the Databricks job"
+variable "description" {
+  description = "Description of the job"
   type        = string
-  default     = "Pipeline to ingest sensor data from Kinesis into Databricks"
+  default     = "Pipeline orchestration job"
 }
 
-variable "stream_config" {
-  description = "Stream configuration details"
-  type = object({
-    kinesis_stream_name = string
-    aws_region          = string
-    kinesis_endpoint    = optional(string)
-  })
+variable "pipeline_tasks" {
+  description = "DLT pipeline tasks to run"
+  type = list(object({
+    name        = string
+    pipeline_id = string
+    depends_on  = optional(string)
+  }))
+  default = []
 }
 
-variable "catalog_config" {
-  description = "Unity Catalog configuration"
-  type = object({
-    catalog_name   = string
-    central_schema = string
-  })
-  default = {
-    catalog_name   = "open_jii_dev"
-    central_schema = "centrum"
-  }
+variable "notebook_tasks" {
+  description = "Notebook tasks to run"
+  type = list(object({
+    name          = string
+    notebook_path = string
+    parameters    = optional(map(string), {})
+    depends_on    = optional(string)
+  }))
+  default = []
+}
+
+variable "schedule" {
+  description = "Cron schedule expression (optional)"
+  type        = string
+  default     = null
 }

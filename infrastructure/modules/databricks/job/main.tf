@@ -3,85 +3,90 @@ terraform {
     databricks = {
       source                = "databricks/databricks"
       version               = ">= 1.13.0"
-      configuration_aliases = [databricks.workspace]
     }
   }
 }
 
+# Find smallest available node type
 data "databricks_node_type" "smallest" {
   local_disk = true
 }
 
 data "databricks_spark_version" "latest_lts" {
-  provider          = databricks.workspace
   long_term_support = true
 }
 
-# Upload notebooks to Databricks workspace
-resource "databricks_notebook" "ingest_pipeline" {
-  provider = databricks.workspace
-  path     = "/Shared/notebooks/ingest_pipeline"
-  language = "PYTHON"
-  source   = "${path.module}/../notebooks/ingest_pipeline.py"
-}
+# Create orchestration job
+resource "databricks_job" "this" {
+  name        = var.name
+  description = var.description
 
-resource "databricks_notebook" "transform_pipeline" {
-  provider = databricks.workspace
-  path     = "/Shared/notebooks/transform_pipeline"
-  language = "PYTHON"
-  source   = "${path.module}/../notebooks/transform_pipeline.py"
-}
-
-resource "databricks_job" "ingest_pipeline" {
-  provider    = databricks.workspace
-  name        = var.job_name
-  description = var.job_description
-
-  # Define shared job cluster for all tasks
+  # Shared cluster for any non-pipeline tasks
   job_cluster {
     job_cluster_key = "shared_cluster"
 
     new_cluster {
-      num_workers   = 1
+      num_workers   = 0 # Single node
       spark_version = data.databricks_spark_version.latest_lts.id
       node_type_id  = data.databricks_node_type.smallest.id
 
+      # Configure for single node
       spark_conf = {
-        "spark.databricks.delta.preview.enabled" : true,
-        "spark.databricks.io.cache.enabled" : true,
-        "spark.sql.streaming.metricsEnabled" : true
-      }
-
-      spark_env_vars = {
-        "KINESIS_STREAM_NAME" : var.stream_config.kinesis_stream_name,
-        "KINESIS_ENDPOINT" : var.stream_config.kinesis_endpoint != null ? var.stream_config.kinesis_endpoint : "https://kinesis.${var.stream_config.aws_region}.amazonaws.com",
-        "AWS_REGION" : var.stream_config.aws_region,
-        "CATALOG_NAME" : var.catalog_config.catalog_name,
-        "CENTRAL_SCHEMA" : var.catalog_config.central_schema
+        "spark.databricks.cluster.profile" = "singleNode"
+        "spark.master"                     = "local[*]"
       }
     }
   }
 
-  # Ingestion task
-  task {
-    task_key        = "ingest_data"
-    job_cluster_key = "shared_cluster"
+  # Create all pipeline tasks
+  dynamic "task" {
+    for_each = var.pipeline_tasks
+    content {
+      task_key = task.value.name
 
-    notebook_task {
-      notebook_path = databricks_notebook.ingest_pipeline.path
+      # Add dependency if specified
+      dynamic "depends_on" {
+        for_each = task.value.depends_on != null ? [task.value.depends_on] : []
+        content {
+          task_key = depends_on.value
+        }
+      }
+
+      # Run the DLT pipeline
+      pipeline_task {
+        pipeline_id = task.value.pipeline_id
+      }
     }
   }
 
-  # Transform task - depends on ingestion completing first
-  task {
-    task_key = "transform_data"
-    depends_on {
-      task_key = "ingest_data"
-    }
-    job_cluster_key = "shared_cluster"
+  # Create notebook tasks
+  dynamic "task" {
+    for_each = var.notebook_tasks
+    content {
+      task_key        = task.value.name
+      job_cluster_key = "shared_cluster"
 
-    notebook_task {
-      notebook_path = databricks_notebook.transform_pipeline.path
+      # Add dependency if specified
+      dynamic "depends_on" {
+        for_each = task.value.depends_on != null ? [task.value.depends_on] : []
+        content {
+          task_key = depends_on.value
+        }
+      }
+
+      notebook_task {
+        notebook_path   = task.value.notebook_path
+        base_parameters = task.value.parameters
+      }
+    }
+  }
+
+  # Add schedule if provided
+  dynamic "schedule" {
+    for_each = var.schedule != null ? [var.schedule] : []
+    content {
+      quartz_cron_expression = var.schedule
+      timezone_id            = "UTC"
     }
   }
 }
