@@ -60,3 +60,12 @@ resource "databricks_mws_workspaces" "this" {
 
   token {}
 }
+
+resource "databricks_credential" "kinesis" {
+  name = var.kinesis_role_name
+  aws_iam_role {
+    role_arn = var.kinesis_role_arn
+  }
+  purpose = "SERVICE"
+  comment = "Kinesis access credential managed by Terraform"
+}

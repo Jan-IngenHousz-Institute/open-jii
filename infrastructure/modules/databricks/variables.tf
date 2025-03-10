@@ -27,3 +27,14 @@ variable "sg_id" {
   description = "Security group ID for Databricks clusters"
   type        = string
 }
+
+variable "kinesis_role_name" {
+  description = "Name of the IAM role for Kinesis access"
+  type        = string
+  default     = "unity-catalog-kinesis-role"
+}
+
+variable "kinesis_role_arn" {
+  description = "ARN of the IAM role for Kinesis access"
+  type        = string
+}

@@ -14,3 +14,21 @@ variable "retention_period_hours" {
   type        = number
   default     = 24
 }
+
+variable "role_name" {
+  description = "Name of the IAM role for Unity Catalog Kinesis access"
+  type        = string
+  default     = "unity-catalog-kinesis-role"
+}
+
+variable "policy_name" {
+  description = "Name of the IAM policy for Kinesis access"
+  type        = string
+  default     = "unity-catalog-kinesis-policy"
+}
+
+variable "databricks_unity_catalog_role_arn" {
+  description = "ARN of the Databricks Unity Catalog role"
+  type        = string
+  default     = "arn:aws:iam::414351767826:role/unity-catalog-prod-UCMasterRole-14S5ZJVKOTYTL"
+}

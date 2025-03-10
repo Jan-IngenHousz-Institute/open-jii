@@ -75,7 +75,66 @@ module "databricks_workspace" {
   private_subnets       = module.vpc.private_subnets
   sg_id                 = module.vpc.default_sg_id
 
+  kinesis_role_arn  = module.kinesis.role_arn
+  kinesis_role_name = module.kinesis.role_name
+
   providers = {
     databricks.mws = databricks.mws
   }
+}
+
+module "ingest_pipeline" {
+  source = "../../modules/databricks/pipeline"
+
+  name        = "Centrum-Ingest-Pipeline"
+  schema_name = "centrum"
+
+  notebook_paths = [
+    "../../modules/databricks/notebooks/ingest_pipeline"
+  ]
+
+  configuration = {
+    "KINESIS_STREAM_NAME" = module.kinesis.kinesis_stream_name
+    "CENTRAL_SCHEMA"      = "centrum"
+  }
+}
+
+module "transform_pipeline" {
+  source = "../../modules/databricks/pipeline"
+
+  name        = "Centrum-Transform-Pipeline"
+  schema_name = "centrum"
+
+  notebook_paths = [
+    "../../modules/databricks/notebooks/transform_pipeline"
+  ]
+
+  configuration = {
+    "CENTRAL_SCHEMA" = "centrum"
+    "BRONZE_TABLE"   = "raw_data"
+  }
+}
+
+module "data_processing_job" {
+  source = "../../modules/databricks/job"
+
+  name        = "Centrum ELT Workflow"
+  description = "Orchestrates the ingest & transform pipelines"
+
+  # Pipeline tasks
+  pipeline_tasks = [
+    {
+      name        = "ingest_pipeline"
+      pipeline_id = module.ingest_pipeline.pipeline_id
+    },
+    {
+      name        = "transform_pipeline"
+      pipeline_id = module.transform_pipeline.pipeline_id
+      depends_on  = "ingest_pipeline"
+    }
+  ]
+
+
+  # Run daily at 2am
+  schedule = "0 0 2 * * ?"
 }
