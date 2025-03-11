@@ -1,0 +1,16 @@
+{
+  "name": "node-red",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node-red"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-red": "^4.0.9",
+    "node-red-contrib-aws-iot-hub": "^0.1.14"
+  }
+}
