@@ -1,7 +1,8 @@
 terraform {
   required_providers {
     databricks = {
-      source = "databricks/databricks"
+      source                = "databricks/databricks"
+      configuration_aliases = [databricks.workspace]
     }
   }
 }
@@ -12,8 +13,12 @@ data "databricks_node_type" "smallest" {
 }
 
 resource "databricks_pipeline" "this" {
-  name   = var.name
-  target = var.schema_name
+  name     = var.name
+  target   = var.schema_name
+  provider = databricks.workspace
+
+  catalog = var.catalog_name
+
 
   # Support for notebook libraries
   dynamic "library" {
@@ -25,23 +30,38 @@ resource "databricks_pipeline" "this" {
     }
   }
 
-  # Minimal compute configuration
+  # Enhanced compute configuration with min/max workers if autoscale enabled
   cluster {
     label = "default"
 
-    # Use smallest available instance
-    node_type_id = data.databricks_node_type.smallest.id
+    # Use smallest available instance or specified type
+    node_type_id = var.node_type_id != null ? var.node_type_id : data.databricks_node_type.smallest.id
 
-    # Only one worker, no autoscaling
-    num_workers = 1
+    # Support for autoscaling
+    dynamic "autoscale" {
+      for_each = var.autoscale ? [1] : []
+      content {
+        min_workers = var.min_workers
+        max_workers = var.max_workers
+      }
+    }
+
+    # Fixed worker count if autoscaling is disabled
+    num_workers = var.autoscale ? null : var.num_workers
   }
 
-  # Not streaming - manual execution only
-  continuous = false
+  # Support continuous or triggered execution
+  continuous = var.continuous_mode
 
   # Apply any additional configuration
-  configuration = var.configuration
+  configuration = merge({
+    "pipeline.name" : var.name,
+    "pipeline.schema" : var.schema_name,
+    "pipeline.logLevel" : var.log_level,
+    "pipeline.trigger.retry_on_failure" : "false",
+  }, var.configuration)
 
   # Development mode can be toggled
   development = var.development_mode
+
 }
