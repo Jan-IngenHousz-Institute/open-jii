@@ -2,6 +2,7 @@ import jii_multispeq.device as _device
 import jii_multispeq.measurement as _measurement
 from datetime import datetime
 import json
+import os
 
 class DeviceManager:
     @staticmethod
@@ -18,7 +19,19 @@ class DeviceManager:
         return _device.connect(port=port)
 
     @staticmethod
-    def measure_and_analyze(connection):
+    def disconnect_device(connection):
+        """Disconnect from a device"""
+        if connection:
+            try:
+                _device.disconnect(connection)
+                return True
+            except Exception as e:
+                print(f"Error disconnecting from device: {e}")
+                return False
+        return True
+
+    @staticmethod
+    def measure_and_analyze(connection, plant_data=None):
         """Measure and analyze data using the device"""
         # MultispeQ Protocol
         spad_protocol = [{"spad": [1]}]
@@ -27,8 +40,13 @@ class DeviceManager:
         def spad_fn(_data):
             output = {}
             output["SPAD"] = _data["spad"][0]
+            
+            # Include plant data if provided
+            if plant_data:
+                output["plant_info"] = plant_data
+                
             return output
-
+            
         data = None
         try:
             # Measure using the device
@@ -44,19 +62,29 @@ class DeviceManager:
 
         except Exception as e:
             print(f"Error: {e}")
-        finally:
-            _device.disconnect(connection)
+
 
         # Save data to JSON file
         if data:
             # Create filename with timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"multispeq_data_{timestamp}.json"
-
-            # Save data to file
-            with open(filename, 'w') as f:
+            
+            # Include species in filename if available
+            if plant_data and plant_data.get("species"):
+                species = plant_data["species"].replace(" ", "_").lower()
+                filename = f"multispeq_data_{species}_{timestamp}.json"
+            else:
+                filename = f"multispeq_data_{timestamp}.json"
+            
+            # Create dump directory if it doesn't exist
+            dump_dir = "./dump"
+            os.makedirs(dump_dir, exist_ok=True)
+            
+            # Save data to file in dump directory
+            filepath = os.path.join(dump_dir, filename)
+            with open(filepath, 'w') as f:
                 json.dump(data, f, indent=4)
 
-            print(f"Data saved to {filename}")
+            print(f"Data saved to {filepath}")
 
         return data
