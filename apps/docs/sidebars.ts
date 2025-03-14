@@ -113,6 +113,11 @@ const sidebars: SidebarsConfig = {
       link: { type: "generated-index" },
       items: [
         {
+          type: "doc",
+          id: "data-platform/usage/annotating-plant-data",
+          label: "Annotating Plant Data",
+        },
+        {
           type: "category",
           label: "Sensor Operation",
           link: { type: "generated-index" },

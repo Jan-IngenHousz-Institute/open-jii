@@ -32,3 +32,8 @@ variable "databricks_unity_catalog_role_arn" {
   type        = string
   default     = "arn:aws:iam::414351767826:role/unity-catalog-prod-UCMasterRole-14S5ZJVKOTYTL"
 }
+
+variable "workspace_kinesis_credential_id" {
+  description = "The ID of the Kinesis credential coming from the databricks workspace module"
+  type        = string
+}

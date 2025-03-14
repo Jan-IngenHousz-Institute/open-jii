@@ -117,6 +117,19 @@ module "databricks_catalog" {
   depends_on = [module.databricks_metastore]
 }
 
+module "central_schema" {
+  source         = "../../modules/databricks/schema"
+  catalog_name   = "open_jii_dev"
+  schema_name    = "centrum"
+  schema_comment = "Central schema for OpenJII sensor data following the medallion architecture"
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
 module "ingest_pipeline" {
   source = "../../modules/databricks/pipeline"
 
