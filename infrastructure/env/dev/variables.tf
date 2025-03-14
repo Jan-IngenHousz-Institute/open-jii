@@ -80,3 +80,8 @@ variable "unity_catalog_bucket_name" {
   description = "S3 bucket name for Unity Catalog metastore storage"
   type        = string
 }
+
+variable "kinesis_credential_id" {
+  description = "Databricks storage credential ID for Kinesis"
+  type        = string
+}

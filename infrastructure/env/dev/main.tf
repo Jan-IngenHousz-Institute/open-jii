@@ -31,7 +31,10 @@ module "timestream" {
 module "kinesis" {
   source      = "../../modules/kinesis"
   stream_name = var.kinesis_stream_name
+
+  workspace_kinesis_credential_id = var.kinesis_credential_id
 }
+
 
 module "iot_core" {
   source = "../../modules/iot-core"
@@ -88,10 +91,11 @@ module "databricks_workspace" {
   kinesis_role_name = module.kinesis.role_name
 
   providers = {
-    databricks.mws = databricks.mws
+    databricks.mws       = databricks.mws
+    databricks.workspace = databricks.workspace
+
   }
 }
-
 module "databricks_metastore" {
   source         = "../../modules/databricks/metastore"
   metastore_name = "open_jii_metastore_aws_eu_central_1"
@@ -110,6 +114,7 @@ module "databricks_catalog" {
   source             = "../../modules/databricks/catalog"
   catalog_name       = "open_jii_dev"
   external_bucket_id = module.metastore_s3.bucket_name
+
   providers = {
     databricks.workspace = databricks.workspace
   }
@@ -130,58 +135,136 @@ module "central_schema" {
   depends_on = [module.databricks_catalog]
 }
 
-module "ingest_pipeline" {
+module "centrum_pipeline" {
   source = "../../modules/databricks/pipeline"
 
-  name        = "Centrum-Ingest-Pipeline"
-  schema_name = "centrum"
+  name         = "Centrum-DLT-Pipeline-DEV"
+  schema_name  = "centrum"
+  catalog_name = "open_jii_dev"
 
   notebook_paths = [
-    "../../modules/databricks/notebooks/ingest_pipeline"
+    "/Workspace/Shared/notebooks/pipelines/centrum_pipeline"
   ]
 
   configuration = {
-    "KINESIS_STREAM_NAME" = module.kinesis.kinesis_stream_name
-    "CENTRAL_SCHEMA"      = "centrum"
+    "CENTRAL_SCHEMA"    = "centrum"
+    "BRONZE_TABLE"      = "raw_data"
+    "SILVER_TABLE"      = "clean_data"
+    "RAW_KINESIS_TABLE" = "raw_kinesis_data"
+  }
+
+  continuous_mode  = true
+  development_mode = true
+  autoscale        = true
+  min_workers      = 1
+  max_workers      = 2
+  node_type_id     = "m5d.large"
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.central_schema]
+}
+
+module "kinesis_ingest_cluster" {
+  source = "../../modules/databricks/cluster"
+
+  name             = "Kinesis-Ingest-Cluster"
+  single_node      = true
+  single_user      = true
+  single_user_name = var.databricks_client_id
+  spark_version    = "16.2.x-scala2.12"
+
+  providers = {
+    databricks.workspace = databricks.workspace
   }
 }
 
-module "transform_pipeline" {
-  source = "../../modules/databricks/pipeline"
+module "experiment_orchestrator_cluster" {
+  source = "../../modules/databricks/cluster"
 
-  name        = "Centrum-Transform-Pipeline"
-  schema_name = "centrum"
+  name             = "Experiment-Orchestrator-Cluster"
+  single_node      = true
+  single_user      = true
+  single_user_name = var.databricks_client_id
+  spark_version    = "16.2.x-scala2.12"
 
-  notebook_paths = [
-    "../../modules/databricks/notebooks/transform_pipeline"
-  ]
-
-  configuration = {
-    "CENTRAL_SCHEMA" = "centrum"
-    "BRONZE_TABLE"   = "raw_data"
+  providers = {
+    databricks.workspace = databricks.workspace
   }
 }
 
-module "data_processing_job" {
+module "kinesis_ingest_job" {
   source = "../../modules/databricks/job"
 
-  name        = "Centrum ELT Workflow"
-  description = "Orchestrates the ingest & transform pipelines"
+  name        = "Kinesis-Stream-Ingest-Job-DEV"
+  description = "Handles connection to Kinesis stream and pulls data into the central schema"
+  continuous  = true
 
-  # Pipeline tasks
-  pipeline_tasks = [
+  tasks = [
     {
-      name        = "ingest_pipeline"
-      pipeline_id = module.ingest_pipeline.pipeline_id
+      key           = "kinesis_ingest"
+      task_type     = "notebook"
+      compute_type  = "existing_cluster"
+      cluster_id    = module.kinesis_ingest_cluster.cluster_id
+      notebook_path = "/Workspace/Shared/notebooks/tasks/kinesis_ingest_task"
+
+      parameters = {
+        "kinesis_stream_name"     = module.kinesis.kinesis_stream_name
+        "checkpoint_path"         = "/Volumes/open_jii_dev/centrum/checkpoints/kinesis"
+        "catalog_name"            = "open_jii_dev"
+        "schema_name"             = "centrum"
+        "target_table"            = "raw_kinesis_data"
+        "service_credential_name" = "unity-catalog-kinesis-role"
+      }
     },
-    {
-      name        = "transform_pipeline"
-      pipeline_id = module.transform_pipeline.pipeline_id
-      depends_on  = "ingest_pipeline"
-    }
   ]
 
+  depends_on = [module.kinesis_ingest_cluster]
 
-  # Run daily at 2am
-  schedule = "0 0 2 * * ?"
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
+module "experiment_orchestrator_job" {
+  source = "../../modules/databricks/job"
+
+  name        = "Experiment-Pipeline-Orchestrator-Job-DEV"
+  description = "Orchestrates the experiment pipelines (if neccessary) and monitors the experiment state"
+
+  tasks = [
+    {
+      key           = "experiment_pipeline_orchestrator"
+      task_type     = "notebook"
+      compute_type  = "existing_cluster"
+      cluster_id    = module.experiment_orchestrator_cluster.cluster_id
+      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_orchestrator_task"
+      parameters = {
+        "catalog_name"             = "open_jii_dev"
+        "central_schema"           = "centrum"
+        "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
+      }
+    },
+    {
+      key           = "experiment_pipeline_monitor"
+      task_type     = "notebook"
+      compute_type  = "existing_cluster"
+      cluster_id    = module.experiment_orchestrator_cluster.cluster_id
+      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_monitor_task"
+      parameters = {
+        "catalog_name"   = "open_jii_dev"
+        "central_schema" = "centrum"
+      }
+
+      depends_on = "experiment_pipeline_orchestrator"
+    },
+  ]
+
+  depends_on = [module.experiment_orchestrator_cluster]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
 }
