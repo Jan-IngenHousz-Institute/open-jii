@@ -58,6 +58,7 @@ terraform.rc
 __pycache__/
 *.py[cod]
 *$py.class
+dump
 
 # Python egg-info
 *.egg-info/

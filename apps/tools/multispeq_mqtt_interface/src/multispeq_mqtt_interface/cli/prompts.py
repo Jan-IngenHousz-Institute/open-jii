@@ -75,3 +75,24 @@ class PromptHandler:
         key_filepath = os.path.join(directory, f"{cert_id}-private.pem.key")
         ca_filepath = os.path.join(directory, "root-CA.pem")
         return cert_filepath, key_filepath, ca_filepath
+    
+    @staticmethod
+    def prompt_plant_data():
+        """Prompt the user to input information about the plant being measured"""
+        print("\n--- Plant Information ---")
+        plant_species = input("Enter plant species (e.g., Arabidopsis thaliana): ")
+        plant_age = input("Enter plant age (e.g., 4 weeks): ")
+        plant_conditions = input("Enter growth conditions (e.g., greenhouse, field): ")
+        plant_treatment = input("Enter treatment if any (or 'none'): ")
+        plant_notes = input("Additional notes (optional): ")
+        
+        plant_data = {
+            "species": plant_species,
+            "age": plant_age,
+            "conditions": plant_conditions,
+            "treatment": plant_treatment if plant_treatment.lower() != "none" else None,
+            "notes": plant_notes if plant_notes.strip() else None
+        }
+        
+        print("\nPlant data recorded.")
+        return plant_data
