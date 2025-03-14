@@ -60,264 +60,104 @@ resource "databricks_sql_table" "experiments" {
     name = "tags"
     type = "MAP<STRING,STRING>"
   }
+  column {
+    name    = "last_processed_timestamp"
+    type    = "TIMESTAMP"
+    comment = "Timestamp of the last DLT pipeline run"
+  }
 
   table_type         = "MANAGED"
   data_source_format = "DELTA"
 }
 
-# Bronze layer for raw sensor data
-# resource "databricks_sql_table" "raw_data" {
-#   provider     = databricks.workspace
-#   count        = var.create_medallion_tables ? 1 : 0
-#   catalog_name = var.catalog_name
-#   schema_name  = var.schema_name
-#   name         = "raw_data"
-#   comment      = "Bronze layer: Raw sensor data ingested from sources."
+# Raw Kinesis data landing table
+resource "databricks_sql_table" "raw_kinesis_data" {
+  provider     = databricks.workspace
+  catalog_name = var.catalog_name
+  schema_name  = var.schema_name
+  name         = "raw_kinesis_data"
+  comment      = "Landing zone for raw IoT device data from AWS Kinesis streams"
 
-#   column {
-#     name = "topic"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "experiment_id"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "device_type"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "device_version"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "sensor_id"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "measurement_type"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "timestamp"
-#     type = "TIMESTAMP"
-#   }
-#   column {
-#     name = "measurement_value"
-#     type = "DOUBLE"
-#   }
-#   column {
-#     name = "notes"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "protocol"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "device_name"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "device_id"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "device_battery"
-#     type = "DOUBLE"
-#   }
-#   column {
-#     name = "device_firmware"
-#     type = "DOUBLE"
-#   }
-#   column {
-#     name = "plant_name"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "plant_genotype"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "plant_id"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "plant_location"
-#     type = "INT"
-#   }
-#   column {
-#     name = "raw_payload"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "ingest_timestamp"
-#     type = "TIMESTAMP"
-#   }
+  lifecycle {
+    ignore_changes = [
+      column
+    ]
+  }
 
-#   table_type         = "MANAGED"
-#   data_source_format = "DELTA"
-# }
+  column {
+    name    = "data"
+    type    = "BINARY"
+    comment = "Raw binary data from Kinesis"
+  }
+  column {
+    name    = "sequenceNumber"
+    type    = "STRING"
+    comment = "Original Kinesis sequence number"
+  }
+  column {
+    name    = "partitionKey"
+    type    = "STRING"
+    comment = "Kinesis partition key"
+  }
+  column {
+    name    = "approximateArrivalTimestamp"
+    type    = "TIMESTAMP"
+    comment = "Timestamp when record arrived in Kinesis"
+  }
+  column {
+    name    = "shardId"
+    type    = "STRING"
+    comment = "Kinesis shard ID"
+  }
+  column {
+    name    = "raw_payload"
+    type    = "STRING"
+    comment = "Raw payload converted to string format"
+  }
+  column {
+    name    = "parsed_data"
+    type    = "STRUCT<topic:STRING, device_id:STRING, timestamp:TIMESTAMP, experiment_id:STRING, sensor_type:STRING, reading_value:DOUBLE, reading_unit:STRING, device_type:STRING, device_version:STRING, device_name:STRING, device_battery:DOUBLE, device_firmware:STRING, measurement_type:STRING, protocol:STRING, latitude:DOUBLE, longitude:DOUBLE, plant_metadata:STRUCT<plant_id:STRING, plant_name:STRING, plant_genotype:STRING, plant_location:STRING, notes:STRING>, SPAD:DOUBLE, created_at:TIMESTAMP, md5_protocol:STRING, md5_measurement:STRING>"
+    comment = "Parsed JSON data structure"
+  }
+  column {
+    name    = "ingestion_timestamp"
+    type    = "TIMESTAMP"
+    comment = "Timestamp when the record was ingested into Delta"
+  }
+  column {
+    name    = "ingest_date"
+    type    = "DATE"
+    comment = "Date partition extracted from ingestion timestamp"
+  }
+  column {
+    name    = "kinesis_sequence_number"
+    type    = "STRING"
+    comment = "Kinesis sequence number (duplicated for clarity)"
+  }
+  column {
+    name    = "kinesis_shard_id"
+    type    = "STRING"
+    comment = "Kinesis shard ID (duplicated for clarity)"
+  }
+  column {
+    name    = "kinesis_arrival_time"
+    type    = "TIMESTAMP"
+    comment = "Arrival timestamp in Kinesis (duplicated for clarity)"
+  }
+  column {
+    name    = "experiment_id"
+    type    = "STRING"
+    comment = "Extracted experiment ID from topic or metadata"
+  }
+  column {
+    name    = "stream"
+    type    = "STRING"
+    comment = "The name of the Kinesis stream source"
+  }
 
-# Silver layer for clean, transformed data
-# resource "databricks_sql_table" "clean_data" {
-#   provider     = databricks.workspace
-#   count        = var.create_medallion_tables ? 1 : 0
-#   catalog_name = var.catalog_name
-#   schema_name  = var.schema_name
-#   name         = "clean_data"
-#   comment      = "Silver layer: Cleaned and validated sensor data."
+  table_type         = "MANAGED"
+  data_source_format = "DELTA"
 
-#   column {
-#     name = "sensor_id"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "timestamp"
-#     type = "TIMESTAMP"
-#   }
-#   column {
-#     name = "value"
-#     type = "DOUBLE"
-#   }
-#   column {
-#     name = "experiment_id"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "quality_check_passed"
-#     type = "BOOLEAN"
-#   }
-#   column {
-#     name = "processed_timestamp"
-#     type = "TIMESTAMP"
-#   }
+  partitions = ["ingest_date"]
+}
 
-#   table_type         = "MANAGED"
-#   data_source_format = "DELTA"
-# }
-
-# # Gold layer for analytics-ready aggregated data
-# resource "databricks_sql_table" "analytics_data" {
-#   provider     = databricks.workspace
-#   count        = var.create_medallion_tables ? 1 : 0
-#   catalog_name = var.catalog_name
-#   schema_name  = var.schema_name
-#   name         = "analytics_data"
-#   comment      = "Gold layer: Analytics-ready aggregated data."
-
-#   column {
-#     name = "sensor_id"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "date"
-#     type = "DATE"
-#   }
-#   column {
-#     name = "experiment_id"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "min_value"
-#     type = "DOUBLE"
-#   }
-#   column {
-#     name = "max_value"
-#     type = "DOUBLE"
-#   }
-#   column {
-#     name = "avg_value"
-#     type = "DOUBLE"
-#   }
-#   column {
-#     name = "reading_count"
-#     type = "LONG"
-#   }
-
-#   table_type         = "MANAGED"
-#   data_source_format = "DELTA"
-# }
-
-# # Additional metadata tables
-# resource "databricks_sql_table" "sensor_metadata" {
-#   provider     = databricks.workspace
-#   count        = var.create_metadata_tables ? 1 : 0
-#   catalog_name = var.catalog_name
-#   schema_name  = var.schema_name
-#   name         = "sensor_metadata"
-#   comment      = "Metadata about sensors used in experiments."
-
-#   column {
-#     name = "sensor_id"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "sensor_type"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "manufacturer"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "model"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "installation_date"
-#     type = "DATE"
-#   }
-#   column {
-#     name = "calibration_date"
-#     type = "DATE"
-#   }
-#   column {
-#     name = "location_info"
-#     type = "MAP<STRING,STRING>"
-#   }
-
-#   table_type         = "MANAGED"
-#   data_source_format = "DELTA"
-# }
-
-# resource "databricks_sql_table" "plant_metadata" {
-#   provider     = databricks.workspace
-#   count        = var.create_metadata_tables ? 1 : 0
-#   catalog_name = var.catalog_name
-#   schema_name  = var.schema_name
-#   name         = "plant_metadata"
-#   comment      = "Metadata about plants in experiments."
-
-#   column {
-#     name = "plant_id"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "experiment_id"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "species"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "variety"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "planting_date"
-#     type = "DATE"
-#   }
-#   column {
-#     name = "treatment_group"
-#     type = "STRING"
-#   }
-#   column {
-#     name = "notes"
-#     type = "STRING"
-#   }
-
-#   table_type         = "MANAGED"
-#   data_source_format = "DELTA"
-# }

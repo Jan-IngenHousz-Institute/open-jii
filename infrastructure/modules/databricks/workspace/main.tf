@@ -3,7 +3,7 @@ terraform {
     databricks = {
       source                = "databricks/databricks"
       version               = ">= 1.13.0"
-      configuration_aliases = [databricks.mws]
+      configuration_aliases = [databricks.mws, databricks.workspace]
 
     }
   }
@@ -62,7 +62,8 @@ resource "databricks_mws_workspaces" "this" {
 }
 
 resource "databricks_credential" "kinesis" {
-  name = var.kinesis_role_name
+  name     = var.kinesis_role_name
+  provider = databricks.workspace
   aws_iam_role {
     role_arn = var.kinesis_role_arn
   }

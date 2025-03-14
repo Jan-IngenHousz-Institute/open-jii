@@ -10,21 +10,26 @@ data "aws_caller_identity" "current" {}
 resource "aws_iam_role" "unity_catalog_kinesis_role" {
   name = var.role_name
 
-  # Trust policy - allows Databricks Unity Catalog to assume this role
+  # Updated trust policy to allow self-assumption
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [{
-      Effect = "Allow",
-      Principal = {
-        AWS = var.databricks_unity_catalog_role_arn
-      },
-      Action = "sts:AssumeRole",
-      Condition = {
-        StringEquals = {
-          "sts:ExternalId" = "0000"
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          AWS = [
+            var.databricks_unity_catalog_role_arn,
+            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.role_name}" # Self-reference
+          ]
+        },
+        Action = "sts:AssumeRole",
+        Condition = {
+          StringEquals = {
+            "sts:ExternalId" = var.workspace_kinesis_credential_id
+          }
         }
       }
-    }]
+    ]
   })
 }
 
