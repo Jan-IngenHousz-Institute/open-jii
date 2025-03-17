@@ -26,6 +26,9 @@ class Config:
         self.proxy_host = os.getenv("AWS_IOT_PROXY_HOST", None)
         self.proxy_port = int(os.getenv("AWS_IOT_PROXY_PORT", "0"))
 
+        # Plant data storage
+        self.plant_data = None
+
     def display(self):
         print("\nAWS IoT Core Configuration:")
         print(f"Endpoint: {self.endpoint}")
@@ -39,7 +42,27 @@ class Config:
         print(f"Clean session: {self.clean_session}")
         print(f"Proxy host: {self.proxy_host}")
         print(f"Proxy port: {self.proxy_port}")
+        
+        # Display plant data if available
+        if self.plant_data:
+            print("\nConfigured Plant Information:")
+            print(f"Species: {self.plant_data.get('species', 'Not set')}")
+            print(f"Age: {self.plant_data.get('age', 'Not set')}")
+            print(f"Conditions: {self.plant_data.get('conditions', 'Not set')}")
+            if self.plant_data.get('treatment'):
+                print(f"Treatment: {self.plant_data['treatment']}")
+            if self.plant_data.get('notes'):
+                print(f"Notes: {self.plant_data['notes']}")
+        else:
+            print("\nPlant Information: Not configured")
+        
         print()
+
+    def update_plant_data(self, plant_data):
+        """Update the stored plant data"""
+        self.plant_data = plant_data
+        print("\nPlant data has been updated in configuration.")
+    
 
     def validate(self):
         issues = []

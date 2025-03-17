@@ -18,16 +18,18 @@ class IoTMqttCli(cmd.Cmd):
 ║                          |_|       MQTT Connection Tool                    ║
 ╠════════════════════════════════════════════════════════════════════════════╣
 ║ Available commands:                                                        ║
-║  [C] connect        - Connect to AWS IoT Core                              ║
-║  [D] disconnect     - Disconnect from broker                               ║
-║  [P] ping           - Test connection to endpoint                          ║
-║  [M] measure        - Measure and publish a message to topic               ║
-║  [S] status         - Check connection status                              ║
-║  [F] config         - Show current configuration                           ║
-║  [T] set_topic      - Set topic parameters                                 ║
-║  [V] connect_device - Connect to a device from a selected port             ║
-║  [H] help           - Show detailed help                                   ║
-║  [Q] quit/exit      - Exit application                                     ║
+║  [C] connect                   - Connect to AWS IoT Core                   ║
+║  [D] disconnect                - Disconnect from broker                    ║
+║  [P] ping                      - Test connection to endpoint               ║
+║  [M] measure                   - Measure and publish a reading to topic    ║
+║  [K] continuous measure        - Continuously measure and publish readings ║
+║  [S] status                    - Check connection status                   ║
+║  [F] config                    - Show current configuration                ║
+║  [F] plant config              - Set plant metadata                        ║
+║  [T] set_topic                 - Set topic parameters                      ║
+║  [V] connect_device            - Connect to a device from a selected port  ║
+║  [H] help                      - Show detailed help                        ║
+║  [Q] quit/exit                 - Exit application                          ║
 ╚════════════════════════════════════════════════════════════════════════════╝
 """
     prompt = "MultispeQ > "
@@ -41,6 +43,7 @@ class IoTMqttCli(cmd.Cmd):
             "d": "disconnect",
             "p": "ping",
             "m": "publish",
+            "k": "continuous_publish",
             "s": "status",
             "f": "config",
             "t": "set_topic",
@@ -65,6 +68,10 @@ class IoTMqttCli(cmd.Cmd):
         """[M] Measure using device and publish a message to the configured topic"""
         self.command_handler.publish(arg)
 
+    def do_continuous_publish(self, arg):
+        """[K] Continuously measure and publish messages every 6 seconds until stopped"""
+        self.command_handler.continuous_publish()
+
     def do_status(self, arg):
         """[S] Check current connection status"""
         self.command_handler.status()
@@ -80,6 +87,10 @@ class IoTMqttCli(cmd.Cmd):
     def do_connect_device(self, arg):
         """[V] Connect to a device from a selected port"""
         self.command_handler.connect_device()
+        
+    def do_set_plant(self, arg):
+        """[P] Set default plant information for measurements"""
+        self.command_handler.set_plant_data() 
 
     def do_exit(self, arg):
         """[Q] Exit the application"""
