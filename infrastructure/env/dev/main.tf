@@ -10,6 +10,15 @@ module "iam_oidc" {
   branch     = "main"
 }
 
+module "cloudwatch" {
+  source                 = "../../modules/cloudwatch"
+  aws_region             = var.aws_region
+  log_retention_days     = 60
+  cloudwatch_role_name   = var.iot_logging_role_name
+  cloudwatch_policy_name = var.iot_logging_policy_name
+  iot_alerts_topic_name  = "open-jii-dev-iot-connect-alerts"
+}
+
 module "cloudfront" {
   source      = "../../modules/cloudfront"
   bucket_name = var.docusaurus_s3_bucket_name
@@ -35,7 +44,6 @@ module "kinesis" {
   workspace_kinesis_credential_id = var.kinesis_credential_id
 }
 
-
 module "iot_core" {
   source = "../../modules/iot-core"
 
@@ -48,6 +56,8 @@ module "iot_core" {
   iot_kinesis_policy_name = var.iot_kinesis_policy_name
   kinesis_stream_name     = module.kinesis.kinesis_stream_name
   kinesis_stream_arn      = module.kinesis.kinesis_stream_arn
+
+  cloudwatch_role_arn = module.cloudwatch.iot_cloudwatch_role_arn
 }
 
 module "vpc" {
