@@ -1,31 +1,32 @@
+CREATE TYPE "public"."experiment_members_role" AS ENUM('admin', 'member');--> statement-breakpoint
 CREATE TYPE "public"."organization_type" AS ENUM('research_institute', 'non_profit', 'private_company', 'government_agency', 'university');--> statement-breakpoint
 CREATE TABLE "audit_logs" (
-	"id" serial NOT NULL,
-	"user_id" integer,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid,
 	"action" text,
 	"timestamp" timestamp DEFAULT now(),
 	"details" jsonb
 );
 --> statement-breakpoint
 CREATE TABLE "experiment_members" (
-	"id" serial NOT NULL,
-	"experiment_id" integer,
-	"user_id" integer,
-	"role" varchar(50) DEFAULT 'member',
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"experiment_id" uuid,
+	"user_id" uuid,
+	"role" "experiment_members_role" DEFAULT 'member',
 	"joined_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "experiments" (
-	"id" serial PRIMARY KEY NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" varchar(255),
 	"description" text,
 	"is_public" boolean DEFAULT false,
-	"created_by" integer,
+	"created_by" uuid,
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "organizations" (
-	"id" serial PRIMARY KEY NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"type" "organization_type" NOT NULL,
 	"description" text,
@@ -35,18 +36,18 @@ CREATE TABLE "organizations" (
 );
 --> statement-breakpoint
 CREATE TABLE "profiles" (
-	"id" serial PRIMARY KEY NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"first_name" varchar(100),
 	"last_name" varchar(100),
 	"bio" text,
 	"avatar_url" varchar(500),
-	"user_id" integer,
-	"organization_id" integer,
+	"user_id" uuid,
+	"organization_id" uuid,
 	"created_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "sensors" (
-	"id" serial PRIMARY KEY NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"serial_number" varchar(100),
 	"name" text,
 	"location" text,
@@ -56,7 +57,7 @@ CREATE TABLE "sensors" (
 );
 --> statement-breakpoint
 CREATE TABLE "users" (
-	"id" serial PRIMARY KEY NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"email" varchar(255) NOT NULL,
 	"created_at" timestamp DEFAULT now(),
 	CONSTRAINT "users_email_unique" UNIQUE("email")

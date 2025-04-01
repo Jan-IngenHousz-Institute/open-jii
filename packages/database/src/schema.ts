@@ -67,13 +67,16 @@ export const experiments = pgTable("experiments", {
   createdBy: uuid("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
-
+export const experimentMembersEnum = pgEnum("experiment_members_role", [
+  "admin",
+  "member",
+]);
 // Experiment Members (Associative Table)
 export const experimentMembers = pgTable("experiment_members", {
   id: uuid("id").primaryKey().defaultRandom(),
   experimentId: uuid("experiment_id").references(() => experiments.id),
   userId: uuid("user_id").references(() => users.id),
-  role: varchar("role", { length: 50 }).default("member"),
+  role: experimentMembersEnum("role").default("member"),
   joinedAt: timestamp("joined_at").defaultNow(),
 });
 
