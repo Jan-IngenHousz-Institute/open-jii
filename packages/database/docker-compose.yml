@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgres:15
     ports:
-      - "5837:5432" # expose pg on port 5832 to not collide with pg from elswhere
+      - "5837:5432" # expose pg on port 5837 to not collide with pg from elsewhere
     restart: always
     volumes:
       - ./volumes/db:/var/lib/postgresql/data
