@@ -28,7 +28,15 @@ resource "databricks_job" "this" {
 
   dynamic "continuous" {
     for_each = var.continuous ? [1] : []
-    content {}
+    content {
+      pause_status = "PAUSED"
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      task,
+    ]
   }
 
 
