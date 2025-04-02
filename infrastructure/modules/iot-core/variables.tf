@@ -44,3 +44,14 @@ variable "iot_kinesis_policy_name" {
   type        = string
 }
 
+variable "default_log_level" {
+  description = "Logging level for IoT Core (ERROR, WARN, INFO, DEBUG, or DISABLED)"
+  type        = string
+  default     = "INFO"
+}
+
+variable "cloudwatch_role_arn" {
+  description = "ARN of the IAM role for IoT Core logging created by the cloudwatch module"
+  type        = string
+}
+
