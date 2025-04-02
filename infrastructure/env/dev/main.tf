@@ -16,7 +16,6 @@ module "cloudwatch" {
   log_retention_days     = 60
   cloudwatch_role_name   = var.iot_logging_role_name
   cloudwatch_policy_name = var.iot_logging_policy_name
-  iot_alerts_topic_name  = "open-jii-dev-iot-connect-alerts"
 }
 
 module "cloudfront" {
