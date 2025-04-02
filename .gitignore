@@ -84,3 +84,5 @@ pids
 *.pid
 *.seed
 *.pid.lock
+
+volumes
