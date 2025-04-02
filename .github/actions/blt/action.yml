@@ -20,18 +20,14 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Setup Node.js and Enable Corepack
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        fetch-depth: 2
         node-version: ${{ inputs.node-version }}
         cache: "pnpm"
-
-    - name: Enable Corepack & Prepare pnpm
-      shell: bash
-      run: |
-        corepack enable
-        corepack prepare pnpm@latest --activate
 
     - name: Cache pnpm Store
       uses: actions/cache@v4

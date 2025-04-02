@@ -54,6 +54,12 @@ locals {
   }
 }
 
+# Configure IoT Core logging - Use the role from cloudwatch module
+resource "aws_iot_logging_options" "iot_core_logging" {
+  default_log_level = var.default_log_level
+  role_arn          = var.cloudwatch_role_arn
+}
+
 # -----------------
 # AWS IoT Policies
 # -----------------

@@ -46,7 +46,19 @@ variable "iot_kinesis_role_name" {
 
 variable "iot_kinesis_policy_name" {
   description = "Name for the IoT Kinesis IAM Policy"
+  type        = string
 }
+
+variable "iot_logging_role_name" {
+  description = "Name of the IAM role for IoT Core logging"
+  type        = string
+}
+
+variable "iot_logging_policy_name" {
+  description = "Name of the IAM policy for IoT Core logging"
+  type        = string
+}
+
 
 variable "databricks_account_id" {
   description = "Databricks Account ID (used as external_id in the assume role policy)"
