@@ -1,14 +1,14 @@
-import { Global, Module } from '@nestjs/common';
-import { db } from 'database';
+import { Global, Module } from "@nestjs/common";
+import { db } from "database";
 
 @Global()
 @Module({
   providers: [
     {
-      provide: 'DATABASE',
+      provide: "DATABASE",
       useValue: db,
     },
   ],
-  exports: ['DATABASE'],
+  exports: ["DATABASE"],
 })
-export class DatabaseModule {} 
+export class DatabaseModule {}
