@@ -49,6 +49,10 @@ runs:
       shell: bash
       run: pnpm turbo run lint --affected
 
+    - name: Check formatting with Prettier
+      shell: bash
+      run: pnpm format:check
+
     - name: Run Tests
       shell: bash
       run: pnpm turbo run test --affected

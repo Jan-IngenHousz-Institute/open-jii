@@ -120,9 +120,9 @@ To deploy the infrastructure, follow these steps:
 
 If `pnpm` is installed, one can also simply run the following command from the project root directory:
 
-   ```sh
-   pnpm run tf
-   ```
+```sh
+pnpm run tf
+```
 
 ## ⚠️ Disclaimer
 

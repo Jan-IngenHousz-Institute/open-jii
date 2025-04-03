@@ -1,7 +1,8 @@
-import React from "react";
-import Layout from "@theme/Layout";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
+import Layout from "@theme/Layout";
 import SearchBar from "@theme/SearchBar";
+import React from "react";
+
 import styles from "./index.module.css";
 
 function HomepageHeader(): JSX.Element {
