@@ -13,26 +13,28 @@ jobs:
   build_lint_test:
     name: Build, Lint, Test & AsyncAPI
     runs-on: ubuntu-latest
+    outputs:
+      affected_apps: ${{ steps.build.outputs.affected_apps }}
+      has_affected_apps: ${{ steps.build.outputs.has_affected_apps }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Run Build, Lint, Test & AsyncAPI
+      - name: Build, Lint & Test
         id: build
         uses: ./.github/actions/blt
         with:
           node-version: "22"
-
-      - name: Debug Outputs
-        run: |
-          echo "Docs built: ${{ env.docs_built }}"
-          echo "API built: ${{ env.api_built }}"
-          echo "Frontend built: ${{ env.frontend_built }}"
+          artifact_retention: "7"
+          base: "HEAD^1"
 
   # Job 2: Terraform (Plan & Apply)
   tofu:
     name: OpenTofu
     needs: build_lint_test
+    if: needs.build_lint_test.outputs.has_affected_apps == 'true'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -55,6 +57,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: app-artifacts
+          path: artifacts
+
       - name: Run OpenTofu Operations
         uses: ./.github/actions/tofu
         with:
@@ -68,6 +76,7 @@ jobs:
   deploy:
     name: Deploy Artifacts
     needs: [build_lint_test, tofu]
+    if: needs.build_lint_test.outputs.has_affected_apps == 'true'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -79,14 +88,8 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Download Docs Artifact
-        if: needs.build_lint_test.outputs.docs_built == 'true'
+      - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: docs-artifact
-
-      - name: Deploy Docs Artifact to S3
-        if: needs.build_lint_test.outputs.docs_built == 'true'
-        run: |
-          echo "Deploying docs from artifact..."
-          aws s3 cp docs-artifact s3://${{ secrets.S3_BUCKET_NAME }}/docs --recursive
+          name: app-artifacts
+          path: artifacts
