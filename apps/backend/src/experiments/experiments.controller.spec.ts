@@ -14,6 +14,7 @@ import type {
 describe("ExperimentsController", () => {
   let controller: ExperimentsController;
   let service: ExperimentsService;
+  const validUserId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
   // Test constants
   const UUID = {
