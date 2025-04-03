@@ -46,7 +46,7 @@ module "timestream" {
 | ----------------------- | --------------------------------------------- | -------- | ------- | -------- |
 | database_name           | Name of the Timestream database               | `string` | n/a     | ✅ Yes   |
 | table_name              | Name of the Timestream table                  | `string` | n/a     | ✅ Yes   |
-| memory_retention_hours  | Retention period in hours for in-memory store | `number` | `6`    | ❌ No    |
+| memory_retention_hours  | Retention period in hours for in-memory store | `number` | `6`     | ❌ No    |
 | magnetic_retention_days | Retention period in days for magnetic store   | `number` | `2`     | ❌ No    |
 
 ## 📤 Outputs
