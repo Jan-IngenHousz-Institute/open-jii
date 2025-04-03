@@ -30,7 +30,8 @@ module "cloudfront" {
 }
 
 module "docusaurus_s3" {
-  source                      = "../../modules/docusaurus-s3"
+  source                      = "../../modules/s3"
+  enable_versioning           = false
   bucket_name                 = var.docusaurus_s3_bucket_name
   cloudfront_distribution_arn = module.cloudfront.cloudfront_distribution_arn
 }
@@ -78,9 +79,16 @@ module "vpc_endpoints" {
   security_group_ids      = [module.vpc.default_sg_id]
 }
 
-module "databricks_s3" {
-  source      = "../../modules/databricks-s3"
+module "databricks_workspace_s3_policy" {
+  source      = "../../modules/databricks/workspace-s3-policy"
   bucket_name = var.databricks_bucket_name
+}
+
+module "databricks_workspace_s3" {
+  source             = "../../modules/s3"
+  bucket_name        = var.databricks_bucket_name
+  enable_versioning  = false
+  custom_policy_json = module.databricks_workspace_s3_policy.policy_json
 }
 
 module "metastore_s3" {
@@ -96,7 +104,7 @@ module "databricks_workspace" {
   source                = "../../modules/databricks/workspace"
   aws_region            = var.aws_region
   databricks_account_id = var.databricks_account_id
-  bucket_name           = var.databricks_bucket_name
+  bucket_name           = module.databricks_workspace_s3.bucket_id
   vpc_id                = module.vpc.vpc_id
   private_subnets       = module.vpc.private_subnets
   sg_id                 = module.vpc.default_sg_id
@@ -107,9 +115,9 @@ module "databricks_workspace" {
   providers = {
     databricks.mws       = databricks.mws
     databricks.workspace = databricks.workspace
-
   }
 }
+
 module "databricks_metastore" {
   source         = "../../modules/databricks/metastore"
   metastore_name = "open_jii_metastore_aws_eu_central_1"
