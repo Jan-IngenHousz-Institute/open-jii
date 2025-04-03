@@ -3,6 +3,11 @@ module "terraform_state_s3" {
   bucket_name = var.terraform_state_s3_bucket_name
 }
 
+module "terraform_state_lock" {
+  source     = "../../modules/dynamodb"
+  table_name = "terraform-state-lock"
+}
+
 module "iam_oidc" {
   source     = "../../modules/iam-oidc"
   role_name  = "GithubActionsDeployAccess"
