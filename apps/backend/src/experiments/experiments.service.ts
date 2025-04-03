@@ -1,12 +1,16 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { db, experiments, eq, and, experimentMembers } from 'database';
-import type { CreateExperimentDto, UpdateExperimentDto } from './schemas/experiment.schema';
-import type { ExperimentFilter } from './pipes/experiment-filter.pipe';
+import { Injectable, Inject } from "@nestjs/common";
+import { db, experiments, eq, and, experimentMembers } from "database";
+
+import type { ExperimentFilter } from "./pipes/experiment-filter.pipe";
+import type {
+  CreateExperimentDto,
+  UpdateExperimentDto,
+} from "./schemas/experiment.schema";
 
 @Injectable()
 export class ExperimentsService {
   constructor(
-    @Inject('DATABASE')
+    @Inject("DATABASE")
     private readonly database: typeof db,
   ) {}
 
@@ -22,14 +26,14 @@ export class ExperimentsService {
       return this.database.select().from(experiments);
     }
 
-    if (filter === 'my') {
+    if (filter === "my") {
       return this.database
         .select()
         .from(experiments)
         .where(eq(experiments.createdBy, userId));
     }
 
-    if (filter === 'member') {
+    if (filter === "member") {
       return this.database
         .select({
           id: experiments.id,
@@ -47,7 +51,7 @@ export class ExperimentsService {
         .where(eq(experimentMembers.userId, userId));
     }
 
-    if (filter === 'related') {
+    if (filter === "related") {
       return this.database
         .select({
           id: experiments.id,
@@ -87,4 +91,4 @@ export class ExperimentsService {
       .set(updateExperimentDto)
       .where(eq(experiments.id, id));
   }
-} 
+}
