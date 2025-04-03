@@ -1,0 +1,17 @@
+{
+  "name": "validator",
+  "version": "1.0.0",
+  "description": "Validation utilities and schemas",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "drizzle-zod": "^0.5.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "^5.8.2"
+  }
+} 
