@@ -17,10 +17,14 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
+    "@nestjs/config": "^3.2.0",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "database": "workspace:*",
+    "drizzle-orm": "^0.29.3",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "validator": "workspace:*"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
@@ -34,6 +38,7 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^22.10.7",
     "@types/supertest": "^6.0.2",
+    "dotenv": "^16.4.7",
     "eslint": "^9.22.0",
     "globals": "^15.14.0",
     "jest": "^29.7.0",
@@ -60,6 +65,7 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": ["<rootDir>/test/setup.ts"]
   }
 }
