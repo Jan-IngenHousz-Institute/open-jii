@@ -22,6 +22,7 @@
     "@nestjs/platform-express": "^11.0.1",
     "database": "workspace:*",
     "drizzle-orm": "^0.29.3",
+    "nestjs-zod": "^4.3.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "validator": "workspace:*"
@@ -66,6 +67,8 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
-    "setupFilesAfterEnv": ["<rootDir>/test/setup.ts"]
+    "setupFilesAfterEnv": [
+      "<rootDir>/test/setup.ts"
+    ]
   }
 }

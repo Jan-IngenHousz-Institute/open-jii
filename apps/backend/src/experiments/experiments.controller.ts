@@ -7,16 +7,20 @@ import {
   Param,
   ParseUUIDPipe,
   Query,
+  UsePipes,
 } from '@nestjs/common';
 import { ExperimentsService } from './experiments.service';
 import type { CreateExperimentDto, UpdateExperimentDto } from './schemas/experiment.schema';
 import { ExperimentFilterPipe, type ExperimentFilter } from './pipes/experiment-filter.pipe';
+import { createExperimentSchema, updateExperimentSchema } from './schemas/experiment.schema';
+import { ZodValidationPipe } from 'nestjs-zod';
 
 @Controller('experiments')
 export class ExperimentsController {
   constructor(private readonly experimentsService: ExperimentsService) {}
 
   @Post()
+  @UsePipes(new ZodValidationPipe(createExperimentSchema))
   create(
     @Body() createExperimentDto: CreateExperimentDto,
     @Query('userId', ParseUUIDPipe) userId: string,
@@ -38,6 +42,7 @@ export class ExperimentsController {
   }
 
   @Patch(':id')
+  @UsePipes(new ZodValidationPipe(updateExperimentSchema))
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateExperimentDto: UpdateExperimentDto,
