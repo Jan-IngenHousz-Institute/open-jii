@@ -5,17 +5,22 @@ inputs:
     description: "Node.js version"
     required: true
     default: "22"
+  artifact_retention:
+    description: "Artifact retention period in days"
+    required: false
+    default: "1"
+  base:
+    description: "Base reference for detecting changes (commit hash, branch, or tag)"
+    required: true
+    default: "main"
 
 outputs:
-  docs_built:
-    description: "Indicates if the docs project was built"
-    value: ${{ steps.check.outputs.docs_built }}
-  api_built:
-    description: "Indicates if the API project was built"
-    value: ${{ steps.check.outputs.api_built }}
-  frontend_built:
-    description: "Indicates if the frontend project was built"
-    value: ${{ steps.check.outputs.frontend_built }}
+  affected_apps:
+    description: "JSON array of affected app names"
+    value: ${{ steps.check.outputs.affected_apps }}
+  has_affected_apps:
+    description: "Whether there are any affected apps"
+    value: ${{ steps.check.outputs.has_affected_apps }}
 
 runs:
   using: "composite"
@@ -41,46 +46,131 @@ runs:
       shell: bash
       run: pnpm install --frozen-lockfile
 
-    - name: Build Apps
-      shell: bash
-      run: pnpm turbo run build --affected
-
-    - name: Lint Code
-      shell: bash
-      run: pnpm turbo run lint --affected
-
-    - name: Run Tests
-      shell: bash
-      run: pnpm turbo run test --affected
-
-    - name: Generate AsyncAPI HTML
-      shell: bash
-      run: pnpm run asyncapi:html --affected
-
-    - name: Check Affected Projects
+    - name: Identify Affected Projects
       id: check
       shell: bash
       run: |
-        pnpm turbo run print-affected --output=json > affected.json
-        if jq -e '.projects | index("docs")' affected.json > /dev/null; then
-          echo "docs_built=true" >> $GITHUB_OUTPUT
+        echo "Using base for change detection: ${{ inputs.base }}"
+        
+        # Get list of affected projects using provided base
+        pnpm turbo run build --dry-run=json --filter=...[origin/${{ inputs.base }}] --output-logs=none > affected.json
+        
+        # Extract project names from tasks array
+        AFFECTED_APPS=$(jq -r '[.tasks[] | .package] | unique | tostring' affected.json)
+        
+        # Store the affected apps for output
+        echo "affected_apps=${AFFECTED_APPS}" >> $GITHUB_OUTPUT
+        
+        # Check if we have any affected apps
+        if [ "$(echo $AFFECTED_APPS | jq 'length')" -gt 0 ]; then
+          echo "has_affected_apps=true" >> $GITHUB_OUTPUT
+          
+          # Print the affected apps in a more readable format (like the shell script)
+          echo "✅ Found affected packages:"
+          echo "$AFFECTED_APPS" | jq '.'
         else
-          echo "docs_built=false" >> $GITHUB_OUTPUT
+          echo "has_affected_apps=false" >> $GITHUB_OUTPUT
+          echo "No affected packages found"
         fi
-        if jq -e '.projects | index("api")' affected.json > /dev/null; then
-          echo "api_built=true" >> $GITHUB_OUTPUT
-        else
-          echo "api_built=false" >> $GITHUB_OUTPUT
-        fi
-        if jq -e '.projects | index("frontend")' affected.json > /dev/null; then
-          echo "frontend_built=true" >> $GITHUB_OUTPUT
-        else
-          echo "frontend_built=false" >> $GITHUB_OUTPUT
-        fi
+        
+        # Create a file with the list of affected apps for use in next steps
+        echo $AFFECTED_APPS > affected_apps.json
 
-    - name: Upload Docs Artifact
-      if: steps.check.outputs.docs_built == 'true'
+    - name: Build Apps
+      if: steps.check.outputs.has_affected_apps == 'true'
+      shell: bash
+      run: |
+        echo "🔨 Building affected packages"
+        # Build command with individual --filter flags for each package
+        BUILD_CMD="pnpm turbo run build"
+        cat affected_apps.json | jq -r '.[]' | while read -r APP; do
+          BUILD_CMD="$BUILD_CMD --filter=$APP"
+        done
+        echo "Running: $BUILD_CMD"
+        eval "$BUILD_CMD"
+
+    - name: Lint Code
+      if: steps.check.outputs.has_affected_apps == 'true'
+      shell: bash
+      run: |
+        echo "🔎 Linting affected packages"
+        # Lint command with individual --filter flags for each package
+        LINT_CMD="pnpm turbo run lint"
+        cat affected_apps.json | jq -r '.[]' | while read -r APP; do
+          LINT_CMD="$LINT_CMD --filter=$APP"
+        done
+        echo "Running: $LINT_CMD"
+        eval "$LINT_CMD"
+
+    - name: Run Tests
+      if: steps.check.outputs.has_affected_apps == 'true'
+      shell: bash
+      run: |
+        echo "🧪 Testing affected packages"
+        # Test command with individual --filter flags for each package
+        TEST_CMD="pnpm turbo run test"
+        cat affected_apps.json | jq -r '.[]' | while read -r APP; do
+          TEST_CMD="$TEST_CMD --filter=$APP"
+        done
+        echo "Running: $TEST_CMD"
+        eval "$TEST_CMD"
+
+    - name: Generate AsyncAPI HTML
+      if: steps.check.outputs.has_affected_apps == 'true'
+      shell: bash
+      run: |
+        echo "📄 Generating AsyncAPI documentation"
+        pnpm run asyncapi:html
+
+    - name: Collect Build Artifacts
+      if: steps.check.outputs.has_affected_apps == 'true'
+      shell: bash
+      run: |
+        echo "📦 Collecting build artifacts"
+        # Create artifacts directory if it doesn't exist
+        mkdir -p artifacts
+        
+        # Read the affected apps JSON
+        AFFECTED_APPS=$(cat affected_apps.json)
+        
+        # Process each affected app
+        echo $AFFECTED_APPS | jq -r '.[]' | while read -r APP; do
+          echo "Collecting artifacts for $APP"
+          
+          # Determine the build output location based on app directory structure
+          if [[ -d "apps/$APP/build" ]]; then
+            # Copy from apps/{app}/build
+            mkdir -p "artifacts/$APP"
+            cp -r "apps/$APP/build/." "artifacts/$APP/"
+            echo "✅ Copied from apps/$APP/build"
+          elif [[ -d "apps/$APP/dist" ]]; then
+            # Copy from apps/{app}/dist
+            mkdir -p "artifacts/$APP" 
+            cp -r "apps/$APP/dist/." "artifacts/$APP/"
+            echo "✅ Copied from apps/$APP/dist"
+          elif [[ -d "packages/$APP/build" ]]; then
+            # Copy from packages/{app}/build
+            mkdir -p "artifacts/$APP"
+            cp -r "packages/$APP/build/." "artifacts/$APP/"
+            echo "✅ Copied from packages/{app}/build"
+          elif [[ -d "packages/$APP/dist" ]]; then
+            # Copy from packages/{app}/dist
+            mkdir -p "artifacts/$APP"
+            cp -r "packages/$APP/dist/." "artifacts/$APP/"
+            echo "✅ Copied from packages/{app}/dist"
+          else
+            echo "❌ No build output found for $APP in standard locations"
+          fi
+        done
+        
+        # List collected artifacts for verification
+        echo "Collected artifacts in these directories:"
+        ls -la artifacts/
+
+    - name: Upload Consolidated Artifacts
+      if: steps.check.outputs.has_affected_apps == 'true'
       uses: actions/upload-artifact@v4
       with:
-        name: docs-artifact
-        path: apps/docs/build
+        name: app-artifacts
+        path: artifacts/
+        retention-days: ${{ inputs.artifact_retention }}
