@@ -51,16 +51,16 @@ runs:
       shell: bash
       run: |
         echo "Using base for change detection: ${{ inputs.base }}"
-        
+
         # Get list of affected projects using provided base
         pnpm turbo run build --dry-run=json --filter=...[origin/${{ inputs.base }}] --output-logs=none > affected.json
-        
+
         # Extract project names from tasks array
-        AFFECTED_APPS=$(jq -r '[.tasks[] | .package] | unique | tostring' affected.json)
-        
+        AFFECTED_APPS=$(jq -r '[.tasks[] | .package] | unique' affected.json)
+                
         # Store the affected apps for output
         echo "affected_apps=${AFFECTED_APPS}" >> $GITHUB_OUTPUT
-        
+
         # Check if we have any affected apps
         if [ "$(echo $AFFECTED_APPS | jq 'length')" -gt 0 ]; then
           echo "has_affected_apps=true" >> $GITHUB_OUTPUT
@@ -72,7 +72,7 @@ runs:
           echo "has_affected_apps=false" >> $GITHUB_OUTPUT
           echo "No affected packages found"
         fi
-        
+
         # Create a file with the list of affected apps for use in next steps
         echo $AFFECTED_APPS > affected_apps.json
 
@@ -129,10 +129,10 @@ runs:
         echo "📦 Collecting build artifacts"
         # Create artifacts directory if it doesn't exist
         mkdir -p artifacts
-        
+
         # Read the affected apps JSON
         AFFECTED_APPS=$(cat affected_apps.json)
-        
+
         # Process each affected app
         echo $AFFECTED_APPS | jq -r '.[]' | while read -r APP; do
           echo "Collecting artifacts for $APP"
@@ -162,7 +162,7 @@ runs:
             echo "❌ No build output found for $APP in standard locations"
           fi
         done
-        
+
         # List collected artifacts for verification
         echo "Collected artifacts in these directories:"
         ls -la artifacts/
