@@ -1,4 +1,4 @@
-import { createInsertSchema, createSelectSchema } from 'validator';
+import { createInsertSchema } from 'validator';
 import { experiments } from 'database';
 
 export const createExperimentSchema = createInsertSchema(experiments);
