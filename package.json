@@ -13,7 +13,6 @@
     "test:watch": "turbo test --watch",
     "test:coverage": "turbo test --coverage",
     "tf": "pnpm run tf:dev",
-    "test": "turbo test",
     "tf:fmt": "cd infrastructure && tofu fmt --recursive",
     "tf:dev": "cd infrastructure/env/dev && tofu init && tofu plan && tofu apply",
     "asyncapi:html": "asyncapi generate fromTemplate asyncapi.yaml @asyncapi/html-template@3.2.0 --use-new-generator -o ./apps/docs/static/.asyncapi",
