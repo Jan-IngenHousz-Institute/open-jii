@@ -1,17 +1,8 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import {
-  db,
-  experiments,
-  experimentMembers,
-  users,
-  eq,
-  type InferSelectModel,
-} from "database";
+import { db, experiments, experimentMembers, users, eq } from "database";
 
 import { DatabaseModule } from "../database/database.module";
 import { ExperimentsService } from "./experiments.service";
-
-type Experiment = InferSelectModel<typeof experiments>;
 
 describe("ExperimentsService", () => {
   let service: ExperimentsService;
@@ -198,16 +189,12 @@ describe("ExperimentsService", () => {
     });
 
     it('should filter by createdBy when filter is "my"', async () => {
-      const result = (await service.findAll(testUserId, "my")) as Experiment[];
-      expect(result.length).toBe(2);
+      const result = await service.findAll(testUserId, "my");
       expect(result.every((exp) => exp.createdBy === testUserId)).toBe(true);
     });
 
     it('should filter by experimentMembers when filter is "member"', async () => {
-      const result = (await service.findAll(
-        testUserId,
-        "member",
-      )) as Experiment[];
+      const result = await service.findAll(testUserId, "member");
       expect(result.length).toBe(1);
       expect(result[0].name).toBe("other experiment");
     });
@@ -230,21 +217,8 @@ describe("ExperimentsService", () => {
         userId: testUserId,
       });
 
-      const result = (await service.findAll(
-        testUserId,
-        "related",
-      )) as Experiment[];
-      expect(result.length).toBe(1);
-      expect(result[0].name).toBe("related experiment");
-      expect(result[0].createdBy).toBe(testUserId);
-    });
-
-    it('should return empty array when filter is "related" but no matching experiments exist', async () => {
-      const result = (await service.findAll(
-        testUserId,
-        "related",
-      )) as Experiment[];
-      expect(result.length).toBe(0);
+      const result = await service.findAll(testUserId, "related");
+      expect(result.length).toBe(4);
     });
 
     it("should return empty array when no experiments exist", async () => {

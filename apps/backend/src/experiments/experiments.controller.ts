@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Query,
   UsePipes,
+  NotFoundException,
 } from "@nestjs/common";
 import { ZodValidationPipe } from "nestjs-zod";
 
@@ -47,16 +48,24 @@ export class ExperimentsController {
   }
 
   @Get(":id")
-  findOne(@Param("id", ParseUUIDPipe) id: string) {
-    return this.experimentsService.findOne(id);
+  async findOne(@Param("id", ParseUUIDPipe) id: string) {
+    const experiment = await this.experimentsService.findOne(id);
+    if (!experiment) {
+      throw new NotFoundException(`Experiment with ID ${id} not found`);
+    }
+    return experiment;
   }
 
   @Patch(":id")
   @UsePipes(new ZodValidationPipe(updateExperimentSchema))
-  update(
+  async update(
     @Param("id", ParseUUIDPipe) id: string,
     @Body() updateExperimentDto: UpdateExperimentDto,
   ) {
+    const experiment = await this.experimentsService.findOne(id);
+    if (!experiment) {
+      throw new NotFoundException(`Experiment with ID ${id} not found`);
+    }
     return this.experimentsService.update(id, updateExperimentDto);
   }
 }
