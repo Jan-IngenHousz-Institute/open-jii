@@ -1,5 +1,5 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { db, experiments, eq, and, experimentMembers } from "database";
+import { db, experiments, eq, or, experimentMembers } from "database";
 
 import type { ExperimentFilter } from "./pipes/experiment-filter.pipe";
 import type {
@@ -22,59 +22,53 @@ export class ExperimentsService {
   }
 
   async findAll(userId?: string, filter?: ExperimentFilter) {
+    // Base query without any filters
     if (!userId) {
       return this.database.select().from(experiments);
     }
 
-    if (filter === "my") {
-      return this.database
-        .select()
-        .from(experiments)
-        .where(eq(experiments.createdBy, userId));
-    }
+    // Common experiment fields to select
+    const experimentFields = {
+      id: experiments.id,
+      name: experiments.name,
+      status: experiments.status,
+      visibility: experiments.visibility,
+      embargoIntervalDays: experiments.embargoIntervalDays,
+      createdBy: experiments.createdBy,
+    };
 
-    if (filter === "member") {
-      return this.database
-        .select({
-          id: experiments.id,
-          name: experiments.name,
-          status: experiments.status,
-          visibility: experiments.visibility,
-          embargoIntervalDays: experiments.embargoIntervalDays,
-          createdBy: experiments.createdBy,
-        })
-        .from(experiments)
-        .innerJoin(
-          experimentMembers,
-          eq(experiments.id, experimentMembers.experimentId),
-        )
-        .where(eq(experimentMembers.userId, userId));
-    }
+    // Start with a base query builder
+    let query = this.database.select(experimentFields).from(experiments);
 
-    if (filter === "related") {
-      return this.database
-        .select({
-          id: experiments.id,
-          name: experiments.name,
-          status: experiments.status,
-          visibility: experiments.visibility,
-          embargoIntervalDays: experiments.embargoIntervalDays,
-          createdBy: experiments.createdBy,
-        })
-        .from(experiments)
-        .leftJoin(
-          experimentMembers,
-          eq(experiments.id, experimentMembers.experimentId),
-        )
-        .where(
-          and(
-            eq(experiments.createdBy, userId),
-            eq(experimentMembers.userId, userId),
-          ),
-        );
-    }
+    // Apply filters based on the filter type
+    switch (filter) {
+      case "my":
+        return query.where(eq(experiments.createdBy, userId));
 
-    return this.database.select().from(experiments);
+      case "member":
+        return query
+          .innerJoin(
+            experimentMembers,
+            eq(experiments.id, experimentMembers.experimentId),
+          )
+          .where(eq(experimentMembers.userId, userId));
+
+      case "related":
+        return query
+          .leftJoin(
+            experimentMembers,
+            eq(experiments.id, experimentMembers.experimentId),
+          )
+          .where(
+            or(
+              eq(experiments.createdBy, userId),
+              eq(experimentMembers.userId, userId),
+            ),
+          );
+
+      default:
+        return query;
+    }
   }
 
   async findOne(id: string) {
