@@ -14,8 +14,22 @@ import type {
 describe("ExperimentsController", () => {
   let controller: ExperimentsController;
   let service: ExperimentsService;
-  const validUserId = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
-  const validExperimentId = "b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22";
+
+  // Test constants
+  const UUID = {
+    USER: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+    EXPERIMENT: "b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22",
+  };
+
+  // Test fixtures
+  const mockExperiment = fromPartial({
+    id: UUID.EXPERIMENT,
+    name: "Test Experiment",
+    status: "active",
+    visibility: "private",
+    embargoIntervalDays: 90,
+    createdBy: UUID.USER,
+  });
 
   // Test constants
   const UUID = {
@@ -63,7 +77,6 @@ describe("ExperimentsController", () => {
       const createDto: CreateExperimentDto = {
         name: "Test Experiment",
         status: "provisioning",
-        createdBy: validUserId,
         visibility: "private",
         embargoIntervalDays: 90,
       };
@@ -150,10 +163,6 @@ describe("ExperimentsController", () => {
         name: "Updated Experiment",
         status: "active",
       };
-      const mockExperiment = {
-        id: validExperimentId,
-        name: "Original Experiment",
-      };
 
       // Act
       await controller.update(UUID.EXPERIMENT, updateDto);
@@ -166,10 +175,6 @@ describe("ExperimentsController", () => {
     it("should accept empty update data", async () => {
       // Arrange
       const emptyDto: UpdateExperimentDto = {};
-      const mockExperiment = {
-        id: validExperimentId,
-        name: "Original Experiment",
-      };
 
       // Act
       await controller.update(UUID.EXPERIMENT, emptyDto);

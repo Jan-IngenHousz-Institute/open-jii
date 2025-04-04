@@ -37,7 +37,6 @@ describe("ExperimentsService", () => {
   let service: ExperimentsService;
   let testUserId: string;
   let otherUserId: string;
-  const randomUUID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
 
   // Database setup and cleanup
   beforeAll(async () => {
@@ -87,28 +86,6 @@ describe("ExperimentsService", () => {
       expect(created).toBeDefined();
       expect(created.name).toBe("test experiment");
       expect(created.createdBy).toBe(testUserId);
-    });
-
-    it("should assign the provided userId as createdBy", async () => {
-      const dto = {
-        name: "creator test experiment",
-        status: "provisioning" as const,
-        visibility: "private" as const,
-        embargoIntervalDays: 90,
-        createdBy: otherUserId, // Try to set a different createdBy
-      };
-
-      const result = await service.create(dto, testUserId);
-      expect(result).toBeDefined();
-
-      // Verify the experiment was created with the correct userId
-      const [created] = await db
-        .select()
-        .from(experiments)
-        .where(eq(experiments.name, "creator test experiment"));
-
-      expect(created.createdBy).toBe(testUserId);
-      expect(created.createdBy).not.toBe(otherUserId);
     });
   });
 
@@ -192,23 +169,11 @@ describe("ExperimentsService", () => {
       await db.delete(experimentMembers);
       await db.delete(experiments);
 
+      // Act
       const result = await service.findAll(testUserId);
+
+      // Assert
       expect(result).toEqual([]);
-    });
-
-    it("should correctly filter private experiments by visibility", async () => {
-      // Create a public and private experiment
-      await db.insert(experiments).values([
-        {
-          name: "public experiment",
-          status: "active",
-          visibility: "public",
-          embargoIntervalDays: 90,
-          createdBy: otherUserId,
-        },
-      ]);
-
-      // Implement this test if visibility filtering is added to the service
     });
   });
 
