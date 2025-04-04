@@ -192,7 +192,7 @@ describe("ExperimentsService", () => {
       await db.delete(experimentMembers);
       await db.delete(experiments);
 
-      const result = await service.findAll();
+      const result = await service.findAll(testUserId);
       expect(result).toEqual([]);
     });
 
