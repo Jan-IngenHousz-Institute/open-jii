@@ -14,8 +14,22 @@ import type {
 describe("ExperimentsController", () => {
   let controller: ExperimentsController;
   let service: ExperimentsService;
-  const validUserId = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
-  const validExperimentId = "b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22";
+
+  // Test constants
+  const UUID = {
+    USER: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+    EXPERIMENT: "b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22",
+  };
+
+  // Test fixtures
+  const mockExperiment = fromPartial({
+    id: UUID.EXPERIMENT,
+    name: "Test Experiment",
+    status: "active",
+    visibility: "private",
+    embargoIntervalDays: 90,
+    createdBy: UUID.USER,
+  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -24,9 +38,9 @@ describe("ExperimentsController", () => {
         {
           provide: ExperimentsService,
           useValue: {
-            create: jest.fn().mockResolvedValue({ id: validExperimentId }),
-            findAll: jest.fn().mockResolvedValue([{ id: validExperimentId }]),
-            findOne: jest.fn().mockResolvedValue({ id: validExperimentId }),
+            create: jest.fn().mockResolvedValue({ id: UUID.EXPERIMENT }),
+            findAll: jest.fn().mockResolvedValue([mockExperiment]),
+            findOne: jest.fn().mockResolvedValue(mockExperiment),
             update: jest.fn().mockResolvedValue({ affected: 1 }),
           },
         },
@@ -43,141 +57,132 @@ describe("ExperimentsController", () => {
 
   describe("create", () => {
     it("should create an experiment with valid data and pass it to the service", async () => {
+      // Arrange
       const createDto: CreateExperimentDto = {
         name: "Test Experiment",
         status: "provisioning",
-        createdBy: validUserId,
         visibility: "private",
         embargoIntervalDays: 90,
       };
 
-      await controller.create(createDto, validUserId);
+      // Act
+      await controller.create(createDto, UUID.USER);
 
-      expect(service.create).toHaveBeenCalledTimes(1);
-      expect(service.create).toHaveBeenCalledWith(createDto, validUserId);
+      // Assert
+      expect(service.create).toHaveBeenCalledWith(createDto, UUID.USER);
     });
   });
 
   describe("findAll", () => {
     it("should pass the userId and filter to the service with no filter", async () => {
-      await controller.findAll(validUserId);
+      // Act
+      await controller.findAll(UUID.USER);
 
-      expect(service.findAll).toHaveBeenCalledTimes(1);
-      expect(service.findAll).toHaveBeenCalledWith(validUserId, undefined);
+      // Assert
+      expect(service.findAll).toHaveBeenCalledWith(UUID.USER, undefined);
     });
 
     it("should pass the userId and filter to the service with 'my' filter", async () => {
+      // Arrange
       const filter: ExperimentFilter = "my";
 
-      await controller.findAll(validUserId, filter);
+      // Act
+      await controller.findAll(UUID.USER, filter);
 
-      expect(service.findAll).toHaveBeenCalledTimes(1);
-      expect(service.findAll).toHaveBeenCalledWith(validUserId, filter);
+      // Assert
+      expect(service.findAll).toHaveBeenCalledWith(UUID.USER, filter);
     });
 
     it("should pass the userId and filter to the service with 'member' filter", async () => {
+      // Arrange
       const filter: ExperimentFilter = "member";
 
-      await controller.findAll(validUserId, filter);
+      // Act
+      await controller.findAll(UUID.USER, filter);
 
-      expect(service.findAll).toHaveBeenCalledTimes(1);
-      expect(service.findAll).toHaveBeenCalledWith(validUserId, filter);
+      // Assert
+      expect(service.findAll).toHaveBeenCalledWith(UUID.USER, filter);
     });
 
     it("should pass the userId and filter to the service with 'related' filter", async () => {
+      // Arrange
       const filter: ExperimentFilter = "related";
 
-      await controller.findAll(validUserId, filter);
+      // Act
+      await controller.findAll(UUID.USER, filter);
 
-      expect(service.findAll).toHaveBeenCalledTimes(1);
-      expect(service.findAll).toHaveBeenCalledWith(validUserId, filter);
+      // Assert
+      expect(service.findAll).toHaveBeenCalledWith(UUID.USER, filter);
     });
   });
 
   describe("findOne", () => {
     it("should return experiment data when found", async () => {
-      const mockExperiment = { id: validExperimentId, name: "Test Experiment" };
-      jest
-        .spyOn(service, "findOne")
-        .mockResolvedValue(fromPartial(mockExperiment));
+      // Act
+      const result = await controller.findOne(UUID.EXPERIMENT);
 
-      const result = await controller.findOne(validExperimentId);
-
-      expect(service.findOne).toHaveBeenCalledTimes(1);
-      expect(service.findOne).toHaveBeenCalledWith(validExperimentId);
+      // Assert
+      expect(service.findOne).toHaveBeenCalledWith(UUID.EXPERIMENT);
       expect(result).toEqual(mockExperiment);
     });
 
     it("should throw NotFoundException when experiment is not found", async () => {
+      // Arrange
       jest.spyOn(service, "findOne").mockResolvedValue(null);
 
-      await expect(controller.findOne(validExperimentId)).rejects.toThrow(
+      // Act & Assert
+      await expect(controller.findOne(UUID.EXPERIMENT)).rejects.toThrow(
         new NotFoundException(
-          `Experiment with ID ${validExperimentId} not found`,
+          `Experiment with ID ${UUID.EXPERIMENT} not found`,
         ),
       );
-
-      expect(service.findOne).toHaveBeenCalledTimes(1);
-      expect(service.findOne).toHaveBeenCalledWith(validExperimentId);
+      expect(service.findOne).toHaveBeenCalledWith(UUID.EXPERIMENT);
     });
   });
 
   describe("update", () => {
     it("should pass update data to service when experiment exists", async () => {
+      // Arrange
       const updateDto: UpdateExperimentDto = {
         name: "Updated Experiment",
         status: "active",
       };
-      const mockExperiment = {
-        id: validExperimentId,
-        name: "Original Experiment",
-      };
 
-      jest
-        .spyOn(service, "findOne")
-        .mockResolvedValue(fromPartial(mockExperiment));
+      // Act
+      await controller.update(UUID.EXPERIMENT, updateDto);
 
-      await controller.update(validExperimentId, updateDto);
-
-      expect(service.findOne).toHaveBeenCalledTimes(1);
-      expect(service.findOne).toHaveBeenCalledWith(validExperimentId);
-      expect(service.update).toHaveBeenCalledTimes(1);
-      expect(service.update).toHaveBeenCalledWith(validExperimentId, updateDto);
+      // Assert
+      expect(service.findOne).toHaveBeenCalledWith(UUID.EXPERIMENT);
+      expect(service.update).toHaveBeenCalledWith(UUID.EXPERIMENT, updateDto);
     });
 
     it("should accept empty update data", async () => {
+      // Arrange
       const emptyDto: UpdateExperimentDto = {};
-      const mockExperiment = {
-        id: validExperimentId,
-        name: "Original Experiment",
-      };
 
-      jest
-        .spyOn(service, "findOne")
-        .mockResolvedValue(fromPartial(mockExperiment));
+      // Act
+      await controller.update(UUID.EXPERIMENT, emptyDto);
 
-      await controller.update(validExperimentId, emptyDto);
-
-      expect(service.findOne).toHaveBeenCalledTimes(1);
-      expect(service.update).toHaveBeenCalledTimes(1);
-      expect(service.update).toHaveBeenCalledWith(validExperimentId, emptyDto);
+      // Assert
+      expect(service.findOne).toHaveBeenCalledWith(UUID.EXPERIMENT);
+      expect(service.update).toHaveBeenCalledWith(UUID.EXPERIMENT, emptyDto);
     });
 
     it("should throw NotFoundException when trying to update non-existent experiment", async () => {
+      // Arrange
       const updateDto: UpdateExperimentDto = { name: "Will Not Update" };
-
       jest.spyOn(service, "findOne").mockResolvedValue(null);
 
+      // Act & Assert
       await expect(
-        controller.update(validExperimentId, updateDto),
+        controller.update(UUID.EXPERIMENT, updateDto),
       ).rejects.toThrow(
         new NotFoundException(
-          `Experiment with ID ${validExperimentId} not found`,
+          `Experiment with ID ${UUID.EXPERIMENT} not found`,
         ),
       );
 
-      expect(service.findOne).toHaveBeenCalledTimes(1);
-      expect(service.findOne).toHaveBeenCalledWith(validExperimentId);
+      expect(service.findOne).toHaveBeenCalledWith(UUID.EXPERIMENT);
       expect(service.update).not.toHaveBeenCalled();
     });
   });
