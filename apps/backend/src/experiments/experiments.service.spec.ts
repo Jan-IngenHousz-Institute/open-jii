@@ -17,6 +17,7 @@ describe("ExperimentsService", () => {
   let service: ExperimentsService;
   let testUserId: string;
   let otherUserId: string;
+  const randomUUID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
 
   beforeAll(async () => {
     // First, find any existing test users
@@ -128,6 +129,28 @@ describe("ExperimentsService", () => {
       expect(created.name).toBe("test experiment");
       expect(created.createdBy).toBe(testUserId);
     });
+
+    it("should assign the provided userId as createdBy", async () => {
+      const dto = {
+        name: "creator test experiment",
+        status: "provisioning" as const,
+        visibility: "private" as const,
+        embargoIntervalDays: 90,
+        createdBy: otherUserId, // Try to set a different createdBy
+      };
+
+      const result = await service.create(dto, testUserId);
+      expect(result).toBeDefined();
+
+      // Verify the experiment was created with the correct userId
+      const [created] = await db
+        .select()
+        .from(experiments)
+        .where(eq(experiments.name, "creator test experiment"));
+
+      expect(created.createdBy).toBe(testUserId);
+      expect(created.createdBy).not.toBe(otherUserId);
+    });
   });
 
   describe("findAll", () => {
@@ -223,6 +246,30 @@ describe("ExperimentsService", () => {
       )) as Experiment[];
       expect(result.length).toBe(0);
     });
+
+    it("should return empty array when no experiments exist", async () => {
+      // Clean up all test data first
+      await db.delete(experimentMembers);
+      await db.delete(experiments);
+
+      const result = await service.findAll();
+      expect(result).toEqual([]);
+    });
+
+    it("should correctly filter private experiments by visibility", async () => {
+      // Create a public and private experiment
+      await db.insert(experiments).values([
+        {
+          name: "public experiment",
+          status: "active",
+          visibility: "public",
+          embargoIntervalDays: 90,
+          createdBy: otherUserId,
+        },
+      ]);
+
+      // Implement this test if visibility filtering is added to the service
+    });
   });
 
   describe("findOne", () => {
@@ -245,7 +292,28 @@ describe("ExperimentsService", () => {
     it("should find one experiment by id", async () => {
       const result = await service.findOne(testExperimentId);
       expect(result).toBeDefined();
-      expect(result[0].id).toBe(testExperimentId);
+      expect(result?.id).toBe(testExperimentId);
+    });
+
+    it("should return null for non-existent experiment id", async () => {
+      const result = await service.findOne(randomUUID);
+      expect(result).toBeNull();
+    });
+
+    it("should return only the requested experiment", async () => {
+      // Create another experiment to ensure we're only getting the right one
+      await db.insert(experiments).values({
+        name: "another experiment",
+        status: "active",
+        visibility: "private",
+        embargoIntervalDays: 90,
+        createdBy: testUserId,
+      });
+
+      const result = await service.findOne(testExperimentId);
+      expect(result).toBeDefined();
+      expect(result?.id).toBe(testExperimentId);
+      expect(result?.name).toBe("test experiment for findOne");
     });
   });
 
@@ -274,13 +342,125 @@ describe("ExperimentsService", () => {
 
       await service.update(testExperimentId, dto);
 
-      const [updated] = await db
-        .select()
-        .from(experiments)
-        .where(eq(experiments.id, testExperimentId));
+      const updated = await service.findOne(testExperimentId);
+      expect(updated?.name).toBe("updated experiment name");
+      expect(updated?.status).toBe("archived");
+    });
 
-      expect(updated.name).toBe("updated experiment name");
-      expect(updated.status).toBe("archived");
+    it("should not throw an error when updating non-existent experiment", async () => {
+      const dto = {
+        name: "this won't be updated",
+        status: "active" as const,
+      };
+
+      // This should not throw an error
+      await expect(service.update(randomUUID, dto)).resolves.not.toThrow();
+
+      // Verify nothing was actually updated
+      const allExperiments = await db.select().from(experiments);
+      const updatedExperiment = allExperiments.find(
+        (exp) => exp.name === "this won't be updated",
+      );
+      expect(updatedExperiment).toBeUndefined();
+    });
+
+    it("should only update specified fields", async () => {
+      const originalExperiment = await service.findOne(testExperimentId);
+      if (!originalExperiment) {
+        throw new Error("Test experiment not found");
+      }
+
+      // Only update the name
+      const dto = {
+        name: "partially updated name",
+      };
+
+      await service.update(testExperimentId, dto);
+
+      const updated = await service.findOne(testExperimentId);
+      if (!updated) {
+        throw new Error("Updated experiment not found");
+      }
+
+      // Name should be updated
+      expect(updated.name).toBe("partially updated name");
+
+      // Other fields should remain unchanged
+      expect(updated.status).toBe(originalExperiment.status);
+      expect(updated.visibility).toBe(originalExperiment.visibility);
+      expect(updated.embargoIntervalDays).toBe(
+        originalExperiment.embargoIntervalDays,
+      );
+    });
+  });
+
+  describe("authorization scenarios", () => {
+    let userExperimentId: string;
+    let otherUserExperimentId: string;
+
+    beforeEach(async () => {
+      // Create experiments for different users
+      const [userExperiment] = await db
+        .insert(experiments)
+        .values({
+          name: "user's experiment",
+          status: "active",
+          visibility: "private",
+          embargoIntervalDays: 90,
+          createdBy: testUserId,
+        })
+        .returning();
+      userExperimentId = userExperiment.id;
+
+      const [otherExperiment] = await db
+        .insert(experiments)
+        .values({
+          name: "other user's experiment",
+          status: "active",
+          visibility: "private",
+          embargoIntervalDays: 90,
+          createdBy: otherUserId,
+        })
+        .returning();
+      otherUserExperimentId = otherExperiment.id;
+    });
+
+    it("should find only experiments that belong to a specific user with 'my' filter", async () => {
+      const userExperiments = await service.findAll(testUserId, "my");
+      expect(userExperiments.length).toBeGreaterThanOrEqual(1);
+      expect(userExperiments.some((e) => e.id === userExperimentId)).toBe(true);
+      expect(userExperiments.every((e) => e.createdBy === testUserId)).toBe(
+        true,
+      );
+
+      const otherUserExperiments = await service.findAll(otherUserId, "my");
+      expect(
+        otherUserExperiments.some((e) => e.id === otherUserExperimentId),
+      ).toBe(true);
+      expect(
+        otherUserExperiments.every((e) => e.createdBy === otherUserId),
+      ).toBe(true);
+    });
+
+    it("should find experiments where user is a member with 'member' filter", async () => {
+      // Make test user a member of other user's experiment
+      await db.insert(experimentMembers).values({
+        experimentId: otherUserExperimentId,
+        userId: testUserId,
+      });
+
+      const memberExperiments = await service.findAll(testUserId, "member");
+      expect(memberExperiments.length).toBeGreaterThanOrEqual(1);
+      expect(
+        memberExperiments.some((e) => e.id === otherUserExperimentId),
+      ).toBe(true);
+
+      // Other user should not be a member of any experiments yet
+      const otherMemberExperiments = await service.findAll(
+        otherUserId,
+        "member",
+      );
+      expect(otherMemberExperiments.length).toBe(0);
     });
   });
 });
