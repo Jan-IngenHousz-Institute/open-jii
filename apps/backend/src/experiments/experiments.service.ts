@@ -78,11 +78,17 @@ export class ExperimentsService {
   }
 
   async findOne(id: string) {
-    return this.database
+    const result = await this.database
       .select()
       .from(experiments)
       .where(eq(experiments.id, id))
       .limit(1);
+
+    if (result.length === 0) {
+      return null;
+    }
+
+    return result[0];
   }
 
   async update(id: string, updateExperimentDto: UpdateExperimentDto) {
