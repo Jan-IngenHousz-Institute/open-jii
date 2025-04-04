@@ -21,12 +21,7 @@ export class ExperimentsService {
     });
   }
 
-  async findAll(userId?: string, filter?: ExperimentFilter) {
-    // Base query without any filters
-    if (!userId) {
-      return this.database.select().from(experiments);
-    }
-
+  async findAll(userId: string, filter?: ExperimentFilter) {
     // Common experiment fields to select
     const experimentFields = {
       id: experiments.id,
@@ -36,7 +31,6 @@ export class ExperimentsService {
       embargoIntervalDays: experiments.embargoIntervalDays,
       createdBy: experiments.createdBy,
     };
-
     // Start with a base query builder
     let query = this.database.select(experimentFields).from(experiments);
 
