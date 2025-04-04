@@ -41,7 +41,7 @@ export class ExperimentsController {
 
   @Get()
   findAll(
-    @Query("userId", ParseUUIDPipe) userId?: string,
+    @Query("userId", ParseUUIDPipe) userId: string, // for later we will use auth guard
     @Query("filter", ExperimentFilterPipe) filter?: ExperimentFilter,
   ) {
     return this.experimentsService.findAll(userId, filter);
