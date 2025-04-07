@@ -24,11 +24,11 @@ graph TD;
 
 ## 🛠 Resources Used
 
-| Resource               | Description                                    | Documentation                                                                                                        |
-| ---------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `aws_kinesis_stream`   | Manages a Kinesis data stream                  | [AWS Kinesis Stream](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kinesis_stream)    |
-| `aws_iam_role`        | IAM role allowing IoT Core to write to Kinesis  | [AWS IAM Role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role)                |
-| `aws_iam_policy`      | IAM policy defining actions on Kinesis stream   | [AWS IAM Policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy)            |
+| Resource             | Description                                    | Documentation                                                                                                    |
+| -------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `aws_kinesis_stream` | Manages a Kinesis data stream                  | [AWS Kinesis Stream](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kinesis_stream) |
+| `aws_iam_role`       | IAM role allowing IoT Core to write to Kinesis | [AWS IAM Role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role)             |
+| `aws_iam_policy`     | IAM policy defining actions on Kinesis stream  | [AWS IAM Policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy)         |
 
 ## ⚙️ Usage
 
@@ -45,18 +45,18 @@ module "kinesis" {
 
 ## 🔑 Inputs
 
-| Name                     | Description                                  | Type     | Default          | Required |
-| ------------------------ | -------------------------------------------- | -------- | ---------------- | -------- |
-| stream_name             | Name of the Kinesis Data Stream              | `string` | n/a              | ✅ Yes   |
-| shard_count             | Number of shards in the Kinesis stream       | `number` | `1`              | ❌ No    |
-| retention_period_hours  | Data retention period in hours               | `number` | `24`             | ❌ No    |
+| Name                   | Description                            | Type     | Default | Required |
+| ---------------------- | -------------------------------------- | -------- | ------- | -------- |
+| stream_name            | Name of the Kinesis Data Stream        | `string` | n/a     | ✅ Yes   |
+| shard_count            | Number of shards in the Kinesis stream | `number` | `1`     | ❌ No    |
+| retention_period_hours | Data retention period in hours         | `number` | `24`    | ❌ No    |
 
 ## 📤 Outputs
 
-| Name                  | Description                                       |
-| --------------------- | ------------------------------------------------- |
-| kinesis_stream_arn   | ARN of the Kinesis Data Stream                    |
-| kinesis_stream_name  | Name of the provisioned Kinesis stream            |
+| Name                | Description                            |
+| ------------------- | -------------------------------------- |
+| kinesis_stream_arn  | ARN of the Kinesis Data Stream         |
+| kinesis_stream_name | Name of the provisioned Kinesis stream |
 
 ## 🌍 Notes
 
