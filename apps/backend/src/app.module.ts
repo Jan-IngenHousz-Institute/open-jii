@@ -5,7 +5,7 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import databaseConfig from "./config/database.config";
 import { DatabaseModule } from "./database/database.module";
-import { ExperimentsModule } from "./experiments/experiments.module";
+import { ExperimentModule } from "./experiments/experiment.module";
 
 @Module({
   imports: [
@@ -14,7 +14,7 @@ import { ExperimentsModule } from "./experiments/experiments.module";
       load: [databaseConfig],
     }),
     DatabaseModule,
-    ExperimentsModule,
+    ExperimentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

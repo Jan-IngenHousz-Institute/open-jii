@@ -1,14 +1,14 @@
 import { Injectable, Inject } from "@nestjs/common";
 import { db, experiments, eq, or, experimentMembers } from "database";
 
-import type { ExperimentFilter } from "./pipes/experiment-filter.pipe";
+import type { ExperimentFilter } from "../../application/pipes/experiment-filter.pipe";
 import type {
   CreateExperimentDto,
   UpdateExperimentDto,
-} from "./schemas/experiment.schema";
+} from "../schemas/experiment.schema";
 
 @Injectable()
-export class ExperimentsService {
+export class ExperimentRepository {
   constructor(
     @Inject("DATABASE")
     private readonly database: typeof db,

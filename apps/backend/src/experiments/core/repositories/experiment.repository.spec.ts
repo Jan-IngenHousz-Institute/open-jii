@@ -1,12 +1,12 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { db, experiments, experimentMembers, users, eq } from "database";
 
-import { DatabaseModule } from "../database/database.module";
-import { ExperimentsService } from "./experiments.service";
+import { DatabaseModule } from "../../../database/database.module";
 import type {
   CreateExperimentDto,
   UpdateExperimentDto,
-} from "./schemas/experiment.schema";
+} from "../schemas/experiment.schema";
+import { ExperimentRepository } from "./experiment.repository";
 
 // Test constants and fixtures
 const TEST_IDS = {
@@ -33,8 +33,8 @@ const createExperimentFixture = (
   ...options,
 });
 
-describe("ExperimentsService", () => {
-  let service: ExperimentsService;
+describe("ExperimentRepository", () => {
+  let repository: ExperimentRepository;
   let testUserId: string;
   let otherUserId: string;
 
@@ -53,16 +53,16 @@ describe("ExperimentsService", () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [DatabaseModule],
-      providers: [ExperimentsService],
+      providers: [ExperimentRepository],
     }).compile();
 
-    service = module.get<ExperimentsService>(ExperimentsService);
+    repository = module.get<ExperimentRepository>(ExperimentRepository);
     await cleanupExperiments(testUserId, otherUserId);
   });
 
   // Core functionality tests
   it("should be defined", () => {
-    expect(service).toBeDefined();
+    expect(repository).toBeDefined();
   });
 
   describe("create", () => {
@@ -74,7 +74,7 @@ describe("ExperimentsService", () => {
       });
 
       // Act
-      const result = await service.create(dto, testUserId);
+      const result = await repository.create(dto, testUserId);
 
       // Assert
       expect(result).toBeDefined();
@@ -96,7 +96,7 @@ describe("ExperimentsService", () => {
 
     it("should return all experiments when no filter", async () => {
       // Act
-      const result = await service.findAll(testUserId);
+      const result = await repository.findAll(testUserId);
 
       // Assert
       expect(result.length).toBeGreaterThanOrEqual(3);
@@ -104,7 +104,7 @@ describe("ExperimentsService", () => {
 
     it("should filter by user ID when no filter parameter is provided", async () => {
       // Act
-      const result = await service.findAll(testUserId);
+      const result = await repository.findAll(testUserId);
 
       // Assert
       expect(result.length).toBeGreaterThanOrEqual(3);
@@ -112,7 +112,7 @@ describe("ExperimentsService", () => {
 
     it('should filter by createdBy when filter is "my"', async () => {
       // Act
-      const result = await service.findAll(testUserId, "my");
+      const result = await repository.findAll(testUserId, "my");
 
       // Assert
       expect(result.length).toBeGreaterThanOrEqual(2);
@@ -121,7 +121,7 @@ describe("ExperimentsService", () => {
 
     it('should filter by experimentMembers when filter is "member"', async () => {
       // Act
-      const result = await service.findAll(testUserId, "member");
+      const result = await repository.findAll(testUserId, "member");
 
       // Assert
       expect(result.length).toBe(1);
@@ -146,7 +146,7 @@ describe("ExperimentsService", () => {
       });
 
       // Act
-      const result = await service.findAll(testUserId, "related");
+      const result = await repository.findAll(testUserId, "related");
 
       // Assert
       expect(result.length).toBe(4);
@@ -158,7 +158,7 @@ describe("ExperimentsService", () => {
       await db.delete(experiments);
 
       // Act
-      const result = await service.findAll(testUserId);
+      const result = await repository.findAll(testUserId);
 
       // Assert
       expect(result).toEqual([]);
@@ -183,7 +183,7 @@ describe("ExperimentsService", () => {
 
     it("should find one experiment by id", async () => {
       // Act
-      const result = await service.findOne(testExperimentId);
+      const result = await repository.findOne(testExperimentId);
 
       // Assert
       expect(result).toBeDefined();
@@ -192,7 +192,7 @@ describe("ExperimentsService", () => {
 
     it("should return null for non-existent experiment id", async () => {
       // Act
-      const result = await service.findOne(TEST_IDS.NON_EXISTENT);
+      const result = await repository.findOne(TEST_IDS.NON_EXISTENT);
 
       // Assert
       expect(result).toBeNull();
@@ -208,7 +208,7 @@ describe("ExperimentsService", () => {
       });
 
       // Act
-      const result = await service.findOne(testExperimentId);
+      const result = await repository.findOne(testExperimentId);
 
       // Assert
       expect(result).toBeDefined();
@@ -241,10 +241,10 @@ describe("ExperimentsService", () => {
       };
 
       // Act
-      await service.update(testExperimentId, dto);
+      await repository.update(testExperimentId, dto);
 
       // Assert
-      const updated = await service.findOne(testExperimentId);
+      const updated = await repository.findOne(testExperimentId);
       expect(updated?.name).toBe("updated experiment name");
       expect(updated?.status).toBe("archived");
     });
@@ -258,7 +258,7 @@ describe("ExperimentsService", () => {
 
       // Act & Assert
       await expect(
-        service.update(TEST_IDS.NON_EXISTENT, dto),
+        repository.update(TEST_IDS.NON_EXISTENT, dto),
       ).resolves.not.toThrow();
 
       const allExperiments = await db.select().from(experiments);
@@ -270,7 +270,7 @@ describe("ExperimentsService", () => {
 
     it("should only update specified fields", async () => {
       // Arrange
-      const originalExperiment = await service.findOne(testExperimentId);
+      const originalExperiment = await repository.findOne(testExperimentId);
       if (!originalExperiment) {
         throw new Error("Test experiment not found");
       }
@@ -280,10 +280,10 @@ describe("ExperimentsService", () => {
       };
 
       // Act
-      await service.update(testExperimentId, dto);
+      await repository.update(testExperimentId, dto);
 
       // Assert
-      const updated = await service.findOne(testExperimentId);
+      const updated = await repository.findOne(testExperimentId);
       if (!updated) {
         throw new Error("Updated experiment not found");
       }
@@ -328,8 +328,8 @@ describe("ExperimentsService", () => {
 
     it("should find only experiments that belong to a specific user with 'my' filter", async () => {
       // Act
-      const userExperiments = await service.findAll(testUserId, "my");
-      const otherUserExperiments = await service.findAll(otherUserId, "my");
+      const userExperiments = await repository.findAll(testUserId, "my");
+      const otherUserExperiments = await repository.findAll(otherUserId, "my");
 
       // Assert
       expect(userExperiments.some((e) => e.id === userExperimentId)).toBe(true);
@@ -353,8 +353,8 @@ describe("ExperimentsService", () => {
       });
 
       // Act
-      const memberExperiments = await service.findAll(testUserId, "member");
-      const otherMemberExperiments = await service.findAll(
+      const memberExperiments = await repository.findAll(testUserId, "member");
+      const otherMemberExperiments = await repository.findAll(
         otherUserId,
         "member",
       );
