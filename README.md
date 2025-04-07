@@ -13,7 +13,7 @@ OpenJII is designed to support plant researchers throughout their workflow:
 - Collect data from MultispeQ devices and custom IoT sensors
 - Process and analyze data with our pipeline architecture
 - Manage research experiments and datasets
-- Create custom IoT devices using Node-RED flows
+- Visualize and share research results
 
 ## Tech Stack
 
@@ -23,8 +23,8 @@ Next.js with Tailwind CSS and Radix UI components via ShadCN.
 ### Backend
 NestJS API with Drizzle ORM for databases and Zod for validation.
 
-### IoT & Infrastructure  
-Node-RED for custom IoT device programming, and AWS infrastructure managed with OpenTofu (formerly Terraform). Databricks handles our data processing pipeline.
+### Infrastructure  
+AWS infrastructure managed with OpenTofu (formerly Terraform) and Databricks for data processing pipelines.
 
 ## Getting Started
 
@@ -52,20 +52,15 @@ pnpm dev          # Run development servers
 pnpm lint         # Check code style
 pnpm test         # Run tests
 pnpm build        # Build all apps
-
-# IoT development with Node-RED
-pnpm --filter node-red start  # Start at http://localhost:1880
 ```
 
-## Using Node-RED for IoT Development
+## Development Tools
 
-Our platform includes Node-RED to help you build custom IoT devices:
+The repository includes several development tools to help you work with the platform:
 
-1. Start Node-RED with `pnpm --filter node-red start` 
-2. Open http://localhost:1880 in your browser
-3. Use our custom nodes for MQTT connections, sensor data processing, and OpenJII integration
-
-See our [IoT Development Guide](apps/docs/docs/004-iot-development) for detailed tutorials.
+- **MultispeQ Interface**: Tools for interfacing with MultispeQ devices
+- **Node-RED**: Available for custom IoT prototyping if needed (`pnpm --filter node-red start`)
+- **API Documentation**: Auto-generated API docs via Swagger
 
 ## Documentation
 
@@ -73,8 +68,8 @@ Visit our [Documentation Hub](https://docs.openjii.org) or browse the `apps/docs
 
 - Getting started guides
 - Data platform documentation
-- IoT device development tutorials
 - Developer guides and API references
+- Research methodology documentation
 
 ## Contributing
 
