@@ -1,11 +1,10 @@
 ---
 name: Agile User Story Template
-about: Standard agile user story template 
+about: Standard agile user story template
 
 title: "[Short, Descriptive Title]"
 labels: "enhancement"
 assignees: ""
-
 ---
 
 ## User Story

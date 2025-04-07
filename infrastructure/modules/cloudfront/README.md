@@ -20,10 +20,10 @@ graph TD;
 
 ## 🛠 Resources Used
 
-| Resource                                      | Description                                                                              | Documentation |
-|-----------------------------------------------|------------------------------------------------------------------------------------------|---------------|
-| `aws_cloudfront_origin_access_control`        | Creates a CloudFront Origin Access Control (OAC) to sign requests to the S3 origin         | [CloudFront OAC](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_origin_access_control) |
-| `aws_cloudfront_distribution`                 | Creates a CloudFront distribution using OAC for secure access                              | [CloudFront Distribution](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution) |
+| Resource                               | Description                                                                        | Documentation                                                                                                                  |
+| -------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `aws_cloudfront_origin_access_control` | Creates a CloudFront Origin Access Control (OAC) to sign requests to the S3 origin | [CloudFront OAC](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_origin_access_control) |
+| `aws_cloudfront_distribution`          | Creates a CloudFront distribution using OAC for secure access                      | [CloudFront Distribution](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution) |
 
 ## ⚙️ Usage
 
@@ -38,18 +38,18 @@ module "cloudfront" {
 
 ## 🔑 Inputs
 
-| Name                      | Description                                                                 | Type     | Default         | Required |
-|---------------------------|-----------------------------------------------------------------------------|----------|-----------------|:--------:|
-| bucket_name               | The name of the S3 bucket used as the CloudFront origin.                    | string   | n/a             | Yes      |
-| default_root_object       | The default root object served by CloudFront (e.g., `index.html`).            | string   | "index.html"    | No       |
-| aws_region                | The AWS region for deployment.                                              | string   | "eu-central-1"  | No       |
+| Name                | Description                                                        | Type   | Default        | Required |
+| ------------------- | ------------------------------------------------------------------ | ------ | -------------- | :------: |
+| bucket_name         | The name of the S3 bucket used as the CloudFront origin.           | string | n/a            |   Yes    |
+| default_root_object | The default root object served by CloudFront (e.g., `index.html`). | string | "index.html"   |    No    |
+| aws_region          | The AWS region for deployment.                                     | string | "eu-central-1" |    No    |
 
 ## 📤 Outputs
 
-| Name                                  | Description                                                                  |
-|---------------------------------------|------------------------------------------------------------------------------|
-| cloudfront_distribution_domain_name   | The domain name assigned to the CloudFront distribution (e.g., `d123xyz.cloudfront.net`). |
-| cloudfront_distribution_arn             | The ARN of the CloudFront distribution.                                      |
+| Name                                | Description                                                                               |
+| ----------------------------------- | ----------------------------------------------------------------------------------------- |
+| cloudfront_distribution_domain_name | The domain name assigned to the CloudFront distribution (e.g., `d123xyz.cloudfront.net`). |
+| cloudfront_distribution_arn         | The ARN of the CloudFront distribution.                                                   |
 
 ## 🌍 Notes
 

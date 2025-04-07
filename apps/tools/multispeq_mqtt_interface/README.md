@@ -72,19 +72,19 @@ pip install -e .
 
 ## Command Reference
 
-| Command | Shortcut | Description |
-|---------|----------|-------------|
-| `connect` | `c` | Connect to AWS IoT Core MQTT broker |
-| `disconnect` | `d` | Disconnect from broker |
-| `ping` | `p` | Test connection to endpoint |
-| `publish` | `m` | Measure and publish a message to topic |
-| `status` | `s` | Check connection status |
-| `config` | `f` | Show current configuration |
-| `set_topic` | `t` | Set topic parameters |
-| `connect_device` | `v` | Connect to a device from a selected port |
-| `help` | `h` | Show detailed help |
-| `exit`/`quit` | `q` | Exit application |
-| `clear` | | Clear the screen |
+| Command          | Shortcut | Description                              |
+| ---------------- | -------- | ---------------------------------------- |
+| `connect`        | `c`      | Connect to AWS IoT Core MQTT broker      |
+| `disconnect`     | `d`      | Disconnect from broker                   |
+| `ping`           | `p`      | Test connection to endpoint              |
+| `publish`        | `m`      | Measure and publish a message to topic   |
+| `status`         | `s`      | Check connection status                  |
+| `config`         | `f`      | Show current configuration               |
+| `set_topic`      | `t`      | Set topic parameters                     |
+| `connect_device` | `v`      | Connect to a device from a selected port |
+| `help`           | `h`      | Show detailed help                       |
+| `exit`/`quit`    | `q`      | Exit application                         |
+| `clear`          |          | Clear the screen                         |
 
 ## Installation
 
