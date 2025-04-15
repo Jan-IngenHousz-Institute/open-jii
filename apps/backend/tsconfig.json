@@ -1,6 +1,7 @@
 {
+  "extends": "@repo/typescript-config/nestjs.json",
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "Node16",
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,
@@ -16,6 +17,7 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "moduleResolution": "node16"
   }
 }

@@ -18,17 +18,21 @@ OpenJII is designed to support plant researchers throughout their workflow:
 ## Tech Stack
 
 ### Frontend
+
 Next.js with Tailwind CSS and Radix UI components via ShadCN.
 
 ### Backend
+
 NestJS API with Drizzle ORM for databases and Zod for validation.
 
-### Infrastructure  
+### Infrastructure
+
 AWS infrastructure managed with OpenTofu (formerly Terraform) and Databricks for data processing pipelines.
 
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js v22+
 - pnpm
 - Docker (for local development)
