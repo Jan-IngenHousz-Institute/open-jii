@@ -1,95 +1,86 @@
-# Turborepo starter
+# OpenJII Platform
 
-This is an official starter Turborepo.
+<p align="center">
+  <img src="./apps/docs/static/img/logo.png" alt="OpenJII Logo" width="200"/>
+</p>
 
-## Using this example
+An open-source platform for agricultural IoT research and plant phenotyping developed by the Jan IngenHousz Institute. OpenJII helps researchers collect, process, and analyze sensor data from MultispeQ devices and custom IoT sensors.
 
-Run the following command:
+## What is OpenJII?
 
-```sh
-npx create-turbo@latest
-```
+OpenJII is designed to support plant researchers throughout their workflow:
 
-## What's inside?
+- Collect data from MultispeQ devices and custom IoT sensors
+- Process and analyze data with our pipeline architecture
+- Manage research experiments and datasets
+- Visualize and share research results
 
-This Turborepo includes the following packages/apps:
+## Tech Stack
 
-### Apps and Packages
+### Frontend
+Next.js with Tailwind CSS and Radix UI components via ShadCN.
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+### Backend
+NestJS API with Drizzle ORM for databases and Zod for validation.
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+### Infrastructure  
+AWS infrastructure managed with OpenTofu (formerly Terraform) and Databricks for data processing pipelines.
 
-### Utilities
+## Getting Started
 
-This Turborepo has some additional tools already setup for you:
+### Prerequisites
+- Node.js v22+
+- pnpm
+- Docker (for local development)
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+### Installation
 
-### After Cloning
-
-After cloning this repository, you should run the following command to install all dependencies and set your environment up:
-
-```
+```bash
+# Clone and set up
+git clone https://github.com/Jan-IngenHousz-Institute/open-jii.git
 cd open-jii
-nvm use # or `nvm install` if you don't have the right Node version
+nvm use
 corepack enable
 pnpm install
 ```
 
-### Build
+### Development Commands
 
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-pnpm build
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-pnpm dev
+```bash
+# Day-to-day development
+pnpm dev          # Run development servers
+pnpm lint         # Check code style
+pnpm test         # Run tests
+pnpm build        # Build all apps
 ```
 
-### Remote Caching
+## Development Tools
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+The repository includes several development tools to help you work with the platform:
 
-Turborepo can use a technique known as [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+- **MultispeQ Interface**: Tools for interfacing with MultispeQ devices
+- **Node-RED**: Available for custom IoT prototyping if needed (`pnpm --filter node-red start`)
+- **API Documentation**: Auto-generated API docs via Swagger
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+## Documentation
 
-```
-cd my-turborepo
-npx turbo login
-```
+Visit our [Documentation Hub](https://docs.openjii.org) or browse the `apps/docs` directory for:
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+- Getting started guides
+- Data platform documentation
+- Developer guides and API references
+- Research methodology documentation
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+## Contributing
 
-```
-npx turbo link
-```
+We welcome contributions! Please check our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md).
 
-## Useful Links
+## License
 
-Learn more about the power of Turborepo:
+This project is licensed under the terms found in [LICENSE](LICENSE).
 
-- [Tasks](https://turbo.build/repo/docs/core-concepts/monorepos/running-tasks)
-- [Caching](https://turbo.build/repo/docs/core-concepts/caching)
-- [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching)
-- [Filtering](https://turbo.build/repo/docs/core-concepts/monorepos/filtering)
-- [Configuration Options](https://turbo.build/repo/docs/reference/configuration)
-- [CLI Usage](https://turbo.build/repo/docs/reference/command-line-reference)
+## Links
+
+- [Project Website](https://www.openjii.org)
+- [Documentation](https://docs.openjii.org)
+- [Jan IngenHousz Institute](https://www.jan-ingenhousz-institute.org)
