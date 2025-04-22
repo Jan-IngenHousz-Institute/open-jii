@@ -50,7 +50,10 @@ importers:
       '@nestjs/platform-express':
         specifier: ^11.0.1
         version: 11.0.10(@nestjs/common@11.0.16(file-type@19.6.0)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@11.0.10)
-      database:
+      '@repo/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@repo/database':
         specifier: workspace:*
         version: link:../../packages/database
       '@ts-rest/core':
@@ -58,7 +61,7 @@ importers:
         version: 3.52.1(@types/node@22.13.2)(zod@3.24.2)
       '@ts-rest/nest':
         specifier: ^3.52.1
-        version: 3.52.1(@nestjs/common@11.0.10(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@11.0.10)(@ts-rest/core@3.52.1(@types/node@22.13.2)(zod@3.24.2))(rxjs@7.8.1)(zod@3.24.2)
+        version: 3.52.1(@nestjs/common@11.0.16(file-type@19.6.0)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@11.0.10)(@ts-rest/core@3.52.1(@types/node@22.13.2)(zod@3.24.2))(rxjs@7.8.1)(zod@3.24.2)
       http-status-codes:
         specifier: ^2.3.0
         version: 2.3.0
@@ -21883,10 +21886,10 @@ snapshots:
       '@types/node': 22.14.1
       zod: 3.24.2
 
-  '@ts-rest/nest@3.52.1(@nestjs/common@11.0.10(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@11.0.10)(@ts-rest/core@3.52.1(@types/node@22.13.2)(zod@3.24.2))(rxjs@7.8.1)(zod@3.24.2)':
+  '@ts-rest/nest@3.52.1(@nestjs/common@11.0.16(file-type@19.6.0)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@11.0.10)(@ts-rest/core@3.52.1(@types/node@22.13.2)(zod@3.24.2))(rxjs@7.8.1)(zod@3.24.2)':
     dependencies:
-      '@nestjs/common': 11.0.10(reflect-metadata@0.2.2)(rxjs@7.8.1)
-      '@nestjs/core': 11.0.10(@nestjs/common@11.0.10(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/platform-express@11.0.10)(reflect-metadata@0.2.2)(rxjs@7.8.1)
+      '@nestjs/common': 11.0.16(file-type@19.6.0)(reflect-metadata@0.2.2)(rxjs@7.8.1)
+      '@nestjs/core': 11.0.10(@nestjs/common@11.0.16(file-type@19.6.0)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/platform-express@11.0.10)(reflect-metadata@0.2.2)(rxjs@7.8.1)
       '@ts-rest/core': 3.52.1(@types/node@22.13.2)(zod@3.24.2)
       rxjs: 7.8.1
     optionalDependencies:
