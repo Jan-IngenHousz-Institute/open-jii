@@ -1,6 +1,8 @@
-import { StatusCodes } from "http-status-codes";
 import { faker } from "@faker-js/faker";
-import { contract } from "@repo/contracts";
+import { StatusCodes } from "http-status-codes";
+
+import { contract } from "@repo/api";
+
 import { TestHarness } from "../../test/test-harness";
 
 describe("ExperimentController", () => {
@@ -74,8 +76,12 @@ describe("ExperimentController", () => {
 
     it("should return a list of experiments", async () => {
       // Create some experiments first
-      const experiment1 = await testApp.createExperiment({ name: "Experiment 1" });
-      const experiment2 = await testApp.createExperiment({ name: "Experiment 2" });
+      const experiment1 = await testApp.createExperiment({
+        name: "Experiment 1",
+      });
+      const experiment2 = await testApp.createExperiment({
+        name: "Experiment 2",
+      });
 
       const response = await testApp
         .get(contract.listExperiments.path)
@@ -92,13 +98,18 @@ describe("ExperimentController", () => {
 
     it("should filter experiments correctly with 'my' filter", async () => {
       // Create an experiment owned by test user
-      const ownedExperiment = await testApp.createExperiment({ name: "My Experiment" });
-      
+      const ownedExperiment = await testApp.createExperiment({
+        name: "My Experiment",
+      });
+
       // Create an experiment with a different user
       const otherUserId = await testApp.createTestUser("other@example.com");
       testApp.testUserId = otherUserId;
-      const otherExperiment = await testApp.createExperiment({ name: "Other Experiment", userId: otherUserId });
-      
+      const otherExperiment = await testApp.createExperiment({
+        name: "Other Experiment",
+        userId: otherUserId,
+      });
+
       // Reset to original test user
       await testApp.createTestUser();
 
@@ -115,16 +126,16 @@ describe("ExperimentController", () => {
 
   describe("getExperiment", () => {
     it("should return an experiment by ID", async () => {
-      const experiment = await testApp.createExperiment({ 
+      const experiment = await testApp.createExperiment({
         name: "Experiment to Get",
-        description: "Detailed description"
+        description: "Detailed description",
       });
 
-      const path = testApp.resolvePath(contract.getExperiment.path, { id: experiment.id });
+      const path = testApp.resolvePath(contract.getExperiment.path, {
+        id: experiment.id,
+      });
 
-      const response = await testApp
-        .get(path)
-        .expect(StatusCodes.OK);
+      const response = await testApp.get(path).expect(StatusCodes.OK);
 
       expect(response.body).toMatchObject({
         id: experiment.id,
@@ -137,7 +148,9 @@ describe("ExperimentController", () => {
 
     it("should return 404 if experiment does not exist", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.getExperiment.path, { id: nonExistentId });
+      const path = testApp.resolvePath(contract.getExperiment.path, {
+        id: nonExistentId,
+      });
 
       await testApp
         .get(path)
@@ -149,7 +162,9 @@ describe("ExperimentController", () => {
 
     it("should return 400 for invalid UUID", async () => {
       const invalidId = "invalid-uuid";
-      const path = testApp.resolvePath(contract.getExperiment.path, { id: invalidId });
+      const path = testApp.resolvePath(contract.getExperiment.path, {
+        id: invalidId,
+      });
 
       await testApp
         .get(path)
@@ -162,12 +177,14 @@ describe("ExperimentController", () => {
 
   describe("updateExperiment", () => {
     it("should update an experiment successfully", async () => {
-      const experiment = await testApp.createExperiment({ 
+      const experiment = await testApp.createExperiment({
         name: "Experiment to Update",
-        status: "provisioning"
+        status: "provisioning",
       });
 
-      const path = testApp.resolvePath(contract.updateExperiment.path, { id: experiment.id });
+      const path = testApp.resolvePath(contract.updateExperiment.path, {
+        id: experiment.id,
+      });
 
       const response = await testApp
         .patch(path)
@@ -183,7 +200,9 @@ describe("ExperimentController", () => {
 
     it("should return 404 if experiment does not exist", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.updateExperiment.path, { id: nonExistentId });
+      const path = testApp.resolvePath(contract.updateExperiment.path, {
+        id: nonExistentId,
+      });
 
       await testApp
         .patch(path)
@@ -197,23 +216,27 @@ describe("ExperimentController", () => {
 
   describe("deleteExperiment", () => {
     it("should delete an experiment successfully", async () => {
-      const experiment = await testApp.createExperiment({ name: "Experiment to Delete" });
-      const path = testApp.resolvePath(contract.deleteExperiment.path, { id: experiment.id });
+      const experiment = await testApp.createExperiment({
+        name: "Experiment to Delete",
+      });
+      const path = testApp.resolvePath(contract.deleteExperiment.path, {
+        id: experiment.id,
+      });
 
-      await testApp
-        .delete(path)
-        .expect(StatusCodes.NO_CONTENT);
+      await testApp.delete(path).expect(StatusCodes.NO_CONTENT);
 
       // Verify it's gone
-      const getPath = testApp.resolvePath(contract.getExperiment.path, { id: experiment.id });
-      await testApp
-        .get(getPath)
-        .expect(StatusCodes.NOT_FOUND);
+      const getPath = testApp.resolvePath(contract.getExperiment.path, {
+        id: experiment.id,
+      });
+      await testApp.get(getPath).expect(StatusCodes.NOT_FOUND);
     });
 
     it("should return 404 if experiment does not exist", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.deleteExperiment.path, { id: nonExistentId });
+      const path = testApp.resolvePath(contract.deleteExperiment.path, {
+        id: nonExistentId,
+      });
 
       await testApp
         .delete(path)
@@ -226,14 +249,16 @@ describe("ExperimentController", () => {
 
   describe("experimentMembers", () => {
     it("should list experiment members", async () => {
-      const experiment = await testApp.createExperiment({ name: "Member Test Experiment" });
+      const experiment = await testApp.createExperiment({
+        name: "Member Test Experiment",
+      });
       // The creator is automatically an admin member
-      
-      const path = testApp.resolvePath(contract.listExperimentMembers.path, { id: experiment.id });
-      
-      const response = await testApp
-        .get(path)
-        .expect(StatusCodes.OK);
+
+      const path = testApp.resolvePath(contract.listExperimentMembers.path, {
+        id: experiment.id,
+      });
+
+      const response = await testApp.get(path).expect(StatusCodes.OK);
 
       expect(response.body).toHaveLength(1);
       expect(response.body[0]).toMatchObject({
@@ -243,11 +268,15 @@ describe("ExperimentController", () => {
     });
 
     it("should add a member to an experiment", async () => {
-      const experiment = await testApp.createExperiment({ name: "Add Member Test" });
+      const experiment = await testApp.createExperiment({
+        name: "Add Member Test",
+      });
       const newMemberId = await testApp.createTestUser("member@example.com");
-      
-      const path = testApp.resolvePath(contract.addExperimentMember.path, { id: experiment.id });
-      
+
+      const path = testApp.resolvePath(contract.addExperimentMember.path, {
+        id: experiment.id,
+      });
+
       await testApp
         .post(path)
         .send({ userId: newMemberId, role: "member" })
@@ -260,33 +289,44 @@ describe("ExperimentController", () => {
         });
 
       // Verify member was added
-      const listPath = testApp.resolvePath(contract.listExperimentMembers.path, { id: experiment.id });
+      const listPath = testApp.resolvePath(
+        contract.listExperimentMembers.path,
+        { id: experiment.id },
+      );
       const response = await testApp.get(listPath);
       expect(response.body).toHaveLength(2);
     });
 
     it("should remove a member from an experiment", async () => {
-      const experiment = await testApp.createExperiment({ name: "Remove Member Test" });
-      const newMemberId = await testApp.createTestUser("member-to-remove@example.com");
-      
+      const experiment = await testApp.createExperiment({
+        name: "Remove Member Test",
+      });
+      const newMemberId = await testApp.createTestUser(
+        "member-to-remove@example.com",
+      );
+
       // Add the member first
       await testApp.addExperimentMember(experiment.id, newMemberId, "member");
-      
+
       // Verify there are 2 members
-      const listPath = testApp.resolvePath(contract.listExperimentMembers.path, { id: experiment.id });
+      const listPath = testApp.resolvePath(
+        contract.listExperimentMembers.path,
+        { id: experiment.id },
+      );
       let response = await testApp.get(listPath);
       expect(response.body).toHaveLength(2);
-      
+
       // Now remove the member
-      const removePath = testApp.resolvePath(contract.removeExperimentMember.path, { 
-        id: experiment.id, 
-        memberId: newMemberId 
-      });
-      
-      await testApp
-        .delete(removePath)
-        .expect(StatusCodes.NO_CONTENT);
-      
+      const removePath = testApp.resolvePath(
+        contract.removeExperimentMember.path,
+        {
+          id: experiment.id,
+          memberId: newMemberId,
+        },
+      );
+
+      await testApp.delete(removePath).expect(StatusCodes.NO_CONTENT);
+
       // Verify member was removed
       response = await testApp.get(listPath);
       expect(response.body).toHaveLength(1);

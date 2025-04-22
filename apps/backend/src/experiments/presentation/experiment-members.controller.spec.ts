@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/contracts";
+import { contract } from "@repo/api";
 
 import { TestHarness } from "../../test/test-harness";
 

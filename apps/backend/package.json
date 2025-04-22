@@ -21,16 +21,14 @@
     "@nestjs/config": "^3.2.0",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
-    "@repo/contracts": "workspace:*",
+    "@repo/api": "workspace:*",
+    "@repo/database": "workspace:*",
     "@ts-rest/core": "^3.52.1",
     "@ts-rest/nest": "^3.52.1",
-    "@repo/database": "workspace:*",
     "http-status-codes": "^2.3.0",
-    "nestjs-zod": "^4.3.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "validator": "workspace:*",
-    "zod": "^3.22.4"
+    "validator": "workspace:*"
   },
   "devDependencies": {
     "@faker-js/faker": "^9.7.0",

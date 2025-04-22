@@ -2,7 +2,7 @@ import { Controller, Logger } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/contracts";
+import { contract } from "@repo/api";
 
 import { AddExperimentMemberUseCase } from "../application/use-cases/experiment-members/add-experiment-member";
 import { ListExperimentMembersUseCase } from "../application/use-cases/experiment-members/list-experiment-members";
