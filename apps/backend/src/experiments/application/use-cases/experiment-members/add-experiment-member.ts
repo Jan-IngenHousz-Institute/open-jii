@@ -25,7 +25,9 @@ export class AddExperimentMemberUseCase {
 
     // Check if current user has permission to add members (must be admin)
     const members = await this.experimentRepository.getMembers(experimentId);
-    const currentUserMember = members.find(member => member.userId === currentUserId);
+    const currentUserMember = members.find(
+      (member) => member.userId === currentUserId,
+    );
     if (!currentUserMember || currentUserMember.role !== "admin") {
       throw new ForbiddenException("Only experiment admins can add members");
     }
