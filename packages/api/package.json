@@ -1,10 +1,13 @@
 {
   "name": "@repo/api",
   "version": "0.0.1",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "exports": {
+    "default": "./dist/index.js",
+    "types": "./src/index.ts"
+  },
   "private": true,
   "scripts": {
+    "dev": "tsc --watch",
     "build": "tsc"
   },
   "dependencies": {
