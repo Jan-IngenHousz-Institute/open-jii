@@ -1,409 +1,296 @@
-import { NotFoundException, ForbiddenException } from "@nestjs/common";
-import { Test, TestingModule } from "@nestjs/testing";
-import { fromPartial } from "@total-typescript/shoehorn";
-
-import { ExperimentFilterPipe } from "./application/pipes/experiment-filter.pipe";
-import type { ExperimentFilter } from "./application/pipes/experiment-filter.pipe";
-import { AddExperimentMemberUseCase } from "./application/use-cases/add-experiment-member.use-case";
-import { CreateExperimentUseCase } from "./application/use-cases/create-experiment.use-case";
-import { DeleteExperimentUseCase } from "./application/use-cases/delete-experiment.use-case";
-import { GetExperimentUseCase } from "./application/use-cases/get-experiment.use-case";
-import { ListExperimentMembersUseCase } from "./application/use-cases/list-experiment-members.use-case";
-import { ListExperimentsUseCase } from "./application/use-cases/list-experiments.use-case";
-import { RemoveExperimentMemberUseCase } from "./application/use-cases/remove-experiment-member.use-case";
-import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment.use-case";
-import type {
-  CreateExperimentDto,
-  UpdateExperimentDto,
-} from "./core/schemas/experiment.schema";
-import { ExperimentController } from "./experiment.controller";
+import { StatusCodes } from "http-status-codes";
+import { faker } from "@faker-js/faker";
+import { contract } from "@repo/contracts";
+import { TestHarness } from "../../test/test-harness";
 
 describe("ExperimentController", () => {
-  let controller: ExperimentController;
-  let createExperimentUseCase: CreateExperimentUseCase;
-  let getExperimentUseCase: GetExperimentUseCase;
-  let listExperimentsUseCase: ListExperimentsUseCase;
-  let updateExperimentUseCase: UpdateExperimentUseCase;
-  let deleteExperimentUseCase: DeleteExperimentUseCase;
-  let addExperimentMemberUseCase: AddExperimentMemberUseCase;
-  let removeExperimentMemberUseCase: RemoveExperimentMemberUseCase;
-  let listExperimentMembersUseCase: ListExperimentMembersUseCase;
+  const testApp = TestHarness.App;
 
-  // Test constants
-  const UUID = {
-    USER: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-    EXPERIMENT: "b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22",
-  };
-
-  // Test fixtures
-  const mockExperiment = fromPartial({
-    id: UUID.EXPERIMENT,
-    name: "Test Experiment",
-    status: "active",
-    visibility: "private",
-    embargoIntervalDays: 90,
-    createdBy: UUID.USER,
+  beforeAll(async () => {
+    await testApp.setup();
   });
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [ExperimentController],
-      providers: [
-        {
-          provide: CreateExperimentUseCase,
-          useValue: {
-            execute: jest.fn().mockResolvedValue({ id: UUID.EXPERIMENT }),
-          },
-        },
-        {
-          provide: GetExperimentUseCase,
-          useValue: {
-            execute: jest.fn().mockResolvedValue(mockExperiment),
-          },
-        },
-        {
-          provide: ListExperimentsUseCase,
-          useValue: {
-            execute: jest.fn().mockResolvedValue([mockExperiment]),
-          },
-        },
-        {
-          provide: UpdateExperimentUseCase,
-          useValue: {
-            execute: jest.fn().mockResolvedValue({ affected: 1 }),
-          },
-        },
-        {
-          provide: DeleteExperimentUseCase,
-          useValue: {
-            execute: jest.fn().mockResolvedValue(undefined),
-          },
-        },
-        {
-          provide: AddExperimentMemberUseCase,
-          useValue: {
-            execute: jest.fn().mockResolvedValue({
-              id: "member-id",
-              experimentId: UUID.EXPERIMENT,
-              userId: UUID.USER,
-              role: "member",
-            }),
-          },
-        },
-        {
-          provide: RemoveExperimentMemberUseCase,
-          useValue: {
-            execute: jest.fn().mockResolvedValue(undefined),
-          },
-        },
-        {
-          provide: ListExperimentMembersUseCase,
-          useValue: {
-            execute: jest.fn().mockResolvedValue([
-              {
-                id: "member-id",
-                userId: UUID.USER,
-                role: "member",
-                joinedAt: new Date(),
-              },
-            ]),
-          },
-        },
-        ExperimentFilterPipe,
-      ],
-    }).compile();
-
-    controller = module.get<ExperimentController>(ExperimentController);
-    createExperimentUseCase = module.get<CreateExperimentUseCase>(
-      CreateExperimentUseCase,
-    );
-    getExperimentUseCase =
-      module.get<GetExperimentUseCase>(GetExperimentUseCase);
-    listExperimentsUseCase = module.get<ListExperimentsUseCase>(
-      ListExperimentsUseCase,
-    );
-    updateExperimentUseCase = module.get<UpdateExperimentUseCase>(
-      UpdateExperimentUseCase,
-    );
-    deleteExperimentUseCase = module.get<DeleteExperimentUseCase>(
-      DeleteExperimentUseCase,
-    );
-    addExperimentMemberUseCase = module.get<AddExperimentMemberUseCase>(
-      AddExperimentMemberUseCase,
-    );
-    removeExperimentMemberUseCase = module.get<RemoveExperimentMemberUseCase>(
-      RemoveExperimentMemberUseCase,
-    );
-    listExperimentMembersUseCase = module.get<ListExperimentMembersUseCase>(
-      ListExperimentMembersUseCase,
-    );
-
-    // Reset all mocks before each test
-    jest.clearAllMocks();
+    await testApp.beforeEach();
+    await testApp.createTestUser();
   });
 
-  describe("create", () => {
-    it("should create an experiment with valid data and pass it to the use case", async () => {
-      // Arrange
-      const createDto: CreateExperimentDto = {
+  afterEach(() => {
+    testApp.afterEach();
+  });
+
+  afterAll(async () => {
+    await testApp.teardown();
+  });
+
+  describe("createExperiment", () => {
+    it("should successfully create an experiment", async () => {
+      const experimentData = {
         name: "Test Experiment",
+        description: "Test Description",
         status: "provisioning",
         visibility: "private",
         embargoIntervalDays: 90,
       };
 
-      // Act
-      await controller.create(createDto, UUID.USER);
+      const response = await testApp
+        .post(contract.createExperiment.path)
+        .send(experimentData)
+        .expect(StatusCodes.CREATED);
 
-      // Assert
-      expect(createExperimentUseCase.execute).toHaveBeenCalledWith(
-        createDto,
-        UUID.USER,
-      );
+      expect(response.body).toMatchObject({
+        name: experimentData.name,
+        description: experimentData.description,
+        status: experimentData.status,
+        visibility: experimentData.visibility,
+        embargoIntervalDays: experimentData.embargoIntervalDays,
+        createdBy: testApp.testUserId,
+      });
+    });
+
+    it("should return 400 if name is missing", async () => {
+      await testApp
+        .post(contract.createExperiment.path)
+        .send({
+          description: "Missing name",
+          status: "provisioning",
+          visibility: "private",
+        })
+        .expect(StatusCodes.BAD_REQUEST)
+        .expect(({ body }) => {
+          expect(body.message).toContain("name");
+        });
     });
   });
 
-  describe("findAll", () => {
-    it("should pass the userId and filter to the list use case with no filter", async () => {
-      // Act
-      await controller.findAll(UUID.USER);
+  describe("listExperiments", () => {
+    it("should return an empty array if no experiments exist", async () => {
+      const response = await testApp
+        .get(contract.listExperiments.path)
+        .expect(StatusCodes.OK);
 
-      // Assert
-      expect(listExperimentsUseCase.execute).toHaveBeenCalledWith(
-        UUID.USER,
-        undefined,
+      expect(response.body).toEqual([]);
+    });
+
+    it("should return a list of experiments", async () => {
+      // Create some experiments first
+      const experiment1 = await testApp.createExperiment({ name: "Experiment 1" });
+      const experiment2 = await testApp.createExperiment({ name: "Experiment 2" });
+
+      const response = await testApp
+        .get(contract.listExperiments.path)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toHaveLength(2);
+      expect(response.body).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: experiment1.id, name: "Experiment 1" }),
+          expect.objectContaining({ id: experiment2.id, name: "Experiment 2" }),
+        ]),
       );
     });
 
-    it("should pass the userId and filter to the list use case with 'my' filter", async () => {
-      // Arrange
-      const filter: ExperimentFilter = "my";
+    it("should filter experiments correctly with 'my' filter", async () => {
+      // Create an experiment owned by test user
+      const ownedExperiment = await testApp.createExperiment({ name: "My Experiment" });
+      
+      // Create an experiment with a different user
+      const otherUserId = await testApp.createTestUser("other@example.com");
+      testApp.testUserId = otherUserId;
+      const otherExperiment = await testApp.createExperiment({ name: "Other Experiment", userId: otherUserId });
+      
+      // Reset to original test user
+      await testApp.createTestUser();
 
-      // Act
-      await controller.findAll(UUID.USER, filter);
+      const response = await testApp
+        .get(contract.listExperiments.path)
+        .query({ filter: "my" })
+        .expect(StatusCodes.OK);
 
-      // Assert
-      expect(listExperimentsUseCase.execute).toHaveBeenCalledWith(
-        UUID.USER,
-        filter,
-      );
-    });
-
-    it("should pass the userId and filter to the list use case with 'member' filter", async () => {
-      // Arrange
-      const filter: ExperimentFilter = "member";
-
-      // Act
-      await controller.findAll(UUID.USER, filter);
-
-      // Assert
-      expect(listExperimentsUseCase.execute).toHaveBeenCalledWith(
-        UUID.USER,
-        filter,
-      );
-    });
-
-    it("should pass the userId and filter to the list use case with 'related' filter", async () => {
-      // Arrange
-      const filter: ExperimentFilter = "related";
-
-      // Act
-      await controller.findAll(UUID.USER, filter);
-
-      // Assert
-      expect(listExperimentsUseCase.execute).toHaveBeenCalledWith(
-        UUID.USER,
-        filter,
-      );
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0].id).toBe(ownedExperiment.id);
+      expect(response.body[0].name).toBe("My Experiment");
     });
   });
 
-  describe("findOne", () => {
-    it("should return experiment data when found", async () => {
-      // Act
-      const result = await controller.findOne(UUID.EXPERIMENT);
+  describe("getExperiment", () => {
+    it("should return an experiment by ID", async () => {
+      const experiment = await testApp.createExperiment({ 
+        name: "Experiment to Get",
+        description: "Detailed description"
+      });
 
-      // Assert
-      expect(getExperimentUseCase.execute).toHaveBeenCalledWith(
-        UUID.EXPERIMENT,
-      );
-      expect(result).toEqual(mockExperiment);
+      const path = testApp.resolvePath(contract.getExperiment.path, { id: experiment.id });
+
+      const response = await testApp
+        .get(path)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toMatchObject({
+        id: experiment.id,
+        name: experiment.name,
+        description: experiment.description,
+        visibility: experiment.visibility,
+        createdBy: testApp.testUserId,
+      });
     });
 
-    it("should pass through NotFoundExceptions from the use case", async () => {
-      // Arrange
-      jest
-        .spyOn(getExperimentUseCase, "execute")
-        .mockRejectedValue(
-          new NotFoundException(
-            `Experiment with ID ${UUID.EXPERIMENT} not found`,
-          ),
-        );
+    it("should return 404 if experiment does not exist", async () => {
+      const nonExistentId = faker.string.uuid();
+      const path = testApp.resolvePath(contract.getExperiment.path, { id: nonExistentId });
 
-      // Act & Assert
-      await expect(controller.findOne(UUID.EXPERIMENT)).rejects.toThrow(
-        new NotFoundException(
-          `Experiment with ID ${UUID.EXPERIMENT} not found`,
-        ),
-      );
-      expect(getExperimentUseCase.execute).toHaveBeenCalledWith(
-        UUID.EXPERIMENT,
-      );
+      await testApp
+        .get(path)
+        .expect(StatusCodes.NOT_FOUND)
+        .expect(({ body }) => {
+          expect(body.message).toContain("not found");
+        });
+    });
+
+    it("should return 400 for invalid UUID", async () => {
+      const invalidId = "invalid-uuid";
+      const path = testApp.resolvePath(contract.getExperiment.path, { id: invalidId });
+
+      await testApp
+        .get(path)
+        .expect(StatusCodes.BAD_REQUEST)
+        .expect(({ body }) => {
+          expect(body.message).toContain("Invalid UUID format");
+        });
     });
   });
 
-  describe("update", () => {
-    it("should pass update data to the update use case", async () => {
-      // Arrange
-      const updateDto: UpdateExperimentDto = {
-        name: "Updated Experiment",
+  describe("updateExperiment", () => {
+    it("should update an experiment successfully", async () => {
+      const experiment = await testApp.createExperiment({ 
+        name: "Experiment to Update",
+        status: "provisioning"
+      });
+
+      const path = testApp.resolvePath(contract.updateExperiment.path, { id: experiment.id });
+
+      const response = await testApp
+        .patch(path)
+        .send({ name: "Updated Name", status: "active" })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toMatchObject({
+        id: experiment.id,
+        name: "Updated Name",
         status: "active",
-      };
-
-      // Act
-      await controller.update(UUID.EXPERIMENT, updateDto);
-
-      // Assert
-      expect(updateExperimentUseCase.execute).toHaveBeenCalledWith(
-        UUID.EXPERIMENT,
-        updateDto,
-      );
+      });
     });
 
-    it("should accept empty update data", async () => {
-      // Arrange
-      const emptyDto: UpdateExperimentDto = {};
+    it("should return 404 if experiment does not exist", async () => {
+      const nonExistentId = faker.string.uuid();
+      const path = testApp.resolvePath(contract.updateExperiment.path, { id: nonExistentId });
 
-      // Act
-      await controller.update(UUID.EXPERIMENT, emptyDto);
-
-      // Assert
-      expect(updateExperimentUseCase.execute).toHaveBeenCalledWith(
-        UUID.EXPERIMENT,
-        emptyDto,
-      );
-    });
-
-    it("should pass through NotFoundExceptions from the use case", async () => {
-      // Arrange
-      const updateDto: UpdateExperimentDto = { name: "Will Not Update" };
-      jest
-        .spyOn(updateExperimentUseCase, "execute")
-        .mockRejectedValue(
-          new NotFoundException(
-            `Experiment with ID ${UUID.EXPERIMENT} not found`,
-          ),
-        );
-
-      // Act & Assert
-      await expect(
-        controller.update(UUID.EXPERIMENT, updateDto),
-      ).rejects.toThrow(
-        new NotFoundException(
-          `Experiment with ID ${UUID.EXPERIMENT} not found`,
-        ),
-      );
-
-      expect(updateExperimentUseCase.execute).toHaveBeenCalledWith(
-        UUID.EXPERIMENT,
-        updateDto,
-      );
+      await testApp
+        .patch(path)
+        .send({ name: "Won't Update" })
+        .expect(StatusCodes.NOT_FOUND)
+        .expect(({ body }) => {
+          expect(body.message).toContain("not found");
+        });
     });
   });
 
-  describe("remove", () => {
-    it("should call the delete use case with correct params", async () => {
-      // Act
-      await controller.remove(UUID.EXPERIMENT, UUID.USER);
+  describe("deleteExperiment", () => {
+    it("should delete an experiment successfully", async () => {
+      const experiment = await testApp.createExperiment({ name: "Experiment to Delete" });
+      const path = testApp.resolvePath(contract.deleteExperiment.path, { id: experiment.id });
 
-      // Assert
-      expect(deleteExperimentUseCase.execute).toHaveBeenCalledWith(
-        UUID.EXPERIMENT,
-        UUID.USER,
-      );
+      await testApp
+        .delete(path)
+        .expect(StatusCodes.NO_CONTENT);
+
+      // Verify it's gone
+      const getPath = testApp.resolvePath(contract.getExperiment.path, { id: experiment.id });
+      await testApp
+        .get(getPath)
+        .expect(StatusCodes.NOT_FOUND);
     });
 
-    it("should pass through NotFoundExceptions from the use case", async () => {
-      // Arrange
-      jest
-        .spyOn(deleteExperimentUseCase, "execute")
-        .mockRejectedValue(
-          new NotFoundException(
-            `Experiment with ID ${UUID.EXPERIMENT} not found`,
-          ),
-        );
+    it("should return 404 if experiment does not exist", async () => {
+      const nonExistentId = faker.string.uuid();
+      const path = testApp.resolvePath(contract.deleteExperiment.path, { id: nonExistentId });
 
-      // Act & Assert
-      await expect(
-        controller.remove(UUID.EXPERIMENT, UUID.USER),
-      ).rejects.toThrow(
-        new NotFoundException(
-          `Experiment with ID ${UUID.EXPERIMENT} not found`,
-        ),
-      );
-    });
-
-    it("should pass through ForbiddenExceptions from the use case", async () => {
-      // Arrange
-      jest
-        .spyOn(deleteExperimentUseCase, "execute")
-        .mockRejectedValue(
-          new ForbiddenException(`Only the creator can delete this experiment`),
-        );
-
-      // Act & Assert
-      await expect(
-        controller.remove(UUID.EXPERIMENT, UUID.USER),
-      ).rejects.toThrow(
-        new ForbiddenException(`Only the creator can delete this experiment`),
-      );
+      await testApp
+        .delete(path)
+        .expect(StatusCodes.NOT_FOUND)
+        .expect(({ body }) => {
+          expect(body.message).toContain("not found");
+        });
     });
   });
 
-  describe("getMembers", () => {
-    it("should call the list members use case with correct params", async () => {
-      // Act
-      await controller.getMembers(UUID.EXPERIMENT, UUID.USER);
+  describe("experimentMembers", () => {
+    it("should list experiment members", async () => {
+      const experiment = await testApp.createExperiment({ name: "Member Test Experiment" });
+      // The creator is automatically an admin member
+      
+      const path = testApp.resolvePath(contract.listExperimentMembers.path, { id: experiment.id });
+      
+      const response = await testApp
+        .get(path)
+        .expect(StatusCodes.OK);
 
-      // Assert
-      expect(listExperimentMembersUseCase.execute).toHaveBeenCalledWith(
-        UUID.EXPERIMENT,
-        UUID.USER,
-      );
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0]).toMatchObject({
+        userId: testApp.testUserId,
+        role: "admin",
+      });
     });
-  });
 
-  describe("addMember", () => {
-    it("should call the add member use case with correct params", async () => {
-      // Arrange
-      const addMemberDto = { userId: "new-member-id", role: "admin" as const };
+    it("should add a member to an experiment", async () => {
+      const experiment = await testApp.createExperiment({ name: "Add Member Test" });
+      const newMemberId = await testApp.createTestUser("member@example.com");
+      
+      const path = testApp.resolvePath(contract.addExperimentMember.path, { id: experiment.id });
+      
+      await testApp
+        .post(path)
+        .send({ userId: newMemberId, role: "member" })
+        .expect(StatusCodes.CREATED)
+        .expect(({ body }) => {
+          expect(body).toMatchObject({
+            userId: newMemberId,
+            role: "member",
+          });
+        });
 
-      // Act
-      await controller.addMember(UUID.EXPERIMENT, addMemberDto, UUID.USER);
-
-      // Assert
-      expect(addExperimentMemberUseCase.execute).toHaveBeenCalledWith(
-        UUID.EXPERIMENT,
-        addMemberDto,
-        UUID.USER,
-      );
+      // Verify member was added
+      const listPath = testApp.resolvePath(contract.listExperimentMembers.path, { id: experiment.id });
+      const response = await testApp.get(listPath);
+      expect(response.body).toHaveLength(2);
     });
-  });
 
-  describe("removeMember", () => {
-    it("should call the remove member use case with correct params", async () => {
-      // Arrange
-      const memberId = "member-to-remove-id";
-
-      // Act
-      await controller.removeMember(UUID.EXPERIMENT, memberId, UUID.USER);
-
-      // Assert
-      expect(removeExperimentMemberUseCase.execute).toHaveBeenCalledWith(
-        UUID.EXPERIMENT,
-        memberId,
-        UUID.USER,
-      );
+    it("should remove a member from an experiment", async () => {
+      const experiment = await testApp.createExperiment({ name: "Remove Member Test" });
+      const newMemberId = await testApp.createTestUser("member-to-remove@example.com");
+      
+      // Add the member first
+      await testApp.addExperimentMember(experiment.id, newMemberId, "member");
+      
+      // Verify there are 2 members
+      const listPath = testApp.resolvePath(contract.listExperimentMembers.path, { id: experiment.id });
+      let response = await testApp.get(listPath);
+      expect(response.body).toHaveLength(2);
+      
+      // Now remove the member
+      const removePath = testApp.resolvePath(contract.removeExperimentMember.path, { 
+        id: experiment.id, 
+        memberId: newMemberId 
+      });
+      
+      await testApp
+        .delete(removePath)
+        .expect(StatusCodes.NO_CONTENT);
+      
+      // Verify member was removed
+      response = await testApp.get(listPath);
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0].userId).toBe(testApp.testUserId);
     });
   });
 });

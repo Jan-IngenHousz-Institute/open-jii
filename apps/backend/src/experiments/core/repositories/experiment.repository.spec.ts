@@ -1,5 +1,13 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { DatabaseInstance, eq, users } from "database";
+
+import {
+  DatabaseInstance,
+  eq,
+  and,
+  experimentMembers,
+  experiments,
+  users,
+} from "@repo/database";
 
 import { DatabaseModule } from "../../../database/database.module";
 import "../../../test/setup";
@@ -8,7 +16,6 @@ import type {
   CreateExperimentDto,
   UpdateExperimentDto,
 } from "../models/experiment.model";
-import { experiments, experimentMembers } from "../models/experiment.model";
 import { ExperimentRepository } from "./experiment.repository";
 
 // Test constants and fixtures

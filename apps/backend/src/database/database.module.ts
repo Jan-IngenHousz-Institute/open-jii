@@ -1,18 +1,13 @@
 import { Global, Module } from "@nestjs/common";
-import { db } from "database";
 
-import * as experimentSchema from "../experiments/core/models/experiment.model";
-// import * as plantSchema from "../plants/core/schemas/plant.schema";
+import { db } from "@repo/database";
 
 @Global()
 @Module({
   providers: [
     {
       provide: "DATABASE",
-      useValue: db(
-        experimentSchema,
-        // ...plantSchema,
-      ),
+      useValue: db,
     },
   ],
   exports: ["DATABASE"],

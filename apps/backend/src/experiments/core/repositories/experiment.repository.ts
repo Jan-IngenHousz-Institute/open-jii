@@ -1,11 +1,10 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { eq, or, and } from "database";
-import type { DatabaseInstance } from "database";
+
+import { eq, or, and, experiments, experimentMembers } from "@repo/database";
+import type { DatabaseInstance } from "@repo/database";
 
 import type { ExperimentFilter } from "../../application/pipes/experiment-filter.pipe";
 import {
-  experiments,
-  experimentMembers,
   CreateExperimentDto,
   UpdateExperimentDto,
 } from "../models/experiment.model";
@@ -18,10 +17,15 @@ export class ExperimentRepository {
   ) {}
 
   async create(createExperimentDto: CreateExperimentDto, userId: string) {
-    return this.database.insert(experiments).values({
-      ...createExperimentDto,
-      createdBy: userId,
-    });
+    const result = await this.database
+      .insert(experiments)
+      .values({
+        ...createExperimentDto,
+        createdBy: userId,
+      })
+      .returning({ id: experiments.id });
+
+    return result[0].id;
   }
 
   async findAll(userId: string, filter?: ExperimentFilter) {

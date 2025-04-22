@@ -1,131 +1,133 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  ParseUUIDPipe,
-  Query,
-  UsePipes,
-  HttpCode,
-  HttpStatus,
-} from "@nestjs/common";
-import { ZodValidationPipe } from "nestjs-zod";
-import { z } from "validator";
+import { Controller, Logger } from "@nestjs/common";
+import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { StatusCodes } from "http-status-codes";
 
-import {
-  ExperimentFilterPipe,
-  type ExperimentFilter,
-} from "../application/pipes/experiment-filter.pipe";
-import { AddExperimentMemberUseCase } from "../application/use-cases/add-experiment-member.use-case";
-import type { AddMemberDto } from "../application/use-cases/add-experiment-member.use-case";
-import { CreateExperimentUseCase } from "../application/use-cases/create-experiment.use-case";
-import { DeleteExperimentUseCase } from "../application/use-cases/delete-experiment.use-case";
-import { GetExperimentUseCase } from "../application/use-cases/get-experiment.use-case";
-import { ListExperimentMembersUseCase } from "../application/use-cases/list-experiment-members.use-case";
-import { ListExperimentsUseCase } from "../application/use-cases/list-experiments.use-case";
-import { RemoveExperimentMemberUseCase } from "../application/use-cases/remove-experiment-member.use-case";
-import { UpdateExperimentUseCase } from "../application/use-cases/update-experiment.use-case";
-import {
-  CreateExperimentDto,
-  UpdateExperimentDto,
-} from "../core/models/experiment.model";
-import {
-  createExperimentSchema,
-  updateExperimentSchema,
-} from "../core/models/experiment.model";
+import { contract } from "@repo/contracts";
 
-const addMemberSchema = z.object({
-  userId: z.string().uuid(),
-  role: z.enum(["admin", "member"]).optional(),
-});
+import { ChangeExperimentStatusUseCase } from "../application/use-cases/change-experiment-status/change-experiment-status";
+import { CreateExperimentUseCase } from "../application/use-cases/create-experiment/create-experiment";
+import { DeleteExperimentUseCase } from "../application/use-cases/delete-experiment/delete-experiment";
+import { GetExperimentUseCase } from "../application/use-cases/get-experiment/get-experiment";
+import { ListExperimentsUseCase } from "../application/use-cases/list-experiments/list-experiments";
+import { UpdateExperimentUseCase } from "../application/use-cases/update-experiment/update-experiment";
+import { handleApiError } from "../utils/error-handling";
 
-@Controller("experiments")
+@Controller()
 export class ExperimentController {
+  private readonly logger = new Logger(ExperimentController.name);
+
   constructor(
     private readonly createExperimentUseCase: CreateExperimentUseCase,
     private readonly getExperimentUseCase: GetExperimentUseCase,
     private readonly listExperimentsUseCase: ListExperimentsUseCase,
     private readonly updateExperimentUseCase: UpdateExperimentUseCase,
     private readonly deleteExperimentUseCase: DeleteExperimentUseCase,
-    private readonly addExperimentMemberUseCase: AddExperimentMemberUseCase,
-    private readonly removeExperimentMemberUseCase: RemoveExperimentMemberUseCase,
-    private readonly listExperimentMembersUseCase: ListExperimentMembersUseCase,
+    private readonly changeExperimentStatusUseCase: ChangeExperimentStatusUseCase,
   ) {}
 
-  @Post()
-  @UsePipes(new ZodValidationPipe(createExperimentSchema))
-  @HttpCode(HttpStatus.CREATED)
-  create(
-    @Body() createExperimentDto: CreateExperimentDto,
-    @Query("userId", ParseUUIDPipe) userId: string,
-  ) {
-    return this.createExperimentUseCase.execute(createExperimentDto, userId);
+  @TsRestHandler(contract.createExperiment)
+  async createExperiment() {
+    return tsRestHandler(contract.createExperiment, async ({ body, query }) => {
+      try {
+        const userId = query.userId || "default-user-id";
+        const result = await this.createExperimentUseCase.execute(body, userId);
+
+        this.logger.log(`Experiment created: ${result.id} by user ${userId}`);
+        return {
+          status: StatusCodes.CREATED,
+          body: result,
+        };
+      } catch (error) {
+        return handleApiError(error, this.logger);
+      }
+    });
   }
 
-  @Get()
-  findAll(
-    @Query("userId", ParseUUIDPipe) userId: string,
-    @Query("filter", ExperimentFilterPipe) filter?: ExperimentFilter,
-  ) {
-    return this.listExperimentsUseCase.execute(userId, filter);
+  @TsRestHandler(contract.getExperiment)
+  async getExperiment() {
+    return tsRestHandler(contract.getExperiment, async ({ params, query }) => {
+      try {
+        const userId = query.userId || "default-user-id";
+        const experiment = await this.getExperimentUseCase.execute(params.id);
+
+        if (!experiment) {
+          return {
+            status: StatusCodes.NOT_FOUND,
+            body: { message: `Experiment with ID ${params.id} not found` },
+          };
+        }
+
+        return {
+          status: StatusCodes.OK,
+          body: experiment,
+        };
+      } catch (error) {
+        return handleApiError(error, this.logger);
+      }
+    });
   }
 
-  @Get(":id")
-  findOne(
-    @Param("id", ParseUUIDPipe) id: string,
-    @Query("userId", ParseUUIDPipe) userId: string,
-  ) {
-    return this.getExperimentUseCase.execute(id);
+  @TsRestHandler(contract.listExperiments)
+  async listExperiments() {
+    return tsRestHandler(contract.listExperiments, async ({ query }) => {
+      try {
+        const userId = query.userId || "default-user-id";
+        const experiments = await this.listExperimentsUseCase.execute(
+          userId,
+          query.filter,
+        );
+
+        return {
+          status: StatusCodes.OK,
+          body: experiments,
+        };
+      } catch (error) {
+        return handleApiError(error, this.logger);
+      }
+    });
   }
 
-  @Patch(":id")
-  @UsePipes(new ZodValidationPipe(updateExperimentSchema))
-  update(
-    @Param("id", ParseUUIDPipe) id: string,
-    @Body() updateExperimentDto: UpdateExperimentDto,
-    @Query("userId", ParseUUIDPipe) userId: string,
-  ) {
-    return this.updateExperimentUseCase.execute(id, updateExperimentDto);
+  @TsRestHandler(contract.updateExperiment)
+  async updateExperiment() {
+    return tsRestHandler(
+      contract.updateExperiment,
+      async ({ params, body, query }) => {
+        try {
+          const userId = query.userId || "default-user-id";
+          const updatedExperiment = await this.updateExperimentUseCase.execute(
+            params.id,
+            body,
+          );
+
+          this.logger.log(`Experiment ${params.id} updated by user ${userId}`);
+          return {
+            status: StatusCodes.OK,
+            body: updatedExperiment,
+          };
+        } catch (error) {
+          return handleApiError(error, this.logger);
+        }
+      },
+    );
   }
 
-  @Delete(":id")
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(
-    @Param("id", ParseUUIDPipe) id: string,
-    @Query("userId", ParseUUIDPipe) userId: string,
-  ) {
-    await this.deleteExperimentUseCase.execute(id, userId);
-  }
+  @TsRestHandler(contract.deleteExperiment)
+  async deleteExperiment() {
+    return tsRestHandler(
+      contract.deleteExperiment,
+      async ({ params, query }) => {
+        try {
+          await this.deleteExperimentUseCase.execute(params.id);
 
-  @Get(":id/members")
-  getMembers(
-    @Param("id", ParseUUIDPipe) id: string,
-    @Query("userId", ParseUUIDPipe) userId: string,
-  ) {
-    return this.listExperimentMembersUseCase.execute(id, userId);
-  }
-
-  @Post(":id/members")
-  @UsePipes(new ZodValidationPipe(addMemberSchema))
-  @HttpCode(HttpStatus.CREATED)
-  addMember(
-    @Param("id", ParseUUIDPipe) id: string,
-    @Body() addMemberDto: AddMemberDto,
-    @Query("userId", ParseUUIDPipe) userId: string,
-  ) {
-    return this.addExperimentMemberUseCase.execute(id, addMemberDto, userId);
-  }
-
-  @Delete(":id/members/:memberId")
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async removeMember(
-    @Param("id", ParseUUIDPipe) id: string,
-    @Param("memberId", ParseUUIDPipe) memberId: string,
-    @Query("userId", ParseUUIDPipe) userId: string,
-  ) {
-    await this.removeExperimentMemberUseCase.execute(id, memberId, userId);
+          this.logger.log(`Experiment ${params.id} deleted`);
+          return {
+            status: StatusCodes.NO_CONTENT,
+            body: null,
+          };
+        } catch (error) {
+          return handleApiError(error, this.logger);
+        }
+      },
+    );
   }
 }

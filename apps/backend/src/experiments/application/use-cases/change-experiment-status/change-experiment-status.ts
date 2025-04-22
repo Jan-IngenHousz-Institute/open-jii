@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 
-import { ExperimentRepository } from "../../core/repositories/experiment.repository";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 export type ExperimentStatus = "provisioning" | "active" | "archived";
 

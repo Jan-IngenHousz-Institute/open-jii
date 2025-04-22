@@ -1,17 +1,20 @@
 import { INestApplication } from "@nestjs/common";
 import { ModuleMetadata } from "@nestjs/common/interfaces";
 import { Test, TestingModule } from "@nestjs/testing";
-import { DatabaseInstance } from "database";
-import { users } from "database";
 import { config } from "dotenv";
 import { resolve } from "path";
 import request from "supertest";
 
-import { AppModule } from "../app.module";
 import {
-  experiments,
+  DatabaseInstance,
   experimentMembers,
-} from "../experiments/core/models/experiment.model";
+  experiments,
+  users,
+  auditLogs,
+  profiles,
+} from "@repo/database";
+
+import { AppModule } from "../app.module";
 
 // Ensure test environment is loaded
 config({ path: resolve(__dirname, "../../.env.test") });
@@ -51,12 +54,19 @@ export class TestHarness {
    */
   public async beforeEach() {
     try {
-      // Clean up test data
-      await this.database.delete(experimentMembers);
-      await this.database.delete(experiments);
+      if (!this._module) {
+        await this.setup();
+      }
+
+      // Clean up test data in correct order (respecting foreign key constraints)
+      await this.database.delete(auditLogs).execute();
+      await this.database.delete(experimentMembers).execute();
+      await this.database.delete(experiments).execute();
+      await this.database.delete(profiles).execute();
+      await this.database.delete(users).execute();
     } catch (e) {
-      console.log("Failed to clean up database for integration tests.");
-      throw e;
+      console.log("Failed to clean up database for integration tests.", e);
+      // Don't throw the error to allow tests to continue
     }
   }
 

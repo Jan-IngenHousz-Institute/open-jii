@@ -1,6 +1,7 @@
 import { NotFoundException } from "@nestjs/common";
 
-import { UpdateExperimentUseCase } from "./update-experiment.use-case";
+import { TestHarness } from "../../../../test/test-harness";
+import { UpdateExperimentUseCase } from "./update-experiment";
 
 describe("UpdateExperimentUseCase", () => {
   let useCase: UpdateExperimentUseCase;
