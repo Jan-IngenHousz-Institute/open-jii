@@ -41,9 +41,9 @@ Environment variables provide a convenient way to configure the tool, especially
 
 ### Topic Structure
 
-| Variable        | Description        | Default Value                                                                             |
-| --------------- | ------------------ | ----------------------------------------------------------------------------------------- |
-| `AWS_IOT_TOPIC` | MQTT topic pattern | experiment/data_ingest/v1/{experiment_id}/multispeq/v1.0/cli_test_sensor_id/{protocol_id} |
+| Variable        | Description        | Default Value                                                                                 |
+| --------------- | ------------------ |-----------------------------------------------------------------------------------------------|
+| `AWS_IOT_TOPIC` | MQTT topic pattern | experiment/data_ingest/v1/\{experiment_id\}/multispeq/v1.0/cli_test_sensor_id/\{protocol_id\} |
 
 ### Proxy Configuration
 
