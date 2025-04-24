@@ -1,0 +1,79 @@
+import { BluetoothDevice } from './bluetooth-device'
+
+export const sampleDevices: BluetoothDevice[] = [
+  {
+    id: 'DEVICE-ID-001',
+    isConnectable: true,
+    localName: null,
+    manufacturerData: null,
+    mtu: 23,
+    name: null,
+    overflowServiceUUIDs: null,
+    rawScanRecord: 'eyJpZCI6IkRldmljZTEiLCJyc3NpIjotODAsInR4UG93ZXJMZXZlbCI6MTB9',
+    rssi: -80,
+    serviceData: null,
+    serviceUUIDs: null,
+    solicitedServiceUUIDs: null,
+    txPowerLevel: 10
+  },
+  {
+    id: 'DEVICE-ID-002',
+    isConnectable: false,
+    localName: null,
+    manufacturerData: null,
+    mtu: 25,
+    name: null,
+    overflowServiceUUIDs: null,
+    rawScanRecord: 'eyJpZCI6IkRldmljZTIiLCJyc3NpIjotODIsInR4UG93ZXJMZXZlbCI6MTJ9',
+    rssi: -82,
+    serviceData: null,
+    serviceUUIDs: null,
+    solicitedServiceUUIDs: null,
+    txPowerLevel: 12
+  },
+  {
+    id: 'DEVICE-ID-003',
+    isConnectable: true,
+    localName: null,
+    manufacturerData: null,
+    mtu: 26,
+    name: null,
+    overflowServiceUUIDs: null,
+    rawScanRecord: 'eyJpZCI6IkRldmljZTMiLCJyc3NpIjotNzgsInR4UG93ZXJMZXZlbCI6MTV9',
+    rssi: -78,
+    serviceData: null,
+    serviceUUIDs: null,
+    solicitedServiceUUIDs: null,
+    txPowerLevel: 15
+  },
+  {
+    id: 'DEVICE-ID-004',
+    isConnectable: false,
+    localName: null,
+    manufacturerData: null,
+    mtu: 24,
+    name: null,
+    overflowServiceUUIDs: null,
+    rawScanRecord: 'eyJpZCI6IkRldmljZTQiLCJyc3NpIjotODUsInR4UG93ZXJMZXZlbCI6MTN9',
+    rssi: -85,
+    serviceData: null,
+    serviceUUIDs: null,
+    solicitedServiceUUIDs: null,
+    txPowerLevel: 13
+  },
+  {
+    id: 'DEVICE-ID-005',
+    isConnectable: true,
+    localName: null,
+    manufacturerData: null,
+    mtu: 27,
+    name: null,
+    overflowServiceUUIDs: null,
+    rawScanRecord: 'eyJpZCI6IkRldmljZTU5IiwicnNzaSI6LTc1LCJ0eFBvd2VyTGV2ZWwiOjE4fQ==',
+    rssi: -75,
+    serviceData: null,
+    serviceUUIDs: null,
+    solicitedServiceUUIDs: null,
+    txPowerLevel: 18
+  }
+]
