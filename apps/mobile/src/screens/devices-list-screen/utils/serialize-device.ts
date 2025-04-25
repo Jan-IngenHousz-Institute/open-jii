@@ -1,6 +1,6 @@
-import { Device } from 'react-native-ble-plx'
+import { Device } from "react-native-ble-plx";
 
-import { BluetoothDevice } from './bluetooth-device'
+import { BluetoothDevice } from "./bluetooth-device";
 
 export function serializeDevice(device: Device): BluetoothDevice {
   return {
@@ -16,6 +16,6 @@ export function serializeDevice(device: Device): BluetoothDevice {
     serviceData: device.serviceData,
     serviceUUIDs: device.serviceUUIDs,
     solicitedServiceUUIDs: device.solicitedServiceUUIDs,
-    txPowerLevel: device.txPowerLevel ?? 0
-  }
+    txPowerLevel: device.txPowerLevel ?? 0,
+  };
 }

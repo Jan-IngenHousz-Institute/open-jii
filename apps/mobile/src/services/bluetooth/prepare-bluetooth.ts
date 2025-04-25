@@ -1,20 +1,20 @@
-import { BleManager } from 'react-native-ble-plx'
+import { BleManager } from "react-native-ble-plx";
 
 export function prepareBluetooth() {
-  const bleManager = new BleManager()
+  const bleManager = new BleManager();
 
   return new Promise<BleManager>((resolve, reject) => {
-    const subscription = bleManager.onStateChange(state => {
-      if (state === 'PoweredOn') {
-        subscription.remove()
-        resolve(bleManager)
-        return
+    const subscription = bleManager.onStateChange((state) => {
+      if (state === "PoweredOn") {
+        subscription.remove();
+        resolve(bleManager);
+        return;
       }
-      if (['Unauthorized', 'PoweredOff', 'Unsupported'].includes(state)) {
-        subscription.remove()
-        reject(new Error(state))
-        return
+      if (["Unauthorized", "PoweredOff", "Unsupported"].includes(state)) {
+        subscription.remove();
+        reject(new Error(state));
+        return;
       }
-    }, true)
-  })
+    }, true);
+  });
 }

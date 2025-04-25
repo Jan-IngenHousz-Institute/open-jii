@@ -1,7 +1,7 @@
-import { StatusBar } from 'expo-status-bar'
-import { SafeAreaView, StyleSheet } from 'react-native'
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaView, StyleSheet } from "react-native";
 
-import { DevicesListScreen } from './screens/devices-list-screen/devices-list-screen'
+import { DevicesListScreen } from "./screens/devices-list-screen/devices-list-screen";
 
 export function App() {
   return (
@@ -9,14 +9,14 @@ export function App() {
       <DevicesListScreen />
       <StatusBar style="auto" />
     </SafeAreaView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center'
-  }
-})
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
