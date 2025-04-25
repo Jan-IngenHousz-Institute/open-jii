@@ -17,7 +17,7 @@ Make sure you have the following installed:
 To install dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
 ---
@@ -29,7 +29,7 @@ npm install
 This will start the Metro bundler and open the project in Expo Dev Tools:
 
 ```bash
-npm start
+pnpm start
 ```
 
 ### 🤖 Run on Android
@@ -37,7 +37,7 @@ npm start
 To run the app on an Android device or emulator:
 
 ```bash
-npm run android
+pnpm run android
 ```
 
 Make sure you have an Android device connected or an emulator running.
@@ -47,7 +47,7 @@ Make sure you have an Android device connected or an emulator running.
 To run the app on an iOS simulator (macOS only):
 
 ```bash
-npm run ios
+pnpm run ios
 ```
 
 Ensure Xcode and its Command Line Tools are properly installed.
@@ -59,7 +59,7 @@ Ensure Xcode and its Command Line Tools are properly installed.
 To build an Android APK locally using [EAS Build](https://docs.expo.dev/build/introduction/):
 
 ```bash
-npm run build-android
+pnpm run build-android
 ```
 
 This uses the `preview` profile in your `eas.json` and creates a local build.
