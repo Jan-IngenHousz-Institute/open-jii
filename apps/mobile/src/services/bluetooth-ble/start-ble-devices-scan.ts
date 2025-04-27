@@ -1,8 +1,8 @@
 import { BleError, Device, ScanMode } from "react-native-ble-plx";
 
 import { Emitter } from "../../utils/emitter";
+import { requestBluetoothPermission } from "../request-bluetooth-permissions";
 import { prepareBluetooth } from "./prepare-bluetooth";
-import { requestBluetoothPermission } from "./request-bluetooth-permissions";
 
 export async function startDeviceScan() {
   const permissionsGranted = await requestBluetoothPermission();

@@ -10,7 +10,6 @@
     "build-android": "eas build -p android --profile preview --local"
   },
   "dependencies": {
-    "react-native-css-interop": "^0.1.22",
     "expo": "~52.0.46",
     "expo-status-bar": "~2.0.1",
     "nativewind": "^4.1.23",
@@ -18,10 +17,13 @@
     "react-async-hook": "^4.0.0",
     "react-native": "0.76.9",
     "react-native-ble-plx": "^3.5.0",
+    "react-native-bluetooth-classic": "1.73.0-rc.13",
+    "react-native-css-interop": "^0.1.22",
     "react-native-permissions": "^5.3.0",
     "react-native-reanimated": "3.16.2",
     "react-native-safe-area-context": "4.12.0",
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^3.4.17",
+    "with-rn-bluetooth-classic": "^1.0.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

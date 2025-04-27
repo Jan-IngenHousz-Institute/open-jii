@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAsync } from "react-async-hook";
 import { Text, View } from "react-native";
 
-import { startDeviceScan } from "../../services/bluetooth/start-devices-scan";
+import { startDeviceScan } from "../../services/bluetooth-ble/start-ble-devices-scan";
 import { DevicesListView } from "./components/item-card/components/devices-list-view";
 import { BluetoothDevice } from "./utils/bluetooth-device";
 import { orderDevices } from "./utils/order-devices";

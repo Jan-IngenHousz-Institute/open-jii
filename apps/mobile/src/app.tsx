@@ -1,12 +1,14 @@
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView, StyleSheet } from "react-native";
 
+import { BluetoothClassicTestPage } from "./screens/bluetooth-classic-test-page";
 import { DevicesListScreen } from "./screens/devices-list-screen/devices-list-screen";
 
 export function App() {
   return (
     <SafeAreaView style={styles.container}>
-      <DevicesListScreen />
+      {/*<DevicesListScreen />*/}
+      <BluetoothClassicTestPage />
       <StatusBar style="auto" />
     </SafeAreaView>
   );
