@@ -94,3 +94,9 @@ jobs:
         with:
           name: app-artifacts
           path: artifacts
+
+      - name: Print Current Directory
+        run: pwd
+
+      - name: List Artifacts
+        run: ls -l artifacts
