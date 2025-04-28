@@ -72,10 +72,11 @@ jobs:
         uses: ./.github/actions/tofu
         with:
           tofu-version: "1.6.0"
-          environment: "${{ inputs.environment }}"
+          #environment: "${{ inputs.environment }}"
+          environment: "dev"
 
-      - name: Apply Infrastructure
-        run: tofu plan
+      # - name: Apply Infrastructure
+      #   run: tofu plan
 
   # Job 3: Deploy Artifacts
   deploy:
