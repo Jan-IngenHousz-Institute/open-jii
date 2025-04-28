@@ -1,4 +1,4 @@
-name: Deployment Template
+name: Refine/Deployment Template
 
 on:
   workflow_call:
@@ -8,6 +8,9 @@ on:
         required: true
         type: string
   workflow_dispatch:
+  pull_request:
+    branches:
+      - feature/cicd-*
 
 # Job 1: Build, Lint, Test & AsyncAPI
 jobs:
