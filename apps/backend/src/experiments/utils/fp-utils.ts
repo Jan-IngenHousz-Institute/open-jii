@@ -84,11 +84,6 @@ export class Success<T> {
     return onSuccess(this.value);
   }
 
-  // Get or else with default value
-  getOrElse(_: T): T {
-    return this.value;
-  }
-
   // Unwrap value (use with caution)
   unwrap(): T {
     return this.value;
@@ -124,11 +119,6 @@ export class Failure<E> {
   // Fold to handle both success and failure cases
   fold<U>(_: (value: never) => U, onFailure: (error: E) => U): U {
     return onFailure(this.error);
-  }
-
-  // Get or else with default value
-  getOrElse<T>(defaultValue: T): T {
-    return defaultValue;
   }
 
   // Unwrap error (use with caution)
