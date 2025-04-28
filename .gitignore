@@ -87,3 +87,4 @@ pids
 *.pid.lock
 
 volumes
+.idea
