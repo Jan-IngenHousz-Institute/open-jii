@@ -61,11 +61,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: app-artifacts
-          path: artifacts
+      # If we have only infra update, it will depend on the affected apps trigger 
+      # - name: Download Artifacts
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: app-artifacts
+      #     path: artifacts
 
       - name: Run OpenTofu Operations
         uses: ./.github/actions/tofu
@@ -74,7 +75,7 @@ jobs:
           environment: "${{ inputs.environment }}"
 
       - name: Apply Infrastructure
-        run: tofu apply -auto-approve
+        run: tofu plan
 
   # Job 3: Deploy Artifacts
   deploy:
