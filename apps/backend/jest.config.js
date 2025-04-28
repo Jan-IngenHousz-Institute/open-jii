@@ -7,7 +7,15 @@ module.exports = {
   transform: {
     "^.+\\.(t|j)s$": "ts-jest",
   },
-  collectCoverageFrom: ["**/*.(t|j)s"],
+  collectCoverageFrom: [
+    "**/*.(t|j)s",
+    "!**/node_modules/**",
+    "!**/main.ts",
+    "!**/*.model.ts",
+    "!**/models/**",
+    "!**/test/test-harness.ts",
+    "!**/test/**",
+  ],
   coverageDirectory: "../coverage",
   testEnvironment: "node",
   setupFilesAfterEnv: ["<rootDir>/test/setup.ts"],

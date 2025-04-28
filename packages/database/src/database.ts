@@ -13,3 +13,4 @@ const getEnvVariable = (name: string) => {
 export const client = postgres(getEnvVariable("DATABASE_URL"));
 
 export const db = drizzle({ client, schema });
+export type DatabaseInstance = typeof db;
