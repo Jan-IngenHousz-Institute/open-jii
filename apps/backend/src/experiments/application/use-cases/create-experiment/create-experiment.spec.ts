@@ -40,7 +40,7 @@ describe("CreateExperimentUseCase", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     const createdExperiment = result.value;
-    
+
     // Verify all fields were set correctly
     expect(createdExperiment).toMatchObject({
       id: expect.any(String),
@@ -65,7 +65,7 @@ describe("CreateExperimentUseCase", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     const createdExperiment = result.value;
-    
+
     // Verify experiment was created with defaults
     expect(createdExperiment).toMatchObject({
       id: expect.any(String),

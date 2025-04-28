@@ -2,13 +2,13 @@
   "name": "@repo/database",
   "version": "1.0.0",
   "description": "",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    "default": "./dist/index.js",
-    "types": "./src/index.ts"
+    ".": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch",
     "db:seed": "tsx scripts/seed.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",

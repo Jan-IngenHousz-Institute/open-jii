@@ -1,8 +1,5 @@
 import { TestHarness } from "../../../../test/test-harness";
-import {
-  assertFailure,
-  assertSuccess,
-} from "../../../utils/fp-utils";
+import { assertFailure, assertSuccess } from "../../../utils/fp-utils";
 import { ChangeExperimentStatusUseCase } from "./change-experiment-status";
 
 describe("ChangeExperimentStatusUseCase", () => {

@@ -3,12 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
-    "default": "./dist/index.js",
-    "types": "./src/index.ts"
+    "./button": "./src/button.tsx",
+    "./card": "./src/card.tsx",
+    "./code": "./src/code.tsx"
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
     "lint": "eslint . --max-warnings 0",
     "generate:component": "turbo gen react-component",
     "check-types": "tsc --noEmit"
