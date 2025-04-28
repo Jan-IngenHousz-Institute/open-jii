@@ -54,7 +54,7 @@ describe("DeleteExperimentUseCase", () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
 
     // Try to delete a non-existent experiment
-    const result = await useCase.execute(nonExistentId, testUserId);
+    const result = await useCase.execute(nonExistentId);
 
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
