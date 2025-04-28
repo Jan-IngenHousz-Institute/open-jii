@@ -1,10 +1,11 @@
-import { NotFoundException, ForbiddenException } from "@nestjs/common";
 
 import { TestHarness } from "../../../../test/test-harness";
+import { assertFailure } from "../../../utils/fp-utils";
 import { ListExperimentMembersUseCase } from "./list-experiment-members";
 
 describe("ListExperimentMembersUseCase", () => {
   const testApp = TestHarness.App;
+  let testUserId: string;
   let useCase: ListExperimentMembersUseCase;
 
   beforeAll(async () => {
@@ -13,7 +14,7 @@ describe("ListExperimentMembersUseCase", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
-    await testApp.createTestUser();
+    testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(ListExperimentMembersUseCase);
   });
 
@@ -27,23 +28,33 @@ describe("ListExperimentMembersUseCase", () => {
 
   it("should list members of an experiment", async () => {
     // Create an experiment
-    const experiment = await testApp.createExperiment({
+    const { experiment, experimentAdmin } = await testApp.createExperiment({
       name: "List Members Test Experiment",
+      userId: testUserId,
     });
 
     // Add a member
-    const memberId = await testApp.createTestUser("member@example.com");
+    const memberId = await testApp.createTestUser({
+      email: "member@example.com",
+    });
     await testApp.addExperimentMember(experiment.id, memberId, "member");
 
     // List members
-    const members = await useCase.execute(experiment.id, testApp.testUserId);
+    const result = await useCase.execute(experiment.id, testUserId);
+
+    expect(result.isSuccess()).toBe(true);
+
+    // Extract members from the success result
+    const members = result._tag === "success" ? result.value : [];
 
     // Verify members are returned
     expect(members).toHaveLength(2); // Creator + added member
+
+    // Verify members by role rather than hardcoded IDs
     expect(members).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          userId: testApp.testUserId,
+          userId: experimentAdmin.userId,
           role: "admin",
         }),
         expect.objectContaining({
@@ -54,47 +65,62 @@ describe("ListExperimentMembersUseCase", () => {
     );
   });
 
-  it("should throw NotFoundException if experiment does not exist", async () => {
+  it("should return NOT_FOUND error if experiment does not exist", async () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
 
-    await expect(
-      useCase.execute(nonExistentId, testApp.testUserId),
-    ).rejects.toThrow(NotFoundException);
+    const result = await useCase.execute(nonExistentId, testUserId);
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("NOT_FOUND");
   });
 
-  it("should throw ForbiddenException if user has no access to private experiment", async () => {
+  it("should return FORBIDDEN error if user has no access to private experiment", async () => {
     // Create a private experiment
-    const experiment = await testApp.createExperiment({
+    const { experiment } = await testApp.createExperiment({
       name: "Private Experiment",
       visibility: "private",
+      userId: testUserId,
     });
 
     // Create a user who is not a member
-    const nonMemberId = await testApp.createTestUser("nonmember@example.com");
+    const nonMemberId = await testApp.createTestUser({
+      email: "nonmember@example.com",
+    });
 
     // Try to list members as non-member
-    await expect(useCase.execute(experiment.id, nonMemberId)).rejects.toThrow(
-      ForbiddenException,
-    );
+    const result = await useCase.execute(experiment.id, nonMemberId);
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
   });
 
   it("should allow any user to list members of a public experiment", async () => {
     // Create a public experiment
-    const experiment = await testApp.createExperiment({
+    const { experiment, experimentAdmin } = await testApp.createExperiment({
       name: "Public Experiment",
       visibility: "public",
+      userId: testUserId,
     });
 
     // Create a user who is not a member
-    const nonMemberId = await testApp.createTestUser("nonmember@example.com");
+    const nonMemberId = await testApp.createTestUser({
+      email: "nonmember@example.com",
+    });
 
     // List members as non-member
-    const members = await useCase.execute(experiment.id, nonMemberId);
+    const result = await useCase.execute(experiment.id, nonMemberId);
+
+    expect(result.isSuccess()).toBe(true);
+
+    // Extract members from the success result
+    const members = result._tag === "success" ? result.value : [];
 
     // Verify members are returned
     expect(members).toHaveLength(1); // Just the creator
     expect(members[0]).toMatchObject({
-      userId: testApp.testUserId,
+      userId: experimentAdmin.userId,
       role: "admin",
     });
   });

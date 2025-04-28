@@ -81,15 +81,11 @@ export const experimentContract = c.router({
     method: "GET",
     path: "/api/v1/experiments",
     query: z.object({
+      userId: z.string().uuid().describe("User ID for authentication"),
       filter: z
         .enum(["my", "member", "related"])
         .optional()
         .describe("Filter experiments by relationship to the user"),
-      userId: z
-        .string()
-        .uuid()
-        .optional()
-        .describe("User ID for authentication"),
     }),
     responses: {
       200: zExperimentList,
@@ -107,11 +103,7 @@ export const experimentContract = c.router({
       id: z.string().uuid().describe("Experiment ID"),
     }),
     query: z.object({
-      userId: z
-        .string()
-        .uuid()
-        .optional()
-        .describe("User ID for authentication"),
+      userId: z.string().uuid().describe("User ID for authentication"),
     }),
     responses: {
       200: zExperiment,
@@ -128,11 +120,7 @@ export const experimentContract = c.router({
       id: z.string().uuid().describe("Experiment ID"),
     }),
     query: z.object({
-      userId: z
-        .string()
-        .uuid()
-        .optional()
-        .describe("User ID for authentication"),
+      userId: z.string().uuid().describe("User ID for authentication"),
     }),
     body: z.object({
       name: z
@@ -172,11 +160,7 @@ export const experimentContract = c.router({
       id: z.string().uuid().describe("Experiment ID"),
     }),
     query: z.object({
-      userId: z
-        .string()
-        .uuid()
-        .optional()
-        .describe("User ID for authentication"),
+      userId: z.string().uuid().describe("User ID for authentication"),
     }),
     responses: {
       204: z.null(),
@@ -193,11 +177,7 @@ export const experimentContract = c.router({
       id: z.string().uuid().describe("Experiment ID"),
     }),
     query: z.object({
-      userId: z
-        .string()
-        .uuid()
-        .optional()
-        .describe("User ID for authentication"),
+      userId: z.string().uuid().describe("User ID for authentication"),
     }),
     responses: {
       200: zExperimentMemberList,
@@ -216,11 +196,7 @@ export const experimentContract = c.router({
       id: z.string().uuid().describe("Experiment ID"),
     }),
     query: z.object({
-      userId: z
-        .string()
-        .uuid()
-        .optional()
-        .describe("User ID for authentication"),
+      userId: z.string().uuid().describe("User ID for authentication"),
     }),
     body: z.object({
       userId: z.string().uuid().describe("ID of the user to add as a member"),
@@ -246,11 +222,7 @@ export const experimentContract = c.router({
       memberId: z.string().uuid().describe("ID of the member to remove"),
     }),
     query: z.object({
-      userId: z
-        .string()
-        .uuid()
-        .optional()
-        .describe("User ID for authentication"),
+      userId: z.string().uuid().describe("User ID for authentication"),
     }),
     responses: {
       204: z.null(),

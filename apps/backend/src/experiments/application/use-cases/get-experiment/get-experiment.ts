@@ -1,18 +1,22 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
+import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import { Result, success, failure, AppError } from "../../../utils/fp-utils";
 
 @Injectable()
 export class GetExperimentUseCase {
   constructor(private readonly experimentRepository: ExperimentRepository) {}
 
-  async execute(id: string): Promise<any> {
-    const experiment = await this.experimentRepository.findOne(id);
+  async execute(id: string): Promise<Result<ExperimentDto>> {
+    const experimentResult = await this.experimentRepository.findOne(id);
 
-    if (!experiment) {
-      throw new NotFoundException(`Experiment with ID ${id} not found`);
-    }
+    return experimentResult.chain((experiment) => {
+      if (!experiment) {
+        return failure(AppError.notFound(`Experiment with ID ${id} not found`));
+      }
 
-    return experiment;
+      return success(experiment);
+    });
   }
 }

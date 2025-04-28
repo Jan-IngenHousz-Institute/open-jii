@@ -1,26 +1,47 @@
+import { Injectable } from "@nestjs/common";
+
 import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from "@nestjs/common";
-
+  ExperimentDto,
+  ExperimentStatus,
+} from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-
-export type ExperimentStatus = "provisioning" | "active" | "archived";
+import { Result, success, failure, AppError } from "../../../utils/fp-utils";
 
 @Injectable()
 export class ChangeExperimentStatusUseCase {
   constructor(private readonly experimentRepository: ExperimentRepository) {}
 
-  async execute(id: string, status: ExperimentStatus) {
-    const experiment = await this.experimentRepository.findOne(id);
-    if (!experiment) {
-      throw new NotFoundException(`Experiment with ID ${id} not found`);
-    }
+  async execute(
+    id: string,
+    status: ExperimentStatus,
+  ): Promise<Result<ExperimentDto>> {
+    // Validate status
     if (!["provisioning", "active", "archived"].includes(status)) {
-      throw new BadRequestException(`Invalid status: ${status}`);
+      return failure(AppError.badRequest(`Invalid status: ${status}`));
     }
-    // Optionally, add business rules for allowed transitions
-    return this.experimentRepository.update(id, { status });
+
+    // Check if experiment exists
+    const experimentResult = await this.experimentRepository.findOne(id);
+
+    return experimentResult.chain(async (experiment) => {
+      if (!experiment) {
+        return failure(AppError.notFound(`Experiment with ID ${id} not found`));
+      }
+
+      // Update the experiment status
+      const updateResult = await this.experimentRepository.update(id, {
+        status,
+      });
+
+      return updateResult.chain((updatedExperiments) => {
+        if (updatedExperiments.length === 0) {
+          return failure(
+            AppError.internal(`Failed to update status for experiment ${id}`),
+          );
+        }
+
+        return success(updatedExperiments[0]);
+      });
+    });
   }
 }

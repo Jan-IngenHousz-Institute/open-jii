@@ -4,9 +4,11 @@ import { eq, or, and, experiments, experimentMembers } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import type { ExperimentFilter } from "../../application/pipes/experiment-filter.pipe";
+import { Result, tryCatch } from "../../utils/fp-utils";
 import {
   CreateExperimentDto,
   UpdateExperimentDto,
+  ExperimentDto,
 } from "../models/experiment.model";
 
 @Injectable()
@@ -16,19 +18,25 @@ export class ExperimentRepository {
     private readonly database: DatabaseInstance,
   ) {}
 
-  async create(createExperimentDto: CreateExperimentDto, userId: string) {
-    const result = await this.database
-      .insert(experiments)
-      .values({
-        ...createExperimentDto,
-        createdBy: userId,
-      })
-      .returning({ id: experiments.id });
-
-    return result[0].id;
+  async create(
+    createExperimentDto: CreateExperimentDto,
+    userId: string,
+  ): Promise<Result<ExperimentDto[]>> {
+    return tryCatch(() =>
+      this.database
+        .insert(experiments)
+        .values({
+          ...createExperimentDto,
+          createdBy: userId,
+        })
+        .returning(),
+    );
   }
 
-  async findAll(userId: string, filter?: ExperimentFilter) {
+  async findAll(
+    userId: string,
+    filter?: ExperimentFilter,
+  ): Promise<Result<Partial<ExperimentDto>[]>> {
     // Common experiment fields to select
     const experimentFields = {
       id: experiments.id,
@@ -38,160 +46,118 @@ export class ExperimentRepository {
       embargoIntervalDays: experiments.embargoIntervalDays,
       createdBy: experiments.createdBy,
     };
-    // Start with a base query builder
-    let query = this.database.select(experimentFields).from(experiments);
 
-    // Apply filters based on the filter type
-    switch (filter) {
-      case "my":
-        return query.where(eq(experiments.createdBy, userId));
+    return tryCatch(() => {
+      // Start with a base query builder
+      let query = this.database.select(experimentFields).from(experiments);
 
-      case "member":
-        return query
-          .innerJoin(
-            experimentMembers,
-            eq(experiments.id, experimentMembers.experimentId),
-          )
-          .where(eq(experimentMembers.userId, userId));
+      // Apply filters based on the filter type
+      switch (filter) {
+        case "my":
+          return query.where(eq(experiments.createdBy, userId));
 
-      case "related":
-        return query
-          .leftJoin(
-            experimentMembers,
-            eq(experiments.id, experimentMembers.experimentId),
-          )
-          .where(
-            or(
-              eq(experiments.createdBy, userId),
-              eq(experimentMembers.userId, userId),
-            ),
-          );
+        case "member":
+          return query
+            .innerJoin(
+              experimentMembers,
+              eq(experiments.id, experimentMembers.experimentId),
+            )
+            .where(eq(experimentMembers.userId, userId));
 
-      default:
-        return query;
-    }
+        case "related":
+          return query
+            .leftJoin(
+              experimentMembers,
+              eq(experiments.id, experimentMembers.experimentId),
+            )
+            .where(
+              or(
+                eq(experiments.createdBy, userId),
+                eq(experimentMembers.userId, userId),
+              ),
+            );
+
+        default:
+          return query;
+      }
+    });
   }
 
-  async findOne(id: string) {
-    const result = await this.database
-      .select()
-      .from(experiments)
-      .where(eq(experiments.id, id))
-      .limit(1);
+  async findOne(id: string): Promise<Result<ExperimentDto | null>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select()
+        .from(experiments)
+        .where(eq(experiments.id, id))
+        .limit(1);
 
-    if (result.length === 0) {
-      return null;
-    }
+      if (result.length === 0) {
+        return null;
+      }
 
-    return result[0];
+      return result[0];
+    });
   }
 
-  async update(id: string, updateExperimentDto: UpdateExperimentDto) {
-    return this.database
-      .update(experiments)
-      .set(updateExperimentDto)
-      .where(eq(experiments.id, id));
+  async update(
+    id: string,
+    updateExperimentDto: UpdateExperimentDto,
+  ): Promise<Result<ExperimentDto[]>> {
+    return tryCatch(() =>
+      this.database
+        .update(experiments)
+        .set(updateExperimentDto)
+        .where(eq(experiments.id, id))
+        .returning(),
+    );
   }
 
-  async delete(id: string) {
-    // First delete experiment members to maintain referential integrity
-    await this.database
-      .delete(experimentMembers)
-      .where(eq(experimentMembers.experimentId, id));
+  async delete(id: string): Promise<Result<void>> {
+    return tryCatch(async () => {
+      // First delete experiment members to maintain referential integrity
+      await this.database
+        .delete(experimentMembers)
+        .where(eq(experimentMembers.experimentId, id));
 
-    // Then delete the experiment
-    return this.database.delete(experiments).where(eq(experiments.id, id));
+      // Then delete the experiment
+      await this.database.delete(experiments).where(eq(experiments.id, id));
+    });
   }
 
-  async addMember(
+  async hasAccess(
     experimentId: string,
     userId: string,
-    role: "admin" | "member" = "member",
-  ) {
-    // Check if membership already exists
-    const existingMembership = await this.database
-      .select()
-      .from(experimentMembers)
-      .where(
-        and(
-          eq(experimentMembers.experimentId, experimentId),
-          eq(experimentMembers.userId, userId),
-        ),
-      )
-      .limit(1);
+  ): Promise<Result<boolean>> {
+    return tryCatch(async () => {
+      const experiment = await this.database
+        .select()
+        .from(experiments)
+        .where(eq(experiments.id, experimentId))
+        .limit(1);
 
-    // If already a member, update role instead of creating duplicate
-    if (existingMembership.length > 0) {
-      return this.database
-        .update(experimentMembers)
-        .set({ role })
-        .where(eq(experimentMembers.id, existingMembership[0].id))
-        .returning();
-    }
+      // If experiment doesn't exist, no access
+      if (experiment.length === 0) {
+        return false;
+      }
 
-    // Otherwise, add new membership
-    return this.database
-      .insert(experimentMembers)
-      .values({
-        experimentId,
-        userId,
-        role,
-      })
-      .returning();
-  }
+      // If user created the experiment, they have access
+      if (experiment[0].createdBy === userId) {
+        return true;
+      }
 
-  async removeMember(experimentId: string, userId: string) {
-    return this.database
-      .delete(experimentMembers)
-      .where(
-        and(
-          eq(experimentMembers.experimentId, experimentId),
-          eq(experimentMembers.userId, userId),
-        ),
-      );
-  }
+      // Check if user is a member
+      const membership = await this.database
+        .select()
+        .from(experimentMembers)
+        .where(
+          and(
+            eq(experimentMembers.experimentId, experimentId),
+            eq(experimentMembers.userId, userId),
+          ),
+        )
+        .limit(1);
 
-  async hasAccess(experimentId: string, userId: string): Promise<boolean> {
-    const experiment = await this.database
-      .select()
-      .from(experiments)
-      .where(eq(experiments.id, experimentId))
-      .limit(1);
-
-    // If experiment doesn't exist, no access
-    if (experiment.length === 0) {
-      return false;
-    }
-
-    // If user created the experiment, they have access
-    if (experiment[0].createdBy === userId) {
-      return true;
-    }
-
-    // Check if user is a member
-    const membership = await this.database
-      .select()
-      .from(experimentMembers)
-      .where(
-        and(
-          eq(experimentMembers.experimentId, experimentId),
-          eq(experimentMembers.userId, userId),
-        ),
-      )
-      .limit(1);
-
-    return membership.length > 0;
-  }
-
-  async getMembers(experimentId: string) {
-    return this.database
-      .select({
-        id: experimentMembers.id,
-        userId: experimentMembers.userId,
-        role: experimentMembers.role,
-        joinedAt: experimentMembers.joinedAt,
-      })
-      .from(experimentMembers)
-      .where(eq(experimentMembers.experimentId, experimentId));
+      return membership.length > 0;
+    });
   }
 }

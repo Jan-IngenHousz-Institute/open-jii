@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import { INestApplication } from "@nestjs/common";
 import { ModuleMetadata } from "@nestjs/common/interfaces";
 import { Test, TestingModule } from "@nestjs/testing";
@@ -58,12 +59,7 @@ export class TestHarness {
         await this.setup();
       }
 
-      // Clean up test data in correct order (respecting foreign key constraints)
-      await this.database.delete(auditLogs).execute();
-      await this.database.delete(experimentMembers).execute();
-      await this.database.delete(experiments).execute();
-      await this.database.delete(profiles).execute();
-      await this.database.delete(users).execute();
+      await this.clearDatabase();
     } catch (e) {
       console.log("Failed to clean up database for integration tests.", e);
       // Don't throw the error to allow tests to continue
@@ -74,9 +70,16 @@ export class TestHarness {
    * Close the application after tests
    */
   public async teardown() {
+    await this.clearDatabase();
+
     if (this.app) {
       await this.app.close();
       this.app = null;
+    }
+
+    // Close database connections
+    if (this.database) {
+      await this.database.$client.end();
     }
   }
 
@@ -94,20 +97,28 @@ export class TestHarness {
     return this.module.get<DatabaseInstance>("DATABASE");
   }
 
+  private async clearDatabase(): Promise<void> {
+    // Clean up test data in correct order (respecting foreign key constraints)
+    await this.database.delete(auditLogs).execute();
+    await this.database.delete(experimentMembers).execute();
+    await this.database.delete(experiments).execute();
+    await this.database.delete(profiles).execute();
+    await this.database.delete(users).execute();
+  }
+
   /**
    * Create helper functions for making HTTP requests
    */
   private request =
     (method: "get" | "post" | "patch" | "delete") =>
-    (url: string, addUserId = true) => {
+    (url: string, userId?: string) => {
       if (!this._request) {
         throw new Error("Call setup() before making requests.");
       }
 
       const req = this._request[method](url);
 
-      // Add userId query parameter if needed (simulating authentication)
-      return addUserId ? req.query({ userId: this.testUserId }) : req;
+      return !!userId ? req.query({ userId }) : req;
     };
 
   // HTTP request methods
@@ -123,29 +134,16 @@ export class TestHarness {
     return this._module;
   }
 
-  // Test data creation helpers
-  private _testUserId: string | null = null;
-
-  public async createTestUser(
-    email: string = "test@example.com",
-  ): Promise<string> {
+  public async createTestUser({
+    email = faker.internet.email(),
+  }: {
+    email?: string;
+  }): Promise<string> {
     const [user] = await this.database
       .insert(users)
       .values({ email })
       .returning();
-    this._testUserId = user.id; // Store the user ID in the instance property
     return user.id;
-  }
-
-  public get testUserId(): string {
-    if (!this._testUserId) {
-      throw new Error("Call createTestUser() before accessing testUserId");
-    }
-    return this._testUserId;
-  }
-
-  public set testUserId(id: string) {
-    this._testUserId = id;
   }
 
   /**
@@ -153,6 +151,7 @@ export class TestHarness {
    */
   public async createExperiment(data: {
     name: string;
+    userId: string;
     description?: string;
     status?:
       | "provisioning"
@@ -163,10 +162,7 @@ export class TestHarness {
       | "published";
     visibility?: "private" | "public";
     embargoIntervalDays?: number;
-    userId?: string;
   }) {
-    const userId = data.userId || this.testUserId;
-
     const [experiment] = await this.database
       .insert(experiments)
       .values({
@@ -175,11 +171,17 @@ export class TestHarness {
         status: data.status || "provisioning",
         visibility: data.visibility || "private",
         embargoIntervalDays: data.embargoIntervalDays || 90,
-        createdBy: userId,
+        createdBy: data.userId,
       })
       .returning();
 
-    return experiment;
+    const experimentAdmin = await this.addExperimentMember(
+      experiment.id,
+      data.userId,
+      "admin",
+    );
+
+    return { experiment, experimentAdmin };
   }
 
   /**

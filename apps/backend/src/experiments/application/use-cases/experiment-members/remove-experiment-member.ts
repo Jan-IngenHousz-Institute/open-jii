@@ -1,47 +1,65 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
+import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import { Result, failure, AppError } from "../../../utils/fp-utils";
 
 @Injectable()
 export class RemoveExperimentMemberUseCase {
-  constructor(private readonly experimentRepository: ExperimentRepository) {}
+  constructor(
+    private readonly experimentRepository: ExperimentRepository,
+    private readonly experimentMemberRepository: ExperimentMemberRepository,
+  ) {}
 
   async execute(
     experimentId: string,
     memberId: string,
     currentUserId: string,
-  ): Promise<void> {
+  ): Promise<Result<void>> {
     // Check if experiment exists
-    const experiment = await this.experimentRepository.findOne(experimentId);
-    if (!experiment) {
-      throw new NotFoundException(
-        `Experiment with ID ${experimentId} not found`,
-      );
-    }
+    const experimentResult =
+      await this.experimentRepository.findOne(experimentId);
 
-    // Check if user has permission (must be admin)
-    // const role = await this.experimentRepository.getMemberRole(
-    //   experimentId,
-    //   currentUserId,
-    // );
-    // if (role !== "admin") {
-    //   throw new ForbiddenException("Only experiment admins can remove members");
-    // }
+    return experimentResult.chain(async (experiment) => {
+      if (!experiment) {
+        return failure(
+          AppError.notFound(`Experiment with ID ${experimentId} not found`),
+        );
+      }
 
-    // Check if memberId exists and belongs to this experiment
-    const members = await this.experimentRepository.getMembers(experimentId);
-    const memberExists = members.some((member) => member.id === memberId);
-    if (!memberExists) {
-      throw new NotFoundException(
-        `Member with ID ${memberId} not found in this experiment`,
-      );
-    }
+      // Check if user has permission (must be admin)
+      const membersResult =
+        await this.experimentMemberRepository.getMembers(experimentId);
 
-    // Remove the member
-    await this.experimentRepository.removeMember(experimentId, memberId);
+      return membersResult.chain((members) => {
+        const currentUserMember = members.find(
+          (member) => member.userId === currentUserId,
+        );
+
+        if (!currentUserMember || currentUserMember.role !== "admin") {
+          return failure(
+            AppError.forbidden("Only experiment admins can remove members"),
+          );
+        }
+
+        // Check if memberId exists and belongs to this experiment
+        const memberExists = members.some(
+          (member) => member.userId === memberId,
+        );
+        if (!memberExists) {
+          return failure(
+            AppError.notFound(
+              `Member with ID ${memberId} not found in this experiment`,
+            ),
+          );
+        }
+
+        // Remove the member
+        return this.experimentMemberRepository.removeMember(
+          experimentId,
+          memberId,
+        );
+      });
+    });
   }
 }

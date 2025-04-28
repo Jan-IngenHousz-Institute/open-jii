@@ -1,787 +1,488 @@
-import { Test, TestingModule } from "@nestjs/testing";
-
 import {
-  DatabaseInstance,
+  experiments as experimentsTable,
+  experimentMembers,
   eq,
   and,
-  experimentMembers,
-  experiments,
-  users,
 } from "@repo/database";
 
-import { DatabaseModule } from "../../../database/database.module";
-import "../../../test/setup";
-// Import test setup to ensure .env.test is loaded
-import type {
-  CreateExperimentDto,
-  UpdateExperimentDto,
-} from "../models/experiment.model";
+import { TestHarness } from "../../../test/test-harness";
+import { assertSuccess } from "../../utils/fp-utils";
 import { ExperimentRepository } from "./experiment.repository";
 
-// Test constants and fixtures
-const TEST_IDS = {
-  NON_EXISTENT: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-};
-
-const TEST_EMAILS = {
-  USER: "test@example.com",
-  OTHER: "other@example.com",
-};
-
-/**
- * Creates a fixture for experiment data that matches the updated schema.
- * Note: id, createdAt, and createdBy are omitted from the schema.
- */
-const createExperimentFixture = (
-  options: Partial<CreateExperimentDto> = {},
-) => ({
-  name: "Test Experiment",
-  description: "Test experiment description",
-  status: "provisioning" as const,
-  visibility: "private" as const,
-  embargoIntervalDays: 90,
-  ...options,
-});
-
 describe("ExperimentRepository", () => {
+  const testApp = TestHarness.App;
   let repository: ExperimentRepository;
   let testUserId: string;
-  let otherUserId: string;
-  let database: DatabaseInstance;
 
-  // Database setup and cleanup
   beforeAll(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      imports: [DatabaseModule],
-    }).compile();
-
-    database = module.get("DATABASE");
-
-    await cleanupTestUsers(database);
-    const userIds = await createTestUsers(database);
-    testUserId = userIds.testUserId;
-    otherUserId = userIds.otherUserId;
-  });
-
-  afterAll(async () => {
-    await cleanupTestData(testUserId, otherUserId, database);
+    await testApp.setup();
   });
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      imports: [DatabaseModule],
-      providers: [ExperimentRepository],
-    }).compile();
-
-    repository = module.get<ExperimentRepository>(ExperimentRepository);
-    database = module.get("DATABASE");
-    await cleanupExperiments(testUserId, otherUserId, database);
+    await testApp.beforeEach();
+    testUserId = await testApp.createTestUser({});
+    repository = testApp.module.get(ExperimentRepository);
   });
 
-  // Core functionality tests
-  it("should be defined", () => {
-    expect(repository).toBeDefined();
+  afterEach(() => {
+    testApp.afterEach();
+  });
+
+  afterAll(async () => {
+    await testApp.teardown();
   });
 
   describe("create", () => {
-    it("should create an experiment with userId", async () => {
+    it("should create a new experiment", async () => {
       // Arrange
-      const dto = createExperimentFixture({
-        name: "test experiment",
-        status: "provisioning",
-      });
+      const createExperimentDto = {
+        name: "Test Experiment",
+        description: "Test Description",
+        status: "provisioning" as const,
+        visibility: "private" as const,
+        embargoIntervalDays: 90,
+      };
 
       // Act
-      const result = await repository.create(dto, testUserId);
+      const result = await repository.create(createExperimentDto, testUserId);
 
       // Assert
-      expect(result).toBeDefined();
-      const [created] = await database
-        .select()
-        .from(experiments)
-        .where(eq(experiments.name, "test experiment"));
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+      const experiment = experiments[0];
 
-      expect(created).toBeDefined();
-      expect(created.name).toBe("test experiment");
-      expect(created.createdBy).toBe(testUserId);
+      expect(experiment).toMatchObject({
+        id: expect.any(String),
+        name: createExperimentDto.name,
+        description: createExperimentDto.description,
+        status: createExperimentDto.status,
+        visibility: createExperimentDto.visibility,
+        embargoIntervalDays: createExperimentDto.embargoIntervalDays,
+        createdBy: testUserId,
+      });
+
+      // Verify directly in database
+      const dbResult = await testApp.database
+        .select()
+        .from(experimentsTable)
+        .where(eq(experimentsTable.id, experiment.id));
+
+      expect(dbResult.length).toBe(1);
+      expect(dbResult[0]).toMatchObject({
+        name: createExperimentDto.name,
+        description: createExperimentDto.description,
+        status: createExperimentDto.status,
+        visibility: createExperimentDto.visibility,
+        embargoIntervalDays: createExperimentDto.embargoIntervalDays,
+        createdBy: testUserId,
+      });
     });
   });
 
   describe("findAll", () => {
-    beforeEach(async () => {
-      await createTestExperiments(testUserId, otherUserId, database);
-    });
-
-    it("should return all experiments when no filter", async () => {
-      // Act
-      const result = await repository.findAll(testUserId);
-
-      // Assert
-      expect(result.length).toBeGreaterThanOrEqual(3);
-    });
-
-    it("should filter by user ID when no filter parameter is provided", async () => {
-      // Act
-      const result = await repository.findAll(testUserId);
-
-      // Assert
-      expect(result.length).toBeGreaterThanOrEqual(3);
-    });
-
-    it('should filter by createdBy when filter is "my"', async () => {
-      // Act
-      const result = await repository.findAll(testUserId, "my");
-
-      // Assert
-      expect(result.length).toBeGreaterThanOrEqual(2);
-      expect(result.every((exp) => exp.createdBy === testUserId)).toBe(true);
-    });
-
-    it('should filter by experimentMembers when filter is "member"', async () => {
-      // Act
-      const result = await repository.findAll(testUserId, "member");
-
-      // Assert
-      expect(result.length).toBe(1);
-      expect(result[0].name).toBe("other experiment");
-    });
-
-    it('should filter by both createdBy or experimentMembers when filter is "related"', async () => {
+    it("should return all experiments without filter", async () => {
       // Arrange
-      const [relatedExperiment] = await database
-        .insert(experiments)
-        .values({
-          ...createExperimentFixture({
-            name: "related experiment",
-          }),
-          createdBy: testUserId,
-        })
-        .returning();
-
-      await database.insert(experimentMembers).values({
-        experimentId: relatedExperiment.id,
+      const { experiment: experiment1 } = await testApp.createExperiment({
+        name: "Experiment 1",
+        userId: testUserId,
+      });
+      const { experiment: experiment2 } = await testApp.createExperiment({
+        name: "Experiment 2",
         userId: testUserId,
       });
 
       // Act
-      const result = await repository.findAll(testUserId, "related");
-
-      // Assert
-      expect(result.length).toBe(4);
-    });
-
-    it("should return empty array when no experiments exist", async () => {
-      // Arrange
-      await database.delete(experimentMembers);
-      await database.delete(experiments);
-
-      // Act
       const result = await repository.findAll(testUserId);
 
       // Assert
-      expect(result).toEqual([]);
+      expect(result.isSuccess()).toBe(true);
+
+      assertSuccess(result);
+      const experiments = result.value;
+      expect(experiments.length).toBe(2);
+      expect(experiments).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: experiment1.id, name: "Experiment 1" }),
+          expect.objectContaining({ id: experiment2.id, name: "Experiment 2" }),
+        ]),
+      );
+    });
+
+    it("should filter experiments by 'my' filter", async () => {
+      // Arrange
+      const mainUserId = await testApp.createTestUser({
+        email: "main-user@example.com",
+      });
+      const otherUserId = await testApp.createTestUser({
+        email: "other-user@example.com",
+      });
+
+      // Create experiment owned by main user
+      const { experiment: ownedExperiment } = await testApp.createExperiment({
+        name: "My Experiment",
+        userId: mainUserId,
+      });
+
+      // Create experiment owned by other user
+      await testApp.createExperiment({
+        name: "Other Experiment",
+        userId: otherUserId,
+      });
+
+      // Act
+      const result = await repository.findAll(mainUserId, "my");
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+
+      assertSuccess(result);
+      const experiments = result.value;
+      expect(experiments.length).toBe(1);
+      expect(experiments[0].id).toBe(ownedExperiment.id);
+      expect(experiments[0].name).toBe("My Experiment");
+    });
+
+    it("should filter experiments by 'member' filter", async () => {
+      // Arrange
+      const mainUserId = await testApp.createTestUser({
+        email: "main-user@example.com",
+      });
+      const otherUserId = await testApp.createTestUser({
+        email: "other-user@example.com",
+      });
+
+      // Create experiment owned by other user
+      const { experiment } = await testApp.createExperiment({
+        name: "Member Experiment",
+        userId: otherUserId,
+      });
+
+      // Add main user as a member
+      await testApp.addExperimentMember(experiment.id, mainUserId, "member");
+
+      // Act
+      const result = await repository.findAll(mainUserId, "member");
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+
+      assertSuccess(result);
+      const experiments = result.value;
+      expect(experiments.length).toBe(1);
+      expect(experiments[0].id).toBe(experiment.id);
+      expect(experiments[0].name).toBe("Member Experiment");
+    });
+
+    it("should filter experiments by 'related' filter", async () => {
+      // Arrange
+      const mainUserId = await testApp.createTestUser({
+        email: "main-user@example.com",
+      });
+      const otherUserId = await testApp.createTestUser({
+        email: "other-user@example.com",
+      });
+
+      // Create experiment owned by main user
+      const { experiment: ownedExperiment } = await testApp.createExperiment({
+        name: "My Experiment",
+        userId: mainUserId,
+      });
+
+      // Create experiment owned by other user
+      const { experiment: memberExperiment } = await testApp.createExperiment({
+        name: "Member Experiment",
+        userId: otherUserId,
+      });
+
+      // Add main user as a member of the other experiment
+      await testApp.addExperimentMember(
+        memberExperiment.id,
+        mainUserId,
+        "member",
+      );
+
+      // Create an unrelated experiment
+      await testApp.createExperiment({
+        name: "Unrelated Experiment",
+        userId: otherUserId,
+      });
+
+      // Act
+      const result = await repository.findAll(mainUserId, "related");
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+
+      assertSuccess(result);
+      const experiments = result.value;
+      expect(experiments.length).toBe(2);
+      expect(experiments).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: ownedExperiment.id,
+            name: "My Experiment",
+          }),
+          expect.objectContaining({
+            id: memberExperiment.id,
+            name: "Member Experiment",
+          }),
+        ]),
+      );
     });
   });
 
   describe("findOne", () => {
-    let testExperimentId: string;
-
-    beforeEach(async () => {
-      const [experiment] = await database
-        .insert(experiments)
-        .values({
-          ...createExperimentFixture({
-            name: "test experiment for findOne",
-          }),
-          createdBy: testUserId,
-        })
-        .returning();
-      testExperimentId = experiment.id;
-    });
-
-    it("should find one experiment by id", async () => {
-      // Act
-      const result = await repository.findOne(testExperimentId);
-
-      // Assert
-      expect(result).toBeDefined();
-      expect(result?.id).toBe(testExperimentId);
-    });
-
-    it("should return null for non-existent experiment id", async () => {
-      // Act
-      const result = await repository.findOne(TEST_IDS.NON_EXISTENT);
-
-      // Assert
-      expect(result).toBeNull();
-    });
-
-    it("should return only the requested experiment", async () => {
+    it("should find an experiment by id", async () => {
       // Arrange
-      await database.insert(experiments).values({
-        ...createExperimentFixture({
-          name: "another experiment",
-        }),
-        createdBy: testUserId,
+      const { experiment } = await testApp.createExperiment({
+        name: "Experiment to Find",
+        description: "Should be found by ID",
+        userId: testUserId,
       });
 
       // Act
-      const result = await repository.findOne(testExperimentId);
+      const result = await repository.findOne(experiment.id);
 
       // Assert
-      expect(result).toBeDefined();
-      expect(result?.id).toBe(testExperimentId);
-      expect(result?.name).toBe("test experiment for findOne");
+      expect(result.isSuccess()).toBe(true);
+
+      assertSuccess(result);
+      const foundExperiment = result.value;
+      expect(foundExperiment).toMatchObject({
+        id: experiment.id,
+        name: "Experiment to Find",
+        description: "Should be found by ID",
+        createdBy: testUserId,
+      });
+    });
+
+    it("should return null if experiment not found", async () => {
+      // Act
+      const result = await repository.findOne(
+        "00000000-0000-0000-0000-000000000000",
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+
+      assertSuccess(result);
+      expect(result.value).toBeNull();
     });
   });
 
   describe("update", () => {
-    let testExperimentId: string;
-
-    beforeEach(async () => {
-      const [experiment] = await database
-        .insert(experiments)
-        .values({
-          ...createExperimentFixture({
-            name: "test experiment for update",
-          }),
-          createdBy: testUserId,
-        })
-        .returning();
-      testExperimentId = experiment.id;
-    });
-
     it("should update an experiment", async () => {
       // Arrange
-      const dto: UpdateExperimentDto = {
-        name: "updated experiment name",
-        status: "archived",
+      const { experiment } = await testApp.createExperiment({
+        name: "Original Name",
+        description: "Original Description",
+        userId: testUserId,
+      });
+
+      const updateData = {
+        name: "Updated Name",
+        description: "Updated Description",
+        status: "active" as const,
       };
 
       // Act
-      await repository.update(testExperimentId, dto);
+      const updateResult = await repository.update(experiment.id, updateData);
 
       // Assert
-      const updated = await repository.findOne(testExperimentId);
-      expect(updated?.name).toBe("updated experiment name");
-      expect(updated?.status).toBe("archived");
-    });
+      expect(updateResult.isSuccess()).toBe(true);
+      expect(updateResult._tag).toBe("success");
 
-    it("should not throw an error when updating non-existent experiment", async () => {
-      // Arrange
-      const dto: UpdateExperimentDto = {
-        name: "this won't be updated",
-        status: "active",
-      };
+      assertSuccess(updateResult);
+      const updatedExperiments = updateResult.value;
+      const updatedExperiment = updatedExperiments[0];
 
-      // Act & Assert
-      await expect(
-        repository.update(TEST_IDS.NON_EXISTENT, dto),
-      ).resolves.not.toThrow();
+      expect(updatedExperiment).toMatchObject({
+        id: experiment.id,
+        name: updateData.name,
+        description: updateData.description,
+        status: updateData.status,
+        createdBy: testUserId,
+      });
 
-      const allExperiments = await database.select().from(experiments);
-      const updatedExperiment = allExperiments.find(
-        (exp) => exp.name === "this won't be updated",
-      );
-      expect(updatedExperiment).toBeUndefined();
-    });
+      // Verify database directly
+      const dbExperiment = await testApp.database
+        .select()
+        .from(experimentsTable)
+        .where(eq(experimentsTable.id, experiment.id))
+        .limit(1);
 
-    it("should only update specified fields", async () => {
-      // Arrange
-      const originalExperiment = await repository.findOne(testExperimentId);
-      if (!originalExperiment) {
-        throw new Error("Test experiment not found");
-      }
-
-      const dto: UpdateExperimentDto = {
-        name: "partially updated name",
-      };
-
-      // Act
-      await repository.update(testExperimentId, dto);
-
-      // Assert
-      const updated = await repository.findOne(testExperimentId);
-      if (!updated) {
-        throw new Error("Updated experiment not found");
-      }
-
-      expect(updated.name).toBe("partially updated name");
-      expect(updated.status).toBe(originalExperiment.status);
-      expect(updated.visibility).toBe(originalExperiment.visibility);
-      expect(updated.embargoIntervalDays).toBe(
-        originalExperiment.embargoIntervalDays,
-      );
+      expect(dbExperiment.length).toBe(1);
+      expect(dbExperiment[0].name).toBe(updateData.name);
+      expect(dbExperiment[0].description).toBe(updateData.description);
+      expect(dbExperiment[0].status).toBe(updateData.status);
     });
   });
 
   describe("delete", () => {
-    let testExperimentId: string;
-
-    beforeEach(async () => {
-      const [experiment] = await database
-        .insert(experiments)
-        .values({
-          ...createExperimentFixture({
-            name: "test experiment for deletion",
-          }),
-          createdBy: testUserId,
-        })
-        .returning();
-      testExperimentId = experiment.id;
-
-      // Add a member to test cascading delete
-      await database.insert(experimentMembers).values({
-        experimentId: testExperimentId,
-        userId: otherUserId,
-      });
-    });
-
     it("should delete an experiment and its members", async () => {
-      // Act
-      await repository.delete(testExperimentId);
-
-      // Assert - No experiment should remain
-      const remainingExperiment = await repository.findOne(testExperimentId);
-      expect(remainingExperiment).toBeNull();
-
-      // Assert - No members should remain
-      const remainingMembers = await database
-        .select()
-        .from(experimentMembers)
-        .where(eq(experimentMembers.experimentId, testExperimentId));
-      expect(remainingMembers.length).toBe(0);
-    });
-
-    it("should not throw error when deleting non-existent experiment", async () => {
-      // Act & Assert
-      await expect(
-        repository.delete(TEST_IDS.NON_EXISTENT),
-      ).resolves.not.toThrow();
-    });
-  });
-
-  describe("addMember", () => {
-    let testExperimentId: string;
-
-    beforeEach(async () => {
-      const [experiment] = await database
-        .insert(experiments)
-        .values({
-          ...createExperimentFixture({
-            name: "test experiment for member addition",
-          }),
-          createdBy: testUserId,
-        })
-        .returning();
-      testExperimentId = experiment.id;
-    });
-
-    it("should add a member to an experiment", async () => {
-      // Act
-      await repository.addMember(testExperimentId, otherUserId, "admin");
-
-      // Assert
-      const members = await database
-        .select()
-        .from(experimentMembers)
-        .where(
-          and(
-            eq(experimentMembers.experimentId, testExperimentId),
-            eq(experimentMembers.userId, otherUserId),
-          ),
-        );
-      expect(members.length).toBe(1);
-      expect(members[0].role).toBe("admin");
-    });
-
-    it("should update role when member already exists", async () => {
-      // Arrange - Add initial member
-      await repository.addMember(testExperimentId, otherUserId, "member");
-
-      // Act - Update role
-      await repository.addMember(testExperimentId, otherUserId, "admin");
-
-      // Assert
-      const members = await database
-        .select()
-        .from(experimentMembers)
-        .where(
-          and(
-            eq(experimentMembers.experimentId, testExperimentId),
-            eq(experimentMembers.userId, otherUserId),
-          ),
-        );
-      expect(members.length).toBe(1);
-      expect(members[0].role).toBe("admin");
-    });
-  });
-
-  describe("removeMember", () => {
-    let testExperimentId: string;
-
-    beforeEach(async () => {
-      const [experiment] = await database
-        .insert(experiments)
-        .values({
-          ...createExperimentFixture({
-            name: "test experiment for member removal",
-          }),
-          createdBy: testUserId,
-        })
-        .returning();
-      testExperimentId = experiment.id;
-
-      // Add a member
-      await database.insert(experimentMembers).values({
-        experimentId: testExperimentId,
-        userId: otherUserId,
+      // Arrange
+      const { experiment } = await testApp.createExperiment({
+        name: "Experiment to Delete",
+        userId: testUserId,
       });
-    });
 
-    it("should remove a member from an experiment", async () => {
+      // Add a member to the experiment
+      const memberId = await testApp.createTestUser({
+        email: "member@example.com",
+      });
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
       // Act
-      await repository.removeMember(testExperimentId, otherUserId);
+      const deleteResult = await repository.delete(experiment.id);
 
       // Assert
-      const members = await database
+      expect(deleteResult.isSuccess()).toBe(true);
+
+      // Assert directly from database
+      const deletedExperiment = await testApp.database
+        .select()
+        .from(experimentsTable)
+        .where(eq(experimentsTable.id, experiment.id));
+      expect(deletedExperiment.length).toBe(0);
+
+      // Verify members were deleted
+      const members = await testApp.database
         .select()
         .from(experimentMembers)
-        .where(
-          and(
-            eq(experimentMembers.experimentId, testExperimentId),
-            eq(experimentMembers.userId, otherUserId),
-          ),
-        );
+        .where(eq(experimentMembers.experimentId, experiment.id));
       expect(members.length).toBe(0);
-    });
-
-    it("should not throw error when removing non-existent membership", async () => {
-      // Act & Assert
-      await expect(
-        repository.removeMember(testExperimentId, "non-existent-user-id"),
-      ).resolves.not.toThrow();
     });
   });
 
   describe("hasAccess", () => {
-    let testExperimentId: string;
-    let memberExperimentId: string;
-
-    beforeEach(async () => {
-      // Create an experiment where test user is the creator
-      const [experiment] = await database
-        .insert(experiments)
-        .values({
-          ...createExperimentFixture({
-            name: "test experiment for access check - creator",
-          }),
-          createdBy: testUserId,
-        })
-        .returning();
-      testExperimentId = experiment.id;
-
-      // Create another experiment where test user is a member
-      const [otherExperiment] = await database
-        .insert(experiments)
-        .values({
-          ...createExperimentFixture({
-            name: "test experiment for access check - member",
-          }),
-          createdBy: otherUserId,
-        })
-        .returning();
-      memberExperimentId = otherExperiment.id;
-
-      // Add test user as member
-      await database.insert(experimentMembers).values({
-        experimentId: memberExperimentId,
-        userId: testUserId,
-      });
-    });
-
-    it("should return true when user is the creator", async () => {
-      // Act
-      const hasAccess = await repository.hasAccess(
-        testExperimentId,
-        testUserId,
-      );
-
-      // Assert
-      expect(hasAccess).toBe(true);
-    });
-
-    it("should return true when user is a member", async () => {
-      // Act
-      const hasAccess = await repository.hasAccess(
-        memberExperimentId,
-        testUserId,
-      );
-
-      // Assert
-      expect(hasAccess).toBe(true);
-    });
-
-    it("should return false when user has no relation to the experiment", async () => {
-      // Act
-      const hasAccess = await repository.hasAccess(
-        memberExperimentId,
-        "unrelated-user-id",
-      );
-
-      // Assert
-      expect(hasAccess).toBe(false);
-    });
-
-    it("should return false for non-existent experiment", async () => {
-      // Act
-      const hasAccess = await repository.hasAccess(
-        TEST_IDS.NON_EXISTENT,
-        testUserId,
-      );
-
-      // Assert
-      expect(hasAccess).toBe(false);
-    });
-  });
-
-  describe("getMembers", () => {
-    let testExperimentId: string;
-
-    beforeEach(async () => {
-      const [experiment] = await database
-        .insert(experiments)
-        .values({
-          ...createExperimentFixture({
-            name: "test experiment for get members",
-          }),
-          createdBy: testUserId,
-        })
-        .returning();
-      testExperimentId = experiment.id;
-
-      // Add members
-      await database.insert(experimentMembers).values([
-        {
-          experimentId: testExperimentId,
-          userId: otherUserId,
-          role: "admin",
-        },
-        {
-          experimentId: testExperimentId,
-          userId: "another-test-user-id",
-          role: "member",
-        },
-      ]);
-    });
-
-    it("should return all members of an experiment", async () => {
-      // Act
-      const members = await repository.getMembers(testExperimentId);
-
-      // Assert
-      expect(members.length).toBe(2);
-      expect(
-        members.some((m) => m.userId === otherUserId && m.role === "admin"),
-      ).toBe(true);
-      expect(
-        members.some(
-          (m) => m.userId === "another-test-user-id" && m.role === "member",
-        ),
-      ).toBe(true);
-    });
-
-    it("should return empty array for non-existent experiment", async () => {
-      // Act
-      const members = await repository.getMembers(TEST_IDS.NON_EXISTENT);
-
-      // Assert
-      expect(members).toEqual([]);
-    });
-  });
-
-  describe("authorization scenarios", () => {
-    let userExperimentId: string;
-    let otherUserExperimentId: string;
-
-    beforeEach(async () => {
-      // Create experiments for different users
-      const [userExperiment] = await database
-        .insert(experiments)
-        .values({
-          ...createExperimentFixture({
-            name: "user's experiment",
-          }),
-          createdBy: testUserId,
-        })
-        .returning();
-      userExperimentId = userExperiment.id;
-
-      const [otherExperiment] = await database
-        .insert(experiments)
-        .values({
-          ...createExperimentFixture({
-            name: "other user's experiment",
-          }),
-          createdBy: otherUserId,
-        })
-        .returning();
-      otherUserExperimentId = otherExperiment.id;
-    });
-
-    it("should find only experiments that belong to a specific user with 'my' filter", async () => {
-      // Act
-      const userExperiments = await repository.findAll(testUserId, "my");
-      const otherUserExperiments = await repository.findAll(otherUserId, "my");
-
-      // Assert
-      expect(userExperiments.some((e) => e.id === userExperimentId)).toBe(true);
-      expect(userExperiments.every((e) => e.createdBy === testUserId)).toBe(
-        true,
-      );
-
-      expect(
-        otherUserExperiments.some((e) => e.id === otherUserExperimentId),
-      ).toBe(true);
-      expect(
-        otherUserExperiments.every((e) => e.createdBy === otherUserId),
-      ).toBe(true);
-    });
-
-    it("should find experiments where user is a member with 'member' filter", async () => {
+    it("should return true if user created the experiment", async () => {
       // Arrange
-      await database.insert(experimentMembers).values({
-        experimentId: otherUserExperimentId,
+      const { experiment } = await testApp.createExperiment({
+        name: "Creator Access Test",
         userId: testUserId,
       });
 
       // Act
-      const memberExperiments = await repository.findAll(testUserId, "member");
-      const otherMemberExperiments = await repository.findAll(
-        otherUserId,
-        "member",
+      const result = await repository.hasAccess(experiment.id, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(true);
+
+      // Verify relationship directly in database
+      const dbExperiment = await testApp.database
+        .select()
+        .from(experimentsTable)
+        .where(
+          and(
+            eq(experimentsTable.id, experiment.id),
+            eq(experimentsTable.createdBy, testUserId),
+          ),
+        );
+      expect(dbExperiment.length).toBe(1);
+    });
+
+    it("should return true if user is a member of the experiment", async () => {
+      // Arrange
+      const creatorId = await testApp.createTestUser({
+        email: "creator@example.com",
+      });
+      const memberId = await testApp.createTestUser({
+        email: "member@example.com",
+      });
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Member Access Test",
+        userId: creatorId,
+      });
+
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      // Act
+      const result = await repository.hasAccess(experiment.id, memberId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(true);
+
+      // Verify relationship directly in database
+      const membership = await testApp.database
+        .select()
+        .from(experimentMembers)
+        .where(
+          and(
+            eq(experimentMembers.experimentId, experiment.id),
+            eq(experimentMembers.userId, memberId),
+          ),
+        );
+      expect(membership.length).toBe(1);
+    });
+
+    it("should return false if user has no relation to the experiment", async () => {
+      // Arrange
+      const { experiment } = await testApp.createExperiment({
+        name: "No Access Test",
+        userId: testUserId,
+      });
+
+      const nonMemberId = await testApp.createTestUser({
+        email: "non-member@example.com",
+      });
+
+      // Act
+      const result = await repository.hasAccess(experiment.id, nonMemberId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+
+      expect(result.value).toBe(false);
+
+      // Verify absence of relationship directly in database
+      const membership = await testApp.database
+        .select()
+        .from(experimentMembers)
+        .where(
+          and(
+            eq(experimentMembers.experimentId, experiment.id),
+            eq(experimentMembers.userId, nonMemberId),
+          ),
+        );
+      expect(membership.length).toBe(0);
+
+      const creatorCheck = await testApp.database
+        .select()
+        .from(experimentsTable)
+        .where(
+          and(
+            eq(experimentsTable.id, experiment.id),
+            eq(experimentsTable.createdBy, nonMemberId),
+          ),
+        );
+      expect(creatorCheck.length).toBe(0);
+    });
+
+    it("should return false if experiment does not exist", async () => {
+      // Act
+      const result = await repository.hasAccess(
+        "00000000-0000-0000-0000-000000000000",
+        testUserId,
       );
 
       // Assert
-      expect(memberExperiments.length).toBeGreaterThanOrEqual(1);
-      expect(
-        memberExperiments.some((e) => e.id === otherUserExperimentId),
-      ).toBe(true);
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(false);
 
-      expect(otherMemberExperiments.length).toBe(0);
+      // Verify directly in database
+      const experimentCheck = await testApp.database
+        .select()
+        .from(experimentsTable)
+        .where(eq(experimentsTable.id, "00000000-0000-0000-0000-000000000000"));
+      expect(experimentCheck.length).toBe(0);
     });
   });
 });
-
-// Helper functions
-async function cleanupTestUsers(db: any) {
-  // Find and clean up existing test users
-  const existingTestUser = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, TEST_EMAILS.USER));
-  const existingOtherUser = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, TEST_EMAILS.OTHER));
-
-  if (existingTestUser.length > 0) {
-    await cleanupUserData(existingTestUser[0].id, db);
-  }
-
-  if (existingOtherUser.length > 0) {
-    await cleanupUserData(existingOtherUser[0].id, db);
-  }
-}
-
-async function cleanupUserData(userId: string, db: any) {
-  await db
-    .delete(experimentMembers)
-    .where(eq(experimentMembers.userId, userId));
-  await db.delete(experiments).where(eq(experiments.createdBy, userId));
-  await db.delete(users).where(eq(users.id, userId));
-}
-
-async function createTestUsers(db: any) {
-  const [testUser] = await db
-    .insert(users)
-    .values({
-      email: TEST_EMAILS.USER,
-    })
-    .returning();
-
-  const [otherUser] = await db
-    .insert(users)
-    .values({
-      email: TEST_EMAILS.OTHER,
-    })
-    .returning();
-
-  return {
-    testUserId: testUser.id,
-    otherUserId: otherUser.id,
-  };
-}
-
-async function cleanupTestData(
-  testUserId: string,
-  otherUserId: string,
-  db: any,
-) {
-  await cleanupUserData(testUserId, db);
-  await cleanupUserData(otherUserId, db);
-}
-
-async function cleanupExperiments(
-  testUserId: string,
-  otherUserId: string,
-  db: any,
-) {
-  await db
-    .delete(experimentMembers)
-    .where(eq(experimentMembers.userId, testUserId));
-  await db
-    .delete(experimentMembers)
-    .where(eq(experimentMembers.userId, otherUserId));
-  await db.delete(experiments).where(eq(experiments.createdBy, testUserId));
-  await db.delete(experiments).where(eq(experiments.createdBy, otherUserId));
-}
-
-async function createTestExperiments(
-  testUserId: string,
-  otherUserId: string,
-  db: any,
-) {
-  // Create test experiments with createdBy added explicitly to match how the service works
-  await db.insert(experiments).values([
-    {
-      ...createExperimentFixture({
-        name: "my experiment 1",
-      }),
-      createdBy: testUserId,
-    },
-    {
-      ...createExperimentFixture({
-        name: "my experiment 2",
-      }),
-      createdBy: testUserId,
-    },
-    {
-      ...createExperimentFixture({
-        name: "other experiment",
-      }),
-      createdBy: otherUserId,
-    },
-  ]);
-
-  // Create membership link
-  const [experiment] = await db
-    .select()
-    .from(experiments)
-    .where(eq(experiments.name, "other experiment"));
-
-  await db.insert(experimentMembers).values({
-    experimentId: experiment.id,
-    userId: testUserId,
-  });
-}

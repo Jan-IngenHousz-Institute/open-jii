@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common";
 
-import { ExperimentFilterPipe } from "./application/pipes/experiment-filter.pipe";
 // Use Cases
 import { ChangeExperimentStatusUseCase } from "./application/use-cases/change-experiment-status/change-experiment-status";
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
@@ -11,17 +10,19 @@ import { RemoveExperimentMemberUseCase } from "./application/use-cases/experimen
 import { GetExperimentUseCase } from "./application/use-cases/get-experiment/get-experiment";
 import { ListExperimentsUseCase } from "./application/use-cases/list-experiments/list-experiments";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
-// Repository
+// Repositories
+import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
-import { ExperimentMembersController } from "./presentation/experiment-members.controller";
 // Controllers
+import { ExperimentMembersController } from "./presentation/experiment-members.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
 
 @Module({
   controllers: [ExperimentController, ExperimentMembersController],
   providers: [
-    // Repository
+    // Repositories
     ExperimentRepository,
+    ExperimentMemberRepository,
 
     // Use case providers
     CreateExperimentUseCase,
@@ -35,9 +36,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ListExperimentMembersUseCase,
     AddExperimentMemberUseCase,
     RemoveExperimentMemberUseCase,
-    ListExperimentMembersUseCase,
-    ExperimentFilterPipe,
   ],
-  exports: [ExperimentRepository],
+  exports: [ExperimentRepository, ExperimentMemberRepository],
 })
 export class ExperimentModule {}

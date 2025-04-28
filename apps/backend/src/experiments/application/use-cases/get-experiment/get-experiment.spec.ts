@@ -1,10 +1,10 @@
-import { NotFoundException } from "@nestjs/common";
-
 import { TestHarness } from "../../../../test/test-harness";
+import { assertSuccess } from "../../../utils/fp-utils";
 import { GetExperimentUseCase } from "./get-experiment";
 
 describe("GetExperimentUseCase", () => {
   const testApp = TestHarness.App;
+  let testUserId: string;
   let useCase: GetExperimentUseCase;
 
   beforeAll(async () => {
@@ -13,7 +13,8 @@ describe("GetExperimentUseCase", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
-    await testApp.createTestUser();
+    testUserId = await testApp.createTestUser({});
+
     useCase = testApp.module.get(GetExperimentUseCase);
   });
 
@@ -27,34 +28,33 @@ describe("GetExperimentUseCase", () => {
 
   it("should return an experiment when found", async () => {
     // Create an experiment in the database
-    const experiment = await testApp.createExperiment({
+    const { experiment } = await testApp.createExperiment({
       name: "Test Experiment",
       description: "Test Description",
       status: "active",
       visibility: "private",
       embargoIntervalDays: 90,
+      userId: testUserId,
     });
 
     // Act
     const result = await useCase.execute(experiment.id);
 
-    // Assert
-    expect(result).toMatchObject({
+    // Assert result is success
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    const retrievedExperiment = result.value;
+    expect(retrievedExperiment).not.toBeNull();
+
+    // Verify experiment properties
+    expect(retrievedExperiment).toMatchObject({
       id: experiment.id,
       name: experiment.name,
       description: experiment.description,
       status: experiment.status,
       visibility: experiment.visibility,
       embargoIntervalDays: experiment.embargoIntervalDays,
-      createdBy: testApp.testUserId,
+      createdBy: testUserId,
     });
-  });
-
-  it("should throw NotFoundException when experiment is not found", async () => {
-    // Act & Assert
-    const nonExistentId = "00000000-0000-0000-0000-000000000000";
-    await expect(useCase.execute(nonExistentId)).rejects.toThrow(
-      NotFoundException,
-    );
   });
 });

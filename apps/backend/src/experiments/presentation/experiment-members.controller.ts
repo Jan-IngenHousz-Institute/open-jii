@@ -7,7 +7,7 @@ import { contract } from "@repo/api";
 import { AddExperimentMemberUseCase } from "../application/use-cases/experiment-members/add-experiment-member";
 import { ListExperimentMembersUseCase } from "../application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "../application/use-cases/experiment-members/remove-experiment-member";
-import { handleApiError } from "../utils/error-handling";
+import { handleResult, Success } from "../utils/fp-utils";
 
 @Controller()
 export class ExperimentMembersController {
@@ -24,20 +24,26 @@ export class ExperimentMembersController {
     return tsRestHandler(
       contract.listExperimentMembers,
       async ({ params, query }) => {
-        try {
-          const userId = query.userId || "default-user-id";
-          const members = await this.listExperimentMembersUseCase.execute(
-            params.id,
-            userId,
-          );
+        const result = await this.listExperimentMembersUseCase.execute(
+          params.id,
+          query.userId,
+        );
+
+        if (result.isSuccess()) {
+          // Format dates to strings for the API contract
+          const members = (result as Success<any>).value;
+          const formattedMembers = members.map((member) => ({
+            ...member,
+            joinedAt: member.joinedAt.toISOString(),
+          }));
 
           return {
             status: StatusCodes.OK as const,
-            body: members,
+            body: formattedMembers,
           };
-        } catch (error) {
-          return handleApiError(error, this.logger);
         }
+
+        return handleResult(result, this.logger);
       },
     );
   }
@@ -47,24 +53,31 @@ export class ExperimentMembersController {
     return tsRestHandler(
       contract.addExperimentMember,
       async ({ params, body, query }) => {
-        try {
-          const userId = query.userId || "default-user-id";
-          const member = await this.addExperimentMemberUseCase.execute(
-            params.id,
-            body,
-            userId,
-          );
+        const result = await this.addExperimentMemberUseCase.execute(
+          params.id,
+          body,
+          query.userId,
+        );
+
+        if (result.isSuccess()) {
+          const member = (result as Success<any>).value;
+          // Format date to string for the API contract
+          const formattedMember = {
+            ...member,
+            joinedAt: member.joinedAt.toISOString(),
+          };
 
           this.logger.log(
-            `Member ${body.userId} added to experiment ${params.id} by user ${userId}`,
+            `Member ${body.userId} added to experiment ${params.id} by user ${query.userId}`,
           );
+
           return {
             status: StatusCodes.CREATED as const,
-            body: member,
+            body: formattedMember,
           };
-        } catch (error) {
-          return handleApiError(error, this.logger);
         }
+
+        return handleResult(result, this.logger);
       },
     );
   }
@@ -74,24 +87,24 @@ export class ExperimentMembersController {
     return tsRestHandler(
       contract.removeExperimentMember,
       async ({ params, query }) => {
-        try {
-          const userId = query.userId || "default-user-id";
-          await this.removeExperimentMemberUseCase.execute(
-            params.id,
-            params.memberId,
-            userId,
+        const result = await this.removeExperimentMemberUseCase.execute(
+          params.id,
+          params.memberId,
+          query.userId,
+        );
+
+        if (result.isSuccess()) {
+          this.logger.log(
+            `Member ${params.memberId} removed from experiment ${params.id} by user ${query.userId}`,
           );
 
-          this.logger.log(
-            `Member ${params.memberId} removed from experiment ${params.id} by user ${userId}`,
-          );
           return {
-            status: 204,
+            status: StatusCodes.NO_CONTENT,
             body: null,
           };
-        } catch (error) {
-          return handleApiError(error, this.logger);
         }
+
+        return handleResult(result, this.logger);
       },
     );
   }

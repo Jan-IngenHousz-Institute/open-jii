@@ -1,22 +1,39 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
-import { UpdateExperimentDto } from "../../../core/models/experiment.model";
+import {
+  ExperimentDto,
+  UpdateExperimentDto,
+} from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import { Result, success, failure, AppError } from "../../../utils/fp-utils";
 
 @Injectable()
 export class UpdateExperimentUseCase {
   constructor(private readonly experimentRepository: ExperimentRepository) {}
 
-  async execute(id: string, data: UpdateExperimentDto): Promise<any> {
+  async execute(
+    id: string,
+    data: UpdateExperimentDto,
+  ): Promise<Result<ExperimentDto>> {
     // Check if experiment exists
-    const experiment = await this.experimentRepository.findOne(id);
+    const experimentResult = await this.experimentRepository.findOne(id);
 
-    if (!experiment) {
-      throw new NotFoundException(`Experiment with ID ${id} not found`);
-    }
+    return experimentResult.chain(async (experiment) => {
+      if (!experiment) {
+        return failure(AppError.notFound(`Experiment with ID ${id} not found`));
+      }
 
-    // Update the experiment
-    const updatedExperiment = await this.experimentRepository.update(id, data);
-    return updatedExperiment;
+      // Update the experiment
+      const updateResult = await this.experimentRepository.update(id, data);
+      return updateResult.chain((updatedExperiments) => {
+        if (updatedExperiments.length === 0) {
+          return failure(
+            AppError.internal(`Failed to update experiment ${id}`),
+          );
+        }
+
+        return success(updatedExperiments[0]);
+      });
+    });
   }
 }
