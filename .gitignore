@@ -38,6 +38,7 @@ yarn-error.log*
 .DS_Store
 *.pem
 .idea
+.python-version
 
 # OpenTofu
 **/.terraform/*
