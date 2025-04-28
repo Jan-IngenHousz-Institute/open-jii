@@ -32,6 +32,7 @@ runs:
       continue-on-error: true
 
     - name: Check AWS Credentials
+      shell: bash
       run: aws sts get-caller-identity
 
     - name: OpenTofu Init
