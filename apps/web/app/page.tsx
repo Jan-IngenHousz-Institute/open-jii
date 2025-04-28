@@ -24,7 +24,6 @@ export default function Home() {
   return (
     <div className={styles.page}>
       <main className={styles.main}>
-        <h1 className="text-3xl font-bold underline">Test</h1>
         <ThemeImage
           className={styles.logo}
           srcLight="turborepo-dark.svg"
