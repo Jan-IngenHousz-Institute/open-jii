@@ -7,6 +7,7 @@ on:
         description: "The deployment environment"
         required: true
         type: string
+  workflow_dispatch:
 
 # Job 1: Build, Lint, Test & AsyncAPI
 jobs:
@@ -93,3 +94,9 @@ jobs:
         with:
           name: app-artifacts
           path: artifacts
+
+      - name: Print Current Directory
+        run: pwd
+
+      - name: List Artifacts
+        run: ls -l artifacts

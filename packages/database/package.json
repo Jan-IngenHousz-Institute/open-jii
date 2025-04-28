@@ -1,15 +1,23 @@
 {
-  "name": "database",
+  "name": "@repo/database",
   "version": "1.0.0",
   "description": "",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./dist/index.js"
   },
   "scripts": {
+    "build": "tsc",
     "db:seed": "tsx scripts/seed.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:start": "docker compose up -d",
+    "db:stop": "docker compose down",
+    "db:restart": "npm run db:stop && npm run db:start",
+    "test:db:setup": "docker compose up -d && pnpm run db:migrate",
+    "test:db:teardown": "docker compose down"
   },
   "keywords": [],
   "author": "",
@@ -23,8 +31,8 @@
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22.14.1",
     "drizzle-kit": "^0.30.6",
-    "eslint": "^9.22.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"
   }
