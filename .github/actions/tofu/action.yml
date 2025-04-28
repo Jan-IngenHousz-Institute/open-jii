@@ -31,6 +31,9 @@ runs:
       run: tofu fmt -check
       continue-on-error: true
 
+    - name: Check AWS Credentials
+      run: aws sts get-caller-identity
+
     - name: OpenTofu Init
       shell: bash
       working-directory: infrastructure/env/${{ inputs.environment }}
