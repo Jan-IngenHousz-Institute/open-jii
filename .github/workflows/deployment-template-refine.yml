@@ -38,7 +38,7 @@ jobs:
   tofu:
     name: OpenTofu
     needs: build_lint_test
-    if: needs.build_lint_test.outputs.has_affected_apps == 'true'
+    #if: needs.build_lint_test.outputs.has_affected_apps == 'true'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
