@@ -9,10 +9,9 @@
   },
   "dependencies": {
     "@ts-rest/core": "^3.52.1",
-    "zod": "^3.22.4"
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@repo/typescript-config": "workspace:*",
-    "typescript": "^5.8.2"
+    "typescript": "catalog:"
   }
 }

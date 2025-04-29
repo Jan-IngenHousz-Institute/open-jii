@@ -9,6 +9,9 @@
   },
   "scripts": {
     "build": "tsc",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "lint": "eslint",
     "db:seed": "tsx scripts/seed.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
@@ -30,10 +33,9 @@
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
-    "@repo/typescript-config": "workspace:*",
     "@types/node": "^22.14.1",
     "drizzle-kit": "^0.30.6",
     "tsx": "^4.19.3",
-    "typescript": "^5.8.2"
+    "typescript": "catalog:"
   }
 }
