@@ -24,7 +24,7 @@ export function ResultView({ isScanning, scanResult }) {
   );
 }
 
-export function SerialPortTestPage() {
+export function SerialPortConnectionScreen() {
   const [scanResult, setResult] = useState<object>();
   const [isScanning, setIsScanning] = useState(false);
 

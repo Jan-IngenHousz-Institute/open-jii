@@ -1,26 +1,55 @@
+import { Ionicons } from "@expo/vector-icons";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaView, StyleSheet } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { BluetoothClassicTestPage } from "./screens/bluetooth-classic-test-page";
-import { DevicesListScreen } from "./screens/devices-list-screen/devices-list-screen";
-import { SerialPortTestPage } from "./screens/serial-port-test-page";
+import { BluetoothDevicesListScreen } from "./screens/bluetooth-devices-list-screen";
+import { HomeScreen } from "./screens/home-screen";
+import { SerialPortConnectionScreen } from "./screens/serial-port-connection-screen";
+
+const Tab = createBottomTabNavigator();
 
 export function App() {
   return (
-    <SafeAreaView style={styles.container}>
-      {/*<DevicesListScreen />*/}
-      {/*<BluetoothClassicTestPage />*/}
-      <SerialPortTestPage />
-      <StatusBar style="auto" />
-    </SafeAreaView>
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <Tab.Navigator
+          initialRouteName="Home"
+          screenOptions={({ route }) => ({
+            headerShown: true,
+            tabBarIcon: ({ color, size }) => {
+              const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
+                Home: "home",
+                Bluetooth: "bluetooth",
+                Serial: "terminal",
+              };
+              return (
+                <Ionicons name={icons[route.name]} size={size} color={color} />
+              );
+            },
+          })}
+        >
+          <Tab.Screen
+            name="Home"
+            component={HomeScreen}
+            options={{
+              tabBarLabel: "Home",
+            }}
+          />
+          <Tab.Screen
+            name="Bluetooth"
+            component={BluetoothDevicesListScreen}
+            options={{ tabBarLabel: "Bluetooth" }}
+          />
+          <Tab.Screen
+            name="Serial"
+            component={SerialPortConnectionScreen}
+            options={{ tabBarLabel: "Serial Port" }}
+          />
+        </Tab.Navigator>
+        <StatusBar style="auto" />
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

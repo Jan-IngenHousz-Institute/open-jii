@@ -4,7 +4,7 @@ import { FlatList, Text, View } from "react-native";
 import { LargeSpinner } from "../components/large-spinner";
 import { getBluetoothClassicDevices } from "../services/bluetooth-classic";
 
-export function BluetoothClassicTestPage() {
+export function BluetoothDevicesListScreen() {
   const {
     error,
     loading,

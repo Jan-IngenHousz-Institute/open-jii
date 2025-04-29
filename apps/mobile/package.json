@@ -10,6 +10,8 @@
     "build-android": "eas build -p android --profile preview --local"
   },
   "dependencies": {
+    "@react-navigation/bottom-tabs": "^7.3.10",
+    "@react-navigation/native": "^7.1.6",
     "expo": "~52.0.46",
     "expo-status-bar": "~2.0.1",
     "nativewind": "^4.1.23",
@@ -19,10 +21,13 @@
     "react-native-ble-plx": "^3.5.0",
     "react-native-bluetooth-classic": "1.73.0-rc.13",
     "react-native-css-interop": "^0.1.22",
+    "react-native-gesture-handler": "~2.20.2",
     "react-native-permissions": "^5.3.0",
     "react-native-reanimated": "3.16.2",
     "react-native-safe-area-context": "4.12.0",
+    "react-native-screens": "~4.4.0",
     "react-native-usb-serialport-for-android": "^0.5.0",
+    "react-native-vector-icons": "^10.2.0",
     "tailwindcss": "^3.4.17",
     "with-rn-bluetooth-classic": "^1.0.5"
   },
