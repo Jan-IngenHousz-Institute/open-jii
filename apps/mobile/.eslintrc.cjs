@@ -3,7 +3,7 @@ module.exports = {
   extends: [
     "plugin:react/recommended", // Uses the recommended rules from @eslint-plugin-react
     "plugin:@typescript-eslint/recommended", // Uses the recommended rules from the @typescript-eslint/eslint-plugin
-    "plugin:prettier/recommended" // Enables eslint-plugin-prettier and eslint-config-prettier. This will display prettier errors as ESLint errors. Make sure this is always the last configuration in the extends array.
+    "plugin:prettier/recommended", // Enables eslint-plugin-prettier and eslint-config-prettier. This will display prettier errors as ESLint errors. Make sure this is always the last configuration in the extends array.
   ],
   plugins: ["simple-import-sort"],
   parserOptions: {
@@ -15,11 +15,10 @@ module.exports = {
   },
   settings: {
     react: {
-      version: "detect" // Tells eslint-plugin-react to automatically detect the version of React to use
-    }
+      version: "detect", // Tells eslint-plugin-react to automatically detect the version of React to use
+    },
   },
   rules: {
-    // Place to specify ESLint rules. Can be used to overwrite rules specified from the extended configs
     "@typescript-eslint/explicit-function-return-type": "off",
     "@typescript-eslint/interface-name-prefix": "off",
     "@typescript-eslint/no-explicit-any": "off",
@@ -30,13 +29,14 @@ module.exports = {
     "react/display-name": "off",
     "@typescript-eslint/ban-ts-comment": "off",
     "react/react-in-jsx-scope": "off",
-    "@typescript-eslint/ban-types": ["error",
+    "@typescript-eslint/ban-types": [
+      "error",
       {
-        "types": {
-          "Function": false,
+        types: {
+          Function: false,
         },
-        "extendDefaults": true
-      }
-    ]
-  }
+        extendDefaults: true,
+      },
+    ],
+  },
 };

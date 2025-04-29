@@ -1,6 +1,7 @@
 import { useAsync } from "react-async-hook";
-import { ActivityIndicator, FlatList, Text, View } from "react-native";
+import { FlatList, Text, View } from "react-native";
 
+import { LargeSpinner } from "../components/large-spinner";
 import { getBluetoothClassicDevices } from "../services/bluetooth-classic";
 
 export function BluetoothClassicTestPage() {
@@ -14,14 +15,7 @@ export function BluetoothClassicTestPage() {
   }, []);
 
   if (loading) {
-    return (
-      <View className="flex-1 justify-center items-center bg-white w-full">
-        <ActivityIndicator size="large" color="#3B82F6" />
-        <Text className="text-lg font-semibold text-gray-600 mt-4">
-          Scanning for Bluetooth devices...
-        </Text>
-      </View>
-    );
+    return <LargeSpinner>Scanning for Bluetooth devices...</LargeSpinner>;
   }
 
   if (error || !data) {
