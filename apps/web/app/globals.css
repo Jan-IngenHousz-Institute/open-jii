@@ -1,7 +1,10 @@
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap");
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
+@layer base {
+    :root {
     font-family: "Poppins", sans-serif;
     font-weight: 400;
     color: #005E5E;
@@ -18,4 +21,5 @@ nav a:hover {
 
 h1 {
     font-size: 2rem;
+}
 }

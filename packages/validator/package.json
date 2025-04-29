@@ -2,7 +2,6 @@
   "name": "@repo/validator",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
   "description": "Validation utilities and schemas",
   "exports": {
     ".": "./src/index.ts"

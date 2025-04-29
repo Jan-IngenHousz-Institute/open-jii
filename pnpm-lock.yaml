@@ -316,7 +316,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/ui
       next:
-        specifier: ^15.2.4
+        specifier: ^15.3.1
         version: 15.3.1(@babel/core@7.12.9)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       react:
         specifier: catalog:react19
@@ -331,6 +331,12 @@ importers:
       '@repo/prettier-config':
         specifier: workspace:*
         version: link:../../tooling/prettier
+      '@repo/tailwind-config':
+        specifier: workspace:*
+        version: link:../../tooling/tailwind
+      '@repo/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
       '@tailwindcss/postcss':
         specifier: ^4.1.4
         version: 4.1.4
@@ -405,12 +411,21 @@ importers:
       '@repo/prettier-config':
         specifier: workspace:*
         version: link:../../tooling/prettier
+      '@repo/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
       '@types/node':
         specifier: catalog:node22
         version: 22.15.3
       drizzle-kit:
         specifier: ^0.31.0
         version: 0.31.0
+      eslint:
+        specifier: 'catalog:'
+        version: 9.25.1(jiti@2.4.2)
+      prettier:
+        specifier: 'catalog:'
+        version: 3.5.3
       tsx:
         specifier: ^4.19.3
         version: 4.19.3
@@ -491,6 +506,9 @@ importers:
       '@repo/prettier-config':
         specifier: workspace:*
         version: link:../../tooling/prettier
+      '@repo/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
       eslint:
         specifier: 'catalog:'
         version: 9.25.1(jiti@2.4.2)
