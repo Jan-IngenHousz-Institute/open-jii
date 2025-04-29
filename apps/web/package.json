@@ -18,11 +18,15 @@
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
+    "@repo/prettier-config": "workspace:*",
     "@tailwindcss/postcss": "^4.1.4",
     "@types/node": "catalog:node22",
     "@types/react": "catalog:react19",
     "@types/react-dom": "catalog:react19",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
     "tailwindcss": "catalog:",
-    "typescript": "5.5.4"
-  }
+    "typescript": "catalog:"
+  },
+  "prettier": "@repo/prettier-config"
 }
