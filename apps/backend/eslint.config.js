@@ -1,4 +1,10 @@
-import { nestJsConfig } from "@repo/eslint-config/nest-js";
+import baseConfig, { restrictEnvAccess } from "@repo/eslint-config/base";
 
-/** @type {import("eslint").Linter.Config} */
-export default nestJsConfig;
+/** @type {import('typescript-eslint').Config} */
+export default [
+  {
+    ignores: [],
+  },
+  ...baseConfig,
+  ...restrictEnvAccess,
+];
