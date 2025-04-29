@@ -9,12 +9,18 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "pretest": "cd ../../packages/database && pnpm run test:db:setup",
+    "pretest": "cd ../../packages/database && pnpm run db:setup",
     "test": "pnpm run pretest && jest --runInBand --coverage && pnpm run posttest",
-    "posttest": "cd ../../packages/database && pnpm run test:db:teardown",
+    "posttest": "cd ../../packages/database && pnpm run db:teardown",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand"
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "docker:build": "cd ../.. && docker build -t openjii-backend -f apps/backend/Dockerfile .",
+    "docker:run": "docker run -p 3020:3020 openjii-backend",
+    "docker:up": "docker compose up",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:prune": "docker system prune -f"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.0",

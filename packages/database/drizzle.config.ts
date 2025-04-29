@@ -7,11 +7,13 @@ export default {
   dialect: "postgresql",
 
   dbCredentials: {
-    host: process.env.DB_HOST || "localhost",
-    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5837,
-    database: process.env.DB_NAME || "test_db",
-    user: process.env.DB_USER || "postgres",
-    password: process.env.DB_PASSWORD || "postgres",
+    host: process.env.POSTGRES_HOST || "localhost",
+    port: process.env.POSTGRES_PORT
+      ? parseInt(process.env.POSTGRES_PORT)
+      : 5432,
+    database: process.env.POSTGRES_DB || "openjii_local",
+    user: process.env.POSTGRES_USER || "postgres",
+    password: process.env.POSTGRES_PASSWORD || "postgres",
     ssl: false,
   },
 } satisfies Config;
