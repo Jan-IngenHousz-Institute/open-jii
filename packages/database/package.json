@@ -26,14 +26,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "dotenv": "^16.4.7",
+    "dotenv": "catalog:",
     "drizzle-orm": "^0.41.0",
     "postgres": "^3.4.5",
     "validator": "workspace:*"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
-    "@types/node": "^22.14.1",
+    "@types/node": "catalog:node22",
     "drizzle-kit": "^0.30.6",
     "tsx": "^4.19.3",
     "typescript": "catalog:"

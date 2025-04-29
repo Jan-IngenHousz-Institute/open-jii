@@ -13,6 +13,7 @@ catalog:
 
   # Misc
   zod: ^3.24.3
+  dotenv: ^16.5.0
 
 catalogs:
   react19:
@@ -20,4 +21,6 @@ catalogs:
     react-dom: 19.1.0
     "@types/react": 19.1.0
     "@types/react-dom": 19.1.0
+  node22:
+    "@types/node": 22.15.3
 
