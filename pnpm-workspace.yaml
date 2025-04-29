@@ -1,4 +1,12 @@
 packages:
-  - "apps/*"
-  - "apps/tools/*"
-  - "packages/*"
+  - apps/*
+  - packages/*
+  - tooling/*
+
+catalog:
+    
+  # Dev tooling
+  eslint: ^9.25.1
+  prettier: ^3.5.3
+  tailwindcss: ^3.4.15
+  typescript: ^5.8.3
