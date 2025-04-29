@@ -10,8 +10,11 @@
     "build-android": "eas build -p android --profile preview --local"
   },
   "dependencies": {
+    "@expo/vector-icons": "^14.0.2",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/native": "^7.1.6",
+    "@react-navigation/native-stack": "^7.3.10",
+    "clsx": "^2.0.0",
     "expo": "~52.0.46",
     "expo-status-bar": "~2.0.1",
     "nativewind": "^4.1.23",
