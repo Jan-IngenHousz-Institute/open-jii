@@ -3,6 +3,8 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAsync } from "react-async-hook";
 import { FlatList, Text, TouchableOpacity, View } from "react-native";
 
+import { BigActionButton } from "../../components/big-action-button";
+import { ErrorView } from "../../components/error-view";
 import { LargeSpinner } from "../../components/large-spinner";
 import { BluetoothStackParamList } from "../../navigation/bluetooth-stack";
 import { getBluetoothClassicDevices } from "../../services/bluetooth-classic";
@@ -25,10 +27,9 @@ export function BluetoothDevicesListScreen() {
 
   if (error || !devices) {
     return (
-      <View className="flex-1 justify-center items-center bg-white w-full">
-        <Text className="text-lg font-semibold text-red-500">
-          Error loading devices
-        </Text>
+      <View className="flex-1 items-center bg-white w-full justify-between p-4">
+        <ErrorView error="Cannot scan for Bluetooth devices. Please try again." />
+        <BigActionButton onPress={() => refreshDevices()} text="Restart Scan" />
       </View>
     );
   }
@@ -36,10 +37,10 @@ export function BluetoothDevicesListScreen() {
   const sortedDevices = [...devices].sort(compareBluetoothDevices);
 
   return (
-    <View className="flex-1 bg-white w-full">
+    <View className="flex-1 bg-white justify-between w-full">
       <FlatList
         onRefresh={() => refreshDevices()}
-        refreshing={loading}
+        refreshing={false}
         contentContainerStyle={{ padding: 16 }}
         data={sortedDevices}
         keyExtractor={(item) => item.id}

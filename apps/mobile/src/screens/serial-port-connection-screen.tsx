@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAsync } from "react-async-hook";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 
+import { BigActionButton } from "../components/big-action-button";
 import { JSONViewer } from "../components/json-viewer";
 import { LargeSpinner } from "../components/large-spinner";
 import { openSerialPortConnection } from "../services/multispeq-communication/open-serial-port-connection";
@@ -60,14 +61,7 @@ export function SerialPortConnectionScreen() {
       <View className="flex-[2] w-full justify-center items-center border border-gray-300 rounded-2xl p-4 bg-gray-50 shadow-md">
         <ResultView scanResult={scanResult} isScanning={isScanning} />
       </View>
-
-      {/* Start Button */}
-      <TouchableOpacity
-        onPress={handleScan}
-        className="w-full bg-blue-600 rounded-full py-6 mt-6 items-center shadow-lg active:opacity-80"
-      >
-        <Text className="text-white text-2xl font-bold">Start Scan</Text>
-      </TouchableOpacity>
+      <BigActionButton onPress={handleScan} text="Start Scan" />
     </View>
   );
 }
