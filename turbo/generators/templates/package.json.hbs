@@ -1,9 +1,8 @@
 {
-  "name": "@repo/validator",
+  "name": "@repo/{{ name }}",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Validation utilities and schemas",
   "exports": {
     ".": "./src/index.ts"
   },
@@ -15,10 +14,6 @@
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
-  },
-  "dependencies": {
-    "drizzle-zod": "^0.5.1",
-    "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

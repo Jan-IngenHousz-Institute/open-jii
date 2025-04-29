@@ -20,17 +20,17 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.1.0",
-    "@nestjs/config": "^3.3.0",
+    "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.0",
     "@nestjs/platform-express": "^11.1.0",
     "@repo/api": "workspace:*",
     "@repo/database": "workspace:*",
+    "@repo/validator": "workspace:*",
     "@ts-rest/core": "^3.52.1",
     "@ts-rest/nest": "^3.52.1",
     "http-status-codes": "^2.3.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2",
-    "validator": "workspace:*"
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@faker-js/faker": "^9.7.0",

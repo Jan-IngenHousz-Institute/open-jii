@@ -1,5 +1,5 @@
-import { createInsertSchema, createSelectSchema } from "validator";
-import { z } from "validator";
+import { createInsertSchema, createSelectSchema } from "@repo/validator";
+import { z } from "@repo/validator";
 
 import {
   experiments,

@@ -1,6 +1,6 @@
 import { Logger } from "@nestjs/common";
 import { StatusCodes } from "http-status-codes";
-import { z } from "validator";
+import { z } from "@repo/validator";
 
 import {
   AppError,

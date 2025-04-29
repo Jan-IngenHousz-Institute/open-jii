@@ -26,16 +26,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@repo/validator": "workspace:*",
     "dotenv": "catalog:",
-    "drizzle-orm": "^0.41.0",
-    "postgres": "^3.4.5",
-    "validator": "workspace:*"
+    "drizzle-orm": "^0.43.1",
+    "postgres": "^3.4.5"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
+    "@repo/prettier-config": "workspace:*",
     "@types/node": "catalog:node22",
-    "drizzle-kit": "^0.30.6",
+    "drizzle-kit": "^0.31.0",
     "tsx": "^4.19.3",
     "typescript": "catalog:"
-  }
+  },
+  "prettier": "@acme/prettier-config"
 }

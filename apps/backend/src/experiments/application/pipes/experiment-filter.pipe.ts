@@ -1,4 +1,4 @@
-import { z } from "validator";
+import { z } from "@repo/validator";
 
 const experimentFilterSchema = z.enum(["my", "member", "related"]).optional();
 
