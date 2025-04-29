@@ -37,11 +37,6 @@ export function BluetoothDevicesListScreen() {
         contentContainerStyle={{ padding: 16 }}
         data={devices}
         keyExtractor={(item) => item.id}
-        ListHeaderComponent={
-          <Text className="text-2xl font-bold mb-4">
-            Nearby Bluetooth Devices
-          </Text>
-        }
         renderItem={({ item }) => (
           <View className="border rounded-2xl p-4 mb-4 shadow-sm bg-gray-50 w-full">
             <Text className="text-lg font-semibold mb-1">
