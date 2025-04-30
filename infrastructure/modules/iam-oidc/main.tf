@@ -18,7 +18,7 @@ resource "aws_iam_role" "oidc_role" {
         Action = "sts:AssumeRoleWithWebIdentity",
         Condition = {
           "StringEquals" : {
-            "token.actions.githubusercontent.com:sub" : "repo:${var.repository}:ref:refs/heads/${var.branch}", "repo:Jan-IngenHousz-Institute/open-jii:ref:refs/heads/feature/cicd-Tofu-179"
+            "token.actions.githubusercontent.com:sub" : "repo:${var.repository}:ref:refs/heads/${var.branch}"
           }
         }
       }
