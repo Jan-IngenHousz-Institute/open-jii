@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import "./globals.css";
 import { Navigation } from "../components/Navigation";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Jan IngenHousz Institute",

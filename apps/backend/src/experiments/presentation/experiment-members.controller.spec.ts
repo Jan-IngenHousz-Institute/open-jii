@@ -42,9 +42,12 @@ describe("ExperimentMembersController", () => {
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
       // Get the list path
-      const path = testApp.resolvePath(contract.listExperimentMembers.path, {
-        id: experiment.id,
-      });
+      const path = testApp.resolvePath(
+        contract.experiments.listExperimentMembers.path,
+        {
+          id: experiment.id,
+        },
+      );
 
       // Request the members list
       const response = await testApp
@@ -70,9 +73,12 @@ describe("ExperimentMembersController", () => {
 
     it("should return 404 if experiment doesn't exist", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.listExperimentMembers.path, {
-        id: nonExistentId,
-      });
+      const path = testApp.resolvePath(
+        contract.experiments.listExperimentMembers.path,
+        {
+          id: nonExistentId,
+        },
+      );
 
       await testApp
         .get(path)
@@ -85,9 +91,12 @@ describe("ExperimentMembersController", () => {
 
     it("should return 400 for invalid experiment UUID", async () => {
       const invalidId = "not-a-valid-uuid";
-      const path = testApp.resolvePath(contract.listExperimentMembers.path, {
-        id: invalidId,
-      });
+      const path = testApp.resolvePath(
+        contract.experiments.listExperimentMembers.path,
+        {
+          id: invalidId,
+        },
+      );
 
       await testApp
         .get(path)
@@ -110,9 +119,12 @@ describe("ExperimentMembersController", () => {
       });
 
       // Define the path and data
-      const path = testApp.resolvePath(contract.addExperimentMember.path, {
-        id: experiment.id,
-      });
+      const path = testApp.resolvePath(
+        contract.experiments.addExperimentMember.path,
+        {
+          id: experiment.id,
+        },
+      );
       const memberData = { userId: newMemberId, role: "member" };
 
       // Make the request
@@ -131,7 +143,7 @@ describe("ExperimentMembersController", () => {
 
       // Verify the member was added in the database
       const listPath = testApp.resolvePath(
-        contract.listExperimentMembers.path,
+        contract.experiments.listExperimentMembers.path,
         { id: experiment.id },
       );
       const listResponse = await testApp
@@ -154,9 +166,12 @@ describe("ExperimentMembersController", () => {
 
       // Use a non-existent experiment ID
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.addExperimentMember.path, {
-        id: nonExistentId,
-      });
+      const path = testApp.resolvePath(
+        contract.experiments.addExperimentMember.path,
+        {
+          id: nonExistentId,
+        },
+      );
 
       // Make the request
       await testApp
@@ -176,9 +191,12 @@ describe("ExperimentMembersController", () => {
         userId: testUserId,
       });
 
-      const path = testApp.resolvePath(contract.addExperimentMember.path, {
-        id: experiment.id,
-      });
+      const path = testApp.resolvePath(
+        contract.experiments.addExperimentMember.path,
+        {
+          id: experiment.id,
+        },
+      );
 
       // Missing userId
       await testApp
@@ -212,7 +230,7 @@ describe("ExperimentMembersController", () => {
 
       // Verify member was added
       const listPath = testApp.resolvePath(
-        contract.listExperimentMembers.path,
+        contract.experiments.listExperimentMembers.path,
         { id: experiment.id },
       );
       let listResponse = await testApp
@@ -223,7 +241,7 @@ describe("ExperimentMembersController", () => {
 
       // Remove the member
       const removePath = testApp.resolvePath(
-        contract.removeExperimentMember.path,
+        contract.experiments.removeExperimentMember.path,
         {
           id: experiment.id,
           memberId: memberId,
@@ -245,10 +263,13 @@ describe("ExperimentMembersController", () => {
       const nonExistentId = faker.string.uuid();
       const memberId = faker.string.uuid();
 
-      const path = testApp.resolvePath(contract.removeExperimentMember.path, {
-        id: nonExistentId,
-        memberId: memberId,
-      });
+      const path = testApp.resolvePath(
+        contract.experiments.removeExperimentMember.path,
+        {
+          id: nonExistentId,
+          memberId: memberId,
+        },
+      );
 
       await testApp
         .delete(path)
@@ -269,10 +290,13 @@ describe("ExperimentMembersController", () => {
       // Use a non-existent member ID
       const nonExistentMemberId = faker.string.uuid();
 
-      const path = testApp.resolvePath(contract.removeExperimentMember.path, {
-        id: experiment.id,
-        memberId: nonExistentMemberId,
-      });
+      const path = testApp.resolvePath(
+        contract.experiments.removeExperimentMember.path,
+        {
+          id: experiment.id,
+          memberId: nonExistentMemberId,
+        },
+      );
 
       await testApp
         .delete(path)
@@ -285,10 +309,13 @@ describe("ExperimentMembersController", () => {
 
     it("should return 400 for invalid UUIDs", async () => {
       // Invalid experiment ID
-      let path = testApp.resolvePath(contract.removeExperimentMember.path, {
-        id: "invalid-experiment-id",
-        memberId: faker.string.uuid(),
-      });
+      let path = testApp.resolvePath(
+        contract.experiments.removeExperimentMember.path,
+        {
+          id: "invalid-experiment-id",
+          memberId: faker.string.uuid(),
+        },
+      );
 
       await testApp
         .delete(path)
@@ -301,10 +328,13 @@ describe("ExperimentMembersController", () => {
         userId: testUserId,
       });
 
-      path = testApp.resolvePath(contract.removeExperimentMember.path, {
-        id: experiment.id,
-        memberId: "invalid-member-id",
-      });
+      path = testApp.resolvePath(
+        contract.experiments.removeExperimentMember.path,
+        {
+          id: experiment.id,
+          memberId: "invalid-member-id",
+        },
+      );
 
       await testApp
         .delete(path)
@@ -334,7 +364,7 @@ describe("ExperimentMembersController", () => {
 
     //   // Try to remove a member without permission
     //   const removePath = testApp.resolvePath(
-    //     contract.removeExperimentMember.path,
+    //     contract.experiments.removeExperimentMember.path,
     //     {
     //       id: experiment.id,
     //       memberId: otherUserId,

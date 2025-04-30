@@ -2,20 +2,20 @@
 @import "tailwindcss";
 
 :root {
-    font-family: "Poppins", sans-serif;
-    font-weight: 400;
-    color: #005E5E;
+  font-family: "Poppins", sans-serif;
+  font-weight: 400;
+  color: #005e5e;
 }
 
 header {
-    font-weight: 500;
-    font-size: 1.1rem;
+  font-weight: 500;
+  font-size: 1.1rem;
 }
 
 nav a:hover {
-    color: #1BB740;
+  color: #1bb740;
 }
 
 h1 {
-    font-size: 2rem;
+  font-size: 2rem;
 }

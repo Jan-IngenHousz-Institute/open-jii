@@ -23,50 +23,59 @@ export class ExperimentController {
     private readonly deleteExperimentUseCase: DeleteExperimentUseCase,
   ) {}
 
-  @TsRestHandler(contract.createExperiment)
+  @TsRestHandler(contract.experiments.createExperiment)
   async createExperiment() {
-    return tsRestHandler(contract.createExperiment, async ({ body, query }) => {
-      const userId = query.userId;
-      const result = await this.createExperimentUseCase.execute(body, userId);
+    return tsRestHandler(
+      contract.experiments.createExperiment,
+      async ({ body, query }) => {
+        const userId = query.userId;
+        const result = await this.createExperimentUseCase.execute(body, userId);
 
-      if (result.isSuccess()) {
-        const experiment = (result as Success<any>).value;
-        this.logger.log(
-          `Experiment created: ${experiment.id} by user ${query.userId}`,
-        );
-        return {
-          status: StatusCodes.CREATED,
-          body: experiment,
-        };
-      }
+        if (result.isSuccess()) {
+          const experiment = (result as Success<any>).value;
+          this.logger.log(
+            `Experiment created: ${experiment.id} by user ${query.userId}`,
+          );
+          return {
+            status: StatusCodes.CREATED,
+            body: experiment,
+          };
+        }
 
-      return handleResult(result, this.logger);
-    });
+        return handleResult(result, this.logger);
+      },
+    );
   }
 
-  @TsRestHandler(contract.getExperiment)
+  @TsRestHandler(contract.experiments.getExperiment)
   async getExperiment() {
-    return tsRestHandler(contract.getExperiment, async ({ params }) => {
-      const result = await this.getExperimentUseCase.execute(params.id);
-      return handleResult(result, this.logger);
-    });
+    return tsRestHandler(
+      contract.experiments.getExperiment,
+      async ({ params }) => {
+        const result = await this.getExperimentUseCase.execute(params.id);
+        return handleResult(result, this.logger);
+      },
+    );
   }
 
-  @TsRestHandler(contract.listExperiments)
+  @TsRestHandler(contract.experiments.listExperiments)
   async listExperiments() {
-    return tsRestHandler(contract.listExperiments, async ({ query }) => {
-      const result = await this.listExperimentsUseCase.execute(
-        query.userId,
-        query.filter,
-      );
-      return handleResult(result, this.logger);
-    });
+    return tsRestHandler(
+      contract.experiments.listExperiments,
+      async ({ query }) => {
+        const result = await this.listExperimentsUseCase.execute(
+          query.userId,
+          query.filter,
+        );
+        return handleResult(result, this.logger);
+      },
+    );
   }
 
-  @TsRestHandler(contract.updateExperiment)
+  @TsRestHandler(contract.experiments.updateExperiment)
   async updateExperiment() {
     return tsRestHandler(
-      contract.updateExperiment,
+      contract.experiments.updateExperiment,
       async ({ params, body, query }) => {
         const result = await this.updateExperimentUseCase.execute(
           params.id,
@@ -84,10 +93,10 @@ export class ExperimentController {
     );
   }
 
-  @TsRestHandler(contract.deleteExperiment)
+  @TsRestHandler(contract.experiments.deleteExperiment)
   async deleteExperiment() {
     return tsRestHandler(
-      contract.deleteExperiment,
+      contract.experiments.deleteExperiment,
       async ({ params, query }) => {
         const result = await this.deleteExperimentUseCase.execute(params.id);
 
