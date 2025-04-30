@@ -13,11 +13,13 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
-    "db:start": "docker compose up -d",
-    "db:stop": "docker compose down",
-    "db:restart": "npm run db:stop && npm run db:start",
-    "test:db:setup": "docker compose up -d && pnpm run db:migrate",
-    "test:db:teardown": "docker compose down"
+    "db:compose": "docker compose -f ./docker-compose.yml",
+    "db:start": "pnpm db:compose up -d",
+    "db:stop": "pnpm db:compose down",
+    "db:logs": "pnpm db:compose logs -f",
+    "db:restart": "pnpm run db:stop && pnpm run db:start",
+    "db:setup": "pnpm db:start && pnpm run db:migrate",
+    "db:teardown": "pnpm db:stop"
   },
   "keywords": [],
   "author": "",

@@ -2,8 +2,14 @@
   "name": "validator",
   "version": "1.0.0",
   "description": "Validation utilities and schemas",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "private": true,
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc"
   },
   "dependencies": {
     "drizzle-zod": "^0.5.1",
