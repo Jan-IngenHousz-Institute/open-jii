@@ -1,9 +1,9 @@
 import Head from "@docusaurus/Head";
 import Layout from "@theme/Layout";
+import SwaggerUI from "swagger-ui-react";
 import "swagger-ui-react/swagger-ui.css";
 
 import styles from "./api.module.css";
-import SwaggerUI from "swagger-ui-react";
 
 export default function RestApiPage(): JSX.Element {
   return (
