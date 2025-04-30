@@ -5,14 +5,18 @@
   "types": "dist/index.d.ts",
   "private": true,
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "generate:openapi": "ts-node src/openapi.ts"
   },
   "dependencies": {
     "@ts-rest/core": "^3.52.1",
+    "@ts-rest/open-api": "^3.52.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
+    "@types/node": "^20.10.0",
+    "ts-node": "^10.9.1",
     "typescript": "^5.8.2"
   }
 }

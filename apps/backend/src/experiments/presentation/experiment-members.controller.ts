@@ -19,10 +19,10 @@ export class ExperimentMembersController {
     private readonly removeExperimentMemberUseCase: RemoveExperimentMemberUseCase,
   ) {}
 
-  @TsRestHandler(contract.listExperimentMembers)
+  @TsRestHandler(contract.experiments.listExperimentMembers)
   async listMembers() {
     return tsRestHandler(
-      contract.listExperimentMembers,
+      contract.experiments.listExperimentMembers,
       async ({ params, query }) => {
         const result = await this.listExperimentMembersUseCase.execute(
           params.id,
@@ -48,10 +48,10 @@ export class ExperimentMembersController {
     );
   }
 
-  @TsRestHandler(contract.addExperimentMember)
+  @TsRestHandler(contract.experiments.addExperimentMember)
   async addMember() {
     return tsRestHandler(
-      contract.addExperimentMember,
+      contract.experiments.addExperimentMember,
       async ({ params, body, query }) => {
         const result = await this.addExperimentMemberUseCase.execute(
           params.id,
@@ -82,10 +82,10 @@ export class ExperimentMembersController {
     );
   }
 
-  @TsRestHandler(contract.removeExperimentMember)
+  @TsRestHandler(contract.experiments.removeExperimentMember)
   async removeMember() {
     return tsRestHandler(
-      contract.removeExperimentMember,
+      contract.experiments.removeExperimentMember,
       async ({ params, query }) => {
         const result = await this.removeExperimentMemberUseCase.execute(
           params.id,
