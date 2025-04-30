@@ -57,7 +57,8 @@ resource "aws_iam_policy" "oidc_role_policy" {
 				"ec2:DescribeVpcAttribute",
 				"ec2:DescribeAddresses",
 				"ec2:DescribeNatGateways",
-				"ec2:DescribePrefixLists"
+				"ec2:DescribePrefixLists",
+				"ec2:DescribeNetworkInterfaces"
 			],
 			"Effect": "Allow",
 			"Resource": "*",
@@ -78,7 +79,8 @@ resource "aws_iam_policy" "oidc_role_policy" {
 				"s3:GetObject",
 				"s3:GetBucketCORS",
 				"s3:GetBucketWebsite",
-				"s3:GetBucketVersioning"
+				"s3:GetBucketVersioning",
+				"s3:GetAccelerateConfiguration"
 			],
 			"Effect": "Allow",
 			"Resource": "*",
@@ -136,7 +138,9 @@ resource "aws_iam_policy" "oidc_role_policy" {
 				"iot:UpdateThing",
 				"iot:ListThings",
 				"iot:GetPolicy",
-				"iot:ListTagsForResource"
+				"iot:ListTagsForResource",
+				"iot:GetV2LoggingOptions",
+				"iot:ListTopicRules"
 			],
 			"Effect": "Allow",
 			"Resource": "*",
@@ -168,7 +172,8 @@ resource "aws_iam_policy" "oidc_role_policy" {
 				"dynamodb:DescribeTable",
 				"dynamodb:DeleteItem",
 				"dynamodb:DescribeContinuousBackups",
-				"dynamodb:DescribeTimeToLive"
+				"dynamodb:DescribeTimeToLive",
+				"dynamodb:ListTagsOfResource"
 			],
 			"Effect": "Allow",
 			"Resource": "arn:aws:dynamodb:eu-central-1:084375565727:table/terraform-state-lock",
