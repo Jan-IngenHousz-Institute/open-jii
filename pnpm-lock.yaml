@@ -5742,6 +5742,17 @@ packages:
       '@ts-rest/core': ~3.52.0
       zod: ^3.22.3
 
+  '@ts-rest/react-query@3.52.1':
+    resolution: {integrity: sha512-Y4wx3oQwyEj7h3hVz2Wsrd8u7xWRqXc0K6YpKruZJg5G1pioKdlqqjKvv+JJbtgk+vImzha9z+NgeFnO4oYAkA==}
+    peerDependencies:
+      '@tanstack/react-query': ^4.0.0 || ^5.0.0
+      '@ts-rest/core': ~3.52.0
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0
+      zod: ^3.22.3
+    peerDependenciesMeta:
+      zod:
+        optional: true
+
   '@tsconfig/node10@1.0.11':
     resolution: {integrity: sha512-DcRjDCujK/kCk/cUe8Xz8ZSpm8mS3mNNpta+jGCA6USEDfktlNvm1+IuZ9eTcDbNk41BHwpHHeW+N1lKCz4zOw==}
 
@@ -24278,6 +24289,14 @@ snapshots:
       openapi3-ts: 2.0.2
       zod: 3.24.3
 
+  '@ts-rest/react-query@3.52.1(@tanstack/react-query@5.74.11(react@19.0.0))(@ts-rest/core@3.52.1(@types/node@20.17.13)(zod@3.24.2))(react@19.0.0)(zod@3.24.2)':
+    dependencies:
+      '@tanstack/react-query': 5.74.11(react@19.0.0)
+      '@ts-rest/core': 3.52.1(@types/node@20.17.13)(zod@3.24.2)
+      react: 19.0.0
+    optionalDependencies:
+      zod: 3.24.2
+
   '@tsconfig/node10@1.0.11': {}
 
   '@tsconfig/node12@1.0.11': {}
@@ -24603,7 +24622,7 @@ snapshots:
 
   '@types/pg@8.11.11':
     dependencies:
-      '@types/node': 22.15.3
+      '@types/node': 20.17.13
       pg-protocol: 1.8.0
       pg-types: 4.0.2
     optional: true
