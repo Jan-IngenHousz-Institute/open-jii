@@ -84,7 +84,12 @@ resource "aws_iam_policy" "oidc_role_policy" {
 				"s3:GetBucketRequestPayment",
 				"s3:GetBucketLogging",
 				"s3:GetLifecycleConfiguration",
-				"s3:GetReplicationConfiguration"
+				"s3:GetReplicationConfiguration",
+				"s3:GetEncryptionConfiguration",
+				"s3:GetBucketObjectLockConfiguration",
+				"s3:GetBucketTagging",
+				"s3:GetBucketOwnershipControls",
+				"s3:GetBucketPublicAccessBlock"
 			],
 			"Effect": "Allow",
 			"Resource": "*",
