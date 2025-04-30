@@ -1,11 +1,12 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import "server-only";
 
-if (!process.env.SESSION_SECRET) {
-  throw new Error("SESSION_SECRET environment variable is not set.");
-}
-const secretKey = process.env.SESSION_SECRET!;
+// import "server-only";
+
+// if (!process.env.SESSION_SECRET) {
+//   throw new Error("SESSION_SECRET environment variable is not set.");
+// }
+const secretKey = process.env.SESSION_SECRET! || "todo_set_secret_key";
 const encodedKey = new TextEncoder().encode(secretKey);
 
 type SessionPayload = {
