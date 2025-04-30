@@ -80,7 +80,9 @@ resource "aws_iam_policy" "oidc_role_policy" {
 				"s3:GetBucketCORS",
 				"s3:GetBucketWebsite",
 				"s3:GetBucketVersioning",
-				"s3:GetAccelerateConfiguration"
+				"s3:GetAccelerateConfiguration",
+				"s3:GetBucketRequestPayment",
+				"s3:GetBucketLogging"
 			],
 			"Effect": "Allow",
 			"Resource": "*",
@@ -140,7 +142,8 @@ resource "aws_iam_policy" "oidc_role_policy" {
 				"iot:GetPolicy",
 				"iot:ListTagsForResource",
 				"iot:GetV2LoggingOptions",
-				"iot:ListTopicRules"
+				"iot:ListTopicRules",
+				"iot:GetTopicRule"
 			],
 			"Effect": "Allow",
 			"Resource": "*",
