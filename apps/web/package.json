@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@repo/ui": "workspace:*",
+    "@repo/api": "workspace:*",
     "next": "^15.3.1",
     "react": "catalog:react19",
     "react-dom": "catalog:react19"
