@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useAsync } from "react-async-hook";
-import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 
 import { BigActionButton } from "../components/big-action-button";
 import { JSONViewer } from "../components/json-viewer";
 import { LargeSpinner } from "../components/large-spinner";
 import { openSerialPortConnection } from "../services/multispeq-communication/open-serial-port-connection";
-import { toMultispeqStream } from "../services/multispeq-communication/to-multispeq-stream";
+import { serialPortToMultispeqStream } from "../services/multispeq-communication/serial-port-to-multispeq-stream";
 
 const protocol = [{ spad: [1] }];
 
@@ -34,7 +34,9 @@ export function SerialPortConnectionScreen() {
     loading,
     error,
   } = useAsync(async () => {
-    const multispeqStream = toMultispeqStream(await openSerialPortConnection());
+    const multispeqStream = serialPortToMultispeqStream(
+      await openSerialPortConnection(),
+    );
     multispeqStream.on("receivedReplyFromDevice", ({ data }) => {
       setIsScanning(false);
       setResult(data);

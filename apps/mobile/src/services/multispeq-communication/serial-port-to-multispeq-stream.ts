@@ -2,8 +2,8 @@ import { Emitter } from "../../utils/emitter";
 import { SerialPortEvents } from "./serial-port-events";
 
 export type MultispeqStreamEvents = {
-  sendCommandToDevice: object;
-  receivedReplyFromDevice: { data: object; checksum: string };
+  sendCommandToDevice: string | object;
+  receivedReplyFromDevice: { data: object | string; checksum: string };
   destroy: void;
 };
 
@@ -30,7 +30,9 @@ function hexToString(hex: string) {
   return result;
 }
 
-export function toMultispeqStream(inputEmitter: Emitter<SerialPortEvents>) {
+export function serialPortToMultispeqStream(
+  inputEmitter: Emitter<SerialPortEvents>,
+) {
   const outputEmitter = new Emitter<MultispeqStreamEvents>();
   let bufferedData: string[] = [];
 

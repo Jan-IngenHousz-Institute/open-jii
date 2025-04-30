@@ -1,25 +1,43 @@
 import { useAsync } from "react-async-hook";
 import { Text, View } from "react-native";
 
+import { BigActionButton } from "../components/big-action-button";
 import { ErrorView } from "../components/error-view";
 import { LargeSpinner } from "../components/large-spinner";
-import { connectWithBluetoothDevice } from "../services/bluetooth-classic";
+import {
+  bluetoothDeviceToMultispeqStream,
+  connectWithBluetoothDevice,
+} from "../services/bluetooth-classic";
+
+const protocol = [{ spad: [1] }];
 
 export function BluetoothDeviceDetailsScreen({ route }: any) {
   const { deviceId } = route.params;
 
-  const {
-    result: device,
-    loading,
-    error,
-  } = useAsync(() => connectWithBluetoothDevice(deviceId), [deviceId]);
+  const { result, loading, error } = useAsync(async () => {
+    const device = await connectWithBluetoothDevice(deviceId);
+    const multispeqEmitter = bluetoothDeviceToMultispeqStream(device);
+
+    multispeqEmitter.on("receivedReplyFromDevice", ({ data }) => {
+      console.log("got reply from device", data);
+    });
+
+    multispeqEmitter.emit("sendCommandToDevice", "hello");
+    return { emitter: multispeqEmitter, device };
+  }, [deviceId]);
 
   if (loading) {
     return <LargeSpinner>Connecting to device...</LargeSpinner>;
   }
 
-  if (error || !device) {
+  if (error || !result) {
     return <ErrorView error={error ?? "Cannot connect"} />;
+  }
+
+  const { device, emitter } = result;
+
+  function handleScan() {
+    emitter.emit("sendCommandToDevice", protocol);
   }
 
   return (
@@ -34,6 +52,7 @@ export function BluetoothDeviceDetailsScreen({ route }: any) {
       <Text className="text-base text-gray-700">
         Bonded: {device.bonded ? "Yes" : "No"}
       </Text>
+      <BigActionButton onPress={handleScan} text="Start Scan" />
     </View>
   );
 }

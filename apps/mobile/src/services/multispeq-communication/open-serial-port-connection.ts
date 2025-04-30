@@ -7,6 +7,29 @@ import { delay } from "../../utils/delay";
 import { Emitter } from "../../utils/emitter";
 import { SerialPortEvents } from "./serial-port-events";
 
+export function toHex(data: string) {
+  const hexString = Array.from(data)
+    .map((c) => c.charCodeAt(0).toString(16).padStart(2, "0"))
+    .join("")
+    .toUpperCase();
+
+  return hexString;
+}
+
+export function hexToString(hex: string) {
+  if (hex.length % 2 !== 0) {
+    throw new Error("Invalid hex string");
+  }
+
+  let result = "";
+  for (let i = 0; i < hex.length; i += 2) {
+    const byte = hex.slice(i, i + 2);
+    result += String.fromCharCode(parseInt(byte, 16));
+  }
+
+  return result;
+}
+
 export async function openSerialPortConnection() {
   const [device] = await UsbSerialManager.list();
   if (!device) {
@@ -33,14 +56,14 @@ export async function openSerialPortConnection() {
   const emitter = new Emitter<SerialPortEvents>();
   emitter.on("destroy", () => usbSerialPort.close());
   usbSerialPort.onReceived((event) => {
-    emitter.emit("dataReceivedFromDevice", event.data);
+    emitter.emit("dataReceivedFromDevice", hexToString(event.data));
   });
   emitter.on("sendDataToDevice", async (data) => {
     try {
       console.log(
         "sent data to usb port",
         data,
-        await usbSerialPort.send(data),
+        await usbSerialPort.send(toHex(data)),
       );
     } catch (e) {
       console.log("error sending to device", e);
