@@ -8,12 +8,12 @@ module "terraform_state_lock" {
   table_name = "terraform-state-lock"
 }
 
-module "iam_oidc" {
-  source     = "../../modules/iam-oidc"
-  role_name  = "GithubActionsDeployAccess"
-  repository = "Jan-IngenHousz-Institute/open-jii"
-  branch     = "main"
-}
+#module "iam_oidc" {
+#  source     = "../../modules/iam-oidc"
+#  role_name  = "GithubActionsDeployAccess"
+#  repository = "Jan-IngenHousz-Institute/open-jii"
+#  branch     = "main"
+#}
 
 module "cloudwatch" {
   source                 = "../../modules/cloudwatch"
