@@ -12,8 +12,10 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@repo/ui": "workspace:*",
     "@repo/api": "workspace:*",
+    "@tanstack/react-query": "5",
+    "@ts-rest/core": "^3.52.1",
+    "@ts-rest/react-query": "^3.52.1",
     "next": "^15.3.1",
     "react": "catalog:react19",
     "react-dom": "catalog:react19"
