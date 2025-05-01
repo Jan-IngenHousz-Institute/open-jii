@@ -26,9 +26,9 @@
   "license": "ISC",
   "dependencies": {
     "dotenv": "^16.4.7",
-    "drizzle-orm": "^0.41.0",
+    "drizzle-orm": "^0.43.1",
     "postgres": "^3.4.5",
-    "validator": "workspace:*"
+    "zod": "catalog:zod3"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
@@ -36,6 +36,6 @@
     "@types/node": "^22.14.1",
     "drizzle-kit": "^0.30.6",
     "tsx": "^4.19.3",
-    "typescript": "^5.8.2"
+    "typescript": "catalog:"
   }
 }

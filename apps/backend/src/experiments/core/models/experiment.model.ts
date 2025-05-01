@@ -1,5 +1,4 @@
-import { createInsertSchema, createSelectSchema } from "validator";
-import { z } from "validator";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 
 import {
   experiments,

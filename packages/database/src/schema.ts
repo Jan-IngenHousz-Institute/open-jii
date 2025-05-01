@@ -8,6 +8,7 @@ import {
   pgEnum,
   uuid,
   integer,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 
 // Organization Types Enum
@@ -98,17 +99,20 @@ export const experimentMembersEnum = pgEnum("experiment_members_role", [
   "member",
 ]);
 // Experiment Members (Associative Table)
-export const experimentMembers = pgTable("experiment_members", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  experimentId: uuid("experiment_id")
-    .references(() => experiments.id)
-    .notNull(),
-  userId: uuid("user_id")
-    .references(() => users.id)
-    .notNull(),
-  role: experimentMembersEnum("role").default("member").notNull(),
-  joinedAt: timestamp("joined_at").defaultNow().notNull(),
-});
+export const experimentMembers = pgTable(
+  "experiment_members",
+  {
+    experimentId: uuid("experiment_id")
+      .references(() => experiments.id)
+      .notNull(),
+    userId: uuid("user_id")
+      .references(() => users.id)
+      .notNull(),
+    role: experimentMembersEnum("role").default("member").notNull(),
+    joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.experimentId, table.userId] })],
+);
 
 // Audit Log Table
 export const auditLogs = pgTable("audit_logs", {

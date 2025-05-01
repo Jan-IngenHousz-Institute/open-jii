@@ -31,10 +31,11 @@
     "@repo/database": "workspace:*",
     "@ts-rest/core": "^3.52.1",
     "@ts-rest/nest": "^3.52.1",
+    "drizzle-zod": "catalog:zod3",
     "http-status-codes": "^2.3.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "validator": "workspace:*"
+    "zod": "catalog:zod3"
   },
   "devDependencies": {
     "@faker-js/faker": "^9.7.0",
@@ -59,6 +60,7 @@
     "ts-jest": "^29.3.2",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
-    "tsconfig-paths": "^4.2.0"
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "catalog:"
   }
 }
