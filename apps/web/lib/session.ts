@@ -1,7 +1,8 @@
+"use server";
+
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-
-// import "server-only";
+import "server-only";
 
 // if (!process.env.SESSION_SECRET) {
 //   throw new Error("SESSION_SECRET environment variable is not set.");
