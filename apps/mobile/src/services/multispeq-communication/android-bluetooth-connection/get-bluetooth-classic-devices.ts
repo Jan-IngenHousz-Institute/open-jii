@@ -1,3 +1,4 @@
+import _ from "lodash";
 import RNBluetoothClassic from "react-native-bluetooth-classic";
 
 import { requestBluetoothPermission } from "../../request-bluetooth-permissions";
@@ -9,6 +10,10 @@ export async function getBluetoothClassicDevices() {
   } catch (e) {
     // ignored
   }
-  const devices = await RNBluetoothClassic.startDiscovery();
-  return devices;
+  const [connectedDevices, visibleDevices] = await Promise.all([
+    RNBluetoothClassic.getConnectedDevices(),
+    RNBluetoothClassic.startDiscovery(),
+  ]);
+
+  return _.uniqBy([...connectedDevices, ...visibleDevices], "id");
 }

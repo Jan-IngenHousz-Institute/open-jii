@@ -6,7 +6,8 @@ export class MultiSpeqCommandExecutor {
 
   async execute(command: string | object) {
     console.log("executing command", command);
-    this.emitter.emit("sendCommandToDevice", command);
+    await this.emitter.emit("sendCommandToDevice", command);
+    console.log("command hello executed", command);
 
     return new Promise<object | string>((resolve) => {
       const handler = (payload: {
@@ -18,5 +19,9 @@ export class MultiSpeqCommandExecutor {
       };
       this.emitter.on("receivedReplyFromDevice", handler);
     });
+  }
+
+  destroy() {
+    this.emitter.emit("destroy");
   }
 }

@@ -10,8 +10,8 @@ export function bluetoothDeviceToMultispeqStream(
   const emitter = new Emitter<MultispeqStreamEvents>();
 
   connectedDevice.onDataReceived((event) => {
-    console.log("eventType", event.eventType, typeof event.data);
     if (typeof event.data !== "string") {
+      console.log("eventType", event.eventType, typeof event.data);
       return;
     }
 
@@ -30,8 +30,17 @@ export function bluetoothDeviceToMultispeqStream(
     }
   });
 
-  emitter.on("sendCommandToDevice", (data: string | object) => {
-    connectedDevice.write(stringifyIfObject(data) + "\r\n");
+  emitter.on("sendCommandToDevice", async (data: string | object) => {
+    const result = await connectedDevice.write(
+      stringifyIfObject(data) + "\r\n",
+    );
+    if (!result) {
+      throw new Error("Failed to write to device");
+    }
+  });
+
+  emitter.on("destroy", async () => {
+    await connectedDevice.disconnect();
   });
 
   return emitter;

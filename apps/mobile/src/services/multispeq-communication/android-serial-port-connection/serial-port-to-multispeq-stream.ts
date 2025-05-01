@@ -9,7 +9,7 @@ export function serialPortToMultispeqStream(
   const outputEmitter = new Emitter<MultispeqStreamEvents>();
   let bufferedData: string[] = [];
 
-  inputEmitter.on("dataReceivedFromDevice", (data) => {
+  inputEmitter.on("dataReceivedFromDevice", async (data) => {
     bufferedData.push(data);
     if (!data.endsWith("\n")) {
       return;
@@ -22,20 +22,23 @@ export function serialPortToMultispeqStream(
     const checksum = totalData.slice(-9, -1);
 
     try {
-      outputEmitter.emit("receivedReplyFromDevice", {
+      await outputEmitter.emit("receivedReplyFromDevice", {
         data: JSON.parse(jsonData),
         checksum,
       });
     } catch {
-      outputEmitter.emit("receivedReplyFromDevice", {
+      await outputEmitter.emit("receivedReplyFromDevice", {
         data: totalData.slice(0, -1), // skip the newline
         checksum,
       });
     }
   });
 
-  outputEmitter.on("sendCommandToDevice", (command: object | string) => {
-    inputEmitter.emit("sendDataToDevice", stringifyIfObject(command) + "\r\n");
+  outputEmitter.on("sendCommandToDevice", async (command: object | string) => {
+    await inputEmitter.emit(
+      "sendDataToDevice",
+      stringifyIfObject(command) + "\r\n",
+    );
   });
 
   outputEmitter.on("destroy", () => inputEmitter.emit("destroy"));

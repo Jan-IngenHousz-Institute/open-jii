@@ -17,8 +17,10 @@ export function BluetoothDeviceDetailsScreen({ route }: any) {
   const {
     result: multispeq,
     loading: isConnecting,
-    error,
+    execute: handleReconnect,
+    error: connectionError,
   } = useAsync(async () => {
+    reset();
     const device = await connectWithBluetoothDevice(deviceId);
     return new MultiSpeqCommandExecutor(
       bluetoothDeviceToMultispeqStream(device),
@@ -29,14 +31,23 @@ export function BluetoothDeviceDetailsScreen({ route }: any) {
     execute: handleScan,
     loading: isScanning,
     result: scanResult,
+    error: measurementError,
+    reset,
   } = useAsyncCallback(() => multispeq?.execute(protocol));
 
   if (isConnecting) {
     return <LargeSpinner>Connecting to device...</LargeSpinner>;
   }
 
+  const error = connectionError ?? measurementError;
+
   if (error || !multispeq) {
-    return <ErrorView error={error ?? "Cannot connect"} />;
+    return (
+      <View className="flex-1 bg-white items-center justify-center px-4">
+        <ErrorView error={error ?? "Cannot connect"} />
+        <BigActionButton onPress={handleReconnect} text="Reconnect" />
+      </View>
+    );
   }
 
   return (
@@ -44,7 +55,7 @@ export function BluetoothDeviceDetailsScreen({ route }: any) {
       <View className="flex-[2] w-full justify-center items-center border border-gray-300 rounded-2xl p-4 bg-gray-50 shadow-md">
         <ResultView scanResult={scanResult} isScanning={isScanning} />
       </View>
-      <BigActionButton onPress={handleScan} text="Start Scan" />
+      <BigActionButton onPress={handleScan} text="Start Measurement" />
     </View>
   );
 }

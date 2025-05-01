@@ -15,28 +15,30 @@ export function SerialPortConnectionScreen() {
   const {
     result: multispeq,
     loading: isConnecting,
-    error,
+    error: connectionError,
     execute: handleReconnect,
   } = useAsync(async () => {
-    console.log("connecting to serial port...");
-    const multispeqStream = serialPortToMultispeqStream(
-      await openSerialPortConnection(),
+    reset();
+    return new MultiSpeqCommandExecutor(
+      serialPortToMultispeqStream(await openSerialPortConnection()),
     );
-
-    const executor = new MultiSpeqCommandExecutor(multispeqStream);
-    console.log("hello", await executor.execute("hello"));
-    return executor;
   }, []);
 
   const {
     execute: handleScan,
     loading: isScanning,
     result: scanResult,
-  } = useAsyncCallback(() => multispeq?.execute(protocol));
+    error: measurementError,
+    reset,
+  } = useAsyncCallback(() => multispeq?.execute(protocol), {
+    onError: () => multispeq?.destroy(),
+  });
 
   if (isConnecting) {
     return <LargeSpinner>Connecting to device...</LargeSpinner>;
   }
+
+  const error = connectionError ?? measurementError;
 
   if (error || !multispeq) {
     return (
@@ -52,7 +54,7 @@ export function SerialPortConnectionScreen() {
       <View className="flex-[2] w-full justify-center items-center border border-gray-300 rounded-2xl p-4 bg-gray-50 shadow-md">
         <ResultView scanResult={scanResult} isScanning={isScanning} />
       </View>
-      <BigActionButton onPress={handleScan} text="Start Scan" />
+      <BigActionButton onPress={handleScan} text="Start Measurement" />
     </View>
   );
 }

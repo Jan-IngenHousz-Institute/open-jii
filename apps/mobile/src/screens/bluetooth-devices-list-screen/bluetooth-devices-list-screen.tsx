@@ -27,7 +27,7 @@ export function BluetoothDevicesListScreen() {
 
   if (error || !devices) {
     return (
-      <View className="flex-1 items-center bg-white w-full justify-between p-4">
+      <View className="flex-1 bg-white items-center justify-center px-4">
         <ErrorView error="Cannot scan for Bluetooth devices. Please try again." />
         <BigActionButton onPress={() => refreshDevices()} text="Restart Scan" />
       </View>
