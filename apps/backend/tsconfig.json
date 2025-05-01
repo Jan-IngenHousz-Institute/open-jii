@@ -1,23 +1,17 @@
 {
-  "extends": "@repo/tsconfig/base.json",
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@repo/tsconfig/nestjs.json",
   "compilerOptions": {
-    "module": "Node16",
-    "declaration": true,
-    "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "target": "ES2023",
-    "sourceMap": true,
-    "outDir": "./dist",
-    "baseUrl": "./",
-    "incremental": true,
+    "moduleResolution": "NodeNext",
+    "module": "NodeNext",
+    "lib": ["es2017", "dom"],
     "skipLibCheck": true,
-    "strictNullChecks": true,
-    "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false,
-    "moduleResolution": "node16"
-  }
+    "outDir": "./dist",
+    "types": ["jest", "node"],
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "test", "jest.config.ts"]
 }

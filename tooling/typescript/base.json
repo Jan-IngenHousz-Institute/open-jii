@@ -1,5 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Default",
   "compilerOptions": {
     /** Base Options */
     "esModuleInterop": true,
@@ -21,9 +22,10 @@
     "noUncheckedIndexedAccess": true,
     "checkJs": true,
 
-    /** Transpile using Bundler (not tsc) */
-    "module": "Preserve",
-    "moduleResolution": "Bundler",
+    /** Updated module resolution settings */
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": true,
     "noEmit": true
   },
   "exclude": ["node_modules", "build", "dist", ".next", ".expo"]
