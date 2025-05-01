@@ -4,5 +4,5 @@
       "mode": "auto"
     }
   ],
-  "chat.agent.enabled": true
+  "typescript.tsdk": "node_modules/typescript/lib",
 }

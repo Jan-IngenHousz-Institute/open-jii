@@ -1,20 +1,22 @@
 {
   "name": "@repo/api",
   "version": "0.0.1",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "private": true,
+  "exports": {
+    "types": "./dist/index.d.ts",
+    "default": "./dist/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
-    "dev": "tsc",
+    "dev": "tsc -watch",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@ts-rest/core": "^3.52.1",
-    "zod": "catalog:"
+    "@repo/validator": "workspace:*",
+    "@ts-rest/core": "^3.52.1"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

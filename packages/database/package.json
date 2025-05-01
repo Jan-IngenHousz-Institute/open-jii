@@ -31,9 +31,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@repo/validator": "workspace:*",
     "dotenv": "catalog:",
-    "drizzle-orm": "^0.43.1",
+    "drizzle-orm": "^0.41.0",
     "postgres": "^3.4.5"
   },
   "devDependencies": {

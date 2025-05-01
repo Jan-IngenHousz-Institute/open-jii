@@ -1,9 +1,8 @@
 import {
   experiments as experimentsTable,
   experimentMembers,
-  eq,
-  and,
 } from "@repo/database";
+import { and, eq } from "drizzle-orm";
 
 import { TestHarness } from "../../../test/test-harness";
 import { assertSuccess } from "../../utils/fp-utils";

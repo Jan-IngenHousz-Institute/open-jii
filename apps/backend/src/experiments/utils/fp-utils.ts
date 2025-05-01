@@ -215,11 +215,18 @@ export class AppError {
 }
 
 /**
+ * Response type for API handlers
+ */
+export type ApiResponse<T = Record<string, unknown>> = 
+  | { status: StatusCodes.OK; body: T }
+  | { status: StatusCodes; body: { message: string; code: string; details?: unknown } };
+
+/**
  * Utility for handling a Result in a controller context
  * @param result The Result object to handle
  * @param logger Logger to use for logging errors
  */
-export function handleResult<T>(result: Result<T>, logger: Logger) {
+export function handleResult<T extends unknown>(result: Result<T>, logger: Logger) {
   return result.fold(
     // Success case
     (value) => ({
@@ -236,7 +243,7 @@ export function handleResult<T>(result: Result<T>, logger: Logger) {
       }
 
       return {
-        status: error.statusCode as number,
+        status: error.statusCode,
         body: {
           message: error.message,
           code: error.code,

@@ -19,7 +19,7 @@ catalogs:
       specifier: ^3.4.15
       version: 3.4.17
     typescript:
-      specifier: ^5.8.3
+      specifier: ^5.5.4
       version: 5.8.3
     zod:
       specifier: ^3.24.3
@@ -103,6 +103,9 @@ importers:
       '@ts-rest/nest':
         specifier: ^3.52.1
         version: 3.52.1(@nestjs/common@11.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.0)(@ts-rest/core@3.52.1(@types/node@22.15.3)(zod@3.24.3))(rxjs@7.8.2)(zod@3.24.3)
+      drizzle-orm:
+        specifier: ^0.41.0
+        version: 0.41.0(@types/pg@8.11.11)(gel@2.0.1)(pg@8.14.1)(postgres@3.4.5)
       http-status-codes:
         specifier: ^2.3.0
         version: 2.3.0
@@ -131,6 +134,9 @@ importers:
       '@repo/prettier-config':
         specifier: workspace:*
         version: link:../../tooling/prettier
+      '@repo/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
       '@swc/cli':
         specifier: ^0.6.0
         version: 0.6.0(@swc/core@1.11.22)(chokidar@4.0.3)
@@ -310,6 +316,8 @@ importers:
 
   apps/tools: {}
 
+  apps/tools/multispeq_mqtt_interface: {}
+
   apps/web:
     dependencies:
       '@repo/ui':
@@ -364,12 +372,12 @@ importers:
 
   packages/api:
     dependencies:
+      '@repo/validator':
+        specifier: workspace:*
+        version: link:../validator
       '@ts-rest/core':
         specifier: ^3.52.1
         version: 3.52.1(@types/node@22.15.3)(zod@3.24.3)
-      zod:
-        specifier: 'catalog:'
-        version: 3.24.3
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
@@ -392,15 +400,12 @@ importers:
 
   packages/database:
     dependencies:
-      '@repo/validator':
-        specifier: workspace:*
-        version: link:../validator
       dotenv:
         specifier: 'catalog:'
         version: 16.5.0
       drizzle-orm:
-        specifier: ^0.43.1
-        version: 0.43.1(@types/pg@8.11.11)(gel@2.0.1)(pg@8.14.1)(postgres@3.4.5)
+        specifier: ^0.41.0
+        version: 0.41.0(@types/pg@8.11.11)(gel@2.0.1)(pg@8.14.1)(postgres@3.4.5)
       postgres:
         specifier: ^3.4.5
         version: 3.4.5
@@ -7978,6 +7983,95 @@ packages:
   drizzle-kit@0.31.0:
     resolution: {integrity: sha512-pcKVT+GbfPA+bUovPIilgVOoq+onNBo/YQBG86sf3/GFHkN6lRJPm1l7dKN0IMAk57RQoIm4GUllRrasLlcaSg==}
     hasBin: true
+
+  drizzle-orm@0.41.0:
+    resolution: {integrity: sha512-7A4ZxhHk9gdlXmTdPj/lREtP+3u8KvZ4yEN6MYVxBzZGex5Wtdc+CWSbu7btgF6TB0N+MNPrvW7RKBbxJchs/Q==}
+    peerDependencies:
+      '@aws-sdk/client-rds-data': '>=3'
+      '@cloudflare/workers-types': '>=4'
+      '@electric-sql/pglite': '>=0.2.0'
+      '@libsql/client': '>=0.10.0'
+      '@libsql/client-wasm': '>=0.10.0'
+      '@neondatabase/serverless': '>=0.10.0'
+      '@op-engineering/op-sqlite': '>=2'
+      '@opentelemetry/api': ^1.4.1
+      '@planetscale/database': '>=1'
+      '@prisma/client': '*'
+      '@tidbcloud/serverless': '*'
+      '@types/better-sqlite3': '*'
+      '@types/pg': '*'
+      '@types/sql.js': '*'
+      '@vercel/postgres': '>=0.8.0'
+      '@xata.io/client': '*'
+      better-sqlite3: '>=7'
+      bun-types: '*'
+      expo-sqlite: '>=14.0.0'
+      gel: '>=2'
+      knex: '*'
+      kysely: '*'
+      mysql2: '>=2'
+      pg: '>=8'
+      postgres: '>=3'
+      prisma: '*'
+      sql.js: '>=1'
+      sqlite3: '>=5'
+    peerDependenciesMeta:
+      '@aws-sdk/client-rds-data':
+        optional: true
+      '@cloudflare/workers-types':
+        optional: true
+      '@electric-sql/pglite':
+        optional: true
+      '@libsql/client':
+        optional: true
+      '@libsql/client-wasm':
+        optional: true
+      '@neondatabase/serverless':
+        optional: true
+      '@op-engineering/op-sqlite':
+        optional: true
+      '@opentelemetry/api':
+        optional: true
+      '@planetscale/database':
+        optional: true
+      '@prisma/client':
+        optional: true
+      '@tidbcloud/serverless':
+        optional: true
+      '@types/better-sqlite3':
+        optional: true
+      '@types/pg':
+        optional: true
+      '@types/sql.js':
+        optional: true
+      '@vercel/postgres':
+        optional: true
+      '@xata.io/client':
+        optional: true
+      better-sqlite3:
+        optional: true
+      bun-types:
+        optional: true
+      expo-sqlite:
+        optional: true
+      gel:
+        optional: true
+      knex:
+        optional: true
+      kysely:
+        optional: true
+      mysql2:
+        optional: true
+      pg:
+        optional: true
+      postgres:
+        optional: true
+      prisma:
+        optional: true
+      sql.js:
+        optional: true
+      sqlite3:
+        optional: true
 
   drizzle-orm@0.43.1:
     resolution: {integrity: sha512-dUcDaZtE/zN4RV/xqGrVSMpnEczxd5cIaoDeor7Zst9wOe/HzC/7eAaulywWGYXdDEc9oBPMjayVEDg0ziTLJA==}
@@ -26354,6 +26448,13 @@ snapshots:
       esbuild-register: 3.6.0(esbuild@0.25.3)
     transitivePeerDependencies:
       - supports-color
+
+  drizzle-orm@0.41.0(@types/pg@8.11.11)(gel@2.0.1)(pg@8.14.1)(postgres@3.4.5):
+    optionalDependencies:
+      '@types/pg': 8.11.11
+      gel: 2.0.1
+      pg: 8.14.1
+      postgres: 3.4.5
 
   drizzle-orm@0.43.1(@types/pg@8.11.11)(gel@2.0.1)(pg@8.14.1)(postgres@3.4.5):
     optionalDependencies:

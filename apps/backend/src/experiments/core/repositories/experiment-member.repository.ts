@@ -1,13 +1,14 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, eq, experimentMembers } from "@repo/database";
+import { experimentMembers } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
-import { Result, tryCatch, AppError } from "../../utils/fp-utils";
+import { Result, tryCatch } from "../../utils/fp-utils";
 import {
   ExperimentMemberRole,
   ExperimentMemberDto,
 } from "../models/experiment-members.model";
+import { and, eq } from "drizzle-orm";
 
 @Injectable()
 export class ExperimentMemberRepository {
@@ -101,7 +102,7 @@ export class ExperimentMemberRepository {
         return null;
       }
 
-      return membership[0].role as ExperimentMemberRole;
+      return membership[0]?.role as ExperimentMemberRole;
     });
   }
 }

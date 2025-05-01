@@ -1,4 +1,5 @@
-import { eq, experiments } from "@repo/database";
+import { experiments } from "@repo/database";
+import { eq } from "drizzle-orm";
 
 import { TestHarness } from "../../../../test/test-harness";
 import { assertFailure } from "../../../utils/fp-utils";

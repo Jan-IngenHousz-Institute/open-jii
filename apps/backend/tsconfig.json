@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "extends": "@repo/tsconfig/nestjs.json",
+  "extends": "@repo/tsconfig/base.json",
   "compilerOptions": {
     "moduleResolution": "NodeNext",
     "module": "NodeNext",
@@ -10,7 +10,9 @@
     "types": ["jest", "node"],
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": false
+    "sourceMap": false,
+    "strict": true,
+    "experimentalDecorators": true,
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "test", "jest.config.ts"]

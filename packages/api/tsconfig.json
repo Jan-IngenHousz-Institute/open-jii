@@ -1,5 +1,14 @@
 {
-  "extends": "@repo/tsconfig/base.json",
-  "include": ["src"],
-  "exclude": ["node_modules"]
+  // "extends": "@repo/tsconfig/base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "module": "NodeNext",
+    "target": "ES2020",
+    "declaration": true,
+    "declarationMap": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+  },
+  "include": ["src/*"]
 }

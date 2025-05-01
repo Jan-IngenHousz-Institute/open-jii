@@ -28,6 +28,7 @@
     "@repo/validator": "workspace:*",
     "@ts-rest/core": "^3.52.1",
     "@ts-rest/nest": "^3.52.1",
+    "drizzle-orm": "^0.41.0",
     "http-status-codes": "^2.3.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
@@ -39,7 +40,7 @@
     "@nestjs/testing": "^11.1.0",
     "@repo/eslint-config": "workspace:*",
     "@repo/prettier-config": "workspace:*",
-    "@repo/typescript-config": "workspace:*",
+    "@repo/tsconfig": "workspace:*",
     "@swc/cli": "^0.6.0",
     "@swc/core": "^1.11.22",
     "@types/express": "^5.0.1",
