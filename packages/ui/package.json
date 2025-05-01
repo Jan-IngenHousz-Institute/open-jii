@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./forms": "./src/forms/index.ts",
     "./button": "./src/button.tsx",
     "./dropdown-menu": "./src/dropdown-menu.tsx",
     "./form": "./src/form.tsx",

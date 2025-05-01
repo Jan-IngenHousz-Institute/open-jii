@@ -15,7 +15,8 @@
     "@repo/ui": "workspace:*",
     "next": "^15.3.1",
     "react": "catalog:react19",
-    "react-dom": "catalog:react19"
+    "react-dom": "catalog:react19",
+    "react-hook-form": "^7.56.1"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
