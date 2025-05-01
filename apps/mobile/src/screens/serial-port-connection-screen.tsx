@@ -44,7 +44,7 @@ export function SerialPortConnectionScreen() {
     return (
       <View className="flex-1 bg-white items-center justify-center px-4">
         <ErrorView error={error ?? "Cannot connect"} />
-        <BigActionButton onPress={handleReconnect} text="Reconnect" />
+        <BigActionButton onPress={handleReconnect} text="Connect" />
       </View>
     );
   }
