@@ -7,7 +7,7 @@ import { BigActionButton } from "../../components/big-action-button";
 import { ErrorView } from "../../components/error-view";
 import { LargeSpinner } from "../../components/large-spinner";
 import { BluetoothStackParamList } from "../../navigation/bluetooth-stack";
-import { getBluetoothClassicDevices } from "../../services/bluetooth-classic";
+import { getBluetoothClassicDevices } from "../../services/multispeq-communication/android-bluetooth-connection/get-bluetooth-classic-devices";
 import { compareBluetoothDevices } from "./utils/compare-bluetooth-devices";
 
 export function BluetoothDevicesListScreen() {

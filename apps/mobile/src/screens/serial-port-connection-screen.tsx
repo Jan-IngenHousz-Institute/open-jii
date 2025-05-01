@@ -1,61 +1,50 @@
-import { useEffect, useState } from "react";
-import { useAsync } from "react-async-hook";
-import { ActivityIndicator, Text, View } from "react-native";
+import { useAsync, useAsyncCallback } from "react-async-hook";
+import { View } from "react-native";
 
 import { BigActionButton } from "../components/big-action-button";
-import { JSONViewer } from "../components/json-viewer";
+import { ErrorView } from "../components/error-view";
 import { LargeSpinner } from "../components/large-spinner";
-import { openSerialPortConnection } from "../services/multispeq-communication/open-serial-port-connection";
-import { serialPortToMultispeqStream } from "../services/multispeq-communication/serial-port-to-multispeq-stream";
+import { ResultView } from "../components/result-view";
+import { openSerialPortConnection } from "../services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
+import { serialPortToMultispeqStream } from "../services/multispeq-communication/android-serial-port-connection/serial-port-to-multispeq-stream";
+import { MultiSpeqCommandExecutor } from "../services/multispeq-communication/multispeq-command-executor";
 
 const protocol = [{ spad: [1] }];
 
-export function ResultView({ isScanning, scanResult }) {
-  if (isScanning) {
-    return <ActivityIndicator size="large" color="#2563eb" />;
-  }
-  if (scanResult) {
-    return <JSONViewer data={scanResult} />;
-  }
-
-  return (
-    <Text className="text-center text-gray-400">
-      Scan result will appear here
-    </Text>
-  );
-}
-
 export function SerialPortConnectionScreen() {
-  const [scanResult, setResult] = useState<object>();
-  const [isScanning, setIsScanning] = useState(false);
-
   const {
-    result: multispeqStream,
-    loading,
+    result: multispeq,
+    loading: isConnecting,
     error,
+    execute: handleReconnect,
   } = useAsync(async () => {
+    console.log("connecting to serial port...");
     const multispeqStream = serialPortToMultispeqStream(
       await openSerialPortConnection(),
     );
-    multispeqStream.on("receivedReplyFromDevice", ({ data }) => {
-      setIsScanning(false);
-      setResult(data);
-    });
 
-    return multispeqStream;
+    const executor = new MultiSpeqCommandExecutor(multispeqStream);
+    console.log("hello", await executor.execute("hello"));
+    return executor;
   }, []);
 
-  useEffect(() => {
-    return () => multispeqStream?.emit("destroy");
-  }, [multispeqStream]);
+  const {
+    execute: handleScan,
+    loading: isScanning,
+    result: scanResult,
+  } = useAsyncCallback(() => multispeq?.execute(protocol));
 
-  if (loading && !error) {
-    return <LargeSpinner>Connecting...</LargeSpinner>;
+  if (isConnecting) {
+    return <LargeSpinner>Connecting to device...</LargeSpinner>;
   }
 
-  function handleScan() {
-    setIsScanning(true);
-    multispeqStream?.emit("sendCommandToDevice", protocol);
+  if (error || !multispeq) {
+    return (
+      <View className="flex-1 bg-white items-center justify-center px-4">
+        <ErrorView error={error ?? "Cannot connect"} />
+        <BigActionButton onPress={handleReconnect} text="Reconnect" />
+      </View>
+    );
   }
 
   return (

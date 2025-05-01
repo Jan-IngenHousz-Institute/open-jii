@@ -3,8 +3,8 @@ import {
   UsbSerialManager,
 } from "react-native-usb-serialport-for-android";
 
-import { delay } from "../../utils/delay";
-import { Emitter } from "../../utils/emitter";
+import { delay } from "../../../utils/delay";
+import { Emitter } from "../../../utils/emitter";
 import { SerialPortEvents } from "./serial-port-events";
 
 export function toHex(data: string) {
@@ -31,7 +31,9 @@ export function hexToString(hex: string) {
 }
 
 export async function openSerialPortConnection() {
-  const [device] = await UsbSerialManager.list();
+  const devices = await UsbSerialManager.list();
+  console.log("devices", devices);
+  const [device] = devices;
   if (!device) {
     throw new Error("device not found");
   }
@@ -55,16 +57,14 @@ export async function openSerialPortConnection() {
 
   const emitter = new Emitter<SerialPortEvents>();
   emitter.on("destroy", () => usbSerialPort.close());
+
   usbSerialPort.onReceived((event) => {
     emitter.emit("dataReceivedFromDevice", hexToString(event.data));
   });
+
   emitter.on("sendDataToDevice", async (data) => {
     try {
-      console.log(
-        "sent data to usb port",
-        data,
-        await usbSerialPort.send(toHex(data)),
-      );
+      await usbSerialPort.send(toHex(data));
     } catch (e) {
       console.log("error sending to device", e);
     }
