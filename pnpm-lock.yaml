@@ -354,13 +354,13 @@ importers:
     dependencies:
       '@ts-rest/core':
         specifier: ^3.52.1
-        version: 3.52.1(@types/node@22.15.3)(zod@3.24.2)
+        version: 3.52.1(@types/node@22.15.3)(zod@3.24.3)
       '@ts-rest/open-api':
         specifier: ^3.52.1
-        version: 3.52.1(@ts-rest/core@3.52.1(@types/node@22.15.3)(zod@3.24.2))(zod@3.24.2)
+        version: 3.52.1(@ts-rest/core@3.52.1(@types/node@22.15.3)(zod@3.24.3))(zod@3.24.3)
       zod:
-        specifier: ^3.22.4
-        version: 3.24.2
+        specifier: 'catalog:'
+        version: 3.24.3
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
@@ -408,6 +408,9 @@ importers:
       drizzle-kit:
         specifier: ^0.30.6
         version: 0.30.6
+      eslint:
+        specifier: 'catalog:'
+        version: 9.25.1(jiti@2.4.2)
       tsx:
         specifier: ^4.19.3
         version: 4.19.3
@@ -14865,9 +14868,6 @@ packages:
     peerDependencies:
       zod: ^3.18.0
 
-  zod@3.24.2:
-    resolution: {integrity: sha512-lY7CDW43ECgW9u1TcT3IoXHflywfVqDYze4waEz812jR/bZ8FHDsl7pFQoSZTz5N+2NqRXs8GBwnAwo3ZNxqhQ==}
-
   zod@3.24.3:
     resolution: {integrity: sha512-HhY1oqzWCQWuUqvBFnsyrtZRhyPeR7SUGv+C4+MsisMuVfSPx8HpwWqH8tRahSlt6M3PiFAcoeFhZAqIXTxoSg==}
 
@@ -15009,11 +15009,11 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.8
       '@jridgewell/trace-mapping': 0.3.25
 
-  '@anatine/zod-openapi@1.14.2(openapi3-ts@2.0.2)(zod@3.24.2)':
+  '@anatine/zod-openapi@1.14.2(openapi3-ts@2.0.2)(zod@3.24.3)':
     dependencies:
       openapi3-ts: 2.0.2
       ts-deepmerge: 6.2.1
-      zod: 3.24.2
+      zod: 3.24.3
 
   '@angular-devkit/core@19.2.6(chokidar@4.0.3)':
     dependencies:
@@ -19300,7 +19300,7 @@ snapshots:
       '@expo/logger': 1.0.117
       joi: 17.13.3
       semver: 7.7.1
-      zod: 3.24.2
+      zod: 3.24.3
 
   '@expo/eas-json@16.3.3':
     dependencies:
@@ -22857,11 +22857,6 @@ snapshots:
 
   '@trysound/sax@0.2.0': {}
 
-  '@ts-rest/core@3.52.1(@types/node@22.15.3)(zod@3.24.2)':
-    optionalDependencies:
-      '@types/node': 22.15.3
-      zod: 3.24.2
-
   '@ts-rest/core@3.52.1(@types/node@22.15.3)(zod@3.24.3)':
     optionalDependencies:
       '@types/node': 22.15.3
@@ -22876,12 +22871,12 @@ snapshots:
     optionalDependencies:
       zod: 3.24.3
 
-  '@ts-rest/open-api@3.52.1(@ts-rest/core@3.52.1(@types/node@22.15.3)(zod@3.24.2))(zod@3.24.2)':
+  '@ts-rest/open-api@3.52.1(@ts-rest/core@3.52.1(@types/node@22.15.3)(zod@3.24.3))(zod@3.24.3)':
     dependencies:
-      '@anatine/zod-openapi': 1.14.2(openapi3-ts@2.0.2)(zod@3.24.2)
-      '@ts-rest/core': 3.52.1(@types/node@22.15.3)(zod@3.24.2)
+      '@anatine/zod-openapi': 1.14.2(openapi3-ts@2.0.2)(zod@3.24.3)
+      '@ts-rest/core': 3.52.1(@types/node@22.15.3)(zod@3.24.3)
       openapi3-ts: 2.0.2
-      zod: 3.24.2
+      zod: 3.24.3
 
   '@tsconfig/node10@1.0.11': {}
 
@@ -26030,7 +26025,7 @@ snapshots:
       uuid: 9.0.1
       wrap-ansi: 7.0.0
       yaml: 2.6.0
-      zod: 3.24.2
+      zod: 3.24.3
     transitivePeerDependencies:
       - '@swc/core'
       - '@swc/wasm'
@@ -35263,8 +35258,6 @@ snapshots:
   zod-validation-error@3.4.0(zod@3.24.3):
     dependencies:
       zod: 3.24.3
-
-  zod@3.24.2: {}
 
   zod@3.24.3: {}
 
