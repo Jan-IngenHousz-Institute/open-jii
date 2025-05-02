@@ -3,8 +3,8 @@
   "version": "0.0.1",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./src/index.ts"
+      "types": "./src/index.ts",
+      "default": "./src/index.js"
     }
   },
   "private": true,
