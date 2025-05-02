@@ -8,9 +8,11 @@
     "dev": "turbo dev",
     "build:affected": "turbo build --affected",
     "check:affected": "turbo ls --affected",
-    "lint": "turbo lint",
-    "format": "prettier --write \"**/*.{ts,tsx,js,md,mdx,css,yaml,yml}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,md,mdx,css,yaml,yml}\"",
+    "format": "turbo run format --continue -- --cache --cache-location .cache/.prettiercache",
+    "format:fix": "turbo run format --continue -- --write --cache --cache-location .cache/.prettiercache",
+    "lint": "turbo run lint --continue -- --cache --cache-location .cache/.eslintcache",
+    "lint:fix": "turbo run lint --continue -- --fix --cache --cache-location .cache/.eslintcache",
+    "lint:ws": "pnpm dlx sherif@latest",
     "test": "turbo test",
     "test:watch": "turbo test --watch",
     "test:coverage": "turbo test --coverage",
@@ -24,7 +26,9 @@
     "api:docs": "pnpm run openapi:docs && pnpm run asyncapi:html",
     "db:migrate": "turbo db:migrate",
     "db:generate": "turbo --filter database db:generate",
-    "db:studio": "turbo --filter database db:studio"
+    "db:studio": "turbo --filter database db:studio",
+    "typecheck": "turbo run typecheck"
+
   },
   "devDependencies": {
     "@asyncapi/cli": "^2.16.0",
