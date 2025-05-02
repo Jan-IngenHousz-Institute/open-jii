@@ -17,6 +17,6 @@
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^20.10.0",
     "ts-node": "^10.9.1",
-    "typescript": "^5.8.2"
+    "typescript": "catalog:"
   }
 }
