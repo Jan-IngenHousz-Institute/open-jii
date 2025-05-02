@@ -115,7 +115,7 @@ importers:
         version: link:../../tooling/eslint
       '@repo/typescript-config':
         specifier: workspace:*
-        version: link:../../packages/typescript-config
+        version: link:../../tooling/typescript-config
       '@swc/cli':
         specifier: ^0.6.0
         version: 0.6.0(@swc/core@1.11.22)(chokidar@4.0.3)
@@ -371,7 +371,7 @@ importers:
         version: link:../../tooling/eslint
       '@repo/typescript-config':
         specifier: workspace:*
-        version: link:../../packages/typescript-config
+        version: link:../../tooling/typescript-config
       '@tailwindcss/postcss':
         specifier: ^4.1.4
         version: 4.1.4
@@ -406,12 +406,18 @@ importers:
         specifier: ^3.22.4
         version: 3.24.2
     devDependencies:
+      '@repo/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint
       '@repo/typescript-config':
         specifier: workspace:*
-        version: link:../typescript-config
+        version: link:../../tooling/typescript-config
       '@types/node':
         specifier: ^22.15.2
         version: 22.15.3
+      eslint:
+        specifier: 'catalog:'
+        version: 9.25.1(jiti@2.4.2)
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@swc/core@1.11.22)(@types/node@22.15.3)(typescript@5.8.3)
@@ -439,7 +445,7 @@ importers:
         version: link:../../tooling/eslint
       '@repo/typescript-config':
         specifier: workspace:*
-        version: link:../typescript-config
+        version: link:../../tooling/typescript-config
       '@types/node':
         specifier: ^22.15.2
         version: 22.15.3
@@ -455,8 +461,6 @@ importers:
 
   packages/env: {}
 
-  packages/typescript-config: {}
-
   packages/ui:
     dependencies:
       react:
@@ -471,7 +475,7 @@ importers:
         version: link:../../tooling/eslint
       '@repo/typescript-config':
         specifier: workspace:*
-        version: link:../typescript-config
+        version: link:../../tooling/typescript-config
       '@turbo/gen':
         specifier: ^1.12.4
         version: 1.13.4(@swc/core@1.11.22)(@types/node@22.15.3)(typescript@5.8.3)
@@ -517,7 +521,7 @@ importers:
     devDependencies:
       '@repo/typescript-config':
         specifier: workspace:*
-        version: link:../../packages/typescript-config
+        version: link:../typescript-config
       eslint:
         specifier: 'catalog:'
         version: 9.25.1(jiti@2.4.2)
@@ -527,6 +531,8 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.8.3
+
+  tooling/typescript-config: {}
 
 packages:
 

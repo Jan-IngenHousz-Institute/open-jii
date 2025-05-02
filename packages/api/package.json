@@ -15,8 +15,10 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^22.15.2",
+    "eslint": "catalog:",
     "ts-node": "^10.9.2",
     "typescript": "catalog:"
   }
