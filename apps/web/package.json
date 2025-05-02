@@ -24,6 +24,6 @@
     "@types/react-dom": "18.3.0",
     "@tailwindcss/postcss": "^4.1.4",
     "tailwindcss": "^4.1.4",
-    "typescript": "5.5.4"
+    "typescript": "catalog:"
   }
 }
