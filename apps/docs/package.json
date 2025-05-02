@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "docusaurus start -p 3010",
     "build": "docusaurus build",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
     "clear": "docusaurus clear",

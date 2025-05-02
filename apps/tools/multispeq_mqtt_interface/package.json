@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "pyenv local 3.12 && pip install .",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
     "dev": "PYTHONPATH=src pyenv local 3.12 && python3 -m multispeq_mqtt_interface.main"
   }
 }

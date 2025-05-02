@@ -5,6 +5,7 @@
   "types": "dist/index.d.ts",
   "private": true,
   "scripts": {
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
     "build": "tsc",
     "generate:openapi": "ts-node src/openapi.ts"
   },
