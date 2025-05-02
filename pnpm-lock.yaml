@@ -9,6 +9,9 @@ catalogs:
     typescript:
       specifier: ^5.8.3
       version: 5.8.3
+    zod:
+      specifier: ^3.24.3
+      version: 3.24.3
 
 importers:
 
@@ -64,10 +67,13 @@ importers:
         version: link:../../packages/database
       '@ts-rest/core':
         specifier: ^3.52.1
-        version: 3.52.1(@types/node@22.15.3)(zod@3.24.2)
+        version: 3.52.1(@types/node@22.15.3)(zod@3.24.3)
       '@ts-rest/nest':
         specifier: ^3.52.1
-        version: 3.52.1(@nestjs/common@11.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.0)(@ts-rest/core@3.52.1(@types/node@22.15.3)(zod@3.24.2))(rxjs@7.8.2)(zod@3.24.2)
+        version: 3.52.1(@nestjs/common@11.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.0)(@ts-rest/core@3.52.1(@types/node@22.15.3)(zod@3.24.3))(rxjs@7.8.2)(zod@3.24.3)
+      drizzle-zod:
+        specifier: ^0.5.1
+        version: 0.5.1(drizzle-orm@0.41.0(@types/pg@8.11.11)(gel@2.0.1)(pg@8.14.1)(postgres@3.4.5))(zod@3.24.3)
       http-status-codes:
         specifier: ^2.3.0
         version: 2.3.0
@@ -77,9 +83,9 @@ importers:
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
-      validator:
-        specifier: workspace:*
-        version: link:../../packages/validator
+      zod:
+        specifier: 'catalog:'
+        version: 3.24.3
     devDependencies:
       '@faker-js/faker':
         specifier: ^9.7.0
@@ -369,9 +375,9 @@ importers:
       postgres:
         specifier: ^3.4.5
         version: 3.4.5
-      validator:
-        specifier: workspace:*
-        version: link:../validator
+      zod:
+        specifier: 'catalog:'
+        version: 3.24.3
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
@@ -14863,6 +14869,9 @@ packages:
   zod@3.24.2:
     resolution: {integrity: sha512-lY7CDW43ECgW9u1TcT3IoXHflywfVqDYze4waEz812jR/bZ8FHDsl7pFQoSZTz5N+2NqRXs8GBwnAwo3ZNxqhQ==}
 
+  zod@3.24.3:
+    resolution: {integrity: sha512-HhY1oqzWCQWuUqvBFnsyrtZRhyPeR7SUGv+C4+MsisMuVfSPx8HpwWqH8tRahSlt6M3PiFAcoeFhZAqIXTxoSg==}
+
   zustand@4.5.6:
     resolution: {integrity: sha512-ibr/n1hBzLLj5Y+yUcU7dYw8p6WnIVzdJbnX+1YpaScvZVF2ziugqHs+LAmHw4lWO9c/zRj+K1ncgWDQuthEdQ==}
     engines: {node: '>=12.7.0'}
@@ -22921,19 +22930,19 @@ snapshots:
       '@types/node': 20.17.13
       zod: 3.24.2
 
-  '@ts-rest/core@3.52.1(@types/node@22.15.3)(zod@3.24.2)':
+  '@ts-rest/core@3.52.1(@types/node@22.15.3)(zod@3.24.3)':
     optionalDependencies:
       '@types/node': 22.15.3
-      zod: 3.24.2
+      zod: 3.24.3
 
-  '@ts-rest/nest@3.52.1(@nestjs/common@11.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.0)(@ts-rest/core@3.52.1(@types/node@22.15.3)(zod@3.24.2))(rxjs@7.8.2)(zod@3.24.2)':
+  '@ts-rest/nest@3.52.1(@nestjs/common@11.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.0)(@ts-rest/core@3.52.1(@types/node@22.15.3)(zod@3.24.3))(rxjs@7.8.2)(zod@3.24.3)':
     dependencies:
       '@nestjs/common': 11.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/core': 11.1.0(@nestjs/common@11.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.0)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@ts-rest/core': 3.52.1(@types/node@22.15.3)(zod@3.24.2)
+      '@ts-rest/core': 3.52.1(@types/node@22.15.3)(zod@3.24.3)
       rxjs: 7.8.2
     optionalDependencies:
-      zod: 3.24.2
+      zod: 3.24.3
 
   '@ts-rest/open-api@3.52.1(@ts-rest/core@3.52.1(@types/node@20.17.13)(zod@3.24.2))(zod@3.24.2)':
     dependencies:
@@ -25958,6 +25967,11 @@ snapshots:
     dependencies:
       drizzle-orm: 0.41.0(@types/pg@8.11.11)(gel@2.0.1)(pg@8.14.1)(postgres@3.4.5)
       zod: 3.24.2
+
+  drizzle-zod@0.5.1(drizzle-orm@0.41.0(@types/pg@8.11.11)(gel@2.0.1)(pg@8.14.1)(postgres@3.4.5))(zod@3.24.3):
+    dependencies:
+      drizzle-orm: 0.41.0(@types/pg@8.11.11)(gel@2.0.1)(pg@8.14.1)(postgres@3.4.5)
+      zod: 3.24.3
 
   dtrace-provider@0.8.8:
     dependencies:
@@ -35373,6 +35387,8 @@ snapshots:
   zenscroll@4.0.2: {}
 
   zod@3.24.2: {}
+
+  zod@3.24.3: {}
 
   zustand@4.5.6(@types/react@18.3.20)(immer@9.0.21)(react@18.3.1):
     dependencies:

@@ -28,7 +28,7 @@
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.41.0",
     "postgres": "^3.4.5",
-    "validator": "workspace:*"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
