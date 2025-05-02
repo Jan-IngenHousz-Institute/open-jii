@@ -1,10 +1,9 @@
 /// <reference types="./types.d.ts" />
-
-import * as path from "node:path";
 import { includeIgnoreFile } from "@eslint/compat";
 import eslint from "@eslint/js";
 import importPlugin from "eslint-plugin-import";
 import turboPlugin from "eslint-plugin-turbo";
+import * as path from "node:path";
 import tseslint from "typescript-eslint";
 
 /**
