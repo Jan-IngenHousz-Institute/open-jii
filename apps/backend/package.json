@@ -29,6 +29,7 @@
     "@nestjs/platform-express": "^11.1.0",
     "@repo/api": "workspace:*",
     "@repo/database": "workspace:*",
+    "@repo/env": "workspace:*",
     "@ts-rest/core": "^3.52.1",
     "@ts-rest/nest": "^3.52.1",
     "drizzle-zod": "^0.5.1",

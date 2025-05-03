@@ -1,5 +1,6 @@
-import "dotenv/config";
 import type { Config } from "drizzle-kit";
+
+import { env } from "@repo/env";
 
 export default {
   schema: "./src/schema.ts",
@@ -7,13 +8,11 @@ export default {
   dialect: "postgresql",
 
   dbCredentials: {
-    host: process.env.POSTGRES_HOST || "localhost",
-    port: process.env.POSTGRES_PORT
-      ? parseInt(process.env.POSTGRES_PORT)
-      : 5432,
-    database: process.env.POSTGRES_DB || "openjii_local",
-    user: process.env.POSTGRES_USER || "postgres",
-    password: process.env.POSTGRES_PASSWORD || "postgres",
+    host: env.POSTGRES_HOST,
+    port: env.POSTGRES_PORT,
+    database: env.POSTGRES_DB,
+    user: env.POSTGRES_USER,
+    password: env.POSTGRES_PASSWORD,
     ssl: false,
   },
 } satisfies Config;
