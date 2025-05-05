@@ -66,13 +66,16 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Check Boolean for affected apps
+        run: echo "Boolean is: >>> ${{build_lint_test.outputs.has_affected_apps}}""
+
       # If we have only infra update, it will depend on the affected apps trigger 
       # - name: Download Artifacts
       #   uses: actions/download-artifact@v4
       #   with:
       #     name: app-artifacts
       #     path: artifacts
-      
+
       - name: Run OpenTofu Operations
         uses: ./.github/actions/tofu
         with:
