@@ -28,7 +28,8 @@
     "db:generate": "turbo --filter database db:generate",
     "db:studio": "turbo --filter database db:studio",
     "postinstall": "pnpm lint:ws",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "ui-add": "turbo run ui-add"
   },
   "devDependencies": {
     "@asyncapi/cli": "^2.16.0",
