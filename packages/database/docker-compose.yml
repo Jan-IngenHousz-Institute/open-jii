@@ -2,12 +2,22 @@ services:
   postgres:
     image: postgres:15
     ports:
-      - "5837:5432" # expose pg on port 5837 to not collide with pg from elsewhere
+      - "5432:5432"
     restart: always
     volumes:
-      - ./volumes/db:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_PASSWORD: ${PGPASSWORD}
-      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: openjii_local
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: localhost
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 25s
+      timeout: 5s
+      retries: 5
+
 volumes:
-  db_data:
+  postgres_data:
+    driver: local

@@ -1,15 +1,26 @@
 {
-  "name": "database",
+  "name": "@repo/database",
   "version": "1.0.0",
   "description": "",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./dist/index.js"
   },
   "scripts": {
+    "build": "tsc",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
     "db:seed": "tsx scripts/seed.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:compose": "docker compose -f ./docker-compose.yml",
+    "db:start": "pnpm db:compose up -d",
+    "db:stop": "pnpm db:compose down",
+    "db:logs": "pnpm db:compose logs -f",
+    "db:restart": "pnpm run db:stop && pnpm run db:start",
+    "db:setup": "pnpm db:start && pnpm run db:migrate",
+    "db:teardown": "pnpm db:stop"
   },
   "keywords": [],
   "author": "",
@@ -18,14 +29,14 @@
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.41.0",
     "postgres": "^3.4.5",
-    "validator": "workspace:*"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22.14.1",
     "drizzle-kit": "^0.30.6",
-    "eslint": "^9.22.0",
     "tsx": "^4.19.3",
-    "typescript": "^5.8.2"
+    "typescript": "catalog:"
   }
 }
