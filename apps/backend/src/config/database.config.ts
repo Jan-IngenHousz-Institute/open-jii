@@ -1,7 +1,7 @@
 import { registerAs } from "@nestjs/config";
 
-import { env } from "@repo/env";
+import { env } from "src/env";
 
 export default registerAs("@repo/database", () => ({
-  url: env.DATABASE_URL,
+  url: env.server.DATABASE_URL,
 }));

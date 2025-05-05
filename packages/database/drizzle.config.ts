@@ -1,6 +1,7 @@
 import type { Config } from "drizzle-kit";
 
-import { env } from "@repo/env";
+// Import from our local env file instead of directly from @repo/env
+import { env } from "./src/env";
 
 export default {
   schema: "./src/schema.ts",
@@ -8,11 +9,11 @@ export default {
   dialect: "postgresql",
 
   dbCredentials: {
-    host: env.POSTGRES_HOST,
-    port: env.POSTGRES_PORT,
-    database: env.POSTGRES_DB,
-    user: env.POSTGRES_USER,
-    password: env.POSTGRES_PASSWORD,
+    host: env.server.POSTGRES_HOST,
+    port: env.server.POSTGRES_PORT,
+    database: env.server.POSTGRES_DB,
+    user: env.server.POSTGRES_USER,
+    password: env.server.POSTGRES_PASSWORD,
     ssl: false,
   },
 } satisfies Config;

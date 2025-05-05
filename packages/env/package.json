@@ -6,10 +6,6 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./dist/index.js"
-    },
-    "./next": {
-      "types": "./src/next/index.ts",
-      "default": "./dist/next/index.js"
     }
   },
   "scripts": {
@@ -19,8 +15,6 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@t3-oss/env-core": "^0.13.4",
-    "@t3-oss/env-nextjs": "^0.9.2",
     "zod": "catalog:"
   },
   "devDependencies": {

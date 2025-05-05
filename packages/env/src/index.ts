@@ -1,69 +1,144 @@
-import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
-// Define a type for our global env storage
-declare global {
-  var _env: any; // eslint-disable-line no-var
+// Types for environment configuration
+export type EnvConfig<
+  TServer extends Record<string, z.ZodType> = Record<string, never>,
+  TClient extends Record<string, z.ZodType> = Record<string, never>,
+> = {
+  server?: TServer;
+  client?: TClient;
+  runtimeEnv: Record<string, unknown>;
+  clientPrefix?: string;
+  skipValidation?: boolean;
+  emptyStringAsUndefined?: boolean;
+};
+
+// Transform an empty string to undefined
+const emptyStringToUndefined = (value: unknown) => {
+  return typeof value === "string" && value === "" ? undefined : value;
+};
+
+/**
+ * Create environment validation and accessor
+ * @param config Environment configuration with schemas and runtime values
+ * @returns Validated environment variables
+ */
+export function createEnv<
+  TServer extends Record<string, z.ZodType> = Record<string, never>,
+  TClient extends Record<string, z.ZodType> = Record<string, never>,
+>(config: EnvConfig<TServer, TClient>) {
+  const {
+    server = {} as TServer,
+    client = {} as TClient,
+    runtimeEnv,
+    clientPrefix = "PUBLIC_",
+    skipValidation = false,
+    emptyStringAsUndefined = true,
+  } = config;
+
+  // Process environment variables
+  const processEnv = emptyStringAsUndefined
+    ? Object.entries(runtimeEnv).reduce(
+        (acc, [key, value]) => {
+          acc[key] = emptyStringToUndefined(value);
+          return acc;
+        },
+        {} as Record<string, unknown>,
+      )
+    : runtimeEnv;
+
+  // Format errors for better readability
+  const formatErrors = (
+    errors: z.ZodFormattedError<Map<string, string>, string>,
+  ) => {
+    return Object.entries(errors)
+      .map(([name, value]) => {
+        if (
+          value &&
+          typeof value === "object" &&
+          "join" in value &&
+          typeof value.join === "function"
+        ) {
+          // value is an array of error messages
+          return `${name}: ${(value as string[]).join(", ")}\n`;
+        }
+        return null;
+      })
+      .filter(Boolean)
+      .join("\n");
+  };
+
+  // Skip validation in production or when explicitly requested
+  if (!skipValidation) {
+    // Validate server environment variables
+    const serverSchema = z.object(server);
+    const serverResult = serverSchema.safeParse(processEnv);
+
+    if (!serverResult.success) {
+      console.error("❌ Invalid server environment variables:");
+      console.error(formatErrors(serverResult.error.format()));
+      throw new Error(
+        `Invalid server environment variables:\n${formatErrors(
+          serverResult.error.format(),
+        )}`,
+      );
+    }
+
+    // Validate client environment variables (those with clientPrefix)
+    const clientEnvSchema = z.object(client);
+    const clientEnv = Object.entries(processEnv)
+      .filter(([key]) => key.startsWith(clientPrefix))
+      .reduce(
+        (acc, [key, value]) => {
+          acc[key.replace(clientPrefix, "")] = value;
+          return acc;
+        },
+        {} as Record<string, unknown>,
+      );
+
+    const clientResult = clientEnvSchema.safeParse(clientEnv);
+
+    if (!clientResult.success) {
+      console.error("❌ Invalid client environment variables:");
+      console.error(formatErrors(clientResult.error.format()));
+      throw new Error(
+        `Invalid client environment variables:\n${formatErrors(
+          clientResult.error.format(),
+        )}`,
+      );
+    }
+  }
+
+  // Create type-safe accessors for environment variables
+  const env = {} as {
+    server: { [K in keyof TServer]: z.infer<TServer[K]> };
+    client: { [K in keyof TClient]: z.infer<TClient[K]> };
+  };
+
+  // Add server values
+  env.server = {} as { [K in keyof TServer]: z.infer<TServer[K]> };
+  for (const key of Object.keys(server)) {
+    const value = processEnv[key];
+    const schema = server[key as keyof TServer];
+    try {
+      env.server[key as keyof TServer] = schema.parse(value) as any;
+    } catch (error) {
+      if (!skipValidation) throw error;
+    }
+  }
+
+  // Add client values
+  env.client = {} as { [K in keyof TClient]: z.infer<TClient[K]> };
+  for (const key of Object.keys(client)) {
+    const envKey = `${clientPrefix}${key}`;
+    const value = processEnv[envKey];
+    const schema = client[key as keyof TClient];
+    try {
+      env.client[key as keyof TClient] = schema.parse(value) as any;
+    } catch (error) {
+      if (!skipValidation) throw error;
+    }
+  }
+
+  return env;
 }
-
-export const env = createEnv({
-  /*
-   * Specify your server-side environment variables schema here. This way you can ensure the app isn't
-   * built with invalid env vars.
-   */
-  server: {
-    // Database configuration
-    POSTGRES_DB: z.string().min(1),
-    POSTGRES_USER: z.string().min(1),
-    POSTGRES_PASSWORD: z.string().min(1),
-    POSTGRES_HOST: z.string().min(1),
-    POSTGRES_PORT: z.string().transform((val) => parseInt(val)),
-    DATABASE_URL: z.string().url(),
-
-    // Application settings
-    NODE_ENV: z
-      .enum(["development", "test", "production"])
-      .default("development"),
-    PORT: z
-      .string()
-      .transform((val) => parseInt(val))
-      .optional(),
-    HOST: z.string().optional(),
-  },
-
-  /**
-   * Client-side environment variables. These will be exposed to the client, so be careful what you put here.
-   */
-  client: {
-    // By using `PUBLIC_` prefix, these can be safely exposed to the client
-  },
-
-  /**
-   * Destructure all variables from `process.env` to make sure they aren't tree-shaken away.
-   */
-  runtimeEnv: {
-    // Database configuration
-    POSTGRES_DB: process.env.POSTGRES_DB,
-    POSTGRES_USER: process.env.POSTGRES_USER,
-    POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD,
-    POSTGRES_HOST: process.env.POSTGRES_HOST,
-    POSTGRES_PORT: process.env.POSTGRES_PORT,
-    DATABASE_URL: process.env.DATABASE_URL,
-
-    // Application settings
-    NODE_ENV: process.env.NODE_ENV,
-    PORT: process.env.PORT,
-    HOST: process.env.HOST,
-  },
-
-  /**
-   * Enable client-side validation in development mode
-   */
-  clientPrefix: "PUBLIC_",
-
-  /**
-   * Optional additional validation
-   */
-  skipValidation: !!process.env.SKIP_ENV_VALIDATION,
-  emptyStringAsUndefined: true,
-});

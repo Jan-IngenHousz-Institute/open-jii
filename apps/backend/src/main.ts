@@ -1,10 +1,14 @@
+import 'dotenv/config';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+config();
+// Also load default env values from database package
+config({ path: resolve(__dirname, '../../packages/database/.env.default') });
+
 import { NestFactory } from "@nestjs/core";
-import * as dotenv from "dotenv";
 
 import { AppModule } from "./app.module";
-
-// Load environment variables from .env file
-dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
