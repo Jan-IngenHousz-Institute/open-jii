@@ -15,7 +15,7 @@ export class Emitter<Events extends Record<string, any>> {
     event: K,
     ...args: Events[K] extends void ? [] : [payload: Events[K]]
   ): Promise<void> {
-    const payload = args[0] as Events[K];
+    const payload = args[0];
     const listeners = this.handlers.get(event);
 
     if (!listeners || listeners.size === 0) {

@@ -1,10 +1,10 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 
-import {
-  experiments,
+import type {
   experimentStatusEnum,
   experimentVisibilityEnum,
 } from "@repo/database";
+import { experiments } from "@repo/database";
 
 // Create schemas for database operations
 export const createExperimentSchema = createInsertSchema(experiments).omit({

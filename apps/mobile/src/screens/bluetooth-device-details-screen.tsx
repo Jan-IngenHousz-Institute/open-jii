@@ -43,7 +43,7 @@ export function BluetoothDeviceDetailsScreen({ route }: any) {
 
   if (error || !multispeq) {
     return (
-      <View className="flex-1 bg-white items-center justify-center px-4">
+      <View className="flex-1 items-center justify-center bg-white px-4">
         <ErrorView error={error ?? "Cannot connect"} />
         <BigActionButton onPress={handleReconnect} text="Connect" />
       </View>
@@ -51,8 +51,8 @@ export function BluetoothDeviceDetailsScreen({ route }: any) {
   }
 
   return (
-    <View className="flex-1 bg-white p-4 justify-between w-full">
-      <View className="flex-[2] w-full justify-center items-center border border-gray-300 rounded-2xl p-4 bg-gray-50 shadow-md">
+    <View className="w-full flex-1 justify-between bg-white p-4">
+      <View className="w-full flex-[2] items-center justify-center rounded-2xl border border-gray-300 bg-gray-50 p-4 shadow-md">
         <ResultView scanResult={scanResult} isScanning={isScanning} />
       </View>
       <BigActionButton onPress={handleScan} text="Start Measurement" />

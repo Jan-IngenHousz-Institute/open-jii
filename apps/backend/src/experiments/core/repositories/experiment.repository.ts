@@ -1,9 +1,9 @@
 import { Injectable, Inject } from "@nestjs/common";
 
+import { ExperimentFilter } from "@repo/api";
 import { eq, or, and, experiments, experimentMembers } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
-import type { ExperimentFilter } from "../../application/pipes/experiment-filter.pipe";
 import { Result, tryCatch } from "../../utils/fp-utils";
 import {
   CreateExperimentDto,
@@ -49,7 +49,7 @@ export class ExperimentRepository {
 
     return tryCatch(() => {
       // Start with a base query builder
-      let query = this.database.select(experimentFields).from(experiments);
+      const query = this.database.select(experimentFields).from(experiments);
 
       // Apply filters based on the filter type
       switch (filter) {

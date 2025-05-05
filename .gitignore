@@ -88,3 +88,5 @@ pids
 *.pid.lock
 
 volumes
+
+.cache

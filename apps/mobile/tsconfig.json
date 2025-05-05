@@ -1,7 +1,22 @@
 {
-  "extends": "expo/tsconfig.base",
+  "extends": "@repo/typescript-config/base.json",
   "compilerOptions": {
-    "strict": true,
-    "noImplicitAny": false
-  }
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./src/*"]
+    },
+    "jsx": "react-native",
+    "checkJs": false,
+    "moduleSuffixes": [".ios", ".android", ".native", ""],
+    "strictNullChecks": true
+  },
+  "include": [
+    "src",
+    "*.ts",
+    "*.js",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts",
+    "nativewind-env.d.ts"
+  ],
+  "exclude": ["node_modules"]
 }

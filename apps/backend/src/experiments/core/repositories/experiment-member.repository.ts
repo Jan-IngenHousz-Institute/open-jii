@@ -101,7 +101,7 @@ export class ExperimentMemberRepository {
         return null;
       }
 
-      return membership[0].role as ExperimentMemberRole;
+      return membership[0].role;
     });
   }
 }

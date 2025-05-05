@@ -1,7 +1,7 @@
 import { Emitter } from "../../../utils/emitter";
 import { stringifyIfObject } from "../../../utils/stringify-if-object";
-import { MultispeqStreamEvents } from "../multispeq-stream-events";
-import { SerialPortEvents } from "./serial-port-events";
+import type { MultispeqStreamEvents } from "../multispeq-stream-events";
+import type { SerialPortEvents } from "./serial-port-events";
 
 export function serialPortToMultispeqStream(
   inputEmitter: Emitter<SerialPortEvents>,

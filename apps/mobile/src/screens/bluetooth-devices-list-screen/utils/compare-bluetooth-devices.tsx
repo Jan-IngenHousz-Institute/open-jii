@@ -1,4 +1,4 @@
-import { BluetoothDevice } from "react-native-bluetooth-classic";
+import type { BluetoothDevice } from "react-native-bluetooth-classic";
 
 export function compareBluetoothDevices(
   a: BluetoothDevice,

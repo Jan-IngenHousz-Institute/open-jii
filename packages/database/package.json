@@ -2,14 +2,24 @@
   "name": "@repo/database",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js"
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./src/client.ts",
+      "default": "./dist/client.js"
+    },
+    "./schema": {
+      "types": "./src/schema.ts",
+      "default": "./dist/schema.js"
+    }
   },
   "scripts": {
     "build": "tsc",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "dev": "tsc --watch",
     "db:seed": "tsx scripts/seed.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
@@ -26,7 +36,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "dotenv": "^16.4.7",
+    "dotenv": "^16.5.0",
     "drizzle-orm": "^0.41.0",
     "postgres": "^3.4.5",
     "zod": "catalog:"
@@ -34,8 +44,9 @@
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^22.14.1",
+    "@types/node": "^22.15.2",
     "drizzle-kit": "^0.30.6",
+    "eslint": "catalog:",
     "tsx": "^4.19.3",
     "typescript": "catalog:"
   }

@@ -1,5 +1,5 @@
-import { Emitter } from "../../utils/emitter";
-import { MultispeqStreamEvents } from "./multispeq-stream-events";
+import type { Emitter } from "../../utils/emitter";
+import type { MultispeqStreamEvents } from "./multispeq-stream-events";
 
 export class MultiSpeqCommandExecutor {
   constructor(private readonly emitter: Emitter<MultispeqStreamEvents>) {}

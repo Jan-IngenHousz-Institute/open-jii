@@ -1,9 +1,10 @@
 import { Injectable } from "@nestjs/common";
 
+import { ExperimentFilter } from "@repo/api";
+
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { Result } from "../../../utils/fp-utils";
-import { ExperimentFilter } from "../../pipes/experiment-filter.pipe";
 
 @Injectable()
 export class ListExperimentsUseCase {

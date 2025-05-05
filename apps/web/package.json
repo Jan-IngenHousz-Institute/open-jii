@@ -20,11 +20,12 @@
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^20",
-    "@types/react": "18.3.1",
-    "@types/react-dom": "18.3.0",
     "@tailwindcss/postcss": "^4.1.4",
-    "tailwindcss": "^4.1.4",
+    "@types/node": "^22.15.2",
+    "@types/react": "~18.3.12",
+    "@types/react-dom": "18.3.1",
+    "eslint": "catalog:",
+    "tailwindcss": "^3.4.17",
     "typescript": "catalog:"
   }
 }

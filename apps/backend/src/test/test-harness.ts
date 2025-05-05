@@ -1,13 +1,14 @@
 import { faker } from "@faker-js/faker";
-import { INestApplication } from "@nestjs/common";
-import { ModuleMetadata } from "@nestjs/common/interfaces";
-import { Test, TestingModule } from "@nestjs/testing";
+import type { INestApplication } from "@nestjs/common";
+import type { ModuleMetadata } from "@nestjs/common/interfaces";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { config } from "dotenv";
 import { resolve } from "path";
 import request from "supertest";
 
+import type { DatabaseInstance } from "@repo/database";
 import {
-  DatabaseInstance,
   experimentMembers,
   experiments,
   users,
@@ -118,7 +119,7 @@ export class TestHarness {
 
       const req = this._request[method](url);
 
-      return !!userId ? req.query({ userId }) : req;
+      return userId ? req.query({ userId }) : req;
     };
 
   // HTTP request methods

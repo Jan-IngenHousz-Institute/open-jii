@@ -117,6 +117,7 @@ export type UpdateExperimentBody = z.infer<typeof zUpdateExperimentBody>;
 export type AddExperimentMemberBody = z.infer<typeof zAddExperimentMemberBody>;
 export type AuthQuery = z.infer<typeof zAuthQuery>;
 export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;
+export type ExperimentFilter = ExperimentFilterQuery["filter"];
 export type CreateExperimentResponse = z.infer<
   typeof zCreateExperimentResponse
 >;
