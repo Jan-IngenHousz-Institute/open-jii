@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "scripts": {
     "build": "nest build",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "dev": "nest start --watch",

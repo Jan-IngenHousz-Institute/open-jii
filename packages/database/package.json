@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
     "db:seed": "tsx scripts/seed.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",

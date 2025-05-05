@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "node-red"
+    "dev": "node-red",
+    "clean": "git clean -xdf .cache .turbo dist node_modules"
   },
   "keywords": [],
   "author": "",
