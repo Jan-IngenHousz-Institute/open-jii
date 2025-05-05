@@ -1,7 +1,7 @@
 name: "OpenTofu Operations"
 description: "Sets up OpenTofu, configures AWS credentials via OIDC, and runs OpenTofu commands in the specified environment"
 inputs:
-  tofu-version:
+  tofu_version:
     description: "OpenTofu version to use"
     required: false
     default: "1.6.0"
@@ -15,7 +15,7 @@ runs:
     - name: Setup OpenTofu
       uses: opentofu/setup-opentofu@v1
       with:
-        tofu-version: ${{ inputs.tofu-version }}
+        tofu_version: ${{ inputs.tofu-version }}
 
     - name: Cache OpenTofu Plugins
       uses: actions/cache@v4
