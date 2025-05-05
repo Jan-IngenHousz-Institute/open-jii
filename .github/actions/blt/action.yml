@@ -67,6 +67,8 @@ runs:
         if [ "$(echo $AFFECTED_APPS | jq 'length')" -gt 0 ]; then
           #echo "has_affected_apps=true" >> $GITHUB_OUTPUT
           echo "has_affected_apps=$(echo $AFFECTED_APPS | jq 'length' > 0)" >> $GITHUB_OUTPUT
+          echo "has_affected_apps=true" >> "$GITHUB_OUTPUT"
+
 
           
           # Print the affected apps in a more readable format (like the shell script)
