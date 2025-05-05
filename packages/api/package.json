@@ -4,7 +4,7 @@
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "default": "./src/index.js"
+      "default": "./dist/index.js"
     }
   },
   "private": true,
