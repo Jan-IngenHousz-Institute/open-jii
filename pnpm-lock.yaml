@@ -22,16 +22,6 @@ catalogs:
 importers:
 
   .:
-    dependencies:
-      '@t3-oss/env-core':
-        specifier: ^0.13.4
-        version: 0.13.4(arktype@2.1.20)(typescript@5.8.3)(zod@3.24.3)
-      '@t3-oss/env-nextjs':
-        specifier: ^0.9.2
-        version: 0.9.2(typescript@5.8.3)(zod@3.24.3)
-      zod:
-        specifier: 'catalog:'
-        version: 3.24.3
     devDependencies:
       '@asyncapi/cli':
         specifier: ^2.16.0

@@ -2,9 +2,6 @@
   "name": "@repo/env",
   "version": "0.0.1",
   "private": true,
-  "type": "commonjs",
-  "main": "./dist/index.js",
-  "types": "./src/index.ts",
   "exports": {
     ".": {
       "types": "./src/index.ts",
