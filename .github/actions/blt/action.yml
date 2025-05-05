@@ -198,3 +198,13 @@ runs:
         name: app-artifacts
         path: artifacts/
         retention-days: ${{ inputs.artifact_retention }}
+
+    - name: Debug output
+      shell: bash
+      run: pwd
+
+    - name: Debug output
+      shell: bash
+      run: ls -lah
+
+      

@@ -113,5 +113,9 @@ jobs:
       - name: Print Current Directory
         run: pwd
 
+      - name: Debug output
+        shell: bash
+        run: ls -lah
+
       - name: List Artifacts
         run: ls -l artifacts
