@@ -83,6 +83,7 @@ runs:
         echo $GITHUB_OUTPUT
 
     - name: Debug output
+      shell: bash
       run: cat affected_apps.json
 
     - name: Build Apps
