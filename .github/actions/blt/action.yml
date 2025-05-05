@@ -93,6 +93,11 @@ runs:
       shell: bash
       run: echo $GITHUB_OUTPUT
 
+    - name: Debug Affected Apps Output
+      shell: bash
+      run: |
+        echo "has_affected_apps = ${{ steps.check.outputs.has_affected_apps }}"
+
     - name: Build Apps
       if: steps.check.outputs.has_affected_apps == 'true'
       shell: bash
