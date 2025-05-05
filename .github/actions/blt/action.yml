@@ -98,7 +98,7 @@ runs:
     - name: Debug Affected Apps Output
       shell: bash
       run: |
-        echo "has_affected_apps = ${{ steps.check.outputs.has_affected_apps }}"
+        echo "has_affected_apps VALUE is: = ${{ steps.check.outputs.has_affected_apps }}"
 
     - name: Build Apps
       if: steps.check.outputs.has_affected_apps == 'true'
