@@ -104,11 +104,11 @@ jobs:
       #     role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
       #     aws-region: ${{ secrets.AWS_REGION }}
 
-      # - name: Download Artifacts
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: app-artifacts
-      #     path: artifacts
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: app-artifacts
+          path: artifacts
 
       - name: Print Current Directory
         run: pwd
