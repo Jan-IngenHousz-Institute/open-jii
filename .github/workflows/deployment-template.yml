@@ -67,7 +67,7 @@ jobs:
       - name: Run OpenTofu Operations
         uses: ./.github/actions/tofu
         with:
-          tofu-version: "1.6.0"
+          tofu_version: "1.6.0"
           environment: "${{ inputs.environment }}"
 
       - name: Apply Infrastructure
