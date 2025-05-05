@@ -72,11 +72,7 @@ jobs:
       #   with:
       #     name: app-artifacts
       #     path: artifacts
-
-      - name: Debug Build Lint
-        shell: bash
-        run: echo "Build-Lint-Test VALUE is: >>> ${{ build_lint_test.outputs.has_affected_apps }}"
-
+      
       - name: Run OpenTofu Operations
         uses: ./.github/actions/tofu
         with:
