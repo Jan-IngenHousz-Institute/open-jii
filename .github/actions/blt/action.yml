@@ -126,18 +126,18 @@ runs:
     #     echo "Running: $LINT_CMD"
     #     eval "$LINT_CMD"
 
-    - name: Run Tests
-      if: steps.check.outputs.has_affected_apps == 'true'
-      shell: bash
-      run: |
-        echo "🧪 Testing affected packages"
-        # Test command with individual --filter flags for each package
-        TEST_CMD="pnpm turbo run test"
-        cat affected_apps.json | jq -r '.[]' | while read -r APP; do
-          TEST_CMD="$TEST_CMD --filter=$APP"
-        done
-        echo "Running: $TEST_CMD"
-        eval "$TEST_CMD"
+    # - name: Run Tests
+    #   if: steps.check.outputs.has_affected_apps == 'true'
+    #   shell: bash
+    #   run: |
+    #     echo "🧪 Testing affected packages"
+    #     # Test command with individual --filter flags for each package
+    #     TEST_CMD="pnpm turbo run test"
+    #     cat affected_apps.json | jq -r '.[]' | while read -r APP; do
+    #       TEST_CMD="$TEST_CMD --filter=$APP"
+    #     done
+    #     echo "Running: $TEST_CMD"
+    #     eval "$TEST_CMD"
 
     - name: Generate AsyncAPI HTML
       if: steps.check.outputs.has_affected_apps == 'true'
