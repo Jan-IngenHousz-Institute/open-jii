@@ -5,7 +5,7 @@ import {
 
 import { delay } from "../../../utils/delay";
 import { Emitter } from "../../../utils/emitter";
-import { SerialPortEvents } from "./serial-port-events";
+import type { SerialPortEvents } from "./serial-port-events";
 
 export function toHex(data: string) {
   const hexString = Array.from(data)

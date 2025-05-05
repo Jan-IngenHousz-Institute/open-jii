@@ -1,4 +1,4 @@
-import type { BleError, Device} from "react-native-ble-plx";
+import type { BleError, Device } from "react-native-ble-plx";
 import { ScanMode } from "react-native-ble-plx";
 
 import { Emitter } from "../../utils/emitter";

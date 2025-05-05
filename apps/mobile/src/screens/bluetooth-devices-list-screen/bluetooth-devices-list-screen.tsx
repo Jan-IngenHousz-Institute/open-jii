@@ -1,12 +1,12 @@
 import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAsync } from "react-async-hook";
 import { FlatList, Text, TouchableOpacity, View } from "react-native";
 
 import { BigActionButton } from "../../components/big-action-button";
 import { ErrorView } from "../../components/error-view";
 import { LargeSpinner } from "../../components/large-spinner";
-import { BluetoothStackParamList } from "../../navigation/bluetooth-stack";
+import type { BluetoothStackParamList } from "../../navigation/bluetooth-stack";
 import { getBluetoothClassicDevices } from "../../services/multispeq-communication/android-bluetooth-connection/get-bluetooth-classic-devices";
 import { compareBluetoothDevices } from "./utils/compare-bluetooth-devices";
 
