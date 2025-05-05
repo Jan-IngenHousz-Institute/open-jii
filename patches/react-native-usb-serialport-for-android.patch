@@ -1,0 +1,14 @@
+diff --git a/android/src/main/java/com/bastengao/usbserialport/UsbSerialportForAndroidModule.java b/android/src/main/java/com/bastengao/usbserialport/UsbSerialportForAndroidModule.java
+index 7e2028288172afdfb08e6ac0d4d07b69d5885902..a9180b049afd7d8e48900964365bb4d0783a8769 100644
+--- a/android/src/main/java/com/bastengao/usbserialport/UsbSerialportForAndroidModule.java
++++ b/android/src/main/java/com/bastengao/usbserialport/UsbSerialportForAndroidModule.java
+@@ -153,6 +153,9 @@ public class UsbSerialportForAndroidModule extends ReactContextBaseJavaModule im
+         try {
+             port.open(connection);
+             port.setParameters(baudRate, dataBits, stopBits, parity);
++            port.setDTR(true);
++            port.setRTS(true);
++
+         } catch (IOException e) {
+             try {
+                  port.close();

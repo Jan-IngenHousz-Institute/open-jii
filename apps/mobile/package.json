@@ -11,18 +11,31 @@
     "build-android": "eas build -p android --profile preview --local"
   },
   "dependencies": {
-    "react-native-css-interop": "^0.1.22",
+    "@expo/vector-icons": "^14.0.2",
+    "@react-navigation/bottom-tabs": "^7.3.10",
+    "@react-navigation/native": "^7.1.6",
+    "@react-navigation/native-stack": "^7.3.10",
+    "@types/lodash": "^4.17.16",
+    "clsx": "^2.0.0",
     "expo": "~52.0.46",
     "expo-status-bar": "~2.0.1",
+    "lodash": "^4.17.21",
     "nativewind": "^4.1.23",
     "react": "18.3.1",
     "react-async-hook": "^4.0.0",
     "react-native": "0.76.9",
     "react-native-ble-plx": "^3.5.0",
+    "react-native-bluetooth-classic": "1.73.0-rc.13",
+    "react-native-css-interop": "^0.1.22",
+    "react-native-gesture-handler": "~2.20.2",
     "react-native-permissions": "^5.3.0",
     "react-native-reanimated": "3.16.2",
     "react-native-safe-area-context": "4.12.0",
-    "tailwindcss": "^3.4.17"
+    "react-native-screens": "~4.4.0",
+    "react-native-usb-serialport-for-android": "^0.5.0",
+    "react-native-vector-icons": "^10.2.0",
+    "tailwindcss": "^3.4.17",
+    "with-rn-bluetooth-classic": "^1.0.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

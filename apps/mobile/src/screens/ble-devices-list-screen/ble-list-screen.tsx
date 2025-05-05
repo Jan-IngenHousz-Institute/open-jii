@@ -2,14 +2,15 @@ import { useState } from "react";
 import { useAsync } from "react-async-hook";
 import { Text, View } from "react-native";
 
-import { startDeviceScan } from "../../services/bluetooth/start-devices-scan";
+import { ErrorView } from "../../components/error-view";
+import { startDeviceScan } from "../../services/bluetooth-ble/start-ble-devices-scan";
 import { DevicesListView } from "./components/item-card/components/devices-list-view";
 import { BluetoothDevice } from "./utils/bluetooth-device";
 import { orderDevices } from "./utils/order-devices";
 import { serializeDevice } from "./utils/serialize-device";
 import { updateList } from "./utils/update-list";
 
-export function DevicesListScreen() {
+export function BleListScreen() {
   const [devices, setDevices] = useState<BluetoothDevice[]>([]);
 
   const { error } = useAsync(async () => {
@@ -27,13 +28,7 @@ export function DevicesListScreen() {
   }, []);
 
   if (error) {
-    return (
-      <View className="px-4 pt-3">
-        <View className="bg-red-100 p-3 rounded-lg border border-red-300">
-          <Text className="text-red-800 font-bold">⚠️ {error.message}</Text>
-        </View>
-      </View>
-    );
+    return <ErrorView error={error} />;
   }
 
   return <DevicesListView items={devices} onRefresh={() => setDevices([])} />;

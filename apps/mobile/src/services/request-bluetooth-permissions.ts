@@ -1,6 +1,6 @@
 import { PermissionsAndroid, Platform } from "react-native";
 
-import { keepTruthy } from "../../utils/keep-truthy";
+import { keepTruthy } from "../utils/keep-truthy";
 
 export async function requestBluetoothPermission() {
   if (Platform.OS === "ios") {
