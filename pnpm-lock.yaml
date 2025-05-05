@@ -361,7 +361,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/ui
       next:
-        specifier: ^15.2.4
+        specifier: ^15.3.1
         version: 15.3.1(@babel/core@7.12.9)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       react:
         specifier: catalog:react19
