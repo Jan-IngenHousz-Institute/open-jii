@@ -80,11 +80,18 @@ runs:
         # Create a file with the list of affected apps for use in next steps
         echo $AFFECTED_APPS > affected_apps.json
 
-        echo $GITHUB_OUTPUT
 
     - name: Debug output
       shell: bash
       run: cat affected_apps.json
+
+    - name: Debug output
+      shell: bash
+      run: pwd
+    
+    - name: Debug output
+      shell: bash
+      run: echo $GITHUB_OUTPUT
 
     - name: Build Apps
       if: steps.check.outputs.has_affected_apps == 'true'
