@@ -2,14 +2,14 @@ export interface BluetoothDevice {
   id: string;
   isConnectable: boolean;
   localName: string | null;
-  manufacturerData: any;
+  manufacturerData: unknown;
   mtu: number;
   name: string | null;
-  overflowServiceUUIDs: any;
+  overflowServiceUUIDs: unknown;
   rawScanRecord: string;
   rssi: number;
-  serviceData: any;
-  serviceUUIDs: any;
-  solicitedServiceUUIDs: any;
+  serviceData: unknown;
+  serviceUUIDs: unknown;
+  solicitedServiceUUIDs: unknown;
   txPowerLevel: number;
 }

@@ -1,9 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
-import { Text, TouchableOpacity, View } from "react-native";
-
 import type { ParamListBase } from "@react-navigation/native";
+import { Text, TouchableOpacity, View } from "react-native";
 
 interface RootTabParamList extends ParamListBase {
   Home: undefined;
@@ -19,7 +18,7 @@ export function HomeScreen() {
       {/* Top half: Bluetooth Mode */}
       <TouchableOpacity
         activeOpacity={0.6}
-        className="items-center justify-center flex-1"
+        className="flex-1 items-center justify-center"
         onPress={() => navigation.navigate("Bluetooth")}
       >
         <View className="items-center">
@@ -31,12 +30,12 @@ export function HomeScreen() {
       </TouchableOpacity>
 
       {/* Full-width Divider */}
-      <View className="h-[1px] bg-gray-300 w-full" />
+      <View className="h-[1px] w-full bg-gray-300" />
 
       {/* Bottom half: Serial Port Mode */}
       <TouchableOpacity
         activeOpacity={0.6}
-        className="items-center justify-center flex-1"
+        className="flex-1 items-center justify-center"
         onPress={() => navigation.navigate("Serial")}
       >
         <View className="items-center">

@@ -20,8 +20,8 @@ export function DevicesListView({
   onRefresh(): void;
 }) {
   return (
-    <View className="flex-1 w-full bg-neutral-100">
-      <Text className="mt-6 mb-4 text-2xl font-bold text-center text-neutral-800">
+    <View className="w-full flex-1 bg-neutral-100">
+      <Text className="mb-4 mt-6 text-center text-2xl font-bold text-neutral-800">
         {items.length} Devices Found
       </Text>
       <FlatList

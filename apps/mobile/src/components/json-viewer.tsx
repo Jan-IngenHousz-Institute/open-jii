@@ -6,7 +6,7 @@ export function JSONViewer({ data, indent = 0 }) {
   const renderValue = (value: any, level: number) => {
     if (typeof value !== "object" || value === null) {
       return (
-        <Text className="text-sm text-gray-600 break-words w-full">
+        <Text className="w-full break-words text-sm text-gray-600">
           {String(value)}
         </Text>
       );
@@ -14,7 +14,7 @@ export function JSONViewer({ data, indent = 0 }) {
 
     if (Array.isArray(value)) {
       return (
-        <View className="pl-4 border-l border-gray-200 my-1 w-full">
+        <View className="my-1 w-full border-l border-gray-200 pl-4">
           {value.map((item, idx) => (
             <View key={idx} className="mb-1 w-full">
               {renderValue(item, level + 1)}
@@ -25,10 +25,10 @@ export function JSONViewer({ data, indent = 0 }) {
     }
 
     return (
-      <View className="pl-4 border-l border-gray-300 my-1 w-full">
+      <View className="my-1 w-full border-l border-gray-300 pl-4">
         {Object.entries(value).map(([key, val], idx) => (
           <View key={idx} className="mb-1 w-full">
-            <Text className="text-sm text-gray-700 font-semibold">{key}:</Text>
+            <Text className="text-sm font-semibold text-gray-700">{key}:</Text>
             <View className="ml-2">{renderValue(val, level + 1)}</View>
           </View>
         ))}
@@ -37,8 +37,8 @@ export function JSONViewer({ data, indent = 0 }) {
   };
 
   return (
-    <ScrollView className="flex-1 bg-white w-full">
-      <View className="p-4 w-full">{renderValue(data, indent)}</View>
+    <ScrollView className="w-full flex-1 bg-white">
+      <View className="w-full p-4">{renderValue(data, indent)}</View>
     </ScrollView>
   );
 }

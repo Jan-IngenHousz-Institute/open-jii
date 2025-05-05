@@ -1,9 +1,8 @@
+import type { ParamListBase } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { BluetoothDeviceDetailsScreen } from "../screens/bluetooth-device-details-screen";
 import { BluetoothDevicesListScreen } from "../screens/bluetooth-devices-list-screen/bluetooth-devices-list-screen";
-
-import type { ParamListBase } from "@react-navigation/native";
 
 export interface BluetoothStackParamList extends ParamListBase {
   DeviceList: undefined;

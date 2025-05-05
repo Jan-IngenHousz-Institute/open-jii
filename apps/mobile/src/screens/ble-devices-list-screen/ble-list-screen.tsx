@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useAsync } from "react-async-hook";
-import { Text, View } from "react-native";
 
 import { ErrorView } from "../../components/error-view";
 import { startDeviceScan } from "../../services/bluetooth-ble/start-ble-devices-scan";
