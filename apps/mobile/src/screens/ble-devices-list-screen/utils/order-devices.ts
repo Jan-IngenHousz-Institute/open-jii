@@ -1,4 +1,4 @@
-import { BluetoothDevice } from "./bluetooth-device";
+import type { BluetoothDevice } from "./bluetooth-device";
 
 export function orderDevices(devices: BluetoothDevice[]): BluetoothDevice[] {
   return [...devices].sort((a, b) => {

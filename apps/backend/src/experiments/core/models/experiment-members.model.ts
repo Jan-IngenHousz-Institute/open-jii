@@ -1,7 +1,8 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-import { experimentMembers, experimentMembersEnum } from "@repo/database";
+import type { experimentMembersEnum } from "@repo/database";
+import { experimentMembers } from "@repo/database";
 
 // Create schema for adding experiment members
 export const addExperimentMemberSchema = createInsertSchema(experimentMembers)

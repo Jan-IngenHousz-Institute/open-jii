@@ -1,4 +1,4 @@
-import { BluetoothDevice } from "./bluetooth-device";
+import type { BluetoothDevice } from "./bluetooth-device";
 
 export const sampleDevices: BluetoothDevice[] = [
   {

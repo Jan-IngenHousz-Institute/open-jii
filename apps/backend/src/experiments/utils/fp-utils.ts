@@ -1,4 +1,4 @@
-import { Logger } from "@nestjs/common";
+import type { Logger } from "@nestjs/common";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
 
@@ -148,40 +148,40 @@ export class AppError {
   ) {}
 
   static notFound(
-    message: string = "Resource not found",
-    code: string = "NOT_FOUND",
+    message = "Resource not found",
+    code = "NOT_FOUND",
     details?: unknown,
   ): AppError {
     return new AppError(message, code, StatusCodes.NOT_FOUND, details);
   }
 
   static badRequest(
-    message: string = "Invalid request data",
-    code: string = "BAD_REQUEST",
+    message = "Invalid request data",
+    code = "BAD_REQUEST",
     details?: unknown,
   ): AppError {
     return new AppError(message, code, StatusCodes.BAD_REQUEST, details);
   }
 
   static forbidden(
-    message: string = "Access forbidden",
-    code: string = "FORBIDDEN",
+    message = "Access forbidden",
+    code = "FORBIDDEN",
     details?: unknown,
   ): AppError {
     return new AppError(message, code, StatusCodes.FORBIDDEN, details);
   }
 
   static unauthorized(
-    message: string = "Unauthorized access",
-    code: string = "UNAUTHORIZED",
+    message = "Unauthorized access",
+    code = "UNAUTHORIZED",
     details?: unknown,
   ): AppError {
     return new AppError(message, code, StatusCodes.UNAUTHORIZED, details);
   }
 
   static internal(
-    message: string = "Internal server error",
-    code: string = "INTERNAL_ERROR",
+    message = "Internal server error",
+    code = "INTERNAL_ERROR",
     details?: unknown,
   ): AppError {
     return new AppError(
@@ -193,8 +193,8 @@ export class AppError {
   }
 
   static repositoryError(
-    message: string = "Repository operation failed",
-    code: string = "REPOSITORY_ERROR",
+    message = "Repository operation failed",
+    code = "REPOSITORY_ERROR",
     details?: unknown,
   ): AppError {
     return new AppError(
@@ -206,8 +206,8 @@ export class AppError {
   }
 
   static validationError(
-    message: string = "Validation error",
-    code: string = "VALIDATION_ERROR",
+    message = "Validation error",
+    code = "VALIDATION_ERROR",
     details?: unknown,
   ): AppError {
     return new AppError(message, code, StatusCodes.BAD_REQUEST, details);

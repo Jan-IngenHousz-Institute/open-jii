@@ -8,7 +8,9 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "prebuild": "expo prebuild",
-    "build-android": "eas build -p android --profile preview --local"
+    "build-android": "eas build -p android --profile preview --local",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.2",
@@ -38,10 +40,10 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
     "@types/lodash": "^4.17.16",
     "@types/react": "~18.3.12",
-    "@typescript-eslint/eslint-plugin": "^7.2.0",
-    "@typescript-eslint/parser": "^7.2.0",
     "eas-cli": "^16.3.2",
     "eslint": "catalog:",
     "expo-dev-client": "~5.0.20",

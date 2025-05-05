@@ -1,7 +1,7 @@
 import React from "react";
 import { Alert, Text, TouchableOpacity, View } from "react-native";
 
-import { BluetoothDevice } from "../../utils/bluetooth-device";
+import type { BluetoothDevice } from "../../utils/bluetooth-device";
 
 function handleCardPress(device: BluetoothDevice) {
   Alert.alert("Device Selected", `${device.name ?? device.id}`);

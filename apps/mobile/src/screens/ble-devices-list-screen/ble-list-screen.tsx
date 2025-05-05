@@ -5,7 +5,7 @@ import { Text, View } from "react-native";
 import { ErrorView } from "../../components/error-view";
 import { startDeviceScan } from "../../services/bluetooth-ble/start-ble-devices-scan";
 import { DevicesListView } from "./components/item-card/components/devices-list-view";
-import { BluetoothDevice } from "./utils/bluetooth-device";
+import type { BluetoothDevice } from "./utils/bluetooth-device";
 import { orderDevices } from "./utils/order-devices";
 import { serializeDevice } from "./utils/serialize-device";
 import { updateList } from "./utils/update-list";
