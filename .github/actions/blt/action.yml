@@ -139,12 +139,12 @@ runs:
     #     echo "Running: $TEST_CMD"
     #     eval "$TEST_CMD"
 
-    - name: Generate AsyncAPI HTML
-      if: steps.check.outputs.has_affected_apps == 'true'
-      shell: bash
-      run: |
-        echo "📄 Generating AsyncAPI documentation"
-        pnpm run asyncapi:html
+    # - name: Generate AsyncAPI HTML
+    #   if: steps.check.outputs.has_affected_apps == 'true'
+    #   shell: bash
+    #   run: |
+    #     echo "📄 Generating AsyncAPI documentation"
+    #     pnpm run asyncapi:html
 
     - name: Collect Build Artifacts
       if: steps.check.outputs.has_affected_apps == 'true'
