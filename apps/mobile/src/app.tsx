@@ -12,7 +12,6 @@ const Tab = createBottomTabNavigator();
 
 export function App() {
   return (
-    // <SafeAreaProvider>
     <NavigationContainer>
       <Tab.Navigator
         initialRouteName="Home"
@@ -50,6 +49,5 @@ export function App() {
       </Tab.Navigator>
       <StatusBar style="auto" />
     </NavigationContainer>
-    // </SafeAreaProvider>
   );
 }
