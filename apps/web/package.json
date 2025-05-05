@@ -19,13 +19,13 @@
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
+    "@repo/tailwind-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@tailwindcss/postcss": "^4.1.4",
-    "@types/node": "^22.15.2",
+    "@types/node": "catalog:",
     "@types/react": "catalog:react19",
     "@types/react-dom": "catalog:react19",
     "eslint": "catalog:",
-    "tailwindcss": "^3.4.17",
+    "tailwindcss": "catalog:",
     "typescript": "catalog:"
   }
 }
