@@ -80,8 +80,7 @@ runs:
         # Create a file with the list of affected apps for use in next steps
         echo $AFFECTED_APPS > affected_apps.json
 
-    - name: Debug output
-      run: echo "!!!! Has affected apps: ${{ steps.check.outputs.has_affected_apps }}"
+        echo $GITHUB_OUTPUT
 
     - name: Debug output
       run: cat affected_apps.json
