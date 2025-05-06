@@ -71,7 +71,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # If we have only infra update, it will depend on the affected apps trigger 
       # - name: Download Artifacts
       #   uses: actions/download-artifact@v4
       #   with:
@@ -98,11 +97,11 @@ jobs:
       id-token: write
       contents: read
     steps:
-      # - name: Configure AWS Credentials via OIDC
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-      #     aws-region: ${{ secrets.AWS_REGION }}
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
@@ -110,12 +109,11 @@ jobs:
           name: app-artifacts
           path: artifacts
 
-      - name: Print Current Directory
-        run: pwd
-
-      - name: Debug output
-        shell: bash
-        run: ls -lah
-
-      - name: List Artifacts
-        run: ls -l artifacts
+      - name: Check Artifact Files
+        run: |
+          if [ -d "artifacts" ] && [ "$(ls -A artifacts)" ]; then
+            echo "Artifacts downloaded successfully"
+          else
+            echo "No artifacts found"
+            exit 1
+          fi
