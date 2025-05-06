@@ -1,4 +1,4 @@
-import { CreateExperiment }  from "@/components/create-experiment";
+import { CreateExperiment } from "@/components/create-experiment";
 
 export default function ExperimentPage() {
   return (

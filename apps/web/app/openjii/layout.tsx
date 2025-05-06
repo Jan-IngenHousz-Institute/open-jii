@@ -1,15 +1,20 @@
+import { Breadcrumbs } from "@/components/app-breadcrumbs";
+import { AppSidebar } from "@/components/app-sidebar";
 import type { Metadata } from "next";
 import { Poppins, Overpass } from "next/font/google";
+import { headers } from "next/headers";
 import type React from "react";
 
 import { cn } from "@repo/ui";
+import { Separator } from "@repo/ui/separator";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@repo/ui/sidebar";
 import { ThemeProvider } from "@repo/ui/theme";
 
 import "../globals.css";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@repo/ui/sidebar";
-import { Separator } from "@repo/ui/separator";
-import { AppSidebar } from "@/components/app-sidebar";
-import { Breadcrumbs } from "@/components/app-breadcrumbs";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -28,11 +33,13 @@ export const metadata: Metadata = {
   description: "Improving photosynthesis for a sustainable future",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = (await headers()).get("x-current-path") ?? "/";
+
   return (
     <html lang="en">
       <head>
@@ -54,14 +61,14 @@ export default function RootLayout({
           <SidebarProvider>
             <AppSidebar />
             <SidebarInset>
-              <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+              <header className="group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear">
                 <div className="flex items-center gap-2 px-4">
                   <SidebarTrigger className="-ml-1" />
                   <Separator
                     orientation="vertical"
                     className="mr-2 data-[orientation=vertical]:h-4"
                   />
-                  <Breadcrumbs />
+                  <Breadcrumbs pathname={pathname} />
                 </div>
               </header>
               {children}

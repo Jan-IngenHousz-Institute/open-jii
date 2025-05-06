@@ -1,7 +1,5 @@
 "use client";
 
-import * as React from "react";
-import Image from "next/image";
 import {
   Archive,
   FileSliders,
@@ -9,6 +7,8 @@ import {
   RadioReceiver,
   Webcam,
 } from "lucide-react";
+import Image from "next/image";
+import * as React from "react";
 
 import {
   Sidebar,
@@ -20,6 +20,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@repo/ui/sidebar";
+
 import { NavItems } from "./nav-items";
 import { NavUser } from "./nav-user";
 

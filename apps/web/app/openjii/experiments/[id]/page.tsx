@@ -1,6 +1,6 @@
+import { NewExperiment } from "@/components/app-new-experiment";
 import { getExperiment } from "@/util/experiments";
 import { notFound } from "next/navigation";
-import { NewExperiment } from "@/components/app-new-experiment";
 
 export default async function ExperimentPage({
   params,

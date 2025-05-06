@@ -1,10 +1,12 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import type z from "zod";
-import type { Experiment} from "@/util/schema";
+import type { Experiment } from "@/util/schema";
 import { experimentSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import type z from "zod";
+
+import { Button } from "@repo/ui/button";
 import {
   Form,
   FormControl,
@@ -16,7 +18,6 @@ import {
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import { Switch } from "@repo/ui/switch";
-import { Button } from "@repo/ui/button";
 
 interface NewExperimentProps {
   experiment: Experiment;

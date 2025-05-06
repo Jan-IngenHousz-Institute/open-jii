@@ -1,5 +1,14 @@
 "use client";
 
+import { createExperiment } from "@/util/experiments";
+import { createExperimentSchema } from "@/util/schema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { redirect } from "next/navigation";
+import { useRef } from "react";
+import { useForm } from "react-hook-form";
+import type z from "zod";
+
+import { Button } from "@repo/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -9,8 +18,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@repo/ui/dialog";
-import type z from "zod";
-import { Button } from "@repo/ui/button";
 import {
   Form,
   FormControl,
@@ -19,15 +26,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@repo/ui/form";
-import { Label } from "@repo/ui/label";
 import { Input } from "@repo/ui/input";
+import { Label } from "@repo/ui/label";
 import { Switch } from "@repo/ui/switch";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { createExperimentSchema } from "@/util/schema";
-import { useRef } from "react";
-import { useForm } from "react-hook-form";
-import { redirect } from "next/navigation";
-import { createExperiment } from "@/util/experiments";
 
 export function CreateExperiment() {
   const formRef = useRef<HTMLFormElement>(null);
