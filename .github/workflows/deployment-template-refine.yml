@@ -63,11 +63,7 @@ jobs:
       TF_VAR_databricks_client_secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
       TF_VAR_databricks_workspace_url: ${{ secrets.DATABRICKS_WORKSPACE_URL }}
     steps:
-      - name: Debug Affected Apps Output
-        shell: bash
-        run: |
-          echo "Boolean is : ${{ needs.build_lint_test.outputs.has_affected_apps }}"
-
+      
       - name: Checkout Repository
         uses: actions/checkout@v4
 
