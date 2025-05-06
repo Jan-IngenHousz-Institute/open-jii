@@ -12,6 +12,10 @@
       "dom.iterable",
       "esnext"
     ],
+    "paths": {
+      "@/components/*": ["./components/*"],
+      "@/util/*": ["./util/*"]
+    },
     "incremental": true,
     "resolveJsonModule": true
   },
@@ -24,5 +28,5 @@
   ],
   "exclude": [
     "node_modules"
-  ]
+  ],
 }
