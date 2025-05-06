@@ -65,12 +65,9 @@ runs:
 
         # Check if we have any affected apps
         if [ "$(echo $AFFECTED_APPS | jq 'length')" -gt 0 ]; then
-          #echo "has_affected_apps=true" >> $GITHUB_OUTPUT
-          echo "has_affected_apps=$(echo $AFFECTED_APPS | jq 'length' > 0)" >> $GITHUB_OUTPUT
-          echo "has_affected_apps=true" >> "$GITHUB_OUTPUT"
+          echo "has_affected_apps=true" >> $GITHUB_OUTPUT
 
 
-          
           # Print the affected apps in a more readable format (like the shell script)
           echo "✅ Found affected packages:"
           echo "$AFFECTED_APPS" | jq '.'
@@ -81,24 +78,6 @@ runs:
 
         # Create a file with the list of affected apps for use in next steps
         echo $AFFECTED_APPS > affected_apps.json
-
-
-    - name: Debug output
-      shell: bash
-      run: cat affected_apps.json
-
-    - name: Debug output
-      shell: bash
-      run: pwd
-    
-    - name: Debug output
-      shell: bash
-      run: echo $GITHUB_OUTPUT
-
-    - name: Debug Affected Apps Output
-      shell: bash
-      run: |
-        echo "has_affected_apps VALUE is: ${{ steps.check.outputs.has_affected_apps }}"
 
     - name: Build Apps
       if: steps.check.outputs.has_affected_apps == 'true'
@@ -198,13 +177,4 @@ runs:
         name: app-artifacts
         path: artifacts/
         retention-days: ${{ inputs.artifact_retention }}
-
-    - name: Debug output
-      shell: bash
-      run: pwd
-
-    - name: Debug output
-      shell: bash
-      run: ls -lah
-
       
