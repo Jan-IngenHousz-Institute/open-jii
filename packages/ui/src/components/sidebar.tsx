@@ -2,29 +2,28 @@
 
 import { ViewVerticalIcon } from "@radix-ui/react-icons";
 import { Slot } from "@radix-ui/react-slot";
-import type { VariantProps} from "class-variance-authority";
-import { cva } from "class-variance-authority";
+import { VariantProps, cva } from "class-variance-authority";
 import * as React from "react";
 
-import { Button } from "./button";
-import { useIsMobile } from "../hooks/use-mobile";
-import { Input } from "./input";
-import { cn } from ".";
-import { Separator } from "./separator";
+import { Button } from "@repo/ui/components/button";
+import { Input } from "@repo/ui/components/input";
+import { Separator } from "@repo/ui/components/separator";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "./sheet";
-import { Skeleton } from "./skeleton";
+} from "@repo/ui/components/sheet";
+import { Skeleton } from "@repo/ui/components/skeleton";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "./tooltip";
+} from "@repo/ui/components/tooltip";
+import { useIsMobile } from "@repo/ui/hooks/use-mobile";
+import { cn } from "@repo/ui/lib/utils";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;

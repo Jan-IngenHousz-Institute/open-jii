@@ -3,7 +3,7 @@ import { Poppins, Overpass } from "next/font/google";
 import type React from "react";
 
 import { cn } from "@repo/ui";
-import { ThemeProvider } from "@repo/ui/theme";
+import { ThemeProvider } from "@repo/ui";
 
 import "./globals.css";
 

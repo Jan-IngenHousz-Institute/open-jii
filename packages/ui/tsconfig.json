@@ -32,7 +32,10 @@
     "outDir": "${configDir}/dist",
     "lib": ["ES2022", "dom", "dom.iterable"],
     "jsx": "preserve",
-    "rootDir": "."
+    "rootDir": ".",
+    "paths": {
+      "@repo/ui/*": ["./src/*"]
+    }
   },
   "exclude": ["node_modules", "build", "dist", ".next", ".expo"]
 }

@@ -6,7 +6,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type z from "zod";
 
-import { Button } from "@repo/ui/button";
+import { Button } from "@repo/ui";
+import { Input } from "@repo/ui";
+import { Label } from "@repo/ui";
+import { Switch } from "@repo/ui";
 import {
   Form,
   FormControl,
@@ -14,10 +17,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@repo/ui/form";
-import { Input } from "@repo/ui/input";
-import { Label } from "@repo/ui/label";
-import { Switch } from "@repo/ui/switch";
+} from "@repo/ui";
 
 interface NewExperimentProps {
   experiment: Experiment;

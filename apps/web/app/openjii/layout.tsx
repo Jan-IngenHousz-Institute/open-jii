@@ -3,12 +3,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { headers } from "next/headers";
 import type React from "react";
 
-import { Separator } from "@repo/ui/separator";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@repo/ui/sidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@repo/ui";
+import { Separator } from "@repo/ui";
 
 export default async function OpenJIILayout({
   children,
