@@ -1,17 +1,18 @@
-import { ApiFetcherArgs, tsRestFetchApi } from "@ts-rest/core";
+import { tsRestFetchApi } from "@ts-rest/core";
+import type { ApiFetcherArgs } from "@ts-rest/core";
 import { initTsrReactQuery } from "@ts-rest/react-query/v5";
 
 import { contract } from "@repo/api";
 
-import { getSession } from "./session";
+// import { getSession } from "./session";
 
 const customApiFetcher = async (args: ApiFetcherArgs) => {
-  const session = await getSession();
-  const token = session?.userId ? `Bearer ${session.userId}` : undefined;
+  // const session = await getSession();
+  // const token = session?.userId ? `Bearer ${session.userId}` : undefined;
 
   const enhancedHeaders = {
     ...args.headers,
-    Authorization: token || "",
+    // Authorization: token || "",
   };
 
   return tsRestFetchApi({
