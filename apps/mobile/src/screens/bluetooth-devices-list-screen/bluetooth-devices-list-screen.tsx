@@ -27,7 +27,7 @@ export function BluetoothDevicesListScreen() {
 
   if (error || !devices) {
     return (
-      <View className="items-center justify-center flex-1 px-4 bg-white">
+      <View className="flex-1 items-center justify-center bg-white px-4">
         <ErrorView error="Cannot scan for Bluetooth devices. Please try again." />
         <BigActionButton onPress={() => refreshDevices()} text="Restart Scan" />
       </View>
@@ -37,7 +37,7 @@ export function BluetoothDevicesListScreen() {
   const sortedDevices = [...devices].sort(compareBluetoothDevices);
 
   return (
-    <View className="justify-between flex-1 w-full bg-white">
+    <View className="w-full flex-1 justify-between bg-white">
       <FlatList
         onRefresh={() => refreshDevices()}
         refreshing={false}
@@ -46,12 +46,12 @@ export function BluetoothDevicesListScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity
-            className="w-full p-4 mb-4 border rounded-2xl bg-gray-50"
+            className="mb-4 w-full rounded-2xl border bg-gray-50 p-4"
             onPress={() =>
               navigation.navigate("DeviceDetails", { deviceId: item.id })
             }
           >
-            <View className="flex-row items-center justify-between mb-1">
+            <View className="mb-1 flex-row items-center justify-between">
               <Text className="text-lg font-semibold">
                 {item.name || "Unknown Device"}
               </Text>

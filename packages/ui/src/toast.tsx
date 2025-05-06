@@ -1,7 +1,7 @@
 "use client";
 
-import type { ToasterProps } from "sonner";
 import { useTheme } from "next-themes";
+import type { ToasterProps } from "sonner";
 import { Toaster as Sonner } from "sonner";
 
 export { toast } from "sonner";
