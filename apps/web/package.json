@@ -12,7 +12,11 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@repo/api": "workspace:*",
     "@repo/ui": "workspace:*",
+    "@tanstack/react-query": "^5.75.4",
+    "@ts-rest/core": "^3.52.1",
+    "@ts-rest/react-query": "^3.52.1",
     "next": "^15.3.1",
     "react": "catalog:react19",
     "react-dom": "catalog:react19"
@@ -21,6 +25,7 @@
     "@repo/eslint-config": "workspace:*",
     "@repo/tailwind-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@tanstack/react-query-devtools": "^5.75.4",
     "@types/node": "catalog:",
     "@types/react": "catalog:react19",
     "@types/react-dom": "catalog:react19",

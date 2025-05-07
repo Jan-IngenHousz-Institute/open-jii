@@ -1,20 +1,20 @@
 "use client";
 
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
+import { Slot } from "radix-ui";
+import * as React from "react";
 import type {
   ControllerProps,
   FieldPath,
   FieldValues,
   UseFormProps,
 } from "react-hook-form";
-import type { ZodType, ZodTypeDef } from "zod";
-import * as React from "react";
-import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { Slot } from "radix-ui";
 import {
   useForm as __useForm,
   Controller,
   useFormContext,
 } from "react-hook-form";
+import type { ZodType, ZodTypeDef } from "zod";
 
 import { cn } from "@repo/ui";
 
@@ -145,7 +145,7 @@ export function FormDescription({
   return (
     <p
       id={formDescriptionId}
-      className={cn("text-[0.8rem] text-muted-foreground", className)}
+      className={cn("text-muted-foreground text-[0.8rem]", className)}
       {...props}
     />
   );
@@ -166,7 +166,7 @@ export function FormMessage({
   return (
     <p
       id={formMessageId}
-      className={cn("text-[0.8rem] font-medium text-destructive", className)}
+      className={cn("text-destructive text-[0.8rem] font-medium", className)}
       {...props}
     >
       {body}
