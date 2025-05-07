@@ -41,7 +41,7 @@ export function CreateExperiment() {
 
   function onSubmit(data: z.infer<typeof createExperimentSchema>) {
     const id = createExperiment(data);
-    redirect(`/experiments/${id}`);
+    redirect(`/openjii/experiments/${id}`);
   }
 
   return (
