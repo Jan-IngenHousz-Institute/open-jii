@@ -7,7 +7,7 @@ import {
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbSeparator,
-} from "@repo/ui";
+} from "@repo/ui/components";
 
 interface BreadcrumbsProps {
   pathname: string;

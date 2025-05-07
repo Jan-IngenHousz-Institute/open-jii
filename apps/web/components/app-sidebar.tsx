@@ -19,7 +19,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from "@repo/ui";
+} from "@repo/ui/components";
 
 import { NavItems } from "./nav-items";
 import { NavUser } from "./nav-user";

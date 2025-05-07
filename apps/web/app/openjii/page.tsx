@@ -1,4 +1,4 @@
-import { Button } from "@repo/ui/button";
+import { Button } from "@repo/ui/components";
 
 export default function Home() {
   return (
@@ -8,12 +8,6 @@ export default function Home() {
       </h1>
       <div className="flex items-center gap-2 py-12">
         <Button>no variant</Button>
-        <Button variant={"destructive"}>destructive</Button>
-        <Button variant={"ghost"}>ghost</Button>
-        <Button variant={"link"}>link</Button>
-        <Button variant={"secondary"}>secondary</Button>
-        <Button variant={"primary"}>primary</Button>
-        <Button variant={"outline"}>outline</Button>
       </div>
       <p className="mb-4 text-lg">
         The world's population is growing, while the area of suitable

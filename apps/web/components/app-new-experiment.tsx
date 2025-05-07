@@ -6,18 +6,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type z from "zod";
 
-import { Button } from "@repo/ui";
-import { Input } from "@repo/ui";
-import { Label } from "@repo/ui";
-import { Switch } from "@repo/ui";
 import {
+  Button, Input, Label, Switch,
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-} from "@repo/ui";
+} from "@repo/ui/components";
 
 interface NewExperimentProps {
   experiment: Experiment;

@@ -8,7 +8,7 @@ import { useRef } from "react";
 import { useForm } from "react-hook-form";
 import type z from "zod";
 
-import { Button } from "@repo/ui";
+import { Button } from "@repo/ui/components";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@repo/ui";
+} from "@repo/ui/components";
 import {
   Form,
   FormControl,
@@ -25,10 +25,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@repo/ui";
-import { Input } from "@repo/ui";
-import { Label } from "@repo/ui";
-import { Switch } from "@repo/ui";
+  Input, Label, Switch
+} from "@repo/ui/components";
 
 export function CreateExperiment() {
   const formRef = useRef<HTMLFormElement>(null);

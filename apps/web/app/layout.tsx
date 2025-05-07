@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { Poppins, Overpass } from "next/font/google";
 import type React from "react";
 
-import { cn } from "@repo/ui";
-import { ThemeProvider } from "@repo/ui";
+import { cn } from "@repo/ui/lib/utils";
+import { ThemeProvider } from "@repo/ui/components";
 
 import "./globals.css";
 

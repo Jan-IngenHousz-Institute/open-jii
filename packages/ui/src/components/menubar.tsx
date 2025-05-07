@@ -8,7 +8,7 @@ import {
 import * as MenubarPrimitive from "@radix-ui/react-menubar";
 import * as React from "react";
 
-import { cn } from "@repo/ui/lib/utils";
+import { cn } from "../lib/utils";
 
 function MenubarMenu({
   ...props

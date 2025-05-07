@@ -3,8 +3,8 @@
 import { ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@repo/ui";
 import {
+  Collapsible, CollapsibleContent, CollapsibleTrigger,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
@@ -13,7 +13,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-} from "@repo/ui";
+} from "@repo/ui/components";
 
 export function NavItems({
   title,

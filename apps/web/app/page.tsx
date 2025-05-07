@@ -1,4 +1,4 @@
-import { Button } from "@repo/ui/button";
+import { Button } from "@repo/ui/components";
 
 export default function Home() {
   return (
@@ -12,7 +12,6 @@ export default function Home() {
         <Button variant={"ghost"}>ghost</Button>
         <Button variant={"link"}>link</Button>
         <Button variant={"secondary"}>secondary</Button>
-        <Button variant={"primary"}>primary</Button>
         <Button variant={"outline"}>outline</Button>
       </div>
       <p className="mb-4 text-lg">
