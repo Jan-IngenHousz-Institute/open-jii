@@ -1,6 +1,6 @@
 import { Button } from "@repo/ui/components";
 
-export default function Home() {
+export default function OpenJIIHome() {
   return (
     <>
       <h1 className="text-jii-dark-green mb-6 text-4xl font-bold">

@@ -1,4 +1,5 @@
 import { Button } from "@repo/ui/components";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -32,6 +33,11 @@ export default function Home() {
           IngenHousz Institute was founded specifically to meet these major
           challenges.
         </p>
+      </div>
+      <div className="p-6">
+        <Link href="/openjii">
+          <Button>Go to the openJII platform</Button>
+        </Link>
       </div>
     </>
   );
