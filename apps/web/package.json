@@ -12,14 +12,18 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.0.1",
     "@repo/api": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tanstack/react-query": "^5.75.4",
     "@ts-rest/core": "^3.52.1",
     "@ts-rest/react-query": "^3.52.1",
+    "lucide-react": "^0.507.0",
     "next": "^15.3.1",
     "react": "catalog:react19",
-    "react-dom": "catalog:react19"
+    "react-dom": "catalog:react19",
+    "react-hook-form": "catalog:react19",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

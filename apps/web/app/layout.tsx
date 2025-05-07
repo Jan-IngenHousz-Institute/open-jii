@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { Poppins, Overpass } from "next/font/google";
 import type React from "react";
 
-import { cn } from "@repo/ui";
-import { ThemeProvider } from "@repo/ui/theme";
+import { cn } from "@repo/ui/lib/utils";
+import { ThemeProvider } from "@repo/ui/components";
 
 import { QueryProvider } from "../providers/QueryProvider";
 import "./globals.css";
@@ -32,9 +32,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <link rel="icon" href="/favicon.ico" />
-      </head>
       <body
         className={cn(
           "bg-background font-overpass min-h-screen antialiased",

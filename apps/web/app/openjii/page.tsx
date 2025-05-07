@@ -1,7 +1,6 @@
 import { Button } from "@repo/ui/components";
-import Link from "next/link";
 
-export default function Home() {
+export default function OpenJIIHome() {
   return (
     <>
       <h1 className="text-jii-dark-green mb-6 text-4xl font-bold">
@@ -9,11 +8,6 @@ export default function Home() {
       </h1>
       <div className="flex items-center gap-2 py-12">
         <Button>no variant</Button>
-        <Button variant={"destructive"}>destructive</Button>
-        <Button variant={"ghost"}>ghost</Button>
-        <Button variant={"link"}>link</Button>
-        <Button variant={"secondary"}>secondary</Button>
-        <Button variant={"outline"}>outline</Button>
       </div>
       <p className="mb-4 text-lg">
         The world's population is growing, while the area of suitable
@@ -33,11 +27,6 @@ export default function Home() {
           IngenHousz Institute was founded specifically to meet these major
           challenges.
         </p>
-      </div>
-      <div className="p-6">
-        <Link href="/openjii">
-          <Button>Go to the openJII platform</Button>
-        </Link>
       </div>
     </>
   );
