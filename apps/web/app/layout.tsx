@@ -5,6 +5,7 @@ import type React from "react";
 import { cn } from "@repo/ui/lib/utils";
 import { ThemeProvider } from "@repo/ui/components";
 
+import { QueryProvider } from "../providers/QueryProvider";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -44,7 +45,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <QueryProvider>{children}</QueryProvider>
         </ThemeProvider>
       </body>
     </html>
