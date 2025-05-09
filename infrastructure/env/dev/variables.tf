@@ -59,6 +59,10 @@ variable "iot_logging_policy_name" {
   type        = string
 }
 
+variable "iot_cognito_identity_pool_name" {
+  description = "Name for the Cognito Identity Pool"
+  type        = string
+}
 
 variable "databricks_account_id" {
   description = "Databricks Account ID (used as external_id in the assume role policy)"
