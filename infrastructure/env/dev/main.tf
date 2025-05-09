@@ -65,6 +65,12 @@ module "iot_core" {
   cloudwatch_role_arn = module.cloudwatch.iot_cloudwatch_role_arn
 }
 
+module "cognito" {
+  source             = "../../modules/cognito"
+  region             = var.aws_region
+  identity_pool_name = var.iot_cognito_identity_pool_name
+}
+
 module "vpc" {
   source = "../../modules/vpc"
 }
