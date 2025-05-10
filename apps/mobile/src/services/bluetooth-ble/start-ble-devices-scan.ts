@@ -26,13 +26,15 @@ export async function startDeviceScan() {
     { scanMode: ScanMode.LowPower, allowDuplicates: true },
     (error, device) => {
       if (error) {
-        emitter.emit("bluetoothError", error);
+        emitter.emit("bluetoothError", error)
+          .catch(e => console.log('bluetoothError', e));
         return;
       }
       if (!device) {
         return;
       }
-      emitter.emit("bluetoothDeviceFound", device);
+      emitter.emit("bluetoothDeviceFound", device)
+        .catch(e => console.log('bluetoothDeviceFound', e));
     },
   );
 

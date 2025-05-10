@@ -20,6 +20,6 @@ export class MultiSpeqCommandExecutor {
   }
 
   destroy() {
-    this.emitter.emit("destroy");
+    return this.emitter.emit("destroy");
   }
 }

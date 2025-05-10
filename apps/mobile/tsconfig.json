@@ -1,22 +1,33 @@
 {
   "extends": "@repo/typescript-config/base.json",
   "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "node",
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./src/*"]
+      "~/*": [
+        "./src/*"
+      ]
     },
     "jsx": "react-native",
     "checkJs": false,
-    "moduleSuffixes": [".ios", ".android", ".native", ""],
-    "strictNullChecks": true
+    "moduleSuffixes": [
+      ".ios",
+      ".android",
+      ".native",
+      ""
+    ],
+    "strictNullChecks": true,
+    "noImplicitAny": false
   },
   "include": [
     "src",
     "*.ts",
     "*.js",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts",
     "nativewind-env.d.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }
