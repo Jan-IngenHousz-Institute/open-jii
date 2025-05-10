@@ -8,7 +8,7 @@ type ErrorHandler = (
 
 export class Emitter<Events extends Record<string, any>> {
   private handlers = new Map<keyof Events, Set<Handler<any>>>();
-  private history = new Map<keyof Events, Events[keyof Events]>();
+  private history = new Map<keyof Events, Events[keyof Events] | undefined>();
   private errorHandler: ErrorHandler = console.log;
 
   async emit<K extends keyof Events>(

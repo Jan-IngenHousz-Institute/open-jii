@@ -4,7 +4,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 
 import { BluetoothStackNavigator } from "./navigation/bluetooth-stack";
-import { HomeScreen } from "./screens/home-screen";
+// import { HomeScreen } from "./screens/home-screen";
+import { MqttPublishTestScreen } from "./screens/mqtt-publish-test-screen";
 import { SerialPortConnectionScreen } from "./screens/serial-port-connection-screen";
 
 const Tab = createBottomTabNavigator();
@@ -30,7 +31,7 @@ export function App() {
       >
         <Tab.Screen
           name="Home"
-          component={HomeScreen}
+          component={MqttPublishTestScreen}
           options={{
             tabBarLabel: "Home",
           }}

@@ -7,7 +7,7 @@ export async function getBluetoothClassicDevices() {
   await requestBluetoothPermission();
   try {
     await RNBluetoothClassic.cancelDiscovery();
-  } catch (e) {
+  } catch {
     // ignored
   }
   const [connectedDevices, visibleDevices] = await Promise.all([

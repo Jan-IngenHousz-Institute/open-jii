@@ -38,3 +38,4 @@ yarn-error.*
 *.apk
 android
 ios
+.cache

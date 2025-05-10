@@ -21,12 +21,12 @@ export function bluetoothDeviceToMultispeqStream(
       emitter.emit("receivedReplyFromDevice", {
         data: JSON.parse(jsonData),
         checksum,
-      });
+      }).catch(e => console.log('receivedReplyFromDevice', e));
     } catch {
       emitter.emit("receivedReplyFromDevice", {
         data: event.data,
         checksum: "",
-      });
+      }).catch(e => console.log('receivedReplyFromDevice', e));
     }
   });
 
