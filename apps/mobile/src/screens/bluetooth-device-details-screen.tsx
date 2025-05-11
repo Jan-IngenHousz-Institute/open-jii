@@ -8,8 +8,13 @@ import { ResultView } from "../components/result-view";
 import { bluetoothDeviceToMultispeqStream } from "../services/multispeq-communication/android-bluetooth-connection/bluetooth-device-to-multispeq-stream";
 import { connectWithBluetoothDevice } from "../services/multispeq-communication/android-bluetooth-connection/connect-with-bluetooth-device";
 import { MultiSpeqCommandExecutor } from "../services/multispeq-communication/multispeq-command-executor";
+import { createMqttConnection } from "~/services/mqtt/mqtt";
+import { assertEnvVariables } from "~/utils/assert";
 
 const protocol = [{ spad: [1] }];
+const { MQTT_TOPIC: topic } = assertEnvVariables({
+  MQTT_TOPIC: process.env.MQTT_TOPIC
+})
 
 export function BluetoothDeviceDetailsScreen({ route }: any) {
   const { deviceId } = route.params;
@@ -27,6 +32,9 @@ export function BluetoothDeviceDetailsScreen({ route }: any) {
     );
   }, [deviceId]);
 
+  const { result: mqttEmitter, execute: reconnectToMqtt } =
+    useAsync(() => createMqttConnection(), [])
+
   const {
     execute: handleScan,
     loading: isScanning,
@@ -34,6 +42,34 @@ export function BluetoothDeviceDetailsScreen({ route }: any) {
     error: measurementError,
     reset,
   } = useAsyncCallback(() => multispeq?.execute(protocol));
+
+  async function handleScanUpload() {
+    const payload = JSON.stringify(scanResult)
+
+    if (!mqttEmitter) {
+      alert('MQTT connection not established')
+      return;
+    }
+
+    try {
+      await mqttEmitter.emit('sendMessage', { payload, topic })
+      alert('Measurement uploaded!')
+      return;
+    } catch (e: any) {
+      console.log('mqtt error', e)
+      console.log('reconnecting', e.message)
+    }
+
+    await reconnectToMqtt()
+    try {
+      await mqttEmitter.emit('sendMessage', { payload, topic })
+      alert('Measurement uploaded!')
+    } catch (e: any) {
+      console.log('mqtt error', e)
+      alert('Error ' + (e.message ?? 'unknown'))
+    }
+  }
+
 
   if (isConnecting) {
     return <LargeSpinner>Connecting to device...</LargeSpinner>;
@@ -56,6 +92,7 @@ export function BluetoothDeviceDetailsScreen({ route }: any) {
         <ResultView scanResult={scanResult} isScanning={isScanning} />
       </View>
       <BigActionButton onPress={handleScan} text="Start Measurement" />
+      <BigActionButton onPress={handleScanUpload} text="Upload measurement" disabled={!scanResult || !mqttEmitter}/>
     </View>
   );
 }

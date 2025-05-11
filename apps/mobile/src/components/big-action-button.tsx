@@ -1,12 +1,19 @@
 import { Text, TouchableOpacity } from "react-native";
+import clsx from "clsx";
 
-export function BigActionButton({ onPress, text }) {
+export function BigActionButton({ onPress, text, disabled = false }) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="mt-6 w-full items-center rounded-full bg-blue-600 py-6 shadow-lg active:opacity-80"
+      className={clsx(
+        "mt-6 w-full items-center rounded-full py-6 shadow-lg",
+        disabled ? "bg-gray-400" : "bg-blue-600 active:opacity-80"
+      )}
+      disabled={disabled}
     >
-      <Text className="text-2xl font-bold text-white">{text}</Text>
+      <Text className={clsx("text-2xl font-bold", disabled ? "text-gray-200" : "text-white")}>
+        {text}
+      </Text>
     </TouchableOpacity>
   );
 }

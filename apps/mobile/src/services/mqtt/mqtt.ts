@@ -4,10 +4,11 @@ import {
   GetCredentialsForIdentityCommand,
 } from "@aws-sdk/client-cognito-identity";
 import { HmacSHA256, SHA256, enc, lib } from "crypto-js";
-import { Client, Message } from "paho-mqtt";
+import { Client, Message, MQTTError } from "paho-mqtt";
 import "react-native-get-random-values";
 
 import { assertEnvVariables } from "../../utils/assert";
+import { Emitter } from "~/utils/emitter";
 
 function sign(key: string | lib.WordArray, msg: string) {
   return HmacSHA256(msg, key).toString(enc.Hex);
@@ -152,7 +153,7 @@ const {
   CLIENT_ID: process.env.CLIENT_ID,
 });
 
-export async function mqttTest() {
+export async function createMqttConnection() {
   const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials({
     identityPoolId: IDENTITY_POOL_ID,
     region: REGION,
@@ -168,20 +169,31 @@ export async function mqttTest() {
   });
 
   const client = await connectToMqtt(signedUrl, clientId);
-  console.log("Connected to MQTT server", client);
+
+  const emitter = new Emitter<{
+    messageArrived: { payload: string, destinationName: string },
+    connectionLost: MQTTError,
+    sendMessage: { payload: string, topic: string },
+    destroy: void
+  }>()
 
   client.onMessageArrived = (message: Message) => {
-    console.log("Message received:", message.payloadString);
+    const { payloadString: payload, destinationName } = message;
+
+    emitter.emit("messageArrived", { destinationName, payload })
+      .catch(e => console.log('messageArrived error', e));
   };
 
-  client.onConnectionLost = (err: any) => {
-    console.error("Connection lost:", err);
+  client.onConnectionLost = (err) => {
+    emitter.emit("connectionLost", err)
+      .catch(e => console.log('connectionLost error', e));
   };
 
-  client.send(
-    "experiment/data_ingest/v1/test-id/multispeq/v1.0/client-id/spad",
-    JSON.stringify({ ivo: "test from react native" }),
-  );
+  emitter.on('sendMessage', ({ payload, topic }) => {
+    client.send(topic, payload);
+  })
 
-  console.log("message sent");
+  emitter.on('destroy', () => client.disconnect())
+
+  return emitter;
 }
