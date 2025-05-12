@@ -25,7 +25,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  Input, Label, Switch
+  Input, Switch
 } from "@repo/ui/components";
 
 export function CreateExperiment() {
@@ -77,13 +77,13 @@ export function CreateExperiment() {
                 name="visibilityPrivate"
                 render={({ field }) => (
                   <FormItem className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="visibilityPrivate" className="text-right">
-                      Private
-                    </Label>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+                    <FormLabel>Private</FormLabel>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />

@@ -26,3 +26,7 @@ export function getExperiment(id: string) {
   console.log("Getting experiment with id", id, "returning", experiment);
   return experiment;
 }
+
+export function saveExperiment(experiment: Experiment) {
+  console.log("Saving experiment with name", experiment.name);
+}

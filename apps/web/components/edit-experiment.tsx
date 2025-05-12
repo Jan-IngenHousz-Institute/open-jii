@@ -16,6 +16,7 @@ import {
   FormLabel,
   FormMessage, Select, SelectItem, SelectContent, Textarea, SelectValue, SelectTrigger,
 } from "@repo/ui/components";
+import { editExperiment } from "@/util/actions";
 
 interface EditExperimentProps {
   experiment: Experiment;
@@ -31,7 +32,7 @@ export function EditExperiment({ experiment }: EditExperimentProps) {
 
   return (
     <Form {...form}>
-      <form>
+      <form action={editExperiment}>
         <div className="flex flex-1 flex-col gap-3 p-4 pt-0">
             <div className="bg-muted/50 aspect-video rounded-xl">
               <FormField
