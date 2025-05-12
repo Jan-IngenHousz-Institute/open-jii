@@ -29,6 +29,7 @@ import {
 } from "@repo/ui/components";
 
 import { useExperimentCreate } from "../hooks/experiment/useExperimentCreate/useExperimentCreate";
+import type { CreateExperimentBody} from "@repo/api";
 import { zExperimentVisibility } from "@repo/api";
 
 export function CreateExperiment() {
@@ -51,12 +52,14 @@ export function CreateExperiment() {
       // In a real app, you would get this from authentication context
       const userId = "00000000-0000-0000-0000-000000000000";
 
+      const body: CreateExperimentBody = {
+        name: data.name,
+        visibility: data.visibilityPrivate ? zExperimentVisibility.enum.private : zExperimentVisibility.enum.public,
+      };
+
       const result = await createExperiment({
         query: { userId },
-        body: {
-          name: data.name,
-          visibility: data.visibilityPrivate ? zExperimentVisibility.enum.private : zExperimentVisibility.enum.public,
-        },
+        body,
       });
 
       // Close the dialog and navigate to the new experiment

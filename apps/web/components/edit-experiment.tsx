@@ -1,7 +1,7 @@
 "use client";
 
-import type { Experiment} from "@/util/schema";
-import { experimentSchema } from "@/util/schema";
+import type { Experiment } from "@/util/schema";
+import { editExperimentSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
@@ -14,9 +14,12 @@ import {
   FormLabel,
   FormMessage, Select, SelectItem, SelectContent, Textarea, SelectValue, SelectTrigger,
 } from "@repo/ui/components";
-import { editExperiment } from "@/util/actions";
+import type { UpdateExperimentBody} from "@repo/api";
 import { zExperimentStatus, zExperimentVisibility } from "@repo/api";
 import { useExperiment } from "../hooks/experiment/useExperiment/useExperiment";
+import type z from "zod";
+import { router } from "next/client";
+import { useExperimentUpdate } from "../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 
 interface EditExperimentProps {
   experimentId: string;
@@ -46,16 +49,46 @@ interface EditExperimentFormProps {
 }
 
 export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
+  const { mutateAsync: updateExperiment } = useExperimentUpdate();
+
   const form = useForm<Experiment>({
-    resolver: zodResolver(experimentSchema),
+    resolver: zodResolver(editExperimentSchema),
     defaultValues: {
       ...experiment,
     },
   });
 
+  async function onSubmit(data: z.infer<typeof editExperimentSchema>) {
+    try {
+      // Generate a random userId for demo purposes
+      // In a real app, you would get this from authentication context
+      const userId = "00000000-0000-0000-0000-000000000000";
+
+      const body: UpdateExperimentBody = {
+        name: data.name,
+        description: data.description,
+        status: data.status,
+        visibility: data.visibility,
+        embargoIntervalDays: data.embargoIntervalDays,
+      };
+
+      const result = await updateExperiment({
+        params: { id: experiment.id, },
+        query: { userId },
+        body,
+      });
+
+      // Navigate to the list of experiments
+      //router.push(`/openjii/experiments`);
+      await router.push(`/openjii/experiments/${result.body.id}`);
+    } catch (error) {
+      console.error("Failed to update experiment:", error);
+    }
+  }
+
   return (
     <Form {...form}>
-      <form action={editExperiment}>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
         <div className="flex flex-1 flex-col gap-3 p-4 pt-0">
             <div className="bg-muted/50 aspect-video rounded-xl">
               <FormField
