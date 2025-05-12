@@ -2,9 +2,11 @@ import z from "zod";
 
 export const experimentSchema = z.object({
   id: z.string(),
-  name: z.string(),
-  private: z.boolean(),
-  description: z.string().optional(),
+  name: z.string().min(2).max(255),
+  description: z.string(),
+  status: z.string(),
+  visibility: z.boolean(),
+  embargoIntervalDays: z.number().default(90),
 });
 
 export type Experiment = z.infer<typeof experimentSchema>;

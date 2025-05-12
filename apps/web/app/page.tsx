@@ -1,5 +1,10 @@
 import { Button } from "@repo/ui/components";
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Jan IngenHousz Institute",
+}
 
 export default function Home() {
   return (

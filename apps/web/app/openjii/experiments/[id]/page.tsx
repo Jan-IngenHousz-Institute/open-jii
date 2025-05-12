@@ -1,11 +1,27 @@
 import { NewExperiment } from "@/components/app-new-experiment";
 import { getExperiment } from "@/util/experiments";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { AppLayout } from "@/components/app-layout";
+
+type ParamsType = Promise<{ id: string }>;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: ParamsType;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const experiment = getExperiment(id);
+  return {
+    title: experiment ? experiment.name : "Experiment",
+  };
+}
 
 export default async function ExperimentPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: ParamsType
 }) {
   const { id } = await params;
   const experiment = getExperiment(id);
@@ -13,8 +29,8 @@ export default async function ExperimentPage({
     notFound();
   }
   return (
-    <>
+    <AppLayout pageTitle={experiment.name}>
       <NewExperiment experiment={experiment} />
-    </>
+    </AppLayout>
   );
 }

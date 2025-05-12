@@ -15,9 +15,9 @@ export function createExperiment(createExperiment: CreateExperiment) {
 export function getExperiment(id: string) {
   const experiment: Experiment = {
     id: fixedId,
-    name: "Test Experiment",
+    name: `Test Experiment ${crypto.randomUUID()}`,
     private: true,
-    description: "Test Experiment Description",
+    description: `Test Experiment Description ${crypto.randomUUID()}`,
   };
   if (id != fixedId) return undefined;
   console.log("Getting experiment with id", id, "returning", experiment);
