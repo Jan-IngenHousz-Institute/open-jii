@@ -1,7 +1,7 @@
 "use client";
 
-import type { Experiment } from "@/util/schema";
-import { editExperimentSchema } from "@/util/schema";
+import type { ExperimentForm } from "@/util/schema";
+import { editExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
@@ -32,7 +32,7 @@ export function EditExperiment({ experimentId }: EditExperimentProps) {      // 
   const { data } = useExperiment(experimentId, userId);
 
   if (data) {
-    const experiment: Experiment = {
+    const experiment: ExperimentForm = {
       id: experimentId,
       name: data.body.name,
       description: data.body.description ?? "",
@@ -45,20 +45,20 @@ export function EditExperiment({ experimentId }: EditExperimentProps) {      // 
 }
 
 interface EditExperimentFormProps {
-  experiment: Experiment;
+  experiment: ExperimentForm;
 }
 
 export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
   const { mutateAsync: updateExperiment } = useExperimentUpdate();
 
-  const form = useForm<Experiment>({
-    resolver: zodResolver(editExperimentSchema),
+  const form = useForm<ExperimentForm>({
+    resolver: zodResolver(editExperimentFormSchema),
     defaultValues: {
       ...experiment,
     },
   });
 
-  async function onSubmit(data: z.infer<typeof editExperimentSchema>) {
+  async function onSubmit(data: z.infer<typeof editExperimentFormSchema>) {
     try {
       // Generate a random userId for demo purposes
       // In a real app, you would get this from authentication context

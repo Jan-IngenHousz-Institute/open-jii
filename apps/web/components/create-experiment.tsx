@@ -1,6 +1,6 @@
 "use client";
 
-import { createExperimentSchema } from "@/util/schema";
+import { createExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
@@ -38,15 +38,15 @@ export function CreateExperiment() {
   const [open, setOpen] = useState(false);
   const { mutateAsync: createExperiment, isPending } = useExperimentCreate();
 
-  const form = useForm<z.output<typeof createExperimentSchema>>({
-    resolver: zodResolver(createExperimentSchema),
+  const form = useForm<z.output<typeof createExperimentFormSchema>>({
+    resolver: zodResolver(createExperimentFormSchema),
     defaultValues: {
       name: "",
       visibilityPrivate: true,
     },
   });
 
-  async function onSubmit(data: z.infer<typeof createExperimentSchema>) {
+  async function onSubmit(data: z.infer<typeof createExperimentFormSchema>) {
     try {
       // Generate a random userId for demo purposes
       // In a real app, you would get this from authentication context
