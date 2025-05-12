@@ -1,10 +1,9 @@
 "use client";
 
-import { createExperiment } from "@/util/experiments";
 import { createExperimentSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { redirect } from "next/navigation";
-import { useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import type z from "zod";
 
@@ -25,11 +24,17 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  Input, Switch
+  Input,
+  Switch,
 } from "@repo/ui/components";
+
+import { useExperimentCreate } from "../hooks/experiment/useExperimentCreate/useExperimentCreate";
 
 export function CreateExperiment() {
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const { mutateAsync: createExperiment, isPending } = useExperimentCreate();
 
   const form = useForm<z.output<typeof createExperimentSchema>>({
     resolver: zodResolver(createExperimentSchema),
@@ -39,13 +44,30 @@ export function CreateExperiment() {
     },
   });
 
-  function onSubmit(data: z.infer<typeof createExperimentSchema>) {
-    const id = createExperiment(data);
-    redirect(`/openjii/experiments/${id}`);
+  async function onSubmit(data: z.infer<typeof createExperimentSchema>) {
+    try {
+      // Generate a random userId for demo purposes
+      // In a real app, you would get this from authentication context
+      const userId = "00000000-0000-0000-0000-000000000000";
+
+      const result = await createExperiment({
+        query: { userId },
+        body: {
+          name: data.name,
+          visibility: data.visibilityPrivate ? "private" : "public",
+        },
+      });
+
+      // Close the dialog and navigate to the new experiment
+      setOpen(false);
+      router.push(`/openjii/experiments/${result.body.id}`);
+    } catch (error) {
+      console.error("Failed to create experiment:", error);
+    }
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline">Create Experiment</Button>
       </DialogTrigger>
@@ -89,7 +111,9 @@ export function CreateExperiment() {
               />
             </div>
             <DialogFooter>
-              <Button type="submit">Continue</Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? "Creating..." : "Continue"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
