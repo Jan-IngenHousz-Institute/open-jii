@@ -8,12 +8,13 @@ import { ResultView } from "../components/result-view";
 import { openSerialPortConnection } from "../services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
 import { serialPortToMultispeqStream } from "../services/multispeq-communication/android-serial-port-connection/serial-port-to-multispeq-stream";
 import { MultiSpeqCommandExecutor } from "../services/multispeq-communication/multispeq-command-executor";
-import {createMqttConnection} from "~/services/mqtt/mqtt";
 import {assertEnvVariables} from "~/utils/assert";
+import {useMqttConnection} from "~/services/mqtt/useMqttConnection";
 
 const protocol = [{ spad: [1] }];
-const { MQTT_TOPIC: topic } = assertEnvVariables({
-  MQTT_TOPIC: process.env.MQTT_TOPIC
+const { MQTT_TOPIC: topic, CLIENT_ID: clientId } = assertEnvVariables({
+  MQTT_TOPIC: process.env.MQTT_TOPIC,
+    CLIENT_ID: process.env.CLIENT_ID,
 })
 
 export function SerialPortConnectionScreen() {
@@ -29,10 +30,7 @@ export function SerialPortConnectionScreen() {
     );
   }, []);
 
-  const { result: mqttEmitter, execute: reconnectToMqtt } =
-      useAsync(() => createMqttConnection(), [])
-
-
+  const { mqttEmitter} = useMqttConnection(clientId);
   const {
     execute: handleScan,
     loading: isScanning,
@@ -45,7 +43,6 @@ export function SerialPortConnectionScreen() {
         .catch(e => console.log('multispeq connection destroy failed', e));
     }
   });
-
   async function handleScanUpload() {
     const payload = JSON.stringify(scanResult)
 
@@ -58,15 +55,6 @@ export function SerialPortConnectionScreen() {
       await mqttEmitter.emit('sendMessage', { payload, topic })
       alert('Measurement uploaded!')
       return;
-    } catch (e: any) {
-      console.log('mqtt error', e)
-      console.log('reconnecting', e.message)
-    }
-
-    await reconnectToMqtt()
-    try {
-      await mqttEmitter.emit('sendMessage', { payload, topic })
-      alert('Measurement uploaded!')
     } catch (e: any) {
       console.log('mqtt error', e)
       alert('Error ' + (e.message ?? 'unknown'))

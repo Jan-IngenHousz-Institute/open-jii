@@ -7,7 +7,7 @@ import { HmacSHA256, SHA256, enc, lib } from "crypto-js";
 import { Client, Message, MQTTError } from "paho-mqtt";
 import "react-native-get-random-values";
 
-import { assertEnvVariables } from "../../utils/assert";
+import { assertEnvVariables } from "~/utils/assert";
 import { Emitter } from "~/utils/emitter";
 
 function sign(key: string | lib.WordArray, msg: string) {
@@ -153,14 +153,22 @@ const {
   CLIENT_ID: process.env.CLIENT_ID,
 });
 
-export async function createMqttConnection() {
+export interface MqttEmitterEvents {
+  messageArrived: { payload: string, destinationName: string },
+  connectionLost: MQTTError,
+  sendMessage: { payload: string, topic: string },
+  destroy: void
+}
+
+export async function createMqttConnection(customClientId?: string) {
   const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials({
     identityPoolId: IDENTITY_POOL_ID,
     region: REGION,
   });
+  const effectiveClientId = customClientId ?? clientId;
 
   const signedUrl = createSignedUrl({
-    clientId,
+    clientId: effectiveClientId,
     accessKeyId,
     secretAccessKey,
     sessionToken,
@@ -168,14 +176,9 @@ export async function createMqttConnection() {
     endpoint: IOT_ENDPOINT,
   });
 
-  const client = await connectToMqtt(signedUrl, clientId);
+  const client = await connectToMqtt(signedUrl, effectiveClientId);
 
-  const emitter = new Emitter<{
-    messageArrived: { payload: string, destinationName: string },
-    connectionLost: MQTTError,
-    sendMessage: { payload: string, topic: string },
-    destroy: void
-  }>()
+  const emitter = new Emitter<MqttEmitterEvents>()
 
   client.onMessageArrived = (message: Message) => {
     const { payloadString: payload, destinationName } = message;
@@ -193,7 +196,10 @@ export async function createMqttConnection() {
     client.send(topic, payload);
   })
 
-  emitter.on('destroy', () => client.disconnect())
+  emitter.on('destroy', () => client.disconnect()
+  )
 
-  return emitter;
+  return Object.assign(emitter, {
+    isConnected: () => client.isConnected()
+  });
 }

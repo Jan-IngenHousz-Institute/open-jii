@@ -7,11 +7,14 @@ import { BluetoothStackNavigator } from "./navigation/bluetooth-stack";
 // import { HomeScreen } from "./screens/home-screen";
 import { MqttPublishTestScreen } from "./screens/mqtt-publish-test-screen";
 import { SerialPortConnectionScreen } from "./screens/serial-port-connection-screen";
+import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 
 const Tab = createBottomTabNavigator();
+const queryClient = new QueryClient()
 
 export function App() {
   return (
+  <QueryClientProvider client={queryClient}>
     <NavigationContainer>
       <Tab.Navigator
         initialRouteName="Home"
@@ -49,5 +52,6 @@ export function App() {
       </Tab.Navigator>
       <StatusBar style="auto" />
     </NavigationContainer>
+  </QueryClientProvider>
   );
 }

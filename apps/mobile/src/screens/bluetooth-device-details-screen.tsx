@@ -8,12 +8,13 @@ import { ResultView } from "../components/result-view";
 import { bluetoothDeviceToMultispeqStream } from "../services/multispeq-communication/android-bluetooth-connection/bluetooth-device-to-multispeq-stream";
 import { connectWithBluetoothDevice } from "../services/multispeq-communication/android-bluetooth-connection/connect-with-bluetooth-device";
 import { MultiSpeqCommandExecutor } from "../services/multispeq-communication/multispeq-command-executor";
-import { createMqttConnection } from "~/services/mqtt/mqtt";
 import { assertEnvVariables } from "~/utils/assert";
+import {useMqttConnection} from "~/services/mqtt/useMqttConnection";
 
 const protocol = [{ spad: [1] }];
-const { MQTT_TOPIC: topic } = assertEnvVariables({
-  MQTT_TOPIC: process.env.MQTT_TOPIC
+const { MQTT_TOPIC: topic, CLIENT_ID: clientId } = assertEnvVariables({
+  MQTT_TOPIC: process.env.MQTT_TOPIC,
+  CLIENT_ID: process.env.CLIENT_ID,
 })
 
 export function BluetoothDeviceDetailsScreen({ route }: any) {
@@ -32,8 +33,7 @@ export function BluetoothDeviceDetailsScreen({ route }: any) {
     );
   }, [deviceId]);
 
-  const { result: mqttEmitter, execute: reconnectToMqtt } =
-    useAsync(() => createMqttConnection(), [])
+  const { mqttEmitter} = useMqttConnection(clientId);
 
   const {
     execute: handleScan,
@@ -55,15 +55,6 @@ export function BluetoothDeviceDetailsScreen({ route }: any) {
       await mqttEmitter.emit('sendMessage', { payload, topic })
       alert('Measurement uploaded!')
       return;
-    } catch (e: any) {
-      console.log('mqtt error', e)
-      console.log('reconnecting', e.message)
-    }
-
-    await reconnectToMqtt()
-    try {
-      await mqttEmitter.emit('sendMessage', { payload, topic })
-      alert('Measurement uploaded!')
     } catch (e: any) {
       console.log('mqtt error', e)
       alert('Error ' + (e.message ?? 'unknown'))
