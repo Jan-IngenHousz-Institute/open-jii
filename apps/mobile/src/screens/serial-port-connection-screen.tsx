@@ -9,7 +9,6 @@ import { openSerialPortConnection } from "../services/multispeq-communication/an
 import { serialPortToMultispeqStream } from "../services/multispeq-communication/android-serial-port-connection/serial-port-to-multispeq-stream";
 import { MultiSpeqCommandExecutor } from "../services/multispeq-communication/multispeq-command-executor";
 import {assertEnvVariables} from "~/utils/assert";
-import {useMqttConnection} from "~/services/mqtt/useMqttConnection";
 
 const protocol = [{ spad: [1] }];
 const { MQTT_TOPIC: topic, CLIENT_ID: clientId } = assertEnvVariables({
@@ -30,7 +29,7 @@ export function SerialPortConnectionScreen() {
     );
   }, []);
 
-  const { mqttEmitter} = useMqttConnection(clientId);
+
   const {
     execute: handleScan,
     loading: isScanning,
@@ -46,19 +45,19 @@ export function SerialPortConnectionScreen() {
   async function handleScanUpload() {
     const payload = JSON.stringify(scanResult)
 
-    if (!mqttEmitter) {
-      alert('MQTT connection not established')
-      return;
-    }
+    // if (!mqttEmitter) {
+    //   alert('MQTT connection not established')
+    //   return;
+    // }
 
-    try {
-      await mqttEmitter.emit('sendMessage', { payload, topic })
-      alert('Measurement uploaded!')
-      return;
-    } catch (e: any) {
-      console.log('mqtt error', e)
-      alert('Error ' + (e.message ?? 'unknown'))
-    }
+    // try {
+    //   await mqttEmitter.emit('sendMessage', { payload, topic })
+    //   alert('Measurement uploaded!')
+    //   return;
+    // } catch (e: any) {
+    //   console.log('mqtt error', e)
+    //   alert('Error ' + (e.message ?? 'unknown'))
+    // }
   }
 
   if (isConnecting) {
@@ -82,7 +81,7 @@ export function SerialPortConnectionScreen() {
         <ResultView scanResult={scanResult} isScanning={isScanning} />
       </View>
       <BigActionButton onPress={handleScan} text="Start Measurement" />
-      <BigActionButton onPress={handleScanUpload} text="Upload measurement" disabled={!scanResult || !mqttEmitter}/>
+      {/*<BigActionButton onPress={handleScanUpload} text="Upload measurement" disabled={!scanResult || !mqttEmitter}/>*/}
     </View>
   );
 }

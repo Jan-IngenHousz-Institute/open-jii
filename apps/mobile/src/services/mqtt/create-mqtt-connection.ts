@@ -153,22 +153,27 @@ const {
   CLIENT_ID: process.env.CLIENT_ID,
 });
 
+export interface ReceivedMessage {
+  payload: string,
+  destinationName: string
+}
+
 export interface MqttEmitterEvents {
-  messageArrived: { payload: string, destinationName: string },
+  messageArrived: ReceivedMessage,
   connectionLost: MQTTError,
   sendMessage: { payload: string, topic: string },
   destroy: void
+  messageDelivered: ReceivedMessage,
 }
 
-export async function createMqttConnection(customClientId?: string) {
+export async function createMqttConnection() {
   const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials({
     identityPoolId: IDENTITY_POOL_ID,
     region: REGION,
   });
-  const effectiveClientId = customClientId ?? clientId;
 
   const signedUrl = createSignedUrl({
-    clientId: effectiveClientId,
+    clientId,
     accessKeyId,
     secretAccessKey,
     sessionToken,
@@ -176,7 +181,7 @@ export async function createMqttConnection(customClientId?: string) {
     endpoint: IOT_ENDPOINT,
   });
 
-  const client = await connectToMqtt(signedUrl, effectiveClientId);
+  const client = await connectToMqtt(signedUrl, clientId);
 
   const emitter = new Emitter<MqttEmitterEvents>()
 
@@ -196,10 +201,12 @@ export async function createMqttConnection(customClientId?: string) {
     client.send(topic, payload);
   })
 
-  emitter.on('destroy', () => client.disconnect()
-  )
+  emitter.on('destroy', () => client.disconnect());
 
-  return Object.assign(emitter, {
-    isConnected: () => client.isConnected()
-  });
+  client.onMessageDelivered = (message) => {
+    const { payloadString: payload, destinationName } = message;
+    emitter.emit('messageDelivered', { payload, destinationName });
+  }
+
+  return emitter;
 }
