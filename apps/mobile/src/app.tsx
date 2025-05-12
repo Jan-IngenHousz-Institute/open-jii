@@ -48,7 +48,7 @@ export function App() {
             options={{ tabBarLabel: "Serial Port" }}
           />
         </Tab.Navigator>
-        <StatusBar style="auto" />
+        <StatusBar style="dark" backgroundColor="white" translucent={false} />
       </NavigationContainer>
     </ToastProvider>
   );
