@@ -35,7 +35,7 @@ export function CreateExperiment() {
     resolver: zodResolver(createExperimentSchema),
     defaultValues: {
       name: "",
-      private: true,
+      visibilityPrivate: true,
     },
   });
 
@@ -74,10 +74,10 @@ export function CreateExperiment() {
               />
               <FormField
                 control={form.control}
-                name="private"
+                name="visibilityPrivate"
                 render={({ field }) => (
                   <FormItem className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="private" className="text-right">
+                    <Label htmlFor="visibilityPrivate" className="text-right">
                       Private
                     </Label>
                     <Switch

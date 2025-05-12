@@ -1,4 +1,4 @@
-import { NewExperiment } from "@/components/app-new-experiment";
+import { EditExperiment } from "@/components/edit-experiment";
 import { getExperiment } from "@/util/experiments";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -30,7 +30,7 @@ export default async function ExperimentPage({
   }
   return (
     <AppLayout pageTitle={experiment.name}>
-      <NewExperiment experiment={experiment} />
+      <EditExperiment experiment={experiment} />
     </AppLayout>
   );
 }
