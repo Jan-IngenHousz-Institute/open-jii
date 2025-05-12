@@ -6,7 +6,7 @@ import React, {
   useCallback,
   ReactNode,
 } from "react";
-import { Animated, Text, View } from "react-native";
+import { Animated, Text } from "react-native";
 import clsx from "clsx";
 
 type ToastType = "success" | "error";

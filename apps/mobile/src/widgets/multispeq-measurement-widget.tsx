@@ -10,6 +10,7 @@ import { MultiSpeqCommandExecutor } from "../services/multispeq-communication/mu
 import { sendMqttEvent } from "../services/mqtt/send-mqtt-event";
 import { assertEnvVariables } from "~/utils/assert";
 import { useToast } from "../components/toast-provider";
+import {prettifyErrorMessages} from "~/utils/prettify-error-messages";
 
 const { MQTT_TOPIC: topic } = assertEnvVariables({
   MQTT_TOPIC: process.env.MQTT_TOPIC,
@@ -17,9 +18,9 @@ const { MQTT_TOPIC: topic } = assertEnvVariables({
 
 const protocol = [{ spad: [1] }];
 
-type Props = {
+interface Props {
   establishDeviceConnection: () => Promise<MultiSpeqCommandExecutor>;
-};
+}
 
 export function MultispeqMeasurementWidget({ establishDeviceConnection }: Props) {
   const { showToast } = useToast();
@@ -29,7 +30,14 @@ export function MultispeqMeasurementWidget({ establishDeviceConnection }: Props)
     loading: isConnecting,
     error: connectionError,
     execute: reconnect,
-  } = useAsync(establishDeviceConnection, []);
+  } = useAsync(async () => {
+    try {
+      await multispeq?.destroy();
+    } catch {
+      // ignored
+    }
+    return await establishDeviceConnection()
+  }, []);
 
   const {
     execute: handleScan,
@@ -59,13 +67,17 @@ export function MultispeqMeasurementWidget({ establishDeviceConnection }: Props)
     return <LargeSpinner>Connecting to device...</LargeSpinner>;
   }
 
+  const handleReconnect = async () => {
+    reset();
+    await reconnect();
+  }
   const error = connectionError ?? measurementError;
 
   if (error || !multispeq) {
     return (
-      <View className="flex-1 items-center justify-center bg-white px-4">
-        <ErrorView error={error ?? "Cannot connect"} />
-        <BigActionButton onPress={reconnect} text="Connect" />
+      <View className="w-full flex-1 justify-between bg-white p-4">
+        <ErrorView error={prettifyErrorMessages(error ?? "Cannot connect")} />
+        <BigActionButton onPress={handleReconnect} text="Connect" />
       </View>
     );
   }

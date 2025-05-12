@@ -32,10 +32,11 @@ export function hexToString(hex: string) {
 
 export async function openSerialPortConnection() {
   const devices = await UsbSerialManager.list();
+
   console.log("devices", devices);
   const [device] = devices;
   if (!device) {
-    throw new Error("device not found");
+    throw new Error("PhotosynQ device not detected. Please reconnect the device and try again.");
   }
   const { deviceId } = device;
   while (true) {

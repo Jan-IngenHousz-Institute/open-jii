@@ -13,8 +13,8 @@ export function SerialPortConnectionScreen() {
   return (
     <MultispeqMeasurementWidget
       establishDeviceConnection={async () => {
-        const port = await openSerialPortConnection();
-        return new MultiSpeqCommandExecutor(serialPortToMultispeqStream(port));
+        const serialPortEventsEmitter = await openSerialPortConnection();
+        return new MultiSpeqCommandExecutor(serialPortToMultispeqStream(serialPortEventsEmitter));
       }}
     />
   );
