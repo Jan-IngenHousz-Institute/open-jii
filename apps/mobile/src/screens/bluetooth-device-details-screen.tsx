@@ -52,7 +52,7 @@ export function BluetoothDeviceDetailsScreen({ route }: any) {
       await sendMqttEvent(topic, scanResult)
       showToast('Measurement uploaded!')
     } catch (e: any) {
-      showToast('Error. Please try again.', 'error')
+      showToast("Please check your internet connection and try again.", 'error')
     }
 
   })
