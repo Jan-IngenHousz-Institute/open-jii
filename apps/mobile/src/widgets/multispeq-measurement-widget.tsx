@@ -45,7 +45,14 @@ export function MultispeqMeasurementWidget({ establishDeviceConnection }: Props)
     result: scanResult,
     error: measurementError,
     reset,
-  } = useAsyncCallback(() => multispeq?.execute(protocol));
+  } = useAsyncCallback(async () =>{
+    try {
+      return await multispeq?.execute(protocol);
+    } catch (e) {
+      console.log("Error executing command", e);
+      throw Error("Scan failed, try reconnecting your PhotosynQ device.");
+    }
+  });
 
   const {
     execute: handleScanUpload,

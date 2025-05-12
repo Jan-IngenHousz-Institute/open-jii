@@ -4,6 +4,9 @@ export function prettifyErrorMessages(error: string | Error) {
   if (msg.toLowerCase() === 'send failed') {
     return 'Please connect or reconnect your PhotosynQ device.';
   }
+  if (msg.toLowerCase() === 'device not found') {
+    return 'Please connect or reconnect your PhotosynQ device.';
+  }
 
   return msg
 }
