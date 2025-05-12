@@ -59,7 +59,6 @@ runs:
         AFFECTED_APPS=$(jq -r '[.tasks[] | .package] | unique' affected.json)
                 
         # Store the affected apps for output
-        #echo "affected_apps=${AFFECTED_APPS}" >> $GITHUB_OUTPUT
         echo "affected_apps=$(echo $AFFECTED_APPS | jq -c .)" >> $GITHUB_OUTPUT
 
 
@@ -92,38 +91,38 @@ runs:
         echo "Running: $BUILD_CMD"
         eval "$BUILD_CMD"
 
-    # - name: Lint Code
-    #   if: steps.check.outputs.has_affected_apps == 'true'
-    #   shell: bash
-    #   run: |
-    #     echo "🔎 Linting affected packages"
-    #     # Lint command with individual --filter flags for each package
-    #     LINT_CMD="pnpm turbo run lint"
-    #     cat affected_apps.json | jq -r '.[]' | while read -r APP; do
-    #       LINT_CMD="$LINT_CMD --filter=$APP"
-    #     done
-    #     echo "Running: $LINT_CMD"
-    #     eval "$LINT_CMD"
+    - name: Lint Code
+      if: steps.check.outputs.has_affected_apps == 'true'
+      shell: bash
+      run: |
+        echo "🔎 Linting affected packages"
+        # Lint command with individual --filter flags for each package
+        LINT_CMD="pnpm turbo run lint"
+        cat affected_apps.json | jq -r '.[]' | while read -r APP; do
+          LINT_CMD="$LINT_CMD --filter=$APP"
+        done
+        echo "Running: $LINT_CMD"
+        eval "$LINT_CMD"
 
-    # - name: Run Tests
-    #   if: steps.check.outputs.has_affected_apps == 'true'
-    #   shell: bash
-    #   run: |
-    #     echo "🧪 Testing affected packages"
-    #     # Test command with individual --filter flags for each package
-    #     TEST_CMD="pnpm turbo run test"
-    #     cat affected_apps.json | jq -r '.[]' | while read -r APP; do
-    #       TEST_CMD="$TEST_CMD --filter=$APP"
-    #     done
-    #     echo "Running: $TEST_CMD"
-    #     eval "$TEST_CMD"
+    - name: Run Tests
+      if: steps.check.outputs.has_affected_apps == 'true'
+      shell: bash
+      run: |
+        echo "🧪 Testing affected packages"
+        # Test command with individual --filter flags for each package
+        TEST_CMD="pnpm turbo run test"
+        cat affected_apps.json | jq -r '.[]' | while read -r APP; do
+          TEST_CMD="$TEST_CMD --filter=$APP"
+        done
+        echo "Running: $TEST_CMD"
+        eval "$TEST_CMD"
 
-    # - name: Generate AsyncAPI HTML
-    #   if: steps.check.outputs.has_affected_apps == 'true'
-    #   shell: bash
-    #   run: |
-    #     echo "📄 Generating AsyncAPI documentation"
-    #     pnpm run asyncapi:html
+    - name: Generate AsyncAPI HTML
+      if: steps.check.outputs.has_affected_apps == 'true'
+      shell: bash
+      run: |
+        echo "📄 Generating AsyncAPI documentation"
+        pnpm run asyncapi:html
 
     - name: Collect Build Artifacts
       if: steps.check.outputs.has_affected_apps == 'true'
