@@ -50,7 +50,7 @@ export function MultispeqMeasurementWidget({ establishDeviceConnection }: Props)
       await sendMqttEvent(topic, scanResult);
       showToast("Measurement uploaded!", "success");
     } catch (e: any) {
-      console.error("Upload failed", e);
+      console.log("Upload failed", e);
       showToast("Please check your internet connection and try again.", "error");
     }
   });
