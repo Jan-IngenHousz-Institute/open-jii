@@ -1,4 +1,4 @@
-name: Refine/Deployment Template
+name: Deployment Template
 
 on:
   workflow_call:
