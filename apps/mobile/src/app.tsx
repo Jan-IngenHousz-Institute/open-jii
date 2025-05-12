@@ -4,17 +4,14 @@ import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 
 import { BluetoothStackNavigator } from "./navigation/bluetooth-stack";
-import { SerialPortConnectionScreen } from "./screens/serial-port-connection-screen";
-import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {HomeScreen} from "~/screens/home-screen";
 import { ToastProvider } from "./components/toast-provider";
+import { SerialPortConnectionScreen } from "./screens/serial-port-connection-screen";
 
 const Tab = createBottomTabNavigator();
-const queryClient = new QueryClient()
 
 export function App() {
   return (
-  <QueryClientProvider client={queryClient}>
     <ToastProvider>
       <NavigationContainer>
         <Tab.Navigator
@@ -54,6 +51,5 @@ export function App() {
         <StatusBar style="auto" />
       </NavigationContainer>
     </ToastProvider>
-  </QueryClientProvider>
   );
 }

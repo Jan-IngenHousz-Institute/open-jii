@@ -1,87 +1,22 @@
-import { useAsync, useAsyncCallback } from "react-async-hook";
-import { View } from "react-native";
-
-import { BigActionButton } from "../components/big-action-button";
-import { ErrorView } from "../components/error-view";
-import { LargeSpinner } from "../components/large-spinner";
-import { ResultView } from "../components/result-view";
-import { openSerialPortConnection } from "../services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
-import { serialPortToMultispeqStream } from "../services/multispeq-communication/android-serial-port-connection/serial-port-to-multispeq-stream";
 import { MultiSpeqCommandExecutor } from "../services/multispeq-communication/multispeq-command-executor";
-import {assertEnvVariables} from "~/utils/assert";
+import { MultispeqMeasurementWidget } from "~/widgets/multispeq-measurement-widget";
+import {
+  openSerialPortConnection
+} from "~/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
+import {
+  serialPortToMultispeqStream
+} from "~/services/multispeq-communication/android-serial-port-connection/serial-port-to-multispeq-stream";
 
-const protocol = [{ spad: [1] }];
-const { MQTT_TOPIC: topic, CLIENT_ID: clientId } = assertEnvVariables({
-  MQTT_TOPIC: process.env.MQTT_TOPIC,
-    CLIENT_ID: process.env.CLIENT_ID,
-})
+
 
 export function SerialPortConnectionScreen() {
-  const {
-    result: multispeq,
-    loading: isConnecting,
-    error: connectionError,
-    execute: handleReconnect,
-  } = useAsync(async () => {
-    reset();
-    return new MultiSpeqCommandExecutor(
-      serialPortToMultispeqStream(await openSerialPortConnection()),
-    );
-  }, []);
-
-
-  const {
-    execute: handleScan,
-    loading: isScanning,
-    result: scanResult,
-    error: measurementError,
-    reset,
-  } = useAsyncCallback(() => multispeq?.execute(protocol), {
-    onError: () => {
-      multispeq?.destroy()
-        .catch(e => console.log('multispeq connection destroy failed', e));
-    }
-  });
-  async function handleScanUpload() {
-    const payload = JSON.stringify(scanResult)
-
-    // if (!mqttEmitter) {
-    //   alert('MQTT connection not established')
-    //   return;
-    // }
-
-    // try {
-    //   await mqttEmitter.emit('sendMessage', { payload, topic })
-    //   alert('Measurement uploaded!')
-    //   return;
-    // } catch (e: any) {
-    //   console.log('mqtt error', e)
-    //   alert('Error ' + (e.message ?? 'unknown'))
-    // }
-  }
-
-  if (isConnecting) {
-    return <LargeSpinner>Connecting to device...</LargeSpinner>;
-  }
-
-  const error = connectionError ?? measurementError;
-
-  if (error || !multispeq) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white px-4">
-        <ErrorView error={error ?? "Cannot connect"} />
-        <BigActionButton onPress={handleReconnect} text="Connect" />
-      </View>
-    );
-  }
-
   return (
-    <View className="w-full flex-1 justify-between bg-white p-4">
-      <View className="w-full flex-[2] items-center justify-center rounded-2xl border border-gray-300 bg-gray-50 p-4 shadow-md">
-        <ResultView scanResult={scanResult} isScanning={isScanning} />
-      </View>
-      <BigActionButton onPress={handleScan} text="Start Measurement" />
-      {/*<BigActionButton onPress={handleScanUpload} text="Upload measurement" disabled={!scanResult || !mqttEmitter}/>*/}
-    </View>
+    <MultispeqMeasurementWidget
+      establishDeviceConnection={async () => {
+        const port = await openSerialPortConnection();
+        return new MultiSpeqCommandExecutor(serialPortToMultispeqStream(port));
+      }}
+    />
   );
 }
+
