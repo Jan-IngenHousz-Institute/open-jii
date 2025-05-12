@@ -29,6 +29,7 @@ import {
 } from "@repo/ui/components";
 
 import { useExperimentCreate } from "../hooks/experiment/useExperimentCreate/useExperimentCreate";
+import { zExperimentVisibility } from "@repo/api";
 
 export function CreateExperiment() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -54,7 +55,7 @@ export function CreateExperiment() {
         query: { userId },
         body: {
           name: data.name,
-          visibility: data.visibilityPrivate ? "private" : "public",
+          visibility: data.visibilityPrivate ? zExperimentVisibility.enum.private : zExperimentVisibility.enum.public,
         },
       });
 

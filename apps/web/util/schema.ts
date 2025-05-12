@@ -1,18 +1,5 @@
 import z from "zod";
-
-export enum ExperimentStatus {
-  "provisioning"= "provisioning",
-  "provisioning_failed" = "provisioning_failed",
-  "active" = "active",
-  "stale" = "stale",
-  "archived" = "archived",
-  "published" = "published",
-}
-
-export enum ExperimentVisibility {
-  "private" = "private",
-  "public" = "public",
-}
+import { zExperimentStatus, zExperimentVisibility } from "@repo/api";
 
 export const experimentSchema = z.object({
   id: z.string(),
@@ -22,20 +9,14 @@ export const experimentSchema = z.object({
     message: "Name must be maximum 255 characters.",
   }),
   description: z.string(),
-  status: z.nativeEnum(ExperimentStatus),
-  visibility: z.nativeEnum(ExperimentVisibility),
+  status: zExperimentStatus,
+  visibility: zExperimentVisibility,
   embargoIntervalDays: z.number(),
 });
 
 export type Experiment = z.infer<typeof experimentSchema>;
 
 export const createExperimentSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }).max(255, {
-    message: "Name must be maximum 255 characters.",
-  }),
+  name: z.string().min(1).max(100),
   visibilityPrivate: z.boolean(),
 });
-
-export type CreateExperiment = z.infer<typeof createExperimentSchema>;
