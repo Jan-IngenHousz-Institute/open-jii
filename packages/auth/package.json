@@ -1,0 +1,53 @@
+{
+  "name": "@repo/auth",
+  "version": "0.0.1",
+  "exports": {
+    "./config": {
+      "types": "./src/config.d.ts",
+      "default": "./dist/config.js"
+    },
+    "./next": {
+      "types": "./src/next.d.ts",
+      "default": "./dist/next.js"
+    },
+    "./express": {
+      "types": "./src/express.d.ts",
+      "default": "./dist/express.js"
+    }
+  },
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "dev": "tsc --watch",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@auth/core": "^0.39.1",
+    "@auth/drizzle-adapter": "^1.9.1",
+    "@auth/express": "^0.10.1",
+    "@repo/database": "workspace:*",
+    "next": "^15.3.2",
+    "next-auth": "5.0.0-beta.25",
+    "react": "catalog:react19",
+    "react-dom": "catalog:react19"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/express": "^5.0.1",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "express": "^5.1.0"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    }
+  }
+}

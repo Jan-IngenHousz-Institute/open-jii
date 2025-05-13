@@ -1,8 +1,11 @@
-import { Controller, Logger } from "@nestjs/common";
+import { Controller, Logger, UseGuards } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
+import { AuthGuard, CurrentUser } from "src/auth";
+
 import { contract } from "@repo/api";
+import type { SessionUser } from "@repo/auth/config";
 
 import { CreateExperimentUseCase } from "../application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "../application/use-cases/delete-experiment/delete-experiment";
@@ -12,6 +15,7 @@ import { UpdateExperimentUseCase } from "../application/use-cases/update-experim
 import { handleResult, Success } from "../utils/fp-utils";
 
 @Controller()
+@UseGuards(AuthGuard)
 export class ExperimentController {
   private readonly logger = new Logger(ExperimentController.name);
 
@@ -24,17 +28,19 @@ export class ExperimentController {
   ) {}
 
   @TsRestHandler(contract.experiments.createExperiment)
-  async createExperiment() {
+  async createExperiment(@CurrentUser() user: SessionUser) {
     return tsRestHandler(
       contract.experiments.createExperiment,
-      async ({ body, query }) => {
-        const userId = query.userId;
-        const result = await this.createExperimentUseCase.execute(body, userId);
+      async ({ body }) => {
+        const result = await this.createExperimentUseCase.execute(
+          body,
+          user.id,
+        );
 
         if (result.isSuccess()) {
           const experiment = (result as Success<any>).value;
           this.logger.log(
-            `Experiment created: ${experiment.id} by user ${query.userId}`,
+            `Experiment created: ${experiment.id} by user ${user.id}`,
           );
           return {
             status: StatusCodes.CREATED,
@@ -59,12 +65,12 @@ export class ExperimentController {
   }
 
   @TsRestHandler(contract.experiments.listExperiments)
-  async listExperiments() {
+  async listExperiments(@CurrentUser() user: SessionUser) {
     return tsRestHandler(
       contract.experiments.listExperiments,
       async ({ query }) => {
         const result = await this.listExperimentsUseCase.execute(
-          query.userId,
+          user.id,
           query.filter,
         );
         return handleResult(result, this.logger);
@@ -73,19 +79,17 @@ export class ExperimentController {
   }
 
   @TsRestHandler(contract.experiments.updateExperiment)
-  async updateExperiment() {
+  async updateExperiment(@CurrentUser() user: SessionUser) {
     return tsRestHandler(
       contract.experiments.updateExperiment,
-      async ({ params, body, query }) => {
+      async ({ params, body }) => {
         const result = await this.updateExperimentUseCase.execute(
           params.id,
           body,
         );
 
         if (result.isSuccess()) {
-          this.logger.log(
-            `Experiment ${params.id} updated by user ${query.userId}`,
-          );
+          this.logger.log(`Experiment ${params.id} updated by user ${user.id}`);
         }
 
         return handleResult(result, this.logger);
@@ -97,7 +101,7 @@ export class ExperimentController {
   async deleteExperiment() {
     return tsRestHandler(
       contract.experiments.deleteExperiment,
-      async ({ params, query }) => {
+      async ({ params }) => {
         const result = await this.deleteExperimentUseCase.execute(params.id);
 
         if (result.isSuccess()) {

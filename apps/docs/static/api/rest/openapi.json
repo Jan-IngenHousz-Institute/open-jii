@@ -8,22 +8,7 @@
         "tags": [
           "experiments"
         ],
-        "parameters": [
-          {
-            "name": "userId",
-            "in": "query",
-            "description": "User ID for authentication",
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              }
-            }
-          }
-        ],
+        "parameters": [],
         "operationId": "experiments.createExperiment",
         "requestBody": {
           "description": "Body",
@@ -121,20 +106,6 @@
           "experiments"
         ],
         "parameters": [
-          {
-            "name": "userId",
-            "in": "query",
-            "description": "User ID for authentication",
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              }
-            }
-          },
           {
             "name": "filter",
             "in": "query",
@@ -254,22 +225,10 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "description": "User ID for authentication",
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              }
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
           }
         ],
         "operationId": "experiments.getExperiment",
@@ -368,22 +327,10 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "description": "User ID for authentication",
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              }
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
           }
         ],
         "operationId": "experiments.updateExperiment",
@@ -528,22 +475,10 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "description": "User ID for authentication",
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              }
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
           }
         ],
         "operationId": "experiments.deleteExperiment",
@@ -585,22 +520,10 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "description": "User ID for authentication",
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              }
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
           }
         ],
         "operationId": "experiments.listExperimentMembers",
@@ -695,22 +618,10 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "description": "User ID for authentication",
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              }
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
           }
         ],
         "operationId": "experiments.addExperimentMember",
@@ -833,30 +744,20 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
           },
           {
             "name": "memberId",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "description": "User ID for authentication",
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              }
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the member"
           }
         ],
         "operationId": "experiments.removeExperimentMember",
@@ -902,22 +803,329 @@
           }
         }
       }
+    },
+    "/api/v1/auth/signin": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "parameters": [],
+        "operationId": "auth.signInPage",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "parameters": [],
+        "operationId": "auth.signIn",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "csrfToken": {
+                    "type": "string"
+                  },
+                  "callbackUrl": {
+                    "type": "string"
+                  },
+                  "json": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "csrfToken"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "302": {
+            "description": "302",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/callback/{provider}": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "operationId": "auth.callback",
+        "responses": {
+          "307": {
+            "description": "307",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/signout": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "parameters": [],
+        "operationId": "auth.signOutPage",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "parameters": [],
+        "operationId": "auth.signOut",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "csrfToken": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "csrfToken"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "302": {
+            "description": "302",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/session": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "parameters": [],
+        "operationId": "auth.session",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "email": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "image": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id"
+                      ]
+                    },
+                    "expires": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "expires"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/csrf": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "parameters": [],
+        "operationId": "auth.csrf",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "csrfToken": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "csrfToken"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/providers": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "parameters": [],
+        "operationId": "auth.providers",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/error": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "parameters": [
+          {
+            "name": "error",
+            "in": "query",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "operationId": "auth.error",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "info": {
     "title": "OpenJII API",
     "version": "1.0.0",
-    "description": "API documentation for the OpenJII platform"
+    "description": "REST API documentation for the OpenJII platform"
   },
   "servers": [
-    {
-      "url": "https://api.openjii.org",
-      "description": "Production environment"
-    },
-    {
-      "url": "https://staging-api.openjii.org",
-      "description": "Staging environment"
-    },
     {
       "url": "http://localhost:3000",
       "description": "Local development"
