@@ -208,7 +208,8 @@ export async function createMqttConnection() {
 
   client.onMessageDelivered = (message) => {
     const { payloadString: payload, destinationName } = message;
-    emitter.emit('messageDelivered', { payload, destinationName });
+    emitter.emit('messageDelivered', { payload, destinationName })
+      .catch(e => console.log('messageDelivered error', e))
   }
 
   return emitter;
