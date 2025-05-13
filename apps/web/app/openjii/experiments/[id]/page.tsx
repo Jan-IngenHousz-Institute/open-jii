@@ -1,20 +1,23 @@
-import { NewExperiment } from "@/components/app-new-experiment";
-import { getExperiment } from "@/util/experiments";
-import { notFound } from "next/navigation";
+import { EditExperiment } from "@/components/edit-experiment";
+import { AppLayout } from "@/components/app-layout";
+import type { Metadata } from "next";
+
+type ParamsType = Promise<{ id: string }>;
+
+export const metadata: Metadata = {
+  title: "Experiment",
+}
 
 export default async function ExperimentPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: ParamsType
 }) {
   const { id } = await params;
-  const experiment = getExperiment(id);
-  if (!experiment) {
-    notFound();
-  }
+
   return (
-    <>
-      <NewExperiment experiment={experiment} />
-    </>
+    <AppLayout pageTitle={"Experiment"}>
+      <EditExperiment experimentId={id} />
+    </AppLayout>
   );
 }
