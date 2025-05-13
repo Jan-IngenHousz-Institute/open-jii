@@ -18,8 +18,9 @@ import type { UpdateExperimentBody} from "@repo/api";
 import { zExperimentStatus, zExperimentVisibility } from "@repo/api";
 import { useExperiment } from "../hooks/experiment/useExperiment/useExperiment";
 import type z from "zod";
-import { router } from "next/client";
 import { useExperimentUpdate } from "../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
+import { toast } from "@repo/ui/hooks";
+import { useRouter } from "next/navigation";
 
 interface EditExperimentProps {
   experimentId: string;
@@ -49,6 +50,7 @@ interface EditExperimentFormProps {
 }
 
 export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
+  const router = useRouter();
   const { mutateAsync: updateExperiment } = useExperimentUpdate();
 
   const form = useForm<ExperimentForm>({
@@ -72,16 +74,23 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
         embargoIntervalDays: data.embargoIntervalDays,
       };
 
-      const result = await updateExperiment({
+      await updateExperiment({
         params: { id: experiment.id, },
         query: { userId },
         body,
       });
 
+      // Show message
+      toast({
+        description: "Experiment updated successfully",
+      });
       // Navigate to the list of experiments
-      //router.push(`/openjii/experiments`);
-      await router.push(`/openjii/experiments/${result.body.id}`);
+      router.push(`/openjii/experiments`);
     } catch (error) {
+      toast({
+        description: "Failed to update experiment",
+        variant: "destructive",
+      });
       console.error("Failed to update experiment:", error);
     }
   }
