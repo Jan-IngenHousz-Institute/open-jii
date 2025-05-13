@@ -49,6 +49,7 @@ export const authConfig = {
   adapter,
   secret: process.env.AUTH_SECRET,
   providers: [],
+  trustHost: true,
   callbacks: {
     session: (opts) => {
       if (!("user" in opts))

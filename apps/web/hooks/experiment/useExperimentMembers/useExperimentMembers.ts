@@ -1,5 +1,3 @@
-import { ExperimentMember } from "@repo/api";
-
 import { tsr } from "../../../lib/tsr";
 
 /**
@@ -8,9 +6,9 @@ import { tsr } from "../../../lib/tsr";
  * @param userId The ID of the current user for authentication
  * @returns Query result containing the experiment members
  */
-export const useExperimentMembers = (experimentId: string, userId: string) => {
+export const useExperimentMembers = (experimentId: string) => {
   return tsr.experiments.listExperimentMembers.useQuery({
-    queryData: { params: { id: experimentId }, query: { userId } },
-    queryKey: ["experiment-members", experimentId, userId],
+    queryData: { params: { id: experimentId } },
+    queryKey: ["experiment-members", experimentId],
   });
 };
