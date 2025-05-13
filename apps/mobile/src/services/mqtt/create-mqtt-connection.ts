@@ -9,6 +9,7 @@ import "react-native-get-random-values";
 
 import { assertEnvVariables } from "~/utils/assert";
 import { Emitter } from "~/utils/emitter";
+import { generateRandomString } from "~/utils/generate-random-string";
 
 function sign(key: string | lib.WordArray, msg: string) {
   return HmacSHA256(msg, key).toString(enc.Hex);
@@ -142,7 +143,7 @@ function connectToMqtt(url: string, clientId: string) {
 }
 
 const {
-  CLIENT_ID: clientId,
+  CLIENT_ID,
   REGION,
   IOT_ENDPOINT,
   IDENTITY_POOL_ID,
@@ -152,6 +153,8 @@ const {
   IOT_ENDPOINT: process.env.IOT_ENDPOINT,
   CLIENT_ID: process.env.CLIENT_ID,
 });
+
+const clientId = CLIENT_ID + ' - ' + generateRandomString()
 
 export interface ReceivedMessage {
   payload: string,
