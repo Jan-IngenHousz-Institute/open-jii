@@ -1,4 +1,3 @@
-import { Button } from "@repo/ui/components";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -6,9 +5,15 @@ export const metadata: Metadata = {
   title: "Jan IngenHousz Institute",
 }
 
+import { Button } from "@repo/ui/components";
+
+import { AuthShowcase } from "./_components/auth-showcase";
+
 export default function Home() {
   return (
     <>
+      <AuthShowcase />
+
       <h1 className="text-jii-dark-green mb-6 text-4xl font-bold">
         Jan IngenHousz Institute
       </h1>

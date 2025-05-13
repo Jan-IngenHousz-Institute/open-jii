@@ -9,7 +9,6 @@ import {
   zCreateExperimentBody,
   zUpdateExperimentBody,
   zAddExperimentMemberBody,
-  zAuthQuery,
   zExperimentFilterQuery,
   zCreateExperimentResponse,
   zIdPathParam,
@@ -18,12 +17,10 @@ import {
 
 const c = initContract();
 
-// Define the experiment contract with enhanced documentation
 export const experimentContract = c.router({
   createExperiment: {
     method: "POST",
     path: "/api/v1/experiments",
-    query: zAuthQuery,
     body: zCreateExperimentBody,
     responses: {
       201: zCreateExperimentResponse,
@@ -50,7 +47,6 @@ export const experimentContract = c.router({
     method: "GET",
     path: "/api/v1/experiments/:id",
     pathParams: zIdPathParam,
-    query: zAuthQuery,
     responses: {
       200: zExperiment,
       404: zErrorResponse,
@@ -63,7 +59,6 @@ export const experimentContract = c.router({
     method: "PATCH",
     path: "/api/v1/experiments/:id",
     pathParams: zIdPathParam,
-    query: zAuthQuery,
     body: zUpdateExperimentBody,
     responses: {
       200: zExperiment,
@@ -77,7 +72,6 @@ export const experimentContract = c.router({
     method: "DELETE",
     path: "/api/v1/experiments/:id",
     pathParams: zIdPathParam,
-    query: zAuthQuery,
     responses: {
       204: null,
       404: zErrorResponse,
@@ -90,7 +84,6 @@ export const experimentContract = c.router({
     method: "GET",
     path: "/api/v1/experiments/:id/members",
     pathParams: zIdPathParam,
-    query: zAuthQuery,
     responses: {
       200: zExperimentMemberList,
       404: zErrorResponse,
@@ -105,7 +98,6 @@ export const experimentContract = c.router({
     method: "POST",
     path: "/api/v1/experiments/:id/members",
     pathParams: zIdPathParam,
-    query: zAuthQuery,
     body: zAddExperimentMemberBody,
     responses: {
       201: zExperimentMember,
@@ -120,7 +112,6 @@ export const experimentContract = c.router({
     method: "DELETE",
     path: "/api/v1/experiments/:id/members/:memberId",
     pathParams: zExperimentMemberPathParam,
-    query: zAuthQuery,
     responses: {
       204: null,
       404: zErrorResponse,
