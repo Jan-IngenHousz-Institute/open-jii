@@ -24,7 +24,7 @@ export async function AppLayout({ children, pageTitle }: Readonly<{
             <Breadcrumbs pathname={pathname} pageTitle={pageTitle} />
           </div>
         </header>
-        {children}
+        <main className="flex flex-1 flex-col p-4">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );

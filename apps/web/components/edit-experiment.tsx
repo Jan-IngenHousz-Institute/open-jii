@@ -88,99 +88,95 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        <div className="flex flex-1 flex-col gap-3 p-4 pt-0">
-            <div className="bg-muted/50 aspect-video rounded-xl">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input data-1p-ignore {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder=""
-                        className="resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select an experiment status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {(Object.entries(zExperimentStatus.enum)).map(key => {
-                          return <SelectItem key={key[0]} value={key[0]}>{key[0]}</SelectItem>
-                        })}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="visibility"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Visibility</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select an experiment visibility" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {(Object.entries(zExperimentVisibility.enum)).map(key => {
-                          return <SelectItem key={key[0]} value={key[0]}>{key[0]}</SelectItem>
-                        })}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="embargoIntervalDays"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Embargo interval days</FormLabel>
-                    <FormControl>
-                      <Input data-1p-ignore {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit">Save</Button>
-          </div>
-        </div>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Name</FormLabel>
+              <FormControl>
+                <Input data-1p-ignore {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder=""
+                  className="resize-none"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Status</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an experiment status" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {(Object.entries(zExperimentStatus.enum)).map(key => {
+                    return <SelectItem key={key[0]} value={key[0]}>{key[0]}</SelectItem>
+                  })}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="visibility"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Visibility</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an experiment visibility" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {(Object.entries(zExperimentVisibility.enum)).map(key => {
+                    return <SelectItem key={key[0]} value={key[0]}>{key[0]}</SelectItem>
+                  })}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="embargoIntervalDays"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Embargo interval days</FormLabel>
+              <FormControl>
+                <Input data-1p-ignore {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit">Update experiment</Button>
       </form>
     </Form>
   );

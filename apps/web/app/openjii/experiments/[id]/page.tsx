@@ -17,7 +17,15 @@ export default async function ExperimentPage({
 
   return (
     <AppLayout pageTitle={"Experiment"}>
-      <EditExperiment experimentId={id} />
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-lg font-medium">Experiment</h3>
+            <p className="text-sm text-muted-foreground">
+              You can edit your experiment here.
+            </p>
+          </div>
+          <EditExperiment experimentId={id} />
+        </div>
     </AppLayout>
   );
 }

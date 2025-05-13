@@ -42,7 +42,7 @@ export function CreateExperiment() {
     resolver: zodResolver(createExperimentFormSchema),
     defaultValues: {
       name: "",
-      visibilityPrivate: true,
+      visibilityPrivate: false,
     },
   });
 
