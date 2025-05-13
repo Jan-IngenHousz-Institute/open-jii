@@ -22,7 +22,7 @@
     "next": "^15.3.1",
     "react": "catalog:react19",
     "react-dom": "catalog:react19",
-    "react-hook-form": "catalog:react19",
+    "react-hook-form": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
