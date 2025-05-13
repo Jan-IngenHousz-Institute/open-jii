@@ -49,17 +49,12 @@ export function CreateExperiment() {
 
   async function onSubmit(data: z.infer<typeof createExperimentFormSchema>) {
     try {
-      // Generate a random userId for demo purposes
-      // In a real app, you would get this from authentication context
-      const userId = "00000000-0000-0000-0000-000000000000";
-
       const body: CreateExperimentBody = {
         name: data.name,
         visibility: data.visibilityPrivate ? zExperimentVisibility.enum.private : zExperimentVisibility.enum.public,
       };
 
       const result = await createExperiment({
-        query: { userId },
         body,
       });
 

@@ -3,19 +3,29 @@
 import type { ExperimentForm } from "@/util/schema";
 import { editExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { router } from "next/client";
 import { useForm } from "react-hook-form";
+import type z from "zod";
 
+import type { UpdateExperimentBody } from "@repo/api";
+import { zExperimentStatus, zExperimentVisibility } from "@repo/api";
 import {
-  Button, Input,
+  Button,
+  Input,
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormMessage, Select, SelectItem, SelectContent, Textarea, SelectValue, SelectTrigger,
+  FormMessage,
+  Select,
+  SelectItem,
+  SelectContent,
+  Textarea,
+  SelectValue,
+  SelectTrigger,
 } from "@repo/ui/components";
-import type { UpdateExperimentBody} from "@repo/api";
-import { zExperimentStatus, zExperimentVisibility } from "@repo/api";
+
 import { useExperiment } from "../hooks/experiment/useExperiment/useExperiment";
 import type z from "zod";
 import { useExperimentUpdate } from "../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
@@ -26,11 +36,8 @@ interface EditExperimentProps {
   experimentId: string;
 }
 
-export function EditExperiment({ experimentId }: EditExperimentProps) {      // Generate a random userId for demo purposes
-  // In a real app, you would get this from authentication context
-  const userId = "00000000-0000-0000-0000-000000000000";
-
-  const { data } = useExperiment(experimentId, userId);
+export function EditExperiment({ experimentId }: EditExperimentProps) {
+  const { data } = useExperiment(experimentId);
 
   if (data) {
     const experiment: ExperimentForm = {
@@ -40,8 +47,8 @@ export function EditExperiment({ experimentId }: EditExperimentProps) {      // 
       visibility: data.body.visibility,
       status: data.body.status,
       embargoIntervalDays: data.body.embargoIntervalDays,
-    }
-    return <EditExperimentForm experiment={experiment}/>;
+    };
+    return <EditExperimentForm experiment={experiment} />;
   }
 }
 
@@ -62,10 +69,6 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
 
   async function onSubmit(data: z.infer<typeof editExperimentFormSchema>) {
     try {
-      // Generate a random userId for demo purposes
-      // In a real app, you would get this from authentication context
-      const userId = "00000000-0000-0000-0000-000000000000";
-
       const body: UpdateExperimentBody = {
         name: data.name,
         description: data.description,
@@ -74,9 +77,8 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
         embargoIntervalDays: data.embargoIntervalDays,
       };
 
-      await updateExperiment({
-        params: { id: experiment.id, },
-        query: { userId },
+      const result = await updateExperiment({
+        params: { id: experiment.id },
         body,
       });
 
