@@ -15,6 +15,9 @@ catalogs:
     prettier:
       specifier: ^3.5.3
       version: 3.5.3
+    react-hook-form:
+      specifier: ^7.56.2
+      version: 7.56.2
     tailwindcss:
       specifier: ^3.4.15
       version: 3.4.17
@@ -37,9 +40,6 @@ catalogs:
     react-dom:
       specifier: ^19.1.0
       version: 19.1.0
-    react-hook-form:
-      specifier: ^7.56.1
-      version: 7.56.2
   react19-mobile:
     '@types/react':
       specifier: 19.0.0
@@ -428,7 +428,7 @@ importers:
         specifier: catalog:react19
         version: 19.1.0(react@19.1.0)
       react-hook-form:
-        specifier: catalog:react19
+        specifier: 'catalog:'
         version: 7.56.2(react@19.1.0)
       zod:
         specifier: 'catalog:'
@@ -647,7 +647,7 @@ importers:
         specifier: 8.10.1
         version: 8.10.1(date-fns@4.1.0)(react@19.1.0)
       react-hook-form:
-        specifier: ^7.56.2
+        specifier: 'catalog:'
         version: 7.56.2(react@19.1.0)
       react-resizable-panels:
         specifier: ^3.0.1
