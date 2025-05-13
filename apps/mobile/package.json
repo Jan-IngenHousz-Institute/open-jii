@@ -8,7 +8,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "prebuild": "expo prebuild",
-    "build-android": "eas build -p android --profile preview --local",
+    "build-android": "echo 'node-linker=hoisted' > .npmrc && eas build -p android --profile preview --local && rm .npmrc",
     "lint": "eslint",
     "typecheck": "tsc --noEmit"
   },
