@@ -3,7 +3,6 @@ const { getDefaultConfig } = require("expo/metro-config");
 const { FileStore } = require("metro-cache");
 const { withNativeWind } = require("nativewind/metro");
 
-
 const path = require("node:path");
 
 const config = withTurborepoManagedCache(
@@ -12,7 +11,6 @@ const config = withTurborepoManagedCache(
     configPath: "./tailwind.config.ts",
   }),
 );
-
 
 module.exports = config;
 

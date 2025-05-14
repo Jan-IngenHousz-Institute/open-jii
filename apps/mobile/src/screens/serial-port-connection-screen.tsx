@@ -32,9 +32,10 @@ export function SerialPortConnectionScreen() {
     reset,
   } = useAsyncCallback(() => multispeq?.execute(protocol), {
     onError: () => {
-      multispeq?.destroy()
-        .catch(e => console.log('multispeq connection destroy failed', e));
-    }
+      multispeq
+        ?.destroy()
+        .catch((e) => console.log("multispeq connection destroy failed", e));
+    },
   });
 
   if (isConnecting) {
