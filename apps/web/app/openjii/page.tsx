@@ -1,10 +1,11 @@
-import { Button } from "@repo/ui/components";
-import type { Metadata } from "next";
 import { AppLayout } from "@/components/app-layout";
+import type { Metadata } from "next";
+
+import { Button } from "@repo/ui/components";
 
 export const metadata: Metadata = {
   title: "openJII",
-}
+};
 
 export default function OpenJIIHome() {
   return (

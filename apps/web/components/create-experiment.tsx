@@ -7,6 +7,8 @@ import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import type z from "zod";
 
+import type { CreateExperimentBody } from "@repo/api";
+import { zExperimentVisibility } from "@repo/api";
 import { Button } from "@repo/ui/components";
 import {
   Dialog,
@@ -29,8 +31,6 @@ import {
 } from "@repo/ui/components";
 
 import { useExperimentCreate } from "../hooks/experiment/useExperimentCreate/useExperimentCreate";
-import type { CreateExperimentBody} from "@repo/api";
-import { zExperimentVisibility } from "@repo/api";
 
 export function CreateExperiment() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -48,17 +48,14 @@ export function CreateExperiment() {
 
   async function onSubmit(data: z.infer<typeof createExperimentFormSchema>) {
     try {
-      // Generate a random userId for demo purposes
-      // In a real app, you would get this from authentication context
-      const userId = "00000000-0000-0000-0000-000000000000";
-
       const body: CreateExperimentBody = {
         name: data.name,
-        visibility: data.visibilityPrivate ? zExperimentVisibility.enum.private : zExperimentVisibility.enum.public,
+        visibility: data.visibilityPrivate
+          ? zExperimentVisibility.enum.private
+          : zExperimentVisibility.enum.public,
       };
 
       const result = await createExperiment({
-        query: { userId },
         body,
       });
 

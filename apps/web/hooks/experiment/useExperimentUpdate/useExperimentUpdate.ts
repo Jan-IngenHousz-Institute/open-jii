@@ -1,4 +1,4 @@
-import { Experiment, UpdateExperimentBody } from "@repo/api";
+import type { Experiment } from "@repo/api";
 
 import { tsr } from "../../../lib/tsr";
 
@@ -13,30 +13,27 @@ export const useExperimentUpdate = () => {
     onMutate: async (variables) => {
       // Cancel any outgoing refetches to avoid overwrites
       await queryClient.cancelQueries({
-        queryKey: ["experiment", variables.params.id, variables.query.userId],
+        queryKey: ["experiment", variables.params.id],
       });
 
       // Get the current experiment data
       const previousExperiment = queryClient.getQueryData<{
         body: Experiment;
-      }>(["experiment", variables.params.id, variables.query.userId]);
+      }>(["experiment", variables.params.id]);
 
       // Optimistically update the cache
       if (previousExperiment) {
-        queryClient.setQueryData(
-          ["experiment", variables.params.id, variables.query.userId],
-          {
-            ...previousExperiment,
-            body: {
-              ...previousExperiment.body,
-              ...variables.body,
-            },
+        queryClient.setQueryData(["experiment", variables.params.id], {
+          ...previousExperiment,
+          body: {
+            ...previousExperiment.body,
+            ...variables.body,
           },
-        );
+        });
       }
 
       // Also update in any experiment lists in the cache
-      const experimentsKey = ["experiments", variables.query.userId];
+      const experimentsKey = ["experiments"];
       const previousExperiments = queryClient.getQueryData<{
         body: Experiment[];
       }>(experimentsKey);
@@ -58,25 +55,22 @@ export const useExperimentUpdate = () => {
       // Revert updates on error
       if (context?.previousExperiment) {
         queryClient.setQueryData(
-          ["experiment", variables.params.id, variables.query.userId],
+          ["experiment", variables.params.id],
           context.previousExperiment,
         );
       }
 
       if (context?.previousExperiments) {
-        queryClient.setQueryData(
-          ["experiments", variables.query.userId],
-          context.previousExperiments,
-        );
+        queryClient.setQueryData(["experiments"], context.previousExperiments);
       }
     },
-    onSettled: (data, error, variables) => {
+    onSettled: async (data, error, variables) => {
       // Always refetch after error or success
-      queryClient.invalidateQueries({
-        queryKey: ["experiment", variables.params.id, variables.query.userId],
+      await queryClient.invalidateQueries({
+        queryKey: ["experiment", variables.params.id],
       });
-      queryClient.invalidateQueries({
-        queryKey: ["experiments", variables.query.userId],
+      await queryClient.invalidateQueries({
+        queryKey: ["experiments"],
       });
     },
   });
