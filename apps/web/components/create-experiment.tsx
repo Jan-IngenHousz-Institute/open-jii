@@ -7,6 +7,8 @@ import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import type z from "zod";
 
+import type { CreateExperimentBody } from "@repo/api";
+import { zExperimentVisibility } from "@repo/api";
 import { Button } from "@repo/ui/components";
 import {
   Dialog,
@@ -27,11 +29,9 @@ import {
   Input,
   Switch,
 } from "@repo/ui/components";
+import { toast } from "@repo/ui/hooks";
 
 import { useExperimentCreate } from "../hooks/experiment/useExperimentCreate/useExperimentCreate";
-import type { CreateExperimentBody} from "@repo/api";
-import { zExperimentVisibility } from "@repo/api";
-import { toast } from "@repo/ui/hooks";
 
 export function CreateExperiment() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -55,38 +55,19 @@ export function CreateExperiment() {
 
       const body: CreateExperimentBody = {
         name: data.name,
-        visibility: data.visibilityPrivate ? zExperimentVisibility.enum.private : zExperimentVisibility.enum.public,
+        visibility: data.visibilityPrivate
+          ? zExperimentVisibility.enum.private
+          : zExperimentVisibility.enum.public,
       };
 
       const result = await createExperiment({
         query: { userId },
         body,
       });
-
-      // Show message
-      toast({
-        description: "New experiment created successfully",
-      });
       // Close the dialog and navigate to the new experiment
+      router.push(`/openjii/experiments/${result.body.id}`);
       setOpen(false);
-      if (result && "body" in result && result.body && "id" in result.body) {
-        router.push(`/openjii/experiments/${result.body.id}`);
-      }
-    } catch (error: unknown) {
-      // Try to extract error message safely
-      const message =
-      typeof error === "object" && error !== null && "body" in error && typeof (error as any).body === "string"
-        ? (error as any).body
-        : error instanceof Error
-        ? error.message
-        : "Unknown error";
-
-      toast({
-      description: `Failed to create experiment: ${message}`,
-      variant: "destructive",
-      });
-      console.error("Failed to create experiment:", error);
-    }
+    } catch (error) {
       toast({
         description: "Failed to create experiment",
         variant: "destructive",
