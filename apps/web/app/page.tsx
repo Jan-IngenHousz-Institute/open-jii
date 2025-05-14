@@ -1,13 +1,13 @@
-import Link from "next/link";
 import type { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Jan IngenHousz Institute",
-}
+import Link from "next/link";
 
 import { Button } from "@repo/ui/components";
 
 import { AuthShowcase } from "./_components/auth-showcase";
+
+export const metadata: Metadata = {
+  title: "Jan IngenHousz Institute",
+};
 
 export default function Home() {
   return (

@@ -1,13 +1,13 @@
 import { initContract } from "@ts-rest/core";
 import z from "zod";
 
-
-
-import { zCsrfAuthSchema, zHtmlAuthSchema, zProvidersAuthSchema, zSessionAuthSchema, zUrlAuthSchema } from "../schemas/auth.schema";
-
-
-
-
+import {
+  zCsrfAuthSchema,
+  zHtmlAuthSchema,
+  zProvidersAuthSchema,
+  zSessionAuthSchema,
+  zUrlAuthSchema,
+} from "../schemas/auth.schema";
 
 const c = initContract();
 

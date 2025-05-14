@@ -7,6 +7,8 @@ import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import type z from "zod";
 
+import type { CreateExperimentBody } from "@repo/api";
+import { zExperimentVisibility } from "@repo/api";
 import { Button } from "@repo/ui/components";
 import {
   Dialog,
@@ -29,9 +31,6 @@ import {
 } from "@repo/ui/components";
 
 import { useExperimentCreate } from "../hooks/experiment/useExperimentCreate/useExperimentCreate";
-import type { CreateExperimentBody} from "@repo/api";
-import { zExperimentVisibility } from "@repo/api";
-import { toast } from "@repo/ui/hooks";
 
 export function CreateExperiment() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -51,7 +50,9 @@ export function CreateExperiment() {
     try {
       const body: CreateExperimentBody = {
         name: data.name,
-        visibility: data.visibilityPrivate ? zExperimentVisibility.enum.private : zExperimentVisibility.enum.public,
+        visibility: data.visibilityPrivate
+          ? zExperimentVisibility.enum.private
+          : zExperimentVisibility.enum.public,
       };
 
       const result = await createExperiment({
