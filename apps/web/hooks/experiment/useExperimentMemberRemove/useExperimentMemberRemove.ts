@@ -1,15 +1,15 @@
-import type { ExperimentMember } from "@repo/api";
+import { tsrWithToasts } from "@/lib/tsr-with-toasts";
 
-import { tsr } from "../../../lib/tsr";
+import type { ExperimentMember } from "@repo/api";
 
 /**
  * Hook to remove a member from an experiment
  * @returns Mutation object for removing members from an experiment
  */
 export const useExperimentMemberRemove = () => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = tsrWithToasts.useQueryClient();
 
-  return tsr.experiments.removeExperimentMember.useMutation({
+  return tsrWithToasts.experiments.removeExperimentMember.useMutation({
     onMutate: async (variables) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({
@@ -48,10 +48,11 @@ export const useExperimentMemberRemove = () => {
           context.previousMembers,
         );
       }
+      // The toast notification is automatically shown by tsrWithToasts
     },
-    onSettled: (data, error, variables) => {
+    onSettled: async (data, error, variables) => {
       // Always refetch to ensure cache is in sync with server
-      queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: [
           "experiment-members",
           variables.params.id,

@@ -69,8 +69,24 @@ export function CreateExperiment() {
       });
       // Close the dialog and navigate to the new experiment
       setOpen(false);
-      router.push(`/openjii/experiments/${result.body.id}`);
-    } catch (error) {
+      if (result && "body" in result && result.body && "id" in result.body) {
+        router.push(`/openjii/experiments/${result.body.id}`);
+      }
+    } catch (error: unknown) {
+      // Try to extract error message safely
+      const message =
+      typeof error === "object" && error !== null && "body" in error && typeof (error as any).body === "string"
+        ? (error as any).body
+        : error instanceof Error
+        ? error.message
+        : "Unknown error";
+
+      toast({
+      description: `Failed to create experiment: ${message}`,
+      variant: "destructive",
+      });
+      console.error("Failed to create experiment:", error);
+    }
       toast({
         description: "Failed to create experiment",
         variant: "destructive",

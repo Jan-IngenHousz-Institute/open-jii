@@ -1,5 +1,3 @@
-import { ExperimentMember } from "@repo/api";
-
 import { tsr } from "../../../lib/tsr";
 
 /**

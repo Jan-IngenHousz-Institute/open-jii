@@ -7,14 +7,12 @@
       }
     ],
     "target": "ES2017",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "paths": {
       "@/components/*": ["./components/*"],
-      "@/util/*": ["./util/*"]
+      "@/util/*": ["./util/*"],
+      "@/lib/*": ["./lib/*"],
+      "@/hooks/*": ["./hooks/*"]
     },
     "incremental": true,
     "resolveJsonModule": true
@@ -26,7 +24,5 @@
     "next.config.js",
     ".next/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ],
+  "exclude": ["node_modules"]
 }

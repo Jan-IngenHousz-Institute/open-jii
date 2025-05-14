@@ -1,15 +1,15 @@
-import { Experiment } from "@repo/api";
+import { tsrWithToasts } from "@/lib/tsr-with-toasts";
 
-import { tsr } from "../../../lib/tsr";
+import type { Experiment } from "@repo/api";
 
 /**
  * Hook to create a new experiment
  * @returns Mutation object for creating experiments
  */
 export const useExperimentCreate = () => {
-  const queryClient = tsr.useQueryClient();
+  const queryClient = tsrWithToasts.useQueryClient();
 
-  return tsr.experiments.createExperiment.useMutation({
+  return tsrWithToasts.experiments.createExperiment.useMutation({
     onMutate: async (variables) => {
       // Cancel any outgoing refetches so they don't overwrite our optimistic update
       await queryClient.cancelQueries({ queryKey: ["experiments"] });

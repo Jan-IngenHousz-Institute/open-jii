@@ -9,7 +9,8 @@
     "clean": "git clean -xdf .cache .next .turbo node_modules",
     "start": "next start",
     "lint": "next lint --max-warnings 0",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "vitest"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
@@ -35,6 +36,7 @@
     "@types/react-dom": "catalog:react19",
     "eslint": "catalog:",
     "tailwindcss": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "^3.1.3"
   }
 }

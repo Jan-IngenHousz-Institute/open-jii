@@ -1,4 +1,4 @@
-import { Experiment, UpdateExperimentBody } from "@repo/api";
+import type { Experiment } from "@repo/api";
 
 import { tsr } from "../../../lib/tsr";
 
@@ -70,12 +70,12 @@ export const useExperimentUpdate = () => {
         );
       }
     },
-    onSettled: (data, error, variables) => {
+    onSettled: async (data, error, variables) => {
       // Always refetch after error or success
-      queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: ["experiment", variables.params.id, variables.query.userId],
       });
-      queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: ["experiments", variables.query.userId],
       });
     },
