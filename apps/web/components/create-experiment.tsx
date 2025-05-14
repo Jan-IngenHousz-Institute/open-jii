@@ -31,6 +31,7 @@ import {
 import { useExperimentCreate } from "../hooks/experiment/useExperimentCreate/useExperimentCreate";
 import type { CreateExperimentBody} from "@repo/api";
 import { zExperimentVisibility } from "@repo/api";
+import { toast } from "@repo/ui/hooks";
 
 export function CreateExperiment() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -42,7 +43,7 @@ export function CreateExperiment() {
     resolver: zodResolver(createExperimentFormSchema),
     defaultValues: {
       name: "",
-      visibilityPrivate: true,
+      visibilityPrivate: false,
     },
   });
 
@@ -62,10 +63,18 @@ export function CreateExperiment() {
         body,
       });
 
+      // Show message
+      toast({
+        description: "New experiment created successfully",
+      });
       // Close the dialog and navigate to the new experiment
       setOpen(false);
       router.push(`/openjii/experiments/${result.body.id}`);
     } catch (error) {
+      toast({
+        description: "Failed to create experiment",
+        variant: "destructive",
+      });
       console.error("Failed to create experiment:", error);
     }
   }
