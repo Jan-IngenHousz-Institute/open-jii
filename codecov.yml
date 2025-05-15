@@ -1,0 +1,97 @@
+codecov:
+  require_ci_to_pass: true
+  notify:
+    wait_for_ci: true
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        base: auto
+        flags:
+          - unit
+        paths:
+          - "**"
+      backend:
+        target: auto
+        threshold: 1%
+        flags:
+          - backend
+        paths:
+          - "apps/backend/src"
+      web:
+        target: auto
+        threshold: 1%
+        flags:
+          - web
+        paths:
+          - "apps/web"
+      mobile:
+        target: auto
+        threshold: 1%
+        flags:
+          - mobile
+        paths:
+          - "apps/mobile"
+    patch:
+      default:
+        target: auto
+        threshold: 5%
+        base: auto
+    changes: false
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no
+
+comment:
+  layout: "reach,diff,flags,files,footer"
+  behavior: default
+  require_changes: false
+  require_base: no
+  require_head: no
+
+ignore:
+  - "**/*.d.ts"
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/.next/**"
+  - "**/test/**"
+  - "apps/backend/src/test/**"
+  - "**/*.model.ts"
+  - "**/models/**"
+  - "apps/backend/src/main.ts"
+  - "infrastructure/**"
+  - "patches/**"
+  - "tooling/**"
+  - "**/*.config.js"
+  - "**/*.config.ts"
+
+flags:
+  backend:
+    paths:
+      - apps/backend/src
+    carryforward: true
+  web:
+    paths:
+      - apps/web
+    carryforward: true
+  mobile:
+    paths:
+      - apps/mobile
+    carryforward: true
+  unit:
+    paths:
+      - apps/backend/src
+      - apps/web
+      - apps/mobile
+    carryforward: true

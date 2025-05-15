@@ -4,7 +4,9 @@ import { ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import {
-  Collapsible, CollapsibleContent, CollapsibleTrigger,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,

@@ -1,10 +1,20 @@
-import type React from "react";
-import { headers } from "next/headers";
-import { Separator, SidebarInset, SidebarProvider, SidebarTrigger, Toaster } from "@repo/ui/components";
-import { AppSidebar } from "@/components/app-sidebar";
 import { Breadcrumbs } from "@/components/app-breadcrumbs";
+import { AppSidebar } from "@/components/app-sidebar";
+import { headers } from "next/headers";
+import type React from "react";
 
-export async function AppLayout({ children, pageTitle }: Readonly<{
+import {
+  Separator,
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+  Toaster,
+} from "@repo/ui/components";
+
+export async function AppLayout({
+  children,
+  pageTitle,
+}: Readonly<{
   children: React.ReactNode;
   pageTitle?: string;
 }>) {
