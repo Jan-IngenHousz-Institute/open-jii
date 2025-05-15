@@ -59,8 +59,9 @@ export async function openSerialPortConnection() {
   emitter.on("destroy", () => usbSerialPort.close());
 
   usbSerialPort.onReceived((event) => {
-    emitter.emit("dataReceivedFromDevice", hexToString(event.data))
-      .catch(e => console.log('dataReceivedFromDevice', e))
+    emitter
+      .emit("dataReceivedFromDevice", hexToString(event.data))
+      .catch((e) => console.log("dataReceivedFromDevice", e));
   });
 
   emitter.on("sendDataToDevice", async (data) => {
