@@ -1,19 +1,18 @@
 import z from "zod";
+import { zExperimentStatus, zExperimentVisibility } from "@repo/api";
 
-export const experimentSchema = z.object({
+export const editExperimentFormSchema = z.object({
   id: z.string(),
-  name: z.string(),
-  private: z.boolean(),
-  description: z.string().optional(),
+  name: z.string().min(1).max(100),
+  description: z.string(),
+  status: zExperimentStatus,
+  visibility: zExperimentVisibility,
+  embargoIntervalDays: z.number(),
 });
 
-export type Experiment = z.infer<typeof experimentSchema>;
+export type ExperimentForm = z.infer<typeof editExperimentFormSchema>;
 
-export const createExperimentSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }),
-  private: z.boolean(),
+export const createExperimentFormSchema = z.object({
+  name: z.string().min(1).max(100),
+  visibilityPrivate: z.boolean(),
 });
-
-export type CreateExperiment = z.infer<typeof createExperimentSchema>;

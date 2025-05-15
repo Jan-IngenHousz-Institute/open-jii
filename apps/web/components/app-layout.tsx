@@ -1,15 +1,12 @@
-import { Breadcrumbs } from "@/components/app-breadcrumbs";
-import { AppSidebar } from "@/components/app-sidebar";
-import { headers } from "next/headers";
 import type React from "react";
+import { headers } from "next/headers";
+import { Separator, SidebarInset, SidebarProvider, SidebarTrigger, Toaster } from "@repo/ui/components";
+import { AppSidebar } from "@/components/app-sidebar";
+import { Breadcrumbs } from "@/components/app-breadcrumbs";
 
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@repo/ui/components";
-import { Separator } from "@repo/ui/components";
-
-export default async function OpenJIILayout({
-  children,
-}: Readonly<{
+export async function AppLayout({ children, pageTitle }: Readonly<{
   children: React.ReactNode;
+  pageTitle?: string;
 }>) {
   const pathname = (await headers()).get("x-current-path") ?? "/";
 
@@ -24,10 +21,11 @@ export default async function OpenJIILayout({
               orientation="vertical"
               className="mr-2 data-[orientation=vertical]:h-4"
             />
-            <Breadcrumbs pathname={pathname} />
+            <Breadcrumbs pathname={pathname} pageTitle={pageTitle} />
           </div>
         </header>
-        {children}
+        <main className="flex flex-1 flex-col p-4">{children}</main>
+        <Toaster />
       </SidebarInset>
     </SidebarProvider>
   );

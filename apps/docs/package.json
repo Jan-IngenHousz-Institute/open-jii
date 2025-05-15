@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "docusaurus start -p 3010",
+    "dev": "docusaurus start -p 3010 --no-open",
     "build": "docusaurus build",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "swizzle": "docusaurus swizzle",

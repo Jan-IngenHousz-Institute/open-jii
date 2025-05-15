@@ -3,7 +3,6 @@ import { Poppins, Overpass } from "next/font/google";
 import type React from "react";
 
 import { cn } from "@repo/ui/lib/utils";
-import { ThemeProvider } from "@repo/ui/components";
 
 import { QueryProvider } from "../providers/QueryProvider";
 import "./globals.css";
@@ -39,14 +38,7 @@ export default function RootLayout({
           overpass.variable,
         )}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <QueryProvider>{children}</QueryProvider>
-        </ThemeProvider>
+        <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   );

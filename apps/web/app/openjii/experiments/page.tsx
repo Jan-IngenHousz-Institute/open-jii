@@ -1,13 +1,21 @@
 import { CreateExperiment } from "@/components/create-experiment";
+import type { Metadata } from "next";
+import { AppLayout } from "@/components/app-layout";
+
+export const metadata: Metadata = {
+  title: "Experiments",
+}
 
 export default function ExperimentPage() {
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-      <div className="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:min-h-min">
-        <h1>Experiments</h1>
-        <p>This page will show a list of existing experiments.</p>
+    <AppLayout pageTitle="Experiments">
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-medium">Experiment</h3>
+          <p>This page will show a list of existing experiments.</p>
+        </div>
         <CreateExperiment />
       </div>
-    </div>
+    </AppLayout>
   );
 }

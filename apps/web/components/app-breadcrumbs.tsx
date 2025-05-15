@@ -11,19 +11,33 @@ import {
 
 interface BreadcrumbsProps {
   pathname: string;
+  pageTitle?: string;
 }
 
-export function Breadcrumbs({ pathname }: BreadcrumbsProps) {
+function getUppercaseTitle(title: string) {
+  switch (title) {
+    case "openjii":
+      return "openJII";
+    default:
+      return title[0].toUpperCase() + title.slice(1);
+  }
+}
+
+function getTitle(title: string, overrideTitle?: string) {
+  return overrideTitle ?? getUppercaseTitle(title);
+}
+
+export function Breadcrumbs({ pathname, pageTitle }: BreadcrumbsProps) {
   const pathNames = pathname.split("/").filter((path) => path);
   const breadcrumbItems: ReactElement[] = [];
   pathNames.forEach((link, index) => {
     const href = `/${pathNames.slice(0, index + 1).join("/")}`;
-    const itemLink = link[0].toUpperCase() + link.slice(1);
+    const title = getTitle(link, (index == pathNames.length-1 ? pageTitle : undefined));
     breadcrumbItems.push(
       <React.Fragment key={href}>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          <BreadcrumbLink href={href}>{itemLink}</BreadcrumbLink>
+          <BreadcrumbLink href={href}>{title}</BreadcrumbLink>
         </BreadcrumbItem>
       </React.Fragment>,
     );
