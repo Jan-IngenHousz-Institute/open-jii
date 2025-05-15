@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextMiddleware } from "next/server";
 
-import { auth } from "@repo/auth/next";
+import { middleware } from "@repo/auth/middleware";
 
-export default auth((request) => {
-  // Check if the user is authenticated
+export default middleware((request) => {
   if (!request.auth) {
     const callbackUrl = encodeURIComponent(
       `${request.nextUrl.origin}${request.nextUrl.pathname}${request.nextUrl.search}`,

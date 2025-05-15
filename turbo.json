@@ -37,9 +37,6 @@
     },
     "clean": {
       "cache": false
-    },
-    "//#clean": {
-      "cache": false
     }
   }
 }

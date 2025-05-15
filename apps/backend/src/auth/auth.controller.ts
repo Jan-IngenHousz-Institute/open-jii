@@ -7,79 +7,58 @@ import { authContract } from "@repo/api";
 import { auth } from "@repo/auth/express";
 
 import { Result, success, AppError } from "../experiments/utils/fp-utils";
+import { Cookies } from "./decorators/cookie.decorator";
 
 @Controller()
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  @TsRestHandler(authContract.signInPage)
-  async signInPage(
+  @TsRestHandler(authContract.session)
+  async session(
     @Req() req: Request,
     @Res() res: Response,
     @Next() next: NextFunction,
   ) {
-    return tsRestHandler(authContract.signInPage, async () => {
+    return tsRestHandler(authContract.session, async () => {
       try {
         await auth(req, res, next);
         return {
           status: StatusCodes.OK,
-          body: "", // This won't actually be used as auth will handle the response
+          body: { expires: new Date().toISOString() }, // This won't actually be used as auth will handle the response
         };
       } catch (error) {
-        this.logger.error(
-          `Error displaying sign-in page: ${(error as any).message}`,
-        );
+        this.logger.error(`Error fetching session: ${(error as any).message}`);
         return {
           status: StatusCodes.INTERNAL_SERVER_ERROR,
-          body: "Error displaying sign-in page",
+          body: { expires: new Date().toISOString() },
         };
       }
     });
   }
 
-  @TsRestHandler(authContract.signIn)
-  async signIn(
+  @TsRestHandler(authContract.signOut)
+  async signOut(
     @Req() req: Request,
     @Res() res: Response,
     @Next() next: NextFunction,
+    @Cookies("authjs.csrf-token") csrfToken: string,
   ) {
-    return tsRestHandler(authContract.signIn, async () => {
+    return tsRestHandler(authContract.signOut, async () => {
       try {
+        this.logger.log(req.body);
         await auth(req, res, next);
+
+        // handle response after auth
+
         return {
           status: StatusCodes.OK,
-          body: "", // This won't actually be used as auth will handle the response
+          body: {}, // This won't actually be used as auth will handle the redirect
         };
       } catch (error) {
-        this.logger.error(
-          `Error displaying sign-in page: ${(error as any).message}`,
-        );
+        this.logger.error(`Error signing out: ${(error as any).message}`);
         return {
           status: StatusCodes.INTERNAL_SERVER_ERROR,
-          body: "Error displaying sign-in page",
-        };
-      }
-    });
-  }
-
-  @TsRestHandler(authContract.callback)
-  async callback(
-    @Req() req: Request,
-    @Res() res: Response,
-    @Next() next: NextFunction,
-  ) {
-    return tsRestHandler(authContract.callback, async () => {
-      try {
-        await auth(req, res, next);
-        return {
-          status: StatusCodes.TEMPORARY_REDIRECT,
-          body: { url: "/" }, // This won't actually be used as auth will handle the redirect
-        };
-      } catch (error) {
-        this.logger.error(`Error during callback: ${(error as any).message}`);
-        return {
-          status: StatusCodes.INTERNAL_SERVER_ERROR,
-          body: { url: "/api/v1/auth/error" },
+          body: { message: "Error signing out" },
         };
       }
     });
@@ -108,107 +87,28 @@ export class AuthController {
     });
   }
 
-  // @TsRestHandler(authContract.signOutPage)
-  // async signOutPage() {
-  //   return tsRestHandler(
-  //     authContract.signOutPage,
-  //     async ({ req, res, next }) => {
-  //       try {
-  //         await auth(req as Request, res as Response, next as NextFunction);
-  //         return {
-  //           status: StatusCodes.OK,
-  //           body: "Sign out page HTML", // This won't actually be used as auth will handle the response
-  //         };
-  //       } catch (error) {
-  //         this.logger.error(`Error displaying sign-out page: ${error.message}`);
-  //         return {
-  //           status: StatusCodes.INTERNAL_SERVER_ERROR,
-  //           body: "Error displaying sign-out page",
-  //         };
-  //       }
-  //     },
-  //   );
-  // }
-
-  // @TsRestHandler(authContract.signOut)
-  // async signOut() {
-  //   return tsRestHandler(authContract.signOut, async ({ req, res, next }) => {
-  //     try {
-  //       await auth(req as Request, res as Response, next as NextFunction);
-  //       return {
-  //         status: StatusCodes.FOUND,
-  //         body: { url: "/" }, // This won't actually be used as auth will handle the redirect
-  //       };
-  //     } catch (error) {
-  //       this.logger.error(`Error signing out: ${error.message}`);
-  //       return {
-  //         status: StatusCodes.INTERNAL_SERVER_ERROR,
-  //         body: { url: "/api/v1/auth/error" },
-  //       };
-  //     }
-  //   });
-  // }
-
-  // @TsRestHandler(authContract.session)
-  // async session() {
-  //   return tsRestHandler(authContract.session, async ({ req, res, next }) => {
-  //     try {
-  //       await auth(req as Request, res as Response, next as NextFunction);
-  //       return {
-  //         status: StatusCodes.OK,
-  //         body: { expires: new Date().toISOString() }, // This won't actually be used as auth will handle the response
-  //       };
-  //     } catch (error) {
-  //       this.logger.error(`Error fetching session: ${error.message}`);
-  //       return {
-  //         status: StatusCodes.INTERNAL_SERVER_ERROR,
-  //         body: { expires: new Date().toISOString() },
-  //       };
-  //     }
-  //   });
-  // }
-
-  @TsRestHandler(authContract.csrf)
-  async csrf(
+  @TsRestHandler(authContract.providers)
+  async providers(
     @Req() req: Request,
     @Res() res: Response,
     @Next() next: NextFunction,
   ) {
-    return tsRestHandler(authContract.csrf, async () => {
+    return tsRestHandler(authContract.providers, async () => {
       try {
         await auth(req, res, next);
         return {
           status: StatusCodes.OK,
-          body: { csrfToken: "" }, // This won't actually be used as auth will handle the response
+          body: {}, // This won't actually be used as auth will handle the response
         };
       } catch (error) {
         this.logger.error(
-          `Error fetching CSRF token: ${(error as any).message}`,
+          `Error fetching providers: ${(error as any).message}`,
         );
         return {
           status: StatusCodes.INTERNAL_SERVER_ERROR,
-          body: { csrfToken: "" },
+          body: {},
         };
       }
     });
   }
-
-  // @TsRestHandler(authContract.providers)
-  // async providers() {
-  //   return tsRestHandler(authContract.providers, async ({ req, res, next }) => {
-  //     try {
-  //       await auth(req as Request, res as Response, next as NextFunction);
-  //       return {
-  //         status: StatusCodes.OK,
-  //         body: {}, // This won't actually be used as auth will handle the response
-  //       };
-  //     } catch (error) {
-  //       this.logger.error(`Error fetching providers: ${error.message}`);
-  //       return {
-  //         status: StatusCodes.INTERNAL_SERVER_ERROR,
-  //         body: {},
-  //       };
-  //     }
-  //   });
-  // }
 }
