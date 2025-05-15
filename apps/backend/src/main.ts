@@ -1,13 +1,18 @@
 import { NestFactory } from "@nestjs/core";
-
-import { auth } from "@repo/auth/express";
+import cookieParser from "cookie-parser";
 
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { cors: true });
+  const app = await NestFactory.create(AppModule);
+  app.use(cookieParser());
 
-  // app.use("/auth/*splat", auth);
+  // Enable CORS
+  app.enableCors({
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+  });
 
   await app.listen(process.env.PORT ?? 3020);
 }

@@ -8,59 +8,22 @@ import {
   zSessionAuthSchema,
   zUrlAuthSchema,
 } from "../schemas/auth.schema";
+import { zErrorResponse } from "../schemas/experiment.schema";
 
 const c = initContract();
 
 export const authContract = c.router({
-  // Display built-in sign-in page
-  signInPage: {
-    method: "GET",
-    path: "/api/v1/auth/signin",
-    responses: {
-      200: zHtmlAuthSchema,
-    },
-  },
-
-  // Start provider-specific sign-in flow
-  signIn: {
-    method: "POST",
-    path: "/api/v1/auth/signin",
-    body: z.object({
-      csrfToken: z.string(),
-      callbackUrl: z.string().optional(),
-      json: z.boolean().optional(),
-    }),
-    responses: {
-      302: zUrlAuthSchema,
-    },
-  },
-
-  // Handle OAuth callback (both GET and POST)
-  callback: {
-    method: "GET",
-    path: "/api/v1/auth/callback/:provider",
-    pathParams: z.object({ provider: z.string() }),
-    responses: {
-      307: zUrlAuthSchema,
-    },
-  },
-
-  // Display built-in sign-out page
-  signOutPage: {
-    method: "GET",
-    path: "/api/v1/auth/signout",
-    responses: {
-      200: zHtmlAuthSchema,
-    },
-  },
-
   // Invalidate session (requires CSRF token)
   signOut: {
     method: "POST",
     path: "/api/v1/auth/signout",
-    body: z.object({ csrfToken: z.string() }),
+    body: z.object({
+      callbackUrl: z.string().optional(),
+    }),
     responses: {
+      200: z.object({}),
       302: zUrlAuthSchema,
+      400: zErrorResponse,
     },
   },
 
@@ -70,15 +33,6 @@ export const authContract = c.router({
     path: "/api/v1/auth/session",
     responses: {
       200: zSessionAuthSchema,
-    },
-  },
-
-  // Return CSRF token
-  csrf: {
-    method: "GET",
-    path: "/api/v1/auth/csrf",
-    responses: {
-      200: zCsrfAuthSchema,
     },
   },
 

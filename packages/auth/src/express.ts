@@ -4,23 +4,28 @@ import {
   setEnvDefaults,
   createActionURL,
 } from "@auth/core";
+import { skipCSRFCheck } from "@auth/core";
 import type { Session } from "@auth/core/types";
-import GitHub from "@auth/express/providers/github";
-import Google from "@auth/express/providers/google";
 import e from "express";
 
+import { adapter } from "./adapter";
 import { authConfig } from "./config";
 
-export { AuthError, CredentialsSignin } from "@auth/core/errors";
-export type {
-  Account,
-  DefaultSession,
-  Profile,
-  Session,
-  User,
-} from "@auth/core/types";
-
 export type NestAuthConfig = Omit<AuthConfig, "raw">;
+
+const config = {
+  ...authConfig,
+  basePath: "/api/v1/auth",
+  session: { strategy: "jwt" },
+  callbacks: {
+    redirect({ url, baseUrl }) {
+      return url;
+    },
+  },
+  adapter,
+  skipCSRFCheck,
+  debug: true,
+} satisfies NestAuthConfig;
 
 /**
  * Encodes an object as url-encoded string.
@@ -117,9 +122,9 @@ export async function toExpressResponse(response: Response, res: e.Response) {
 
 export function NestAuth(config: NestAuthConfig) {
   return async (req: e.Request, res: e.Response, next: e.NextFunction) => {
-    e.json()(req, res, async (err) => {
+    e.json()(req, res, async (err: any) => {
       if (err) return next(err);
-      e.urlencoded({ extended: true })(req, res, async (err) => {
+      e.urlencoded({ extended: true })(req, res, async (err: any) => {
         if (err) return next(err);
         try {
           setEnvDefaults(process.env, config);
@@ -135,10 +140,7 @@ export function NestAuth(config: NestAuthConfig) {
 
 export type GetSessionResult = Promise<Session | null>;
 
-export async function getSession(
-  req: e.Request,
-  config: NestAuthConfig,
-): GetSessionResult {
+export async function getSession(req: e.Request): GetSessionResult {
   setEnvDefaults(process.env, config);
   const url = createActionURL(
     "session",
@@ -151,7 +153,7 @@ export async function getSession(
 
   const response = await Auth(
     new Request(url, { headers: { cookie: req.headers.cookie ?? "" } }),
-    authConfig,
+    config,
   );
 
   const { status = 200 } = response;
@@ -163,9 +165,4 @@ export async function getSession(
   throw new Error(data.message);
 }
 
-export const auth = NestAuth({
-  ...authConfig,
-  trustHost: true,
-  basePath: "/api/v1/auth",
-  providers: [GitHub, Google],
-});
+export const auth = NestAuth(config);

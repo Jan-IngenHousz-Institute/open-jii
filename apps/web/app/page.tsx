@@ -1,3 +1,4 @@
+import { ClientSignOutButton } from "@/components/auth-showcase-client";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -13,6 +14,7 @@ export default function Home() {
   return (
     <>
       <AuthShowcase />
+      <ClientSignOutButton />
 
       <h1 className="text-jii-dark-green mb-6 text-4xl font-bold">
         Jan IngenHousz Institute

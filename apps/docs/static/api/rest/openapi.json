@@ -823,12 +823,23 @@
             }
           }
         }
-      },
+      }
+    },
+    "/api/v1/auth/signin/{provider}": {
       "post": {
         "tags": [
           "auth"
         ],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "operationId": "auth.signIn",
         "requestBody": {
           "description": "Body",

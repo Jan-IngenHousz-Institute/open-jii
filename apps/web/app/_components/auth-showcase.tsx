@@ -26,17 +26,19 @@ export async function AuthShowcase() {
         <span>Logged in as {session.user?.name}</span>
       </p>
 
-      <form>
-        <Button
-          size="lg"
-          formAction={async () => {
-            "use server";
-            await signOut();
-          }}
-        >
-          Sign out
-        </Button>
-      </form>
+      <div className="flex flex-col gap-2">
+        <form>
+          <Button
+            size="lg"
+            formAction={async () => {
+              "use server";
+              await signOut();
+            }}
+          >
+            Sign out (Server)
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

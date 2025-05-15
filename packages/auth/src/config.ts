@@ -1,4 +1,6 @@
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import { AuthConfig } from "@auth/core";
+import GitHub from "@auth/core/providers/github";
+import Google from "@auth/core/providers/google";
 import type {
   DefaultSession,
   NextAuthConfig,
@@ -6,13 +8,7 @@ import type {
   User,
 } from "next-auth";
 
-import {
-  accounts,
-  db,
-  sessions,
-  users,
-  verificationTokens,
-} from "@repo/database";
+import { NestAuthConfig } from "./express";
 
 declare module "next-auth" {
   /**
@@ -36,52 +32,8 @@ declare module "next-auth" {
 
 export type { Session, SessionUser, DefaultSession, User } from "next-auth";
 
-const adapter = DrizzleAdapter(db as any, {
-  usersTable: users as any,
-  accountsTable: accounts as any,
-  sessionsTable: sessions as any,
-  verificationTokensTable: verificationTokens as any,
-});
-
-export const isSecureContext = process.env.NODE_ENV !== "development";
-
 export const authConfig = {
-  adapter,
   secret: process.env.AUTH_SECRET,
-  providers: [],
+  providers: [GitHub, Google],
   trustHost: true,
-  callbacks: {
-    session: (opts) => {
-      if (!("user" in opts))
-        throw new Error("unreachable with session strategy");
-
-      return {
-        ...opts.session,
-        user: {
-          ...opts.session.user,
-          id: opts.user.id,
-        },
-      };
-    },
-  },
 } satisfies NextAuthConfig;
-
-export const validateToken = async (
-  token: string,
-): Promise<NextAuthSession | null> => {
-  const sessionToken = token.slice("Bearer ".length);
-  const session = await adapter.getSessionAndUser?.(sessionToken);
-  return session
-    ? {
-        user: {
-          ...session.user,
-        },
-        expires: session.session.expires.toISOString(),
-      }
-    : null;
-};
-
-export const invalidateSessionToken = async (token: string) => {
-  const sessionToken = token.slice("Bearer ".length);
-  await adapter.deleteSession?.(sessionToken);
-};

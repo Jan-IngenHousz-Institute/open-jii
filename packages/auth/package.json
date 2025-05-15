@@ -2,6 +2,14 @@
   "name": "@repo/auth",
   "version": "0.0.1",
   "exports": {
+    "./middleware": {
+      "types": "./src/middleware.d.ts",
+      "default": "./dist/middleware.js"
+    },
+    "./adapter": {
+      "types": "./src/adapter.d.ts",
+      "default": "./dist/adapter.js"
+    },
     "./config": {
       "types": "./src/config.d.ts",
       "default": "./dist/config.js"
@@ -17,7 +25,7 @@
   },
   "private": true,
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --build --verbose",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "dev": "tsc --watch",
     "format": "prettier --check . --ignore-path ../../.gitignore",
