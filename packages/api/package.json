@@ -11,6 +11,9 @@
   "scripts": {
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint . --ext .ts,.tsx --max-warnings 0",
+    "typecheck": "tsc --noEmit",
     "generate:openapi": "ts-node src/openapi.ts"
   },
   "dependencies": {
