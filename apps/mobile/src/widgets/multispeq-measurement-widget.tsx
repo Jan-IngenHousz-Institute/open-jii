@@ -1,5 +1,6 @@
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { View } from "react-native";
+import { ReactNode } from "react"
 
 import { BigActionButton } from "../components/big-action-button";
 import { ErrorView } from "../components/error-view";
@@ -10,7 +11,7 @@ import { MultiSpeqCommandExecutor } from "../services/multispeq-communication/mu
 import { sendMqttEvent } from "../services/mqtt/send-mqtt-event";
 import { assertEnvVariables } from "~/utils/assert";
 import { useToast } from "../components/toast-provider";
-import {prettifyErrorMessages} from "~/utils/prettify-error-messages";
+import { prettifyErrorMessages } from "~/utils/prettify-error-messages";;
 
 const { MQTT_TOPIC: topic } = assertEnvVariables({
   MQTT_TOPIC: process.env.MQTT_TOPIC,
@@ -20,9 +21,10 @@ const protocol = [{ spad: [1] }];
 
 interface Props {
   establishDeviceConnection: () => Promise<MultiSpeqCommandExecutor>;
+  renderError?: (error: Error) => ReactNode;
 }
 
-export function MultispeqMeasurementWidget({ establishDeviceConnection }: Props) {
+export function MultispeqMeasurementWidget({ establishDeviceConnection, renderError }: Props) {
   const { showToast } = useToast();
 
   const {
@@ -84,8 +86,10 @@ export function MultispeqMeasurementWidget({ establishDeviceConnection }: Props)
     return (
       <View className="w-full flex-1 justify-between bg-white p-4">
         <ErrorView error={prettifyErrorMessages(error ?? "Cannot connect")} />
+        {error && renderError?.(error)}
         <BigActionButton onPress={handleReconnect} text="Connect" />
       </View>
+
     );
   }
 

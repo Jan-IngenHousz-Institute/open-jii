@@ -36,7 +36,7 @@ export async function openSerialPortConnection() {
   console.log("devices", devices);
   const [device] = devices;
   if (!device) {
-    throw new Error("PhotosynQ device not detected. Please reconnect the device and try again.");
+    throw new Error("PhotosynQ device not detected. Please reconnect the sensor, press the button to activate it and try again.");
   }
   const { deviceId } = device;
   while (true) {

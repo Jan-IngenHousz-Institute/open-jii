@@ -8,5 +8,9 @@ export function prettifyErrorMessages(error: string | Error) {
     return 'Please connect or reconnect your PhotosynQ device.';
   }
 
+  if (msg.toLowerCase().includes('closed or timeout')) {
+    return 'Connection failed.\nPlease put your device into connection mode by pressing the button on the back or select another device.';
+  }
+
   return msg
 }

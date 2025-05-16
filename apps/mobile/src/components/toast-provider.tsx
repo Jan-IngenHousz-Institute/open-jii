@@ -7,7 +7,19 @@ import React, {
   ReactNode,
 } from "react";
 import { Animated, Text } from "react-native";
-import clsx from "clsx";
+import { cva } from "class-variance-authority";
+
+const toastContainer = cva(
+    "absolute top-0 left-0 right-0 z-50 mx-4 mt-6 rounded-xl px-4 py-3 shadow-lg",
+    {
+      variants: {
+        type: {
+          success: "bg-green-500",
+          error: "bg-red-500",
+        },
+      },
+    }
+);
 
 type ToastType = "success" | "error";
 
@@ -48,20 +60,19 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   }, [slideAnim]);
 
   return (
-    <ToastContext.Provider value={{ showToast }}>
-      {children}
-      {visible && (
-        <Animated.View
-          style={{ transform: [{ translateY: slideAnim }] }}
-          className={clsx(
-            "absolute top-0 left-0 right-0 z-50 mx-4 mt-6 rounded-xl px-4 py-3 shadow-lg",
-            type === "success" ? "bg-green-500" : "bg-red-500"
-          )}
-        >
-          <Text className="text-center text-base font-semibold text-white">{message}</Text>
-        </Animated.View>
-      )}
-    </ToastContext.Provider>
+      <ToastContext.Provider value={{ showToast }}>
+        {children}
+        {visible && (
+            <Animated.View
+                style={{ transform: [{ translateY: slideAnim }] }}
+                className={toastContainer({ type })}
+            >
+              <Text className="text-center text-base font-semibold text-white">
+                {message}
+              </Text>
+            </Animated.View>
+        )}
+      </ToastContext.Provider>
   );
 };
 
