@@ -4,10 +4,12 @@ import {
   GetCredentialsForIdentityCommand,
 } from "@aws-sdk/client-cognito-identity";
 import { HmacSHA256, SHA256, enc, lib } from "crypto-js";
-import { Client, Message } from "paho-mqtt";
+import { Client, Message, MQTTError } from "paho-mqtt";
 import "react-native-get-random-values";
 
-import { assertEnvVariables } from "../../utils/assert";
+import { assertEnvVariables } from "~/utils/assert";
+import { Emitter } from "~/utils/emitter";
+import { generateRandomString } from "~/utils/generate-random-string";
 
 function sign(key: string | lib.WordArray, msg: string) {
   return HmacSHA256(msg, key).toString(enc.Hex);
@@ -141,7 +143,7 @@ function connectToMqtt(url: string, clientId: string) {
 }
 
 const {
-  CLIENT_ID: clientId,
+  CLIENT_ID,
   REGION,
   IOT_ENDPOINT,
   IDENTITY_POOL_ID,
@@ -152,7 +154,22 @@ const {
   CLIENT_ID: process.env.CLIENT_ID,
 });
 
-export async function mqttTest() {
+const clientId = CLIENT_ID + ' - ' + generateRandomString()
+
+export interface ReceivedMessage {
+  payload: string,
+  destinationName: string
+}
+
+export interface MqttEmitterEvents {
+  messageArrived: ReceivedMessage,
+  connectionLost: MQTTError,
+  sendMessage: { payload: string, topic: string },
+  destroy: void
+  messageDelivered: ReceivedMessage,
+}
+
+export async function createMqttConnection() {
   const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials({
     identityPoolId: IDENTITY_POOL_ID,
     region: REGION,
@@ -168,20 +185,32 @@ export async function mqttTest() {
   });
 
   const client = await connectToMqtt(signedUrl, clientId);
-  console.log("Connected to MQTT server", client);
+
+  const emitter = new Emitter<MqttEmitterEvents>()
 
   client.onMessageArrived = (message: Message) => {
-    console.log("Message received:", message.payloadString);
+    const { payloadString: payload, destinationName } = message;
+
+    emitter.emit("messageArrived", { destinationName, payload })
+      .catch(e => console.log('messageArrived error', e));
   };
 
-  client.onConnectionLost = (err: any) => {
-    console.error("Connection lost:", err);
+  client.onConnectionLost = (err) => {
+    emitter.emit("connectionLost", err)
+      .catch(e => console.log('connectionLost error', e));
   };
 
-  client.send(
-    "experiment/data_ingest/v1/test-id/multispeq/v1.0/client-id/spad",
-    JSON.stringify({ ivo: "test from react native" }),
-  );
+  emitter.on('sendMessage', ({ payload, topic }) => {
+    client.send(topic, payload);
+  })
 
-  console.log("message sent");
+  emitter.on('destroy', () => client.disconnect());
+
+  client.onMessageDelivered = (message) => {
+    const { payloadString: payload, destinationName } = message;
+    emitter.emit('messageDelivered', { payload, destinationName })
+      .catch(e => console.log('messageDelivered error', e))
+  }
+
+  return emitter;
 }

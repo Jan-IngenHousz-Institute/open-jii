@@ -10,10 +10,11 @@ export async function getBluetoothClassicDevices() {
   } catch {
     // ignored
   }
-  const [connectedDevices, visibleDevices] = await Promise.all([
+  const [bondedDevices, connectedDevices, visibleDevices] = await Promise.all([
+    RNBluetoothClassic.getBondedDevices(),
     RNBluetoothClassic.getConnectedDevices(),
     RNBluetoothClassic.startDiscovery(),
   ]);
 
-  return _.uniqBy([...connectedDevices, ...visibleDevices], "id");
+  return _.uniqBy([...bondedDevices, ...connectedDevices, ...visibleDevices], "id");
 }
