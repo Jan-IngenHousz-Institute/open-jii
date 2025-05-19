@@ -1,7 +1,6 @@
 "use client";
 
-import type { ExperimentForm } from "@/util/schema";
-import { editExperimentFormSchema } from "@/util/schema";
+import { newExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
@@ -14,84 +13,65 @@ import {
   FormLabel,
   FormMessage, Select, SelectItem, SelectContent, Textarea, SelectValue, SelectTrigger,
 } from "@repo/ui/components";
-import type { UpdateExperimentBody } from "@repo/api";
+import type { CreateExperimentBody } from "@repo/api";
 import { zExperimentStatus, zExperimentVisibility } from "@repo/api";
-import { useExperiment } from "../hooks/experiment/useExperiment/useExperiment";
 import type z from "zod";
-import { useExperimentUpdate } from "../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 import { toast } from "@repo/ui/hooks";
 import { useRouter } from "next/navigation";
+import { useExperimentCreate } from "../hooks/experiment/useExperimentCreate/useExperimentCreate";
 
-interface EditExperimentProps {
-  experimentId: string;
+interface NewExperimentFormProps {
+  name?: string;
+  visibilityPrivate?: boolean;
 }
 
-export function EditExperiment({ experimentId }: EditExperimentProps) {      // Generate a random userId for demo purposes
-  // In a real app, you would get this from authentication context
-  const userId = "00000000-0000-0000-0000-000000000000";
-
-  const { data } = useExperiment(experimentId, userId);
-
-  if (data) {
-    const experiment: ExperimentForm = {
-      id: experimentId,
-      name: data.body.name,
-      description: data.body.description ?? "",
-      visibility: data.body.visibility,
-      status: data.body.status,
-      embargoIntervalDays: data.body.embargoIntervalDays,
-    }
-    return <EditExperimentForm experiment={experiment}/>;
-  }
-}
-
-interface EditExperimentFormProps {
-  experiment: ExperimentForm;
-}
-
-export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
+export function NewExperimentForm({ name, visibilityPrivate }: NewExperimentFormProps) {
   const router = useRouter();
-  const { mutateAsync: updateExperiment } = useExperimentUpdate();
+  const { mutateAsync: createExperiment, isPending } = useExperimentCreate();
 
-  const form = useForm<ExperimentForm>({
-    resolver: zodResolver(editExperimentFormSchema),
+  const form = useForm<z.infer<typeof newExperimentFormSchema>>({
+    resolver: zodResolver(newExperimentFormSchema),
     defaultValues: {
-      ...experiment,
+      name: name ?? "",
+      description: "",
+      status: zExperimentStatus.enum.provisioning,
+      visibility: visibilityPrivate !== undefined ? (visibilityPrivate ? zExperimentVisibility.enum.private : zExperimentVisibility.enum.public) : zExperimentVisibility.enum.public,
+      embargoIntervalDays: 90,
     },
   });
 
-  async function onSubmit(data: z.infer<typeof editExperimentFormSchema>) {
+  function cancel() {
+    router.back();
+  }
+
+  async function onSubmit(data: z.infer<typeof newExperimentFormSchema>) {
     try {
       // Generate a random userId for demo purposes
       // In a real app, you would get this from authentication context
       const userId = "00000000-0000-0000-0000-000000000000";
 
-      const body: UpdateExperimentBody = {
+      const body: CreateExperimentBody = {
         name: data.name,
-        description: data.description,
-        status: data.status,
         visibility: data.visibility,
-        embargoIntervalDays: data.embargoIntervalDays,
       };
 
-      await updateExperiment({
-        params: { id: experiment.id, },
+      await createExperiment({
         query: { userId },
         body,
       });
 
       // Show message
       toast({
-        description: "Experiment updated successfully",
+        description: "Experiment created successfully",
       });
       // Navigate to the list of experiments
       router.push(`/openjii/experiments`);
     } catch (error) {
       toast({
-        description: "Failed to update experiment",
+        description: "Failed to create experiment",
         variant: "destructive",
       });
-      console.error("Failed to update experiment:", error);
+      console.error("Failed to create experiment:", error);
     }
   }
 
@@ -179,13 +159,18 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
             <FormItem>
               <FormLabel>Embargo interval days</FormLabel>
               <FormControl>
-                <Input data-1p-ignore {...field} />
+                <Input type="number" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit">Update experiment</Button>
+        <div className="flex gap-2">
+          <Button type="button" onClick={cancel} variant="outline">Cancel</Button>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Creating..." : "Finalize setup"}
+          </Button>
+        </div>
       </form>
     </Form>
   );

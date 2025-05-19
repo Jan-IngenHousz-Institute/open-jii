@@ -39,6 +39,10 @@ const data = {
       isActive: true,
       items: [
         {
+          title: "New",
+          url: "/openjii/experiments/new",
+        },
+        {
           title: "Public",
           url: "/openjii/experiments?category=public",
         },
