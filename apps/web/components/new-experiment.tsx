@@ -52,7 +52,10 @@ export function NewExperimentForm({ name, visibilityPrivate }: NewExperimentForm
 
       const body: CreateExperimentBody = {
         name: data.name,
+        description: data.description,
         visibility: data.visibility,
+        status: data.status,
+        embargoIntervalDays: data.embargoIntervalDays,
       };
 
       await createExperiment({
