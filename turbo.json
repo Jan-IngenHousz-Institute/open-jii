@@ -14,6 +14,7 @@
       "dependsOn": ["^check-types"]
     },
     "dev": {
+      "env": ["NEXT_PUBLIC_ENABLE_DEVTOOLS"],
       "cache": false,
       "persistent": true
     },
