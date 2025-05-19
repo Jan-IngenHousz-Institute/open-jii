@@ -1,168 +1,176 @@
-import {
-  Auth,
-  type AuthConfig,
-  setEnvDefaults,
-  createActionURL,
-} from "@auth/core";
-import { skipCSRFCheck } from "@auth/core";
-import type { Session } from "@auth/core/types";
-import e from "express";
+import { getSession as getExpressSession } from "@auth/express";
+import * as e from "express";
 
-import { adapter } from "./adapter";
 import { authConfig } from "./config";
 
-export type NestAuthConfig = Omit<AuthConfig, "raw">;
+export const getSession = (request: e.Request) =>
+  getExpressSession(request, authConfig);
 
-const config = {
-  ...authConfig,
-  basePath: "/api/v1/auth",
-  session: { strategy: "jwt" },
-  callbacks: {
-    redirect({ url, baseUrl }) {
-      return url;
-    },
-  },
-  adapter,
-  skipCSRFCheck,
-  debug: true,
-} satisfies NestAuthConfig;
+// import {
+//   Auth,
+//   type AuthConfig,
+//   setEnvDefaults,
+//   createActionURL,
+// } from "@auth/core";
+// import { skipCSRFCheck } from "@auth/core";
+// import type { Session } from "@auth/core/types";
+// import e from "express";
 
-/**
- * Encodes an object as url-encoded string.
- */
-export function encodeUrlEncoded(object: Record<string, any> = {}) {
-  const params = new URLSearchParams();
+// import { adapter } from "./adapter";
+// import { authConfig } from "./config";
 
-  for (const [key, value] of Object.entries(object)) {
-    if (Array.isArray(value)) {
-      value.forEach((v) => params.append(key, v));
-    } else {
-      params.append(key, value);
-    }
-  }
+// export type NestAuthConfig = Omit<AuthConfig, "raw">;
 
-  return params.toString();
-}
+// const config = {
+//   ...authConfig,
+//   basePath: "/api/v1/auth",
+//   session: { strategy: "jwt" },
+//   callbacks: {
+//     redirect({ url, baseUrl }) {
+//       return url;
+//     },
+//   },
+//   adapter,
+//   skipCSRFCheck,
+//   debug: true,
+// } satisfies NestAuthConfig;
 
-/**
- * Encodes an object as JSON
- */
-function encodeJson(obj: Record<string, any>) {
-  return JSON.stringify(obj);
-}
+// /**
+//  * Encodes an object as url-encoded string.
+//  */
+// export function encodeUrlEncoded(object: Record<string, any> = {}) {
+//   const params = new URLSearchParams();
 
-/**
- * Encodes an Express Request body based on the content type header.
- */
-function encodeRequestBody(req: e.Request) {
-  const contentType = req.headers["content-type"];
+//   for (const [key, value] of Object.entries(object)) {
+//     if (Array.isArray(value)) {
+//       value.forEach((v) => params.append(key, v));
+//     } else {
+//       params.append(key, value);
+//     }
+//   }
 
-  if (contentType?.includes("application/x-www-form-urlencoded")) {
-    return encodeUrlEncoded(req.body);
-  }
+//   return params.toString();
+// }
 
-  if (contentType?.includes("application/json")) {
-    return encodeJson(req.body);
-  }
+// /**
+//  * Encodes an object as JSON
+//  */
+// function encodeJson(obj: Record<string, any>) {
+//   return JSON.stringify(obj);
+// }
 
-  return req.body;
-}
+// /**
+//  * Encodes an Express Request body based on the content type header.
+//  */
+// function encodeRequestBody(req: e.Request) {
+//   const contentType = req.headers["content-type"];
 
-/**
- * Adapts an Express Request to a Web Request, returning the Web Request.
- */
-export function toWebRequest(req: e.Request) {
-  const url = req.protocol + "://" + req.get("host") + req.originalUrl;
+//   if (contentType?.includes("application/x-www-form-urlencoded")) {
+//     return encodeUrlEncoded(req.body);
+//   }
 
-  const headers = new Headers();
+//   if (contentType?.includes("application/json")) {
+//     return encodeJson(req.body);
+//   }
 
-  Object.entries(req.headers).forEach(([key, value]) => {
-    if (Array.isArray(value)) {
-      value.forEach((v) => v && headers.append(key, v));
-      return;
-    }
+//   return req.body;
+// }
 
-    if (value) {
-      headers.append(key, value);
-    }
-  });
+// /**
+//  * Adapts an Express Request to a Web Request, returning the Web Request.
+//  */
+// export function toWebRequest(req: e.Request) {
+//   const url = req.protocol + "://" + req.get("host") + req.originalUrl;
 
-  // GET and HEAD not allowed to receive body
-  const body = /GET|HEAD/.test(req.method) ? undefined : encodeRequestBody(req);
+//   const headers = new Headers();
 
-  const request = new Request(url, {
-    method: req.method,
-    headers,
-    body,
-  });
+//   Object.entries(req.headers).forEach(([key, value]) => {
+//     if (Array.isArray(value)) {
+//       value.forEach((v) => v && headers.append(key, v));
+//       return;
+//     }
 
-  return request;
-}
+//     if (value) {
+//       headers.append(key, value);
+//     }
+//   });
 
-/**
- * Adapts a Web Response to an Express Response, invoking appropriate
- * Express response methods to handle the response.
- */
-export async function toExpressResponse(response: Response, res: e.Response) {
-  response.headers.forEach((value, key) => {
-    if (value) {
-      res.append(key, value);
-    }
-  });
+//   // GET and HEAD not allowed to receive body
+//   const body = /GET|HEAD/.test(req.method) ? undefined : encodeRequestBody(req);
 
-  // Explicitly write the headers for content-type
-  // https://stackoverflow.com/a/59449326/13944042
-  res.writeHead(response.status, response.statusText, {
-    "Content-Type": response.headers.get("content-type") || "",
-  });
+//   const request = new Request(url, {
+//     method: req.method,
+//     headers,
+//     body,
+//   });
 
-  res.write(await response.text());
-  res.end();
-}
+//   return request;
+// }
 
-export function NestAuth(config: NestAuthConfig) {
-  return async (req: e.Request, res: e.Response, next: e.NextFunction) => {
-    e.json()(req, res, async (err: any) => {
-      if (err) return next(err);
-      e.urlencoded({ extended: true })(req, res, async (err: any) => {
-        if (err) return next(err);
-        try {
-          setEnvDefaults(process.env, config);
-          await toExpressResponse(await Auth(toWebRequest(req), config), res);
-          if (!res.headersSent) next();
-        } catch (error) {
-          next(error);
-        }
-      });
-    });
-  };
-}
+// /**
+//  * Adapts a Web Response to an Express Response, invoking appropriate
+//  * Express response methods to handle the response.
+//  */
+// export async function toExpressResponse(response: Response, res: e.Response) {
+//   response.headers.forEach((value, key) => {
+//     if (value) {
+//       res.append(key, value);
+//     }
+//   });
 
-export type GetSessionResult = Promise<Session | null>;
+//   // Explicitly write the headers for content-type
+//   // https://stackoverflow.com/a/59449326/13944042
+//   res.writeHead(response.status, response.statusText, {
+//     "Content-Type": response.headers.get("content-type") || "",
+//   });
 
-export async function getSession(req: e.Request): GetSessionResult {
-  setEnvDefaults(process.env, config);
-  const url = createActionURL(
-    "session",
-    req.protocol,
-    // @ts-expect-error
-    new Headers(req.headers),
-    process.env,
-    config,
-  );
+//   res.write(await response.text());
+//   res.end();
+// }
 
-  const response = await Auth(
-    new Request(url, { headers: { cookie: req.headers.cookie ?? "" } }),
-    config,
-  );
+// export function NestAuth(config: NestAuthConfig) {
+//   return async (req: e.Request, res: e.Response, next: e.NextFunction) => {
+//     e.json()(req, res, async (err: any) => {
+//       if (err) return next(err);
+//       e.urlencoded({ extended: true })(req, res, async (err: any) => {
+//         if (err) return next(err);
+//         try {
+//           setEnvDefaults(process.env, config);
+//           await toExpressResponse(await Auth(toWebRequest(req), config), res);
+//           if (!res.headersSent) next();
+//         } catch (error) {
+//           next(error);
+//         }
+//       });
+//     });
+//   };
+// }
 
-  const { status = 200 } = response;
+// export type GetSessionResult = Promise<Session | null>;
 
-  const data = await response.json();
+// export async function getSession(req: e.Request): GetSessionResult {
+//   setEnvDefaults(process.env, config);
+//   const url = createActionURL(
+//     "session",
+//     req.protocol,
+//     // @ts-expect-error
+//     new Headers(req.headers),
+//     process.env,
+//     config,
+//   );
 
-  if (!data || !Object.keys(data).length) return null;
-  if (status === 200) return data;
-  throw new Error(data.message);
-}
+//   const response = await Auth(
+//     new Request(url, { headers: { cookie: req.headers.cookie ?? "" } }),
+//     config,
+//   );
 
-export const auth = NestAuth(config);
+//   const { status = 200 } = response;
+
+//   const data = await response.json();
+
+//   if (!data || !Object.keys(data).length) return null;
+//   if (status === 200) return data;
+//   throw new Error(data.message);
+// }
+
+// export const auth = NestAuth(config);

@@ -5,8 +5,8 @@ import { StatusCodes } from "http-status-codes";
 import { contract } from "@repo/api";
 import type { SessionUser } from "@repo/auth/config";
 
-import { CurrentUser } from "../../auth/decorators/current-user.decorator";
-import { AuthGuard } from "../../auth/guards/auth.guard";
+import { CurrentUser } from "../../common/decorators";
+import { AuthGuard } from "../../common/guards";
 import { AddExperimentMemberUseCase } from "../application/use-cases/experiment-members/add-experiment-member";
 import { ListExperimentMembersUseCase } from "../application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "../application/use-cases/experiment-members/remove-experiment-member";

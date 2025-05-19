@@ -2,10 +2,6 @@
   "name": "@repo/auth",
   "version": "0.0.1",
   "exports": {
-    "./middleware": {
-      "types": "./src/middleware.d.ts",
-      "default": "./dist/middleware.js"
-    },
     "./adapter": {
       "types": "./src/adapter.d.ts",
       "default": "./dist/adapter.js"
@@ -49,13 +45,5 @@
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:"
-  },
-  "peerDependencies": {
-    "express": "^5.1.0"
-  },
-  "peerDependenciesMeta": {
-    "express": {
-      "optional": true
-    }
   }
 }

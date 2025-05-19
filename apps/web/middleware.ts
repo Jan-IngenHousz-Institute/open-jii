@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextMiddleware } from "next/server";
 
-import { middleware } from "@repo/auth/middleware";
+import { middleware } from "@repo/auth/next";
 
 export default middleware((request) => {
   if (!request.auth) {

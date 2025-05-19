@@ -3,7 +3,7 @@
 import type { ExperimentForm } from "@/util/schema";
 import { editExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { router } from "next/client";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import type z from "zod";
 
@@ -25,12 +25,10 @@ import {
   SelectValue,
   SelectTrigger,
 } from "@repo/ui/components";
+import { toast } from "@repo/ui/hooks";
 
 import { useExperiment } from "../hooks/experiment/useExperiment/useExperiment";
-import type z from "zod";
 import { useExperimentUpdate } from "../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
-import { toast } from "@repo/ui/hooks";
-import { useRouter } from "next/navigation";
 
 interface EditExperimentProps {
   experimentId: string;
@@ -82,6 +80,8 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
         body,
       });
 
+      console.log(result);
+
       // Show message
       toast({
         description: "Experiment updated successfully",
@@ -120,11 +120,7 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea
-                  placeholder=""
-                  className="resize-none"
-                  {...field}
-                />
+                <Textarea placeholder="" className="resize-none" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -143,8 +139,12 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {(Object.entries(zExperimentStatus.enum)).map(key => {
-                    return <SelectItem key={key[0]} value={key[0]}>{key[0]}</SelectItem>
+                  {Object.entries(zExperimentStatus.enum).map((key) => {
+                    return (
+                      <SelectItem key={key[0]} value={key[0]}>
+                        {key[0]}
+                      </SelectItem>
+                    );
                   })}
                 </SelectContent>
               </Select>
@@ -165,8 +165,12 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {(Object.entries(zExperimentVisibility.enum)).map(key => {
-                    return <SelectItem key={key[0]} value={key[0]}>{key[0]}</SelectItem>
+                  {Object.entries(zExperimentVisibility.enum).map((key) => {
+                    return (
+                      <SelectItem key={key[0]} value={key[0]}>
+                        {key[0]}
+                      </SelectItem>
+                    );
                   })}
                 </SelectContent>
               </Select>

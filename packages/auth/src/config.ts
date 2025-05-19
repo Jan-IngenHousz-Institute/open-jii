@@ -1,4 +1,3 @@
-import { AuthConfig } from "@auth/core";
 import GitHub from "@auth/core/providers/github";
 import Google from "@auth/core/providers/google";
 import type {
@@ -7,8 +6,6 @@ import type {
   Session as NextAuthSession,
   User,
 } from "next-auth";
-
-import { NestAuthConfig } from "./express";
 
 declare module "next-auth" {
   /**

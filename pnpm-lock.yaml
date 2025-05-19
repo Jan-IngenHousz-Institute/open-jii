@@ -481,9 +481,6 @@ importers:
 
   packages/api:
     dependencies:
-      '@repo/auth':
-        specifier: workspace:*
-        version: link:../auth
       '@ts-rest/core':
         specifier: ^3.52.1
         version: 3.52.1(@types/node@22.15.17)(zod@3.24.4)
@@ -527,9 +524,6 @@ importers:
       '@repo/database':
         specifier: workspace:*
         version: link:../database
-      express:
-        specifier: ^5.1.0
-        version: 5.1.0
       next:
         specifier: ^15.3.2
         version: 15.3.2(@babel/core@7.12.9)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)

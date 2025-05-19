@@ -2,11 +2,11 @@ import { Controller, Logger, UseGuards } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
-import { AuthGuard, CurrentUser } from "src/auth";
-
 import { contract } from "@repo/api";
 import type { SessionUser } from "@repo/auth/config";
 
+import { CurrentUser } from "../../common/decorators";
+import { AuthGuard } from "../../common/guards";
 import { CreateExperimentUseCase } from "../application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "../application/use-cases/delete-experiment/delete-experiment";
 import { GetExperimentUseCase } from "../application/use-cases/get-experiment/get-experiment";
