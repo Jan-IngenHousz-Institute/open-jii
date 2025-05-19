@@ -91,3 +91,9 @@ variable "instance_class" {
   type        = string
   default     = "db.serverless"
 }
+
+variable "iam_database_authentication_enabled" {
+  description = "IAM authentication for Aurora DB"
+  type        = bool
+  default     = true
+}
