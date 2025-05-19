@@ -18,8 +18,9 @@ import type { UpdateExperimentBody} from "@repo/api";
 import { zExperimentStatus, zExperimentVisibility } from "@repo/api";
 import { useExperiment } from "../hooks/experiment/useExperiment/useExperiment";
 import type z from "zod";
-import { router } from "next/client";
 import { useExperimentUpdate } from "../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
+import { toast } from "@repo/ui/hooks";
+import { useRouter } from "next/navigation";
 
 interface EditExperimentProps {
   experimentId: string;
@@ -49,6 +50,7 @@ interface EditExperimentFormProps {
 }
 
 export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
+  const router = useRouter();
   const { mutateAsync: updateExperiment } = useExperimentUpdate();
 
   const form = useForm<ExperimentForm>({
@@ -72,115 +74,118 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
         embargoIntervalDays: data.embargoIntervalDays,
       };
 
-      const result = await updateExperiment({
+      await updateExperiment({
         params: { id: experiment.id, },
         query: { userId },
         body,
       });
 
+      // Show message
+      toast({
+        description: "Experiment updated successfully",
+      });
       // Navigate to the list of experiments
-      //router.push(`/openjii/experiments`);
-      await router.push(`/openjii/experiments/${result.body.id}`);
+      router.push(`/openjii/experiments`);
     } catch (error) {
+      toast({
+        description: "Failed to update experiment",
+        variant: "destructive",
+      });
       console.error("Failed to update experiment:", error);
     }
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        <div className="flex flex-1 flex-col gap-3 p-4 pt-0">
-            <div className="bg-muted/50 aspect-video rounded-xl">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input data-1p-ignore {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder=""
-                        className="resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select an experiment status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {(Object.entries(zExperimentStatus.enum)).map(key => {
-                          return <SelectItem key={key[0]} value={key[0]}>{key[0]}</SelectItem>
-                        })}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="visibility"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Visibility</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select an experiment visibility" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {(Object.entries(zExperimentVisibility.enum)).map(key => {
-                          return <SelectItem key={key[0]} value={key[0]}>{key[0]}</SelectItem>
-                        })}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="embargoIntervalDays"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Embargo interval days</FormLabel>
-                    <FormControl>
-                      <Input data-1p-ignore {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit">Save</Button>
-          </div>
-        </div>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Name</FormLabel>
+              <FormControl>
+                <Input data-1p-ignore {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder=""
+                  className="resize-none"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Status</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an experiment status" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {(Object.entries(zExperimentStatus.enum)).map(key => {
+                    return <SelectItem key={key[0]} value={key[0]}>{key[0]}</SelectItem>
+                  })}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="visibility"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Visibility</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an experiment visibility" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {(Object.entries(zExperimentVisibility.enum)).map(key => {
+                    return <SelectItem key={key[0]} value={key[0]}>{key[0]}</SelectItem>
+                  })}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="embargoIntervalDays"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Embargo interval days</FormLabel>
+              <FormControl>
+                <Input data-1p-ignore {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit">Update experiment</Button>
       </form>
     </Form>
   );

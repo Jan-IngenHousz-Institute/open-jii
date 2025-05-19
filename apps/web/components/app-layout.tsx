@@ -1,6 +1,6 @@
 import type React from "react";
 import { headers } from "next/headers";
-import { Separator, SidebarInset, SidebarProvider, SidebarTrigger } from "@repo/ui/components";
+import { Separator, SidebarInset, SidebarProvider, SidebarTrigger, Toaster } from "@repo/ui/components";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Breadcrumbs } from "@/components/app-breadcrumbs";
 
@@ -24,7 +24,8 @@ export async function AppLayout({ children, pageTitle }: Readonly<{
             <Breadcrumbs pathname={pathname} pageTitle={pageTitle} />
           </div>
         </header>
-        {children}
+        <main className="flex flex-1 flex-col p-4">{children}</main>
+        <Toaster />
       </SidebarInset>
     </SidebarProvider>
   );
