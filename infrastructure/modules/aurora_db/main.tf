@@ -43,7 +43,7 @@ resource "aws_iam_policy" "aurora_db_access" {
       {
         Effect   = "Allow"
         Action   = ["rds-db:connect"]
-        Resource = "arn:aws:rds-db:${var.aws_region}:${var.aws_account_id}:dbuser:${aws_rds_cluster.rds_cluster_aurora.id}/${var.master_username}"
+        Resource = "arn:aws:rds-db:${data.aws_caller_identity.current.account_id}:dbuser:${aws_rds_cluster.rds_cluster_aurora.id}/${var.master_username}"
       },
       {
         Effect   = "Allow"
@@ -69,8 +69,8 @@ resource "aws_iam_role" "aurora_db_dev_role" {
         Effect = "Allow"
         Principal = {
           AWS = [
-            "arn:aws:iam::${var.aws_account_id}:user/developer1",
-            "arn:aws:iam::${var.aws_account_id}:user/developer2"
+            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/developer1",
+            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/developer2"
           ]
         }
         Action = "sts:AssumeRole"
