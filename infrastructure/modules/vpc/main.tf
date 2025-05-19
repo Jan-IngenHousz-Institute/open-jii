@@ -41,6 +41,35 @@ resource "aws_security_group" "default" {
   tags = { Name = "open-jii-default-sg-dev" }
 }
 
+# -------------------------
+# Aurora DB Security Group
+# -------------------------
+resource "aws_security_group" "aurora_sg" {
+  name        = "open-jii-aurora-sg-dev"
+  description = "Security group for Aurora DB"
+  vpc_id      = aws_vpc.this.id
+
+  # Allow inbound traffic on the DB port (typically 5432 for PostgreSQL)
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.this.cidr_block] # Restrict access to VPC only
+  }
+
+  # Allow outbound traffic (Aurora needs this to communicate)
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    "Name" = "open-jii-aurora-sg-dev"
+  }
+}
+
 # ---------------
 # Public Subnets
 # ---------------
@@ -62,6 +91,18 @@ resource "aws_subnet" "private" {
   cidr_block        = cidrsubnet(var.cidr_block, var.subnet_bits, count.index + 100)
   availability_zone = element(data.aws_availability_zones.available.names, count.index)
   tags              = { Name = "open-jii-private-subnet-${count.index}-dev" }
+}
+
+# ----------------------
+# Aurora DB Subnet Group
+# ----------------------
+resource "aws_db_subnet_group" "aurora_subnet_group" {
+  name       = "aurora-subnet-group"
+  subnet_ids = aws_subnet.private[*].id
+
+  tags = {
+    "Name" = "Aurora DB Subnet Group"
+  }
 }
 
 # -----------------
