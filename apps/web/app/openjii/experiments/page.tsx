@@ -1,6 +1,7 @@
 import { CreateExperiment } from "@/components/create-experiment";
 import type { Metadata } from "next";
 import { AppLayout } from "@/components/app-layout";
+import { ListExperiments } from "@/components/list-experiments";
 
 export const metadata: Metadata = {
   title: "Experiments",
@@ -15,6 +16,7 @@ export default function ExperimentPage() {
           <p>This page will show a list of existing experiments.</p>
         </div>
         <CreateExperiment />
+        <ListExperiments />
       </div>
     </AppLayout>
   );

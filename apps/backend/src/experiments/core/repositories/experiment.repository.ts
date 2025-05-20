@@ -44,6 +44,7 @@ export class ExperimentRepository {
       status: experiments.status,
       visibility: experiments.visibility,
       embargoIntervalDays: experiments.embargoIntervalDays,
+      createdAt: experiments.createdAt,
       createdBy: experiments.createdBy,
     };
 
