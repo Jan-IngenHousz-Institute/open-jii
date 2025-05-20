@@ -1,4 +1,4 @@
-name: Deployment Template
+name: Deployment Template (Old) - TF Only
 
 on:
   workflow_call:
