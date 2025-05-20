@@ -154,10 +154,10 @@ export class TestHarness {
   }
 
   // HTTP request methods
-  public get = this.request("get");
-  public post = this.request("post");
-  public patch = this.request("patch");
-  public delete = this.request("delete");
+  public get: ReturnType<typeof this.request> = this.request("get");
+  public post: ReturnType<typeof this.request> = this.request("post");
+  public patch: ReturnType<typeof this.request> = this.request("patch");
+  public delete: ReturnType<typeof this.request> = this.request("delete");
 
   public get module() {
     if (!this._module) {

@@ -1,5 +1,4 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { Session } from "next-auth";
 
 import {
   accounts,

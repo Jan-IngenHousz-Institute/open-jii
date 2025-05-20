@@ -1,11 +1,6 @@
 import GitHub from "@auth/core/providers/github";
 import Google from "@auth/core/providers/google";
-import type {
-  DefaultSession,
-  NextAuthConfig,
-  Session as NextAuthSession,
-  User,
-} from "next-auth";
+import type { DefaultSession, NextAuthConfig, User } from "next-auth";
 
 declare module "next-auth" {
   /**
@@ -31,6 +26,6 @@ export type { Session, SessionUser, DefaultSession, User } from "next-auth";
 
 export const authConfig = {
   secret: process.env.AUTH_SECRET,
-  providers: [GitHub, Google],
+  providers: [GitHub],
   trustHost: true,
 } satisfies NextAuthConfig;
