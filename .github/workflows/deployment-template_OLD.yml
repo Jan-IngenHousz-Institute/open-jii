@@ -1,4 +1,4 @@
-name: Deployment Template
+name: Deployment Template (Old) - TF Only
 
 on:
   workflow_call:
@@ -9,33 +9,10 @@ on:
         type: string
   workflow_dispatch:
 
-# Job 1: Build, Lint, Test & AsyncAPI
+
 jobs:
-  build_lint_test:
-    name: Build, Lint, Test & AsyncAPI
-    runs-on: ubuntu-latest
-    outputs:
-      affected_apps: ${{ steps.build.outputs.affected_apps }}
-      has_affected_apps: ${{ steps.build.outputs.has_affected_apps }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Build, Lint & Test
-        id: build
-        uses: ./.github/actions/blt
-        with:
-          node-version: "22"
-          artifact_retention: "7"
-          base: "HEAD^1"
-
-  # Job 2: Terraform (Plan & Apply)
   tofu:
     name: OpenTofu
-    needs: build_lint_test
-    if: needs.build_lint_test.outputs.has_affected_apps == 'true'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -58,45 +35,67 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: app-artifacts
-          path: artifacts
-
       - name: Run OpenTofu Operations
         uses: ./.github/actions/tofu
         with:
           tofu_version: "1.6.0"
           environment: "${{ inputs.environment }}"
+      
+      - name: Run OpenTofu Plan
+        run: |
+          tofu plan -out=tfplan
 
       - name: Apply Infrastructure
         run: tofu apply -auto-approve
 
-  # Job 3: Deploy Artifacts
-  deploy:
-    name: Deploy Artifacts
-    needs: [build_lint_test, tofu]
-    if: needs.build_lint_test.outputs.has_affected_apps == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: Configure AWS Credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: app-artifacts
-          path: artifacts
+  # build_lint_test:
+  #   name: Build, Lint, Test & AsyncAPI
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     affected_apps: ${{ steps.build.outputs.affected_apps }}
+  #     has_affected_apps: ${{ steps.build.outputs.has_affected_apps }}
+  #   steps:
+  #     - name: Checkout Repository
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
 
-      - name: Print Current Directory
-        run: pwd
+  #     - name: Build, Lint & Test
+  #       id: build
+  #       uses: ./.github/actions/blt
+  #       with:
+  #         node-version: "22"
+  #         artifact_retention: "7"
+  #         base: "HEAD^1"
 
-      - name: List Artifacts
-        run: ls -l artifacts
+  # Job 2: Terraform (Plan & Apply)
+  
+
+  # # Job 3: Deploy Artifacts
+  # deploy:
+  #   name: Deploy Artifacts
+  #   needs: [build_lint_test, tofu]
+  #   if: needs.build_lint_test.outputs.has_affected_apps == 'true'
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   steps:
+  #     - name: Configure AWS Credentials via OIDC
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+  #         aws-region: ${{ secrets.AWS_REGION }}
+
+  #     - name: Download Artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: app-artifacts
+  #         path: artifacts
+
+  #     - name: Print Current Directory
+  #       run: pwd
+
+  #     - name: List Artifacts
+  #       run: ls -l artifacts
