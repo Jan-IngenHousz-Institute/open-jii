@@ -108,19 +108,50 @@ export class TestHarness {
   }
 
   /**
-   * Create helper functions for making HTTP requests
+   * Create helper functions for making HTTP requests with authentication support
    */
   private request =
-    (method: "get" | "post" | "patch" | "delete") =>
-    (url: string, userId?: string) => {
+    (method: "get" | "post" | "patch" | "delete") => (url: string) => {
       if (!this._request) {
         throw new Error("Call setup() before making requests.");
       }
 
       const req = this._request[method](url);
 
-      return userId ? req.query({ userId }) : req;
+      // Return a function that accepts an optional userId and mock session
+      return {
+        ...req,
+        // Used for adding auth headers
+        withAuth: (userId: string) => {
+          // Add mock session to request
+          req.set("Authorization", `Bearer test-token-for-${userId}`);
+          // Mock the getSession function to return a session with the user
+          this.mockUserSession(userId);
+          return req;
+        },
+        withoutAuth: () => {
+          // Ensure no auth headers
+          req.unset("Authorization");
+          // Mock getSession to return null (unauthorized)
+          this.mockNoSession();
+          return req;
+        },
+      };
     };
+
+  // Mock the auth session for testing
+  private mockUserSession(userId: string) {
+    jest.spyOn(require("@repo/auth/express"), "getSession").mockResolvedValue({
+      user: { id: userId, name: "Test User", email: "test@example.com" },
+    });
+  }
+
+  // Mock no session for unauthorized tests
+  private mockNoSession() {
+    jest
+      .spyOn(require("@repo/auth/express"), "getSession")
+      .mockResolvedValue(null);
+  }
 
   // HTTP request methods
   public get = this.request("get");
