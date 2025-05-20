@@ -1,10 +1,15 @@
 import { getSession as getExpressSession } from "@auth/express";
 import * as e from "express";
 
+import { adapter } from "./adapter";
 import { authConfig } from "./config";
 
 export const getSession = (request: e.Request) =>
-  getExpressSession(request, authConfig);
+  getExpressSession(request, {
+    adapter,
+    session: { strategy: "jwt" },
+    ...authConfig,
+  });
 
 // import {
 //   Auth,
