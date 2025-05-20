@@ -1,13 +1,19 @@
 "use client";
 
-import { useExperiments } from "../hooks/experiment/useExperiments/useExperiments";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components";
-import {
-  EditIcon,
-  LockIcon,
-} from "lucide-react";
-import { zExperimentVisibility } from "@repo/api";
+import { EditIcon, LockIcon } from "lucide-react";
 import Link from "next/link";
+
+import { zExperimentVisibility } from "@repo/api";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@repo/ui/components";
+
+import { useExperiments } from "../hooks/experiment/useExperiments/useExperiments";
 
 export function ListExperiments() {
   // In a real app, you would get this from authentication context
@@ -28,18 +34,26 @@ export function ListExperiments() {
         </TableHeader>
         <TableBody>
           {data.body.map((experiment) => {
-            console.log(experiment);
             return (
               <TableRow key={experiment.id}>
                 <TableCell>{experiment.name}</TableCell>
-                <TableCell>{experiment.visibility === zExperimentVisibility.enum.private && <LockIcon size={18} />}</TableCell>
-                <TableCell>{experiment.createdAt.substring(0,10)}</TableCell>
-                <TableCell><Link href={`/openjii/experiments/${experiment.id}`}><EditIcon size={18} /></Link></TableCell>
+                <TableCell>
+                  {experiment.visibility ===
+                    zExperimentVisibility.enum.private && (
+                    <LockIcon size={18} />
+                  )}
+                </TableCell>
+                <TableCell>{experiment.createdAt.substring(0, 10)}</TableCell>
+                <TableCell>
+                  <Link href={`/openjii/experiments/${experiment.id}`}>
+                    <EditIcon size={18} />
+                  </Link>
+                </TableCell>
               </TableRow>
-            )
+            );
           })}
         </TableBody>
       </Table>
-    )
+    );
   }
 }
