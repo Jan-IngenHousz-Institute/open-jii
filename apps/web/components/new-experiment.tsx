@@ -2,22 +2,30 @@
 
 import { newExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import type z from "zod";
 
+import type { CreateExperimentBody } from "@repo/api";
+import { zExperimentVisibility } from "@repo/api";
 import {
-  Button, Input,
+  Button,
+  Input,
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormMessage, Select, SelectItem, SelectContent, Textarea, SelectValue, SelectTrigger,
+  FormMessage,
+  Select,
+  SelectItem,
+  SelectContent,
+  Textarea,
+  SelectValue,
+  SelectTrigger,
 } from "@repo/ui/components";
-import type { CreateExperimentBody } from "@repo/api";
-import { zExperimentStatus, zExperimentVisibility } from "@repo/api";
-import type z from "zod";
 import { toast } from "@repo/ui/hooks";
-import { useRouter } from "next/navigation";
+
 import { useExperimentCreate } from "../hooks/experiment/useExperimentCreate/useExperimentCreate";
 
 interface NewExperimentFormProps {
@@ -25,7 +33,10 @@ interface NewExperimentFormProps {
   visibilityPrivate?: boolean;
 }
 
-export function NewExperimentForm({ name, visibilityPrivate }: NewExperimentFormProps) {
+export function NewExperimentForm({
+  name,
+  visibilityPrivate,
+}: NewExperimentFormProps) {
   const router = useRouter();
   const { mutateAsync: createExperiment, isPending } = useExperimentCreate();
 
@@ -34,8 +45,12 @@ export function NewExperimentForm({ name, visibilityPrivate }: NewExperimentForm
     defaultValues: {
       name: name ?? "",
       description: "",
-      status: zExperimentStatus.enum.provisioning,
-      visibility: visibilityPrivate !== undefined ? (visibilityPrivate ? zExperimentVisibility.enum.private : zExperimentVisibility.enum.public) : zExperimentVisibility.enum.public,
+      visibility:
+        visibilityPrivate !== undefined
+          ? visibilityPrivate
+            ? zExperimentVisibility.enum.private
+            : zExperimentVisibility.enum.public
+          : zExperimentVisibility.enum.public,
       embargoIntervalDays: 90,
     },
   });
@@ -54,7 +69,6 @@ export function NewExperimentForm({ name, visibilityPrivate }: NewExperimentForm
         name: data.name,
         description: data.description,
         visibility: data.visibility,
-        status: data.status,
         embargoIntervalDays: data.embargoIntervalDays,
       };
 
@@ -101,34 +115,8 @@ export function NewExperimentForm({ name, visibilityPrivate }: NewExperimentForm
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea
-                  placeholder=""
-                  className="resize-none"
-                  {...field}
-                />
+                <Textarea placeholder="" className="resize-none" {...field} />
               </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="status"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Status</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an experiment status" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {(Object.entries(zExperimentStatus.enum)).map(key => {
-                    return <SelectItem key={key[0]} value={key[0]}>{key[0]}</SelectItem>
-                  })}
-                </SelectContent>
-              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -146,8 +134,12 @@ export function NewExperimentForm({ name, visibilityPrivate }: NewExperimentForm
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {(Object.entries(zExperimentVisibility.enum)).map(key => {
-                    return <SelectItem key={key[0]} value={key[0]}>{key[0]}</SelectItem>
+                  {Object.entries(zExperimentVisibility.enum).map((key) => {
+                    return (
+                      <SelectItem key={key[0]} value={key[0]}>
+                        {key[0]}
+                      </SelectItem>
+                    );
                   })}
                 </SelectContent>
               </Select>
@@ -169,7 +161,9 @@ export function NewExperimentForm({ name, visibilityPrivate }: NewExperimentForm
           )}
         />
         <div className="flex gap-2">
-          <Button type="button" onClick={cancel} variant="outline">Cancel</Button>
+          <Button type="button" onClick={cancel} variant="outline">
+            Cancel
+          </Button>
           <Button type="submit" disabled={isPending}>
             {isPending ? "Creating..." : "Finalize setup"}
           </Button>
