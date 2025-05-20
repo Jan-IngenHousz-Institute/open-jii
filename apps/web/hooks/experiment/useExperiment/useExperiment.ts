@@ -6,9 +6,9 @@ import { tsr } from "../../../lib/tsr";
  * @param userId The ID of the current user for authentication
  * @returns Query result containing the experiment details
  */
-export const useExperiment = (experimentId: string, userId: string) => {
+export const useExperiment = (experimentId: string) => {
   return tsr.experiments.getExperiment.useQuery({
-    queryData: { query: { userId }, params: { id: experimentId } },
-    queryKey: ["experiment", experimentId, userId],
+    queryData: { params: { id: experimentId } },
+    queryKey: ["experiment", experimentId],
   });
 };

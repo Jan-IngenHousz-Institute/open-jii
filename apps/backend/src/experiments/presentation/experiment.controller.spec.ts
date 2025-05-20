@@ -16,6 +16,9 @@ describe("ExperimentController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
+
+    // Reset any mocks before each test
+    jest.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -38,7 +41,7 @@ describe("ExperimentController", () => {
 
       const response = await testApp
         .post(contract.experiments.createExperiment.path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .send(experimentData)
         .expect(StatusCodes.CREATED);
 
@@ -56,7 +59,7 @@ describe("ExperimentController", () => {
     it("should return 400 if name is missing", async () => {
       await testApp
         .post(contract.experiments.createExperiment.path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .send({
           description: "Missing name",
           status: "provisioning",
@@ -64,13 +67,26 @@ describe("ExperimentController", () => {
         })
         .expect(StatusCodes.BAD_REQUEST);
     });
+
+    it("should return 401 if not authenticated", async () => {
+      await testApp
+        .post(contract.experiments.createExperiment.path)
+        .withoutAuth()
+        .send({
+          name: "Unauthorized Experiment",
+          description: "This should fail",
+          status: "provisioning",
+          visibility: "private",
+        })
+        .expect(StatusCodes.UNAUTHORIZED);
+    });
   });
 
   describe("listExperiments", () => {
     it("should return an empty array if no experiments exist", async () => {
       const response = await testApp
         .get(contract.experiments.listExperiments.path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
       expect(response.body).toEqual([]);
@@ -89,7 +105,7 @@ describe("ExperimentController", () => {
 
       const response = await testApp
         .get(contract.experiments.listExperiments.path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
       expect(response.body).toHaveLength(2);
@@ -120,12 +136,20 @@ describe("ExperimentController", () => {
 
       const response = await testApp
         .get(contract.experiments.listExperiments.path)
+        .withAuth(testUserId)
         .query({ userId: testUserId, filter: "my" })
         .expect(StatusCodes.OK);
 
       expect(response.body).toHaveLength(1);
       expect(response.body[0].id).toBe(experiment.id);
       expect(response.body[0].name).toBe("My Experiment");
+    });
+
+    it("should return 401 if not authenticated", async () => {
+      await testApp
+        .get(contract.experiments.listExperiments.path)
+        .withoutAuth()
+        .expect(StatusCodes.UNAUTHORIZED);
     });
   });
 
@@ -146,7 +170,7 @@ describe("ExperimentController", () => {
 
       const response = await testApp
         .get(path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
       expect(response.body).toMatchObject({
@@ -169,7 +193,7 @@ describe("ExperimentController", () => {
 
       await testApp
         .get(path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)
         .expect(({ body }) => {
           expect(body.message).toContain("not found");
@@ -187,8 +211,20 @@ describe("ExperimentController", () => {
 
       await testApp
         .get(path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 401 if not authenticated", async () => {
+      const nonExistentId = faker.string.uuid();
+      const path = testApp.resolvePath(
+        contract.experiments.getExperiment.path,
+        {
+          id: nonExistentId,
+        },
+      );
+
+      await testApp.get(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
     });
   });
 
@@ -209,7 +245,7 @@ describe("ExperimentController", () => {
 
       const response = await testApp
         .patch(path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .send({ name: "Updated Name", status: "active" })
         .expect(StatusCodes.OK);
 
@@ -231,12 +267,28 @@ describe("ExperimentController", () => {
 
       await testApp
         .patch(path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .send({ name: "Won't Update" })
         .expect(StatusCodes.NOT_FOUND)
         .expect(({ body }) => {
           expect(body.message).toContain("not found");
         });
+    });
+
+    it("should return 401 if not authenticated", async () => {
+      const nonExistentId = faker.string.uuid();
+      const path = testApp.resolvePath(
+        contract.experiments.updateExperiment.path,
+        {
+          id: nonExistentId,
+        },
+      );
+
+      await testApp
+        .patch(path)
+        .withoutAuth()
+        .send({ name: "Won't Update" })
+        .expect(StatusCodes.UNAUTHORIZED);
     });
   });
 
@@ -256,7 +308,7 @@ describe("ExperimentController", () => {
 
       await testApp
         .delete(path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .expect(StatusCodes.NO_CONTENT);
 
       // Verify it's gone
@@ -268,7 +320,7 @@ describe("ExperimentController", () => {
       );
       await testApp
         .get(getPath)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND);
     });
 
@@ -283,11 +335,23 @@ describe("ExperimentController", () => {
 
       await testApp
         .delete(path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)
         .expect(({ body }) => {
           expect(body.message).toContain("not found");
         });
+    });
+
+    it("should return 401 if not authenticated", async () => {
+      const nonExistentId = faker.string.uuid();
+      const path = testApp.resolvePath(
+        contract.experiments.deleteExperiment.path,
+        {
+          id: nonExistentId,
+        },
+      );
+
+      await testApp.delete(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
     });
   });
 
@@ -307,7 +371,7 @@ describe("ExperimentController", () => {
 
       const response = await testApp
         .get(path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
       expect(response.body).toHaveLength(1);
@@ -315,6 +379,22 @@ describe("ExperimentController", () => {
         userId: testUserId,
         role: "admin",
       });
+    });
+
+    it("should return 401 if not authenticated when listing members", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Member Test Experiment",
+        userId: testUserId,
+      });
+
+      const path = testApp.resolvePath(
+        contract.experiments.listExperimentMembers.path,
+        {
+          id: experiment.id,
+        },
+      );
+
+      await testApp.get(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
     });
 
     it("should add a member to an experiment", async () => {
@@ -335,7 +415,7 @@ describe("ExperimentController", () => {
 
       await testApp
         .post(path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .send({ userId: newMemberId, role: "member" })
         .expect(StatusCodes.CREATED)
         .expect(({ body }) => {
@@ -350,10 +430,33 @@ describe("ExperimentController", () => {
         contract.experiments.listExperimentMembers.path,
         { id: experiment.id },
       );
-      const response = await testApp.get(listPath).query({
+      const response = await testApp.get(listPath).withAuth(testUserId).query({
         userId: testUserId,
       });
       expect(response.body).toHaveLength(2);
+    });
+
+    it("should return 401 if not authenticated when adding a member", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Add Member Test",
+        userId: testUserId,
+      });
+      const newMemberId = await testApp.createTestUser({
+        email: "member@example.com",
+      });
+
+      const path = testApp.resolvePath(
+        contract.experiments.addExperimentMember.path,
+        {
+          id: experiment.id,
+        },
+      );
+
+      await testApp
+        .post(path)
+        .withoutAuth()
+        .send({ userId: newMemberId, role: "member" })
+        .expect(StatusCodes.UNAUTHORIZED);
     });
 
     it("should remove a member from an experiment", async () => {
@@ -373,7 +476,7 @@ describe("ExperimentController", () => {
         contract.experiments.listExperimentMembers.path,
         { id: experiment.id },
       );
-      let response = await testApp.get(listPath).query({
+      let response = await testApp.get(listPath).withAuth(testUserId).query({
         userId: testUserId,
       });
 
@@ -390,15 +493,42 @@ describe("ExperimentController", () => {
 
       await testApp
         .delete(removePath)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .expect(StatusCodes.NO_CONTENT);
 
       // Verify member was removed
-      response = await testApp.get(listPath).query({
+      response = await testApp.get(listPath).withAuth(testUserId).query({
         userId: testUserId,
       });
       expect(response.body).toHaveLength(1);
       expect(response.body[0].userId).toBe(testUserId);
+    });
+
+    it("should return 401 if not authenticated when removing a member", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Remove Member Test",
+        userId: testUserId,
+      });
+      const newMemberId = await testApp.createTestUser({
+        email: "member-to-remove@example.com",
+      });
+
+      // Add the member first
+      await testApp.addExperimentMember(experiment.id, newMemberId, "member");
+
+      // Now try to remove the member without auth
+      const removePath = testApp.resolvePath(
+        contract.experiments.removeExperimentMember.path,
+        {
+          id: experiment.id,
+          memberId: newMemberId,
+        },
+      );
+
+      await testApp
+        .delete(removePath)
+        .withoutAuth()
+        .expect(StatusCodes.UNAUTHORIZED);
     });
   });
 });

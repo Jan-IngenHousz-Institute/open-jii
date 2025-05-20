@@ -1,4 +1,4 @@
-export function promiseWithTimeout<T>(promise: Promise<T>, ms: number){
+export function promiseWithTimeout<T>(promise: Promise<T>, ms: number) {
   return new Promise<T>((resolve, reject) => {
     const timeoutId = setTimeout(() => {
       reject(new Error("Timed out"));
