@@ -16,10 +16,7 @@ import {
 import { useExperiments } from "../hooks/experiment/useExperiments/useExperiments";
 
 export function ListExperiments() {
-  // In a real app, you would get this from authentication context
-  const userId = "00000000-0000-0000-0000-000000000000";
-
-  const { data } = useExperiments(userId);
+  const { data } = useExperiments();
 
   if (data) {
     return (

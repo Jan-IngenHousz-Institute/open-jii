@@ -60,10 +60,6 @@ export function NewExperimentForm({
 
   async function onSubmit(data: CreateExperimentBody) {
     try {
-      // Generate a random userId for demo purposes
-      // In a real app, you would get this from authentication context
-      const userId = "00000000-0000-0000-0000-000000000000";
-
       const body: CreateExperimentBody = {
         name: data.name,
         description: data.description,
@@ -72,7 +68,6 @@ export function NewExperimentForm({
       };
 
       await createExperiment({
-        query: { userId },
         body,
       });
 

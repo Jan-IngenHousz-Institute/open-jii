@@ -35,11 +35,7 @@ interface EditExperimentProps {
 }
 
 export function EditExperiment({ experimentId }: EditExperimentProps) {
-  // Generate a random userId for demo purposes
-  // In a real app, you would get this from authentication context
-  const userId = "00000000-0000-0000-0000-000000000000";
-
-  const { data } = useExperiment(experimentId, userId);
+  const { data } = useExperiment(experimentId);
 
   if (data) {
     const experiment: EditExperimentForm = {
@@ -74,10 +70,6 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
 
   async function onSubmit(data: z.infer<typeof editExperimentFormSchema>) {
     try {
-      // Generate a random userId for demo purposes
-      // In a real app, you would get this from authentication context
-      const userId = "00000000-0000-0000-0000-000000000000";
-
       const body: UpdateExperimentBody = {
         name: data.name,
         description: data.description,
@@ -87,7 +79,6 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
 
       await updateExperiment({
         params: { id: experiment.id },
-        query: { userId },
         body,
       });
 

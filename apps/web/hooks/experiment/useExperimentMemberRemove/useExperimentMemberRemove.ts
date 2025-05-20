@@ -13,29 +13,22 @@ export const useExperimentMemberRemove = () => {
     onMutate: async (variables) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({
-        queryKey: [
-          "experiment-members",
-          variables.params.id,
-          variables.query.userId,
-        ],
+        queryKey: ["experiment-members", variables.params.id],
       });
 
       // Get current members
       const previousMembers = queryClient.getQueryData<{
         body: ExperimentMember[];
-      }>(["experiment-members", variables.params.id, variables.query.userId]);
+      }>(["experiment-members", variables.params.id]);
 
       // Optimistically remove the member from the cache
       if (previousMembers?.body) {
-        queryClient.setQueryData(
-          ["experiment-members", variables.params.id, variables.query.userId],
-          {
-            ...previousMembers,
-            body: previousMembers.body.filter(
-              (member) => member.userId !== variables.params.memberId,
-            ),
-          },
-        );
+        queryClient.setQueryData(["experiment-members", variables.params.id], {
+          ...previousMembers,
+          body: previousMembers.body.filter(
+            (member) => member.userId !== variables.params.memberId,
+          ),
+        });
       }
 
       return { previousMembers };
@@ -44,19 +37,15 @@ export const useExperimentMemberRemove = () => {
       // Revert to previous state on error
       if (context?.previousMembers) {
         queryClient.setQueryData(
-          ["experiment-members", variables.params.id, variables.query.userId],
+          ["experiment-members", variables.params.id],
           context.previousMembers,
         );
       }
     },
-    onSettled: (data, error, variables) => {
+    onSettled: async (data, error, variables) => {
       // Always refetch to ensure cache is in sync with server
-      queryClient.invalidateQueries({
-        queryKey: [
-          "experiment-members",
-          variables.params.id,
-          variables.query.userId,
-        ],
+      await queryClient.invalidateQueries({
+        queryKey: ["experiment-members", variables.params.id],
       });
     },
   });

@@ -1,17 +1,16 @@
+import { ReactNode } from "react";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { View } from "react-native";
-import { ReactNode } from "react"
+import { assertEnvVariables } from "~/utils/assert";
+import { prettifyErrorMessages } from "~/utils/prettify-error-messages";
 
 import { BigActionButton } from "../components/big-action-button";
 import { ErrorView } from "../components/error-view";
 import { LargeSpinner } from "../components/large-spinner";
 import { ResultView } from "../components/result-view";
-
-import { MultiSpeqCommandExecutor } from "../services/multispeq-communication/multispeq-command-executor";
-import { sendMqttEvent } from "../services/mqtt/send-mqtt-event";
-import { assertEnvVariables } from "~/utils/assert";
 import { useToast } from "../components/toast-provider";
-import { prettifyErrorMessages } from "~/utils/prettify-error-messages";;
+import { sendMqttEvent } from "../services/mqtt/send-mqtt-event";
+import { MultiSpeqCommandExecutor } from "../services/multispeq-communication/multispeq-command-executor";
 
 const { MQTT_TOPIC: topic } = assertEnvVariables({
   MQTT_TOPIC: process.env.MQTT_TOPIC,
@@ -24,7 +23,10 @@ interface Props {
   renderError?: (error: Error) => ReactNode;
 }
 
-export function MultispeqMeasurementWidget({ establishDeviceConnection, renderError }: Props) {
+export function MultispeqMeasurementWidget({
+  establishDeviceConnection,
+  renderError,
+}: Props) {
   const { showToast } = useToast();
 
   const {
@@ -38,7 +40,7 @@ export function MultispeqMeasurementWidget({ establishDeviceConnection, renderEr
     } catch {
       // ignored
     }
-    return await establishDeviceConnection()
+    return await establishDeviceConnection();
   }, []);
 
   const {
@@ -47,7 +49,7 @@ export function MultispeqMeasurementWidget({ establishDeviceConnection, renderEr
     result: scanResult,
     error: measurementError,
     reset,
-  } = useAsyncCallback(async () =>{
+  } = useAsyncCallback(async () => {
     try {
       return await multispeq?.execute(protocol);
     } catch (e) {
@@ -68,7 +70,10 @@ export function MultispeqMeasurementWidget({ establishDeviceConnection, renderEr
       showToast("Measurement uploaded!", "success");
     } catch (e: any) {
       console.log("Upload failed", e);
-      showToast("Please check your internet connection and try again.", "error");
+      showToast(
+        "Please check your internet connection and try again.",
+        "error",
+      );
     }
   });
 
@@ -79,7 +84,7 @@ export function MultispeqMeasurementWidget({ establishDeviceConnection, renderEr
   const handleReconnect = async () => {
     reset();
     await reconnect();
-  }
+  };
   const error = connectionError ?? measurementError;
 
   if (error || !multispeq) {
@@ -89,7 +94,6 @@ export function MultispeqMeasurementWidget({ establishDeviceConnection, renderEr
         {error && renderError?.(error)}
         <BigActionButton onPress={handleReconnect} text="Connect" />
       </View>
-
     );
   }
 

@@ -176,4 +176,3 @@ runs:
         name: app-artifacts
         path: artifacts/
         retention-days: ${{ inputs.artifact_retention }}
-      
