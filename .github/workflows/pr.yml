@@ -26,9 +26,11 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Build, Lint & Test
-        id: build
+        id: blt
         uses: ./.github/actions/blt
         with:
           node-version: "22"
@@ -58,12 +60,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: app-artifacts
-          path: artifacts
 
       - name: Run OpenTofu Operations
         uses: ./.github/actions/tofu
