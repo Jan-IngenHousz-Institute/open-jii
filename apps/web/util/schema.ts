@@ -2,18 +2,15 @@ import z from "zod";
 
 import { zExperimentVisibility } from "@repo/api";
 
-export const newExperimentFormSchema = z.object({
+export const editExperimentFormSchema = z.object({
+  id: z.string(),
   name: z.string().min(1).max(100),
   description: z.string(),
   visibility: zExperimentVisibility,
   embargoIntervalDays: z.number(),
 });
 
-export const editExperimentFormSchema = newExperimentFormSchema.extend({
-  id: z.string(),
-});
-
-export type ExperimentForm = z.infer<typeof editExperimentFormSchema>;
+export type EditExperimentForm = z.infer<typeof editExperimentFormSchema>;
 
 export const createExperimentFormSchema = z.object({
   name: z.string().min(1).max(100),

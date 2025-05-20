@@ -1,6 +1,6 @@
 "use client";
 
-import type { ExperimentForm } from "@/util/schema";
+import type { EditExperimentForm } from "@/util/schema";
 import { editExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -42,7 +42,7 @@ export function EditExperiment({ experimentId }: EditExperimentProps) {
   const { data } = useExperiment(experimentId, userId);
 
   if (data) {
-    const experiment: ExperimentForm = {
+    const experiment: EditExperimentForm = {
       id: experimentId,
       name: data.body.name,
       description: data.body.description ?? "",
@@ -54,19 +54,23 @@ export function EditExperiment({ experimentId }: EditExperimentProps) {
 }
 
 interface EditExperimentFormProps {
-  experiment: ExperimentForm;
+  experiment: EditExperimentForm;
 }
 
 export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
   const router = useRouter();
-  const { mutateAsync: updateExperiment } = useExperimentUpdate();
+  const { mutateAsync: updateExperiment, isPending } = useExperimentUpdate();
 
-  const form = useForm<ExperimentForm>({
+  const form = useForm<EditExperimentForm>({
     resolver: zodResolver(editExperimentFormSchema),
     defaultValues: {
       ...experiment,
     },
   });
+
+  function cancel() {
+    router.back();
+  }
 
   async function onSubmit(data: z.infer<typeof editExperimentFormSchema>) {
     try {
@@ -170,6 +174,14 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
             </FormItem>
           )}
         />
+        <div className="flex gap-2">
+          <Button type="button" onClick={cancel} variant="outline">
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Updating..." : "Update"}
+          </Button>
+        </div>
         <Button type="submit">Update experiment</Button>
       </form>
     </Form>
