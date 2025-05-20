@@ -23,8 +23,6 @@ jobs:
   build_lint_test:
     name: Build, Lint, Test & AsyncAPI
     runs-on: ubuntu-latest
-    outputs:
-      has_affected_apps: ${{ steps.blt.outputs.has_affected_apps }}  # Exposes action output
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -60,13 +58,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
-      - name: Download Artifacts
-        if: needs.build_lint_test.outputs.has_affected_apps == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: app-artifacts
-          path: artifacts
 
       - name: Run OpenTofu Operations
         uses: ./.github/actions/tofu
