@@ -40,12 +40,16 @@ runs:
     - name: Configure AWS Credentials via OIDC
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        role-to-assume: "arn:aws:iam::084375565727:role/GithubActionsDeployAccess"
-        aws-region: "eu-central-1"
+        role-to-assume: ${{ inputs.aws_role_arn }}
+        aws-region: ${{ inputs.aws_region }}
 
     - name: Check AWS Credentials
       shell: bash
       run: aws sts get-caller-identity
+
+    - name: Check Env
+      shell: bash
+      run: ls infrastructure/env/${{ inputs.environment }}
 
     - name: OpenTofu Init
       shell: bash
