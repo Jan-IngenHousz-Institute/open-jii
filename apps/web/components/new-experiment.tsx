@@ -44,12 +44,9 @@ export function NewExperimentForm({
     defaultValues: {
       name: name ?? "",
       description: "",
-      visibility:
-        visibilityPrivate !== undefined
-          ? visibilityPrivate
-            ? zExperimentVisibility.enum.private
-            : zExperimentVisibility.enum.public
-          : zExperimentVisibility.enum.public,
+      visibility: visibilityPrivate
+        ? zExperimentVisibility.enum.private
+        : zExperimentVisibility.enum.public,
       embargoIntervalDays: 90,
     },
   });
