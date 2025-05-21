@@ -40,8 +40,8 @@ runs:
     - name: Configure AWS Credentials via OIDC
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        role-to-assume: ${{ inputs.aws_role_arn }}
-        aws-region: ${{ inputs.aws_region }}
+        role-to-assume: "arn:aws:iam::084375565727:role/GithubActionsDeployAccess"
+        aws-region: "eu-central-1"
 
     - name: Check AWS Credentials
       shell: bash
