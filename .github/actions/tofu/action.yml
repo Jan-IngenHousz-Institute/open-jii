@@ -51,6 +51,10 @@ runs:
       shell: bash
       run: cd infrastructure/env/${{ inputs.environment }}
 
+    - name: Check Env
+      shell: bash
+      run: pwd
+
     - name: OpenTofu Init
       shell: bash
       working-directory: infrastructure/env/${{ inputs.environment }}
