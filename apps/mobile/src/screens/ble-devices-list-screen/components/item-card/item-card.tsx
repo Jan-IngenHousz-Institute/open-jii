@@ -3,14 +3,12 @@ import { Alert, Text, TouchableOpacity, View } from "react-native";
 
 import type { BluetoothDevice } from "../../utils/bluetooth-device";
 
-function handleCardPress(device: BluetoothDevice) {
-  Alert.alert("Device Selected", `${device.name ?? device.id}`);
-}
 
-export function ItemCard({ item }: { item: BluetoothDevice }) {
+
+export function ItemCard({ item, onPress }: { item: BluetoothDevice, onPress? }) {
   return (
     <TouchableOpacity
-      onPress={() => handleCardPress(item)}
+      onPress={() => onPress?.(item)}
       className="mb-3 rounded-xl bg-white p-4 shadow-md"
     >
       <View>
