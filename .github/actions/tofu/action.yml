@@ -32,7 +32,7 @@ runs:
       continue-on-error: true
 
     - name: Debug Secrets
-      run: echo "AWS Role ARN: $AWS_ROLE_ARN, AWS Region: $AWS_REGION"
+      run: echo "Debug"
       env:
         AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
         AWS_REGION: ${{ secrets.AWS_REGION }}
