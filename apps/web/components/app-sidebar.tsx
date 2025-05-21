@@ -39,7 +39,7 @@ const data = {
       isActive: true,
       items: [
         {
-          title: "New",
+          title: "New experiment",
           url: "/openjii/experiments/new",
         },
         {
