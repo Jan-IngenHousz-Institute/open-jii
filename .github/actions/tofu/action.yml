@@ -31,11 +31,11 @@ runs:
       run: tofu fmt -check
       continue-on-error: true
 
-    - name: Configure AWS Credentials
+    - name: Configure AWS Credentials via OIDC
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        role-to-assume: "arn:aws:iam::084375565727:role/GithubActionsDeployAccess"
-        aws-region: "eu-north-1"
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
     - name: Check AWS Credentials
       shell: bash
