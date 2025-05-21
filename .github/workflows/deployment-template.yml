@@ -35,7 +35,7 @@ jobs:
   tofu:
     name: OpenTofu
     needs: build_lint_test
-    if: needs.build_lint_test.outputs.has_affected_apps == 'true'
+    # if: needs.build_lint_test.outputs.has_affected_apps == 'true'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -69,8 +69,8 @@ jobs:
           tofu_version: "1.6.0"
           environment: "${{ inputs.environment }}"
 
-      - name: Apply Infrastructure
-        run: tofu apply -auto-approve
+      # - name: Apply Infrastructure
+      #   run: tofu apply -auto-approve
 
   # Job 3: Deploy Artifacts
   deploy:
