@@ -11,25 +11,25 @@ on:
 
 # Job 1: Build, Lint, Test & AsyncAPI
 jobs:
-  # build_lint_test:
-  #   name: Build, Lint, Test & AsyncAPI
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     affected_apps: ${{ steps.build.outputs.affected_apps }}
-  #     has_affected_apps: ${{ steps.build.outputs.has_affected_apps }}
-  #   steps:
-  #     - name: Checkout Repository
-  #       uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
+  build_lint_test:
+    name: Build, Lint, Test & AsyncAPI
+    runs-on: ubuntu-latest
+    outputs:
+      affected_apps: ${{ steps.build.outputs.affected_apps }}
+      has_affected_apps: ${{ steps.build.outputs.has_affected_apps }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-  #     - name: Build, Lint & Test
-  #       id: build
-  #       uses: ./.github/actions/blt
-  #       with:
-  #         node-version: "22"
-  #         artifact_retention: "7"
-  #         base: "HEAD^1"
+      - name: Build, Lint & Test
+        id: build
+        uses: ./.github/actions/blt
+        with:
+          node-version: "22"
+          artifact_retention: "7"
+          base: "HEAD^1"
 
   # Job 2: Terraform (Plan & Apply)
   tofu:
@@ -70,7 +70,8 @@ jobs:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region: ${{ secrets.AWS_REGION }}
           tofu_version: "1.6.0"
-          environment: "${{ inputs.environment }}"
+          environment: "dev"
+          # environment: "${{ inputs.environment }}"
 
       # - name: Apply Infrastructure
       #   run: tofu apply -auto-approve

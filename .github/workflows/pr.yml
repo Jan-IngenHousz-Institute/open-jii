@@ -30,11 +30,12 @@ jobs:
           fetch-depth: 0
 
       - name: Build, Lint & Test
-        id: blt
+        id: build
         uses: ./.github/actions/blt
         with:
           node-version: "22"
-          base: "main"
+          artifact_retention: "7"
+          base: "HEAD^1"
 
   tofu:
     name: OpenTofu

@@ -47,19 +47,10 @@ runs:
       shell: bash
       run: aws sts get-caller-identity
 
-    - name: Check Env
-      shell: bash
-      run: cd infrastructure/env/${{ inputs.environment }}
-
-    - name: Check Env
-      shell: bash
-      run: pwd
-
     - name: OpenTofu Init
       shell: bash
       working-directory: infrastructure/env/${{ inputs.environment }}
-      # run: tofu init
-      run: pwd
+      run: tofu init
 
     - name: OpenTofu Validate
       shell: bash
