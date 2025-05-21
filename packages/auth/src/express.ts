@@ -1,4 +1,7 @@
-import { getSession as getExpressSession } from "@auth/express";
+import {
+  ExpressAuthConfig,
+  getSession as getExpressSession,
+} from "@auth/express";
 import * as e from "express";
 import { NextAuthConfig } from "next-auth";
 
@@ -9,7 +12,7 @@ const config = {
   ...authConfig,
   adapter,
   session: { strategy: "jwt" },
-} satisfies NextAuthConfig;
+} satisfies ExpressAuthConfig;
 
 export const getSession = (request: e.Request) =>
   getExpressSession(request, config);

@@ -1,5 +1,6 @@
 import GitHub from "@auth/core/providers/github";
 import Google from "@auth/core/providers/google";
+import { ExpressAuthConfig } from "@auth/express";
 import type { DefaultSession, NextAuthConfig, User } from "next-auth";
 
 declare module "next-auth" {
@@ -29,9 +30,16 @@ export const authConfig = {
   providers: [GitHub],
   trustHost: true,
   callbacks: {
+    jwt({ token, user }) {
+      if (user) {
+        // User is available during sign-in
+        token.id = user.id;
+      }
+      return token;
+    },
     session({ session, token }) {
       session.user.id = token.id as string;
       return session;
     },
   },
-} satisfies NextAuthConfig;
+} satisfies NextAuthConfig & ExpressAuthConfig;
