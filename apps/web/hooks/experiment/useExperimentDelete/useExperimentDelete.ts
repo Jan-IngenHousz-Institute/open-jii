@@ -1,4 +1,4 @@
-import { Experiment } from "@repo/api";
+import type { Experiment } from "@repo/api";
 
 import { tsr } from "../../../lib/tsr";
 
@@ -13,17 +13,17 @@ export const useExperimentDelete = () => {
     onMutate: async (variables) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({
-        queryKey: ["experiments", variables.query.userId],
+        queryKey: ["experiments"],
       });
 
       // Get the current experiments list
       const previousExperiments = queryClient.getQueryData<{
         body: Experiment[];
-      }>(["experiments", variables.query.userId]);
+      }>(["experiments"]);
 
       // Optimistically remove the experiment from the list
       if (previousExperiments?.body) {
-        queryClient.setQueryData(["experiments", variables.query.userId], {
+        queryClient.setQueryData(["experiments"], {
           ...previousExperiments,
           body: previousExperiments.body.filter(
             (experiment) => experiment.id !== variables.params.id,
@@ -33,7 +33,7 @@ export const useExperimentDelete = () => {
 
       // Remove the single experiment from cache as well
       queryClient.removeQueries({
-        queryKey: ["experiment", variables.params.id, variables.query.userId],
+        queryKey: ["experiment", variables.params.id],
       });
 
       return { previousExperiments };
@@ -41,16 +41,13 @@ export const useExperimentDelete = () => {
     onError: (error, variables, context) => {
       // Restore the previous data if there was an error
       if (context?.previousExperiments) {
-        queryClient.setQueryData(
-          ["experiments", variables.query.userId],
-          context.previousExperiments,
-        );
+        queryClient.setQueryData(["experiments"], context.previousExperiments);
       }
     },
-    onSettled: (data, error, variables) => {
+    onSettled: async () => {
       // Always invalidate to ensure cache is in sync with server
-      queryClient.invalidateQueries({
-        queryKey: ["experiments", variables.query.userId],
+      await queryClient.invalidateQueries({
+        queryKey: ["experiments"],
       });
     },
   });

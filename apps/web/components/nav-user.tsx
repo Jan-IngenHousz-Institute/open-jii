@@ -3,7 +3,9 @@
 import { ChevronsUpDown, LogOut } from "lucide-react";
 
 import {
-  Avatar, AvatarFallback, AvatarImage,
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,

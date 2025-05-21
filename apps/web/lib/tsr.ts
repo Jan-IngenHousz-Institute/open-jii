@@ -4,15 +4,9 @@ import { initTsrReactQuery } from "@ts-rest/react-query/v5";
 
 import { contract } from "@repo/api";
 
-// import { getSession } from "./session";
-
 const customApiFetcher = async (args: ApiFetcherArgs) => {
-  // const session = await getSession();
-  // const token = session?.userId ? `Bearer ${session.userId}` : undefined;
-
   const enhancedHeaders = {
     ...args.headers,
-    // Authorization: token || "",
   };
 
   return tsRestFetchApi({
@@ -27,4 +21,5 @@ export const tsr = initTsrReactQuery(contract, {
     "x-app-source": "ts-rest",
   },
   api: customApiFetcher,
+  credentials: "include",
 });

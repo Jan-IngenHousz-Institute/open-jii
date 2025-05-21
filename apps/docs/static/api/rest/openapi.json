@@ -8,22 +8,7 @@
         "tags": [
           "experiments"
         ],
-        "parameters": [
-          {
-            "name": "userId",
-            "in": "query",
-            "description": "User ID for authentication",
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              }
-            }
-          }
-        ],
+        "parameters": [],
         "operationId": "experiments.createExperiment",
         "requestBody": {
           "description": "Body",
@@ -121,20 +106,6 @@
           "experiments"
         ],
         "parameters": [
-          {
-            "name": "userId",
-            "in": "query",
-            "description": "User ID for authentication",
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              }
-            }
-          },
           {
             "name": "filter",
             "in": "query",
@@ -254,22 +225,10 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "description": "User ID for authentication",
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              }
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
           }
         ],
         "operationId": "experiments.getExperiment",
@@ -368,22 +327,10 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "description": "User ID for authentication",
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              }
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
           }
         ],
         "operationId": "experiments.updateExperiment",
@@ -528,22 +475,10 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "description": "User ID for authentication",
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              }
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
           }
         ],
         "operationId": "experiments.deleteExperiment",
@@ -585,22 +520,10 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "description": "User ID for authentication",
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              }
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
           }
         ],
         "operationId": "experiments.listExperimentMembers",
@@ -695,22 +618,10 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "description": "User ID for authentication",
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              }
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
           }
         ],
         "operationId": "experiments.addExperimentMember",
@@ -833,30 +744,20 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
           },
           {
             "name": "memberId",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "description": "User ID for authentication",
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              }
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the member"
           }
         ],
         "operationId": "experiments.removeExperimentMember",
@@ -907,19 +808,11 @@
   "info": {
     "title": "OpenJII API",
     "version": "1.0.0",
-    "description": "API documentation for the OpenJII platform"
+    "description": "REST API documentation for the OpenJII platform"
   },
   "servers": [
     {
-      "url": "https://api.openjii.org",
-      "description": "Production environment"
-    },
-    {
-      "url": "https://staging-api.openjii.org",
-      "description": "Staging environment"
-    },
-    {
-      "url": "http://localhost:3000",
+      "url": "http://localhost:3020",
       "description": "Local development"
     }
   ]

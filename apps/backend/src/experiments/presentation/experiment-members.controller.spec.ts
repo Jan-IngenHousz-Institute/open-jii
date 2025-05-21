@@ -1,3 +1,4 @@
+// filepath: /Users/petar/Projects/JII/open-jii/apps/backend/src/experiments/presentation/experiment-members.controller.spec.ts
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
@@ -16,6 +17,9 @@ describe("ExperimentMembersController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
+
+    // Reset any mocks before each test
+    jest.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -52,21 +56,15 @@ describe("ExperimentMembersController", () => {
       // Request the members list
       const response = await testApp
         .get(path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
       // Assert the response
       expect(response.body).toHaveLength(2);
       expect(response.body).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({
-            userId: testUserId,
-            role: "admin",
-          }),
-          expect.objectContaining({
-            userId: memberId,
-            role: "member",
-          }),
+          expect.objectContaining({ userId: testUserId, role: "admin" }),
+          expect.objectContaining({ userId: memberId, role: "member" }),
         ]),
       );
     });
@@ -82,7 +80,7 @@ describe("ExperimentMembersController", () => {
 
       await testApp
         .get(path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)
         .expect(({ body }) => {
           expect(body.message).toContain("not found");
@@ -90,7 +88,7 @@ describe("ExperimentMembersController", () => {
     });
 
     it("should return 400 for invalid experiment UUID", async () => {
-      const invalidId = "not-a-valid-uuid";
+      const invalidId = "not-a-uuid";
       const path = testApp.resolvePath(
         contract.experiments.listExperimentMembers.path,
         {
@@ -100,72 +98,93 @@ describe("ExperimentMembersController", () => {
 
       await testApp
         .get(path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 401 if not authenticated", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Members List",
+        userId: testUserId,
+      });
+
+      const path = testApp.resolvePath(
+        contract.experiments.listExperimentMembers.path,
+        {
+          id: experiment.id,
+        },
+      );
+
+      await testApp.get(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
     });
   });
 
   describe("addExperimentMember", () => {
     it("should add a new member to an experiment", async () => {
-      // Create an experiment
+      // Create an experiment first
       const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment for Adding Member",
+        name: "Test Experiment for Adding Members",
         userId: testUserId,
       });
 
-      // Create a user to add as member
+      // Create a user to be added as member
       const newMemberId = await testApp.createTestUser({
         email: "new-member@example.com",
       });
 
-      // Define the path and data
+      // Construct the path
       const path = testApp.resolvePath(
         contract.experiments.addExperimentMember.path,
         {
           id: experiment.id,
         },
       );
+
+      // Create the member data
       const memberData = { userId: newMemberId, role: "member" };
 
-      // Make the request
+      // Send the request
       const response = await testApp
         .post(path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .send(memberData)
         .expect(StatusCodes.CREATED);
 
       // Assert the response
       expect(response.body).toMatchObject({
-        experimentId: experiment.id,
         userId: newMemberId,
         role: "member",
+        experimentId: experiment.id,
       });
 
-      // Verify the member was added in the database
+      // Verify with a list request
       const listPath = testApp.resolvePath(
         contract.experiments.listExperimentMembers.path,
-        { id: experiment.id },
+        {
+          id: experiment.id,
+        },
       );
+
       const listResponse = await testApp
         .get(listPath)
-        .query({ userId: testUserId });
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
 
-      expect(listResponse.body).toHaveLength(2); // Creator + new member
+      expect(listResponse.body).toHaveLength(2);
       expect(listResponse.body).toEqual(
         expect.arrayContaining([
+          expect.objectContaining({ userId: testUserId, role: "admin" }),
           expect.objectContaining({ userId: newMemberId, role: "member" }),
         ]),
       );
     });
 
     it("should return 404 when adding member to non-existent experiment", async () => {
-      // Create a user to add as member
+      const nonExistentId = faker.string.uuid();
       const memberId = await testApp.createTestUser({
-        email: "nonexistent-exp-member@example.com",
+        email: "member@example.com",
       });
 
-      // Use a non-existent experiment ID
-      const nonExistentId = faker.string.uuid();
       const path = testApp.resolvePath(
         contract.experiments.addExperimentMember.path,
         {
@@ -173,10 +192,9 @@ describe("ExperimentMembersController", () => {
         },
       );
 
-      // Make the request
       await testApp
         .post(path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .send({ userId: memberId, role: "member" })
         .expect(StatusCodes.NOT_FOUND)
         .expect(({ body }) => {
@@ -185,9 +203,9 @@ describe("ExperimentMembersController", () => {
     });
 
     it("should return 400 for invalid member data", async () => {
-      // Create an experiment
+      // Create an experiment first
       const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment for Invalid Member",
+        name: "Test Experiment for Invalid Member Data",
         userId: testUserId,
       });
 
@@ -201,14 +219,42 @@ describe("ExperimentMembersController", () => {
       // Missing userId
       await testApp
         .post(path)
+        .withAuth(testUserId)
         .send({ role: "member" })
         .expect(StatusCodes.BAD_REQUEST);
 
       // Invalid role
       await testApp
         .post(path)
+        .withAuth(testUserId)
         .send({ userId: faker.string.uuid(), role: "invalid-role" })
         .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 401 if not authenticated", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Adding Members",
+        userId: testUserId,
+      });
+
+      const newMemberId = await testApp.createTestUser({
+        email: "new-member@example.com",
+      });
+
+      const path = testApp.resolvePath(
+        contract.experiments.addExperimentMember.path,
+        {
+          id: experiment.id,
+        },
+      );
+
+      const memberData = { userId: newMemberId, role: "member" };
+
+      await testApp
+        .post(path)
+        .withoutAuth()
+        .send(memberData)
+        .expect(StatusCodes.UNAUTHORIZED);
     });
   });
 
@@ -216,26 +262,22 @@ describe("ExperimentMembersController", () => {
     it("should remove a member from an experiment", async () => {
       // Create an experiment
       const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment for Removing Member",
+        name: "Test Experiment for Removing Members",
         userId: testUserId,
       });
 
-      // Create a user to add as member
+      // Add a member
       const memberId = await testApp.createTestUser({
         email: "member-to-remove@example.com",
       });
-
-      // Add the member
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
-      // Verify member was added
+      // Verify there are 2 members
       const listPath = testApp.resolvePath(
         contract.experiments.listExperimentMembers.path,
         { id: experiment.id },
       );
-      let listResponse = await testApp
-        .get(listPath)
-        .query({ userId: testUserId });
+      let listResponse = await testApp.get(listPath).withAuth(testUserId);
 
       expect(listResponse.body).toHaveLength(2);
 
@@ -250,18 +292,20 @@ describe("ExperimentMembersController", () => {
 
       await testApp
         .delete(removePath)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .expect(StatusCodes.NO_CONTENT);
 
-      // Verify member was removed
-      listResponse = await testApp.get(listPath).query({ userId: testUserId });
-      expect(listResponse.body).toHaveLength(1); // Only creator remains
+      // Verify the member was removed
+      listResponse = await testApp.get(listPath).withAuth(testUserId);
+      expect(listResponse.body).toHaveLength(1);
       expect(listResponse.body[0].userId).toBe(testUserId);
     });
 
     it("should return 404 when removing member from non-existent experiment", async () => {
       const nonExistentId = faker.string.uuid();
-      const memberId = faker.string.uuid();
+      const memberId = await testApp.createTestUser({
+        email: "member@example.com",
+      });
 
       const path = testApp.resolvePath(
         contract.experiments.removeExperimentMember.path,
@@ -273,7 +317,7 @@ describe("ExperimentMembersController", () => {
 
       await testApp
         .delete(path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)
         .expect(({ body }) => {
           expect(body.message).toContain("not found");
@@ -283,7 +327,7 @@ describe("ExperimentMembersController", () => {
     it("should return 404 when member doesn't exist in experiment", async () => {
       // Create an experiment
       const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment for Non-existent Member",
+        name: "Test Experiment for Member Not Found",
         userId: testUserId,
       });
 
@@ -300,7 +344,7 @@ describe("ExperimentMembersController", () => {
 
       await testApp
         .delete(path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)
         .expect(({ body }) => {
           expect(body.message).toContain("not found");
@@ -308,18 +352,18 @@ describe("ExperimentMembersController", () => {
     });
 
     it("should return 400 for invalid UUIDs", async () => {
-      // Invalid experiment ID
-      let path = testApp.resolvePath(
+      const invalidId = "not-a-uuid";
+      const path = testApp.resolvePath(
         contract.experiments.removeExperimentMember.path,
         {
-          id: "invalid-experiment-id",
-          memberId: faker.string.uuid(),
+          id: invalidId,
+          memberId: "also-not-a-uuid",
         },
       );
 
       await testApp
         .delete(path)
-        .query({ userId: testUserId })
+        .withAuth(testUserId)
         .expect(StatusCodes.BAD_REQUEST);
 
       // Invalid member ID
@@ -328,53 +372,43 @@ describe("ExperimentMembersController", () => {
         userId: testUserId,
       });
 
-      path = testApp.resolvePath(
+      const pathWithInvalidMember = testApp.resolvePath(
         contract.experiments.removeExperimentMember.path,
         {
           id: experiment.id,
-          memberId: "invalid-member-id",
+          memberId: "not-a-valid-uuid",
         },
       );
 
       await testApp
-        .delete(path)
-        .query({ userId: testUserId })
+        .delete(pathWithInvalidMember)
+        .withAuth(testUserId)
         .expect(StatusCodes.BAD_REQUEST);
     });
 
-    // it("should handle authorization correctly when removing members", async () => {
-    //   // Create an experiment with the test user
-    //   const { experiment } = await testApp.createExperiment({
-    //     name: "Test Experiment for Auth Check",
-    //     userId: testUserId,
-    //   });
+    it("should return 401 if not authenticated", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Removing Members",
+        userId: testUserId,
+      });
 
-    //   // Create another user
-    //   const otherUserId = await testApp.createTestUser({
-    //     email: "other-user@example.com",
-    //   });
+      const memberId = await testApp.createTestUser({
+        email: "member-to-remove@example.com",
+      });
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
 
-    //   // Add that user as a member
-    //   await testApp.addExperimentMember(experiment.id, otherUserId, "member");
+      const removePath = testApp.resolvePath(
+        contract.experiments.removeExperimentMember.path,
+        {
+          id: experiment.id,
+          memberId: memberId,
+        },
+      );
 
-    //   // Create a third user who is not related to the experiment
-    //   const unauthorizedUserId = await testApp.createTestUser({
-    //     email: "unauthorized@example.com",
-    //   });
-
-    //   // Try to remove a member without permission
-    //   const removePath = testApp.resolvePath(
-    //     contract.experiments.removeExperimentMember.path,
-    //     {
-    //       id: experiment.id,
-    //       memberId: otherUserId,
-    //     },
-    //   );
-
-    //   await testApp
-    //     .delete(removePath)
-    //     .query({ userId: unauthorizedUserId })
-    //     .expect(StatusCodes.FORBIDDEN);
-    // });
+      await testApp
+        .delete(removePath)
+        .withoutAuth()
+        .expect(StatusCodes.UNAUTHORIZED);
+    });
   });
 });

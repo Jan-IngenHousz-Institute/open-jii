@@ -13,7 +13,9 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <tsr.ReactQueryProvider>
         {children}
-        { process.env.NEXT_PUBLIC_ENABLE_DEVTOOLS === "true" && <ReactQueryDevtools initialIsOpen={false} /> }
+        {process.env.NEXT_PUBLIC_ENABLE_DEVTOOLS === "true" && (
+          <ReactQueryDevtools initialIsOpen={false} />
+        )}
       </tsr.ReactQueryProvider>
     </QueryClientProvider>
   );

@@ -18,15 +18,19 @@ export function bluetoothDeviceToMultispeqStream(
     const checksum = event.data.slice(-8);
     const jsonData = event.data.slice(0, -8);
     try {
-      emitter.emit("receivedReplyFromDevice", {
-        data: JSON.parse(jsonData),
-        checksum,
-      }).catch(e => console.log('receivedReplyFromDevice', e));
+      emitter
+        .emit("receivedReplyFromDevice", {
+          data: JSON.parse(jsonData),
+          checksum,
+        })
+        .catch((e) => console.log("receivedReplyFromDevice", e));
     } catch {
-      emitter.emit("receivedReplyFromDevice", {
-        data: event.data,
-        checksum: "",
-      }).catch(e => console.log('receivedReplyFromDevice', e));
+      emitter
+        .emit("receivedReplyFromDevice", {
+          data: event.data,
+          checksum: "",
+        })
+        .catch((e) => console.log("receivedReplyFromDevice", e));
     }
   });
 

@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 0
 
       - name: Build, Lint & Test
-        id: build
+        id: blt
         uses: ./.github/actions/blt
         with:
           node-version: "22"
