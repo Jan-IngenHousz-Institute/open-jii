@@ -9,10 +9,11 @@
   },
   "private": true,
   "scripts": {
+    "build": "tsc --build --verbose",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
-    "build": "tsc",
     "dev": "tsc --watch",
-    "lint": "eslint . --ext .ts,.tsx --max-warnings 0",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "generate:openapi": "ts-node src/openapi.ts"
   },

@@ -97,12 +97,7 @@ export const zAddExperimentMemberBody = z.object({
     .describe("Role to assign to the new member"),
 });
 
-export const zAuthQuery = z.object({
-  userId: z.string().uuid().describe("User ID for authentication"),
-});
-
 export const zExperimentFilterQuery = z.object({
-  userId: z.string().uuid().describe("User ID for authentication"),
   filter: z
     .enum(["my", "member", "related"])
     .optional()
@@ -115,7 +110,6 @@ export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
 export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;
 export type UpdateExperimentBody = z.infer<typeof zUpdateExperimentBody>;
 export type AddExperimentMemberBody = z.infer<typeof zAddExperimentMemberBody>;
-export type AuthQuery = z.infer<typeof zAuthQuery>;
 export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;
 export type ExperimentFilter = ExperimentFilterQuery["filter"];
 export type CreateExperimentResponse = z.infer<

@@ -32,7 +32,10 @@ export function Breadcrumbs({ pathname, pageTitle }: BreadcrumbsProps) {
   const breadcrumbItems: ReactElement[] = [];
   pathNames.forEach((link, index) => {
     const href = `/${pathNames.slice(0, index + 1).join("/")}`;
-    const title = getTitle(link, (index == pathNames.length-1 ? pageTitle : undefined));
+    const title = getTitle(
+      link,
+      index == pathNames.length - 1 ? pageTitle : undefined,
+    );
     breadcrumbItems.push(
       <React.Fragment key={href}>
         <BreadcrumbSeparator />

@@ -1,5 +1,3 @@
-import { ExperimentFilterQuery } from "@repo/api";
-
 import { tsr } from "../../../lib/tsr";
 
 /**
@@ -8,12 +6,9 @@ import { tsr } from "../../../lib/tsr";
  * @param filter Optional filter for experiments ('my', 'member', or 'related')
  * @returns Query result containing list of experiments
  */
-export const useExperiments = (
-  userId: string,
-  filter?: "my" | "member" | "related",
-) => {
+export const useExperiments = (filter?: "my" | "member" | "related") => {
   return tsr.experiments.listExperiments.useQuery({
-    queryData: { query: { userId, filter } },
-    queryKey: ["experiments", userId, filter],
+    queryData: { query: { filter } },
+    queryKey: ["experiments", filter],
   });
 };

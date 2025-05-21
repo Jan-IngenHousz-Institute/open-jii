@@ -6,7 +6,6 @@ import {
 import { HmacSHA256, SHA256, enc, lib } from "crypto-js";
 import { Client, Message, MQTTError } from "paho-mqtt";
 import "react-native-get-random-values";
-
 import { assertEnvVariables } from "~/utils/assert";
 import { Emitter } from "~/utils/emitter";
 import { generateRandomString } from "~/utils/generate-random-string";
@@ -142,31 +141,27 @@ function connectToMqtt(url: string, clientId: string) {
   });
 }
 
-const {
-  CLIENT_ID,
-  REGION,
-  IOT_ENDPOINT,
-  IDENTITY_POOL_ID,
-} = assertEnvVariables({
-  REGION: process.env.REGION,
-  IDENTITY_POOL_ID: process.env.IDENTITY_POOL_ID,
-  IOT_ENDPOINT: process.env.IOT_ENDPOINT,
-  CLIENT_ID: process.env.CLIENT_ID,
-});
+const { CLIENT_ID, REGION, IOT_ENDPOINT, IDENTITY_POOL_ID } =
+  assertEnvVariables({
+    REGION: process.env.REGION,
+    IDENTITY_POOL_ID: process.env.IDENTITY_POOL_ID,
+    IOT_ENDPOINT: process.env.IOT_ENDPOINT,
+    CLIENT_ID: process.env.CLIENT_ID,
+  });
 
-const clientId = CLIENT_ID + ' - ' + generateRandomString()
+const clientId = CLIENT_ID + " - " + generateRandomString();
 
 export interface ReceivedMessage {
-  payload: string,
-  destinationName: string
+  payload: string;
+  destinationName: string;
 }
 
 export interface MqttEmitterEvents {
-  messageArrived: ReceivedMessage,
-  connectionLost: MQTTError,
-  sendMessage: { payload: string, topic: string },
-  destroy: void
-  messageDelivered: ReceivedMessage,
+  messageArrived: ReceivedMessage;
+  connectionLost: MQTTError;
+  sendMessage: { payload: string; topic: string };
+  destroy: void;
+  messageDelivered: ReceivedMessage;
 }
 
 export async function createMqttConnection() {
@@ -186,31 +181,34 @@ export async function createMqttConnection() {
 
   const client = await connectToMqtt(signedUrl, clientId);
 
-  const emitter = new Emitter<MqttEmitterEvents>()
+  const emitter = new Emitter<MqttEmitterEvents>();
 
   client.onMessageArrived = (message: Message) => {
     const { payloadString: payload, destinationName } = message;
 
-    emitter.emit("messageArrived", { destinationName, payload })
-      .catch(e => console.log('messageArrived error', e));
+    emitter
+      .emit("messageArrived", { destinationName, payload })
+      .catch((e) => console.log("messageArrived error", e));
   };
 
   client.onConnectionLost = (err) => {
-    emitter.emit("connectionLost", err)
-      .catch(e => console.log('connectionLost error', e));
+    emitter
+      .emit("connectionLost", err)
+      .catch((e) => console.log("connectionLost error", e));
   };
 
-  emitter.on('sendMessage', ({ payload, topic }) => {
+  emitter.on("sendMessage", ({ payload, topic }) => {
     client.send(topic, payload);
-  })
+  });
 
-  emitter.on('destroy', () => client.disconnect());
+  emitter.on("destroy", () => client.disconnect());
 
   client.onMessageDelivered = (message) => {
     const { payloadString: payload, destinationName } = message;
-    emitter.emit('messageDelivered', { payload, destinationName })
-      .catch(e => console.log('messageDelivered error', e))
-  }
+    emitter
+      .emit("messageDelivered", { payload, destinationName })
+      .catch((e) => console.log("messageDelivered error", e));
+  };
 
   return emitter;
 }

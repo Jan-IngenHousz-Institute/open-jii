@@ -1,10 +1,11 @@
-import { CreateExperiment } from "@/components/create-experiment";
-import type { Metadata } from "next";
 import { AppLayout } from "@/components/app-layout";
+import { CreateExperiment } from "@/components/create-experiment";
+import { ListExperiments } from "@/components/list-experiments";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Experiments",
-}
+};
 
 export default function ExperimentPage() {
   return (
@@ -15,6 +16,7 @@ export default function ExperimentPage() {
           <p>This page will show a list of existing experiments.</p>
         </div>
         <CreateExperiment />
+        <ListExperiments />
       </div>
     </AppLayout>
   );

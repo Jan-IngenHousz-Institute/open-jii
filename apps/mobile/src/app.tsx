@@ -2,10 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
+import { HomeScreen } from "~/screens/home-screen";
 
-import { BluetoothStackNavigator } from "./navigation/bluetooth-stack";
-import {HomeScreen} from "~/screens/home-screen";
 import { ToastProvider } from "./components/toast-provider";
+import { BluetoothStackNavigator } from "./navigation/bluetooth-stack";
 import { SerialPortConnectionScreen } from "./screens/serial-port-connection-screen";
 
 const Tab = createBottomTabNavigator();
