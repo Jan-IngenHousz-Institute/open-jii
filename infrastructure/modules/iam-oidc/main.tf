@@ -197,7 +197,7 @@ resource "aws_iam_policy" "oidc_role_policy" {
         		"cognito-identity:LookupDeveloperIdentity"
     		],
 			"Effect": "Allow",
-    		"Resource": "*",
+			"Resource": "*",
 			"Sid": "CognitoPools"
 		}
 	],
