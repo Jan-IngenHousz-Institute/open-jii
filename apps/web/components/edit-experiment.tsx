@@ -173,7 +173,6 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
             {isPending ? "Updating..." : "Update"}
           </Button>
         </div>
-        <Button type="submit">Update experiment</Button>
       </form>
     </Form>
   );
