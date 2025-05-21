@@ -49,7 +49,7 @@ runs:
 
     - name: Check Env
       shell: bash
-      run: ls infrastructure/env/${{ inputs.environment }}
+      run: cd infrastructure/env/${{ inputs.environment }}
 
     - name: OpenTofu Init
       shell: bash
