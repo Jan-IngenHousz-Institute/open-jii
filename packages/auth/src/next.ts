@@ -6,9 +6,9 @@ import { authConfig } from "./config";
 const { auth: middleware } = NextAuth(authConfig);
 
 const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter,
   session: { strategy: "jwt" },
-  ...authConfig,
 });
 
 export { handlers, auth, signIn, signOut, middleware };
