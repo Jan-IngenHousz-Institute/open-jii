@@ -31,6 +31,12 @@ runs:
       run: tofu fmt -check
       continue-on-error: true
 
+    - name: Debug Secrets
+      run: echo "AWS Role ARN: $AWS_ROLE_ARN, AWS Region: $AWS_REGION"
+      env:
+        AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+        AWS_REGION: ${{ secrets.AWS_REGION }}
+
     - name: Configure AWS Credentials via OIDC
       uses: aws-actions/configure-aws-credentials@v4
       with:
