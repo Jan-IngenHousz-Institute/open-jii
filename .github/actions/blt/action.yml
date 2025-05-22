@@ -26,10 +26,11 @@ runs:
   using: "composite"
   steps:
 
-    # - name: Checkout Repository
-    #   uses: actions/checkout@v4
-    #   with:
-    #       sparse-checkout: .
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+          sparse-checkout: .
+          
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
