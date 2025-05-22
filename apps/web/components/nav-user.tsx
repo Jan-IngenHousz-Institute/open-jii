@@ -18,15 +18,17 @@ import {
   useSidebar,
 } from "@repo/ui/components";
 
-export function NavUser({
-  user,
-}: {
-  user: {
-    name: string;
-    email: string;
-    avatar: string;
-  };
-}) {
+export interface NavUserType {
+  name: string;
+  email: string;
+  avatar: string;
+}
+
+export interface NavUserProps {
+  user: NavUserType;
+}
+
+export function NavUser({ user }: NavUserProps) {
   const { isMobile } = useSidebar();
 
   return (

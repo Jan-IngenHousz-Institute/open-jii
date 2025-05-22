@@ -1,8 +1,10 @@
 import { Breadcrumbs } from "@/components/app-breadcrumbs";
 import { AppSidebar } from "@/components/app-sidebar";
+import type { NavUserType } from "@/components/nav-user";
 import { headers } from "next/headers";
 import type React from "react";
 
+import { auth } from "@repo/auth/next";
 import {
   Separator,
   SidebarInset,
@@ -19,10 +21,16 @@ export async function AppLayout({
   pageTitle?: string;
 }>) {
   const pathname = (await headers()).get("x-current-path") ?? "/";
+  const session = await auth();
+  const user: NavUserType = {
+    name: session?.user?.name ?? "Jan IngenHousz",
+    email: session?.user?.email ?? "jan@openjii.org",
+    avatar: "/avatars/shadcn.jpg",
+  };
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar user={user} />
       <SidebarInset>
         <header className="group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear">
           <div className="flex items-center gap-2 px-4">

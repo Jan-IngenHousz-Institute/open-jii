@@ -22,15 +22,11 @@ import {
 } from "@repo/ui/components";
 
 import { NavItems } from "./nav-items";
+import type { NavUserType } from "./nav-user";
 import { NavUser } from "./nav-user";
 
 // This is sample data.
 const data = {
-  user: {
-    name: "Jan IngenHousz",
-    email: "jan@openjii.org",
-    avatar: "/avatars/shadcn.jpg",
-  },
   navExperiments: [
     {
       title: "Experiments",
@@ -105,7 +101,12 @@ const data = {
   ],
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+interface AppSidebarProps {
+  user: NavUserType;
+  props?: React.ComponentProps<typeof Sidebar>;
+}
+
+export function AppSidebar({ user, ...props }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -128,7 +129,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavItems items={data.navHardware} title="Hardware" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
