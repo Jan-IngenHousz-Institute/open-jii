@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
-import { ExperimentFilter } from "@repo/api";
+import { ExperimentFilter, ExperimentStatus } from "@repo/api";
 
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -13,7 +13,8 @@ export class ListExperimentsUseCase {
   async execute(
     userId: string,
     filter?: ExperimentFilter,
+    status?: ExperimentStatus,
   ): Promise<Result<Partial<ExperimentDto>[]>> {
-    return await this.experimentRepository.findAll(userId, filter);
+    return await this.experimentRepository.findAll(userId, filter, status);
   }
 }

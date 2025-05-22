@@ -72,6 +72,7 @@ export class ExperimentController {
         const result = await this.listExperimentsUseCase.execute(
           user.id,
           query.filter,
+          query.status,
         );
         return handleResult(result, this.logger);
       },

@@ -104,6 +104,9 @@ export const zExperimentFilterQuery = z.object({
     .enum(["my", "member", "related"])
     .optional()
     .describe("Filter experiments by relationship to the user"),
+  status: zExperimentStatus
+    .optional()
+    .describe("Filter experiments by their status"),
 });
 
 export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });

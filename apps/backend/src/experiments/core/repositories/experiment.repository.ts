@@ -1,6 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { ExperimentFilter } from "@repo/api";
+import { ExperimentFilter, ExperimentStatus } from "@repo/api";
 import { eq, or, and, experiments, experimentMembers } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
@@ -36,6 +36,7 @@ export class ExperimentRepository {
   async findAll(
     userId: string,
     filter?: ExperimentFilter,
+    status?: ExperimentStatus,
   ): Promise<Result<Partial<ExperimentDto>[]>> {
     // Common experiment fields to select
     const experimentFields = {
@@ -51,22 +52,25 @@ export class ExperimentRepository {
     return tryCatch(() => {
       // Start with a base query builder
       const query = this.database.select(experimentFields).from(experiments);
+      let filteredQuery;
 
       // Apply filters based on the filter type
       switch (filter) {
         case "my":
-          return query.where(eq(experiments.createdBy, userId));
+          filteredQuery = query.where(eq(experiments.createdBy, userId));
+          break;
 
         case "member":
-          return query
+          filteredQuery = query
             .innerJoin(
               experimentMembers,
               eq(experiments.id, experimentMembers.experimentId),
             )
             .where(eq(experimentMembers.userId, userId));
+          break;
 
         case "related":
-          return query
+          filteredQuery = query
             .leftJoin(
               experimentMembers,
               eq(experiments.id, experimentMembers.experimentId),
@@ -77,10 +81,19 @@ export class ExperimentRepository {
                 eq(experimentMembers.userId, userId),
               ),
             );
+          break;
 
         default:
-          return query;
+          filteredQuery = query;
+          break;
       }
+
+      // Apply status filter if provided
+      if (status) {
+        return filteredQuery.where(eq(experiments.status, status));
+      }
+
+      return filteredQuery;
     });
   }
 
