@@ -103,4 +103,24 @@ describe("CreateExperimentUseCase", () => {
     expect(result.error.code).toBe("BAD_REQUEST");
     expect(result.error.message).toContain("User ID is required");
   });
+
+  it("should return error if experiment name already exists", async () => {
+    // First create an experiment with a specific name
+    const existingName = "Unique Experiment Name";
+    await testApp.createExperiment({
+      name: existingName,
+      userId: testUserId,
+    });
+
+    // Now try to create another experiment with the same name
+    const result = await useCase.execute({ name: existingName }, testUserId);
+
+    // Verify error is returned
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("BAD_REQUEST");
+    expect(result.error.message).toContain(
+      `An experiment with the name "${existingName}" already exists`,
+    );
+  });
 });

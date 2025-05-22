@@ -231,6 +231,58 @@ describe("ExperimentMembersController", () => {
         .expect(StatusCodes.BAD_REQUEST);
     });
 
+    it("should return 400 when adding a member that already exists", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Duplicate Members",
+        userId: testUserId,
+      });
+
+      // Create a user to be added as member
+      const memberId = await testApp.createTestUser({
+        email: "duplicate-member@example.com",
+      });
+
+      // Add the member first time
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      // Try to add the same member again
+      const path = testApp.resolvePath(
+        contract.experiments.addExperimentMember.path,
+        {
+          id: experiment.id,
+        },
+      );
+
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({ userId: memberId, role: "member" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 400 when adding self as a member when already an admin", async () => {
+      // Create an experiment - creator is already an admin
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Self Addition",
+        userId: testUserId,
+      });
+
+      // Try to add self again
+      const path = testApp.resolvePath(
+        contract.experiments.addExperimentMember.path,
+        {
+          id: experiment.id,
+        },
+      );
+
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({ userId: testUserId, role: "member" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
     it("should return 401 if not authenticated", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment for Adding Members",
@@ -384,6 +436,31 @@ describe("ExperimentMembersController", () => {
         .delete(pathWithInvalidMember)
         .withAuth(testUserId)
         .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 400 when removing the last admin", async () => {
+      // Create an experiment - creator is the only admin
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Last Admin Removal",
+        userId: testUserId,
+      });
+
+      // Attempt to remove self (the only admin)
+      const path = testApp.resolvePath(
+        contract.experiments.removeExperimentMember.path,
+        {
+          id: experiment.id,
+          memberId: testUserId,
+        },
+      );
+
+      await testApp
+        .delete(path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.BAD_REQUEST)
+        .expect(({ body }) => {
+          expect(body.message).toContain("Cannot remove the last admin");
+        });
     });
 
     it("should return 401 if not authenticated", async () => {

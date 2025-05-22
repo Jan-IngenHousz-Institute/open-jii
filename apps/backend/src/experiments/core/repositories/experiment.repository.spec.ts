@@ -317,6 +317,45 @@ describe("ExperimentRepository", () => {
       expect(dbExperiment[0].description).toBe(updateData.description);
       expect(dbExperiment[0].status).toBe(updateData.status);
     });
+
+    it("should update the updatedAt timestamp when an experiment is modified", async () => {
+      // Arrange
+      const { experiment } = await testApp.createExperiment({
+        name: "Timestamp Test Experiment",
+        description: "Testing updatedAt",
+        userId: testUserId,
+      });
+
+      // Store the original updatedAt timestamp
+      const originalExperiment = await testApp.database
+        .select()
+        .from(experimentsTable)
+        .where(eq(experimentsTable.id, experiment.id))
+        .limit(1);
+
+      const originalUpdatedAt = originalExperiment[0].updatedAt;
+
+      // Add a small delay to ensure timestamp will be different
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Act: update the experiment
+      const updateData = {
+        name: "Updated Timestamp Experiment",
+      };
+
+      const updateResult = await repository.update(experiment.id, updateData);
+      expect(updateResult.isSuccess()).toBe(true);
+
+      // Assert: verify updatedAt was changed
+      const updatedExperiment = await testApp.database
+        .select()
+        .from(experimentsTable)
+        .where(eq(experimentsTable.id, experiment.id))
+        .limit(1);
+
+      expect(updatedExperiment[0].updatedAt).not.toEqual(originalUpdatedAt);
+      expect(updatedExperiment[0].updatedAt > originalUpdatedAt).toBe(true);
+    });
   });
 
   describe("delete", () => {

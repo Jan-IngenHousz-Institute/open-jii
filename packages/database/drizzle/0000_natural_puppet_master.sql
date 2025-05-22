@@ -52,7 +52,8 @@ CREATE TABLE "experiments" (
 	"visibility" "experiment_visibility" DEFAULT 'private' NOT NULL,
 	"embargo_interval_days" integer DEFAULT 90 NOT NULL,
 	"created_by" uuid NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "organizations" (

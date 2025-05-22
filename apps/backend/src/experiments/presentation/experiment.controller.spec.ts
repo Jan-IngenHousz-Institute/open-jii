@@ -531,4 +531,38 @@ describe("ExperimentController", () => {
         .expect(StatusCodes.UNAUTHORIZED);
     });
   });
+
+  describe("createExperiment", () => {
+    // Add these tests to the existing createExperiment test block
+
+    it("should return 400 if name is too long", async () => {
+      const tooLongName = "a".repeat(256); // assuming max length is 255
+
+      await testApp
+        .post(contract.experiments.createExperiment.path)
+        .withAuth(testUserId)
+        .send({
+          name: tooLongName,
+          description: "Test Description",
+          status: "provisioning",
+          visibility: "private",
+          embargoIntervalDays: 90,
+        })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 400 if embargoIntervalDays is negative", async () => {
+      await testApp
+        .post(contract.experiments.createExperiment.path)
+        .withAuth(testUserId)
+        .send({
+          name: "Test Experiment",
+          description: "Test Description",
+          status: "provisioning",
+          visibility: "private",
+          embargoIntervalDays: -1,
+        })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+  });
 });

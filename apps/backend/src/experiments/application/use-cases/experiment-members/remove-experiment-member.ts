@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
+import { ExperimentMemberDto } from "../../../core/models/experiment-members.model";
+import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { Result, failure, AppError } from "../../../utils/fp-utils";
@@ -20,7 +22,7 @@ export class RemoveExperimentMemberUseCase {
     const experimentResult =
       await this.experimentRepository.findOne(experimentId);
 
-    return experimentResult.chain(async (experiment) => {
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
       if (!experiment) {
         return failure(
           AppError.notFound(`Experiment with ID ${experimentId} not found`),
@@ -52,6 +54,24 @@ export class RemoveExperimentMemberUseCase {
               `Member with ID ${memberId} not found in this experiment`,
             ),
           );
+        }
+
+        // Check if trying to remove the last admin
+        const memberToRemove = members.find(
+          (member: ExperimentMemberDto) => member.userId === memberId,
+        );
+        if (memberToRemove && memberToRemove.role === "admin") {
+          // Count how many admins we have
+          const adminCount = members.filter(
+            (member: ExperimentMemberDto) => member.role === "admin",
+          ).length;
+          if (adminCount <= 1) {
+            return failure(
+              AppError.badRequest(
+                "Cannot remove the last admin from the experiment",
+              ),
+            );
+          }
         }
 
         // Remove the member

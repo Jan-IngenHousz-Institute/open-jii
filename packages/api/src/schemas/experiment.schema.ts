@@ -23,6 +23,7 @@ export const zExperiment = z.object({
   embargoIntervalDays: z.number().int(),
   createdBy: z.string().uuid(),
   createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
 });
 
 export const zExperimentList = z.array(zExperiment);
@@ -52,7 +53,7 @@ export type ErrorResponse = z.infer<typeof zErrorResponse>;
 
 // Define request and response types
 export const zCreateExperimentBody = z.object({
-  name: z.string().min(1).max(100).describe("The name of the experiment"),
+  name: z.string().min(1).max(64).describe("The name of the experiment"),
   description: z
     .string()
     .optional()
@@ -66,6 +67,7 @@ export const zCreateExperimentBody = z.object({
   embargoIntervalDays: z
     .number()
     .int()
+    .positive()
     .optional()
     .describe("Embargo period in days"),
 });

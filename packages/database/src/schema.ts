@@ -158,7 +158,7 @@ export const experimentVisibilityEnum = pgEnum("experiment_visibility", [
 
 export const experiments = pgTable("experiments", {
   id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull(),
+  name: varchar("name", { length: 64 }).notNull(),
   description: text("description"),
   status: experimentStatusEnum("status").default("provisioning").notNull(),
   visibility: experimentVisibilityEnum("visibility")
@@ -169,6 +169,7 @@ export const experiments = pgTable("experiments", {
     .references(() => users.id)
     .notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const experimentMembersEnum = pgEnum("experiment_members_role", [

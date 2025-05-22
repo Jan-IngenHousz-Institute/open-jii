@@ -18,14 +18,14 @@ export class UpdateExperimentUseCase {
     // Check if experiment exists
     const experimentResult = await this.experimentRepository.findOne(id);
 
-    return experimentResult.chain(async (experiment) => {
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
       if (!experiment) {
         return failure(AppError.notFound(`Experiment with ID ${id} not found`));
       }
 
       // Update the experiment
       const updateResult = await this.experimentRepository.update(id, data);
-      return updateResult.chain((updatedExperiments) => {
+      return updateResult.chain((updatedExperiments: ExperimentDto[]) => {
         if (updatedExperiments.length === 0) {
           return failure(
             AppError.internal(`Failed to update experiment ${id}`),

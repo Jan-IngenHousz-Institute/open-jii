@@ -100,6 +100,22 @@ export class ExperimentRepository {
     });
   }
 
+  async findByName(name: string): Promise<Result<ExperimentDto | null>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select()
+        .from(experiments)
+        .where(eq(experiments.name, name))
+        .limit(1);
+
+      if (result.length === 0) {
+        return null;
+      }
+
+      return result[0];
+    });
+  }
+
   async update(
     id: string,
     updateExperimentDto: UpdateExperimentDto,
@@ -107,7 +123,10 @@ export class ExperimentRepository {
     return tryCatch(() =>
       this.database
         .update(experiments)
-        .set(updateExperimentDto)
+        .set({
+          ...updateExperimentDto,
+          updatedAt: new Date(), // Explicitly set the updatedAt field to current date/time
+        })
         .where(eq(experiments.id, id))
         .returning(),
     );

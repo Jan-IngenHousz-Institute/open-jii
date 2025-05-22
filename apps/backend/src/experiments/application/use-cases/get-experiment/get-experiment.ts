@@ -11,7 +11,7 @@ export class GetExperimentUseCase {
   async execute(id: string): Promise<Result<ExperimentDto>> {
     const experimentResult = await this.experimentRepository.findOne(id);
 
-    return experimentResult.chain((experiment) => {
+    return experimentResult.chain((experiment: ExperimentDto | null) => {
       if (!experiment) {
         return failure(AppError.notFound(`Experiment with ID ${id} not found`));
       }
