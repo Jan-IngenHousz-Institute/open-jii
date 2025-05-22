@@ -46,6 +46,12 @@ runs:
       shell: bash
       run: pnpm install --frozen-lockfile
 
+    - name: Debug Git History
+      run: |
+        git log --oneline -n 5
+        git branch -r
+        git diff origin/main HEAD --name-only
+
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
