@@ -186,7 +186,7 @@ resource "aws_iam_policy" "oidc_role_policy" {
 				"dynamodb:ListTagsOfResource"
 			],
 			"Effect": "Allow",
-			"Resource": "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/terraform-state-lock",
+			"Resource": "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/terraform-state-lock",
 			"Sid": "DynamoDBs3lock"
 		},
 		{
