@@ -26,11 +26,15 @@ runs:
   using: "composite"
   steps:
 
+    # - name: Checkout Repository
+    #   uses: actions/checkout@v4
+    #   with:
+    #       sparse-checkout: .
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
-          sparse-checkout: .
-          
+        fetch-depth: 0
+
     - name: Setup pnpm
       uses: pnpm/action-setup@v4
 
