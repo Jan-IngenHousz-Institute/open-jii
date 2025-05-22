@@ -145,6 +145,70 @@ describe("ExperimentController", () => {
       expect(response.body[0].name).toBe("My Experiment");
     });
 
+    it("should filter experiments by status", async () => {
+      // Create an active experiment
+      const { experiment: activeExperiment } = await testApp.createExperiment({
+        name: "Active Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+
+      // Create an archived experiment
+      await testApp.createExperiment({
+        name: "Archived Experiment",
+        userId: testUserId,
+        status: "archived",
+      });
+
+      const response = await testApp
+        .get(contract.experiments.listExperiments.path)
+        .withAuth(testUserId)
+        .query({ status: "active" })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0].id).toBe(activeExperiment.id);
+      expect(response.body[0].name).toBe("Active Experiment");
+      expect(response.body[0].status).toBe("active");
+    });
+
+    it("should combine filter and status parameters", async () => {
+      // Create an active experiment owned by test user
+      const { experiment: myActive } = await testApp.createExperiment({
+        name: "My Active Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+
+      // Create an archived experiment owned by test user
+      await testApp.createExperiment({
+        name: "My Archived Experiment",
+        userId: testUserId,
+        status: "archived",
+      });
+
+      // Create an experiment with a different user
+      const otherUserId = await testApp.createTestUser({
+        email: "other-combo@example.com",
+      });
+      await testApp.createExperiment({
+        name: "Other Active Experiment",
+        userId: otherUserId,
+        status: "active",
+      });
+
+      const response = await testApp
+        .get(contract.experiments.listExperiments.path)
+        .withAuth(testUserId)
+        .query({ filter: "my", status: "active" })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0].id).toBe(myActive.id);
+      expect(response.body[0].name).toBe("My Active Experiment");
+      expect(response.body[0].status).toBe("active");
+    });
+
     it("should return 401 if not authenticated", async () => {
       await testApp
         .get(contract.experiments.listExperiments.path)
