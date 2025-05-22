@@ -38,9 +38,6 @@ describe("AddExperimentMemberUseCase", () => {
       email: "newmember@example.com",
     });
 
-    // We don't need to add the member first, the use case will do that
-    // Removed: testApp.addExperimentMember(experiment.id, newMemberId, "member");
-
     // Add the member through the use case
     const result = await useCase.execute(
       experiment.id,
