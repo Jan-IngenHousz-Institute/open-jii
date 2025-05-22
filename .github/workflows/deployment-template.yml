@@ -72,8 +72,8 @@ jobs:
           # environment: "${{ inputs.environment }}"
           environment: "dev"
 
-      - name: Apply Infrastructure
-        run: tofu apply -auto-approve
+      # - name: Apply Infrastructure
+      #   run: tofu apply -auto-approve
 
   # Job 3: Deploy Artifacts
   deploy:
