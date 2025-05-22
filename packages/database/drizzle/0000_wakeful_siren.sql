@@ -46,7 +46,7 @@ CREATE TABLE "experiment_members" (
 --> statement-breakpoint
 CREATE TABLE "experiments" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"name" varchar(255) NOT NULL,
+	"name" varchar(64) NOT NULL,
 	"description" text,
 	"status" "experiment_status" DEFAULT 'provisioning' NOT NULL,
 	"visibility" "experiment_visibility" DEFAULT 'private' NOT NULL,

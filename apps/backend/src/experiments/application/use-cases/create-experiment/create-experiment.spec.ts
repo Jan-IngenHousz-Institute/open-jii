@@ -1,3 +1,6 @@
+import { eq, experimentMembers } from "@repo/database";
+
+import { ExperimentMemberRepository } from "../../../../experiments/core/repositories/experiment-member.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { assertFailure, assertSuccess } from "../../../utils/fp-utils";
 import { CreateExperimentUseCase } from "./create-experiment";
@@ -52,6 +55,40 @@ describe("CreateExperimentUseCase", () => {
       createdBy: testUserId,
     });
   });
+  it("should add the creating user as an admin member", async () => {
+    const experimentData = {
+      name: "Member Test Experiment",
+      description: "Testing automatic member creation",
+    };
+
+    const result = await useCase.execute(experimentData, testUserId);
+
+    // Verify result is success
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    const createdExperiment = result.value;
+
+    // Get the experiment member repository directly from the module
+    const experimentMemberRepository = testApp.module.get(
+      ExperimentMemberRepository,
+    );
+
+    // Query for members using direct database access since we don't have typed access to repository
+    const members = await testApp.database
+      .select()
+      .from(experimentMembers)
+      .where(eq(experimentMembers.experimentId, createdExperiment.id));
+
+    // Should have exactly 1 member (the creator)
+    expect(members.length).toBe(1);
+
+    // Verify the creator was added as an admin
+    expect(members[0]).toMatchObject({
+      experimentId: createdExperiment.id,
+      userId: testUserId,
+      role: "admin",
+    });
+  });
 
   it("should create an experiment with minimal data", async () => {
     // Only provide required name field
@@ -75,9 +112,9 @@ describe("CreateExperimentUseCase", () => {
   });
 
   it("should return error if name is not provided", async () => {
-    // @ts-expect-error - Testing with missing required fields
     const invalidData = {
       description: "Missing name field",
+      name: "",
     };
 
     const result = await useCase.execute(invalidData, testUserId);

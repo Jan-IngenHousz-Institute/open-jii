@@ -4,12 +4,16 @@ import {
   CreateExperimentDto,
   ExperimentDto,
 } from "../../../core/models/experiment.model";
+import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { Result, success, failure, AppError } from "../../../utils/fp-utils";
 
 @Injectable()
 export class CreateExperimentUseCase {
-  constructor(private readonly experimentRepository: ExperimentRepository) {}
+  constructor(
+    private readonly experimentRepository: ExperimentRepository,
+    private readonly experimentMemberRepository: ExperimentMemberRepository,
+  ) {}
 
   async execute(
     data: CreateExperimentDto,
@@ -48,11 +52,24 @@ export class CreateExperimentUseCase {
           userId,
         );
 
-        return experimentResult.chain((experiments: ExperimentDto[]) => {
+        return experimentResult.chain(async (experiments: ExperimentDto[]) => {
           if (experiments.length === 0) {
             return failure(AppError.internal("Failed to create experiment"));
           }
-          return success(experiments[0]);
+
+          const experiment = experiments[0];
+
+          // Add the user as an admin member
+          const addMemberResult =
+            await this.experimentMemberRepository.addMember(
+              experiment.id,
+              userId,
+              "admin",
+            );
+
+          return addMemberResult.chain(() => {
+            return success(experiment);
+          });
         });
       },
     );
