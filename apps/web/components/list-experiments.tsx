@@ -24,8 +24,10 @@ export function ListExperiments() {
         <TableHeader>
           <TableRow>
             <TableHead>Experiment name</TableHead>
+            <TableHead>Owner/Member</TableHead>
             <TableHead>Private</TableHead>
             <TableHead>Created</TableHead>
+            <TableHead>Updated</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -34,6 +36,7 @@ export function ListExperiments() {
             return (
               <TableRow key={experiment.id}>
                 <TableCell>{experiment.name}</TableCell>
+                <TableCell>TODO</TableCell>
                 <TableCell>
                   {experiment.visibility ===
                     zExperimentVisibility.enum.private && (
@@ -41,6 +44,7 @@ export function ListExperiments() {
                   )}
                 </TableCell>
                 <TableCell>{experiment.createdAt.substring(0, 10)}</TableCell>
+                <TableCell>TODO</TableCell>
                 <TableCell>
                   <Link href={`/openjii/experiments/${experiment.id}`}>
                     <EditIcon size={18} />
