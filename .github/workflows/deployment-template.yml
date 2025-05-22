@@ -62,10 +62,12 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
+     
       - name: Run OpenTofu Operations
         uses: ./.github/actions/tofu
         with:
+          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws_region: ${{ secrets.AWS_REGION }}
           tofu_version: "1.6.0"
           environment: "${{ inputs.environment }}"
 
