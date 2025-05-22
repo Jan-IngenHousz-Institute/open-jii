@@ -3,13 +3,11 @@
 import { createExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import type z from "zod";
 
-import type { CreateExperimentBody } from "@repo/api";
-import { zExperimentVisibility } from "@repo/api";
-import { Button } from "@repo/ui/components";
+import { Button, DialogClose } from "@repo/ui/components";
 import {
   Dialog,
   DialogContent,
@@ -29,15 +27,10 @@ import {
   Input,
   Switch,
 } from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
-
-import { useExperimentCreate } from "../hooks/experiment/useExperimentCreate/useExperimentCreate";
 
 export function CreateExperiment() {
-  const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const { mutateAsync: createExperiment, isPending } = useExperimentCreate();
 
   const form = useForm<z.output<typeof createExperimentFormSchema>>({
     resolver: zodResolver(createExperimentFormSchema),
@@ -47,33 +40,10 @@ export function CreateExperiment() {
     },
   });
 
-  async function onSubmit(data: z.infer<typeof createExperimentFormSchema>) {
-    try {
-      const body: CreateExperimentBody = {
-        name: data.name,
-        visibility: data.visibilityPrivate
-          ? zExperimentVisibility.enum.private
-          : zExperimentVisibility.enum.public,
-      };
-
-      const result = await createExperiment({
-        body,
-      });
-
-      // Show message
-      toast({
-        description: "New experiment created successfully",
-      });
-      // Close the dialog and navigate to the new experiment
-      setOpen(false);
-      router.push(`/openjii/experiments/${result.body.id}`);
-    } catch (error) {
-      toast({
-        description: "Failed to create experiment",
-        variant: "destructive",
-      });
-      console.error("Failed to create experiment:", error);
-    }
+  function onSubmit(data: z.infer<typeof createExperimentFormSchema>) {
+    // Close the dialog and navigate to the new experiment page
+    setOpen(false);
+    router.push(`/openjii/experiments/new?name=${encodeURIComponent(data.name)}&visibilityPrivate=${encodeURIComponent(data.visibilityPrivate)}`);
   }
 
   return (
@@ -83,7 +53,7 @@ export function CreateExperiment() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <Form {...form}>
-          <form ref={formRef} onSubmit={form.handleSubmit(onSubmit)}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
             <DialogHeader>
               <DialogTitle>New experiment</DialogTitle>
               <DialogDescription>
@@ -121,9 +91,10 @@ export function CreateExperiment() {
               />
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={isPending}>
-                {isPending ? "Creating..." : "Continue"}
-              </Button>
+              <DialogClose asChild>
+                <Button variant="outline">Go back</Button>
+              </DialogClose>
+              <Button type="submit">Continue</Button>
             </DialogFooter>
           </form>
         </Form>

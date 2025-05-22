@@ -1,13 +1,11 @@
 "use client";
 
-import type { EditExperimentForm } from "@/util/schema";
-import { editExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
-import type z from "zod";
 
-import type { UpdateExperimentBody } from "@repo/api";
+import type { CreateExperimentBody } from "@repo/api";
+import { zCreateExperimentBody } from "@repo/api";
 import { zExperimentVisibility } from "@repo/api";
 import {
   Button,
@@ -27,40 +25,29 @@ import {
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-import { useExperiment } from "../hooks/experiment/useExperiment/useExperiment";
-import { useExperimentUpdate } from "../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
+import { useExperimentCreate } from "../hooks/experiment/useExperimentCreate/useExperimentCreate";
 
-interface EditExperimentProps {
-  experimentId: string;
+interface NewExperimentFormProps {
+  name?: string;
+  visibilityPrivate?: boolean;
 }
 
-export function EditExperiment({ experimentId }: EditExperimentProps) {
-  const { data } = useExperiment(experimentId);
-
-  if (data) {
-    const experiment: EditExperimentForm = {
-      id: experimentId,
-      name: data.body.name,
-      description: data.body.description ?? "",
-      visibility: data.body.visibility,
-      embargoIntervalDays: data.body.embargoIntervalDays,
-    };
-    return <EditExperimentForm experiment={experiment} />;
-  }
-}
-
-interface EditExperimentFormProps {
-  experiment: EditExperimentForm;
-}
-
-export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
+export function NewExperimentForm({
+  name,
+  visibilityPrivate,
+}: NewExperimentFormProps) {
   const router = useRouter();
-  const { mutateAsync: updateExperiment, isPending } = useExperimentUpdate();
+  const { mutateAsync: createExperiment, isPending } = useExperimentCreate();
 
-  const form = useForm<EditExperimentForm>({
-    resolver: zodResolver(editExperimentFormSchema),
+  const form = useForm<CreateExperimentBody>({
+    resolver: zodResolver(zCreateExperimentBody),
     defaultValues: {
-      ...experiment,
+      name: name ?? "",
+      description: "",
+      visibility: visibilityPrivate
+        ? zExperimentVisibility.enum.private
+        : zExperimentVisibility.enum.public,
+      embargoIntervalDays: 90,
     },
   });
 
@@ -68,32 +55,31 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
     router.back();
   }
 
-  async function onSubmit(data: z.infer<typeof editExperimentFormSchema>) {
+  async function onSubmit(data: CreateExperimentBody) {
     try {
-      const body: UpdateExperimentBody = {
+      const body: CreateExperimentBody = {
         name: data.name,
         description: data.description,
         visibility: data.visibility,
         embargoIntervalDays: data.embargoIntervalDays,
       };
 
-      await updateExperiment({
-        params: { id: experiment.id },
+      await createExperiment({
         body,
       });
 
       // Show message
       toast({
-        description: "Experiment updated successfully",
+        description: "Experiment created successfully",
       });
       // Navigate to the list of experiments
       router.push(`/openjii/experiments`);
     } catch (error) {
       toast({
-        description: "Failed to update experiment",
+        description: "Failed to create experiment",
         variant: "destructive",
       });
-      console.error("Failed to update experiment:", error);
+      console.error("Failed to create experiment:", error);
     }
   }
 
@@ -159,7 +145,7 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
             <FormItem>
               <FormLabel>Embargo interval days</FormLabel>
               <FormControl>
-                <Input data-1p-ignore {...field} />
+                <Input type="number" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -170,7 +156,7 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
             Cancel
           </Button>
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Updating..." : "Update"}
+            {isPending ? "Creating..." : "Finalize setup"}
           </Button>
         </div>
       </form>
