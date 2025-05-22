@@ -13,3 +13,5 @@ jobs:
     permissions:
       id-token: write # Grant the required permission
       # contents: read # Ensure the workflow can read repository contents
+
+      
