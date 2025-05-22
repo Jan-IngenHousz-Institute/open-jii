@@ -8,6 +8,12 @@ inputs:
   environment:
     description: "Deployment environment (e.g., dev, staging, production)"
     required: true
+  aws_role_arn:
+    description: "AWS Role ARN"
+    required: true
+  aws_region:
+    description: "AWS Region"
+    required: true
 
 runs:
   using: "composite"
@@ -34,8 +40,8 @@ runs:
     - name: Configure AWS Credentials via OIDC
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        aws-region: ${{ secrets.AWS_REGION }}
+        role-to-assume: ${{ inputs.aws_role_arn }}
+        aws-region: ${{ inputs.aws_region }}
 
     - name: Check AWS Credentials
       shell: bash

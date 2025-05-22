@@ -34,7 +34,8 @@ jobs:
         uses: ./.github/actions/blt
         with:
           node-version: "22"
-          base: "main"
+          artifact_retention: "7"
+          base: "HEAD^1"
 
   tofu:
     name: OpenTofu
