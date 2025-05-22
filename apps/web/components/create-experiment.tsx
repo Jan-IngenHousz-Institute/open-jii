@@ -43,7 +43,9 @@ export function CreateExperiment() {
   function onSubmit(data: z.infer<typeof createExperimentFormSchema>) {
     // Close the dialog and navigate to the new experiment page
     setOpen(false);
-    router.push(`/openjii/experiments/new?name=${encodeURIComponent(data.name)}&visibilityPrivate=${encodeURIComponent(data.visibilityPrivate)}`);
+    router.push(
+      `/openjii/experiments/new?name=${encodeURIComponent(data.name)}&visibilityPrivate=${encodeURIComponent(data.visibilityPrivate)}`,
+    );
   }
 
   return (
