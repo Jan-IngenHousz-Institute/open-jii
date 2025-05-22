@@ -37,12 +37,11 @@ export function ListExperiments({ userId }: ListExperimentProps) {
         </TableHeader>
         <TableBody>
           {data.body.map((experiment) => {
+            const isOwner = experiment.createdBy === userId;
             return (
               <TableRow key={experiment.id}>
                 <TableCell>{experiment.name}</TableCell>
-                <TableCell>
-                  {experiment.createdBy === userId ? "Owner" : "Member"}
-                </TableCell>
+                <TableCell>{isOwner ? "Owner" : "Member"}</TableCell>
                 <TableCell>
                   {experiment.visibility ===
                     zExperimentVisibility.enum.private && (
@@ -52,9 +51,11 @@ export function ListExperiments({ userId }: ListExperimentProps) {
                 <TableCell>{experiment.createdAt.substring(0, 10)}</TableCell>
                 <TableCell>TODO</TableCell>
                 <TableCell>
-                  <Link href={`/openjii/experiments/${experiment.id}`}>
-                    <EditIcon size={18} />
-                  </Link>
+                  {isOwner && (
+                    <Link href={`/openjii/experiments/${experiment.id}`}>
+                      <EditIcon size={18} />
+                    </Link>
+                  )}
                 </TableCell>
               </TableRow>
             );
