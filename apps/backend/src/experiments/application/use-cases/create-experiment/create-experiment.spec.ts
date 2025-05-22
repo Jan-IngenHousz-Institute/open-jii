@@ -9,6 +9,7 @@ describe("CreateExperimentUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: CreateExperimentUseCase;
+  let experimentMemberRepository: ExperimentMemberRepository;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -18,6 +19,7 @@ describe("CreateExperimentUseCase", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(CreateExperimentUseCase);
+    experimentMemberRepository = testApp.module.get(ExperimentMemberRepository);
   });
 
   afterEach(() => {
@@ -61,23 +63,20 @@ describe("CreateExperimentUseCase", () => {
       description: "Testing automatic member creation",
     };
 
-    const result = await useCase.execute(experimentData, testUserId);
+    const experimentResult = await useCase.execute(experimentData, testUserId);
 
     // Verify result is success
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    const createdExperiment = result.value;
+    expect(experimentResult.isSuccess()).toBe(true);
+    assertSuccess(experimentResult);
+    const createdExperiment = experimentResult.value;
 
-    // Get the experiment member repository directly from the module
-    const experimentMemberRepository = testApp.module.get(
-      ExperimentMemberRepository,
+    const membersResult = await experimentMemberRepository.getMembers(
+      createdExperiment.id,
     );
 
-    // Query for members using direct database access since we don't have typed access to repository
-    const members = await testApp.database
-      .select()
-      .from(experimentMembers)
-      .where(eq(experimentMembers.experimentId, createdExperiment.id));
+    expect(membersResult.isSuccess()).toBe(true);
+    assertSuccess(membersResult);
+    const members = membersResult.value;
 
     // Should have exactly 1 member (the creator)
     expect(members.length).toBe(1);
