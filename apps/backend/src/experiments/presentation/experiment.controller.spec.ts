@@ -533,10 +533,8 @@ describe("ExperimentController", () => {
   });
 
   describe("createExperiment", () => {
-    // Add these tests to the existing createExperiment test block
-
     it("should return 400 if name is too long", async () => {
-      const tooLongName = "a".repeat(256); // assuming max length is 255
+      const tooLongName = "a".repeat(65);
 
       await testApp
         .post(contract.experiments.createExperiment.path)
