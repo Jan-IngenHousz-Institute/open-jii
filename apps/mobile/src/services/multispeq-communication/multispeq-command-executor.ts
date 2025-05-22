@@ -20,7 +20,7 @@ export class MultiSpeqCommandExecutor {
       this.emitter.on("receivedReplyFromDevice", handler);
     });
 
-    return promiseWithTimeout(executePromise, 10000);
+    return promiseWithTimeout(executePromise, 20000);
   }
 
   destroy() {

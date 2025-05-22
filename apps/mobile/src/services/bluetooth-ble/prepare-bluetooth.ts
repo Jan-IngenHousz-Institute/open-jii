@@ -1,8 +1,8 @@
 import { BleManager } from "react-native-ble-plx";
 
-export function prepareBluetooth() {
-  const bleManager = new BleManager();
+export const bleManager = new BleManager();
 
+export function prepareBluetooth() {
   return new Promise<BleManager>((resolve, reject) => {
     const subscription = bleManager.onStateChange((state) => {
       if (state === "PoweredOn") {
