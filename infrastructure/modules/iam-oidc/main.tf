@@ -188,6 +188,17 @@ resource "aws_iam_policy" "oidc_role_policy" {
 			"Effect": "Allow",
 			"Resource": "arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/terraform-state-lock",
 			"Sid": "DynamoDBs3lock"
+		},
+		{
+    		"Action": [
+       			"cognito-identity:DescribeIdentityPool",
+        		"cognito-identity:ListIdentityPools",
+        		"cognito-identity:GetIdentityPoolRoles",
+        		"cognito-identity:LookupDeveloperIdentity"
+    		],
+			"Effect": "Allow",
+			"Resource": "*",
+			"Sid": "CognitoPools"
 		}
 	],
 	"Version": "2012-10-17"
