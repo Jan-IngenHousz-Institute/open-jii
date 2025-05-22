@@ -25,6 +25,12 @@ outputs:
 runs:
   using: "composite"
   steps:
+
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+          sparse-checkout: .
+          
     - name: Setup pnpm
       uses: pnpm/action-setup@v4
 
@@ -53,10 +59,6 @@ runs:
         git branch -r
         git diff origin/main HEAD --name-only
 
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-          sparse-checkout: .
 
     - name: Identify Affected Projects
       id: check
