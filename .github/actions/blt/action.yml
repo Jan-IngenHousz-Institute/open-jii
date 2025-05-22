@@ -81,13 +81,15 @@ runs:
     - name: Debug
       shell: bash
       run: |
-        #DEBUG
+        echo "Dry Run build"
+        pnpm turbo run build --dry-run=json --filter=...[origin/${{ inputs.base }}]
+        echo #DEBUG Afected apps:
         echo $AFFECTED_APPS
-        echo "#######"
+        echo has_affected_apps:
         echo $has_affected_apps
-        echo "#######"
+        echo affected_apps.json
         cat affected_apps.json
-        echo "#######"
+        echo "#######-END"
 
     - name: Build Apps
       if: steps.check.outputs.has_affected_apps == 'true'
