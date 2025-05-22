@@ -66,7 +66,7 @@ jobs:
       - name: Run OpenTofu Operations
         uses: ./.github/actions/tofu
         with:
-          tofu_version: "1.6.0"
+          tofu_version: "1.9.0"
           environment: "dev"
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region: ${{ secrets.AWS_REGION }}
