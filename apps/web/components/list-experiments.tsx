@@ -15,7 +15,11 @@ import {
 
 import { useExperiments } from "../hooks/experiment/useExperiments/useExperiments";
 
-export function ListExperiments() {
+interface ListExperimentProps {
+  userId: string | undefined;
+}
+
+export function ListExperiments({ userId }: ListExperimentProps) {
   const { data } = useExperiments();
 
   if (data) {
@@ -36,7 +40,9 @@ export function ListExperiments() {
             return (
               <TableRow key={experiment.id}>
                 <TableCell>{experiment.name}</TableCell>
-                <TableCell>TODO</TableCell>
+                <TableCell>
+                  {experiment.createdBy === userId ? "Owner" : "Member"}
+                </TableCell>
                 <TableCell>
                   {experiment.visibility ===
                     zExperimentVisibility.enum.private && (
