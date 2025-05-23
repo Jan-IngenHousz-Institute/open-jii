@@ -29,7 +29,8 @@
     "db:studio": "turbo --filter database db:studio",
     "postinstall": "pnpm lint:ws",
     "typecheck": "turbo run typecheck",
-    "ui-add": "turbo run ui-add"
+    "ui-add": "turbo run ui-add",
+    "dev:fb": "turbo run dev --filter=backend --filter=web"
   },
   "devDependencies": {
     "@asyncapi/cli": "^2.16.0",
