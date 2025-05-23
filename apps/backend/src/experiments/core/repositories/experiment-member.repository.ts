@@ -33,23 +33,6 @@ export class ExperimentMemberRepository {
     role: ExperimentMemberRole = "member",
   ): Promise<Result<ExperimentMemberDto[]>> {
     return tryCatch(async () => {
-      // Check if membership already exists
-      const existingMembership = await this.database
-        .select()
-        .from(experimentMembers)
-        .where(
-          and(
-            eq(experimentMembers.experimentId, experimentId),
-            eq(experimentMembers.userId, userId),
-          ),
-        )
-        .limit(1);
-
-      if (existingMembership.length > 0) {
-        // Membership already exists, return it without updating (no duplicate memberships)
-        return [existingMembership[0]];
-      }
-
       // Otherwise create a new membership
       return await this.database
         .insert(experimentMembers)

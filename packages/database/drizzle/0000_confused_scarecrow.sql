@@ -37,11 +37,11 @@ CREATE TABLE "authenticators" (
 );
 --> statement-breakpoint
 CREATE TABLE "experiment_members" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"experiment_id" uuid NOT NULL,
 	"user_id" uuid NOT NULL,
 	"role" "experiment_members_role" DEFAULT 'member' NOT NULL,
-	"joined_at" timestamp DEFAULT now() NOT NULL
+	"joined_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "experiment_members_experiment_id_user_id_pk" PRIMARY KEY("experiment_id","user_id")
 );
 --> statement-breakpoint
 CREATE TABLE "experiments" (

@@ -52,88 +52,68 @@ export class ExperimentRepository {
     return tryCatch(() => {
       // Start with a base query builder
       const query = this.database.select(experimentFields).from(experiments);
-      
-      // Build different queries based on combined filter and status
-      if (filter && status) {
-        // Both filter and status are provided
-        switch (filter) {
-          case "my":
-            return query.where(
-              and(
-                eq(experiments.createdBy, userId),
-                eq(experiments.status, status)
-              )
-            );
 
-          case "member":
-            return query
-              .innerJoin(
-                experimentMembers,
-                eq(experiments.id, experimentMembers.experimentId),
-              )
-              .where(
-                and(
-                  eq(experimentMembers.userId, userId),
-                  eq(experiments.status, status)
-                )
-              );
-
-          case "related":
-            return query
-              .leftJoin(
-                experimentMembers,
-                eq(experiments.id, experimentMembers.experimentId),
-              )
-              .where(
-                and(
-                  or(
-                    eq(experiments.createdBy, userId),
-                    eq(experimentMembers.userId, userId),
-                  ),
-                  eq(experiments.status, status)
-                )
-              );
-              
-          default:
-            return query.where(eq(experiments.status, status));
+      // Apply filter and status conditions without nested conditionals
+      if (filter === "my") {
+        if (status) {
+          return query.where(
+            and(
+              eq(experiments.createdBy, userId),
+              eq(experiments.status, status),
+            ),
+          );
         }
-      } else if (filter) {
-        // Only filter is provided
-        switch (filter) {
-          case "my":
-            return query.where(eq(experiments.createdBy, userId));
-
-          case "member":
-            return query
-              .innerJoin(
-                experimentMembers,
-                eq(experiments.id, experimentMembers.experimentId),
-              )
-              .where(eq(experimentMembers.userId, userId));
-
-          case "related":
-            return query
-              .leftJoin(
-                experimentMembers,
-                eq(experiments.id, experimentMembers.experimentId),
-              )
-              .where(
-                or(
-                  eq(experiments.createdBy, userId),
-                  eq(experimentMembers.userId, userId),
-                )
-              );
-              
-          default:
-            return query;
-        }
-      } else if (status) {
-        // Only status is provided
-        return query.where(eq(experiments.status, status));
-      } else {
-        // No filters provided
-        return query;
+        return query.where(eq(experiments.createdBy, userId));
       }
+
+      if (filter === "member") {
+        const joinedQuery = query.innerJoin(
+          experimentMembers,
+          eq(experiments.id, experimentMembers.experimentId),
+        );
+
+        if (status) {
+          return joinedQuery.where(
+            and(
+              eq(experimentMembers.userId, userId),
+              eq(experiments.status, status),
+            ),
+          );
+        }
+        return joinedQuery.where(eq(experimentMembers.userId, userId));
+      }
+
+      if (filter === "related") {
+        const joinedQuery = query.leftJoin(
+          experimentMembers,
+          eq(experiments.id, experimentMembers.experimentId),
+        );
+
+        if (status) {
+          return joinedQuery.where(
+            and(
+              or(
+                eq(experiments.createdBy, userId),
+                eq(experimentMembers.userId, userId),
+              ),
+              eq(experiments.status, status),
+            ),
+          );
+        }
+        return joinedQuery.where(
+          or(
+            eq(experiments.createdBy, userId),
+            eq(experimentMembers.userId, userId),
+          ),
+        );
+      }
+
+      // Default cases (no filter or unrecognized filter)
+      if (status) {
+        return query.where(eq(experiments.status, status));
+      }
+
+      return query;
     });
   }
 

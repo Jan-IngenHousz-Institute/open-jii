@@ -1,5 +1,5 @@
 {
-  "id": "a8131240-269c-4401-9da2-c29cc9cb9bc6",
+  "id": "e0d666ec-19d9-415f-8065-2afd89e065c4",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -243,13 +243,6 @@
       "name": "experiment_members",
       "schema": "",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
         "experiment_id": {
           "name": "experiment_id",
           "type": "uuid",
@@ -307,7 +300,15 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "experiment_members_experiment_id_user_id_pk": {
+          "name": "experiment_members_experiment_id_user_id_pk",
+          "columns": [
+            "experiment_id",
+            "user_id"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

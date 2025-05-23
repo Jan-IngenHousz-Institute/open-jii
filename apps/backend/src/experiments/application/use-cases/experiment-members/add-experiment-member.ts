@@ -37,32 +37,6 @@ export class AddExperimentMemberUseCase {
 
       return existingMembersResult.chain(
         async (existingMembers: ExperimentMemberDto[]) => {
-          // Check if user is trying to add themselves when already a member
-          if (data.userId === currentUserId) {
-            const isMember = existingMembers.some(
-              (member) => member.userId === currentUserId,
-            );
-            if (isMember) {
-              return failure(
-                AppError.badRequest(
-                  "You are already a member of this experiment",
-                ),
-              );
-            }
-          }
-
-          // Check if the user being added is already a member
-          const alreadyMember = existingMembers.some(
-            (member) => member.userId === data.userId,
-          );
-          if (alreadyMember) {
-            return failure(
-              AppError.badRequest(
-                `User with ID ${data.userId} is already a member of this experiment`,
-              ),
-            );
-          }
-
           // Check if current user has permission to add members (must be admin or creator)
           if (experiment.createdBy === currentUserId) {
             // User is the creator, allow adding members without further checks
