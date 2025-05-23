@@ -17,20 +17,31 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
+    - name: Setup pnpm store path
+      run: pnpm config set store-dir ~/.pnpm-store
+
+    - name: Cache pnpm dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.pnpm-store
+        key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-
+
     - name: Install Dependencies
       run: |
         cd apps/backend
-        npm install 
+        pnpm install --frozen-lockfile
       shell: bash
 
     - name: Build the Application
       run: |
         cd apps/backend
-        npm run build
+        pnpm run build
       shell: bash
 
     - name: Run Tests
       run: |
         cd apps/backend
-        npm test
+        pnpm test --runInBand --coverage
       shell: bash
