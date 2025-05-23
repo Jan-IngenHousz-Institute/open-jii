@@ -20,7 +20,7 @@ runs:
     - name: Install Dependencies
       run: |
         cd apps/backend
-        npm install
+        npm install 
       shell: bash
 
     - name: Build the Application
