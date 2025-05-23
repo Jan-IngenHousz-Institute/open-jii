@@ -98,7 +98,7 @@ export class ExperimentRepository {
               ),
               eq(experiments.status, status),
             ),
-          );
+          ); 
         }
         return joinedQuery.where(
           or(
@@ -158,7 +158,6 @@ export class ExperimentRepository {
         .update(experiments)
         .set({
           ...updateExperimentDto,
-          updatedAt: new Date(), // Explicitly set the updatedAt field to current date/time
         })
         .where(eq(experiments.id, id))
         .returning(),
