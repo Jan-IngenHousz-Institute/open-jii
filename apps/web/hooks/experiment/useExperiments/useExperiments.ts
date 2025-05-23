@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 
 import type { ExperimentStatus } from "@repo/api";
 
