@@ -98,7 +98,7 @@ export class ExperimentRepository {
               ),
               eq(experiments.status, status),
             ),
-          ); 
+          );
         }
         return joinedQuery.where(
           or(
@@ -156,9 +156,7 @@ export class ExperimentRepository {
     return tryCatch(() =>
       this.database
         .update(experiments)
-        .set({
-          ...updateExperimentDto,
-        })
+        .set(updateExperimentDto)
         .where(eq(experiments.id, id))
         .returning(),
     );

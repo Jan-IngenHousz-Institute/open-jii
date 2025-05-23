@@ -172,8 +172,8 @@ export const experiments = pgTable("experiments", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
-    .notNull()
-    .$onUpdate(() => sql`(now() AT TIME ZONE 'utc'::text)`),
+    .$onUpdate(() => new Date())
+    .notNull(),
 });
 
 export const experimentMembersEnum = pgEnum("experiment_members_role", [
