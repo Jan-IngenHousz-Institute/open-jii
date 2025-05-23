@@ -69,32 +69,24 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
   }
 
   async function onSubmit(data: z.infer<typeof editExperimentFormSchema>) {
-    try {
-      const body: UpdateExperimentBody = {
-        name: data.name,
-        description: data.description,
-        visibility: data.visibility,
-        embargoIntervalDays: data.embargoIntervalDays,
-      };
+    const body: UpdateExperimentBody = {
+      name: data.name,
+      description: data.description,
+      visibility: data.visibility,
+      embargoIntervalDays: data.embargoIntervalDays,
+    };
 
-      await updateExperiment({
-        params: { id: experiment.id },
-        body,
-      });
+    await updateExperiment({
+      params: { id: experiment.id },
+      body,
+    });
 
-      // Show message
-      toast({
-        description: "Experiment updated successfully",
-      });
-      // Navigate to the list of experiments
-      router.push(`/openjii/experiments`);
-    } catch (error) {
-      toast({
-        description: "Failed to update experiment",
-        variant: "destructive",
-      });
-      console.error("Failed to update experiment:", error);
-    }
+    // Show message
+    toast({
+      description: "Experiment updated successfully",
+    });
+    // Navigate to the list of experiments
+    router.push(`/openjii/experiments`);
   }
 
   return (
