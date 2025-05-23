@@ -1,0 +1,36 @@
+name: "Build & Test Node.js App"
+description: "Installs dependencies and runs tests for the Node.js backend"
+
+inputs:
+  node-version:
+    description: "Node.js version"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install Dependencies
+      run: |
+        cd apps/backend
+        npm install
+      shell: bash
+
+    - name: Build the Application
+      run: |
+        cd apps/backend
+        npm run build
+      shell: bash
+
+    - name: Run Tests
+      run: |
+        cd apps/backend
+        npm test
+      shell: bash
