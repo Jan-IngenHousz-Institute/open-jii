@@ -1,13 +1,10 @@
 "use client";
 
-import { EditIcon, LockIcon, GlobeIcon } from "lucide-react";
-import Link from "next/link";
-
-import { zExperimentVisibility } from "@repo/api";
+import type { ExperimentStatus } from "@repo/api";
+import { zExperimentStatus } from "@repo/api";
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -16,25 +13,21 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
 } from "@repo/ui/components";
 
 import { useExperiments } from "../hooks/experiment/useExperiments/useExperiments";
-import { formatDate } from "../util/date";
+import { ExperimentTableContent } from "./experiment-table-rows";
 
 interface ListExperimentProps {
   userId: string;
 }
 
 export function ListExperiments({ userId }: ListExperimentProps) {
-  const { data, filter, setFilter } = useExperiments();
+  const { data, filter, setFilter, status, setStatus } = useExperiments({});
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end space-x-8">
         <Select
           defaultValue="my"
           value={filter}
@@ -52,67 +45,42 @@ export function ListExperiments({ userId }: ListExperimentProps) {
             <SelectItem value="all">All Experiments</SelectItem>
           </SelectContent>
         </Select>
+
+        <Select
+          value={status ?? "all"}
+          onValueChange={(v) =>
+            setStatus(v === "all" ? undefined : (v as ExperimentStatus))
+          }
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            {Object.values(zExperimentStatus.enum).map((s) => (
+              <SelectItem key={s} value={s}>
+                {s}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {data ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Experiment name</TableHead>
-              <TableHead>Owner/Member</TableHead>
-              <TableHead className="text-center">Visibility</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead>Updated</TableHead>
-              <TableHead className="text-center">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.body.map((experiment) => {
-              const isOwner = experiment.createdBy === userId;
-              const isPrivate =
-                experiment.visibility === zExperimentVisibility.enum.private;
-
-              return (
-                <TableRow key={experiment.id}>
-                  <TableCell>{experiment.name}</TableCell>
-                  <TableCell>{isOwner ? "Owner" : "Member"}</TableCell>
-                  <TableCell className="text-center">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="inline-flex justify-center">
-                            {isPrivate ? (
-                              <LockIcon size={18} className="text-amber-500" />
-                            ) : (
-                              <GlobeIcon size={18} className="text-blue-500" />
-                            )}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {isPrivate ? "Private" : "Public"}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </TableCell>
-                  <TableCell>{formatDate(experiment.createdAt)}</TableCell>
-                  <TableCell>N/A</TableCell>
-                  <TableCell className="text-center">
-                    {isOwner && (
-                      <div className="inline-flex justify-center">
-                        <Link href={`/openjii/experiments/${experiment.id}`}>
-                          <EditIcon size={18} />
-                        </Link>
-                      </div>
-                    )}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      ) : (
-        <div className="py-4 text-center">Loading experiments...</div>
-      )}
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Experiment name</TableHead>
+            <TableHead className="text-center">Visibility</TableHead>
+            <TableHead>State</TableHead>
+            <TableHead>Created</TableHead>
+            <TableHead>Updated</TableHead>
+            <TableHead className="text-center">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <ExperimentTableContent data={data?.body} userId={userId} />
+        </TableBody>
+      </Table>
     </div>
   );
 }
