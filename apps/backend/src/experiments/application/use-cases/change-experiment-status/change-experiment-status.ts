@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
+import { experimentStatusEnum } from "@repo/database";
+
 import {
   ExperimentDto,
   ExperimentStatus,
@@ -16,7 +18,7 @@ export class ChangeExperimentStatusUseCase {
     status: ExperimentStatus,
   ): Promise<Result<ExperimentDto>> {
     // Validate status
-    if (!["provisioning", "active", "archived"].includes(status)) {
+    if (!experimentStatusEnum.enumValues.includes(status)) {
       return failure(AppError.badRequest(`Invalid status: ${status}`));
     }
 
@@ -33,7 +35,7 @@ export class ChangeExperimentStatusUseCase {
         status,
       });
 
-      return updateResult.chain((updatedExperiments) => {
+      return updateResult.chain((updatedExperiments: ExperimentDto[]) => {
         if (updatedExperiments.length === 0) {
           return failure(
             AppError.internal(`Failed to update status for experiment ${id}`),

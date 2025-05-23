@@ -1,6 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { ExperimentFilter } from "@repo/api";
+import { ExperimentFilter, ExperimentStatus } from "@repo/api";
 import { eq, or, and, experiments, experimentMembers } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
@@ -36,6 +36,7 @@ export class ExperimentRepository {
   async findAll(
     userId: string,
     filter?: ExperimentFilter,
+    status?: ExperimentStatus,
   ): Promise<Result<Partial<ExperimentDto>[]>> {
     // Common experiment fields to select
     const experimentFields = {
@@ -52,35 +53,67 @@ export class ExperimentRepository {
       // Start with a base query builder
       const query = this.database.select(experimentFields).from(experiments);
 
-      // Apply filters based on the filter type
-      switch (filter) {
-        case "my":
-          return query.where(eq(experiments.createdBy, userId));
+      // Apply filter and status conditions without nested conditionals
+      if (filter === "my") {
+        if (status) {
+          return query.where(
+            and(
+              eq(experiments.createdBy, userId),
+              eq(experiments.status, status),
+            ),
+          );
+        }
+        return query.where(eq(experiments.createdBy, userId));
+      }
 
-        case "member":
-          return query
-            .innerJoin(
-              experimentMembers,
-              eq(experiments.id, experimentMembers.experimentId),
-            )
-            .where(eq(experimentMembers.userId, userId));
+      if (filter === "member") {
+        const joinedQuery = query.innerJoin(
+          experimentMembers,
+          eq(experiments.id, experimentMembers.experimentId),
+        );
 
-        case "related":
-          return query
-            .leftJoin(
-              experimentMembers,
-              eq(experiments.id, experimentMembers.experimentId),
-            )
-            .where(
+        if (status) {
+          return joinedQuery.where(
+            and(
+              eq(experimentMembers.userId, userId),
+              eq(experiments.status, status),
+            ),
+          );
+        }
+        return joinedQuery.where(eq(experimentMembers.userId, userId));
+      }
+
+      if (filter === "related") {
+        const joinedQuery = query.leftJoin(
+          experimentMembers,
+          eq(experiments.id, experimentMembers.experimentId),
+        );
+
+        if (status) {
+          return joinedQuery.where(
+            and(
               or(
                 eq(experiments.createdBy, userId),
                 eq(experimentMembers.userId, userId),
               ),
-            );
-
-        default:
-          return query;
+              eq(experiments.status, status),
+            ),
+          );
+        }
+        return joinedQuery.where(
+          or(
+            eq(experiments.createdBy, userId),
+            eq(experimentMembers.userId, userId),
+          ),
+        );
       }
+
+      // Default cases (no filter or unrecognized filter)
+      if (status) {
+        return query.where(eq(experiments.status, status));
+      }
+
+      return query;
     });
   }
 
@@ -90,6 +123,22 @@ export class ExperimentRepository {
         .select()
         .from(experiments)
         .where(eq(experiments.id, id))
+        .limit(1);
+
+      if (result.length === 0) {
+        return null;
+      }
+
+      return result[0];
+    });
+  }
+
+  async findByName(name: string): Promise<Result<ExperimentDto | null>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select()
+        .from(experiments)
+        .where(eq(experiments.name, name))
         .limit(1);
 
       if (result.length === 0) {

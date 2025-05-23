@@ -1,5 +1,5 @@
 {
-  "id": "d64d7fa3-8af2-4fe8-b555-fcb5dc6615f0",
+  "id": "752b2ed4-f17b-4a08-80d2-5558018fa55a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -243,13 +243,6 @@
       "name": "experiment_members",
       "schema": "",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
         "experiment_id": {
           "name": "experiment_id",
           "type": "uuid",
@@ -307,7 +300,15 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "experiment_members_experiment_id_user_id_pk": {
+          "name": "experiment_members_experiment_id_user_id_pk",
+          "columns": [
+            "experiment_id",
+            "user_id"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -326,7 +327,7 @@
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "varchar(64)",
           "primaryKey": false,
           "notNull": true
         },
@@ -367,6 +368,13 @@
         },
         "created_at": {
           "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,

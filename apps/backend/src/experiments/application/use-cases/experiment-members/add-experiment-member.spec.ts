@@ -1,5 +1,5 @@
 import { TestHarness } from "../../../../test/test-harness";
-import { assertFailure } from "../../../utils/fp-utils";
+import { assertFailure, assertSuccess } from "../../../utils/fp-utils";
 import { AddExperimentMemberUseCase } from "./add-experiment-member";
 
 describe("AddExperimentMemberUseCase", () => {
@@ -38,9 +38,7 @@ describe("AddExperimentMemberUseCase", () => {
       email: "newmember@example.com",
     });
 
-    testApp.addExperimentMember(experiment.id, newMemberId, "member");
-
-    // Add the member
+    // Add the member through the use case
     const result = await useCase.execute(
       experiment.id,
       { userId: newMemberId, role: "member" },
@@ -50,14 +48,12 @@ describe("AddExperimentMemberUseCase", () => {
     // Verify result is success
     expect(result.isSuccess()).toBe(true);
 
-    // Extract member from the success result
-    const member = result._tag === "success" ? result.value : null;
-    expect(member).not.toBeNull();
+    expect(result._tag).toBe("success");
 
-    // Verify the member was added
-    expect(member.experimentId).toBe(experiment.id);
-    expect(member.userId).toBe(newMemberId);
-    expect(member.role).toBe("member");
+    assertSuccess(result);
+    expect(result.value.experimentId).toBe(experiment.id);
+    expect(result.value.userId).toBe(newMemberId);
+    expect(result.value.role).toBe("member");
   });
 
   it("should return NOT_FOUND error if experiment does not exist", async () => {
@@ -68,7 +64,7 @@ describe("AddExperimentMemberUseCase", () => {
 
     const result = await useCase.execute(
       nonExistentId,
-      { userId: newMemberId },
+      { userId: newMemberId, role: "member" },
       testUserId,
     );
 
@@ -95,7 +91,7 @@ describe("AddExperimentMemberUseCase", () => {
     // Try to add a member as a non-admin user
     const result = await useCase.execute(
       experiment.id,
-      { userId: newMemberId },
+      { userId: newMemberId, role: "member" },
       nonAdminId,
     );
 

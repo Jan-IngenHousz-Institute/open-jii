@@ -7,7 +7,6 @@ import { experimentMembers } from "@repo/database";
 // Create schema for adding experiment members
 export const addExperimentMemberSchema = createInsertSchema(experimentMembers)
   .omit({
-    id: true,
     experimentId: true,
     joinedAt: true,
   })
