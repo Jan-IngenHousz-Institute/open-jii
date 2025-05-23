@@ -20,7 +20,7 @@ export default async function ExperimentPage() {
           <p>This page will show a list of existing experiments.</p>
         </div>
         <CreateExperiment />
-        <ListExperiments userId={userId} />
+        <ListExperiments userId={userId ?? ""} />
       </div>
     </AppLayout>
   );
