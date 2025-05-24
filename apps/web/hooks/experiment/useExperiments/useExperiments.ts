@@ -1,20 +1,39 @@
+import { useState } from "react";
+
 import type { ExperimentStatus } from "@repo/api";
 
 import { tsr } from "../../../lib/tsr";
 
-/**
- * Hook to fetch a list of experiments with optional filtering
- * @param userId The ID of the current user
- * @param filter Optional filter for experiments ('my', 'member', or 'related')
- * @param status Optional filter for experiments by status ('provisioning', 'active', etc.)
- * @returns Query result containing list of experiments
- */
-export const useExperiments = (
-  filter?: "my" | "member" | "related",
-  status?: ExperimentStatus,
-) => {
-  return tsr.experiments.listExperiments.useQuery({
-    queryData: { query: { filter, status } },
+export type ExperimentFilter = "my" | "member" | "related" | "all";
+
+export const useExperiments = ({
+  initialFilter = "my",
+  initialStatus = undefined,
+}: {
+  initialFilter?: ExperimentFilter;
+  initialStatus?: ExperimentStatus | undefined;
+}) => {
+  const [filter, setFilter] = useState<ExperimentFilter>(initialFilter);
+  // status only holds actual status or undefined (all)
+  const [status, setStatus] = useState<ExperimentStatus | undefined>(
+    initialStatus,
+  );
+
+  // When filter is "all", we don't pass any filter to the API
+
+  const { data } = tsr.experiments.listExperiments.useQuery({
+    queryData: {
+      query: { filter: filter === "all" ? undefined : filter, status },
+    },
     queryKey: ["experiments", filter, status],
   });
+
+  // Return query result with filter and status controls
+  return {
+    data,
+    filter,
+    setFilter,
+    status,
+    setStatus,
+  };
 };

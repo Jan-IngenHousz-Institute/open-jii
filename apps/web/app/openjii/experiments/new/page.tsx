@@ -1,5 +1,7 @@
 import { AppLayout } from "@/components/app-layout";
 import { NewExperimentForm } from "@/components/new-experiment";
+import type { SearchParamsType } from "@/util/searchParams";
+import { getFirstSearchParam } from "@/util/searchParams";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -7,15 +9,14 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: SearchParamsType;
 }
 
 export default async function NewExperimentPage({ searchParams }: PageProps) {
   const { name, visibilityPrivate } = await searchParams;
-  const nameParam = Array.isArray(name) ? name[0] : name;
-  const visibilityPrivateParam = Array.isArray(visibilityPrivate)
-    ? visibilityPrivate[0] === "true"
-    : visibilityPrivate === "true";
+  const nameParam = getFirstSearchParam(name);
+  const visibilityPrivateParam =
+    getFirstSearchParam(visibilityPrivate) === "true";
   return (
     <AppLayout pageTitle={"New experiment"}>
       <div className="space-y-6">
