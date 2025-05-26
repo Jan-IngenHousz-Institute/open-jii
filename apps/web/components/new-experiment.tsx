@@ -56,31 +56,16 @@ export function NewExperimentForm({
   }
 
   async function onSubmit(data: CreateExperimentBody) {
-    try {
-      const body: CreateExperimentBody = {
-        name: data.name,
-        description: data.description,
-        visibility: data.visibility,
-        embargoIntervalDays: data.embargoIntervalDays,
-      };
+    const experiment = await createExperiment({
+      body: data,
+    });
 
-      await createExperiment({
-        body,
-      });
-
-      // Show message
-      toast({
-        description: "Experiment created successfully",
-      });
-      // Navigate to the list of experiments
-      router.push(`/openjii/experiments`);
-    } catch (error) {
-      toast({
-        description: "Failed to create experiment",
-        variant: "destructive",
-      });
-      console.error("Failed to create experiment:", error);
-    }
+    // Show message
+    toast({
+      description: "Experiment created successfully",
+    });
+    // Navigate to the list of experiments
+    router.push(`/openjii/experiments/${experiment.body.id}`);
   }
 
   return (
