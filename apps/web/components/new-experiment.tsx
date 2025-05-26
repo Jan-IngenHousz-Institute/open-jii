@@ -46,7 +46,7 @@ export function NewExperimentForm() {
   }
 
   async function onSubmit(data: CreateExperimentBody) {
-    const experiment = await createExperiment({
+    await createExperiment({
       body: data,
     });
 
@@ -55,7 +55,7 @@ export function NewExperimentForm() {
       description: "Experiment created successfully",
     });
     // Navigate to the experiment page
-    router.push(`/openjii/experiments/${experiment.body.id}`);
+    router.push(`/openjii/experiments`);
   }
 
   return (
