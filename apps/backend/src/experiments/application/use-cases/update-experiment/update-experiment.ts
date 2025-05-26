@@ -25,7 +25,9 @@ export class UpdateExperimentUseCase {
 
     return experimentResult.chain(async (experiment: ExperimentDto | null) => {
       if (!experiment) {
-        this.logger.warn(`Attempt to update non-existent experiment with ID ${id}`);
+        this.logger.warn(
+          `Attempt to update non-existent experiment with ID ${id}`,
+        );
         return failure(AppError.notFound(`Experiment with ID ${id} not found`));
       }
 
@@ -41,7 +43,9 @@ export class UpdateExperimentUseCase {
         }
 
         const updatedExperiment = updatedExperiments[0];
-        this.logger.log(`Successfully updated experiment "${updatedExperiment.name}" (ID: ${id})`);
+        this.logger.log(
+          `Successfully updated experiment "${updatedExperiment.name}" (ID: ${id})`,
+        );
         return success(updatedExperiment);
       });
     });

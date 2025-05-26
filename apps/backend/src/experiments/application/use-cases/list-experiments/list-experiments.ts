@@ -17,19 +17,29 @@ export class ListExperimentsUseCase {
     filter?: ExperimentFilter,
     status?: ExperimentStatus,
   ): Promise<Result<Partial<ExperimentDto>[]>> {
-    this.logger.log(`Listing experiments for user ${userId}${filter ? ` with filter "${filter}"` : ''}${status ? ` and status "${status}"` : ''}`);
-    
-    const result = await this.experimentRepository.findAll(userId, filter, status);
-    
+    this.logger.log(
+      `Listing experiments for user ${userId}${filter ? ` with filter "${filter}"` : ""}${status ? ` and status "${status}"` : ""}`,
+    );
+
+    const result = await this.experimentRepository.findAll(
+      userId,
+      filter,
+      status,
+    );
+
     result.fold(
       (experiments) => {
-        this.logger.debug(`Found ${experiments.length} experiments for user ${userId}`);
+        this.logger.debug(
+          `Found ${experiments.length} experiments for user ${userId}`,
+        );
       },
       (error) => {
-        this.logger.error(`Failed to list experiments for user ${userId}: ${error.message}`);
-      }
+        this.logger.error(
+          `Failed to list experiments for user ${userId}: ${error.message}`,
+        );
+      },
     );
-    
+
     return result;
   }
 }
