@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 
-import { DatabricksModule } from "../common/services/databricks.module";
+import { DatabricksModule } from "../common/services/databricks/databricks.module";
 // Use Cases
 import { ChangeExperimentStatusUseCase } from "./application/use-cases/change-experiment-status/change-experiment-status";
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";

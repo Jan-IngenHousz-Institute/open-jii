@@ -1,6 +1,6 @@
 import { eq, experimentMembers } from "@repo/database";
 
-import { DatabricksService } from "../../../../common/services/databricks.service";
+import { DatabricksService } from "../../../../common/services/databricks/databricks.service";
 import { ExperimentMemberRepository } from "../../../../experiments/core/repositories/experiment-member.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import {
@@ -113,15 +113,13 @@ describe("CreateExperimentUseCase", () => {
 
   it("should create an experiment even if Databricks job trigger fails", async () => {
     // Mock Databricks job trigger failure
-    jest
-      .spyOn(databricksService, "triggerJob")
-      .mockResolvedValue(
-        failure({
-          code: "INTERNAL_ERROR",
-          message: "Databricks API error",
-          statusCode: 500,
-        }),
-      );
+    jest.spyOn(databricksService, "triggerJob").mockResolvedValue(
+      failure({
+        code: "INTERNAL_ERROR",
+        message: "Databricks API error",
+        statusCode: 500,
+      }),
+    );
 
     const experimentData = {
       name: "Databricks Failure Test",

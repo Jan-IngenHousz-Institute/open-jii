@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
-import { DatabricksService } from "../../../../common/services/databricks.service";
+import { DatabricksService } from "../../../../common/services/databricks/databricks.service";
 import {
   CreateExperimentDto,
   ExperimentDto,

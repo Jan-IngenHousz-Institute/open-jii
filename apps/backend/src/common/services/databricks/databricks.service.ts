@@ -9,7 +9,7 @@ import {
   success,
   failure,
   AppError,
-} from "../../experiments/utils/fp-utils";
+} from "../../../experiments/utils/fp-utils";
 
 export interface DatabricksConfig {
   readonly host: string;

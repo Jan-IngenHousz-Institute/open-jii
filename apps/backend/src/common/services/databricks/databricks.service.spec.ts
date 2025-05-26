@@ -7,7 +7,7 @@ import {
   AppError,
   assertFailure,
   assertSuccess,
-} from "../../experiments/utils/fp-utils";
+} from "../../../experiments/utils/fp-utils";
 import { DatabricksService } from "./databricks.service";
 
 describe("DatabricksService", () => {
