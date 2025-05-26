@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
+import { DatabricksService } from "../../../../common/services/databricks.service";
 import {
   CreateExperimentDto,
   ExperimentDto,
@@ -13,6 +14,7 @@ export class CreateExperimentUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentMemberRepository: ExperimentMemberRepository,
+    private readonly databricksService: DatabricksService,
   ) {}
 
   async execute(
@@ -67,7 +69,26 @@ export class CreateExperimentUseCase {
               "admin",
             );
 
-          return addMemberResult.chain(() => {
+          return addMemberResult.chain(async () => {
+            // Trigger Databricks job for the new experiment
+            const databricksResult = await this.databricksService.triggerJob({
+              experimentId: experiment.id,
+              experimentName: experiment.name,
+              userId: userId,
+            });
+
+            // Log Databricks job trigger result but don't fail experiment creation
+            if (databricksResult.isFailure()) {
+              console.warn(
+                `Failed to trigger Databricks job for experiment ${experiment.id}:`,
+                (databricksResult as any).error.message,
+              );
+            } else {
+              console.log(
+                `Successfully triggered Databricks job for experiment ${experiment.id}`,
+              );
+            }
+
             return success(experiment);
           });
         });

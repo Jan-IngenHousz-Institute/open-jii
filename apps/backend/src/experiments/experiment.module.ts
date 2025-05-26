@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { DatabricksModule } from "../common/services/databricks.module";
 // Use Cases
 import { ChangeExperimentStatusUseCase } from "./application/use-cases/change-experiment-status/change-experiment-status";
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
@@ -18,6 +19,7 @@ import { ExperimentMembersController } from "./presentation/experiment-members.c
 import { ExperimentController } from "./presentation/experiment.controller";
 
 @Module({
+  imports: [DatabricksModule],
   controllers: [ExperimentController, ExperimentMembersController],
   providers: [
     // Repositories
