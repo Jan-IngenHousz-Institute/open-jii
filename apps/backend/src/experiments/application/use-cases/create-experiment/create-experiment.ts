@@ -100,7 +100,7 @@ export class CreateExperimentUseCase {
             if (databricksResult.isFailure()) {
               this.logger.warn(
                 `Failed to trigger Databricks job for experiment ${experiment.id}:`,
-                (databricksResult as any).error.message,
+                databricksResult.error.message,
               );
             } else {
               this.logger.log(

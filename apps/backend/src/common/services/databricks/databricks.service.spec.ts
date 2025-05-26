@@ -14,37 +14,99 @@ describe("DatabricksService", () => {
   let service: DatabricksService;
   let configService: ConfigService;
 
-  const mockDatabricksHost = "https://databricks.example.com";
-  const mockClientId = "test-client-id";
-  const mockClientSecret = "test-client-secret";
-  const mockJobId = "1234";
-
-  const mockConfigService = {
-    get: jest.fn((key: string, defaultValue?: string) => {
-      const configs = {
-        "databricks.host": mockDatabricksHost,
-        "databricks.clientId": mockClientId,
-        "databricks.clientSecret": mockClientSecret,
-        "databricks.jobId": mockJobId,
-      };
-      return configs[key] !== undefined ? configs[key] : defaultValue;
-    }),
+  const mockConfig = {
+    databricksHost: "https://databricks.example.com",
+    clientId: "test-client-id",
+    clientSecret: "test-client-secret",
+    jobId: "1234",
   };
+
+  const mockJobParams = {
+    experimentId: "exp-123",
+    experimentName: "Test Experiment",
+    userId: "user-123",
+  };
+
+  const createMockConfigService = (
+    overrides: Partial<typeof mockConfig> = {},
+  ) => ({
+    getOrThrow: jest.fn((key: string, defaultValue?: string) => {
+      const config = { ...mockConfig, ...overrides };
+      const configMap = {
+        "databricks.host": config.databricksHost,
+        "databricks.clientId": config.clientId,
+        "databricks.clientSecret": config.clientSecret,
+        "databricks.jobId": config.jobId,
+      };
+      return configMap[key] ?? defaultValue;
+    }),
+  });
+
+  const setupModule = async (configOverrides?: Partial<typeof mockConfig>) => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        DatabricksService,
+        { provide: HttpService, useValue: new HttpService() },
+        {
+          provide: ConfigService,
+          useValue: createMockConfigService(configOverrides),
+        },
+      ],
+    }).compile();
+
+    return {
+      service: module.get<DatabricksService>(DatabricksService),
+      configService: module.get<ConfigService>(ConfigService),
+    };
+  };
+
+  const mockTokenResponse = (accessToken = "mock-token", expiresIn = 3600) =>
+    nock(mockConfig.databricksHost).post("/oidc/v1/token").reply(200, {
+      access_token: accessToken,
+      expires_in: expiresIn,
+    });
+
+  const mockTokenFailure = (
+    status = 401,
+    errorDescription = "Invalid client credentials",
+  ) =>
+    nock(mockConfig.databricksHost)
+      .post("/oidc/v1/token")
+      .reply(status, { error_description: errorDescription });
+
+  const mockJobRunSuccess = (runId = 12345, numberInJob = 1) =>
+    nock(mockConfig.databricksHost).post("/api/2.2/jobs/run-now").reply(200, {
+      run_id: runId,
+      number_in_job: numberInJob,
+    });
+
+  const mockJobRunFailure = (
+    status = 404,
+    message = "Job not found or access denied",
+  ) =>
+    nock(mockConfig.databricksHost)
+      .post("/api/2.2/jobs/run-now")
+      .reply(status, { message });
+
+  const mockJobsListSuccess = (jobs = [{ job_id: 1234, name: "Test Job" }]) =>
+    nock(mockConfig.databricksHost)
+      .get("/api/2.2/jobs/list")
+      .query({ limit: 1, expand_tasks: false })
+      .reply(200, { jobs });
+
+  const mockJobsListFailure = (status = 503, message = "Service unavailable") =>
+    nock(mockConfig.databricksHost)
+      .get("/api/2.2/jobs/list")
+      .query({ limit: 1, expand_tasks: false })
+      .reply(status, { message });
 
   beforeEach(async () => {
     jest.clearAllMocks();
     nock.cleanAll();
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        DatabricksService,
-        { provide: HttpService, useValue: new HttpService() },
-        { provide: ConfigService, useValue: mockConfigService },
-      ],
-    }).compile();
-
-    service = module.get<DatabricksService>(DatabricksService);
-    configService = module.get<ConfigService>(ConfigService);
+    const moduleSetup = await setupModule();
+    service = moduleSetup.service;
+    configService = moduleSetup.configService;
   });
 
   afterEach(() => {
@@ -52,320 +114,250 @@ describe("DatabricksService", () => {
     jest.restoreAllMocks();
   });
 
-  describe("configuration", () => {
-    it("should load config from ConfigService", () => {
-      expect(configService.get).toHaveBeenCalledWith("databricks.host", "");
-      expect(configService.get).toHaveBeenCalledWith("databricks.clientId", "");
-      expect(configService.get).toHaveBeenCalledWith(
+  describe("Configuration", () => {
+    it("should load all required configuration values", () => {
+      const expectedCalls = [
+        "databricks.host",
+        "databricks.clientId",
         "databricks.clientSecret",
-        "",
-      );
-      expect(configService.get).toHaveBeenCalledWith("databricks.jobId", "");
+        "databricks.jobId",
+      ];
+
+      expectedCalls.forEach((key) => {
+        expect(configService.getOrThrow).toHaveBeenCalledWith(key);
+      });
     });
   });
 
   describe("triggerJob", () => {
-    it("should trigger a job successfully", async () => {
-      // Mock token request
-      nock(mockDatabricksHost).post("/oidc/v1/token").reply(200, {
-        access_token: "mock-token",
-        expires_in: 3600,
+    describe("Success scenarios", () => {
+      it("should trigger a job successfully with valid parameters", async () => {
+        mockTokenResponse();
+        mockJobRunSuccess();
+
+        const result = await service.triggerJob(mockJobParams);
+
+        expect(result.isSuccess()).toBe(true);
+        assertSuccess(result);
+        expect(result.value).toEqual({
+          run_id: 12345,
+          number_in_job: 1,
+        });
+        expect(nock.isDone()).toBeTruthy();
       });
 
-      // Mock job run request
-      nock(mockDatabricksHost).post("/api/2.2/jobs/run-now").reply(200, {
-        run_id: 12345,
-        number_in_job: 1,
+      it("should handle custom run IDs and job numbers", async () => {
+        const customRunId = 99999;
+        const customJobNumber = 5;
+
+        mockTokenResponse();
+        mockJobRunSuccess(customRunId, customJobNumber);
+
+        const result = await service.triggerJob(mockJobParams);
+
+        assertSuccess(result);
+        expect(result.value).toEqual({
+          run_id: customRunId,
+          number_in_job: customJobNumber,
+        });
       });
-
-      const params = {
-        experimentId: "exp-123",
-        experimentName: "Test Experiment",
-        userId: "user-123",
-      };
-
-      const result = await service.triggerJob(params);
-
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toEqual({
-        run_id: 12345,
-        number_in_job: 1,
-      });
-
-      // Verify all nock interceptors were used
-      expect(nock.isDone()).toBeTruthy();
     });
 
-    it("should return failure when token request fails", async () => {
-      // Mock failed token request
-      nock(mockDatabricksHost).post("/oidc/v1/token").reply(401, {
-        error_description: "Invalid client credentials",
+    describe("Authentication failures", () => {
+      it("should handle token request failures", async () => {
+        mockTokenFailure();
+
+        const result = await service.triggerJob(mockJobParams);
+
+        expect(result.isSuccess()).toBe(false);
+        assertFailure(result);
+        expect(result.error.code).toBe("UNAUTHORIZED");
+        expect(result.error.message).toContain(
+          "Databricks token request: Invalid client credentials",
+        );
       });
 
-      const params = {
-        experimentId: "exp-123",
-        experimentName: "Test Experiment",
-        userId: "user-123",
-      };
+      it("should handle different authentication error responses", async () => {
+        mockTokenFailure(403, "Access forbidden");
 
-      const result = await service.triggerJob(params);
+        const result = await service.triggerJob(mockJobParams);
 
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.code).toBe("UNAUTHORIZED");
-      expect(result.error.message).toContain(
-        "Databricks authentication failed",
-      );
+        assertFailure(result);
+        expect(result.error.message).toContain(
+          "Databricks token request: Access forbidden",
+        );
+      });
     });
 
-    it("should return failure when job trigger fails", async () => {
-      // Mock token success but job trigger failure
-      nock(mockDatabricksHost).post("/oidc/v1/token").reply(200, {
-        access_token: "mock-token",
-        expires_in: 3600,
+    describe("Job execution failures", () => {
+      it("should handle job not found errors", async () => {
+        mockTokenResponse();
+        mockJobRunFailure();
+
+        const result = await service.triggerJob(mockJobParams);
+
+        expect(result.isSuccess()).toBe(false);
+        assertFailure(result);
+        expect(result.error.code).toBe("NOT_FOUND");
+        expect(result.error.message).toContain("Databricks job execution");
       });
 
-      // Mock job run failure
-      nock(mockDatabricksHost).post("/api/2.2/jobs/run-now").reply(404, {
-        message: "Job not found or access denied",
+      it("should handle different job execution error statuses", async () => {
+        mockTokenResponse();
+        mockJobRunFailure(500, "Internal server error");
+
+        const result = await service.triggerJob(mockJobParams);
+
+        assertFailure(result);
+        expect(result.error.code).toBe("SERVICE_UNAVAILABLE");
       });
-
-      const params = {
-        experimentId: "exp-123",
-        experimentName: "Test Experiment",
-        userId: "user-123",
-      };
-
-      const result = await service.triggerJob(params);
-
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.code).toBe("BAD_REQUEST");
-      expect(result.error.message).toContain("Databricks job not found");
     });
 
-    it("should return failure when job ID is not configured", async () => {
-      // Create a separate instance with empty job ID
-      const moduleWithEmptyConfig: TestingModule =
-        await Test.createTestingModule({
-          providers: [
-            DatabricksService,
-            {
-              provide: ConfigService,
-              useValue: {
-                get: jest.fn((key: string, defaultValue?: string) => {
-                  if (key === "databricks.jobId") return "";
-                  if (key === "databricks.host") return mockDatabricksHost;
-                  if (key === "databricks.clientId") return mockClientId;
-                  if (key === "databricks.clientSecret")
-                    return mockClientSecret;
-                  return defaultValue;
-                }),
-              },
-            },
-            { provide: HttpService, useValue: new HttpService() },
-          ],
-        }).compile();
+    describe("Configuration validation", () => {
+      it("should fail when job ID is not configured", async () => {
+        expect(() => setupModule({ jobId: "" })).rejects.toThrow(
+          "Invalid Databricks configuration: all fields must be non-empty strings",
+        );
+      });
 
-      const serviceWithEmptyJobId =
-        moduleWithEmptyConfig.get<DatabricksService>(DatabricksService);
-
-      const params = {
-        experimentId: "exp-123",
-        experimentName: "Test Experiment",
-        userId: "user-123",
-      };
-
-      const result = await serviceWithEmptyJobId.triggerJob(params);
-
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.code).toBe("INTERNAL_ERROR");
-      expect(result.error.message).toContain(
-        "Databricks job ID not configured",
-      );
+      it("should fail when host is not configured", async () => {
+        expect(() => setupModule({ databricksHost: "" })).rejects.toThrow(
+          "Invalid Databricks configuration: all fields must be non-empty strings",
+        );
+      });
     });
   });
 
   describe("healthCheck", () => {
-    it("should return healthy when Databricks API is available", async () => {
-      // Mock token request
-      nock(mockDatabricksHost).post("/oidc/v1/token").reply(200, {
-        access_token: "mock-token",
-        expires_in: 3600,
+    describe("Success scenarios", () => {
+      it("should return healthy when Databricks API is available", async () => {
+        mockTokenResponse();
+        mockJobsListSuccess();
+
+        const result = await service.healthCheck();
+
+        expect(result.isSuccess()).toBe(true);
+        assertSuccess(result);
+        expect(result.value).toEqual({
+          healthy: true,
+          service: "databricks",
+        });
+        expect(nock.isDone()).toBeTruthy();
       });
 
-      // Mock jobs list request
-      nock(mockDatabricksHost)
-        .get("/api/2.2/jobs/list")
-        .query({ limit: 10 })
-        .reply(200, {
-          jobs: [{ job_id: 1234, name: "Test Job" }],
-        });
+      it("should handle empty jobs list response", async () => {
+        mockTokenResponse();
+        mockJobsListSuccess([]);
 
-      const result = await service.healthCheck();
+        const result = await service.healthCheck();
 
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toEqual({
-        healthy: true,
-        service: "databricks",
+        assertSuccess(result);
+        expect(result.value.healthy).toBe(true);
       });
     });
 
-    it("should return failure when Databricks API is unavailable", async () => {
-      // Mock token request
-      nock(mockDatabricksHost).post("/oidc/v1/token").reply(200, {
-        access_token: "mock-token",
-        expires_in: 3600,
+    describe("Failure scenarios", () => {
+      it("should return failure when Databricks API is unavailable", async () => {
+        mockTokenResponse();
+        mockJobsListFailure();
+
+        const result = await service.healthCheck();
+
+        expect(result.isSuccess()).toBe(false);
+        assertFailure(result);
+        expect(result.error.code).toBe("SERVICE_UNAVAILABLE");
+        expect(result.error.message).toContain(
+          "Databricks service unavailable",
+        );
       });
 
-      // Mock failed jobs list request
-      nock(mockDatabricksHost)
-        .get("/api/2.2/jobs/list")
-        .query({ limit: 10 })
-        .reply(503, {
-          message: "Service unavailable",
-        });
+      it("should return failure when token acquisition fails", async () => {
+        mockTokenFailure();
 
-      const result = await service.healthCheck();
+        const result = await service.healthCheck();
 
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.code).toBe("INTERNAL_ERROR");
-      expect(result.error.message).toContain("Databricks service unavailable");
-    });
-
-    it("should return failure when token acquisition fails", async () => {
-      // Mock failed token request
-      nock(mockDatabricksHost).post("/oidc/v1/token").reply(401, {
-        error_description: "Invalid client credentials",
+        expect(result.isSuccess()).toBe(false);
+        assertFailure(result);
+        expect(result.error.message).toContain(
+          "Databricks token request: Invalid client credentials",
+        );
       });
-
-      const result = await service.healthCheck();
-
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toContain(
-        "Databricks authentication failed",
-      );
     });
   });
 
-  describe("token management", () => {
-    it("should cache tokens and reuse them", async () => {
-      // Mock token request that should only be called once
-      const tokenScope = nock(mockDatabricksHost)
-        .post("/oidc/v1/token")
-        .once() // Should only be called once
-        .reply(200, {
-          access_token: "mock-token",
-          expires_in: 3600,
-        });
-
-      // Mock two job run requests
-      const jobRunScope1 = nock(mockDatabricksHost)
-        .post("/api/2.2/jobs/run-now")
-        .reply(200, {
-          run_id: 12345,
-          number_in_job: 1,
-        });
-
-      const jobRunScope2 = nock(mockDatabricksHost)
-        .post("/api/2.2/jobs/run-now")
-        .reply(200, {
-          run_id: 12346,
-          number_in_job: 2,
-        });
+  describe("Token Management", () => {
+    it("should cache tokens and reuse them for multiple requests", async () => {
+      const tokenScope = mockTokenResponse().persist(false);
+      mockJobRunSuccess(12345, 1);
+      mockJobRunSuccess(12346, 2);
 
       // First call should get a token
-      await service.triggerJob({
-        experimentId: "exp-123",
-        experimentName: "Test Experiment",
-        userId: "user-123",
-      });
-
-      // Token request and first job request should be consumed
+      await service.triggerJob(mockJobParams);
       expect(tokenScope.isDone()).toBeTruthy();
-      expect(jobRunScope1.isDone()).toBeTruthy();
 
-      // Second call should reuse the token
+      // Second call should reuse the token (no additional token requests)
       await service.triggerJob({
+        ...mockJobParams,
         experimentId: "exp-456",
-        experimentName: "Another Experiment",
-        userId: "user-123",
       });
 
-      // Second job request should be consumed without additional token requests
-      expect(jobRunScope2.isDone()).toBeTruthy();
-
-      // No pending mocks should remain
       expect(nock.isDone()).toBeTruthy();
     });
 
     it("should request a new token after expiration", async () => {
       // First token with short expiration
-      const firstTokenScope = nock(mockDatabricksHost)
-        .post("/oidc/v1/token")
-        .reply(200, {
-          access_token: "first-token",
-          expires_in: 0, // Immediate expiration
-        });
+      const firstTokenScope = mockTokenResponse("first-token", 1);
+      const firstJobScope = mockJobRunSuccess(12345, 1);
 
-      // First job run
-      const firstJobScope = nock(mockDatabricksHost)
-        .post("/api/2.2/jobs/run-now", (body) => {
-          // Verify this request uses the first token
-          expect(body.job_id).toBe(1234);
-          return true;
-        })
-        .reply(200, {
-          run_id: 12345,
-          number_in_job: 1,
-        });
+      // Second token after expiration
+      const secondTokenScope = mockTokenResponse("second-token", 3600);
+      const secondJobScope = mockJobRunSuccess(12346, 2);
 
-      // Second token request after expiration
-      const secondTokenScope = nock(mockDatabricksHost)
-        .post("/oidc/v1/token")
-        .reply(200, {
-          access_token: "second-token",
-          expires_in: 3600,
-        });
-
-      // Second job run
-      const secondJobScope = nock(mockDatabricksHost)
-        .post("/api/2.2/jobs/run-now", (body) => {
-          // Verify this request uses the second token
-          expect(body.job_id).toBe(1234);
-          return true;
-        })
-        .reply(200, {
-          run_id: 12346,
-          number_in_job: 2,
-        });
-
-      // First call should get a token (that immediately expires)
-      await service.triggerJob({
-        experimentId: "exp-123",
-        experimentName: "Test Experiment",
-        userId: "user-123",
-      });
-
+      // First call with token that will expire soon
+      await service.triggerJob(mockJobParams);
       expect(firstTokenScope.isDone()).toBeTruthy();
       expect(firstJobScope.isDone()).toBeTruthy();
 
+      // Advance time to ensure token expires
+      jest.spyOn(Date, "now").mockReturnValue(Date.now() + 7200 * 1000); // 2 hours later
+
       // Second call should need a new token
       await service.triggerJob({
+        ...mockJobParams,
         experimentId: "exp-456",
-        experimentName: "Another Experiment",
-        userId: "user-123",
       });
 
-      // All requests should be consumed
       expect(secondTokenScope.isDone()).toBeTruthy();
       expect(secondJobScope.isDone()).toBeTruthy();
-      expect(nock.isDone()).toBeTruthy();
+
+      // Restore Date.now
+      jest.restoreAllMocks();
+    });
+
+    it("should handle token refresh failures gracefully", async () => {
+      // First successful token with normal expiration
+      mockTokenResponse("first-token", 3600);
+      mockJobRunSuccess();
+
+      // Failed token refresh for second call
+      mockTokenFailure();
+
+      // First call succeeds
+      const firstResult = await service.triggerJob(mockJobParams);
+      assertSuccess(firstResult);
+
+      // Manually expire the token by advancing time
+      jest.spyOn(Date, "now").mockReturnValue(Date.now() + 7200 * 1000); // 2 hours later
+
+      // Second call fails due to token refresh failure
+      const secondResult = await service.triggerJob({
+        ...mockJobParams,
+        experimentId: "exp-456",
+      });
+      assertFailure(secondResult);
+
+      // Restore Date.now
+      jest.restoreAllMocks();
     });
   });
 });

@@ -64,7 +64,7 @@ export class Success<T> {
     return true;
   }
 
-  isFailure(): boolean {
+  isFailure(): this is Failure<never> {
     return false;
   }
 
@@ -97,7 +97,7 @@ export class Failure<E> {
   readonly _tag = "failure";
   constructor(readonly error: E) {}
 
-  isSuccess(): boolean {
+  isSuccess(): this is Success<never> {
     return false;
   }
 
@@ -300,6 +300,64 @@ export function defaultRepositoryErrorMapper(error: unknown): AppError {
   }
 
   return AppError.repositoryError(message);
+}
+
+/**
+ * Error mapper for API/external service operations
+ * @param error The original error
+ * @param context A string describing the operation context
+ * @returns AppError instance with appropriate status code and message
+ */
+export function apiErrorMapper(error: unknown, context?: string): AppError {
+  // Return as is if it's already an AppError
+  if (error instanceof AppError) {
+    return error;
+  }
+
+  // Handle Axios errors - check if the error object has isAxiosError property or response property
+  if (typeof error === "object" && error !== null) {
+    const err = error as any;
+    const isAxiosErr =
+      err.isAxiosError === true || (err.response && err.response.status);
+
+    if (isAxiosErr) {
+      const status = err.response?.status;
+      const message =
+        err.response?.data?.message ||
+        err.response?.data?.error_description ||
+        err.message ||
+        "Unknown API error";
+
+      const displayMessage = context ? `${context}: ${message}` : message;
+
+      // Map common HTTP status codes to appropriate AppError types
+      switch (status) {
+        case 400:
+          return AppError.badRequest(displayMessage);
+        case 401:
+          return AppError.unauthorized(displayMessage);
+        case 403:
+          return AppError.forbidden(displayMessage);
+        case 404:
+          return AppError.notFound(displayMessage);
+        case 429:
+          return AppError.badRequest(displayMessage, "RATE_LIMIT_EXCEEDED");
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+          return AppError.internal(displayMessage, "SERVICE_UNAVAILABLE");
+        default:
+          return AppError.internal(displayMessage);
+      }
+    }
+  }
+
+  // Handle generic errors
+  const message = error instanceof Error ? error.message : String(error);
+  const displayMessage = context ? `${context}: ${message}` : message;
+
+  return AppError.internal(displayMessage);
 }
 
 /**
