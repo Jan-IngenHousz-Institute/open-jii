@@ -27,26 +27,16 @@ import { toast } from "@repo/ui/hooks";
 
 import { useExperimentCreate } from "../hooks/experiment/useExperimentCreate/useExperimentCreate";
 
-interface NewExperimentFormProps {
-  name?: string;
-  visibilityPrivate?: boolean;
-}
-
-export function NewExperimentForm({
-  name,
-  visibilityPrivate,
-}: NewExperimentFormProps) {
+export function NewExperimentForm() {
   const router = useRouter();
   const { mutateAsync: createExperiment, isPending } = useExperimentCreate();
 
   const form = useForm<CreateExperimentBody>({
     resolver: zodResolver(zCreateExperimentBody),
     defaultValues: {
-      name: name ?? "",
+      name: "",
       description: "",
-      visibility: visibilityPrivate
-        ? zExperimentVisibility.enum.private
-        : zExperimentVisibility.enum.public,
+      visibility: zExperimentVisibility.enum.private,
       embargoIntervalDays: 90,
     },
   });
@@ -64,7 +54,7 @@ export function NewExperimentForm({
     toast({
       description: "Experiment created successfully",
     });
-    // Navigate to the list of experiments
+    // Navigate to the experiment page
     router.push(`/openjii/experiments/${experiment.body.id}`);
   }
 
@@ -78,7 +68,7 @@ export function NewExperimentForm({
             <FormItem>
               <FormLabel>Name</FormLabel>
               <FormControl>
-                <Input data-1p-ignore {...field} />
+                <Input {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

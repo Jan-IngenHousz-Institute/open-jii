@@ -1,22 +1,12 @@
 import { AppLayout } from "@/components/app-layout";
 import { NewExperimentForm } from "@/components/new-experiment";
-import type { SearchParamsType } from "@/util/searchParams";
-import { getFirstSearchParam } from "@/util/searchParams";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "New experiment",
 };
 
-interface PageProps {
-  searchParams: SearchParamsType;
-}
-
-export default async function NewExperimentPage({ searchParams }: PageProps) {
-  const { name, visibilityPrivate } = await searchParams;
-  const nameParam = getFirstSearchParam(name);
-  const visibilityPrivateParam =
-    getFirstSearchParam(visibilityPrivate) === "true";
+export default function NewExperimentPage() {
   return (
     <AppLayout pageTitle={"New experiment"}>
       <div className="space-y-6">
@@ -26,10 +16,7 @@ export default async function NewExperimentPage({ searchParams }: PageProps) {
             Set up a new experiment (project).
           </p>
         </div>
-        <NewExperimentForm
-          name={nameParam}
-          visibilityPrivate={visibilityPrivateParam}
-        />
+        <NewExperimentForm />
       </div>
     </AppLayout>
   );
