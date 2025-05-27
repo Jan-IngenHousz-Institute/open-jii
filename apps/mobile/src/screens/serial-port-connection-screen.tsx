@@ -4,7 +4,7 @@ import { serialPortToMultispeqStream } from "~/services/multispeq-communication/
 import { MultispeqMeasurementWidget } from "~/widgets/multispeq-measurement-widget";
 
 import multispeqMicroUsbImage from "../../assets/multispeq2-microusb.png";
-import { MultiSpeqCommandExecutor } from "../services/multispeq-communication/multispeq-command-executor";
+import { MultispeqCommandExecutor } from "../services/multispeq-communication/multispeq-command-executor";
 
 export function SerialPortConnectionScreen() {
   return (
@@ -25,7 +25,7 @@ export function SerialPortConnectionScreen() {
       }}
       establishDeviceConnection={async () => {
         const serialPortEventsEmitter = await openSerialPortConnection();
-        return new MultiSpeqCommandExecutor(
+        return new MultispeqCommandExecutor(
           serialPortToMultispeqStream(serialPortEventsEmitter),
         );
       }}

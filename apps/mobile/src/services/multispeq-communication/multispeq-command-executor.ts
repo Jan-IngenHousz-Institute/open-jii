@@ -3,7 +3,12 @@ import { promiseWithTimeout } from "~/utils/promise-with-timeout";
 import type { Emitter } from "../../utils/emitter";
 import type { MultispeqStreamEvents } from "./multispeq-stream-events";
 
-export class MultiSpeqCommandExecutor {
+export interface IMultispeqCommandExecutor {
+  execute(command: string | object): Promise<string | object>;
+  destroy(): Promise<void>;
+}
+
+export class MultispeqCommandExecutor implements IMultispeqCommandExecutor {
   constructor(private readonly emitter: Emitter<MultispeqStreamEvents>) {}
 
   async execute(command: string | object) {

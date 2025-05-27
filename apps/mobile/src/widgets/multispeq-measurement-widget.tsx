@@ -10,7 +10,9 @@ import { LargeSpinner } from "../components/large-spinner";
 import { ResultView } from "../components/result-view";
 import { useToast } from "../components/toast-provider";
 import { sendMqttEvent } from "../services/mqtt/send-mqtt-event";
-import { MultiSpeqCommandExecutor } from "../services/multispeq-communication/multispeq-command-executor";
+import {
+  IMultispeqCommandExecutor,
+} from "../services/multispeq-communication/multispeq-command-executor";
 
 const { MQTT_TOPIC: topic } = assertEnvVariables({
   MQTT_TOPIC: process.env.MQTT_TOPIC,
@@ -19,7 +21,7 @@ const { MQTT_TOPIC: topic } = assertEnvVariables({
 const protocol = [{ spad: [1] }];
 
 interface Props {
-  establishDeviceConnection: () => Promise<MultiSpeqCommandExecutor>;
+  establishDeviceConnection: () => Promise<IMultispeqCommandExecutor>;
   renderError?: (error: Error) => ReactNode;
 }
 
