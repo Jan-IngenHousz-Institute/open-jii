@@ -1,4 +1,3 @@
-import { AppLayout } from "@/components/app-layout";
 import type { Metadata } from "next";
 
 import { Button } from "@repo/ui/components";
@@ -9,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function OpenJIIHome() {
   return (
-    <AppLayout pageTitle="openJII">
+    <>
       <h1 className="text-jii-dark-green mb-6 text-4xl font-bold">
         Jan IngenHousz Institute
       </h1>
@@ -35,6 +34,6 @@ export default function OpenJIIHome() {
           challenges.
         </p>
       </div>
-    </AppLayout>
+    </>
   );
 }
