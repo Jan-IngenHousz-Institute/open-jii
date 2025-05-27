@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common";
 
+import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { Result, success, failure, AppError } from "../../../utils/fp-utils";
+import { Result, failure, AppError } from "../../../utils/fp-utils";
 
 @Injectable()
 export class DeleteExperimentUseCase {
@@ -11,7 +12,7 @@ export class DeleteExperimentUseCase {
     // Check if experiment exists
     const experimentResult = await this.experimentRepository.findOne(id);
 
-    return experimentResult.chain(async (experiment) => {
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
       if (!experiment) {
         return failure(AppError.notFound(`Experiment with ID ${id} not found`));
       }

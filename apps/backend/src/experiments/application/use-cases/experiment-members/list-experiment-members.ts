@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { ExperimentMemberDto } from "../../../core/models/experiment-members.model";
+import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { Result, failure, AppError } from "../../../utils/fp-utils";
@@ -20,7 +21,7 @@ export class ListExperimentMembersUseCase {
     const experimentResult =
       await this.experimentRepository.findOne(experimentId);
 
-    return experimentResult.chain(async (experiment) => {
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
       if (!experiment) {
         return failure(
           AppError.notFound(`Experiment with ID ${experimentId} not found`),
@@ -33,7 +34,7 @@ export class ListExperimentMembersUseCase {
         userId,
       );
 
-      return accessResult.chain((hasAccess) => {
+      return accessResult.chain((hasAccess: boolean) => {
         if (!hasAccess && experiment.visibility !== "public") {
           return failure(
             AppError.forbidden("You do not have access to this experiment"),

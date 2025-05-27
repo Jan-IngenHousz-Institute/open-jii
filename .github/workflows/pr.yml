@@ -7,6 +7,7 @@ on:
       - edited
       - synchronize
       - reopened
+  workflow_dispatch:
 
 permissions:
   pull-requests: read
@@ -34,7 +35,8 @@ jobs:
         uses: ./.github/actions/blt
         with:
           node-version: "22"
-          base: "main"
+          artifact_retention: "7"
+          base: "HEAD^1"
 
   tofu:
     name: OpenTofu
@@ -64,5 +66,7 @@ jobs:
       - name: Run OpenTofu Operations
         uses: ./.github/actions/tofu
         with:
+          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws_region: ${{ secrets.AWS_REGION }}
           tofu_version: "1.9.0"
           environment: "dev"

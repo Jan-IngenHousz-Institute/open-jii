@@ -6,16 +6,7 @@ export const metadata: Metadata = {
   title: "New experiment",
 };
 
-interface PageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
-
-export default async function NewExperimentPage({ searchParams }: PageProps) {
-  const { name, visibilityPrivate } = await searchParams;
-  const nameParam = Array.isArray(name) ? name[0] : name;
-  const visibilityPrivateParam = Array.isArray(visibilityPrivate)
-    ? visibilityPrivate[0] === "true"
-    : visibilityPrivate === "true";
+export default function NewExperimentPage() {
   return (
     <AppLayout pageTitle={"New experiment"}>
       <div className="space-y-6">
@@ -25,10 +16,7 @@ export default async function NewExperimentPage({ searchParams }: PageProps) {
             Set up a new experiment (project).
           </p>
         </div>
-        <NewExperimentForm
-          name={nameParam}
-          visibilityPrivate={visibilityPrivateParam}
-        />
+        <NewExperimentForm />
       </div>
     </AppLayout>
   );

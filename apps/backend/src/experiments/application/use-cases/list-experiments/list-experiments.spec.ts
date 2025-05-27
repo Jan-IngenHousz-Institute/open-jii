@@ -97,6 +97,87 @@ describe("ListExperimentsUseCase", () => {
     );
   });
 
+  it("should filter experiments by status", async () => {
+    // Create a user for this test
+    const userId = await testApp.createTestUser({
+      email: "status-test@example.com",
+    });
+
+    // Create active experiment
+    const { experiment: activeExperiment } = await testApp.createExperiment({
+      name: "Active Experiment",
+      userId,
+      status: "active",
+    });
+
+    // Create archived experiment
+    const { experiment: archivedExperiment } = await testApp.createExperiment({
+      name: "Archived Experiment",
+      userId,
+      status: "archived",
+    });
+
+    // Act - filter by "active" status
+    const result = await useCase.execute(userId, undefined, "active");
+
+    expect(result.isSuccess()).toBe(true);
+
+    assertSuccess(result);
+    const experiments = result.value;
+
+    // Assert - should only find experiments with active status
+    expect(experiments.length).toBe(1);
+    expect(experiments[0].id).toBe(activeExperiment.id);
+    expect(experiments[0].name).toBe("Active Experiment");
+    expect(experiments[0].status).toBe("active");
+  });
+
+  it("should combine relationship and status filters", async () => {
+    // Create users for this test
+    const mainUserId = await testApp.createTestUser({
+      email: "main-combo@example.com",
+    });
+    const otherUserId = await testApp.createTestUser({
+      email: "other-combo@example.com",
+    });
+
+    // Create active experiment owned by main user
+    const { experiment: myActive } = await testApp.createExperiment({
+      name: "My Active Experiment",
+      userId: mainUserId,
+      status: "active",
+    });
+
+    // Create archived experiment owned by main user
+    await testApp.createExperiment({
+      name: "My Archived Experiment",
+      userId: mainUserId,
+      status: "archived",
+    });
+
+    // Create active experiment owned by other user
+    await testApp.createExperiment({
+      name: "Other Active Experiment",
+      userId: otherUserId,
+      status: "active",
+    });
+
+    // Act - filter by "my" and "active" status
+    const result = await useCase.execute(mainUserId, "my", "active");
+
+    expect(result.isSuccess()).toBe(true);
+
+    assertSuccess(result);
+    const experiments = result.value;
+
+    // Assert - should only find active experiments owned by mainUserId
+    expect(experiments.length).toBe(1);
+    expect(experiments[0].id).toBe(myActive.id);
+    expect(experiments[0].name).toBe("My Active Experiment");
+    expect(experiments[0].status).toBe("active");
+    expect(experiments[0].createdBy).toBe(mainUserId);
+  });
+
   it("should return empty array when no experiments exist", async () => {
     // Create a unique user for this test to ensure isolation
     const uniqueUserId = await testApp.createTestUser({

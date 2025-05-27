@@ -13,6 +13,7 @@ module "iam_oidc" {
   role_name  = "GithubActionsDeployAccess"
   repository = "Jan-IngenHousz-Institute/open-jii"
   branch     = "main"
+  aws_region = var.aws_region
 }
 
 module "cloudwatch" {

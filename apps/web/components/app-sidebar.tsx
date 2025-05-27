@@ -43,12 +43,8 @@ const data = {
           url: "/openjii/experiments/new",
         },
         {
-          title: "Public",
-          url: "/openjii/experiments?category=public",
-        },
-        {
-          title: "Private",
-          url: "/openjii/experiments?category=private",
+          title: "Overview",
+          url: "/openjii/experiments",
         },
       ],
     },

@@ -1,3 +1,6 @@
+import { eq, experimentMembers } from "@repo/database";
+
+import { ExperimentMemberRepository } from "../../../../experiments/core/repositories/experiment-member.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { assertFailure, assertSuccess } from "../../../utils/fp-utils";
 import { CreateExperimentUseCase } from "./create-experiment";
@@ -6,6 +9,7 @@ describe("CreateExperimentUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: CreateExperimentUseCase;
+  let experimentMemberRepository: ExperimentMemberRepository;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -15,6 +19,7 @@ describe("CreateExperimentUseCase", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(CreateExperimentUseCase);
+    experimentMemberRepository = testApp.module.get(ExperimentMemberRepository);
   });
 
   afterEach(() => {
@@ -52,6 +57,37 @@ describe("CreateExperimentUseCase", () => {
       createdBy: testUserId,
     });
   });
+  it("should add the creating user as an admin member", async () => {
+    const experimentData = {
+      name: "Member Test Experiment",
+      description: "Testing automatic member creation",
+    };
+
+    const experimentResult = await useCase.execute(experimentData, testUserId);
+
+    // Verify result is success
+    expect(experimentResult.isSuccess()).toBe(true);
+    assertSuccess(experimentResult);
+    const createdExperiment = experimentResult.value;
+
+    const membersResult = await experimentMemberRepository.getMembers(
+      createdExperiment.id,
+    );
+
+    expect(membersResult.isSuccess()).toBe(true);
+    assertSuccess(membersResult);
+    const members = membersResult.value;
+
+    // Should have exactly 1 member (the creator)
+    expect(members.length).toBe(1);
+
+    // Verify the creator was added as an admin
+    expect(members[0]).toMatchObject({
+      experimentId: createdExperiment.id,
+      userId: testUserId,
+      role: "admin",
+    });
+  });
 
   it("should create an experiment with minimal data", async () => {
     // Only provide required name field
@@ -75,9 +111,9 @@ describe("CreateExperimentUseCase", () => {
   });
 
   it("should return error if name is not provided", async () => {
-    // @ts-expect-error - Testing with missing required fields
     const invalidData = {
       description: "Missing name field",
+      name: "",
     };
 
     const result = await useCase.execute(invalidData, testUserId);
@@ -102,5 +138,25 @@ describe("CreateExperimentUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("BAD_REQUEST");
     expect(result.error.message).toContain("User ID is required");
+  });
+
+  it("should return error if experiment name already exists", async () => {
+    // First create an experiment with a specific name
+    const existingName = "Unique Experiment Name";
+    await testApp.createExperiment({
+      name: existingName,
+      userId: testUserId,
+    });
+
+    // Now try to create another experiment with the same name
+    const result = await useCase.execute({ name: existingName }, testUserId);
+
+    // Verify error is returned
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("BAD_REQUEST");
+    expect(result.error.message).toContain(
+      `An experiment with the name "${existingName}" already exists`,
+    );
   });
 });
