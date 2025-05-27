@@ -1,21 +1,21 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Platform } from 'react-native';
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
+import { Platform } from "react-native";
+import { BleStackNavigator } from "~/navigation/ble-stack-navigator";
 import { HomeScreen } from "~/screens/home-screen";
 
 import { ToastProvider } from "./components/toast-provider";
 import { BluetoothStackNavigator } from "./navigation/bluetooth-stack-navigator";
 import { SerialPortConnectionScreen } from "./screens/serial-port-connection-screen";
-import { BleStackNavigator } from "~/navigation/ble-stack-navigator";
 
 const Tab = createBottomTabNavigator();
 
 export function App() {
   function renderMainRouter() {
     if (Platform.OS === "ios") {
-      return <BleStackNavigator />
+      return <BleStackNavigator />;
     }
 
     return (
@@ -27,7 +27,7 @@ export function App() {
             const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
               Home: "home",
               Bluetooth: "bluetooth",
-              Serial: "terminal"
+              Serial: "terminal",
             };
             return (
               <Ionicons name={icons[route.name]} size={size} color={color} />
@@ -53,7 +53,7 @@ export function App() {
           options={{ tabBarLabel: "Serial Port" }}
         />
       </Tab.Navigator>
-    )
+    );
   }
 
   return (
