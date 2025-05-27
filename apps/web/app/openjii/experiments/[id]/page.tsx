@@ -108,7 +108,7 @@ export default function ExperimentOverviewPage({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-green-500">Active</Badge>;
+        return <Badge className="bg-secondary">Active</Badge>;
       case "provisioning":
         return <Badge className="bg-yellow-500">Provisioning</Badge>;
       case "archived":
@@ -125,7 +125,7 @@ export default function ExperimentOverviewPage({
       case "active":
         return <Badge className="bg-blue-500">In Progress</Badge>;
       case "completed":
-        return <Badge className="bg-green-500">Completed</Badge>;
+        return <Badge className="bg-secondary">Completed</Badge>;
       case "upcoming":
         return <Badge className="bg-gray-400">Upcoming</Badge>;
       default:
@@ -225,7 +225,7 @@ export default function ExperimentOverviewPage({
             </p>
             <div className="bg-muted mt-3 h-1.5 w-full overflow-hidden rounded-full">
               <div
-                className="h-full rounded-full bg-green-500"
+                className="h-full rounded-full bg-secondary"
                 style={{
                   width: `${(mockSensors.filter((s) => s.status === "online").length / mockSensors.length) * 100}%`,
                 }}
@@ -383,7 +383,7 @@ export default function ExperimentOverviewPage({
           <CardContent>
             <div className="mb-4 grid grid-cols-3 gap-2">
               <div className="flex items-center gap-2 text-sm">
-                <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                <div className="h-3 w-3 rounded-full bg-secondary"></div>
                 <span>
                   Online (
                   {mockSensors.filter((s) => s.status === "online").length})
