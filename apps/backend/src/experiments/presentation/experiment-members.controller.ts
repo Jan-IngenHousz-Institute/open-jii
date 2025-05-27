@@ -115,13 +115,12 @@ export class ExperimentMembersController {
   }
 
   @TsRestHandler(contract.experiments.getUsersNotOnExperiment)
-  getUsersNotOnExperiment(@CurrentUser() user: SessionUser) {
+  getUsersNotOnExperiment() {
     return tsRestHandler(
       contract.experiments.getUsersNotOnExperiment,
       async ({ params }) => {
         const result = await this.getUsersNotOnExperimentUseCase.execute(
           params.id,
-          user.id,
         );
         return handleResult(result, this.logger);
       },
