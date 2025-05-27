@@ -10,7 +10,6 @@ export interface DatabricksConfig {
 export interface DatabricksRunNowRequest {
   job_id: number;
   idempotency_token?: string;
-  notebook_params?: Record<string, string>;
   job_parameters?: Record<string, string>;
   only?: string[];
   performance_target?: "PERFORMANCE_OPTIMIZED" | "STANDARD";
@@ -19,8 +18,7 @@ export interface DatabricksRunNowRequest {
     [key: string]: any;
   };
   queue?: {
-    enabled?: boolean;
-    [key: string]: any;
+    enabled: boolean;
   };
   // Legacy parameters for backward compatibility
   jar_params?: string[];

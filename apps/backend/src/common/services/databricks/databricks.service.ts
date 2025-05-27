@@ -1,6 +1,7 @@
 import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { isAxiosError } from "axios";
 
 import {
   Result,
@@ -77,7 +78,7 @@ export class DatabricksService {
   }
 
   private getErrorMessage(error: unknown): string {
-    if (this.isAxiosError(error)) {
+    if (isAxiosError(error)) {
       const message = this.extractAxiosErrorMessage(error);
       return error.response?.status
         ? `HTTP ${error.response.status}: ${message}`
@@ -86,12 +87,6 @@ export class DatabricksService {
     return (error as any) instanceof Error
       ? (error as Error).message
       : String(error);
-  }
-
-  private isAxiosError(error: unknown): error is any {
-    return (
-      typeof error === "object" && error !== null && "isAxiosError" in error
-    );
   }
 
   private extractAxiosErrorMessage(axiosError: any): string {
@@ -263,12 +258,14 @@ export class DatabricksService {
   ): DatabricksRunNowRequest {
     return {
       job_id: parseInt(this.config.jobId, 10),
-      notebook_params: {
+      job_parameters: {
         experiment_id: params.experimentId,
         experiment_name: params.experimentName,
-        user_id: params.userId,
-        triggered_at: new Date().toISOString(),
       },
+      queue: {
+        enabled: true,
+      },
+      performance_target: "STANDARD",
       idempotency_token: params.experimentId,
     };
   }
