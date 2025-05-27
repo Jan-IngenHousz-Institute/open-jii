@@ -1,24 +1,16 @@
 "use client";
 
-import { ErrorDisplay } from "@/components/error-display";
-import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
+import { useExperiment } from "../hooks/experiment/useExperiment/useExperiment";
 
-interface ExperimentOverviewPageProps {
-  params: { id: string };
+interface ExperimentOverviewProps {
+  experimentId: string;
 }
 
-export default function ExperimentOverviewPage({
-  params,
-}: ExperimentOverviewPageProps) {
-  const { id } = params;
-  const { data, isLoading, error } = useExperiment(id);
+export function ExperimentOverview({ experimentId }: ExperimentOverviewProps) {
+  const { data, isLoading } = useExperiment(experimentId);
 
   if (isLoading) {
     return <div>Loading experiment details...</div>;
-  }
-
-  if (error) {
-    return <ErrorDisplay error={error} title="Failed to load experiment" />;
   }
 
   if (!data) {

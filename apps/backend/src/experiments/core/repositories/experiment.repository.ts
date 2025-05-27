@@ -47,6 +47,7 @@ export class ExperimentRepository {
       embargoIntervalDays: experiments.embargoIntervalDays,
       createdAt: experiments.createdAt,
       createdBy: experiments.createdBy,
+      updatedAt: experiments.updatedAt,
     };
 
     return tryCatch(() => {
