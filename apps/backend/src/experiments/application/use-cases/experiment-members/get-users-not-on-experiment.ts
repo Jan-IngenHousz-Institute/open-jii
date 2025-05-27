@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
-import { isSuccess, Result } from "../../../utils/fp-utils";
+import { isSuccess } from "../../../utils/fp-utils";
 
 export interface UserDto {
   id: string;

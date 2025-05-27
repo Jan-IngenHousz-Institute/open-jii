@@ -115,7 +115,7 @@ export class ExperimentMembersController {
   }
 
   @TsRestHandler(contract.experiments.getUsersNotOnExperiment)
-  async getUsersNotOnExperiment(@CurrentUser() user: SessionUser) {
+  getUsersNotOnExperiment(@CurrentUser() user: SessionUser) {
     return tsRestHandler(
       contract.experiments.getUsersNotOnExperiment,
       async ({ params }) => {
