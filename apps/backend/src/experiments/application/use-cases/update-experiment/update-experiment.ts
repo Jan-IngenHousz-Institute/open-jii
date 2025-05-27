@@ -18,7 +18,6 @@ export class UpdateExperimentUseCase {
     data: UpdateExperimentDto,
   ): Promise<Result<ExperimentDto>> {
     this.logger.log(`Updating experiment with ID ${id}`);
-    this.logger.debug(`Update payload: ${JSON.stringify(data)}`);
 
     // Check if experiment exists
     const experimentResult = await this.experimentRepository.findOne(id);
