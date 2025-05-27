@@ -1,14 +1,12 @@
-"use client";
-
 import { EditExperiment } from "@/components/edit-experiment";
 
 interface ExperimentEditPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default function ExperimentEditPage({
+export default async function ExperimentEditPage({
   params,
 }: ExperimentEditPageProps) {
-  const { id } = params;
+  const { id } = await params;
   return <EditExperiment experimentId={id} />;
 }

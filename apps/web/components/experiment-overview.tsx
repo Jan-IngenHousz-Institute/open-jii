@@ -35,7 +35,7 @@ export function ExperimentOverview({ experimentId }: ExperimentOverviewProps) {
               Description
             </h4>
             <p className="text-sm">
-              {experiment.description || "No description provided"}
+              {experiment.description ?? "No description provided"}
             </p>
           </div>
 

@@ -1,15 +1,19 @@
+import { use } from "react";
+
 interface ExperimentSettingsPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default function ExperimentSettingsPage(
-  _props: ExperimentSettingsPageProps,
-) {
+export default function ExperimentSettingsPage({
+  params,
+}: ExperimentSettingsPageProps) {
+  const { id } = use(params);
   // Will use params.id when implementing actual settings functionality
 
   return (
     <div className="space-y-8">
       <div>
+        {id}
         <h4 className="text-lg font-medium">Experiment Settings</h4>
         <p className="text-muted-foreground text-sm">
           Configure advanced settings and preferences for this experiment.
@@ -92,10 +96,16 @@ export default function ExperimentSettingsPage(
         </div>
 
         <div className="flex justify-end space-x-3">
-          <button type="button" className="rounded-md border px-4 py-2 hover:bg-gray-50">
+          <button
+            type="button"
+            className="rounded-md border px-4 py-2 hover:bg-gray-50"
+          >
             Reset to Defaults
           </button>
-          <button type="button" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-4 py-2">
+          <button
+            type="button"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-4 py-2"
+          >
             Save Settings
           </button>
         </div>

@@ -4,6 +4,7 @@ import { ErrorDisplay } from "@/components/error-display";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { formatDate } from "@/util/date";
 import { CalendarIcon } from "lucide-react";
+import { use } from "react";
 
 import {
   Card,
@@ -15,13 +16,13 @@ import {
 } from "@repo/ui/components";
 
 interface ExperimentOverviewPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function ExperimentOverviewPage({
   params,
 }: ExperimentOverviewPageProps) {
-  const { id } = params;
+  const { id } = use(params);
   const { data, isLoading, error } = useExperiment(id);
   if (isLoading) {
     return <div>Loading experiment details...</div>;
@@ -79,7 +80,10 @@ export default function ExperimentOverviewPage({
                 Created
               </h4>
               <p className="flex items-center gap-1">
-                <CalendarIcon className="text-muted-foreground h-4 w-4" aria-hidden="true" />
+                <CalendarIcon
+                  className="text-muted-foreground h-4 w-4"
+                  aria-hidden="true"
+                />
                 {formatDate(experiment.createdAt)}
               </p>
             </div>

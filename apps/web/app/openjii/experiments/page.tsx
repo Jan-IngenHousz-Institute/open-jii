@@ -1,4 +1,3 @@
-import { AppLayout } from "@/components/app-layout";
 import { ListExperiments } from "@/components/list-experiments";
 import type { Metadata } from "next";
 import Link from "next/link";

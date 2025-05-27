@@ -1,17 +1,17 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
+import { use } from "react";
 
 interface ExperimentDataPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function ExperimentDataPage({
   params,
 }: ExperimentDataPageProps) {
-  const { id } = params;
+  const { id } = use(params);
   const { data, isLoading, error } = useExperiment(id);
 
   if (isLoading) {
@@ -27,8 +27,6 @@ export default function ExperimentDataPage({
   if (!data) {
     return <div>Experiment not found</div>;
   }
-
-  const experiment = data.body;
 
   return (
     <div className="space-y-8">

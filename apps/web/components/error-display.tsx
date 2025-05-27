@@ -22,8 +22,10 @@ export function ErrorDisplay({ error, title = "Error" }: ErrorDisplayProps) {
     if (err instanceof Error) return err.message;
 
     // Check for API error responses
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (typeof err === "object" && err !== null) {
       // @ts-expect-error - custom error structure
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
       if (err.body?.message) return err.body.message;
 
       // Try to stringify the object if all else fails
@@ -34,6 +36,7 @@ export function ErrorDisplay({ error, title = "Error" }: ErrorDisplayProps) {
       }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-base-to-string
     return String(err);
   };
 
