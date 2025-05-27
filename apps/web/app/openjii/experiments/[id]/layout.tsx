@@ -41,11 +41,11 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
           <TabsTrigger value="edit" asChild>
             <Link href={`/openjii/experiments/${id}/edit`}>Edit</Link>
           </TabsTrigger>
-          <TabsTrigger value="settings" asChild>
-            <Link href={`/openjii/experiments/${id}/settings`}>Settings</Link>
-          </TabsTrigger>
           <TabsTrigger value="data" asChild>
             <Link href={`/openjii/experiments/${id}/data`}>Data</Link>
+          </TabsTrigger>
+          <TabsTrigger value="settings" asChild>
+            <Link href={`/openjii/experiments/${id}/settings`}>Settings</Link>
           </TabsTrigger>
         </TabsList>
 

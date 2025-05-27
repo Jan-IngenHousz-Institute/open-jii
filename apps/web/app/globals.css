@@ -21,6 +21,10 @@
     --secondary: 136 74% 58%;
     --secondary-foreground: 0 0% 0%;
     
+    /* #76b465 = hsl(110 29% 55%) */
+    --tertiary: 110 29% 55%;
+    --tertiary-foreground: 0 0% 100%;
+    
     /* Keep some of the original values for compatibility */
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
@@ -28,6 +32,10 @@
     /* #afd7f4 = hsl(206 77% 82%) */
     --accent: 206 77% 82%;
     --accent-foreground: 0 0% 0%;
+    
+    /* #fff381 = hsl(56 100% 75%) */
+    --highlight: 56 100% 75%;
+    --highlight-foreground: 0 0% 0%;
     
     --destructive: 0 72.22% 50.59%;
     --destructive-foreground: 0 0% 98%;
@@ -62,11 +70,17 @@
     --secondary: 136 60% 45%; /* Darker green */
     --secondary-foreground: 0 0% 100%;
     
+    --tertiary: 110 29% 40%; /* Darker medium green */
+    --tertiary-foreground: 0 0% 100%;
+    
     --muted: 240 3.7% 15.9%;
     --muted-foreground: 240 5% 64.9%;
     
     --accent: 206 40% 60%; /* Darker blue */
     --accent-foreground: 0 0% 100%;
+    
+    --highlight: 56 70% 65%; /* Darker yellow */
+    --highlight-foreground: 0 0% 0%;
     
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 85.7% 97.3%;

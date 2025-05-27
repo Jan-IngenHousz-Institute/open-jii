@@ -110,11 +110,11 @@ export default function ExperimentOverviewPage({
       case "active":
         return <Badge className="bg-secondary">Active</Badge>;
       case "provisioning":
-        return <Badge className="bg-yellow-500">Provisioning</Badge>;
+        return <Badge className="bg-highlight">Provisioning</Badge>;
       case "archived":
-        return <Badge className="bg-gray-500">Archived</Badge>;
+        return <Badge className="bg-muted">Archived</Badge>;
       case "stale":
-        return <Badge className="bg-orange-500">Stale</Badge>;
+        return <Badge className="bg-tertiary">Stale</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -123,11 +123,11 @@ export default function ExperimentOverviewPage({
   const getPhaseStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-blue-500">In Progress</Badge>;
+        return <Badge className="bg-primary">In Progress</Badge>;
       case "completed":
         return <Badge className="bg-secondary">Completed</Badge>;
       case "upcoming":
-        return <Badge className="bg-gray-400">Upcoming</Badge>;
+        return <Badge className="bg-muted">Upcoming</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -225,7 +225,7 @@ export default function ExperimentOverviewPage({
             </p>
             <div className="bg-muted mt-3 h-1.5 w-full overflow-hidden rounded-full">
               <div
-                className="h-full rounded-full bg-secondary"
+                className="bg-secondary h-full rounded-full"
                 style={{
                   width: `${(mockSensors.filter((s) => s.status === "online").length / mockSensors.length) * 100}%`,
                 }}
@@ -255,10 +255,10 @@ export default function ExperimentOverviewPage({
                   style={{
                     backgroundColor:
                       sensor.status === "online"
-                        ? "rgb(34, 197, 94)"
+                        ? "#49e06d" // secondary
                         : sensor.status === "warning"
-                          ? "rgb(234, 179, 8)"
-                          : "rgb(239, 68, 68)",
+                          ? "#fff381" // highlight
+                          : "hsl(var(--destructive))",
                     opacity: 0.4 + (sensor.readingsCount / 1500) * 0.6,
                   }}
                 />
@@ -302,13 +302,18 @@ export default function ExperimentOverviewPage({
                       Unprocessed readings from all sensors
                     </p>
                   </div>
-                  <Badge>CSV</Badge>
+                  <Badge className="bg-accent text-accent-foreground">
+                    CSV
+                  </Badge>
                 </div>
                 <div className="mt-2 text-sm">
                   <p>Last updated: {formatDate(subHours(new Date(), 2))}</p>
                   <p className="text-muted-foreground">Size: 2.4 MB</p>
                 </div>
-                <Button className="mt-auto" size="sm">
+                <Button
+                  className="bg-primary hover:bg-primary/90 mt-auto text-white"
+                  size="sm"
+                >
                   Download
                 </Button>
               </div>
@@ -321,13 +326,18 @@ export default function ExperimentOverviewPage({
                       Cleaned and normalized data
                     </p>
                   </div>
-                  <Badge>JSON</Badge>
+                  <Badge className="bg-highlight text-highlight-foreground">
+                    JSON
+                  </Badge>
                 </div>
                 <div className="mt-2 text-sm">
                   <p>Last updated: {formatDate(subDays(new Date(), 1))}</p>
                   <p className="text-muted-foreground">Size: 1.8 MB</p>
                 </div>
-                <Button className="mt-auto" size="sm">
+                <Button
+                  className="bg-primary hover:bg-primary/90 mt-auto text-white"
+                  size="sm"
+                >
                   Download
                 </Button>
               </div>
@@ -340,13 +350,18 @@ export default function ExperimentOverviewPage({
                       Generated summary with charts
                     </p>
                   </div>
-                  <Badge>PDF</Badge>
+                  <Badge className="bg-tertiary text-tertiary-foreground">
+                    PDF
+                  </Badge>
                 </div>
                 <div className="mt-2 text-sm">
                   <p>Last updated: {formatDate(subDays(new Date(), 3))}</p>
                   <p className="text-muted-foreground">Size: 4.2 MB</p>
                 </div>
-                <Button className="mt-auto" size="sm">
+                <Button
+                  className="bg-primary hover:bg-primary/90 mt-auto text-white"
+                  size="sm"
+                >
                   Download
                 </Button>
               </div>
@@ -383,21 +398,21 @@ export default function ExperimentOverviewPage({
           <CardContent>
             <div className="mb-4 grid grid-cols-3 gap-2">
               <div className="flex items-center gap-2 text-sm">
-                <div className="h-3 w-3 rounded-full bg-secondary"></div>
+                <div className="bg-secondary h-3 w-3 rounded-full"></div>
                 <span>
                   Online (
                   {mockSensors.filter((s) => s.status === "online").length})
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
+                <div className="bg-highlight h-3 w-3 rounded-full"></div>
                 <span>
                   Warning (
                   {mockSensors.filter((s) => s.status === "warning").length})
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <div className="h-3 w-3 rounded-full bg-red-500"></div>
+                <div className="bg-destructive h-3 w-3 rounded-full"></div>
                 <span>
                   Offline (
                   {mockSensors.filter((s) => s.status === "offline").length})
@@ -444,7 +459,7 @@ export default function ExperimentOverviewPage({
                             }}
                           />
                           <div
-                            className="-top-0.75 absolute h-3 w-1.5 -translate-x-1/2 transform rounded-full bg-blue-500"
+                            className="-top-0.75 bg-accent absolute h-3 w-1.5 -translate-x-1/2 transform rounded-full"
                             style={{
                               left: `${((sensor.lastReading - sensor.min * 0.8) / (sensor.max * 1.2 - sensor.min * 0.8)) * 100}%`,
                             }}
@@ -458,10 +473,10 @@ export default function ExperimentOverviewPage({
                         <div
                           className={`mr-2 h-2.5 w-2.5 rounded-full ${
                             sensor.status === "online"
-                              ? "bg-green-500"
+                              ? "bg-secondary"
                               : sensor.status === "warning"
-                                ? "bg-yellow-500"
-                                : "bg-red-500"
+                                ? "bg-highlight"
+                                : "bg-destructive"
                           }`}
                         ></div>
                         <span className="capitalize">{sensor.status}</span>
@@ -489,7 +504,7 @@ export default function ExperimentOverviewPage({
               <div>
                 <CardTitle className="flex items-center">
                   Notifications
-                  <Badge className="ml-2 bg-red-500">
+                  <Badge className="bg-destructive ml-2">
                     {mockNotifications.filter((n) => !n.read).length}
                   </Badge>
                 </CardTitle>
@@ -513,13 +528,13 @@ export default function ExperimentOverviewPage({
                 >
                   <div className="bg-muted mt-0.5 rounded-full p-1">
                     {notification.type === "error" ? (
-                      <AlertTriangleIcon className="h-3.5 w-3.5 text-red-500" />
+                      <AlertTriangleIcon className="text-destructive h-3.5 w-3.5" />
                     ) : notification.type === "warning" ? (
-                      <AlertTriangleIcon className="h-3.5 w-3.5 text-yellow-500" />
+                      <AlertTriangleIcon className="text-highlight h-3.5 w-3.5" />
                     ) : notification.type === "success" ? (
-                      <CheckCircleIcon className="h-3.5 w-3.5 text-green-500" />
+                      <CheckCircleIcon className="text-secondary h-3.5 w-3.5" />
                     ) : (
-                      <InfoIcon className="h-3.5 w-3.5 text-blue-500" />
+                      <InfoIcon className="text-accent h-3.5 w-3.5" />
                     )}
                   </div>
                   <div className="flex-1 space-y-1">
@@ -560,7 +575,7 @@ export default function ExperimentOverviewPage({
               View All
             </Button>
             <Button
-              variant="outline"
+              className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
               size="sm"
               disabled={mockNotifications.every((n) => n.read)}
             >
@@ -609,21 +624,21 @@ export default function ExperimentOverviewPage({
           </CardHeader>
           <CardContent>
             <div className="mb-4 flex gap-4">
-              <div className="flex-1 rounded-md border px-3 py-2">
+              <div className="flex-1 rounded-md border border-primary/20 bg-primary/5 px-3 py-2">
                 <p className="text-muted-foreground text-xs">Current</p>
-                <p className="text-xl font-medium">24.8°C</p>
+                <p className="text-xl font-medium text-primary">24.8°C</p>
               </div>
-              <div className="flex-1 rounded-md border px-3 py-2">
+              <div className="flex-1 rounded-md border border-tertiary/20 bg-tertiary/5 px-3 py-2">
                 <p className="text-muted-foreground text-xs">Average</p>
-                <p className="text-xl font-medium">23.5°C</p>
+                <p className="text-xl font-medium text-tertiary">23.5°C</p>
               </div>
-              <div className="flex-1 rounded-md border px-3 py-2">
+              <div className="flex-1 rounded-md border border-accent/20 bg-accent/5 px-3 py-2">
                 <p className="text-muted-foreground text-xs">Min</p>
-                <p className="text-xl font-medium">19.2°C</p>
+                <p className="text-xl font-medium text-accent-foreground">19.2°C</p>
               </div>
-              <div className="flex-1 rounded-md border px-3 py-2">
+              <div className="flex-1 rounded-md border border-secondary/20 bg-secondary/5 px-3 py-2">
                 <p className="text-muted-foreground text-xs">Max</p>
-                <p className="text-xl font-medium">26.7°C</p>
+                <p className="text-xl font-medium text-secondary-foreground">26.7°C</p>
               </div>
             </div>
             <div className="h-[300px]">
@@ -631,11 +646,11 @@ export default function ExperimentOverviewPage({
                 config={{
                   temperature: {
                     label: "Temperature",
-                    color: "#0ea5e9",
+                    color: "#005e5e", // primary color
                   },
                   anomaly: {
                     label: "Anomaly",
-                    color: "#ef4444",
+                    color: "#ef4444", // keeping the red for anomalies for better visibility
                   },
                 }}
               >
@@ -687,13 +702,14 @@ export default function ExperimentOverviewPage({
                     )}
                     <RechartsPrimitive.ReferenceLine
                       y={24}
-                      stroke="#0ea5e9"
+                      stroke="#49e06d" // secondary color
                       strokeDasharray="3 3"
                     />
                     <RechartsPrimitive.Brush
                       dataKey="date"
                       height={20}
-                      stroke="#8884d8"
+                      stroke="#005e5e" // primary color
+                      fill="#d7ebfa" // accent light color
                       startIndex={Math.max(0, chartData.length - 20)}
                       endIndex={chartData.length - 1}
                     />
@@ -724,7 +740,7 @@ export default function ExperimentOverviewPage({
                 >
                   <div className="flex items-center justify-between">
                     <h4 className="flex items-center font-medium">
-                      <span className="bg-primary text-primary-foreground mr-2 flex h-5 w-5 items-center justify-center rounded-full text-xs">
+                      <span className="bg-primary mr-2 flex h-5 w-5 items-center justify-center rounded-full text-xs text-white">
                         {index + 1}
                       </span>
                       {phase.name}
@@ -814,12 +830,12 @@ export default function ExperimentOverviewPage({
                   <div
                     className={`h-2 w-2 rounded-full ${
                       event.type === "milestone"
-                        ? "bg-purple-500"
+                        ? "bg-primary"
                         : event.type === "observation"
-                          ? "bg-blue-500"
+                          ? "bg-accent"
                           : event.type === "maintenance"
-                            ? "bg-yellow-500"
-                            : "bg-green-500"
+                            ? "bg-highlight"
+                            : "bg-secondary"
                     }`}
                   ></div>
                 </div>
@@ -830,12 +846,12 @@ export default function ExperimentOverviewPage({
                       variant="outline"
                       className={`capitalize ${
                         event.type === "milestone"
-                          ? "border-purple-200 bg-purple-50 text-purple-700"
+                          ? "border-primary/20 bg-primary/10 text-primary"
                           : event.type === "observation"
-                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                            ? "border-accent/20 bg-accent/10 text-accent-foreground"
                             : event.type === "maintenance"
-                              ? "border-yellow-200 bg-yellow-50 text-yellow-700"
-                              : "border-green-200 bg-green-50 text-green-700"
+                              ? "border-highlight/20 bg-highlight/10 text-highlight-foreground"
+                              : "border-secondary/20 bg-secondary/10 text-secondary-foreground"
                       }`}
                     >
                       {event.type}
@@ -859,11 +875,11 @@ export default function ExperimentOverviewPage({
           <Button variant="outline">View Full Timeline</Button>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm">
-              <span className="mr-1 h-3 w-3 rounded-full bg-purple-500" />{" "}
+              <span className="bg-primary mr-1 h-3 w-3 rounded-full" />{" "}
               Milestones
             </Button>
             <Button variant="ghost" size="sm">
-              <span className="mr-1 h-3 w-3 rounded-full bg-blue-500" />{" "}
+              <span className="bg-accent mr-1 h-3 w-3 rounded-full" />{" "}
               Observations
             </Button>
           </div>
@@ -882,14 +898,20 @@ export default function ExperimentOverviewPage({
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="hover:border-primary rounded-lg border p-4 transition-colors"
+                className={`rounded-lg border p-4 transition-colors ${
+                  i === 1 
+                    ? "border-secondary/30 hover:border-secondary" 
+                    : i === 2 
+                      ? "border-muted hover:border-muted-foreground" 
+                      : "border-highlight/30 hover:border-highlight"
+                }`}
               >
                 <div className="flex items-start justify-between">
                   <h3 className="font-medium">
                     {experiment.name.replace(/\d+$/, "")}{" "}
                     {i === 2
-                      ? parseInt(/\d+$/.exec(experiment.name)?.[0] || "0") - 1
-                      : parseInt(/\d+$/.exec(experiment.name)?.[0] || "0") + i}
+                      ? parseInt(/\d+$/.exec(experiment.name)?.[0] ?? "0") - 1
+                      : parseInt(/\d+$/.exec(experiment.name)?.[0] ?? "0") + i}
                   </h3>
                   {getStatusBadge(
                     i === 1 ? "active" : i === 2 ? "archived" : "provisioning",
@@ -908,7 +930,13 @@ export default function ExperimentOverviewPage({
                     {formatDate(subDays(new Date(), i * 15).toISOString())}
                   </div>
                   <div className="ml-auto">
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" className={
+                      i === 1 
+                        ? "text-secondary hover:bg-secondary/10" 
+                        : i === 2 
+                          ? "text-muted-foreground hover:bg-muted/10" 
+                          : "text-highlight-foreground hover:bg-highlight/10"
+                    }>
                       View
                     </Button>
                   </div>
@@ -918,7 +946,7 @@ export default function ExperimentOverviewPage({
           </div>
         </CardContent>
         <CardFooter>
-          <Button variant="outline" size="sm">
+          <Button className="bg-primary hover:bg-primary/90 text-white" size="sm">
             Find More Related Experiments
           </Button>
         </CardFooter>
