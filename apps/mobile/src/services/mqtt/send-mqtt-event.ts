@@ -15,7 +15,9 @@ export async function sendMqttEvent(topic: string, payload: object) {
       console.log("message delivered!");
       resolve(message);
     });
-    emitter.on("connectionLost", (error) => reject(new Error(error.errorMessage)));
+    emitter.on("connectionLost", (error) =>
+      reject(new Error(error.errorMessage)),
+    );
   });
 
   try {

@@ -1,5 +1,8 @@
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { useAsync } from "react-async-hook";
+import { BleStackParamList } from "~/navigation/ble-stack-navigator";
 
 import { ErrorView } from "../../components/error-view";
 import { startDeviceScan } from "../../services/bluetooth-ble/start-ble-devices-scan";
@@ -8,9 +11,6 @@ import type { BluetoothDevice } from "./utils/bluetooth-device";
 import { orderDevices } from "./utils/order-devices";
 import { serializeDevice } from "./utils/serialize-device";
 import { updateList } from "./utils/update-list";
-import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import {BleStackParamList} from "~/navigation/ble-stack-navigator";
 
 export function BleDevicesListScreen() {
   const [devices, setDevices] = useState<BluetoothDevice[]>([]);
@@ -39,7 +39,7 @@ export function BleDevicesListScreen() {
     <DevicesListView
       items={devices}
       onRefresh={() => setDevices([])}
-      onPress={id => navigation.navigate('BleConnection', { deviceId: id })}
+      onPress={(id) => navigation.navigate("BleConnection", { deviceId: id })}
     />
-  )
+  );
 }
