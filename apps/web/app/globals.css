@@ -11,7 +11,6 @@
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-
     /* JII Brand Colors - using HSL versions of the hex colors */
     /* #005e5e = hsl(180 100% 18.4%) */
     --primary: 180 100% 18.4%;
@@ -43,7 +42,6 @@
     --input: 240 5.9% 90%;
     --ring: 180 100% 18.4%; /* Same as primary */
     --radius: 0.5rem;
-
     /* Sidebar colors */
     --sidebar-background: 180 100% 18.4%; /* Primary dark teal */
     --sidebar-foreground: 0 0% 100%;
@@ -87,7 +85,6 @@
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 180 80% 15%;
-
     /* Dark mode sidebar */
     --sidebar-background: 180 100% 10%;
     --sidebar-foreground: 0 0% 100%;
