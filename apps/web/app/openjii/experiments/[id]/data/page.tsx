@@ -2,7 +2,7 @@
 
 import { ErrorDisplay } from "@/components/error-display";
 
-import { useExperiment } from "../../../../../hooks/experiment/useExperiment/useExperiment";
+import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 
 interface ExperimentDataPageProps {
   params: { id: string };
