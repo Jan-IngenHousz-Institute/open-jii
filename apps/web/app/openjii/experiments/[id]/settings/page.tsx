@@ -1,3 +1,5 @@
+import { ExperimentMemberManagement } from "@/components/experiment-member-management";
+import { ExperimentSettings } from "@/components/experiment-settings";
 import { use } from "react";
 
 interface ExperimentSettingsPageProps {
