@@ -47,8 +47,8 @@
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 136 74% 58%; /* Secondary bright green */
     --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 206 77% 82%; /* Accent light blue */
-    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-accent: 180 50% 35%; /* Lighter teal for better hover visibility */
+    --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 180 30% 25%;
     --sidebar-ring: 136 74% 58%;
   }
@@ -90,7 +90,7 @@
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 136 60% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 206 40% 60%;
+    --sidebar-accent: 180 30% 25%; /* Lighter teal for dark mode hover */
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 180 30% 20%;
     --sidebar-ring: 136 60% 45%;
