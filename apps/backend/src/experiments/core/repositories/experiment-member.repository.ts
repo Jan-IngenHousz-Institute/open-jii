@@ -1,6 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, eq, experimentMembers } from "@repo/database";
+import { and, eq, experimentMembers, users, notInArray } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -24,6 +24,27 @@ export class ExperimentMemberRepository {
         .select()
         .from(experimentMembers)
         .where(eq(experimentMembers.experimentId, experimentId)),
+    );
+  }
+
+  async getUsersNotOnExperiment(experimentId: string) {
+    return tryCatch(() =>
+      this.database
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+        })
+        .from(users)
+        .where(
+          notInArray(
+            users.id,
+            this.database
+              .select({ userId: experimentMembers.userId })
+              .from(experimentMembers)
+              .where(eq(experimentMembers.experimentId, experimentId)),
+          ),
+        ),
     );
   }
 

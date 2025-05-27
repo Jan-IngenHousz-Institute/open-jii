@@ -10,14 +10,15 @@ import {
   CardDescription,
   CardContent,
   Button,
-  Input,
   Badge,
+  Select, SelectTrigger, SelectContent, SelectItem, SelectValue,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 import { useExperimentMembers } from "../hooks/experiment/useExperimentMembers/useExperimentMembers";
 import { useExperimentMemberAdd } from "../hooks/experiment/useExperimentMemberAdd/useExperimentMemberAdd";
 import { useExperimentMemberRemove } from "../hooks/experiment/useExperimentMemberRemove/useExperimentMemberRemove";
+import { useUsersNotOnExperiment } from "../hooks/experiment/useUsersNotOnExperiment/useUsersNotOnExperiment";
 
 interface ExperimentMemberManagementProps {
   experimentId: string;
@@ -27,36 +28,32 @@ export function ExperimentMemberManagement({
   experimentId,
 }: ExperimentMemberManagementProps) {
   const { data: membersData, isLoading, isError } = useExperimentMembers(experimentId);
+  const { data: availableUsersData, isLoading: isLoadingUsers } = useUsersNotOnExperiment(experimentId);
   const { mutateAsync: addMember, isPending: isAddingMember } = useExperimentMemberAdd();
   const { mutateAsync: removeMember, isPending: isRemovingMember } = useExperimentMemberRemove();
   
-  const [newMemberEmail, setNewMemberEmail] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState("");
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
 
   const handleAddMember = async () => {
-    if (!newMemberEmail.trim()) {
+    if (!selectedUserId) {
       toast({
         title: "Error",
-        description: "Please enter a valid email address",
+        description: "Please select a user to add",
         variant: "destructive",
       });
       return;
     }
-
     try {
       await addMember({
         params: { id: experimentId },
         body: {
-          userId: newMemberEmail,
+          userId: selectedUserId,
           role: "member",
         },
       });
-
-      toast({
-        description: "Member added successfully",
-      });
-
-      setNewMemberEmail("");
+      toast({ description: "Member added successfully" });
+      setSelectedUserId("");
     } catch {
       toast({
         title: "Error",
@@ -91,7 +88,7 @@ export function ExperimentMemberManagement({
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingUsers) {
     return <div>Loading members...</div>;
   }
 
@@ -100,6 +97,12 @@ export function ExperimentMemberManagement({
   }
 
   const members = membersData?.body ?? [];
+  const adminCount = members.filter((m) => m.role === "admin").length;
+  const availableUsers = availableUsersData?.body ?? [];
+
+  // Helper to get user info from available users
+  const getUserInfo = (userId: string) =>
+    availableUsers.find((u) => u.id === userId) ?? { id: userId, name: userId, email: "" };
 
   return (
     <Card>
@@ -113,16 +116,37 @@ export function ExperimentMemberManagement({
         <div className="space-y-2">
           <h6 className="text-sm font-medium">Add a Member</h6>
           <div className="flex space-x-2">
-            <Input
-              type="email"
-              placeholder="Enter email address"
-              value={newMemberEmail}
-              onChange={(e) => setNewMemberEmail(e.target.value)}
-              className="flex-1"
-            />
-            <Button 
-              onClick={handleAddMember} 
-              disabled={isAddingMember || !newMemberEmail.trim()}
+            <Select 
+              value={selectedUserId} 
+              onValueChange={setSelectedUserId}
+              disabled={availableUsers.length === 0}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue 
+                  placeholder={
+                    availableUsers.length === 0 
+                      ? "No users available" 
+                      : "Select user..."
+                  } 
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {availableUsers.length === 0 ? (
+                  <SelectItem value="" disabled>
+                    No users available to add
+                  </SelectItem>
+                ) : (
+                  availableUsers.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} <span className="text-xs text-muted-foreground">({user.email})</span>
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            <Button
+              onClick={handleAddMember}
+              disabled={isAddingMember || !selectedUserId || availableUsers.length === 0}
             >
               <UserPlus className="h-4 w-4 mr-2" />
               {isAddingMember ? "Adding..." : "Add"}
@@ -136,27 +160,32 @@ export function ExperimentMemberManagement({
             <p className="text-muted-foreground text-sm">No members added yet</p>
           ) : (
             <div className="space-y-3">
-              {members.map((member) => (
-                <div key={member.id} className="flex items-center justify-between p-3 border rounded-md">
-                  <div className="flex flex-col">
-                    <span>{member.userId}</span>
-                    <span className="text-xs text-muted-foreground">
-                      Joined {new Date(member.joinedAt).toLocaleDateString()}
-                    </span>
+              {members.map((member) => {
+                const user = getUserInfo(member.userId);
+                const isLastAdmin = member.role === "admin" && adminCount === 1;
+                return (
+                  <div key={member.id} className="flex items-center justify-between p-3 border rounded-md">
+                    <div className="flex flex-col">
+                      <span>{user.name} <span className="text-xs text-muted-foreground">{user.email}</span></span>
+                      <span className="text-xs text-muted-foreground">
+                        Joined {new Date(member.joinedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Badge>{member.role}</Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveMember(member.userId)}
+                        disabled={isRemovingMember && removingMemberId === member.userId || isLastAdmin}
+                        title={isLastAdmin ? "Cannot remove the last admin" : "Remove member"}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Badge>{member.role}</Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveMember(member.userId)}
-                      disabled={isRemovingMember && removingMemberId === member.userId}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
