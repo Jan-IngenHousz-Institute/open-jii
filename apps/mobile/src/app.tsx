@@ -8,9 +8,7 @@ import { HomeScreen } from "~/screens/home-screen";
 import { ToastProvider } from "./components/toast-provider";
 import { BluetoothStackNavigator } from "./navigation/bluetooth-stack-navigator";
 import { SerialPortConnectionScreen } from "./screens/serial-port-connection-screen";
-import {BleDevicesListScreen} from "~/screens/ble-devices-list-screen/ble-devices-list-screen";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import {BleStackNavigator} from "~/navigation/ble-stack-navigator";
+import { BleStackNavigator } from "~/navigation/ble-stack-navigator";
 
 const Tab = createBottomTabNavigator();
 
@@ -29,8 +27,7 @@ export function App() {
             const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
               Home: "home",
               Bluetooth: "bluetooth",
-              Serial: "terminal",
-              "BLE": 'pulse'
+              Serial: "terminal"
             };
             return (
               <Ionicons name={icons[route.name]} size={size} color={color} />
@@ -54,11 +51,6 @@ export function App() {
           name="Serial"
           component={SerialPortConnectionScreen}
           options={{ tabBarLabel: "Serial Port" }}
-        />
-        <Tab.Screen
-          name="BLE"
-          component={BleStackNavigator}
-          options={{ tabBarLabel: "Bluetooth LE", headerShown: false }}
         />
       </Tab.Navigator>
     )
