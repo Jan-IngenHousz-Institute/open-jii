@@ -4,7 +4,14 @@ import { formatDate } from "@/util/date";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Button } from "@repo/ui/components";
+import {
+  Button,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 import { useExperiment } from "../hooks/experiment/useExperiment/useExperiment";
@@ -40,34 +47,30 @@ export function ExperimentSettings({ experimentId }: ExperimentSettingsProps) {
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h4 className="text-lg font-medium">Experiment Settings</h4>
-        <p className="text-muted-foreground text-sm">
-          Manage advanced settings and actions for this experiment.
-        </p>
-      </div>
-
-      <div className="space-y-6">
-        <div className="rounded-lg border p-6">
-          <h5 className="mb-2 text-base font-medium">Experiment Information</h5>
-          <div className="space-y-2 text-sm">
-            <div>
-              <span className="font-medium">Created by:</span>{" "}
-              {experiment.createdBy}
-            </div>
-            <div>
-              <span className="font-medium">Created at:</span>{" "}
-              {formatDate(experiment.createdAt)}
-            </div>
-            <div>
-              <span className="font-medium">Last updated:</span>{" "}
-              {formatDate(experiment.updatedAt)}
-            </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Experiment Information</CardTitle>
+        <CardDescription>
+          View experiment details and danger zone options
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-2 text-sm">
+          <div>
+            <span className="font-medium">Created by:</span>{" "}
+            {experiment.createdBy}
+          </div>
+          <div>
+            <span className="font-medium">Created at:</span>{" "}
+            {formatDate(experiment.createdAt)}
+          </div>
+          <div>
+            <span className="font-medium">Last updated:</span>{" "}
+            {formatDate(experiment.updatedAt)}
           </div>
         </div>
 
-        <div className="border-destructive/20 rounded-lg border p-6">
+        <div className="border-t pt-4">
           <h5 className="text-destructive mb-2 text-base font-medium">
             Danger Zone
           </h5>
@@ -107,7 +110,7 @@ export function ExperimentSettings({ experimentId }: ExperimentSettingsProps) {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
