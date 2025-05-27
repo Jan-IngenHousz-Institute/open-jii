@@ -3,15 +3,7 @@
 import { ErrorDisplay } from "@/components/error-display";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { formatDate } from "@/util/date";
-import {
-  generateMockSensorSummaries,
-  generateMockNotifications,
-  generateMockTimeline,
-  generateHistoricalSensorData,
-  generateMockExperimentPhases,
-} from "@/util/mock-data";
 import { CalendarIcon } from "lucide-react";
-import { useState } from "react";
 
 import {
   Card,
