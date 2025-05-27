@@ -3,6 +3,7 @@ import {MultispeqStreamEvents} from "~/services/multispeq-communication/multispe
 import {bleManager} from "~/services/bluetooth-ble/prepare-bluetooth";
 import {stringifyIfObject} from "~/utils/stringify-if-object";
 import {delay} from "~/utils/delay";
+import {safeAsync} from "~/utils/safe-async";
 
 const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef1';
 const WRITE_UUID = 'abcdef01-1234-5678-9abc-def012345679';
@@ -27,7 +28,7 @@ export async function connectToBteDevice(deviceId: string) {
   const characteristicSubscription = device.monitorCharacteristicForService(
     SERVICE_UUID,
     NOTIFY_UUID,
-    async (error, characteristic) => {
+    safeAsync(async (error, characteristic) => {
       if (error || !characteristic?.value) {
         return;
       }
@@ -47,7 +48,7 @@ export async function connectToBteDevice(deviceId: string) {
       } catch {
         await emitter.emit('receivedReplyFromDevice', ({ data: values.join('').slice(0, -7), checksum: '' }))
       }
-    }
+    })
   );
 
   return emitter

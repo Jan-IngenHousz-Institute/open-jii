@@ -2,8 +2,8 @@ import type { BluetoothDevice } from "./bluetooth-device";
 
 export function orderDevices(devices: BluetoothDevice[]): BluetoothDevice[] {
   return [...devices].sort((a, b) => {
-    const aName = a.name?.toLowerCase() || "";
-    const bName = b.name?.toLowerCase() || "";
+    const aName = a.name?.toLowerCase() ?? "";
+    const bName = b.name?.toLowerCase() ?? "";
 
     const aHasMultispeq = aName.includes("multispeq");
     const bHasMultispeq = bName.includes("multispeq");

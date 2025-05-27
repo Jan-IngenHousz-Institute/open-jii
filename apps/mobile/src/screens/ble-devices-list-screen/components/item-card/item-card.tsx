@@ -1,11 +1,11 @@
 import React from "react";
-import { Alert, Text, TouchableOpacity, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 
 import type { BluetoothDevice } from "../../utils/bluetooth-device";
 
 
 
-export function ItemCard({ item, onPress }: { item: BluetoothDevice, onPress? }) {
+export function ItemCard({ item, onPress }: { item: BluetoothDevice, onPress: (item: BluetoothDevice) => void }) {
   return (
     <TouchableOpacity
       onPress={() => onPress?.(item)}

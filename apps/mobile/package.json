@@ -9,7 +9,7 @@
     "ios": "expo run:ios",
     "prebuild": "expo prebuild",
     "build-android": "echo 'node-linker=hoisted' > .npmrc && dotenv -- eas build -p android --profile preview --local && rm .npmrc",
-    "lint": "eslint",
+    "lint": "eslint src/**/*",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -54,8 +54,6 @@
     "@types/lodash": "^4.17.16",
     "@types/paho-mqtt": "^1.0.10",
     "@types/react": "catalog:react19",
-    "@typescript-eslint/eslint-plugin": "^7.2.0",
-    "@typescript-eslint/parser": "^7.2.0",
     "dotenv-cli": "^8.0.0",
     "eas-cli": "^16.3.2",
     "expo-dev-client": "~5.1.8",
