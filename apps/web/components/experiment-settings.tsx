@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDate } from "@/util/date";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -57,11 +58,11 @@ export function ExperimentSettings({ experimentId }: ExperimentSettingsProps) {
             </div>
             <div>
               <span className="font-medium">Created at:</span>{" "}
-              {new Date(experiment.createdAt).toLocaleString()}
+              {formatDate(experiment.createdAt)}
             </div>
             <div>
               <span className="font-medium">Last updated:</span>{" "}
-              {new Date(experiment.updatedAt).toLocaleString()}
+              {formatDate(experiment.updatedAt)}
             </div>
           </div>
         </div>

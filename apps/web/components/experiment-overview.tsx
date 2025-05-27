@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDate } from "@/util/date";
+
 import { useExperiment } from "../hooks/experiment/useExperiment/useExperiment";
 
 interface ExperimentOverviewProps {
@@ -64,18 +66,14 @@ export function ExperimentOverview({ experimentId }: ExperimentOverviewProps) {
             <h4 className="text-muted-foreground text-sm font-medium">
               Created
             </h4>
-            <p className="text-sm">
-              {new Date(experiment.createdAt).toLocaleDateString()}
-            </p>
+            <p className="text-sm">{formatDate(experiment.createdAt)}</p>
           </div>
 
           <div>
             <h4 className="text-muted-foreground text-sm font-medium">
               Last Updated
             </h4>
-            <p className="text-sm">
-              {new Date(experiment.updatedAt).toLocaleDateString()}
-            </p>
+            <p className="text-sm">{formatDate(experiment.updatedAt)}</p>
           </div>
         </div>
       </div>
