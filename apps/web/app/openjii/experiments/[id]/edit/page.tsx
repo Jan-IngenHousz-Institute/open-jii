@@ -1,6 +1,8 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
+import { useExperimentUpdate } from "@/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 import type { EditExperimentForm } from "@/util/schema";
 import { editExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,9 +29,6 @@ import {
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-import { useExperiment } from "../../../../../../hooks/experiment/useExperiment/useExperiment";
-import { useExperimentUpdate } from "../../../../../../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
-
 interface ExperimentEditPageProps {
   params: { id: string };
 }
@@ -42,6 +41,32 @@ export default function ExperimentEditPage({
   const router = useRouter();
   const { mutateAsync: updateExperiment, isPending } = useExperimentUpdate();
 
+  const defaultValues: EditExperimentForm = {
+    id: id,
+    name: data?.body.name ?? "",
+    description: data?.body.description ?? "",
+    visibility: data?.body.visibility ?? "PRIVATE",
+    embargoIntervalDays: data?.body.embargoIntervalDays ?? 0,
+  };
+
+  const form = useForm<EditExperimentForm>({
+    resolver: zodResolver(editExperimentFormSchema),
+    defaultValues,
+    values: data
+      ? {
+          id: id,
+          name: data.body.name,
+          description: data.body.description ?? "",
+          visibility: data.body.visibility,
+          embargoIntervalDays: data.body.embargoIntervalDays,
+        }
+      : undefined,
+  });
+
+  function cancel() {
+    router.back();
+  }
+
   if (isLoading) {
     return <div>Loading experiment details...</div>;
   }
@@ -52,25 +77,6 @@ export default function ExperimentEditPage({
 
   if (!data) {
     return <div>Experiment not found</div>;
-  }
-
-  const experiment: EditExperimentForm = {
-    id: id,
-    name: data.body.name,
-    description: data.body.description ?? "",
-    visibility: data.body.visibility,
-    embargoIntervalDays: data.body.embargoIntervalDays,
-  };
-
-  const form = useForm<EditExperimentForm>({
-    resolver: zodResolver(editExperimentFormSchema),
-    defaultValues: {
-      ...experiment,
-    },
-  });
-
-  function cancel() {
-    router.back();
   }
 
   async function onSubmit(formData: z.infer<typeof editExperimentFormSchema>) {

@@ -82,9 +82,7 @@ export default function ExperimentSettingsPage(
               </label>
               <select className="w-full rounded-md border p-2">
                 <option value="30">30 days</option>
-                <option value="90" selected>
-                  90 days
-                </option>
+                <option value="90">90 days</option>
                 <option value="180">180 days</option>
                 <option value="365">1 year</option>
                 <option value="forever">Forever</option>
