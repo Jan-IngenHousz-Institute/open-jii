@@ -14,6 +14,9 @@ inputs:
   docker-file-path:
     description: "Path to the Dockerfile"
     required: true
+  build-context:
+    description: "Path to the build context"
+    required: true
 
 runs:
   using: "composite"
@@ -37,7 +40,7 @@ runs:
         REPOSITORY: ${{ inputs.repository-name }}
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG -f ${{ inputs.docker-file-path }} .
+        docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG -f ${{ inputs.docker-file-path }} ${{ inputs.build-context }}
         docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
       shell: bash
 

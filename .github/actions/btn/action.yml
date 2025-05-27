@@ -16,6 +16,7 @@ runs:
       uses: actions/setup-node@v3
       with:
         node-version: ${{ inputs.node-version }}
+        cache: "pnpm"  # Automatically caches global pnpm installation
 
     - name: Setup pnpm store path
       run: pnpm config set store-dir ~/.pnpm-store
