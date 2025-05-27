@@ -79,7 +79,7 @@ export default function ExperimentOverviewPage({
                 Created
               </h4>
               <p className="flex items-center gap-1">
-                <CalendarIcon className="text-muted-foreground h-4 w-4" />
+                <CalendarIcon className="text-muted-foreground h-4 w-4" aria-hidden="true" />
                 {formatDate(experiment.createdAt)}
               </p>
             </div>
