@@ -49,7 +49,7 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
           </TabsTrigger>
         </TabsList>
 
-        <div className="mt-6">{children}</div>
+        <div className="mx-4 mt-6">{children}</div>
       </Tabs>
     </div>
   );

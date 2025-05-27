@@ -52,7 +52,7 @@ importers:
     devDependencies:
       '@asyncapi/cli':
         specifier: ^2.16.0
-        version: 2.17.0(@babel/core@7.12.9)(@swc/core@1.11.24)(@types/babel__core@7.20.5)(@types/node@16.18.126)(csstype@3.1.3)(encoding@0.1.13)(immer@9.0.21)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3))
+        version: 2.17.0(@babel/core@7.27.1)(@swc/core@1.11.24)(@types/babel__core@7.20.5)(@types/node@22.15.17)(csstype@3.1.3)(encoding@0.1.13)(immer@9.0.21)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3))
       '@asyncapi/html-template':
         specifier: ^3.2.0
         version: 3.2.1(@types/babel__core@7.20.5)(encoding@0.1.13)(typescript@5.8.3)
@@ -64,7 +64,7 @@ importers:
         version: 5.2.2(prettier@3.5.3)
       jest:
         specifier: ^29.7.0
-        version: 29.7.0(@types/node@16.18.126)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3))
+        version: 29.7.0(@types/node@22.15.17)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3))
       prettier:
         specifier: ^3.2.5
         version: 3.5.3
@@ -73,7 +73,7 @@ importers:
         version: 0.6.11(@trivago/prettier-plugin-sort-imports@5.2.2(prettier@3.5.3))(prettier@3.5.3)
       ts-jest:
         specifier: ^29.3.2
-        version: 29.3.2(@babel/core@7.12.9)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.12.9))(jest@29.7.0(@types/node@16.18.126)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3)))(typescript@5.8.3)
+        version: 29.3.2(@babel/core@7.27.1)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.27.1))(jest@29.7.0(@types/node@22.15.17)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3)))(typescript@5.8.3)
       turbo:
         specifier: ^2.3.3
         version: 2.5.3
@@ -429,12 +429,15 @@ importers:
       '@ts-rest/react-query':
         specifier: ^3.52.1
         version: 3.52.1(@tanstack/react-query@5.76.0(react@19.0.0))(@ts-rest/core@3.52.1(@types/node@22.15.17)(zod@3.24.4))(react@19.0.0)(zod@3.24.4)
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
       lucide-react:
         specifier: ^0.507.0
         version: 0.507.0(react@19.0.0)
       next:
         specifier: ^15.3.2
-        version: 15.3.2(@babel/core@7.12.9)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+        version: 15.3.2(@babel/core@7.27.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react:
         specifier: catalog:react19
         version: 19.0.0
@@ -526,10 +529,10 @@ importers:
         version: link:../database
       next:
         specifier: ^15.3.2
-        version: 15.3.2(@babel/core@7.12.9)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+        version: 15.3.2(@babel/core@7.27.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       next-auth:
         specifier: 5.0.0-beta.25
-        version: 5.0.0-beta.25(next@15.3.2(@babel/core@7.12.9)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
+        version: 5.0.0-beta.25(next@15.3.2(@babel/core@7.27.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
       react:
         specifier: catalog:react19
         version: 19.0.0
@@ -3004,7 +3007,7 @@ packages:
 
   '@expo/bunyan@4.0.1':
     resolution: {integrity: sha512-+Lla7nYSiHZirgK+U/uYzsLv/X+HaJienbD5AKX1UQZHYfWaP+9uuQluRB4GrEVWF0GZ7vEVp/jzaOT9k/SQlg==}
-    engines: {'0': node >=0.10.0}
+    engines: {node: '>=0.10.0'}
 
   '@expo/cli@0.24.13':
     resolution: {integrity: sha512-2LSdbvYs+WmUljnplQXMCUyNzyX4H+F4l8uExfA1hud25Bl5kyaGrx1jjtgNxMTXmfmMjvgBdK798R50imEhkA==}
@@ -16453,20 +16456,20 @@ snapshots:
       js-yaml: 4.1.0
       lodash: 4.17.21
 
-  '@asyncapi/cli@2.17.0(@babel/core@7.12.9)(@swc/core@1.11.24)(@types/babel__core@7.20.5)(@types/node@16.18.126)(csstype@3.1.3)(encoding@0.1.13)(immer@9.0.21)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3))':
+  '@asyncapi/cli@2.17.0(@babel/core@7.27.1)(@swc/core@1.11.24)(@types/babel__core@7.20.5)(@types/node@22.15.17)(csstype@3.1.3)(encoding@0.1.13)(immer@9.0.21)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3))':
     dependencies:
       '@asyncapi/avro-schema-parser': 3.0.24(encoding@0.1.13)
       '@asyncapi/bundler': 0.6.4
       '@asyncapi/converter': 1.6.2(encoding@0.1.13)
       '@asyncapi/diff': 0.5.0
-      '@asyncapi/generator': 1.17.25(@swc/core@1.11.24)(@types/babel__core@7.20.5)(@types/node@16.18.126)(encoding@0.1.13)
-      '@asyncapi/modelina-cli': 4.4.3(@swc/core@1.11.24)(@types/node@16.18.126)(encoding@0.1.13)
+      '@asyncapi/generator': 1.17.25(@swc/core@1.11.24)(@types/babel__core@7.20.5)(@types/node@22.15.17)(encoding@0.1.13)
+      '@asyncapi/modelina-cli': 4.4.3(@swc/core@1.11.24)(@types/node@22.15.17)(encoding@0.1.13)
       '@asyncapi/openapi-schema-parser': 3.0.24(encoding@0.1.13)
       '@asyncapi/optimizer': 1.0.4(encoding@0.1.13)
       '@asyncapi/parser': 3.4.0(encoding@0.1.13)
       '@asyncapi/protobuf-schema-parser': 3.5.1(encoding@0.1.13)
       '@asyncapi/raml-dt-schema-parser': 4.0.24(encoding@0.1.13)
-      '@asyncapi/studio': 0.23.1(@babel/core@7.12.9)(csstype@3.1.3)(encoding@0.1.13)(immer@9.0.21)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3))
+      '@asyncapi/studio': 0.23.1(@babel/core@7.27.1)(csstype@3.1.3)(encoding@0.1.13)(immer@9.0.21)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3))
       '@changesets/changelog-git': 0.2.1
       '@clack/prompts': 0.7.0
       '@oclif/core': 4.3.0
@@ -16476,13 +16479,13 @@ snapshots:
       chokidar: 3.6.0
       fast-levenshtein: 3.0.0
       fs-extra: 11.3.0
-      generator-v2: '@asyncapi/generator@2.6.0(@swc/core@1.11.24)(@types/babel__core@7.20.5)(@types/node@16.18.126)(encoding@0.1.13)'
+      generator-v2: '@asyncapi/generator@2.6.0(@swc/core@1.11.24)(@types/babel__core@7.20.5)(@types/node@22.15.17)(encoding@0.1.13)'
       https-proxy-agent: 7.0.6
       inquirer: 8.2.6
       js-yaml: 4.1.0
-      next: 14.2.28(@babel/core@7.12.9)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      next: 14.2.28(@babel/core@7.27.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       node-fetch: 2.7.0(encoding@0.1.13)
-      oclif: 4.17.46(@types/node@16.18.126)
+      oclif: 4.17.46(@types/node@22.15.17)
       open: 8.4.2
       picocolors: 1.1.1
       reflect-metadata: 0.1.14
@@ -16560,7 +16563,7 @@ snapshots:
       - encoding
       - supports-color
 
-  '@asyncapi/generator@1.17.25(@swc/core@1.11.24)(@types/babel__core@7.20.5)(@types/node@16.18.126)(encoding@0.1.13)':
+  '@asyncapi/generator@1.17.25(@swc/core@1.11.24)(@types/babel__core@7.20.5)(@types/node@22.15.17)(encoding@0.1.13)':
     dependencies:
       '@asyncapi/generator-react-sdk': 1.1.2(@types/babel__core@7.20.5)(encoding@0.1.13)
       '@asyncapi/parser': 3.4.0(encoding@0.1.13)
@@ -16584,7 +16587,7 @@ snapshots:
       semver: 7.7.2
       simple-git: 3.27.0
       source-map-support: 0.5.21
-      ts-node: 10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@4.9.5)
+      ts-node: 10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@4.9.5)
       typescript: 4.9.5
     transitivePeerDependencies:
       - '@swc/core'
@@ -16595,7 +16598,7 @@ snapshots:
       - encoding
       - supports-color
 
-  '@asyncapi/generator@2.6.0(@swc/core@1.11.24)(@types/babel__core@7.20.5)(@types/node@16.18.126)(encoding@0.1.13)':
+  '@asyncapi/generator@2.6.0(@swc/core@1.11.24)(@types/babel__core@7.20.5)(@types/node@22.15.17)(encoding@0.1.13)':
     dependencies:
       '@asyncapi/generator-hooks': 0.1.0
       '@asyncapi/generator-react-sdk': 1.1.2(@types/babel__core@7.20.5)(encoding@0.1.13)
@@ -16622,7 +16625,7 @@ snapshots:
       resolve-pkg: 2.0.0
       semver: 7.7.2
       simple-git: 3.27.0
-      ts-node: 10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@4.9.5)
+      ts-node: 10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@4.9.5)
       typescript: 4.9.5
     transitivePeerDependencies:
       - '@swc/core'
@@ -16664,14 +16667,14 @@ snapshots:
       - encoding
       - supports-color
 
-  '@asyncapi/modelina-cli@4.4.3(@swc/core@1.11.24)(@types/node@16.18.126)(encoding@0.1.13)':
+  '@asyncapi/modelina-cli@4.4.3(@swc/core@1.11.24)(@types/node@22.15.17)(encoding@0.1.13)':
     dependencies:
       '@asyncapi/modelina': 4.4.3(@swc/core@1.11.24)(encoding@0.1.13)
       '@oclif/core': 3.27.0
       '@oclif/errors': 1.3.6
       '@oclif/plugin-autocomplete': 3.2.28
       '@oclif/plugin-help': 6.2.28
-      '@oclif/plugin-not-found': 3.2.51(@types/node@16.18.126)
+      '@oclif/plugin-not-found': 3.2.51(@types/node@22.15.17)
       '@oclif/plugin-plugins': 5.4.37
       '@oclif/plugin-version': 2.2.28
       js-yaml: 4.1.0
@@ -16877,7 +16880,7 @@ snapshots:
     dependencies:
       '@types/json-schema': 7.0.15
 
-  '@asyncapi/studio@0.23.1(@babel/core@7.12.9)(csstype@3.1.3)(encoding@0.1.13)(immer@9.0.21)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3))':
+  '@asyncapi/studio@0.23.1(@babel/core@7.27.1)(csstype@3.1.3)(encoding@0.1.13)(immer@9.0.21)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3))':
     dependencies:
       '@asyncapi/avro-schema-parser': 3.0.24(encoding@0.1.13)
       '@asyncapi/converter': 1.5.0(encoding@0.1.13)
@@ -16906,14 +16909,14 @@ snapshots:
       js-yaml: 4.1.0
       monaco-editor: 0.34.1
       monaco-yaml: 4.0.2(monaco-editor@0.34.1)
-      next: 14.2.3(@babel/core@7.12.9)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      next: 14.2.3(@babel/core@7.27.1)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       postcss: 8.4.31
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
       react-hot-toast: 2.4.0(csstype@3.1.3)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       react-icons: 4.12.0(react@18.2.0)
       reactflow: 11.11.4(@types/react@18.2.18)(immer@9.0.21)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
-      tailwindcss: 3.3.3(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3))
+      tailwindcss: 3.3.3(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3))
       tippy.js: 6.3.7
       typescript: 5.1.6
       zustand: 4.5.6(@types/react@18.2.18)(immer@9.0.21)(react@18.2.0)
@@ -17859,44 +17862,20 @@ snapshots:
     dependencies:
       '@babel/core': 7.27.1
 
-  '@babel/plugin-syntax-async-generators@7.8.4(@babel/core@7.12.9)':
-    dependencies:
-      '@babel/core': 7.12.9
-      '@babel/helper-plugin-utils': 7.27.1
-    optional: true
-
   '@babel/plugin-syntax-async-generators@7.8.4(@babel/core@7.27.1)':
     dependencies:
       '@babel/core': 7.27.1
       '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-syntax-bigint@7.8.3(@babel/core@7.12.9)':
-    dependencies:
-      '@babel/core': 7.12.9
-      '@babel/helper-plugin-utils': 7.27.1
-    optional: true
 
   '@babel/plugin-syntax-bigint@7.8.3(@babel/core@7.27.1)':
     dependencies:
       '@babel/core': 7.27.1
       '@babel/helper-plugin-utils': 7.27.1
 
-  '@babel/plugin-syntax-class-properties@7.12.13(@babel/core@7.12.9)':
-    dependencies:
-      '@babel/core': 7.12.9
-      '@babel/helper-plugin-utils': 7.27.1
-    optional: true
-
   '@babel/plugin-syntax-class-properties@7.12.13(@babel/core@7.27.1)':
     dependencies:
       '@babel/core': 7.27.1
       '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-syntax-class-static-block@7.14.5(@babel/core@7.12.9)':
-    dependencies:
-      '@babel/core': 7.12.9
-      '@babel/helper-plugin-utils': 7.27.1
-    optional: true
 
   '@babel/plugin-syntax-class-static-block@7.14.5(@babel/core@7.27.1)':
     dependencies:
@@ -17943,22 +17922,10 @@ snapshots:
       '@babel/core': 7.27.1
       '@babel/helper-plugin-utils': 7.27.1
 
-  '@babel/plugin-syntax-import-meta@7.10.4(@babel/core@7.12.9)':
-    dependencies:
-      '@babel/core': 7.12.9
-      '@babel/helper-plugin-utils': 7.27.1
-    optional: true
-
   '@babel/plugin-syntax-import-meta@7.10.4(@babel/core@7.27.1)':
     dependencies:
       '@babel/core': 7.27.1
       '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-syntax-json-strings@7.8.3(@babel/core@7.12.9)':
-    dependencies:
-      '@babel/core': 7.12.9
-      '@babel/helper-plugin-utils': 7.27.1
-    optional: true
 
   '@babel/plugin-syntax-json-strings@7.8.3(@babel/core@7.27.1)':
     dependencies:
@@ -17975,88 +17942,40 @@ snapshots:
       '@babel/core': 7.27.1
       '@babel/helper-plugin-utils': 7.27.1
 
-  '@babel/plugin-syntax-logical-assignment-operators@7.10.4(@babel/core@7.12.9)':
-    dependencies:
-      '@babel/core': 7.12.9
-      '@babel/helper-plugin-utils': 7.27.1
-    optional: true
-
   '@babel/plugin-syntax-logical-assignment-operators@7.10.4(@babel/core@7.27.1)':
     dependencies:
       '@babel/core': 7.27.1
       '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-syntax-nullish-coalescing-operator@7.8.3(@babel/core@7.12.9)':
-    dependencies:
-      '@babel/core': 7.12.9
-      '@babel/helper-plugin-utils': 7.27.1
-    optional: true
 
   '@babel/plugin-syntax-nullish-coalescing-operator@7.8.3(@babel/core@7.27.1)':
     dependencies:
       '@babel/core': 7.27.1
       '@babel/helper-plugin-utils': 7.27.1
 
-  '@babel/plugin-syntax-numeric-separator@7.10.4(@babel/core@7.12.9)':
-    dependencies:
-      '@babel/core': 7.12.9
-      '@babel/helper-plugin-utils': 7.27.1
-    optional: true
-
   '@babel/plugin-syntax-numeric-separator@7.10.4(@babel/core@7.27.1)':
     dependencies:
       '@babel/core': 7.27.1
       '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-syntax-object-rest-spread@7.8.3(@babel/core@7.12.9)':
-    dependencies:
-      '@babel/core': 7.12.9
-      '@babel/helper-plugin-utils': 7.27.1
-    optional: true
 
   '@babel/plugin-syntax-object-rest-spread@7.8.3(@babel/core@7.27.1)':
     dependencies:
       '@babel/core': 7.27.1
       '@babel/helper-plugin-utils': 7.27.1
 
-  '@babel/plugin-syntax-optional-catch-binding@7.8.3(@babel/core@7.12.9)':
-    dependencies:
-      '@babel/core': 7.12.9
-      '@babel/helper-plugin-utils': 7.27.1
-    optional: true
-
   '@babel/plugin-syntax-optional-catch-binding@7.8.3(@babel/core@7.27.1)':
     dependencies:
       '@babel/core': 7.27.1
       '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-syntax-optional-chaining@7.8.3(@babel/core@7.12.9)':
-    dependencies:
-      '@babel/core': 7.12.9
-      '@babel/helper-plugin-utils': 7.27.1
-    optional: true
 
   '@babel/plugin-syntax-optional-chaining@7.8.3(@babel/core@7.27.1)':
     dependencies:
       '@babel/core': 7.27.1
       '@babel/helper-plugin-utils': 7.27.1
 
-  '@babel/plugin-syntax-private-property-in-object@7.14.5(@babel/core@7.12.9)':
-    dependencies:
-      '@babel/core': 7.12.9
-      '@babel/helper-plugin-utils': 7.27.1
-    optional: true
-
   '@babel/plugin-syntax-private-property-in-object@7.14.5(@babel/core@7.27.1)':
     dependencies:
       '@babel/core': 7.27.1
       '@babel/helper-plugin-utils': 7.27.1
-
-  '@babel/plugin-syntax-top-level-await@7.14.5(@babel/core@7.12.9)':
-    dependencies:
-      '@babel/core': 7.12.9
-      '@babel/helper-plugin-utils': 7.27.1
-    optional: true
 
   '@babel/plugin-syntax-top-level-await@7.14.5(@babel/core@7.27.1)':
     dependencies:
@@ -21185,16 +21104,6 @@ snapshots:
   '@img/sharp-win32-x64@0.34.1':
     optional: true
 
-  '@inquirer/checkbox@4.1.6(@types/node@16.18.126)':
-    dependencies:
-      '@inquirer/core': 10.1.11(@types/node@16.18.126)
-      '@inquirer/figures': 1.0.11
-      '@inquirer/type': 3.0.6(@types/node@16.18.126)
-      ansi-escapes: 4.3.2
-      yoctocolors-cjs: 2.1.2
-    optionalDependencies:
-      '@types/node': 16.18.126
-
   '@inquirer/checkbox@4.1.6(@types/node@22.15.17)':
     dependencies:
       '@inquirer/core': 10.1.11(@types/node@22.15.17)
@@ -21210,32 +21119,12 @@ snapshots:
       '@inquirer/core': 9.2.1
       '@inquirer/type': 1.5.5
 
-  '@inquirer/confirm@5.1.10(@types/node@16.18.126)':
-    dependencies:
-      '@inquirer/core': 10.1.11(@types/node@16.18.126)
-      '@inquirer/type': 3.0.6(@types/node@16.18.126)
-    optionalDependencies:
-      '@types/node': 16.18.126
-
   '@inquirer/confirm@5.1.10(@types/node@22.15.17)':
     dependencies:
       '@inquirer/core': 10.1.11(@types/node@22.15.17)
       '@inquirer/type': 3.0.6(@types/node@22.15.17)
     optionalDependencies:
       '@types/node': 22.15.17
-
-  '@inquirer/core@10.1.11(@types/node@16.18.126)':
-    dependencies:
-      '@inquirer/figures': 1.0.11
-      '@inquirer/type': 3.0.6(@types/node@16.18.126)
-      ansi-escapes: 4.3.2
-      cli-width: 4.1.0
-      mute-stream: 2.0.0
-      signal-exit: 4.1.0
-      wrap-ansi: 6.2.0
-      yoctocolors-cjs: 2.1.2
-    optionalDependencies:
-      '@types/node': 16.18.126
 
   '@inquirer/core@10.1.11(@types/node@22.15.17)':
     dependencies:
@@ -21265,14 +21154,6 @@ snapshots:
       wrap-ansi: 6.2.0
       yoctocolors-cjs: 2.1.2
 
-  '@inquirer/editor@4.2.11(@types/node@16.18.126)':
-    dependencies:
-      '@inquirer/core': 10.1.11(@types/node@16.18.126)
-      '@inquirer/type': 3.0.6(@types/node@16.18.126)
-      external-editor: 3.1.0
-    optionalDependencies:
-      '@types/node': 16.18.126
-
   '@inquirer/editor@4.2.11(@types/node@22.15.17)':
     dependencies:
       '@inquirer/core': 10.1.11(@types/node@22.15.17)
@@ -21280,14 +21161,6 @@ snapshots:
       external-editor: 3.1.0
     optionalDependencies:
       '@types/node': 22.15.17
-
-  '@inquirer/expand@4.0.13(@types/node@16.18.126)':
-    dependencies:
-      '@inquirer/core': 10.1.11(@types/node@16.18.126)
-      '@inquirer/type': 3.0.6(@types/node@16.18.126)
-      yoctocolors-cjs: 2.1.2
-    optionalDependencies:
-      '@types/node': 16.18.126
 
   '@inquirer/expand@4.0.13(@types/node@22.15.17)':
     dependencies:
@@ -21304,13 +21177,6 @@ snapshots:
       '@inquirer/core': 9.2.1
       '@inquirer/type': 1.5.5
 
-  '@inquirer/input@4.1.10(@types/node@16.18.126)':
-    dependencies:
-      '@inquirer/core': 10.1.11(@types/node@16.18.126)
-      '@inquirer/type': 3.0.6(@types/node@16.18.126)
-    optionalDependencies:
-      '@types/node': 16.18.126
-
   '@inquirer/input@4.1.10(@types/node@22.15.17)':
     dependencies:
       '@inquirer/core': 10.1.11(@types/node@22.15.17)
@@ -21318,27 +21184,12 @@ snapshots:
     optionalDependencies:
       '@types/node': 22.15.17
 
-  '@inquirer/number@3.0.13(@types/node@16.18.126)':
-    dependencies:
-      '@inquirer/core': 10.1.11(@types/node@16.18.126)
-      '@inquirer/type': 3.0.6(@types/node@16.18.126)
-    optionalDependencies:
-      '@types/node': 16.18.126
-
   '@inquirer/number@3.0.13(@types/node@22.15.17)':
     dependencies:
       '@inquirer/core': 10.1.11(@types/node@22.15.17)
       '@inquirer/type': 3.0.6(@types/node@22.15.17)
     optionalDependencies:
       '@types/node': 22.15.17
-
-  '@inquirer/password@4.0.13(@types/node@16.18.126)':
-    dependencies:
-      '@inquirer/core': 10.1.11(@types/node@16.18.126)
-      '@inquirer/type': 3.0.6(@types/node@16.18.126)
-      ansi-escapes: 4.3.2
-    optionalDependencies:
-      '@types/node': 16.18.126
 
   '@inquirer/password@4.0.13(@types/node@22.15.17)':
     dependencies:
@@ -21378,28 +21229,20 @@ snapshots:
     optionalDependencies:
       '@types/node': 22.15.17
 
-  '@inquirer/prompts@7.5.1(@types/node@16.18.126)':
+  '@inquirer/prompts@7.5.1(@types/node@22.15.17)':
     dependencies:
-      '@inquirer/checkbox': 4.1.6(@types/node@16.18.126)
-      '@inquirer/confirm': 5.1.10(@types/node@16.18.126)
-      '@inquirer/editor': 4.2.11(@types/node@16.18.126)
-      '@inquirer/expand': 4.0.13(@types/node@16.18.126)
-      '@inquirer/input': 4.1.10(@types/node@16.18.126)
-      '@inquirer/number': 3.0.13(@types/node@16.18.126)
-      '@inquirer/password': 4.0.13(@types/node@16.18.126)
-      '@inquirer/rawlist': 4.1.1(@types/node@16.18.126)
-      '@inquirer/search': 3.0.13(@types/node@16.18.126)
-      '@inquirer/select': 4.2.1(@types/node@16.18.126)
+      '@inquirer/checkbox': 4.1.6(@types/node@22.15.17)
+      '@inquirer/confirm': 5.1.10(@types/node@22.15.17)
+      '@inquirer/editor': 4.2.11(@types/node@22.15.17)
+      '@inquirer/expand': 4.0.13(@types/node@22.15.17)
+      '@inquirer/input': 4.1.10(@types/node@22.15.17)
+      '@inquirer/number': 3.0.13(@types/node@22.15.17)
+      '@inquirer/password': 4.0.13(@types/node@22.15.17)
+      '@inquirer/rawlist': 4.1.1(@types/node@22.15.17)
+      '@inquirer/search': 3.0.13(@types/node@22.15.17)
+      '@inquirer/select': 4.2.1(@types/node@22.15.17)
     optionalDependencies:
-      '@types/node': 16.18.126
-
-  '@inquirer/rawlist@4.1.1(@types/node@16.18.126)':
-    dependencies:
-      '@inquirer/core': 10.1.11(@types/node@16.18.126)
-      '@inquirer/type': 3.0.6(@types/node@16.18.126)
-      yoctocolors-cjs: 2.1.2
-    optionalDependencies:
-      '@types/node': 16.18.126
+      '@types/node': 22.15.17
 
   '@inquirer/rawlist@4.1.1(@types/node@22.15.17)':
     dependencies:
@@ -21408,15 +21251,6 @@ snapshots:
       yoctocolors-cjs: 2.1.2
     optionalDependencies:
       '@types/node': 22.15.17
-
-  '@inquirer/search@3.0.13(@types/node@16.18.126)':
-    dependencies:
-      '@inquirer/core': 10.1.11(@types/node@16.18.126)
-      '@inquirer/figures': 1.0.11
-      '@inquirer/type': 3.0.6(@types/node@16.18.126)
-      yoctocolors-cjs: 2.1.2
-    optionalDependencies:
-      '@types/node': 16.18.126
 
   '@inquirer/search@3.0.13(@types/node@22.15.17)':
     dependencies:
@@ -21435,16 +21269,6 @@ snapshots:
       ansi-escapes: 4.3.2
       yoctocolors-cjs: 2.1.2
 
-  '@inquirer/select@4.2.1(@types/node@16.18.126)':
-    dependencies:
-      '@inquirer/core': 10.1.11(@types/node@16.18.126)
-      '@inquirer/figures': 1.0.11
-      '@inquirer/type': 3.0.6(@types/node@16.18.126)
-      ansi-escapes: 4.3.2
-      yoctocolors-cjs: 2.1.2
-    optionalDependencies:
-      '@types/node': 16.18.126
-
   '@inquirer/select@4.2.1(@types/node@22.15.17)':
     dependencies:
       '@inquirer/core': 10.1.11(@types/node@22.15.17)
@@ -21462,10 +21286,6 @@ snapshots:
   '@inquirer/type@2.0.0':
     dependencies:
       mute-stream: 1.0.0
-
-  '@inquirer/type@3.0.6(@types/node@16.18.126)':
-    optionalDependencies:
-      '@types/node': 16.18.126
 
   '@inquirer/type@3.0.6(@types/node@22.15.17)':
     optionalDependencies:
@@ -21506,41 +21326,6 @@ snapshots:
       jest-message-util: 29.7.0
       jest-util: 29.7.0
       slash: 3.0.0
-
-  '@jest/core@29.7.0(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3))':
-    dependencies:
-      '@jest/console': 29.7.0
-      '@jest/reporters': 29.7.0
-      '@jest/test-result': 29.7.0
-      '@jest/transform': 29.7.0
-      '@jest/types': 29.6.3
-      '@types/node': 22.15.17
-      ansi-escapes: 4.3.2
-      chalk: 4.1.2
-      ci-info: 3.9.0
-      exit: 0.1.2
-      graceful-fs: 4.2.11
-      jest-changed-files: 29.7.0
-      jest-config: 29.7.0(@types/node@22.15.17)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3))
-      jest-haste-map: 29.7.0
-      jest-message-util: 29.7.0
-      jest-regex-util: 29.6.3
-      jest-resolve: 29.7.0
-      jest-resolve-dependencies: 29.7.0
-      jest-runner: 29.7.0
-      jest-runtime: 29.7.0
-      jest-snapshot: 29.7.0
-      jest-util: 29.7.0
-      jest-validate: 29.7.0
-      jest-watcher: 29.7.0
-      micromatch: 4.0.8
-      pretty-format: 29.7.0
-      slash: 3.0.0
-      strip-ansi: 6.0.1
-    transitivePeerDependencies:
-      - babel-plugin-macros
-      - supports-color
-      - ts-node
 
   '@jest/core@29.7.0(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3))':
     dependencies:
@@ -22667,9 +22452,9 @@ snapshots:
     dependencies:
       '@oclif/core': 4.3.0
 
-  '@oclif/plugin-not-found@3.2.51(@types/node@16.18.126)':
+  '@oclif/plugin-not-found@3.2.51(@types/node@22.15.17)':
     dependencies:
-      '@inquirer/prompts': 7.5.1(@types/node@16.18.126)
+      '@inquirer/prompts': 7.5.1(@types/node@22.15.17)
       '@oclif/core': 4.3.0
       ansis: 3.17.0
       fast-levenshtein: 3.0.0
@@ -26327,20 +26112,6 @@ snapshots:
 
   b4a@1.6.7: {}
 
-  babel-jest@29.7.0(@babel/core@7.12.9):
-    dependencies:
-      '@babel/core': 7.12.9
-      '@jest/transform': 29.7.0
-      '@types/babel__core': 7.20.5
-      babel-plugin-istanbul: 6.1.1
-      babel-preset-jest: 29.6.3(@babel/core@7.12.9)
-      chalk: 4.1.2
-      graceful-fs: 4.2.11
-      slash: 3.0.0
-    transitivePeerDependencies:
-      - supports-color
-    optional: true
-
   babel-jest@29.7.0(@babel/core@7.27.1):
     dependencies:
       '@babel/core': 7.27.1
@@ -26454,26 +26225,6 @@ snapshots:
     transitivePeerDependencies:
       - '@babel/core'
 
-  babel-preset-current-node-syntax@1.1.0(@babel/core@7.12.9):
-    dependencies:
-      '@babel/core': 7.12.9
-      '@babel/plugin-syntax-async-generators': 7.8.4(@babel/core@7.12.9)
-      '@babel/plugin-syntax-bigint': 7.8.3(@babel/core@7.12.9)
-      '@babel/plugin-syntax-class-properties': 7.12.13(@babel/core@7.12.9)
-      '@babel/plugin-syntax-class-static-block': 7.14.5(@babel/core@7.12.9)
-      '@babel/plugin-syntax-import-attributes': 7.27.1(@babel/core@7.12.9)
-      '@babel/plugin-syntax-import-meta': 7.10.4(@babel/core@7.12.9)
-      '@babel/plugin-syntax-json-strings': 7.8.3(@babel/core@7.12.9)
-      '@babel/plugin-syntax-logical-assignment-operators': 7.10.4(@babel/core@7.12.9)
-      '@babel/plugin-syntax-nullish-coalescing-operator': 7.8.3(@babel/core@7.12.9)
-      '@babel/plugin-syntax-numeric-separator': 7.10.4(@babel/core@7.12.9)
-      '@babel/plugin-syntax-object-rest-spread': 7.8.3(@babel/core@7.12.9)
-      '@babel/plugin-syntax-optional-catch-binding': 7.8.3(@babel/core@7.12.9)
-      '@babel/plugin-syntax-optional-chaining': 7.8.3(@babel/core@7.12.9)
-      '@babel/plugin-syntax-private-property-in-object': 7.14.5(@babel/core@7.12.9)
-      '@babel/plugin-syntax-top-level-await': 7.14.5(@babel/core@7.12.9)
-    optional: true
-
   babel-preset-current-node-syntax@1.1.0(@babel/core@7.27.1):
     dependencies:
       '@babel/core': 7.27.1
@@ -26519,13 +26270,6 @@ snapshots:
     transitivePeerDependencies:
       - '@babel/core'
       - supports-color
-
-  babel-preset-jest@29.6.3(@babel/core@7.12.9):
-    dependencies:
-      '@babel/core': 7.12.9
-      babel-plugin-jest-hoist: 29.6.3
-      babel-preset-current-node-syntax: 1.1.0(@babel/core@7.12.9)
-    optional: true
 
   babel-preset-jest@29.6.3(@babel/core@7.27.1):
     dependencies:
@@ -27400,21 +27144,6 @@ snapshots:
       parse-json: 5.2.0
     optionalDependencies:
       typescript: 5.8.3
-
-  create-jest@29.7.0(@types/node@16.18.126)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3)):
-    dependencies:
-      '@jest/types': 29.6.3
-      chalk: 4.1.2
-      exit: 0.1.2
-      graceful-fs: 4.2.11
-      jest-config: 29.7.0(@types/node@16.18.126)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3))
-      jest-util: 29.7.0
-      prompts: 2.4.2
-    transitivePeerDependencies:
-      - '@types/node'
-      - babel-plugin-macros
-      - supports-color
-      - ts-node
 
   create-jest@29.7.0(@types/node@22.15.17)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3)):
     dependencies:
@@ -30635,25 +30364,6 @@ snapshots:
       - babel-plugin-macros
       - supports-color
 
-  jest-cli@29.7.0(@types/node@16.18.126)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3)):
-    dependencies:
-      '@jest/core': 29.7.0(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3))
-      '@jest/test-result': 29.7.0
-      '@jest/types': 29.6.3
-      chalk: 4.1.2
-      create-jest: 29.7.0(@types/node@16.18.126)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3))
-      exit: 0.1.2
-      import-local: 3.2.0
-      jest-config: 29.7.0(@types/node@16.18.126)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3))
-      jest-util: 29.7.0
-      jest-validate: 29.7.0
-      yargs: 17.7.2
-    transitivePeerDependencies:
-      - '@types/node'
-      - babel-plugin-macros
-      - supports-color
-      - ts-node
-
   jest-cli@29.7.0(@types/node@22.15.17)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3)):
     dependencies:
       '@jest/core': 29.7.0(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3))
@@ -30672,68 +30382,6 @@ snapshots:
       - babel-plugin-macros
       - supports-color
       - ts-node
-
-  jest-config@29.7.0(@types/node@16.18.126)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3)):
-    dependencies:
-      '@babel/core': 7.27.1
-      '@jest/test-sequencer': 29.7.0
-      '@jest/types': 29.6.3
-      babel-jest: 29.7.0(@babel/core@7.27.1)
-      chalk: 4.1.2
-      ci-info: 3.9.0
-      deepmerge: 4.3.1
-      glob: 7.2.3
-      graceful-fs: 4.2.11
-      jest-circus: 29.7.0
-      jest-environment-node: 29.7.0
-      jest-get-type: 29.6.3
-      jest-regex-util: 29.6.3
-      jest-resolve: 29.7.0
-      jest-runner: 29.7.0
-      jest-util: 29.7.0
-      jest-validate: 29.7.0
-      micromatch: 4.0.8
-      parse-json: 5.2.0
-      pretty-format: 29.7.0
-      slash: 3.0.0
-      strip-json-comments: 3.1.1
-    optionalDependencies:
-      '@types/node': 16.18.126
-      ts-node: 10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3)
-    transitivePeerDependencies:
-      - babel-plugin-macros
-      - supports-color
-
-  jest-config@29.7.0(@types/node@22.15.17)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3)):
-    dependencies:
-      '@babel/core': 7.27.1
-      '@jest/test-sequencer': 29.7.0
-      '@jest/types': 29.6.3
-      babel-jest: 29.7.0(@babel/core@7.27.1)
-      chalk: 4.1.2
-      ci-info: 3.9.0
-      deepmerge: 4.3.1
-      glob: 7.2.3
-      graceful-fs: 4.2.11
-      jest-circus: 29.7.0
-      jest-environment-node: 29.7.0
-      jest-get-type: 29.6.3
-      jest-regex-util: 29.6.3
-      jest-resolve: 29.7.0
-      jest-runner: 29.7.0
-      jest-util: 29.7.0
-      jest-validate: 29.7.0
-      micromatch: 4.0.8
-      parse-json: 5.2.0
-      pretty-format: 29.7.0
-      slash: 3.0.0
-      strip-json-comments: 3.1.1
-    optionalDependencies:
-      '@types/node': 22.15.17
-      ts-node: 10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3)
-    transitivePeerDependencies:
-      - babel-plugin-macros
-      - supports-color
 
   jest-config@29.7.0(@types/node@22.15.17)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3)):
     dependencies:
@@ -30986,18 +30634,6 @@ snapshots:
       jest-util: 29.7.0
       merge-stream: 2.0.0
       supports-color: 8.1.1
-
-  jest@29.7.0(@types/node@16.18.126)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3)):
-    dependencies:
-      '@jest/core': 29.7.0(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3))
-      '@jest/types': 29.6.3
-      import-local: 3.2.0
-      jest-cli: 29.7.0(@types/node@16.18.126)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3))
-    transitivePeerDependencies:
-      - '@types/node'
-      - babel-plugin-macros
-      - supports-color
-      - ts-node
 
   jest@29.7.0(@types/node@22.15.17)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3)):
     dependencies:
@@ -32669,10 +32305,10 @@ snapshots:
 
   netmask@2.0.2: {}
 
-  next-auth@5.0.0-beta.25(next@15.3.2(@babel/core@7.12.9)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0):
+  next-auth@5.0.0-beta.25(next@15.3.2(@babel/core@7.27.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0):
     dependencies:
       '@auth/core': 0.37.2
-      next: 15.3.2(@babel/core@7.12.9)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      next: 15.3.2(@babel/core@7.27.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react: 19.0.0
 
   next-themes@0.4.6(react-dom@19.1.0(react@19.0.0))(react@19.0.0):
@@ -32680,7 +32316,7 @@ snapshots:
       react: 19.0.0
       react-dom: 19.1.0(react@19.0.0)
 
-  next@14.2.28(@babel/core@7.12.9)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  next@14.2.28(@babel/core@7.27.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@next/env': 14.2.28
       '@swc/helpers': 0.5.5
@@ -32690,7 +32326,7 @@ snapshots:
       postcss: 8.4.31
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-      styled-jsx: 5.1.1(@babel/core@7.12.9)(react@18.3.1)
+      styled-jsx: 5.1.1(@babel/core@7.27.1)(react@18.3.1)
     optionalDependencies:
       '@next/swc-darwin-arm64': 14.2.28
       '@next/swc-darwin-x64': 14.2.28
@@ -32705,7 +32341,7 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
-  next@14.2.3(@babel/core@7.12.9)(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
+  next@14.2.3(@babel/core@7.27.1)(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
     dependencies:
       '@next/env': 14.2.3
       '@swc/helpers': 0.5.5
@@ -32715,7 +32351,7 @@ snapshots:
       postcss: 8.4.31
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      styled-jsx: 5.1.1(@babel/core@7.12.9)(react@18.2.0)
+      styled-jsx: 5.1.1(@babel/core@7.27.1)(react@18.2.0)
     optionalDependencies:
       '@next/swc-darwin-arm64': 14.2.3
       '@next/swc-darwin-x64': 14.2.3
@@ -32730,7 +32366,7 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
-  next@15.3.2(@babel/core@7.12.9)(react-dom@19.0.0(react@19.0.0))(react@19.0.0):
+  next@15.3.2(@babel/core@7.27.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0):
     dependencies:
       '@next/env': 15.3.2
       '@swc/counter': 0.1.3
@@ -32740,7 +32376,7 @@ snapshots:
       postcss: 8.4.31
       react: 19.0.0
       react-dom: 19.0.0(react@19.0.0)
-      styled-jsx: 5.1.6(@babel/core@7.12.9)(react@19.0.0)
+      styled-jsx: 5.1.6(@babel/core@7.27.1)(react@19.0.0)
     optionalDependencies:
       '@next/swc-darwin-arm64': 15.3.2
       '@next/swc-darwin-x64': 15.3.2
@@ -33102,7 +32738,7 @@ snapshots:
 
   obuf@1.1.2: {}
 
-  oclif@4.17.46(@types/node@16.18.126):
+  oclif@4.17.46(@types/node@22.15.17):
     dependencies:
       '@aws-sdk/client-cloudfront': 3.808.0
       '@aws-sdk/client-s3': 3.808.0
@@ -33111,7 +32747,7 @@ snapshots:
       '@inquirer/select': 2.5.0
       '@oclif/core': 4.3.0
       '@oclif/plugin-help': 6.2.28
-      '@oclif/plugin-not-found': 3.2.51(@types/node@16.18.126)
+      '@oclif/plugin-not-found': 3.2.51(@types/node@22.15.17)
       '@oclif/plugin-warn-if-update-available': 3.1.39
       async-retry: 1.3.3
       chalk: 4.1.2
@@ -33717,14 +33353,6 @@ snapshots:
       '@csstools/postcss-progressive-custom-properties': 4.0.1(postcss@8.5.3)
       '@csstools/utilities': 2.0.0(postcss@8.5.3)
       postcss: 8.5.3
-
-  postcss-load-config@4.0.2(postcss@8.5.3)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3)):
-    dependencies:
-      lilconfig: 3.1.3
-      yaml: 2.7.1
-    optionalDependencies:
-      postcss: 8.5.3
-      ts-node: 10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3)
 
   postcss-load-config@4.0.2(postcss@8.5.3)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3)):
     dependencies:
@@ -35966,26 +35594,26 @@ snapshots:
     dependencies:
       inline-style-parser: 0.2.4
 
-  styled-jsx@5.1.1(@babel/core@7.12.9)(react@18.2.0):
+  styled-jsx@5.1.1(@babel/core@7.27.1)(react@18.2.0):
     dependencies:
       client-only: 0.0.1
       react: 18.2.0
     optionalDependencies:
-      '@babel/core': 7.12.9
+      '@babel/core': 7.27.1
 
-  styled-jsx@5.1.1(@babel/core@7.12.9)(react@18.3.1):
+  styled-jsx@5.1.1(@babel/core@7.27.1)(react@18.3.1):
     dependencies:
       client-only: 0.0.1
       react: 18.3.1
     optionalDependencies:
-      '@babel/core': 7.12.9
+      '@babel/core': 7.27.1
 
-  styled-jsx@5.1.6(@babel/core@7.12.9)(react@19.0.0):
+  styled-jsx@5.1.6(@babel/core@7.27.1)(react@19.0.0):
     dependencies:
       client-only: 0.0.1
       react: 19.0.0
     optionalDependencies:
-      '@babel/core': 7.12.9
+      '@babel/core': 7.27.1
 
   stylehacks@6.1.1(postcss@8.5.3):
     dependencies:
@@ -36144,7 +35772,7 @@ snapshots:
     dependencies:
       tailwindcss: 3.4.17(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3))
 
-  tailwindcss@3.3.3(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3)):
+  tailwindcss@3.3.3(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3)):
     dependencies:
       '@alloc/quick-lru': 5.2.0
       arg: 5.0.2
@@ -36163,7 +35791,7 @@ snapshots:
       postcss: 8.5.3
       postcss-import: 15.1.0(postcss@8.5.3)
       postcss-js: 4.0.1(postcss@8.5.3)
-      postcss-load-config: 4.0.2(postcss@8.5.3)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3))
+      postcss-load-config: 4.0.2(postcss@8.5.3)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3))
       postcss-nested: 6.2.0(postcss@8.5.3)
       postcss-selector-parser: 6.1.2
       resolve: 1.22.10
@@ -36407,26 +36035,6 @@ snapshots:
 
   ts-interface-checker@0.1.13: {}
 
-  ts-jest@29.3.2(@babel/core@7.12.9)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.12.9))(jest@29.7.0(@types/node@16.18.126)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3)))(typescript@5.8.3):
-    dependencies:
-      bs-logger: 0.2.6
-      ejs: 3.1.10
-      fast-json-stable-stringify: 2.1.0
-      jest: 29.7.0(@types/node@16.18.126)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3))
-      jest-util: 29.7.0
-      json5: 2.2.3
-      lodash.memoize: 4.1.2
-      make-error: 1.3.6
-      semver: 7.7.2
-      type-fest: 4.41.0
-      typescript: 5.8.3
-      yargs-parser: 21.1.1
-    optionalDependencies:
-      '@babel/core': 7.12.9
-      '@jest/transform': 29.7.0
-      '@jest/types': 29.6.3
-      babel-jest: 29.7.0(@babel/core@7.12.9)
-
   ts-jest@29.3.2(@babel/core@7.27.1)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.27.1))(jest@29.7.0(@types/node@22.15.17)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3)))(typescript@5.8.3):
     dependencies:
       bs-logger: 0.2.6
@@ -36479,26 +36087,25 @@ snapshots:
     optionalDependencies:
       '@swc/core': 1.11.24
 
-  ts-node@10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3):
+  ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@4.9.5):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       '@tsconfig/node10': 1.0.11
       '@tsconfig/node12': 1.0.11
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.4
-      '@types/node': 16.18.126
+      '@types/node': 22.15.17
       acorn: 8.14.1
       acorn-walk: 8.3.4
       arg: 4.1.3
       create-require: 1.1.1
       diff: 4.0.2
       make-error: 1.3.6
-      typescript: 5.8.3
+      typescript: 4.9.5
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
     optionalDependencies:
       '@swc/core': 1.11.24
-    optional: true
 
   ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.17)(typescript@5.8.3):
     dependencies:
