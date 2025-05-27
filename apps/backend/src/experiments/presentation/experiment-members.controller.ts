@@ -13,6 +13,7 @@ import {
 } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { AddExperimentMemberUseCase } from "../application/use-cases/experiment-members/add-experiment-member";
+import { GetUsersNotOnExperimentUseCase } from "../application/use-cases/experiment-members/get-users-not-on-experiment";
 import { ListExperimentMembersUseCase } from "../application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "../application/use-cases/experiment-members/remove-experiment-member";
 
@@ -25,6 +26,7 @@ export class ExperimentMembersController {
     private readonly listExperimentMembersUseCase: ListExperimentMembersUseCase,
     private readonly addExperimentMemberUseCase: AddExperimentMemberUseCase,
     private readonly removeExperimentMemberUseCase: RemoveExperimentMemberUseCase,
+    private readonly getUsersNotOnExperimentUseCase: GetUsersNotOnExperimentUseCase,
   ) {}
 
   @TsRestHandler(contract.experiments.listExperimentMembers)
@@ -108,6 +110,20 @@ export class ExperimentMembersController {
         }
 
         return handleFailure(result, this.logger);
+      },
+    );
+  }
+
+  @TsRestHandler(contract.experiments.getUsersNotOnExperiment)
+  async getUsersNotOnExperiment(@CurrentUser() user: SessionUser) {
+    return tsRestHandler(
+      contract.experiments.getUsersNotOnExperiment,
+      async ({ params }) => {
+        const result = await this.getUsersNotOnExperimentUseCase.execute(
+          params.id,
+          user.id,
+        );
+        return handleResult(result, this.logger);
       },
     );
   }

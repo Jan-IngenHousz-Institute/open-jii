@@ -366,4 +366,66 @@ describe("ExperimentMemberRepository", () => {
       expect(role).toBeNull();
     });
   });
+
+  describe("getUsersNotOnExperiment", () => {
+    it("should return users not part of the specified experiment", async () => {
+      // Create experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Experiment for Getting Non-Members",
+        userId: testUserId,
+      });
+
+      // Create additional users
+      const memberId = await testApp.createTestUser({
+        email: "member@example.com",
+      });
+      const nonMemberId = await testApp.createTestUser({
+        email: "nonmember@example.com",
+      });
+
+      // Add only one user as a member
+      await repository.addMember(experiment.id, memberId, "member");
+
+      // Get users not on the experiment
+      const result = await repository.getUsersNotOnExperiment(experiment.id);
+
+      // Assert success
+      assertSuccess(result);
+
+      // The result should include nonMemberId and testUserId (creator is not automatically added in this test)
+      const users = result.value;
+      const userIds = users.map((user) => user.id);
+
+      // NonMemberId should be in the list
+      expect(userIds).toContain(nonMemberId);
+
+      // MemberId should NOT be in the list
+      expect(userIds).not.toContain(memberId);
+    });
+
+    it("should return all users when experiment has no members", async () => {
+      // Create experiment with no members
+      const { experiment } = await testApp.createExperiment({
+        name: "Empty Experiment",
+        userId: testUserId,
+      });
+
+      // Create an additional user
+      const otherUserId = await testApp.createTestUser({
+        email: "other@example.com",
+      });
+
+      const result = await repository.getUsersNotOnExperiment(experiment.id);
+
+      // Assert success
+      assertSuccess(result);
+
+      // Should include all users
+      const users = result.value;
+      const userIds = users.map((user) => user.id);
+
+      expect(userIds).toContain(otherUserId);
+      expect(userIds).toContain(testUserId);
+    });
+  });
 });
