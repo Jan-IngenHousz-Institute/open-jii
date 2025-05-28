@@ -302,6 +302,7 @@ module "alb" {
   source            = "../../modules/alb"
   service_name      = var.service_name
   vpc_id            = module.vpc.vpc_id 
+  security_groups   = [module.vpc.alb_sg_id]
   public_subnet_ids = module.vpc.public_subnets
   container_port    = var.container_port
 }
