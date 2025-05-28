@@ -2,7 +2,7 @@ resource "aws_lb" "app_alb" {
   name               = "${var.service_name}-alb"
   internal           = false  # Set to true if ALB should only be private
   load_balancer_type = "application"
-  security_groups    = [module.vpc.alb_sg_id]
+  security_groups    = var.security_groups 
   subnets            = var.public_subnet_ids
 }
 
@@ -12,7 +12,7 @@ resource "aws_lb_target_group" "app_tg" {
   port        = var.container_port
   protocol    = "HTTP"
   target_type = "ip"
-  vpc_id      = module.vpc.id
+  vpc_id      = var.vpc_id
 }
 
 resource "aws_lb_listener" "app_listener" {
