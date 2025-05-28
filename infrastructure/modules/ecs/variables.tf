@@ -72,3 +72,13 @@ variable "assign_public_ip" {
   description = "Assign public IP to the ECS Service"
   type        = bool
 }
+
+variable "target_group_arn" {
+  description = "ARN of the ALB target group"
+  type        = string
+}
+
+variable "vpc_id" {
+  description = "VPC ID where ECS is deployed"
+  type        = string
+}
