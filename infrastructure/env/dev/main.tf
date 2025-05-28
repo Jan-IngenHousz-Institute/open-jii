@@ -368,7 +368,7 @@ module "ecs" {
   memory              = 32
   network_mode        = "awsvpc"
   container_name      = "open_jii_dev_container"
-  image               = var.image
+  image               = "public.ecr.aws/nginx/nginx:latest"
   container_port      = 3020
   host_port           = 3020
   execution_role_arn  = module.ecs.ecs_execution_role_arn
