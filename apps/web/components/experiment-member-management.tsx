@@ -167,7 +167,7 @@ export function ExperimentMemberManagement({
                 const isLastAdmin = member.role === "admin" && adminCount === 1;
                 return (
                   <div
-                    key={member.id}
+                    key={member.userId}
                     className="flex items-center justify-between rounded-md border p-3"
                   >
                     <div className="flex flex-col">

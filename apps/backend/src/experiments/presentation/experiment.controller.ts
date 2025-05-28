@@ -43,7 +43,6 @@ export class ExperimentController {
 
         if (result.isSuccess()) {
           const experiment = result.value;
-
           this.logger.log(
             `Experiment created: ${experiment.id} by user ${user.id}`,
           );
