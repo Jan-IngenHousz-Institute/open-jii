@@ -56,10 +56,11 @@ runs:
     - name: OpenTofu Validate
       shell: bash
       # working-directory: infrastructure/env/${{ inputs.environment }}
-      working-directory: infrastructure/env/
+      working-directory: infrastructure/env/dev
       run: tofu validate
 
     - name: OpenTofu Plan
       shell: bash
-      working-directory: infrastructure/env/${{ inputs.environment }}
+      # working-directory: infrastructure/env/${{ inputs.environment }}
+      working-directory: infrastructure/env/dev
       run: tofu plan
