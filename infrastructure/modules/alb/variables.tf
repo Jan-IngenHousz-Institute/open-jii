@@ -17,3 +17,8 @@ variable "vpc_id" {
   description = "VPC ID where the ALB should be created"
   type        = string
 }
+
+variable "security_groups" {
+  description = "Security groups for ALB"
+  type        = list(string)
+}
