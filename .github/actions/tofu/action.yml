@@ -60,4 +60,4 @@ runs:
     - name: OpenTofu Plan
       shell: bash
       working-directory: infrastructure/env/${{ inputs.environment }}
-      run: tofu plan -no-color
+      run: tofu plan -no-color -ignore-input
