@@ -35,8 +35,8 @@ jobs:
   # Job 2: Terraform (Plan & Apply)
   tofu:
     name: OpenTofu
-    needs: build_lint_test
-    if: needs.build_lint_test.outputs.has_affected_apps == 'true'
+    # needs: build_lint_test
+    # if: needs.build_lint_test.outputs.has_affected_apps == 'true'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -77,26 +77,26 @@ jobs:
       #   run: tofu apply -auto-approve
 
   # Job 3: Deploy Artifacts
-  deploy:
-    name: Deploy Artifacts
-    needs: [build_lint_test, tofu]
-    if: needs.build_lint_test.outputs.has_affected_apps == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: Configure AWS Credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+  # deploy:
+  #   name: Deploy Artifacts
+  #   needs: [build_lint_test, tofu]
+  #   if: needs.build_lint_test.outputs.has_affected_apps == 'true'
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     id-token: write
+  #     contents: read
+  #   steps:
+  #     - name: Configure AWS Credentials via OIDC
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+  #         aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: app-artifacts
-          path: artifacts
+  #     - name: Download Artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: app-artifacts
+  #         path: artifacts
 
       - name: Check Artifact Files
         run: |
