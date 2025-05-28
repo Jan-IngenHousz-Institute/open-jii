@@ -47,7 +47,7 @@ export const zExperimentList = z.array(zExperiment);
 export const zExperimentMember = z.object({
   userId: z.string().uuid(),
   role: zExperimentMemberRole,
-joinedAt: z.string().datetime(),
+  joinedAt: z.string().datetime(),
 });
 
 export const zExperimentMemberList = z.array(zExperimentMember);

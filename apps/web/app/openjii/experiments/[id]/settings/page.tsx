@@ -15,7 +15,6 @@ export default function ExperimentSettingsPage({
   return (
     <div className="space-y-8">
       <div>
-        {id}
         <h4 className="text-lg font-medium">Experiment Settings</h4>
         <p className="text-muted-foreground text-sm">
           Manage settings and members for this experiment.
