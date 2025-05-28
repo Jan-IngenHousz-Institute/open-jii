@@ -70,7 +70,7 @@ jobs:
           aws_region: ${{ secrets.AWS_REGION }}
           tofu_version: "1.6.0"
           # environment: "${{ inputs.environment }}"
-          environemnt: "dev"
+          environemnt: dev
 
 
       # - name: Apply Infrastructure
