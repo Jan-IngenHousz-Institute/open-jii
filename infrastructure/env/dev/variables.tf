@@ -155,5 +155,5 @@ variable "opennext_price_class" {
 variable "image" {
   description = "Docker image for the ECS container"
   type        = string
-  deafult     = "public.ecr.aws/nginx/nginx:latest"
+  default     = "public.ecr.aws/nginx/nginx:latest"
 }
