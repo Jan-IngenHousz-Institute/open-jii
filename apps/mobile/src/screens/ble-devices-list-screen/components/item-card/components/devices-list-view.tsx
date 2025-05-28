@@ -8,16 +8,14 @@ function getKey(item: BluetoothDevice) {
   return item.id;
 }
 
-function renderItem({ item }: { item: BluetoothDevice }) {
-  return <ItemCard item={item} />;
-}
-
 export function DevicesListView({
   items,
   onRefresh,
+  onPress,
 }: {
   items: BluetoothDevice[];
   onRefresh(): void;
+  onPress?(id: string): void;
 }) {
   return (
     <View className="w-full flex-1 bg-neutral-100">
@@ -27,7 +25,9 @@ export function DevicesListView({
       <FlatList
         data={items}
         keyExtractor={getKey}
-        renderItem={renderItem}
+        renderItem={({ item }) => (
+          <ItemCard item={item} onPress={() => onPress?.(item.id)} />
+        )}
         contentContainerClassName="p-4"
         onRefresh={onRefresh}
         refreshing={false}
