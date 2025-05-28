@@ -311,6 +311,7 @@ module "ecs" {
   source              = "../../modules/ecs"
   cluster_name        = "ECS-OpenJII-Dev"
   environment         = "Dev"
+  assign_public_ip    = "false"
   family             = "backend-task"
   cpu                = 32
   memory             = 32
