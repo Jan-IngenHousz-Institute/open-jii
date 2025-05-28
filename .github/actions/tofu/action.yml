@@ -63,4 +63,4 @@ runs:
       shell: bash
       # working-directory: infrastructure/env/${{ inputs.environment }}
       working-directory: infrastructure/env/dev
-      run: tofu plan
+      run: tofu plan -input=false
