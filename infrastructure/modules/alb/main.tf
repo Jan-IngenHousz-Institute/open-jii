@@ -12,7 +12,7 @@ resource "aws_lb_target_group" "app_tg" {
   port        = var.container_port
   protocol    = "HTTP"
   target_type = "ip"
-  vpc_id      = aws_vpc.ecs_vpc.id
+  vpc_id      = module.vpc.id
 }
 
 resource "aws_lb_listener" "app_listener" {
