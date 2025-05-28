@@ -301,6 +301,6 @@ module "experiment_orchestrator_job" {
 module "alb" {
   source            = "../../modules/alb"
   service_name      = var.service_name
-  public_subnet_ids = module.vpc.public_subnet_ids
+  public_subnet_ids = module.vpc.public
   container_port    = var.container_port
 }
