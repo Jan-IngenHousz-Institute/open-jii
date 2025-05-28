@@ -12,3 +12,8 @@ variable "service_name" {
   description = "Base name for the service"
   type        = string
 }
+
+variable "vpc_id" {
+  description = "VPC ID where the ALB should be created"
+  type        = string
+}
