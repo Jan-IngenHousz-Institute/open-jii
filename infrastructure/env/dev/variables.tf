@@ -114,3 +114,8 @@ variable "service_name" {
   type        = string
   default     = "ECS-service-Dev"
 }
+
+variable "image" {
+  description = "Docker image for the ECS container"
+  type        = string
+}
