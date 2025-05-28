@@ -5,8 +5,8 @@ import {
   and,
 } from "@repo/database";
 
+import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
-import { assertSuccess } from "../../utils/fp-utils";
 import { ExperimentRepository } from "./experiment.repository";
 
 describe("ExperimentRepository", () => {

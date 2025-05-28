@@ -3,11 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { Test, TestingModule } from "@nestjs/testing";
 import nock from "nock";
 
-import {
-  AppError,
-  assertFailure,
-  assertSuccess,
-} from "../../../experiments/utils/fp-utils";
+import { AppError, assertFailure, assertSuccess } from "../../utils/fp-utils";
 import { DatabricksService } from "./databricks.service";
 
 describe("DatabricksService", () => {

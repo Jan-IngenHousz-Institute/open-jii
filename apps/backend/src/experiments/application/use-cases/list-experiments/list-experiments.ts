@@ -2,9 +2,9 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ExperimentFilter, ExperimentStatus } from "@repo/api";
 
+import { Result } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { Result } from "../../../utils/fp-utils";
 
 @Injectable()
 export class ListExperimentsUseCase {
@@ -16,7 +16,7 @@ export class ListExperimentsUseCase {
     userId: string,
     filter?: ExperimentFilter,
     status?: ExperimentStatus,
-  ): Promise<Result<Partial<ExperimentDto>[]>> {
+  ): Promise<Result<ExperimentDto[]>> {
     this.logger.log(
       `Listing experiments for user ${userId}${filter ? ` with filter "${filter}"` : ""}${status ? ` and status "${status}"` : ""}`,
     );

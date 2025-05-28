@@ -47,12 +47,6 @@ describe("ExperimentController", () => {
 
       expect(response.body).toMatchObject({
         id: expect.any(String),
-        name: experimentData.name,
-        description: experimentData.description,
-        status: experimentData.status,
-        visibility: experimentData.visibility,
-        embargoIntervalDays: experimentData.embargoIntervalDays,
-        createdBy: testUserId,
       });
     });
 

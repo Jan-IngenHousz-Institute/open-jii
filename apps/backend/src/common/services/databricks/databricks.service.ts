@@ -9,7 +9,7 @@ import {
   tryCatch,
   apiErrorMapper,
   success,
-} from "../../../experiments/utils/fp-utils";
+} from "../../utils/fp-utils";
 import { DatabricksConfig } from "./databricks.types";
 import type {
   DatabricksHealthCheck,

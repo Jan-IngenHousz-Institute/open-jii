@@ -7,12 +7,16 @@ import type { SessionUser } from "@repo/auth/config";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
+import {
+  formatDates,
+  formatDatesList,
+} from "../../common/utils/date-formatter";
+import { handleFailure } from "../../common/utils/fp-utils";
 import { CreateExperimentUseCase } from "../application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "../application/use-cases/delete-experiment/delete-experiment";
 import { GetExperimentUseCase } from "../application/use-cases/get-experiment/get-experiment";
 import { ListExperimentsUseCase } from "../application/use-cases/list-experiments/list-experiments";
 import { UpdateExperimentUseCase } from "../application/use-cases/update-experiment/update-experiment";
-import { handleResult, Success } from "../utils/fp-utils";
 
 @Controller()
 @UseGuards(AuthGuard)
@@ -38,17 +42,20 @@ export class ExperimentController {
         );
 
         if (result.isSuccess()) {
-          const experiment = (result as Success<any>).value;
+          const experiment = result.value;
+
           this.logger.log(
             `Experiment created: ${experiment.id} by user ${user.id}`,
           );
           return {
             status: StatusCodes.CREATED,
-            body: experiment,
+            body: {
+              id: experiment.id,
+            },
           };
         }
 
-        return handleResult(result, this.logger);
+        return handleFailure(result, this.logger);
       },
     );
   }
@@ -59,7 +66,21 @@ export class ExperimentController {
       contract.experiments.getExperiment,
       async ({ params }) => {
         const result = await this.getExperimentUseCase.execute(params.id);
-        return handleResult(result, this.logger);
+
+        if (result.isSuccess()) {
+          const experiment = result.value;
+
+          // Format dates to strings for the API contract
+          const formattedExperiment = formatDates(experiment);
+
+          this.logger.log(`Experiment ${params.id} retrieved`);
+          return {
+            status: StatusCodes.OK,
+            body: formattedExperiment,
+          };
+        }
+
+        return handleFailure(result, this.logger);
       },
     );
   }
@@ -74,7 +95,25 @@ export class ExperimentController {
           query.filter,
           query.status,
         );
-        return handleResult(result, this.logger);
+
+        if (result.isSuccess()) {
+          const experiments = result.value;
+
+          // Format dates to strings for the API contract
+          const formattedExperiments = formatDatesList(experiments);
+
+          this.logger.log(
+            `Listed experiments for user ${user.id} with filter: ${JSON.stringify(
+              query.filter,
+            )}, status: ${query.status}`,
+          );
+          return {
+            status: StatusCodes.OK,
+            body: formattedExperiments,
+          };
+        }
+
+        return handleFailure(result, this.logger);
       },
     );
   }
@@ -90,10 +129,19 @@ export class ExperimentController {
         );
 
         if (result.isSuccess()) {
+          const experiment = result.value;
+
+          // Format dates to strings for the API contract
+          const formattedExperiment = formatDates(experiment);
+
           this.logger.log(`Experiment ${params.id} updated by user ${user.id}`);
+          return {
+            status: StatusCodes.OK,
+            body: formattedExperiment,
+          };
         }
 
-        return handleResult(result, this.logger);
+        return handleFailure(result, this.logger);
       },
     );
   }
@@ -113,7 +161,7 @@ export class ExperimentController {
           };
         }
 
-        return handleResult(result, this.logger);
+        return handleFailure(result, this.logger);
       },
     );
   }

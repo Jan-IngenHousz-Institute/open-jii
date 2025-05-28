@@ -1,12 +1,17 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import {
+  Result,
+  success,
+  failure,
+  AppError,
+} from "../../../../common/utils/fp-utils";
+import {
   AddExperimentMemberDto,
   ExperimentMemberDto,
 } from "../../../core/models/experiment-members.model";
 import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { Result, success, failure, AppError } from "../../../utils/fp-utils";
 
 @Injectable()
 export class AddExperimentMemberUseCase {

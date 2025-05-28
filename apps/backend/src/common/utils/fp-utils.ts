@@ -215,38 +215,30 @@ export class AppError {
 }
 
 /**
- * Utility for handling a Result in a controller context
- * @param result The Result object to handle
+ * Utility for handling errors in a controller context
+ * @param error The AppError object to handle
  * @param logger Logger to use for logging errors
  */
-export function handleResult<T>(result: Result<T>, logger: Logger) {
-  return result.fold(
-    // Success case
-    (value) => ({
-      status: StatusCodes.OK as const,
-      body: value,
-    }),
-    // Failure case
-    (error) => {
-      // Log the error
-      if (error.statusCode >= 500) {
-        logger.error(`${error.code}: ${error.message}`, error.details);
-      } else {
-        logger.warn(`${error.code}: ${error.message}`, error.details);
-      }
+export function handleFailure(failure: Failure<AppError>, logger: Logger) {
+  const error = failure.error;
 
-      return {
-        status: error.statusCode as number,
-        body: {
-          message: error.message,
-          code: error.code,
-          ...(process.env.NODE_ENV !== "production" && error.details
-            ? { details: error.details }
-            : {}),
-        },
-      };
+  // Log the error
+  if (error.statusCode >= 500) {
+    logger.error(`${error.code}: ${error.message}`, error.details);
+  } else {
+    logger.warn(`${error.code}: ${error.message}`, error.details);
+  }
+
+  return {
+    status: error.statusCode as any, // Todo: fix type casting
+    body: {
+      message: error.message,
+      code: error.code,
+      ...(process.env.NODE_ENV !== "production" && error.details
+        ? { details: error.details }
+        : {}),
     },
-  );
+  };
 }
 
 /**

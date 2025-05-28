@@ -3,11 +3,16 @@ import { Injectable, Logger } from "@nestjs/common";
 import { experimentStatusEnum } from "@repo/database";
 
 import {
+  Result,
+  success,
+  failure,
+  AppError,
+} from "../../../../common/utils/fp-utils";
+import {
   ExperimentDto,
   ExperimentStatus,
 } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { Result, success, failure, AppError } from "../../../utils/fp-utils";
 
 @Injectable()
 export class ChangeExperimentStatusUseCase {

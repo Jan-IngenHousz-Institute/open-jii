@@ -1,5 +1,5 @@
+import { assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import { assertSuccess } from "../../../utils/fp-utils";
 import { ListExperimentsUseCase } from "./list-experiments";
 
 describe("ListExperimentsUseCase", () => {
