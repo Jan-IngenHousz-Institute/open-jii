@@ -319,10 +319,8 @@ module "ecs" {
   image              = var.image
   container_port     = 3020
   host_port          = 3020
-  service_name       = var.service_name
+  execution_role_arn = aws_iam_role.ecs_execution_role.arn
   desired_count      = 1
-  target_group_arn   = module.alb.target_group_arn  # Connect ALB with ECS service
-  vpc_id             = module.vpc.vpc_id
   subnets            = module.vpc.private_subnet_ids
   security_groups    = [module.vpc.ecs_sg_id]
 }
