@@ -377,4 +377,5 @@ module "ecs" {
   security_groups     = [module.vpc.ecs_sg_id]
   target_group_arn    = module.alb.target_group_arn
   vpc_id              = module.vpc.vpc_id
+  service_name        = "ECS-Service-OpenJII-Dev"
 }
