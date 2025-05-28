@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDate } from "@/util/date";
 import { UserPlus, Trash2 } from "lucide-react";
 import { useState } from "react";
 
@@ -127,7 +128,7 @@ export function ExperimentMemberManagement({
               </SelectTrigger>
               <SelectContent>
                 {availableUsers.length === 0 ? (
-                  <SelectItem value="" disabled>
+                  <SelectItem value="no-users-available" disabled>
                     No users available to add
                   </SelectItem>
                 ) : (
@@ -178,7 +179,7 @@ export function ExperimentMemberManagement({
                         </span>
                       </span>
                       <span className="text-muted-foreground text-xs">
-                        Joined {new Date(member.joinedAt).toLocaleDateString()}
+                        Joined {formatDate(member.joinedAt)}
                       </span>
                     </div>
                     <div className="flex items-center space-x-3">
