@@ -89,6 +89,57 @@ resource "aws_security_group" "aurora_sg" {
   }
 }
 
+# -----------------------
+# ALB Security Group
+# -----------------------
+resource "aws_security_group" "alb_sg" {
+  name   = "open-jii-alb-sg-dev"
+  vpc_id = aws_vpc.this.id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Allow public traffic
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Allow HTTPS traffic
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"] # Allow outbound traffic
+  }
+}
+
+# -----------------------
+# ECS Security Group
+# -----------------------
+resource "aws_security_group" "ecs_sg" {
+  name   = "open-jii-ecs-sg-dev"
+  vpc_id = aws_vpc.this.id # Fixed to use the VPC ID from the current resource
+
+  ingress {
+    from_port       = 3020 # Correct container port
+    to_port         = 3020
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id] # Fixed to reference the ALB security group
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
 # ---------------
 # Public Subnets
 # ---------------

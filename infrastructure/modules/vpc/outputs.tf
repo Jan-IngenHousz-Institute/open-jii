@@ -34,9 +34,21 @@ output "default_sg_id" {
 }
 
 output "db_subnet_group_name" {
-  value = aws_db_subnet_group.aurora_subnet_group.name
+  description = "Aurora DB subnet group name"
+  value       = aws_db_subnet_group.aurora_subnet_group.name
 }
 
 output "aurora_security_group_id" {
-  value = aws_security_group.aurora_sg.id
+  description = "Aurora DB security group ID"
+  value       = aws_security_group.aurora_sg.id
+}
+
+output "alb_sg_id" {
+  description = "ALB security group ID"
+  value       = aws_security_group.alb_sg.id
+}
+
+output "ecs_sg_id" {
+  description = "ECS security group ID"
+  value       = aws_security_group.ecs_sg.id
 }
