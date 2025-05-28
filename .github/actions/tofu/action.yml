@@ -49,12 +49,14 @@ runs:
 
     - name: OpenTofu Init
       shell: bash
-      working-directory: infrastructure/env/${{ inputs.environment }}
+      # working-directory: infrastructure/env/${{ inputs.environment }}
+      working-directory: infrastructure/env/dev
       run: tofu init
 
     - name: OpenTofu Validate
       shell: bash
-      working-directory: infrastructure/env/${{ inputs.environment }}
+      # working-directory: infrastructure/env/${{ inputs.environment }}
+      working-directory: infrastructure/env/
       run: tofu validate
 
     - name: OpenTofu Plan
