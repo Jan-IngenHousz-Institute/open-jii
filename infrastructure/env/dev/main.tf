@@ -371,7 +371,7 @@ module "ecs" {
   image              = var.image
   container_port     = 3020
   host_port          = 3020
-  execution_role_arn = aws_iam_role.ecs_execution_role.arn
+  execution_role_arn = module.ecs.ecs_execution_role_arn
   desired_count      = 1
   subnets            = module.vpc.private_subnet_ids
   security_groups    = [module.vpc.ecs_sg_id]

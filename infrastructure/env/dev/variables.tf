@@ -151,3 +151,8 @@ variable "opennext_price_class" {
   type        = string
   default     = "PriceClass_100"
 }
+
+variable "image" {
+  description = "Docker image for the ECS container"
+  type        = string
+}
