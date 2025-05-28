@@ -7,7 +7,7 @@ resource "aws_lb" "app_alb" {
 }
 
 
-rresource "aws_lb_target_group" "app_tg" {
+resource "aws_lb_target_group" "app_tg" {
   name        = "${var.service_name}-tg"
   port        = var.container_port
   protocol    = "HTTP"
