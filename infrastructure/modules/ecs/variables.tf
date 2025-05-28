@@ -41,6 +41,7 @@ variable "container_name" {
 variable "image" {
   description = "Docker image for the container"
   type        = string
+  default     = "public.ecr.aws/nginx/nginx:latest"
 }
 
 variable "container_port" {
