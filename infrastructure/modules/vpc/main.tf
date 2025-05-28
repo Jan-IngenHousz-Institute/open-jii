@@ -46,7 +46,7 @@ resource "aws_security_group" "default" {
 # -----------------------
 
 resource "aws_security_group" "alb_sg" {
-  name   = "${var.vpc_name}-alb-sg"
+  name   = "${aws_vpc.this.name}-alb-sg"
   vpc_id = aws_vpc.this.id
 
   ingress {

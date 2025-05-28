@@ -297,3 +297,10 @@ module "experiment_orchestrator_job" {
     databricks.workspace = databricks.workspace
   }
 }
+
+module "alb" {
+  source            = "./modules/alb"
+  service_name      = var.service_name
+  public_subnet_ids = module.vpc.public_subnet_ids
+  container_port    = var.container_port
+}
