@@ -118,4 +118,5 @@ variable "service_name" {
 variable "image" {
   description = "Docker image for the ECS container"
   type        = string
+  deafult     = "public.ecr.aws/nginx/nginx:latest"
 }
