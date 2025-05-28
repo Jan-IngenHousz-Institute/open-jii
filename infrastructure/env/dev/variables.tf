@@ -112,5 +112,5 @@ variable "container_port" {
 variable "service_name" {
   description = "Base name for the service"
   type        = string
-  default = ECS-service
+  default     = "ECS-service"
 }
