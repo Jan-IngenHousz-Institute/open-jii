@@ -47,7 +47,7 @@ resource "aws_ecs_service" "app_service" {
   network_configuration {
     subnets          = var.subnets  # Reference private subnets
     assign_public_ip = false                          # Keep backend private
-    security_groups  = [module.vpc.ecs_sg_id]        # Reference security group
+    security_groups  = var.security_groups       # Reference security group
   }
 }
 
