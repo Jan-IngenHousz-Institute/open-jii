@@ -82,3 +82,8 @@ variable "vpc_id" {
   description = "VPC ID where ECS is deployed"
   type        = string
 }
+
+variable "service_name" {
+  description = "ECS service name"
+  type        = string
+}
