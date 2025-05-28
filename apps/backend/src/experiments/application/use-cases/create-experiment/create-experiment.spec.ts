@@ -1,8 +1,14 @@
 import { eq, experimentMembers } from "@repo/database";
 
+import { DatabricksService } from "../../../../common/services/databricks/databricks.service";
 import { ExperimentMemberRepository } from "../../../../experiments/core/repositories/experiment-member.repository";
 import { TestHarness } from "../../../../test/test-harness";
-import { assertFailure, assertSuccess } from "../../../utils/fp-utils";
+import {
+  assertFailure,
+  assertSuccess,
+  failure,
+  success,
+} from "../../../utils/fp-utils";
 import { CreateExperimentUseCase } from "./create-experiment";
 
 describe("CreateExperimentUseCase", () => {
@@ -10,6 +16,7 @@ describe("CreateExperimentUseCase", () => {
   let testUserId: string;
   let useCase: CreateExperimentUseCase;
   let experimentMemberRepository: ExperimentMemberRepository;
+  let databricksService: DatabricksService;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -20,10 +27,17 @@ describe("CreateExperimentUseCase", () => {
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(CreateExperimentUseCase);
     experimentMemberRepository = testApp.module.get(ExperimentMemberRepository);
+    databricksService = testApp.module.get(DatabricksService);
+
+    // Mock the Databricks service
+    jest
+      .spyOn(databricksService, "triggerJob")
+      .mockResolvedValue(success({ run_id: 12345, number_in_job: 1 }));
   });
 
   afterEach(() => {
     testApp.afterEach();
+    jest.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -56,7 +70,15 @@ describe("CreateExperimentUseCase", () => {
       embargoIntervalDays: experimentData.embargoIntervalDays,
       createdBy: testUserId,
     });
+
+    // Verify Databricks job was triggered
+    expect(databricksService.triggerJob).toHaveBeenCalledWith({
+      experimentId: createdExperiment.id,
+      experimentName: experimentData.name,
+      userId: testUserId,
+    });
   });
+
   it("should add the creating user as an admin member", async () => {
     const experimentData = {
       name: "Member Test Experiment",
@@ -89,6 +111,36 @@ describe("CreateExperimentUseCase", () => {
     });
   });
 
+  it("should create an experiment even if Databricks job trigger fails", async () => {
+    // Mock Databricks job trigger failure
+    jest.spyOn(databricksService, "triggerJob").mockResolvedValue(
+      failure({
+        code: "INTERNAL_ERROR",
+        message: "Databricks API error",
+        statusCode: 500,
+      }),
+    );
+
+    const experimentData = {
+      name: "Databricks Failure Test",
+      description: "Testing continued creation when Databricks fails",
+    };
+
+    const result = await useCase.execute(experimentData, testUserId);
+
+    // Verify experiment was still created successfully
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value.name).toBe(experimentData.name);
+
+    // Verify Databricks job was triggered but failed
+    expect(databricksService.triggerJob).toHaveBeenCalledWith({
+      experimentId: result.value.id,
+      experimentName: experimentData.name,
+      userId: testUserId,
+    });
+  });
+
   it("should create an experiment with minimal data", async () => {
     // Only provide required name field
     const minimalData = {
@@ -108,6 +160,13 @@ describe("CreateExperimentUseCase", () => {
       name: minimalData.name,
       createdBy: testUserId,
     });
+
+    // Verify Databricks job was triggered
+    expect(databricksService.triggerJob).toHaveBeenCalledWith({
+      experimentId: createdExperiment.id,
+      experimentName: minimalData.name,
+      userId: testUserId,
+    });
   });
 
   it("should return error if name is not provided", async () => {
@@ -123,6 +182,9 @@ describe("CreateExperimentUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("BAD_REQUEST");
     expect(result.error.message).toContain("Experiment name is required");
+
+    // Verify Databricks job was not triggered
+    expect(databricksService.triggerJob).not.toHaveBeenCalled();
   });
 
   it("should return error if userId is not provided", async () => {
@@ -138,6 +200,9 @@ describe("CreateExperimentUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("BAD_REQUEST");
     expect(result.error.message).toContain("User ID is required");
+
+    // Verify Databricks job was not triggered
+    expect(databricksService.triggerJob).not.toHaveBeenCalled();
   });
 
   it("should return error if experiment name already exists", async () => {
@@ -158,5 +223,8 @@ describe("CreateExperimentUseCase", () => {
     expect(result.error.message).toContain(
       `An experiment with the name "${existingName}" already exists`,
     );
+
+    // Verify Databricks job was not triggered
+    expect(databricksService.triggerJob).not.toHaveBeenCalled();
   });
 });

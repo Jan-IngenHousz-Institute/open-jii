@@ -4,5 +4,6 @@
       "mode": "auto"
     }
   ],
-  "chat.agent.enabled": true
+  "chat.agent.enabled": true,
+  "jest.runMode": "on-demand"
 }
