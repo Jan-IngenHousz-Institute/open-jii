@@ -357,3 +357,23 @@ module "opennext" {
     ManagedBy   = "terraform"
   }
 }
+
+module "ecs" {
+  source              = "../../modules/ecs"
+  cluster_name        = "ECS-OpenJII-Dev"
+  environment         = "Dev"
+  family             = "backend-task"
+  cpu                = 32
+  memory             = 32
+  network_mode       = "awsvpc"
+  container_name     = "open_jii_dev_container"
+  image              = var.image
+  container_port     = 3020
+  host_port          = 3020
+  service_name       = var.service_name
+  desired_count      = 1
+  target_group_arn   = module.alb.target_group_arn  # Connect ALB with ECS service
+  vpc_id             = module.vpc.vpc_id
+  subnets            = module.vpc.private_subnet_ids
+  security_groups    = [module.vpc.ecs_sg_id]
+}
