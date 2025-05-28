@@ -39,13 +39,13 @@ resource "aws_ecs_service" "app_service" {
   desired_count   = var.desired_count
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.app_tg.arn
+    target_group_arn = var.target_group_arn
     container_name   = var.container_name
     container_port   = var.container_port
   }
 
   network_configuration {
-    subnets          = module.vpc.private_subnet_ids  # Reference private subnets
+    subnets          = var.subnets  # Reference private subnets
     assign_public_ip = false                          # Keep backend private
     security_groups  = [module.vpc.ecs_sg_id]        # Reference security group
   }
