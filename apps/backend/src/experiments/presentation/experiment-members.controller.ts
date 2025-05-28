@@ -68,7 +68,6 @@ export class ExperimentMembersController {
 
         if (result.isSuccess()) {
           const member = result.value;
-
           // Format date to string for the API contract
           const formattedMember = formatDates(member);
 
@@ -122,7 +121,21 @@ export class ExperimentMembersController {
         const result = await this.getUsersNotOnExperimentUseCase.execute(
           params.id,
         );
-        return handleResult(result, this.logger);
+        if (result.isSuccess()) {
+          // Format dates to strings for the API contract and ensure non-null values for the API contract
+          const users = result.value;
+          const formattedUsers = formatDatesList(users).map((user) => ({
+            id: user.id,
+            name: user.name || "",
+            email: user.email || "",
+          }));
+
+          return {
+            status: StatusCodes.OK as const,
+            body: formattedUsers,
+          };
+        }
+        return handleFailure(result, this.logger);
       },
     );
   }
