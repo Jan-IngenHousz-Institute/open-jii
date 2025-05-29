@@ -181,7 +181,7 @@ function ExperimentVisibilityCard({
     useExperimentUpdate();
 
   interface VisibilityFormValues {
-    visibility: "private" | "public";
+    visibility?: "private" | "public";
     embargoIntervalDays?: number;
   }
 
@@ -201,10 +201,12 @@ function ExperimentVisibilityCard({
   // Watch visibility to conditionally display the embargo field
   const visibility = form.watch("visibility");
 
-  async function onSubmit(data: {
-    visibility: "private" | "public";
-    embargoIntervalDays?: number;
-  }) {
+  async function onSubmit(data: VisibilityFormValues) {
+    // Skip the update if visibility is undefined
+    if (data.visibility === undefined) {
+      return;
+    }
+
     const updateData = {
       visibility: data.visibility,
       // Only include embargoIntervalDays when visibility is private
