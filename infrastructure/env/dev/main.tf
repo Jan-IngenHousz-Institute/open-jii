@@ -378,4 +378,8 @@ module "ecs" {
   target_group_arn    = module.alb.target_group_arn
   vpc_id              = module.vpc.vpc_id
   service_name        = "ECS-Service-OpenJII-Dev"
+  region              = var.aws_region
+  account_id          = data.aws_caller_identity.current.account_id
+  db_username_arn     = "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:open_jii_dev/db_credentials:username::"
+  db_password_arn     = "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:open_jii_dev/db_credentials:password::"
 }
