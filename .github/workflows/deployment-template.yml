@@ -67,7 +67,8 @@ jobs:
         uses: ./.github/actions/tofu
         with:
           tofu_version: "1.6.0"
-          environment: "${{ inputs.environment }}"
+          # environment: "${{ inputs.environment }}"
+          environment: "dev"
 
       # - name: Apply Infrastructure
       #   run: tofu apply -auto-approve
