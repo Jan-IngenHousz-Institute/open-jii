@@ -52,14 +52,6 @@ export const zExperimentMember = z.object({
 
 export const zExperimentMemberList = z.array(zExperimentMember);
 
-export const zUser = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  email: z.string().email(),
-});
-
-export const zUserList = z.array(zUser);
-
 export const zErrorResponse = z.object({
   message: z.string(),
 });
@@ -74,8 +66,6 @@ export type Experiment = z.infer<typeof zExperiment>;
 export type ExperimentList = z.infer<typeof zExperimentList>;
 export type ExperimentMember = z.infer<typeof zExperimentMember>;
 export type ExperimentMemberList = z.infer<typeof zExperimentMemberList>;
-export type User = z.infer<typeof zUser>;
-export type UserList = z.infer<typeof zUserList>;
 
 // Define request and response types
 export const zCreateExperimentBody = z.object({

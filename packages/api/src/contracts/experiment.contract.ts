@@ -5,7 +5,6 @@ import {
   zExperimentList,
   zExperimentMember,
   zExperimentMemberList,
-  zUserList,
   zErrorResponse,
   zCreateExperimentBody,
   zUpdateExperimentBody,
@@ -120,19 +119,5 @@ export const experimentContract = c.router({
     },
     summary: "Remove experiment member",
     description: "Removes a member from the experiment",
-  },
-
-  getUsersNotOnExperiment: {
-    method: "GET",
-    path: "/api/v1/experiments/:id/available-users",
-    pathParams: zIdPathParam,
-    responses: {
-      200: zUserList,
-      404: zErrorResponse,
-      403: zErrorResponse,
-    },
-    summary: "Get available users",
-    description:
-      "Returns a list of users who are not members of the specified experiment",
   },
 });
