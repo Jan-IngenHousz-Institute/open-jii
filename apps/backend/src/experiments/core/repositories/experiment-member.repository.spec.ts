@@ -2,8 +2,8 @@ import { StatusCodes } from "http-status-codes";
 
 import { experiments } from "@repo/database";
 
+import { assertFailure, assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
-import { assertFailure, assertSuccess } from "../../utils/fp-utils";
 import { ExperimentMemberRepository } from "./experiment-member.repository";
 
 describe("ExperimentMemberRepository", () => {

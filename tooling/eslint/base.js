@@ -1,11 +1,11 @@
-import path from "path";
+import { includeIgnoreFile } from "@eslint/compat";
 import eslint from "@eslint/js";
-import * as tseslint from "typescript-eslint";
 import prettierConfig from "eslint-config-prettier";
 import importPlugin from "eslint-plugin-import";
-import turboPlugin from "eslint-plugin-turbo";
 import prettierPlugin from "eslint-plugin-prettier";
-import { includeIgnoreFile } from "@eslint/compat";
+import turboPlugin from "eslint-plugin-turbo";
+import path from "path";
+import * as tseslint from "typescript-eslint";
 
 /**
  * All packages that leverage t3-env should use this rule

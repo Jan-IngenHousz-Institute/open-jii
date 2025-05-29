@@ -3,11 +3,16 @@ import { Injectable, Logger } from "@nestjs/common";
 import { experimentStatusEnum } from "@repo/database";
 
 import {
+  Result,
+  success,
+  failure,
+  AppError,
+} from "../../../../common/utils/fp-utils";
+import {
   ExperimentDto,
   ExperimentStatus,
 } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { Result, success, failure, AppError } from "../../../utils/fp-utils";
 
 @Injectable()
 export class ChangeExperimentStatusUseCase {
@@ -32,7 +37,7 @@ export class ChangeExperimentStatusUseCase {
     // Check if experiment exists
     const experimentResult = await this.experimentRepository.findOne(id);
 
-    return experimentResult.chain(async (experiment) => {
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
       if (!experiment) {
         this.logger.warn(
           `Attempt to change status of non-existent experiment with ID ${id}`,

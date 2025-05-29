@@ -20,6 +20,7 @@
     "build": "tsc --build --verbose",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "dev": "tsc --watch",
+    "lint": "eslint",
     "db:seed": "tsx scripts/seed.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",

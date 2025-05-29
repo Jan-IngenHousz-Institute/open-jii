@@ -1,14 +1,12 @@
-import { eq, experimentMembers } from "@repo/database";
-
 import { DatabricksService } from "../../../../common/services/databricks/databricks.service";
-import { ExperimentMemberRepository } from "../../../../experiments/core/repositories/experiment-member.repository";
-import { TestHarness } from "../../../../test/test-harness";
 import {
   assertFailure,
   assertSuccess,
   failure,
   success,
-} from "../../../utils/fp-utils";
+} from "../../../../common/utils/fp-utils";
+import { ExperimentMemberRepository } from "../../../../experiments/core/repositories/experiment-member.repository";
+import { TestHarness } from "../../../../test/test-harness";
 import { CreateExperimentUseCase } from "./create-experiment";
 
 describe("CreateExperimentUseCase", () => {
@@ -62,7 +60,7 @@ describe("CreateExperimentUseCase", () => {
 
     // Verify all fields were set correctly
     expect(createdExperiment).toMatchObject({
-      id: expect.any(String),
+      id: expect.any(String) as string,
       name: experimentData.name,
       description: experimentData.description,
       status: experimentData.status,
@@ -72,6 +70,7 @@ describe("CreateExperimentUseCase", () => {
     });
 
     // Verify Databricks job was triggered
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(databricksService.triggerJob).toHaveBeenCalledWith({
       experimentId: createdExperiment.id,
       experimentName: experimentData.name,
@@ -115,6 +114,7 @@ describe("CreateExperimentUseCase", () => {
     // Mock Databricks job trigger failure
     jest.spyOn(databricksService, "triggerJob").mockResolvedValue(
       failure({
+        name: "DatabricksError",
         code: "INTERNAL_ERROR",
         message: "Databricks API error",
         statusCode: 500,
@@ -134,6 +134,7 @@ describe("CreateExperimentUseCase", () => {
     expect(result.value.name).toBe(experimentData.name);
 
     // Verify Databricks job was triggered but failed
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(databricksService.triggerJob).toHaveBeenCalledWith({
       experimentId: result.value.id,
       experimentName: experimentData.name,
@@ -156,12 +157,13 @@ describe("CreateExperimentUseCase", () => {
 
     // Verify experiment was created with defaults
     expect(createdExperiment).toMatchObject({
-      id: expect.any(String),
+      id: expect.any(String) as string,
       name: minimalData.name,
       createdBy: testUserId,
     });
 
     // Verify Databricks job was triggered
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(databricksService.triggerJob).toHaveBeenCalledWith({
       experimentId: createdExperiment.id,
       experimentName: minimalData.name,
@@ -184,6 +186,7 @@ describe("CreateExperimentUseCase", () => {
     expect(result.error.message).toContain("Experiment name is required");
 
     // Verify Databricks job was not triggered
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(databricksService.triggerJob).not.toHaveBeenCalled();
   });
 
@@ -202,6 +205,7 @@ describe("CreateExperimentUseCase", () => {
     expect(result.error.message).toContain("User ID is required");
 
     // Verify Databricks job was not triggered
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(databricksService.triggerJob).not.toHaveBeenCalled();
   });
 
@@ -225,6 +229,7 @@ describe("CreateExperimentUseCase", () => {
     );
 
     // Verify Databricks job was not triggered
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(databricksService.triggerJob).not.toHaveBeenCalled();
   });
 });

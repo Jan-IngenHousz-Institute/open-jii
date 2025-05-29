@@ -1,8 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { Result, failure, AppError } from "../../../utils/fp-utils";
 
 @Injectable()
 export class DeleteExperimentUseCase {

@@ -7,10 +7,14 @@ import type { SessionUser } from "@repo/auth/config";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
+import {
+  formatDates,
+  formatDatesList,
+} from "../../common/utils/date-formatter";
+import { handleFailure } from "../../common/utils/fp-utils";
 import { AddExperimentMemberUseCase } from "../application/use-cases/experiment-members/add-experiment-member";
 import { ListExperimentMembersUseCase } from "../application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "../application/use-cases/experiment-members/remove-experiment-member";
-import { handleResult, Success } from "../utils/fp-utils";
 
 @Controller()
 @UseGuards(AuthGuard)
@@ -24,7 +28,7 @@ export class ExperimentMembersController {
   ) {}
 
   @TsRestHandler(contract.experiments.listExperimentMembers)
-  async listMembers(@CurrentUser() user: SessionUser) {
+  listMembers(@CurrentUser() user: SessionUser) {
     return tsRestHandler(
       contract.experiments.listExperimentMembers,
       async ({ params }) => {
@@ -35,11 +39,8 @@ export class ExperimentMembersController {
 
         if (result.isSuccess()) {
           // Format dates to strings for the API contract
-          const members = (result as Success<any>).value;
-          const formattedMembers = members.map((member) => ({
-            ...member,
-            joinedAt: member.joinedAt.toISOString(),
-          }));
+          const members = result.value;
+          const formattedMembers = formatDatesList(members);
 
           return {
             status: StatusCodes.OK as const,
@@ -47,13 +48,13 @@ export class ExperimentMembersController {
           };
         }
 
-        return handleResult(result, this.logger);
+        return handleFailure(result, this.logger);
       },
     );
   }
 
   @TsRestHandler(contract.experiments.addExperimentMember)
-  async addMember(@CurrentUser() user: SessionUser) {
+  addMember(@CurrentUser() user: SessionUser) {
     return tsRestHandler(
       contract.experiments.addExperimentMember,
       async ({ params, body }) => {
@@ -64,30 +65,28 @@ export class ExperimentMembersController {
         );
 
         if (result.isSuccess()) {
-          const member = (result as Success<any>).value;
+          const member = result.value;
+
           // Format date to string for the API contract
-          const formattedMember = {
-            ...member,
-            joinedAt: member.joinedAt.toISOString(),
-          };
+          const formattedMember = formatDates(member);
 
           this.logger.log(
             `Member ${body.userId} added to experiment ${params.id} by user ${user.id}`,
           );
 
           return {
-            status: StatusCodes.CREATED as const,
+            status: StatusCodes.CREATED,
             body: formattedMember,
           };
         }
 
-        return handleResult(result, this.logger);
+        return handleFailure(result, this.logger);
       },
     );
   }
 
   @TsRestHandler(contract.experiments.removeExperimentMember)
-  async removeMember(@CurrentUser() user: SessionUser) {
+  removeMember(@CurrentUser() user: SessionUser) {
     return tsRestHandler(
       contract.experiments.removeExperimentMember,
       async ({ params }) => {
@@ -108,7 +107,7 @@ export class ExperimentMembersController {
           };
         }
 
-        return handleResult(result, this.logger);
+        return handleFailure(result, this.logger);
       },
     );
   }

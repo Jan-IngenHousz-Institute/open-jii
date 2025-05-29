@@ -1,6 +1,5 @@
 import GitHub from "@auth/core/providers/github";
-import Google from "@auth/core/providers/google";
-import { ExpressAuthConfig } from "@auth/express";
+import type { ExpressAuthConfig } from "@auth/express";
 import type { DefaultSession, NextAuthConfig, User } from "next-auth";
 
 declare module "next-auth" {
@@ -31,6 +30,7 @@ export const authConfig = {
   trustHost: true,
   callbacks: {
     jwt({ token, user }) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (user) {
         // User is available during sign-in
         token.id = user.id;

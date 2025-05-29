@@ -1,10 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentMemberDto } from "../../../core/models/experiment-members.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { Result, failure, AppError } from "../../../utils/fp-utils";
 
 @Injectable()
 export class RemoveExperimentMemberUseCase {
@@ -45,7 +45,7 @@ export class RemoveExperimentMemberUseCase {
       const membersResult =
         await this.experimentMemberRepository.getMembers(experimentId);
 
-      return membersResult.chain((members) => {
+      return membersResult.chain((members: ExperimentMemberDto[]) => {
         const currentUserMember = members.find(
           (member) => member.userId === currentUserId,
         );

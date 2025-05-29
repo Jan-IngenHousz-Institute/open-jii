@@ -1,7 +1,7 @@
 import { eq, experiments } from "@repo/database";
 
+import { assertFailure } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import { assertFailure } from "../../../utils/fp-utils";
 import { DeleteExperimentUseCase } from "./delete-experiment";
 
 describe("DeleteExperimentUseCase", () => {

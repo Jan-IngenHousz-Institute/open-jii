@@ -10,6 +10,7 @@ import { experiments } from "@repo/database";
 export const createExperimentSchema = createInsertSchema(experiments).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
   createdBy: true,
 });
 export const updateExperimentSchema = createInsertSchema(experiments)
@@ -17,6 +18,7 @@ export const updateExperimentSchema = createInsertSchema(experiments)
   .omit({
     id: true,
     createdAt: true,
+    updatedAt: true,
     createdBy: true,
   });
 export const selectExperimentSchema = createSelectSchema(experiments);

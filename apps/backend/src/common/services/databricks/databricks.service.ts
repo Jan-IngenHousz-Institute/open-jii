@@ -1,7 +1,8 @@
 import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { isAxiosError } from "axios";
+import { AxiosError, AxiosResponse, isAxiosError } from "axios";
+import z from "zod";
 
 import {
   Result,
@@ -9,8 +10,8 @@ import {
   tryCatch,
   apiErrorMapper,
   success,
-} from "../../../experiments/utils/fp-utils";
-import { DatabricksConfig } from "./databricks.types";
+} from "../../utils/fp-utils";
+import { DatabricksConfig, PerformanceTarget } from "./databricks.types";
 import type {
   DatabricksHealthCheck,
   DatabricksJobRunResponse,
@@ -26,7 +27,7 @@ export class DatabricksService {
   private readonly logger = new Logger(DatabricksService.name);
   private readonly config: DatabricksConfig;
   private accessToken: string | null = null;
-  private tokenExpiresAt: number = 0;
+  private tokenExpiresAt = 0;
 
   private static readonly TOKEN_BUFFER_MS = 5 * 60 * 1000; // 5 minutes
   private static readonly TOKEN_ENDPOINT = "/oidc/v1/token";
@@ -53,32 +54,33 @@ export class DatabricksService {
   }
 
   private validateConfig(): void {
-    const { host, clientId, clientSecret, jobId } = this.config;
+    const databricksConfigSchema = z.object({
+      host: z.string().url(),
+      clientId: z.string().min(1),
+      clientSecret: z.string().min(1),
+      jobId: z
+        .string()
+        .min(1)
+        .refine((val) => !isNaN(Number(val)), {
+          message: "Job ID must be numeric",
+        }),
+    });
 
-    if (
-      !host?.trim() ||
-      !clientId?.trim() ||
-      !clientSecret?.trim() ||
-      !jobId?.trim()
-    ) {
+    try {
+      databricksConfigSchema.parse(this.config);
+    } catch {
       throw new Error(
         "Invalid Databricks configuration: all fields must be non-empty strings",
       );
     }
-
-    try {
-      new URL(host);
-    } catch {
-      throw new Error(`Invalid Databricks host URL: ${host}`);
-    }
-
-    if (isNaN(parseInt(jobId, 10))) {
-      throw new Error(`Invalid Databricks job ID: ${jobId} must be a number`);
-    }
   }
 
   private getErrorMessage(error: unknown): string {
-    if (isAxiosError(error)) {
+    if (
+      isAxiosError<
+        { message?: string; error_description?: string } | undefined
+      >(error)
+    ) {
       const message = this.extractAxiosErrorMessage(error);
       return error.response?.status
         ? `HTTP ${error.response.status}: ${message}`
@@ -89,12 +91,15 @@ export class DatabricksService {
       : String(error);
   }
 
-  private extractAxiosErrorMessage(axiosError: any): string {
+  private extractAxiosErrorMessage(
+    axiosError: AxiosError<
+      { message?: string; error_description?: string } | undefined
+    >,
+  ): string {
     return (
-      axiosError.response?.data?.message ||
-      axiosError.response?.data?.error_description ||
-      axiosError.message ||
-      "Unknown error"
+      axiosError.response?.data?.message ??
+      axiosError.response?.data?.error_description ??
+      (axiosError.message || "Unknown error")
     );
   }
 
@@ -106,8 +111,8 @@ export class DatabricksService {
   }
 
   private async getAccessToken(): Promise<Result<string>> {
-    if (this.isTokenValid()) {
-      return success(this.accessToken!);
+    if (this.isTokenValid() && this.accessToken) {
+      return success(this.accessToken);
     }
 
     return await tryCatch(
@@ -122,8 +127,12 @@ export class DatabricksService {
         const tokenData = tokenResult.value;
         this.updateTokenCache(tokenData);
 
+        if (!this.accessToken) {
+          throw AppError.internal("Failed to obtain Databricks access token");
+        }
+
         this.logger.debug("Successfully obtained Databricks OAuth token");
-        return this.accessToken!;
+        return this.accessToken;
       },
       (error) => {
         this.logger.error(
@@ -139,20 +148,21 @@ export class DatabricksService {
 
     return await tryCatch(
       async () => {
-        const response = await this.httpService.axiosRef.post(
-          tokenUrl,
-          "grant_type=client_credentials&scope=all-apis",
-          {
-            auth: {
-              username: this.config.clientId,
-              password: this.config.clientSecret,
+        const response: AxiosResponse<TokenResponse> =
+          await this.httpService.axiosRef.post(
+            tokenUrl,
+            "grant_type=client_credentials&scope=all-apis",
+            {
+              auth: {
+                username: this.config.clientId,
+                password: this.config.clientSecret,
+              },
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              timeout: DatabricksService.DEFAULT_REQUEST_TIMEOUT,
             },
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-            },
-            timeout: DatabricksService.DEFAULT_REQUEST_TIMEOUT,
-          },
-        );
+          );
 
         const { access_token, token_type, expires_in } = response.data;
         this.validateTokenResponse(access_token, expires_in);
@@ -169,7 +179,7 @@ export class DatabricksService {
   }
 
   private validateTokenResponse(accessToken: string, expiresIn: number): void {
-    if (!accessToken?.trim()) {
+    if (!accessToken.trim()) {
       throw AppError.internal("Invalid token response: missing access_token");
     }
     if (!expiresIn || expiresIn <= 0) {
@@ -177,7 +187,7 @@ export class DatabricksService {
     }
   }
 
-  private updateTokenCache(tokenData: TokenResponse): void {
+  private updateTokenCache(tokenData: TokenResponse) {
     this.accessToken = tokenData.access_token;
     this.tokenExpiresAt = Date.now() + tokenData.expires_in * 1000;
   }
@@ -223,19 +233,16 @@ export class DatabricksService {
 
     return await tryCatch(
       async () => {
-        const response = await this.httpService.axiosRef.post(
-          jobUrl,
-          requestBody,
-          {
+        const response: AxiosResponse<DatabricksJobRunResponse> =
+          await this.httpService.axiosRef.post(jobUrl, requestBody, {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
             timeout: DatabricksService.DEFAULT_REQUEST_TIMEOUT,
-          },
-        );
+          });
 
-        const jobRunResponse: DatabricksJobRunResponse = response.data;
+        const jobRunResponse = response.data;
         this.validateJobRunResponse(jobRunResponse);
 
         this.logger.log(
@@ -265,7 +272,7 @@ export class DatabricksService {
       queue: {
         enabled: true,
       },
-      performance_target: "STANDARD",
+      performance_target: PerformanceTarget.STANDARD,
       idempotency_token: params.experimentId,
     };
   }

@@ -1,5 +1,5 @@
+import { assertFailure } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import { assertFailure } from "../../../utils/fp-utils";
 import { RemoveExperimentMemberUseCase } from "./remove-experiment-member";
 
 describe("RemoveExperimentMemberUseCase", () => {

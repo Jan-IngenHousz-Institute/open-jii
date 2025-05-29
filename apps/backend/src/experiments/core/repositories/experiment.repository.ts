@@ -4,7 +4,7 @@ import { ExperimentFilter, ExperimentStatus } from "@repo/api";
 import { eq, or, and, experiments, experimentMembers } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
-import { Result, tryCatch } from "../../utils/fp-utils";
+import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
   CreateExperimentDto,
   UpdateExperimentDto,
@@ -37,11 +37,13 @@ export class ExperimentRepository {
     userId: string,
     filter?: ExperimentFilter,
     status?: ExperimentStatus,
-  ): Promise<Result<Partial<ExperimentDto>[]>> {
+  ): Promise<Result<ExperimentDto[]>> {
     // Common experiment fields to select
+    // Todo: type this thing properly
     const experimentFields = {
       id: experiments.id,
       name: experiments.name,
+      description: experiments.description,
       status: experiments.status,
       visibility: experiments.visibility,
       embargoIntervalDays: experiments.embargoIntervalDays,

@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import { primaryKey } from "drizzle-orm/pg-core";
 import {
   pgTable,

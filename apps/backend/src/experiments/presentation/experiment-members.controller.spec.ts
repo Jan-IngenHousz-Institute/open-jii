@@ -1,9 +1,10 @@
-// filepath: /Users/petar/Projects/JII/open-jii/apps/backend/src/experiments/presentation/experiment-members.controller.spec.ts
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
+import type { ErrorResponse, ExperimentMemberList } from "@repo/api";
 import { contract } from "@repo/api";
 
+import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 
 describe("ExperimentMembersController", () => {
@@ -54,7 +55,7 @@ describe("ExperimentMembersController", () => {
       );
 
       // Request the members list
-      const response = await testApp
+      const response: SuperTestResponse<ExperimentMemberList> = await testApp
         .get(path)
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -82,7 +83,7 @@ describe("ExperimentMembersController", () => {
         .get(path)
         .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)
-        .expect(({ body }) => {
+        .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("not found");
         });
     });
@@ -197,7 +198,7 @@ describe("ExperimentMembersController", () => {
         .withAuth(testUserId)
         .send({ userId: memberId, role: "member" })
         .expect(StatusCodes.NOT_FOUND)
-        .expect(({ body }) => {
+        .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("not found");
         });
     });
@@ -329,7 +330,9 @@ describe("ExperimentMembersController", () => {
         contract.experiments.listExperimentMembers.path,
         { id: experiment.id },
       );
-      let listResponse = await testApp.get(listPath).withAuth(testUserId);
+      let listResponse: SuperTestResponse<ExperimentMemberList> = await testApp
+        .get(listPath)
+        .withAuth(testUserId);
 
       expect(listResponse.body).toHaveLength(2);
 
@@ -371,7 +374,7 @@ describe("ExperimentMembersController", () => {
         .delete(path)
         .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)
-        .expect(({ body }) => {
+        .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("not found");
         });
     });
@@ -398,7 +401,7 @@ describe("ExperimentMembersController", () => {
         .delete(path)
         .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)
-        .expect(({ body }) => {
+        .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("not found");
         });
     });
@@ -458,7 +461,7 @@ describe("ExperimentMembersController", () => {
         .delete(path)
         .withAuth(testUserId)
         .expect(StatusCodes.BAD_REQUEST)
-        .expect(({ body }) => {
+        .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("Cannot remove the last admin");
         });
     });

@@ -1,5 +1,5 @@
+import { assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import { assertSuccess } from "../../../utils/fp-utils";
 import { ListExperimentsUseCase } from "./list-experiments";
 
 describe("ListExperimentsUseCase", () => {
@@ -111,7 +111,7 @@ describe("ListExperimentsUseCase", () => {
     });
 
     // Create archived experiment
-    const { experiment: archivedExperiment } = await testApp.createExperiment({
+    await testApp.createExperiment({
       name: "Archived Experiment",
       userId,
       status: "archived",

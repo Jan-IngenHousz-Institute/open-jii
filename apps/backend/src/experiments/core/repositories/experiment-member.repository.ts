@@ -3,7 +3,7 @@ import { Injectable, Inject } from "@nestjs/common";
 import { and, eq, experimentMembers } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
-import { Result, tryCatch, AppError } from "../../utils/fp-utils";
+import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
   ExperimentMemberRole,
   ExperimentMemberDto,
