@@ -24,6 +24,16 @@ resource "aws_ecs_task_definition" "app_task" {
           containerPort = var.container_port
           hostPort      = var.host_port
         }
+      ],
+      secrets = [
+        {
+          name      = "DB_USERNAME"
+          valueFrom = "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:myapp/db_credentials:username::"
+        },
+        {
+          name      = "DB_PASSWORD"
+          valueFrom = "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:myapp/db_credentials:password::"
+        }
       ]
     }
   ])

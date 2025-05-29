@@ -88,3 +88,13 @@ variable "service_name" {
   description = "ECS service name"
   type        = string
 }
+
+variable "region" {
+  description = "AWS region for Secrets Manager"
+  type        = string
+}
+
+variable "account_id" {
+  description = "AWS account ID for Secrets Manager ARNs"
+  type        = string
+}
