@@ -8,6 +8,12 @@ inputs:
   environment:
     description: "Deployment environment (e.g., dev, staging, production)"
     required: true
+  aws_role_arn:
+    description: "AWS Role ARN"
+    required: true
+  aws_region:
+    description: "AWS Region"
+    required: true
 
 runs:
   using: "composite"
@@ -31,11 +37,11 @@ runs:
       run: tofu fmt -check
       continue-on-error: true
 
-    - name: Configure AWS Credentials
+    - name: Configure AWS Credentials via OIDC
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        role-to-assume: "arn:aws:iam::084375565727:role/GithubActionsDeployAccess"
-        aws-region: "eu-central-1"
+        role-to-assume: ${{ inputs.aws_role_arn }}
+        aws-region: ${{ inputs.aws_region }}
 
     - name: Check AWS Credentials
       shell: bash

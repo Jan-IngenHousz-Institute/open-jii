@@ -5,9 +5,7 @@
       "post": {
         "description": "Creates a new experiment with the provided configuration",
         "summary": "Create a new experiment",
-        "tags": [
-          "experiments"
-        ],
+        "tags": ["experiments"],
         "parameters": [],
         "operationId": "experiments.createExperiment",
         "requestBody": {
@@ -20,7 +18,7 @@
                   "name": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 100,
+                    "maxLength": 64,
                     "description": "The name of the experiment"
                   },
                   "description": {
@@ -41,20 +39,17 @@
                   },
                   "visibility": {
                     "type": "string",
-                    "enum": [
-                      "private",
-                      "public"
-                    ],
+                    "enum": ["private", "public"],
                     "description": "Experiment visibility setting"
                   },
                   "embargoIntervalDays": {
                     "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": 0,
                     "description": "Embargo period in days"
                   }
                 },
-                "required": [
-                  "name"
-                ]
+                "required": ["name"]
               }
             }
           }
@@ -72,9 +67,7 @@
                       "format": "uuid"
                     }
                   },
-                  "required": [
-                    "id"
-                  ]
+                  "required": ["id"]
                 }
               }
             }
@@ -90,9 +83,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "message"
-                  ]
+                  "required": ["message"]
                 }
               }
             }
@@ -102,9 +93,7 @@
       "get": {
         "description": "Returns a list of experiments based on the specified filter criteria",
         "summary": "List experiments",
-        "tags": [
-          "experiments"
-        ],
+        "tags": ["experiments"],
         "parameters": [
           {
             "name": "filter",
@@ -114,10 +103,26 @@
               "application/json": {
                 "schema": {
                   "type": "string",
+                  "enum": ["my", "member", "related"]
+                }
+              }
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter experiments by their status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
                   "enum": [
-                    "my",
-                    "member",
-                    "related"
+                    "provisioning",
+                    "provisioning_failed",
+                    "active",
+                    "stale",
+                    "archived",
+                    "published"
                   ]
                 }
               }
@@ -159,10 +164,7 @@
                       },
                       "visibility": {
                         "type": "string",
-                        "enum": [
-                          "private",
-                          "public"
-                        ]
+                        "enum": ["private", "public"]
                       },
                       "embargoIntervalDays": {
                         "type": "integer"
@@ -172,6 +174,10 @@
                         "format": "uuid"
                       },
                       "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updatedAt": {
                         "type": "string",
                         "format": "date-time"
                       }
@@ -184,7 +190,8 @@
                       "visibility",
                       "embargoIntervalDays",
                       "createdBy",
-                      "createdAt"
+                      "createdAt",
+                      "updatedAt"
                     ]
                   }
                 }
@@ -202,9 +209,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "message"
-                  ]
+                  "required": ["message"]
                 }
               }
             }
@@ -216,9 +221,7 @@
       "get": {
         "description": "Returns detailed information about a specific experiment",
         "summary": "Get experiment details",
-        "tags": [
-          "experiments"
-        ],
+        "tags": ["experiments"],
         "parameters": [
           {
             "name": "id",
@@ -264,10 +267,7 @@
                     },
                     "visibility": {
                       "type": "string",
-                      "enum": [
-                        "private",
-                        "public"
-                      ]
+                      "enum": ["private", "public"]
                     },
                     "embargoIntervalDays": {
                       "type": "integer"
@@ -277,6 +277,10 @@
                       "format": "uuid"
                     },
                     "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
                       "type": "string",
                       "format": "date-time"
                     }
@@ -289,7 +293,8 @@
                     "visibility",
                     "embargoIntervalDays",
                     "createdBy",
-                    "createdAt"
+                    "createdAt",
+                    "updatedAt"
                   ]
                 }
               }
@@ -306,9 +311,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "message"
-                  ]
+                  "required": ["message"]
                 }
               }
             }
@@ -318,9 +321,7 @@
       "patch": {
         "description": "Updates an existing experiment with the provided changes",
         "summary": "Update experiment",
-        "tags": [
-          "experiments"
-        ],
+        "tags": ["experiments"],
         "parameters": [
           {
             "name": "id",
@@ -365,10 +366,7 @@
                   },
                   "visibility": {
                     "type": "string",
-                    "enum": [
-                      "private",
-                      "public"
-                    ],
+                    "enum": ["private", "public"],
                     "description": "Updated visibility setting"
                   },
                   "embargoIntervalDays": {
@@ -412,10 +410,7 @@
                     },
                     "visibility": {
                       "type": "string",
-                      "enum": [
-                        "private",
-                        "public"
-                      ]
+                      "enum": ["private", "public"]
                     },
                     "embargoIntervalDays": {
                       "type": "integer"
@@ -425,6 +420,10 @@
                       "format": "uuid"
                     },
                     "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
                       "type": "string",
                       "format": "date-time"
                     }
@@ -437,7 +436,8 @@
                     "visibility",
                     "embargoIntervalDays",
                     "createdBy",
-                    "createdAt"
+                    "createdAt",
+                    "updatedAt"
                   ]
                 }
               }
@@ -454,9 +454,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "message"
-                  ]
+                  "required": ["message"]
                 }
               }
             }
@@ -466,9 +464,7 @@
       "delete": {
         "description": "Deletes an experiment and all associated data",
         "summary": "Delete experiment",
-        "tags": [
-          "experiments"
-        ],
+        "tags": ["experiments"],
         "parameters": [
           {
             "name": "id",
@@ -497,9 +493,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "message"
-                  ]
+                  "required": ["message"]
                 }
               }
             }
@@ -511,9 +505,7 @@
       "get": {
         "description": "Returns a list of all users who are members of the specified experiment",
         "summary": "List experiment members",
-        "tags": [
-          "experiments"
-        ],
+        "tags": ["experiments"],
         "parameters": [
           {
             "name": "id",
@@ -537,32 +529,20 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
                       "userId": {
                         "type": "string",
                         "format": "uuid"
                       },
                       "role": {
                         "type": "string",
-                        "enum": [
-                          "admin",
-                          "member"
-                        ]
+                        "enum": ["admin", "member"]
                       },
                       "joinedAt": {
                         "type": "string",
                         "format": "date-time"
                       }
                     },
-                    "required": [
-                      "id",
-                      "userId",
-                      "role",
-                      "joinedAt"
-                    ]
+                    "required": ["userId", "role", "joinedAt"]
                   }
                 }
               }
@@ -579,9 +559,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "message"
-                  ]
+                  "required": ["message"]
                 }
               }
             }
@@ -597,9 +575,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "message"
-                  ]
+                  "required": ["message"]
                 }
               }
             }
@@ -609,9 +585,7 @@
       "post": {
         "description": "Adds a new member to the experiment with the specified role",
         "summary": "Add experiment member",
-        "tags": [
-          "experiments"
-        ],
+        "tags": ["experiments"],
         "parameters": [
           {
             "name": "id",
@@ -640,16 +614,11 @@
                   "role": {
                     "default": "member",
                     "type": "string",
-                    "enum": [
-                      "admin",
-                      "member"
-                    ],
+                    "enum": ["admin", "member"],
                     "description": "Role to assign to the new member"
                   }
                 },
-                "required": [
-                  "userId"
-                ]
+                "required": ["userId"]
               }
             }
           }
@@ -662,32 +631,20 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
                     "userId": {
                       "type": "string",
                       "format": "uuid"
                     },
                     "role": {
                       "type": "string",
-                      "enum": [
-                        "admin",
-                        "member"
-                      ]
+                      "enum": ["admin", "member"]
                     },
                     "joinedAt": {
                       "type": "string",
                       "format": "date-time"
                     }
                   },
-                  "required": [
-                    "id",
-                    "userId",
-                    "role",
-                    "joinedAt"
-                  ]
+                  "required": ["userId", "role", "joinedAt"]
                 }
               }
             }
@@ -703,9 +660,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "message"
-                  ]
+                  "required": ["message"]
                 }
               }
             }
@@ -721,9 +676,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "message"
-                  ]
+                  "required": ["message"]
                 }
               }
             }
@@ -735,9 +688,7 @@
       "delete": {
         "description": "Removes a member from the experiment",
         "summary": "Remove experiment member",
-        "tags": [
-          "experiments"
-        ],
+        "tags": ["experiments"],
         "parameters": [
           {
             "name": "id",
@@ -776,8 +727,209 @@
                       "type": "string"
                     }
                   },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/search": {
+      "get": {
+        "description": "Search for users by name or email with pagination support",
+        "summary": "Search users",
+        "tags": ["users"],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "description": "Search query for name or email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of users to return",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "default": 50,
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                }
+              }
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Number of users to skip for pagination",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "default": 0,
+                  "type": "integer",
+                  "minimum": 0,
+                  "nullable": true
+                }
+              }
+            }
+          }
+        ],
+        "operationId": "users.searchUsers",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "email": {
+                        "type": "string",
+                        "format": "email",
+                        "nullable": true
+                      },
+                      "emailVerified": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                      },
+                      "image": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "email",
+                      "emailVerified",
+                      "image",
+                      "createdAt"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}": {
+      "get": {
+        "description": "Returns a single user by their unique identifier",
+        "summary": "Get a user by ID",
+        "tags": ["users"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the user"
+          }
+        ],
+        "operationId": "users.getUser",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email",
+                      "nullable": true
+                    },
+                    "emailVerified": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "image": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
                   "required": [
-                    "message"
+                    "id",
+                    "name",
+                    "email",
+                    "emailVerified",
+                    "image",
+                    "createdAt"
                   ]
                 }
               }
@@ -794,9 +946,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "message"
-                  ]
+                  "required": ["message"]
                 }
               }
             }

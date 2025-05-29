@@ -1,9 +1,10 @@
-// filepath: /Users/petar/Projects/JII/open-jii/apps/backend/src/experiments/presentation/experiment-members.controller.spec.ts
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
+import type { ErrorResponse, ExperimentMemberList } from "@repo/api";
 import { contract } from "@repo/api";
 
+import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 
 describe("ExperimentMembersController", () => {
@@ -54,7 +55,7 @@ describe("ExperimentMembersController", () => {
       );
 
       // Request the members list
-      const response = await testApp
+      const response: SuperTestResponse<ExperimentMemberList> = await testApp
         .get(path)
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -82,7 +83,7 @@ describe("ExperimentMembersController", () => {
         .get(path)
         .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)
-        .expect(({ body }) => {
+        .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("not found");
         });
     });
@@ -197,7 +198,7 @@ describe("ExperimentMembersController", () => {
         .withAuth(testUserId)
         .send({ userId: memberId, role: "member" })
         .expect(StatusCodes.NOT_FOUND)
-        .expect(({ body }) => {
+        .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("not found");
         });
     });
@@ -228,6 +229,58 @@ describe("ExperimentMembersController", () => {
         .post(path)
         .withAuth(testUserId)
         .send({ userId: faker.string.uuid(), role: "invalid-role" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 400 when adding a member that already exists", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Duplicate Members",
+        userId: testUserId,
+      });
+
+      // Create a user to be added as member
+      const memberId = await testApp.createTestUser({
+        email: "duplicate-member@example.com",
+      });
+
+      // Add the member first time
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      // Try to add the same member again
+      const path = testApp.resolvePath(
+        contract.experiments.addExperimentMember.path,
+        {
+          id: experiment.id,
+        },
+      );
+
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({ userId: memberId, role: "member" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 400 when adding self as a member when already an admin", async () => {
+      // Create an experiment - creator is already an admin
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Self Addition",
+        userId: testUserId,
+      });
+
+      // Try to add self again
+      const path = testApp.resolvePath(
+        contract.experiments.addExperimentMember.path,
+        {
+          id: experiment.id,
+        },
+      );
+
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({ userId: testUserId, role: "member" })
         .expect(StatusCodes.BAD_REQUEST);
     });
 
@@ -277,7 +330,9 @@ describe("ExperimentMembersController", () => {
         contract.experiments.listExperimentMembers.path,
         { id: experiment.id },
       );
-      let listResponse = await testApp.get(listPath).withAuth(testUserId);
+      let listResponse: SuperTestResponse<ExperimentMemberList> = await testApp
+        .get(listPath)
+        .withAuth(testUserId);
 
       expect(listResponse.body).toHaveLength(2);
 
@@ -319,7 +374,7 @@ describe("ExperimentMembersController", () => {
         .delete(path)
         .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)
-        .expect(({ body }) => {
+        .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("not found");
         });
     });
@@ -346,7 +401,7 @@ describe("ExperimentMembersController", () => {
         .delete(path)
         .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)
-        .expect(({ body }) => {
+        .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("not found");
         });
     });
@@ -384,6 +439,31 @@ describe("ExperimentMembersController", () => {
         .delete(pathWithInvalidMember)
         .withAuth(testUserId)
         .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 400 when removing the last admin", async () => {
+      // Create an experiment - creator is the only admin
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Last Admin Removal",
+        userId: testUserId,
+      });
+
+      // Attempt to remove self (the only admin)
+      const path = testApp.resolvePath(
+        contract.experiments.removeExperimentMember.path,
+        {
+          id: experiment.id,
+          memberId: testUserId,
+        },
+      );
+
+      await testApp
+        .delete(path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.BAD_REQUEST)
+        .expect(({ body }: { body: ErrorResponse }) => {
+          expect(body.message).toContain("Cannot remove the last admin");
+        });
     });
 
     it("should return 401 if not authenticated", async () => {

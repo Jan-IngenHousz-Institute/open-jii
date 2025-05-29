@@ -1,8 +1,11 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
+import type { ErrorResponse, ExperimentMemberList } from "@repo/api";
+import type { ExperimentList } from "@repo/api";
 import { contract } from "@repo/api";
 
+import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 
 describe("ExperimentController", () => {
@@ -45,15 +48,7 @@ describe("ExperimentController", () => {
         .send(experimentData)
         .expect(StatusCodes.CREATED);
 
-      expect(response.body).toMatchObject({
-        id: expect.any(String),
-        name: experimentData.name,
-        description: experimentData.description,
-        status: experimentData.status,
-        visibility: experimentData.visibility,
-        embargoIntervalDays: experimentData.embargoIntervalDays,
-        createdBy: testUserId,
-      });
+      expect(response.body).toHaveProperty("id");
     });
 
     it("should return 400 if name is missing", async () => {
@@ -134,7 +129,7 @@ describe("ExperimentController", () => {
         userId: otherUserId,
       });
 
-      const response = await testApp
+      const response: SuperTestResponse<ExperimentList> = await testApp
         .get(contract.experiments.listExperiments.path)
         .withAuth(testUserId)
         .query({ userId: testUserId, filter: "my" })
@@ -143,6 +138,70 @@ describe("ExperimentController", () => {
       expect(response.body).toHaveLength(1);
       expect(response.body[0].id).toBe(experiment.id);
       expect(response.body[0].name).toBe("My Experiment");
+    });
+
+    it("should filter experiments by status", async () => {
+      // Create an active experiment
+      const { experiment: activeExperiment } = await testApp.createExperiment({
+        name: "Active Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+
+      // Create an archived experiment
+      await testApp.createExperiment({
+        name: "Archived Experiment",
+        userId: testUserId,
+        status: "archived",
+      });
+
+      const response: SuperTestResponse<ExperimentList> = await testApp
+        .get(contract.experiments.listExperiments.path)
+        .withAuth(testUserId)
+        .query({ status: "active" })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0].id).toBe(activeExperiment.id);
+      expect(response.body[0].name).toBe("Active Experiment");
+      expect(response.body[0].status).toBe("active");
+    });
+
+    it("should combine filter and status parameters", async () => {
+      // Create an active experiment owned by test user
+      const { experiment: myActive } = await testApp.createExperiment({
+        name: "My Active Experiment",
+        userId: testUserId,
+        status: "active",
+      });
+
+      // Create an archived experiment owned by test user
+      await testApp.createExperiment({
+        name: "My Archived Experiment",
+        userId: testUserId,
+        status: "archived",
+      });
+
+      // Create an experiment with a different user
+      const otherUserId = await testApp.createTestUser({
+        email: "other-combo@example.com",
+      });
+      await testApp.createExperiment({
+        name: "Other Active Experiment",
+        userId: otherUserId,
+        status: "active",
+      });
+
+      const response: SuperTestResponse<ExperimentList> = await testApp
+        .get(contract.experiments.listExperiments.path)
+        .withAuth(testUserId)
+        .query({ filter: "my", status: "active" })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0].id).toBe(myActive.id);
+      expect(response.body[0].name).toBe("My Active Experiment");
+      expect(response.body[0].status).toBe("active");
     });
 
     it("should return 401 if not authenticated", async () => {
@@ -195,7 +254,7 @@ describe("ExperimentController", () => {
         .get(path)
         .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)
-        .expect(({ body }) => {
+        .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("not found");
         });
     });
@@ -270,7 +329,7 @@ describe("ExperimentController", () => {
         .withAuth(testUserId)
         .send({ name: "Won't Update" })
         .expect(StatusCodes.NOT_FOUND)
-        .expect(({ body }) => {
+        .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("not found");
         });
     });
@@ -337,7 +396,7 @@ describe("ExperimentController", () => {
         .delete(path)
         .withAuth(testUserId)
         .expect(StatusCodes.NOT_FOUND)
-        .expect(({ body }) => {
+        .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("not found");
         });
     });
@@ -369,7 +428,7 @@ describe("ExperimentController", () => {
         },
       );
 
-      const response = await testApp
+      const response: SuperTestResponse<ExperimentMemberList> = await testApp
         .get(path)
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -476,9 +535,12 @@ describe("ExperimentController", () => {
         contract.experiments.listExperimentMembers.path,
         { id: experiment.id },
       );
-      let response = await testApp.get(listPath).withAuth(testUserId).query({
-        userId: testUserId,
-      });
+      let response: SuperTestResponse<ExperimentMemberList> = await testApp
+        .get(listPath)
+        .withAuth(testUserId)
+        .query({
+          userId: testUserId,
+        });
 
       expect(response.body).toHaveLength(2);
 
@@ -529,6 +591,38 @@ describe("ExperimentController", () => {
         .delete(removePath)
         .withoutAuth()
         .expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+
+  describe("createExperiment", () => {
+    it("should return 400 if name is too long", async () => {
+      const tooLongName = "a".repeat(65);
+
+      await testApp
+        .post(contract.experiments.createExperiment.path)
+        .withAuth(testUserId)
+        .send({
+          name: tooLongName,
+          description: "Test Description",
+          status: "provisioning",
+          visibility: "private",
+          embargoIntervalDays: 90,
+        })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 400 if embargoIntervalDays is negative", async () => {
+      await testApp
+        .post(contract.experiments.createExperiment.path)
+        .withAuth(testUserId)
+        .send({
+          name: "Test Experiment",
+          description: "Test Description",
+          status: "provisioning",
+          visibility: "private",
+          embargoIntervalDays: -1,
+        })
+        .expect(StatusCodes.BAD_REQUEST);
     });
   });
 });

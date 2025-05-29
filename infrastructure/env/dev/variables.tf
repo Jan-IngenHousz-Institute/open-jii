@@ -62,6 +62,7 @@ variable "iot_logging_policy_name" {
 variable "iot_cognito_identity_pool_name" {
   description = "Name for the Cognito Identity Pool"
   type        = string
+  default     = "open-jii-dev-iot-identity-pool"
 }
 
 variable "databricks_account_id" {

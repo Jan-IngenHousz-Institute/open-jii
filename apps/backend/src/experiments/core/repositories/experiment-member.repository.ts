@@ -3,7 +3,7 @@ import { Injectable, Inject } from "@nestjs/common";
 import { and, eq, experimentMembers } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
-import { Result, tryCatch, AppError } from "../../utils/fp-utils";
+import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
   ExperimentMemberRole,
   ExperimentMemberDto,
@@ -33,23 +33,6 @@ export class ExperimentMemberRepository {
     role: ExperimentMemberRole = "member",
   ): Promise<Result<ExperimentMemberDto[]>> {
     return tryCatch(async () => {
-      // Check if membership already exists
-      const existingMembership = await this.database
-        .select()
-        .from(experimentMembers)
-        .where(
-          and(
-            eq(experimentMembers.experimentId, experimentId),
-            eq(experimentMembers.userId, userId),
-          ),
-        )
-        .limit(1);
-
-      if (existingMembership.length > 0) {
-        // Membership already exists, return it without updating (no duplicate memberships)
-        return [existingMembership[0]];
-      }
-
       // Otherwise create a new membership
       return await this.database
         .insert(experimentMembers)

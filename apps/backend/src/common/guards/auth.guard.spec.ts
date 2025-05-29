@@ -1,4 +1,5 @@
-import { ExecutionContext, UnauthorizedException } from "@nestjs/common";
+import type { ExecutionContext } from "@nestjs/common";
+import { UnauthorizedException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 
 import * as authExpress from "@repo/auth/express";
@@ -17,7 +18,7 @@ describe("AuthGuard", () => {
     authGuard = moduleRef.get<AuthGuard>(AuthGuard);
 
     // Mock the getSession function from @repo/auth/express
-    mockGetSession = jest.spyOn(authExpress, "getSession");
+    mockGetSession = jest.spyOn(authExpress, "getSession") as jest.SpyInstance;
   });
 
   afterEach(() => {

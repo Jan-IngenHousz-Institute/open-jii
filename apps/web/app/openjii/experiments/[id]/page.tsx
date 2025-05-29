@@ -1,31 +1,111 @@
-import { AppLayout } from "@/components/app-layout";
-import { EditExperiment } from "@/components/edit-experiment";
-import type { Metadata } from "next";
+"use client";
 
-type ParamsType = Promise<{ id: string }>;
+import { ErrorDisplay } from "@/components/error-display";
+import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
+import { formatDate } from "@/util/date";
+import { CalendarIcon } from "lucide-react";
+import { use } from "react";
 
-export const metadata: Metadata = {
-  title: "Experiment",
-};
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  Badge,
+} from "@repo/ui/components";
 
-export default async function ExperimentPage({
+interface ExperimentOverviewPageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default function ExperimentOverviewPage({
   params,
-}: {
-  params: ParamsType;
-}) {
-  const { id } = await params;
+}: ExperimentOverviewPageProps) {
+  const { id } = use(params);
+  const { data, isLoading, error } = useExperiment(id);
+  if (isLoading) {
+    return <div>Loading experiment details...</div>;
+  }
+
+  if (error) {
+    return <ErrorDisplay error={error} title="Failed to load experiment" />;
+  }
+
+  if (!data) {
+    return <div>Experiment not found</div>;
+  }
+
+  const experiment = data.body;
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return <Badge className="bg-secondary">Active</Badge>;
+      case "provisioning":
+        return <Badge className="bg-highlight text-black">Provisioning</Badge>;
+      case "archived":
+        return <Badge className="bg-muted">Archived</Badge>;
+      case "stale":
+        return <Badge className="bg-tertiary">Stale</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
+  };
 
   return (
-    <AppLayout pageTitle={"Experiment"}>
-      <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-medium">Experiment</h3>
-          <p className="text-muted-foreground text-sm">
-            You can edit your experiment here.
-          </p>
-        </div>
-        <EditExperiment experimentId={id} />
-      </div>
-    </AppLayout>
+    <div className="space-y-8">
+      {/* Experiment info card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="text-2xl">{experiment.name}</CardTitle>
+              <CardDescription>
+                {experiment.description ?? "No description provided"}
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              {getStatusBadge(experiment.status)}
+              <Badge variant="outline" className="ml-2 capitalize">
+                {experiment.visibility}
+              </Badge>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <div>
+              <h4 className="text-muted-foreground text-sm font-medium">
+                Created
+              </h4>
+              <p className="flex items-center gap-1">
+                <CalendarIcon
+                  className="text-muted-foreground h-4 w-4"
+                  aria-hidden="true"
+                />
+                {formatDate(experiment.createdAt)}
+              </p>
+            </div>
+            <div>
+              <h4 className="text-muted-foreground text-sm font-medium">
+                Updated
+              </h4>
+              <p>{formatDate(experiment.updatedAt)}</p>
+            </div>
+            <div>
+              <h4 className="text-muted-foreground text-sm font-medium">
+                Embargo Period
+              </h4>
+              <p>{experiment.embargoIntervalDays} days</p>
+            </div>
+            <div>
+              <h4 className="text-muted-foreground text-sm font-medium">ID</h4>
+              <p className="truncate font-mono text-xs">{experiment.id}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

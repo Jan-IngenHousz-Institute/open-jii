@@ -1,7 +1,9 @@
+import { StatusCodes } from "http-status-codes";
+
 import { experiments } from "@repo/database";
 
+import { assertFailure, assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
-import { assertSuccess } from "../../utils/fp-utils";
 import { ExperimentMemberRepository } from "./experiment-member.repository";
 
 describe("ExperimentMemberRepository", () => {
@@ -163,20 +165,14 @@ describe("ExperimentMemberRepository", () => {
 
       // Try to add the same member again with a different role
       const result2 = await repository.addMember(
-        experiment.id,
-        memberId,
+        member1.experimentId,
+        member1.userId,
         "admin",
       );
-      expect(result2.isSuccess()).toBe(true);
 
-      // Use assertSuccess to directly access the value
-      assertSuccess(result2);
-      const members2 = result2.value;
-      const member2 = members2[0];
-
-      // Assert: should return the existing membership without updating the role
-      expect(member1.id).toBe(member2.id);
-      expect(member2.role).toBe("member"); // Role should not be updated
+      expect(result2.isSuccess()).toBe(false);
+      assertFailure(result2);
+      expect(result2.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
 
       // Verify only one membership exists
       const membersResult = await repository.getMembers(experiment.id);

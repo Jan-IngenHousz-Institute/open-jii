@@ -1,3 +1,8 @@
+variable "aws_region" {
+  description = "The AWS region for resources"
+  type        = string
+}
+
 variable "oidc_provider_url" {
   description = "The OIDC provider URL."
   type        = string

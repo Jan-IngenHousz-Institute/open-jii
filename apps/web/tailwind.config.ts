@@ -15,24 +15,39 @@ export default {
   theme: {
     extend: {
       colors: {
-        // JII Primary Colors
-        "jii-dark-green": "#005e5e",
-        "jii-bright-green": "#49e06d",
-        // JII Secondary Colors
-        "jii-light-blue": "#afd7f4",
-        "jii-light-yellow": "#fff381",
+        // JII Brand Colors
+        "jii-dark-green": "#005e5e", // Same as primary
+        "jii-bright-green": "#49e06d", // Same as secondary
+        "jii-medium-green": "#76b465", // Same as tertiary
+        "jii-light-blue": "#afd7f4", // Same as accent
+        "jii-light-yellow": "#fff381", // Same as highlight
+        // System colors
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
+          DEFAULT: "#005e5e", // Dark teal
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
+          DEFAULT: "#49e06d", // Bright green
           foreground: "hsl(var(--secondary-foreground))",
+        },
+        tertiary: {
+          DEFAULT: "#76b465", // Medium green
+          foreground: "#ffffff",
+        },
+        accent: {
+          DEFAULT: "#afd7f4", // Light blue
+          light: "#d7ebfa", // Lighter blue (50%)
+          foreground: "#000000",
+        },
+        highlight: {
+          DEFAULT: "#fff381", // Yellow
+          light: "#fff9c0", // Lighter yellow (50%)
+          foreground: "#000000",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
@@ -41,10 +56,6 @@ export default {
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
