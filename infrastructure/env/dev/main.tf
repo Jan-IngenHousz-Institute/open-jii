@@ -380,6 +380,6 @@ module "ecs" {
   service_name        = "ECS-Service-OpenJII-Dev"
   region              = var.aws_region
   account_id          = data.aws_caller_identity.current.account_id
-  db_username_arn     = "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:open_jii_dev/db_credentials:username::"
-  db_password_arn     = "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:open_jii_dev/db_credentials:password::"
+  db_username_arn     = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:open_jii_dev/db_credentials:username::"
+  db_password_arn     = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:open_jii_dev/db_credentials:password::"
 }
