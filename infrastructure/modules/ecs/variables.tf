@@ -98,3 +98,13 @@ variable "account_id" {
   description = "AWS account ID for Secrets Manager ARNs"
   type        = string
 }
+
+variable "db_username_arn" {
+  description = "ARN of the Secrets Manager secret key for DB username"
+  type        = string
+}
+
+variable "db_password_arn" {
+  description = "ARN of the Secrets Manager secret key for DB password"
+  type        = string
+}
