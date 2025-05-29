@@ -8,17 +8,17 @@ resource "aws_iam_role" "oidc_role" {
   name = var.role_name
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17",
+    Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow",
+        Effect = "Allow"
         Principal = {
           Federated = aws_iam_openid_connect_provider.github.arn
-        },
-        Action = "sts:AssumeRoleWithWebIdentity",
+        }
+        Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
-          "StringEquals" : {
-            "token.actions.githubusercontent.com:sub" : "repo:${var.repository}:ref:refs/heads/${var.branch}"
+          StringEquals = {
+            "token.actions.githubusercontent.com:sub" = "repo:${var.repository}:ref:refs/heads/${var.branch}"
           }
         }
       }
