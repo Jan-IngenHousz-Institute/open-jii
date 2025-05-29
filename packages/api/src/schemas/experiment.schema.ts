@@ -14,6 +14,21 @@ export const zExperimentVisibility = z.enum(["private", "public"]);
 
 export const zExperimentMemberRole = z.enum(["admin", "member"]);
 
+// Analytics column schema
+export const zAnalyticsColumn = z.object({
+  name: z.string(),
+  type_name: z.string(),
+  type_text: z.string(),
+});
+
+// Analytics data schema
+export const zExperimentAnalytics = z.object({
+  columns: z.array(zAnalyticsColumn),
+  rows: z.array(z.array(z.string().nullable())),
+  totalRows: z.number().int(),
+  truncated: z.boolean(),
+});
+
 export const zExperiment = z.object({
   id: z.string().uuid(),
   name: z.string(),
@@ -24,6 +39,7 @@ export const zExperiment = z.object({
   createdBy: z.string().uuid(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  analytics: zExperimentAnalytics.optional(),
 });
 
 export const zExperimentList = z.array(zExperiment);
@@ -44,6 +60,8 @@ export const zErrorResponse = z.object({
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
 export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
 export type ExperimentMemberRole = z.infer<typeof zExperimentMemberRole>;
+export type AnalyticsColumn = z.infer<typeof zAnalyticsColumn>;
+export type ExperimentAnalytics = z.infer<typeof zExperimentAnalytics>;
 export type Experiment = z.infer<typeof zExperiment>;
 export type ExperimentList = z.infer<typeof zExperimentList>;
 export type ExperimentMember = z.infer<typeof zExperimentMember>;

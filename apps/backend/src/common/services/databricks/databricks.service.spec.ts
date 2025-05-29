@@ -16,6 +16,8 @@ describe("DatabricksService", () => {
     clientId: "test-client-id",
     clientSecret: "test-client-secret",
     jobId: "1234",
+    warehouseId: "5678",
+    catalogName: "test_catalog",
   };
 
   const mockJobParams = {
@@ -33,7 +35,9 @@ describe("DatabricksService", () => {
           | "databricks.host"
           | "databricks.clientId"
           | "databricks.clientSecret"
-          | "databricks.jobId",
+          | "databricks.jobId"
+          | "databricks.warehouseId"
+          | "databricks.catalogName",
         defaultValue?: string,
       ) => {
         const config = { ...mockConfig, ...overrides };
@@ -42,6 +46,8 @@ describe("DatabricksService", () => {
           "databricks.clientId": config.clientId,
           "databricks.clientSecret": config.clientSecret,
           "databricks.jobId": config.jobId,
+          "databricks.warehouseId": config.warehouseId,
+          "databricks.catalogName": config.catalogName,
         };
         return configMap[key] || defaultValue;
       },
@@ -106,6 +112,118 @@ describe("DatabricksService", () => {
       .query({ limit: 1, expand_tasks: false })
       .reply(status, { message });
 
+  const mockSqlStatementSuccess = (experimentId = "exp-123") =>
+    nock(mockConfig.databricksHost)
+      .post("/api/2.0/sql/statements/")
+      .reply(200, {
+        statement_id: "statement-123",
+        status: {
+          state: "SUCCEEDED",
+        },
+        manifest: {
+          schema: {
+            column_count: 2,
+            columns: [
+              {
+                name: "id",
+                position: 0,
+                type_name: "STRING",
+                type_text: "STRING",
+              },
+              {
+                name: "value",
+                position: 1,
+                type_name: "DOUBLE",
+                type_text: "DOUBLE",
+              },
+            ],
+          },
+          total_row_count: 2,
+        },
+        result: {
+          chunk_index: 0,
+          data_array: [
+            [experimentId, "123.45"],
+            [experimentId, "67.89"],
+          ],
+          row_count: 2,
+          row_offset: 0,
+        },
+      });
+
+  const mockSqlStatementPendingThenSucceeded = (experimentId = "exp-123") => {
+    const pendingScope = nock(mockConfig.databricksHost)
+      .post("/api/2.0/sql/statements/")
+      .reply(200, {
+        statement_id: "statement-123",
+        status: {
+          state: "PENDING",
+        },
+      });
+
+    const successScope = nock(mockConfig.databricksHost)
+      .get("/api/2.0/sql/statements/statement-123")
+      .reply(200, {
+        statement_id: "statement-123",
+        status: {
+          state: "SUCCEEDED",
+        },
+        manifest: {
+          schema: {
+            column_count: 2,
+            columns: [
+              {
+                name: "id",
+                position: 0,
+                type_name: "STRING",
+                type_text: "STRING",
+              },
+              {
+                name: "value",
+                position: 1,
+                type_name: "DOUBLE",
+                type_text: "DOUBLE",
+              },
+            ],
+          },
+          total_row_count: 2,
+        },
+        result: {
+          chunk_index: 0,
+          data_array: [
+            [experimentId, "123.45"],
+            [experimentId, "67.89"],
+          ],
+          row_count: 2,
+          row_offset: 0,
+        },
+      });
+
+    return { pendingScope, successScope };
+  };
+
+  const mockSqlStatementFailure = (
+    status = 400,
+    message = "SQL syntax error",
+  ) =>
+    nock(mockConfig.databricksHost)
+      .post("/api/2.0/sql/statements/")
+      .reply(status, { message });
+
+  const mockSqlStatementExecutionFailure = () =>
+    nock(mockConfig.databricksHost)
+      .post("/api/2.0/sql/statements/")
+      .reply(200, {
+        statement_id: "statement-123",
+        status: {
+          state: "FAILED",
+          error: {
+            message: "Execution failed: table not found",
+            error_code: "TABLE_NOT_FOUND",
+          },
+        },
+      });
+
   beforeEach(async () => {
     jest.clearAllMocks();
     nock.cleanAll();
@@ -127,6 +245,8 @@ describe("DatabricksService", () => {
         "databricks.clientId",
         "databricks.clientSecret",
         "databricks.jobId",
+        "databricks.warehouseId",
+        "databricks.catalogName",
       ];
 
       expectedCalls.forEach((key) => {
@@ -272,6 +392,36 @@ describe("DatabricksService", () => {
           "Invalid Databricks configuration: all fields must be non-empty strings",
         );
       });
+
+      it("should fail when warehouseId is not configured", async () => {
+        await expect(() =>
+          setupModule({
+            jobId: "jobId",
+            databricksHost: "databricksHost",
+            clientId: "clientId",
+            clientSecret: "clientSecret",
+            warehouseId: "",
+            catalogName: "catalogName",
+          }),
+        ).rejects.toThrow(
+          "Invalid Databricks configuration: all fields must be non-empty strings",
+        );
+      });
+
+      it("should fail when catalogName is not configured", async () => {
+        await expect(() =>
+          setupModule({
+            jobId: "jobId",
+            databricksHost: "databricksHost",
+            clientId: "clientId",
+            clientSecret: "clientSecret",
+            warehouseId: "warehouseId",
+            catalogName: "",
+          }),
+        ).rejects.toThrow(
+          "Invalid Databricks configuration: all fields must be non-empty strings",
+        );
+      });
     });
   });
 
@@ -405,6 +555,92 @@ describe("DatabricksService", () => {
 
       // Restore Date.now
       jest.restoreAllMocks();
+    });
+  });
+
+  describe("getExperimentData", () => {
+    describe("Success scenarios", () => {
+      it("should fetch experiment analytics data successfully", async () => {
+        mockTokenResponse();
+        mockSqlStatementSuccess("exp-123");
+
+        const result = await service.getExperimentData("exp-123", "name");
+
+        expect(result.isSuccess()).toBe(true);
+        assertSuccess(result);
+        expect(result.value).toEqual({
+          columns: [
+            { name: "id", type_name: "STRING", type_text: "STRING" },
+            { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" },
+          ],
+          rows: [
+            ["exp-123", "123.45"],
+            ["exp-123", "67.89"],
+          ],
+          totalRows: 2,
+          truncated: false,
+        });
+        expect(nock.isDone()).toBeTruthy();
+      });
+
+      it("should handle SQL execution requiring polling", async () => {
+        mockTokenResponse();
+        const { pendingScope, successScope } =
+          mockSqlStatementPendingThenSucceeded("exp-456");
+
+        const result = await service.getExperimentData("exp-456", "name");
+
+        expect(pendingScope.isDone()).toBeTruthy();
+        expect(successScope.isDone()).toBeTruthy();
+        expect(result.isSuccess()).toBe(true);
+        assertSuccess(result);
+        expect(result.value.rows).toEqual([
+          ["exp-456", "123.45"],
+          ["exp-456", "67.89"],
+        ]);
+      });
+    });
+
+    describe("Failure scenarios", () => {
+      it("should handle authentication failures", async () => {
+        mockTokenFailure();
+
+        const result = await service.getExperimentData("exp-123", "name");
+
+        expect(result.isSuccess()).toBe(false);
+        assertFailure(result);
+        expect(result.error.message).toContain("Databricks token request");
+        expect(nock.isDone()).toBeTruthy();
+      });
+
+      it("should handle SQL statement execution failures", async () => {
+        mockTokenResponse();
+        mockSqlStatementExecutionFailure();
+
+        const result = await service.getExperimentData("exp-123", "name");
+
+        expect(result.isSuccess()).toBe(false);
+        assertFailure(result);
+        expect(result.error.message).toContain(
+          "SQL statement execution failed",
+        );
+        expect(result.error.message).toContain(
+          "Execution failed: table not found",
+        );
+      });
+
+      it("should handle SQL API errors", async () => {
+        mockTokenResponse();
+        mockSqlStatementFailure(500, "Internal server error");
+
+        const result = await service.getExperimentData("exp-123", "name");
+
+        expect(result.isSuccess()).toBe(false);
+        assertFailure(result);
+        expect(result.error.message).toContain(
+          "Databricks SQL statement execution failed",
+        );
+      });
     });
   });
 });

@@ -10,6 +10,7 @@ import {
   tryCatch,
   apiErrorMapper,
   success,
+  failure,
 } from "../../utils/fp-utils";
 import { DatabricksConfig, PerformanceTarget } from "./databricks.types";
 import type {
@@ -20,6 +21,9 @@ import type {
   DatabricksJobsListResponse,
   DatabricksRunNowRequest,
   TokenResponse,
+  ExecuteStatementRequest,
+  StatementResponse,
+  DatabricksExperimentAnalytics,
 } from "./databricks.types";
 
 @Injectable()
@@ -32,6 +36,7 @@ export class DatabricksService {
   private static readonly TOKEN_BUFFER_MS = 5 * 60 * 1000; // 5 minutes
   private static readonly TOKEN_ENDPOINT = "/oidc/v1/token";
   private static readonly JOBS_ENDPOINT = "/api/2.2/jobs";
+  private static readonly SQL_STATEMENTS_ENDPOINT = "/api/2.0/sql/statements";
   private static readonly DEFAULT_REQUEST_TIMEOUT = 30000; // 30 seconds
 
   constructor(
@@ -50,6 +55,12 @@ export class DatabricksService {
         "databricks.clientSecret",
       ),
       jobId: this.configService.getOrThrow<string>("databricks.jobId"),
+      warehouseId: this.configService.getOrThrow<string>(
+        "databricks.warehouseId",
+      ),
+      catalogName: this.configService.getOrThrow<string>(
+        "databricks.catalogName",
+      ),
     };
   }
 
@@ -64,6 +75,8 @@ export class DatabricksService {
         .refine((val) => !isNaN(Number(val)), {
           message: "Job ID must be numeric",
         }),
+      warehouseId: z.string().min(1),
+      catalogName: z.string().min(1),
     });
 
     try {
@@ -283,6 +296,206 @@ export class DatabricksService {
         "Invalid response from Databricks API: missing run_id",
       );
     }
+  }
+
+  async getExperimentData(
+    experimentId: string,
+    experimentName: string,
+  ): Promise<Result<DatabricksExperimentAnalytics>> {
+    return await tryCatch(
+      async () => {
+        const tokenResult = await this.getAccessToken();
+        if (tokenResult.isFailure()) {
+          throw tokenResult.error;
+        }
+
+        const token = tokenResult.value;
+
+        const schemaName = `exp_${experimentName}_${experimentId}`;
+
+        // Execute SQL query to get experiment data
+        const queryResult = await this.executeSqlStatement(
+          token,
+          schemaName,
+          `SELECT * FROM bronze_data_exp`,
+        );
+
+        if (queryResult.isFailure()) {
+          throw queryResult.error;
+        }
+
+        // Format the response
+        const response = this.formatExperimentAnalyticsResponse(
+          queryResult.value,
+        );
+        return response;
+      },
+      (error) => {
+        this.logger.error(
+          `Failed to get experiment data from Databricks: ${this.getErrorMessage(error)}`,
+        );
+        return apiErrorMapper(error, "Databricks SQL query execution");
+      },
+    );
+  }
+
+  private async executeSqlStatement(
+    token: string,
+    schemaName: string,
+    sqlStatement: string,
+  ): Promise<Result<StatementResponse>> {
+    const statementUrl = `${this.config.host}${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`;
+
+    this.logger.debug(`Executing SQL statement in Databricks: ${sqlStatement}`);
+
+    const requestBody: ExecuteStatementRequest = {
+      statement: sqlStatement,
+      warehouse_id: this.config.warehouseId,
+      schema: schemaName,
+      catalog: this.config.catalogName,
+      wait_timeout: "50s", // Maximum supported wait time
+      disposition: "INLINE", // We want the data inline with the response
+      format: "JSON_ARRAY",
+    };
+
+    try {
+      const response: AxiosResponse<StatementResponse> =
+        await this.httpService.axiosRef.post(statementUrl, requestBody, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          timeout: 60000, // Longer timeout for SQL queries
+        });
+
+      const statementResponse = response.data;
+
+      // Check if the statement is in a terminal state
+      if (statementResponse.status.state === "SUCCEEDED") {
+        return success(statementResponse);
+      } else if (
+        ["FAILED", "CANCELED", "CLOSED"].includes(
+          statementResponse.status.state,
+        )
+      ) {
+        if (statementResponse.status.error) {
+          return failure(
+            AppError.internal(
+              `SQL statement execution failed: ${statementResponse.status.error.message ?? "Unknown error"}`,
+            ),
+          );
+        }
+        return failure(
+          AppError.internal(
+            `SQL statement execution ${statementResponse.status.state.toLowerCase()}`,
+          ),
+        );
+      }
+
+      // For PENDING or RUNNING states, poll until completion
+      return await this.pollStatementExecution(
+        token,
+        statementResponse.statement_id,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error executing SQL statement: ${this.getErrorMessage(error)}`,
+      );
+      return failure(
+        AppError.internal(
+          `Databricks SQL statement execution failed: ${this.getErrorMessage(error)}`,
+        ),
+      );
+    }
+  }
+
+  private async pollStatementExecution(
+    token: string,
+    statementId: string,
+  ): Promise<Result<StatementResponse>> {
+    const maxAttempts = 30; // Maximum polling attempts
+    const pollingIntervalMs = 1000; // 1 second between polls
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const getUrl = `${this.config.host}${DatabricksService.SQL_STATEMENTS_ENDPOINT}/${statementId}`;
+
+      try {
+        const response: AxiosResponse<StatementResponse> =
+          await this.httpService.axiosRef.get(getUrl, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            timeout: DatabricksService.DEFAULT_REQUEST_TIMEOUT,
+          });
+
+        const statementResponse = response.data;
+
+        // Check if the statement finished
+        if (statementResponse.status.state === "SUCCEEDED") {
+          return success(statementResponse);
+        } else if (
+          ["FAILED", "CANCELED", "CLOSED"].includes(
+            statementResponse.status.state,
+          )
+        ) {
+          if (statementResponse.status.error) {
+            return failure(
+              AppError.internal(
+                `SQL statement execution failed: ${statementResponse.status.error.message ?? "Unknown error"}`,
+              ),
+            );
+          }
+          return failure(
+            AppError.internal(
+              `SQL statement execution ${statementResponse.status.state.toLowerCase()}`,
+            ),
+          );
+        }
+
+        // Still running or pending, wait and retry
+        await new Promise((resolve) => setTimeout(resolve, pollingIntervalMs));
+      } catch (error) {
+        this.logger.error(
+          `Error polling SQL statement execution: ${this.getErrorMessage(error)}`,
+        );
+        return failure(
+          AppError.internal(
+            `Databricks SQL polling failed: ${this.getErrorMessage(error)}`,
+          ),
+        );
+      }
+    }
+
+    // If we've exhausted our polling attempts, return a timeout error
+    return failure(
+      AppError.internal(
+        "SQL statement execution timed out after multiple polling attempts",
+      ),
+    );
+  }
+
+  private formatExperimentAnalyticsResponse(
+    response: StatementResponse,
+  ): DatabricksExperimentAnalytics {
+    if (!response.manifest || !response.result) {
+      throw AppError.internal(
+        "Invalid SQL statement response: missing manifest or result data",
+      );
+    }
+
+    const columns = response.manifest.schema.columns.map((column) => ({
+      name: column.name,
+      type_name: column.type_name,
+      type_text: column.type_text,
+    }));
+
+    return {
+      columns,
+      rows: response.result.data_array,
+      totalRows: response.manifest.total_row_count ?? response.result.row_count,
+      truncated: response.manifest.truncated ?? false,
+    };
   }
 
   async healthCheck(): Promise<Result<DatabricksHealthCheck>> {
