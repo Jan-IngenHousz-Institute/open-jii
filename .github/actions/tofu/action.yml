@@ -8,6 +8,7 @@ inputs:
   environment:
     description: "Deployment environment (e.g., dev, staging, production)"
     required: true
+    default: "dev"
 
 runs:
   using: "composite"
@@ -35,7 +36,7 @@ runs:
       uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: "arn:aws:iam::084375565727:role/GithubActionsDeployAccess"
-        aws-region: "eu-north-1"
+        aws-region: "eu-central-1"
 
     - name: Check AWS Credentials
       shell: bash
