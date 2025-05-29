@@ -1,4 +1,7 @@
-import { assertSuccess } from "../../../../common/utils/fp-utils";
+import {
+  assertFailure,
+  assertSuccess,
+} from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { GetUserUseCase } from "./get-user";
 
@@ -50,8 +53,7 @@ describe("GetUserUseCase", () => {
     // Assert
     expect(result.isSuccess()).toBe(false);
     expect(result._tag).toBe("failure");
-
-    const error = result._tag === "failure" ? result.error : null;
-    expect(error?.code).toBe("NOT_FOUND");
+    assertFailure(result);
+    expect(result.error.code).toBe("NOT_FOUND");
   });
 });
