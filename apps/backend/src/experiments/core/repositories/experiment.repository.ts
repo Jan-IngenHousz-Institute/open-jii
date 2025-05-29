@@ -1,6 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { Experiment, ExperimentFilter, ExperimentStatus } from "@repo/api";
+import { ExperimentFilter, ExperimentStatus } from "@repo/api";
 import { eq, or, and, experiments, experimentMembers } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
