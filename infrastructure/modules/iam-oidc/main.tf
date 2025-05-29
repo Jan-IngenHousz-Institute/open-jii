@@ -228,6 +228,7 @@ resource "aws_iam_policy" "oidc_role_policy" {
           "ecs:DeleteService",
           "ecs:ListClusters",
           "ecs:DescribeClusters",
+          "ecr:DescribeImages",
           "ecs:ListServices"
         ]
         Resource = "*"
