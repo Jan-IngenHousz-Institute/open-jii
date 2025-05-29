@@ -97,7 +97,7 @@ describe("Functional Programming Utilities", () => {
       it("should fold with the failure function", () => {
         const folded = failureResult.fold(
           (_) => "Success",
-          (err) => `Failure: ${err.message}`,
+          (err: AppError) => `Failure: ${err.message}`,
         );
         expect(folded).toBe("Failure: Test error");
       });
@@ -221,10 +221,12 @@ describe("Functional Programming Utilities", () => {
           details: { detail: "test" },
         },
       });
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.error).toHaveBeenCalledWith(
         "SERVER_ERROR: Server error",
         { detail: "test" },
       );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });
 
@@ -243,7 +245,9 @@ describe("Functional Programming Utilities", () => {
           details: { detail: "test" },
         },
       });
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.error).not.toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.warn).toHaveBeenCalledWith("BAD_REQUEST: Bad request", {
         detail: "test",
       });
@@ -251,7 +255,7 @@ describe("Functional Programming Utilities", () => {
 
     it("should exclude details in production", () => {
       const originalEnv = process.env.NODE_ENV;
-      (process.env as any).NODE_ENV = "production";
+      (process.env as { NODE_ENV?: string }).NODE_ENV = "production";
 
       const error = AppError.badRequest("Bad request", "BAD_REQUEST", {
         detail: "test",
@@ -261,7 +265,7 @@ describe("Functional Programming Utilities", () => {
 
       expect(handled.body).not.toHaveProperty("details");
 
-      (process.env as any).NODE_ENV = originalEnv;
+      (process.env as { NODE_ENV?: string }).NODE_ENV = originalEnv;
     });
 
     it("should log errors with status code 500 and above using error level", () => {
@@ -271,10 +275,12 @@ describe("Functional Programming Utilities", () => {
       const failureResult = failure(error) as Failure<AppError>;
       handleFailure(failureResult, mockLogger);
 
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.error).toHaveBeenCalledWith(
         "CRITICAL_ERROR: Critical error",
         { service: "external" },
       );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });
 
@@ -285,10 +291,12 @@ describe("Functional Programming Utilities", () => {
       const failureResult = failure(error) as Failure<AppError>;
       handleFailure(failureResult, mockLogger);
 
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.warn).toHaveBeenCalledWith(
         "UNAUTHORIZED: Access denied",
         { userId: "123" },
       );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.error).not.toHaveBeenCalled();
     });
 
@@ -304,6 +312,7 @@ describe("Functional Programming Utilities", () => {
           code: "NOT_FOUND",
         },
       });
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.warn).toHaveBeenCalledWith(
         "NOT_FOUND: Resource not found",
         undefined,
@@ -501,12 +510,8 @@ describe("Functional Programming Utilities", () => {
       const error = (result as Failure<AppError>).error;
       expect(error.details).toBeDefined();
       // The details should contain information about both failed fields
-      expect(error.details).toMatchObject(
-        expect.objectContaining({
-          name: expect.anything(),
-          age: expect.anything(),
-        }),
-      );
+      expect(error.details).toHaveProperty("name");
+      expect(error.details).toHaveProperty("age");
     });
 
     it("should handle non-Zod errors", () => {
@@ -515,7 +520,7 @@ describe("Functional Programming Utilities", () => {
         parse: () => {
           throw new Error("Non-Zod error");
         },
-      } as unknown as z.ZodType<any>;
+      } as unknown as z.ZodType<Record<string, unknown>>;
 
       const result = validate(badSchema, {});
 

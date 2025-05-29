@@ -6,7 +6,10 @@ import { Test } from "@nestjs/testing";
 import { config } from "dotenv";
 import { resolve } from "path";
 import request from "supertest";
+import type { Response } from "supertest";
+import type { App } from "supertest/types";
 
+import * as authExpress from "@repo/auth/express";
 import type { DatabaseInstance } from "@repo/database";
 import {
   experimentMembers,
@@ -21,8 +24,10 @@ import { AppModule } from "../app.module";
 // Ensure test environment is loaded
 config({ path: resolve(__dirname, "../../.env.test") });
 
+export type SuperTestResponse<T> = Omit<Response, "body"> & { body: T };
+
 export class TestHarness {
-  private app: INestApplication | null = null;
+  private app: INestApplication<App> | null = null;
   private static _appInstance: TestHarness | null = null;
   private readonly _imports: ModuleMetadata["imports"];
   private _module: TestingModule | null = null;
@@ -33,7 +38,7 @@ export class TestHarness {
   }
 
   public static get App() {
-    return this._appInstance || (this._appInstance = new this([AppModule]));
+    return this._appInstance ?? (this._appInstance = new this([AppModule]));
   }
 
   /**
@@ -45,7 +50,7 @@ export class TestHarness {
         imports: this._imports,
       }).compile();
 
-      this.app = this._module.createNestApplication();
+      this.app = this._module.createNestApplication<INestApplication<App>>();
       await this.app.init();
       this._request = request(this.app.getHttpServer());
     }
@@ -79,9 +84,7 @@ export class TestHarness {
     }
 
     // Close database connections
-    if (this.database) {
-      await this.database.$client.end();
-    }
+    await this.database.$client.end();
   }
 
   /**
@@ -95,7 +98,12 @@ export class TestHarness {
    * Access to the database instance
    */
   public get database(): DatabaseInstance {
-    return this.module.get<DatabaseInstance>("DATABASE");
+    if (!this._module) {
+      throw new Error("Call setup() before accessing the database.");
+    }
+
+    // Get the database instance from the module
+    return this._module.get<DatabaseInstance>("DATABASE");
   }
 
   private async clearDatabase(): Promise<void> {
@@ -119,8 +127,7 @@ export class TestHarness {
       const req = this._request[method](url);
 
       // Return a function that accepts an optional userId and mock session
-      return {
-        ...req,
+      const extendedReq = Object.assign(req, {
         // Used for adding auth headers
         withAuth: (userId: string) => {
           // Add mock session to request
@@ -136,21 +143,26 @@ export class TestHarness {
           this.mockNoSession();
           return req;
         },
-      };
+        // Used for typing response body type
+        withResponseType: <T, _>() => {
+          return req as request.Test & { body: T };
+        },
+      });
+
+      return extendedReq;
     };
 
   // Mock the auth session for testing
   private mockUserSession(userId: string) {
-    jest.spyOn(require("@repo/auth/express"), "getSession").mockResolvedValue({
+    jest.spyOn(authExpress, "getSession").mockResolvedValue({
       user: { id: userId, name: "Test User", email: "test@example.com" },
+      expires: new Date(Date.now() + 60 * 1000).toISOString(),
     });
   }
 
   // Mock no session for unauthorized tests
   private mockNoSession() {
-    jest
-      .spyOn(require("@repo/auth/express"), "getSession")
-      .mockResolvedValue(null);
+    jest.spyOn(authExpress, "getSession").mockResolvedValue(null);
   }
 
   // HTTP request methods
@@ -199,10 +211,10 @@ export class TestHarness {
       .insert(experiments)
       .values({
         name: data.name,
-        description: data.description || "Test description",
-        status: data.status || "provisioning",
-        visibility: data.visibility || "private",
-        embargoIntervalDays: data.embargoIntervalDays || 90,
+        description: data.description ?? "Test description",
+        status: data.status ?? "provisioning",
+        visibility: data.visibility ?? "private",
+        embargoIntervalDays: data.embargoIntervalDays ?? 90,
         createdBy: data.userId,
       })
       .returning();

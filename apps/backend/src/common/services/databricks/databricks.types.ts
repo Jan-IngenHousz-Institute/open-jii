@@ -84,11 +84,11 @@ export interface DatabricksJobSettings {
     on_streaming_backlog_exceeded?: string[];
   };
   webhook_notifications?: {
-    on_start?: Array<Array<{ id: string }>>;
-    on_success?: Array<Array<{ id: string }>>;
-    on_failure?: Array<Array<{ id: string }>>;
-    on_duration_warning_threshold_exceeded?: Array<Array<{ id: string }>>;
-    on_streaming_backlog_exceeded?: Array<Array<{ id: string }>>;
+    on_start?: { id: string }[][];
+    on_success?: { id: string }[][];
+    on_failure?: { id: string }[][];
+    on_duration_warning_threshold_exceeded?: { id: string }[][];
+    on_streaming_backlog_exceeded?: { id: string }[][];
   };
   notification_settings?: {
     no_alert_for_skipped_runs?: boolean;
@@ -96,10 +96,10 @@ export interface DatabricksJobSettings {
   };
   timeout_seconds?: number;
   max_concurrent_runs?: number;
-  job_clusters?: Array<{
+  job_clusters?: {
     job_cluster_key: string;
     new_cluster: ClusterSpec;
-  }>;
+  }[];
   run_as?: {
     user_name?: string;
     service_principal_name?: string;
@@ -135,7 +135,7 @@ export interface DatabricksJobSettings {
     };
   };
   health?: {
-    rules: Array<{
+    rules: {
       metric:
         | "RUN_DURATION_SECONDS"
         | "STREAMING_BACKLOG_BYTES"
@@ -144,12 +144,12 @@ export interface DatabricksJobSettings {
         | "STREAMING_BACKLOG_FILES";
       op: "GREATER_THAN";
       value: number;
-    }>;
+    }[];
   };
-  parameters?: Array<{
+  parameters?: {
     name: string;
     default?: string;
-  }>;
+  }[];
   tags?: Record<string, string>;
   performance_target?: "PERFORMANCE_OPTIMIZED" | "STANDARD";
   budget_policy_id?: string;
@@ -161,23 +161,23 @@ export interface DatabricksJobSettings {
     kind: "BUNDLE";
     metadata_file_path?: string;
   };
-  environments?: Array<{
+  environments?: {
     environment_key: string;
     spec: {
       client: string;
       dependencies: string[];
       [key: string]: any;
     };
-  }>;
+  }[];
 }
 
 export interface JobTask {
   task_key: string;
   description?: string;
-  depends_on?: Array<{
+  depends_on?: {
     task_key: string;
     outcome?: string; // Used for condition task dependencies
-  }>;
+  }[];
   existing_cluster_id?: string;
   new_cluster?: ClusterSpec;
   job_cluster_key?: string;
@@ -283,12 +283,12 @@ export interface JobTask {
       workspace_name: string;
     };
     refresh_after_update?: boolean;
-    tables?: Array<{
+    tables?: {
       catalog: string;
       name: string;
       schema: string;
       storage_mode: "DIRECT_QUERY" | "IMPORT" | "DUAL";
-    }>;
+    }[];
     warehouse_id: string;
   };
   clean_rooms_notebook_task?: {
@@ -309,7 +309,7 @@ export interface JobTask {
     | "ALWAYS"
     | "ALL_FAILED"
     | "AT_LEAST_ONE_FAILED";
-  libraries?: Array<{
+  libraries?: {
     jar?: string;
     egg?: string; // Deprecated in DBR 14.0+
     whl?: string;
@@ -327,7 +327,7 @@ export interface JobTask {
       repo?: string;
     };
     requirements?: string;
-  }>;
+  }[];
   // Notifications
   email_notifications?: {
     on_start?: string[];
@@ -338,11 +338,11 @@ export interface JobTask {
     on_streaming_backlog_exceeded?: string[];
   };
   webhook_notifications?: {
-    on_start?: Array<{ id: string }[]>;
-    on_success?: Array<{ id: string }[]>;
-    on_failure?: Array<{ id: string }[]>;
-    on_duration_warning_threshold_exceeded?: Array<{ id: string }[]>;
-    on_streaming_backlog_exceeded?: Array<{ id: string }[]>;
+    on_start?: { id: string }[][];
+    on_success?: { id: string }[][];
+    on_failure?: { id: string }[][];
+    on_duration_warning_threshold_exceeded?: { id: string }[][];
+    on_streaming_backlog_exceeded?: { id: string }[][];
   };
   notification_settings?: {
     no_alert_for_skipped_runs?: boolean;
@@ -351,7 +351,7 @@ export interface JobTask {
   };
   // Health monitoring
   health?: {
-    rules: Array<{
+    rules: {
       metric:
         | "RUN_DURATION_SECONDS"
         | "STREAMING_BACKLOG_BYTES"
@@ -360,7 +360,7 @@ export interface JobTask {
         | "STREAMING_BACKLOG_FILES";
       op: "GREATER_THAN";
       value: number;
-    }>;
+    }[];
   };
 }
 

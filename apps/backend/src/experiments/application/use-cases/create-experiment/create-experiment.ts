@@ -49,77 +49,74 @@ export class CreateExperimentUseCase {
       data.name,
     );
 
-    return existingExperimentResult.chain(
-      async (existingExperiment: ExperimentDto | null) => {
-        if (existingExperiment) {
-          this.logger.warn(
-            `Attempt to create duplicate experiment "${data.name}" by user ${userId}`,
+    return existingExperimentResult.chain(async (existingExperiment) => {
+      if (existingExperiment) {
+        this.logger.warn(
+          `Attempt to create duplicate experiment "${data.name}" by user ${userId}`,
+        );
+        return failure(
+          AppError.badRequest(
+            `An experiment with the name "${data.name}" already exists`,
+          ),
+        );
+      }
+
+      this.logger.debug(`Creating experiment in repository: "${data.name}"`);
+      // Create the experiment
+      const experimentResult = await this.experimentRepository.create(
+        data,
+        userId,
+      );
+
+      return experimentResult.chain(async (experiments: ExperimentDto[]) => {
+        if (experiments.length === 0) {
+          this.logger.error(
+            `Failed to create experiment "${data.name}" for user ${userId}`,
           );
-          return failure(
-            AppError.badRequest(
-              `An experiment with the name "${data.name}" already exists`,
-            ),
-          );
+          return failure(AppError.internal("Failed to create experiment"));
         }
 
-        this.logger.debug(`Creating experiment in repository: "${data.name}"`);
-        // Create the experiment
-        const experimentResult = await this.experimentRepository.create(
-          data,
-          userId,
+        const experiment = experiments[0];
+        this.logger.debug(
+          `Adding user ${userId} as admin to experiment ${experiment.id}`,
         );
 
-        return experimentResult.chain(async (experiments: ExperimentDto[]) => {
-          if (experiments.length === 0) {
-            this.logger.error(
-              `Failed to create experiment "${data.name}" for user ${userId}`,
+        // Add the user as an admin member
+        const addMemberResult = await this.experimentMemberRepository.addMember(
+          experiment.id,
+          userId,
+          "admin",
+        );
+
+        return addMemberResult.chain(async () => {
+          this.logger.debug(
+            `Triggering Databricks job for experiment ${experiment.id}`,
+          );
+          // Trigger Databricks job for the new experiment
+          const databricksResult = await this.databricksService.triggerJob({
+            experimentId: experiment.id,
+            experimentName: experiment.name,
+            userId: userId,
+          });
+
+          // Log Databricks job trigger result but don't fail experiment creation
+          if (databricksResult.isFailure()) {
+            this.logger.warn(
+              `Failed to trigger Databricks job for experiment ${experiment.id}:`,
+              databricksResult.error.message,
             );
-            return failure(AppError.internal("Failed to create experiment"));
+          } else {
+            this.logger.log(
+              `Successfully triggered Databricks job for experiment ${experiment.id}`,
+            );
           }
 
-          const experiment = experiments[0];
-          this.logger.debug(
-            `Adding user ${userId} as admin to experiment ${experiment.id}`,
+          this.logger.log(
+            `Successfully created experiment "${experiment.name}" (ID: ${experiment.id})`,
           );
-
-          // Add the user as an admin member
-          const addMemberResult =
-            await this.experimentMemberRepository.addMember(
-              experiment.id,
-              userId,
-              "admin",
-            );
-
-          return addMemberResult.chain(async () => {
-            this.logger.debug(
-              `Triggering Databricks job for experiment ${experiment.id}`,
-            );
-            // Trigger Databricks job for the new experiment
-            const databricksResult = await this.databricksService.triggerJob({
-              experimentId: experiment.id,
-              experimentName: experiment.name,
-              userId: userId,
-            });
-
-            // Log Databricks job trigger result but don't fail experiment creation
-            if (databricksResult.isFailure()) {
-              this.logger.warn(
-                `Failed to trigger Databricks job for experiment ${experiment.id}:`,
-                databricksResult.error.message,
-              );
-            } else {
-              this.logger.log(
-                `Successfully triggered Databricks job for experiment ${experiment.id}`,
-              );
-            }
-
-            this.logger.log(
-              `Successfully created experiment "${experiment.name}" (ID: ${experiment.id})`,
-            );
-            return success(experiment);
-          });
+          return success(experiment);
         });
-      },
-    );
+      });
+    });
   }
 }

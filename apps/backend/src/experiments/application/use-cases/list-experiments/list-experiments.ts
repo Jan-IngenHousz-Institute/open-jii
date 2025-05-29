@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ExperimentFilter, ExperimentStatus } from "@repo/api";
 
-import { Result } from "../../../../common/utils/fp-utils";
+import { AppError, Result } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
@@ -28,12 +28,12 @@ export class ListExperimentsUseCase {
     );
 
     result.fold(
-      (experiments) => {
+      (experiments: ExperimentDto[]) => {
         this.logger.debug(
           `Found ${experiments.length} experiments for user ${userId}`,
         );
       },
-      (error) => {
+      (error: AppError) => {
         this.logger.error(
           `Failed to list experiments for user ${userId}: ${error.message}`,
         );

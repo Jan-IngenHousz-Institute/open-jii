@@ -45,7 +45,7 @@ export class RemoveExperimentMemberUseCase {
       const membersResult =
         await this.experimentMemberRepository.getMembers(experimentId);
 
-      return membersResult.chain((members) => {
+      return membersResult.chain((members: ExperimentMemberDto[]) => {
         const currentUserMember = members.find(
           (member) => member.userId === currentUserId,
         );

@@ -37,7 +37,7 @@ export class ChangeExperimentStatusUseCase {
     // Check if experiment exists
     const experimentResult = await this.experimentRepository.findOne(id);
 
-    return experimentResult.chain(async (experiment) => {
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
       if (!experiment) {
         this.logger.warn(
           `Attempt to change status of non-existent experiment with ID ${id}`,

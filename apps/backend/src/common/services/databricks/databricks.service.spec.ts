@@ -1,9 +1,10 @@
 import { HttpService } from "@nestjs/axios";
 import { ConfigService } from "@nestjs/config";
-import { Test, TestingModule } from "@nestjs/testing";
+import type { TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import nock from "nock";
 
-import { AppError, assertFailure, assertSuccess } from "../../utils/fp-utils";
+import { assertFailure, assertSuccess } from "../../utils/fp-utils";
 import { DatabricksService } from "./databricks.service";
 
 describe("DatabricksService", () => {
@@ -26,16 +27,25 @@ describe("DatabricksService", () => {
   const createMockConfigService = (
     overrides: Partial<typeof mockConfig> = {},
   ) => ({
-    getOrThrow: jest.fn((key: string, defaultValue?: string) => {
-      const config = { ...mockConfig, ...overrides };
-      const configMap = {
-        "databricks.host": config.databricksHost,
-        "databricks.clientId": config.clientId,
-        "databricks.clientSecret": config.clientSecret,
-        "databricks.jobId": config.jobId,
-      };
-      return configMap[key] ?? defaultValue;
-    }),
+    getOrThrow: jest.fn(
+      (
+        key:
+          | "databricks.host"
+          | "databricks.clientId"
+          | "databricks.clientSecret"
+          | "databricks.jobId",
+        defaultValue?: string,
+      ) => {
+        const config = { ...mockConfig, ...overrides };
+        const configMap = {
+          "databricks.host": config.databricksHost,
+          "databricks.clientId": config.clientId,
+          "databricks.clientSecret": config.clientSecret,
+          "databricks.jobId": config.jobId,
+        };
+        return configMap[key] || defaultValue;
+      },
+    ),
   });
 
   const setupModule = async (configOverrides?: Partial<typeof mockConfig>) => {
@@ -120,6 +130,7 @@ describe("DatabricksService", () => {
       ];
 
       expectedCalls.forEach((key) => {
+        // eslint-disable-next-line @typescript-eslint/unbound-method
         expect(configService.getOrThrow).toHaveBeenCalledWith(key);
       });
     });
@@ -211,13 +222,53 @@ describe("DatabricksService", () => {
 
     describe("Configuration validation", () => {
       it("should fail when job ID is not configured", async () => {
-        expect(() => setupModule({ jobId: "" })).rejects.toThrow(
+        await expect(() =>
+          setupModule({
+            jobId: "",
+            databricksHost: "databricksHost",
+            clientId: "clientId",
+            clientSecret: "clientSecret",
+          }),
+        ).rejects.toThrow(
           "Invalid Databricks configuration: all fields must be non-empty strings",
         );
       });
 
       it("should fail when host is not configured", async () => {
-        expect(() => setupModule({ databricksHost: "" })).rejects.toThrow(
+        await expect(() =>
+          setupModule({
+            jobId: "jobId",
+            databricksHost: "",
+            clientId: "clientId",
+            clientSecret: "clientSecret",
+          }),
+        ).rejects.toThrow(
+          "Invalid Databricks configuration: all fields must be non-empty strings",
+        );
+      });
+
+      it("should fail when clientId is not configured", async () => {
+        await expect(() =>
+          setupModule({
+            jobId: "jobId",
+            databricksHost: "databricksHost",
+            clientId: "",
+            clientSecret: "clientSecret",
+          }),
+        ).rejects.toThrow(
+          "Invalid Databricks configuration: all fields must be non-empty strings",
+        );
+      });
+
+      it("should fail when clientSecret is not configured", async () => {
+        await expect(() =>
+          setupModule({
+            jobId: "jobId",
+            databricksHost: "databricksHost",
+            clientId: "clientId",
+            clientSecret: "",
+          }),
+        ).rejects.toThrow(
           "Invalid Databricks configuration: all fields must be non-empty strings",
         );
       });

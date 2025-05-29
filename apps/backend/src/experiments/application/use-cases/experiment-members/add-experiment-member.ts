@@ -10,6 +10,7 @@ import {
   AddExperimentMemberDto,
   ExperimentMemberDto,
 } from "../../../core/models/experiment-members.model";
+import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
@@ -35,7 +36,7 @@ export class AddExperimentMemberUseCase {
     const experimentResult =
       await this.experimentRepository.findOne(experimentId);
 
-    return experimentResult.chain(async (experiment) => {
+    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
       if (!experiment) {
         this.logger.warn(
           `Attempt to add member to non-existent experiment with ID ${experimentId}`,
@@ -67,7 +68,7 @@ export class AddExperimentMemberUseCase {
                 data.role,
               );
 
-            return memberResult.chain((members) => {
+            return memberResult.chain((members: ExperimentMemberDto[]) => {
               if (members.length === 0) {
                 this.logger.error(
                   `Failed to add user ${data.userId} as ${data.role} to experiment ${experimentId}`,

@@ -28,7 +28,7 @@ export class ExperimentMembersController {
   ) {}
 
   @TsRestHandler(contract.experiments.listExperimentMembers)
-  async listMembers(@CurrentUser() user: SessionUser) {
+  listMembers(@CurrentUser() user: SessionUser) {
     return tsRestHandler(
       contract.experiments.listExperimentMembers,
       async ({ params }) => {
@@ -54,7 +54,7 @@ export class ExperimentMembersController {
   }
 
   @TsRestHandler(contract.experiments.addExperimentMember)
-  async addMember(@CurrentUser() user: SessionUser) {
+  addMember(@CurrentUser() user: SessionUser) {
     return tsRestHandler(
       contract.experiments.addExperimentMember,
       async ({ params, body }) => {
@@ -86,7 +86,7 @@ export class ExperimentMembersController {
   }
 
   @TsRestHandler(contract.experiments.removeExperimentMember)
-  async removeMember(@CurrentUser() user: SessionUser) {
+  removeMember(@CurrentUser() user: SessionUser) {
     return tsRestHandler(
       contract.experiments.removeExperimentMember,
       async ({ params }) => {

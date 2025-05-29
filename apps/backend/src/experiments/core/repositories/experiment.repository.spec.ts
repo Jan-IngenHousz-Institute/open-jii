@@ -53,7 +53,7 @@ describe("ExperimentRepository", () => {
       const experiment = experiments[0];
 
       expect(experiment).toMatchObject({
-        id: expect.any(String),
+        id: expect.any(String) as string,
         name: createExperimentDto.name,
         description: createExperimentDto.description,
         status: createExperimentDto.status,
@@ -245,13 +245,11 @@ describe("ExperimentRepository", () => {
       });
 
       // Create experiment with archived status
-      const { experiment: archivedExperiment } = await testApp.createExperiment(
-        {
-          name: "Archived Experiment",
-          userId,
-          status: "archived",
-        },
-      );
+      await testApp.createExperiment({
+        name: "Archived Experiment",
+        userId,
+        status: "archived",
+      });
 
       // Act - filter by active status
       const result = await repository.findAll(userId, undefined, "active");

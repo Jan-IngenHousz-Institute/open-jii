@@ -32,7 +32,7 @@ export class ExperimentController {
   ) {}
 
   @TsRestHandler(contract.experiments.createExperiment)
-  async createExperiment(@CurrentUser() user: SessionUser) {
+  createExperiment(@CurrentUser() user: SessionUser) {
     return tsRestHandler(
       contract.experiments.createExperiment,
       async ({ body }) => {
@@ -61,7 +61,7 @@ export class ExperimentController {
   }
 
   @TsRestHandler(contract.experiments.getExperiment)
-  async getExperiment() {
+  getExperiment() {
     return tsRestHandler(
       contract.experiments.getExperiment,
       async ({ params }) => {
@@ -86,7 +86,7 @@ export class ExperimentController {
   }
 
   @TsRestHandler(contract.experiments.listExperiments)
-  async listExperiments(@CurrentUser() user: SessionUser) {
+  listExperiments(@CurrentUser() user: SessionUser) {
     return tsRestHandler(
       contract.experiments.listExperiments,
       async ({ query }) => {
@@ -119,7 +119,7 @@ export class ExperimentController {
   }
 
   @TsRestHandler(contract.experiments.updateExperiment)
-  async updateExperiment(@CurrentUser() user: SessionUser) {
+  updateExperiment(@CurrentUser() user: SessionUser) {
     return tsRestHandler(
       contract.experiments.updateExperiment,
       async ({ params, body }) => {
@@ -147,7 +147,7 @@ export class ExperimentController {
   }
 
   @TsRestHandler(contract.experiments.deleteExperiment)
-  async deleteExperiment() {
+  deleteExperiment() {
     return tsRestHandler(
       contract.experiments.deleteExperiment,
       async ({ params }) => {

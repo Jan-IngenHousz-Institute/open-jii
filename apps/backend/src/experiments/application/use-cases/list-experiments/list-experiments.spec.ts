@@ -111,7 +111,7 @@ describe("ListExperimentsUseCase", () => {
     });
 
     // Create archived experiment
-    const { experiment: archivedExperiment } = await testApp.createExperiment({
+    await testApp.createExperiment({
       name: "Archived Experiment",
       userId,
       status: "archived",
