@@ -229,6 +229,7 @@ resource "aws_iam_policy" "oidc_role_policy" {
           "ecs:ListClusters",
           "ecs:DescribeClusters",
           "ecr:DescribeImages",
+          "ecr:ListTagsForResource",
           "ecs:ListServices"
         ]
         Resource = "*"
