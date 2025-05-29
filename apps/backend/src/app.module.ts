@@ -6,6 +6,7 @@ import databricksConfig from "./common/config/databricks.config";
 import { DatabaseModule } from "./common/database/database.module";
 import { ExperimentModule } from "./experiments/experiment.module";
 import { HealthModule } from "./health/health.module";
+import { UserModule } from "./users/user.module";
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { HealthModule } from "./health/health.module";
     }),
     DatabaseModule,
     ExperimentModule,
+    UserModule,
     HealthModule,
   ],
 })
