@@ -6,6 +6,7 @@ variable "cluster_name" {
 variable "environment" {
   description = "Environment name (e.g., dev, staging, prod)"
   type        = string
+  default     = "dev"
 }
 
 variable "family" {
@@ -21,21 +22,25 @@ variable "execution_role_arn" {
 variable "cpu" {
   description = "CPU units for the ECS task"
   type        = string
+  default     = "256"
 }
 
 variable "memory" {
   description = "Memory for the ECS task"
   type        = string
+  default     = "512"
 }
 
 variable "network_mode" {
   description = "Network mode for the ECS task"
   type        = string
+  default     = "awsvpc"
 }
 
 variable "container_name" {
   description = "Name of the container"
   type        = string
+  default     = "app"
 }
 
 variable "image" {
@@ -47,16 +52,19 @@ variable "image" {
 variable "container_port" {
   description = "Container port to expose"
   type        = number
+  default     = 3020
 }
 
 variable "host_port" {
   description = "Host port to map to the container"
   type        = number
+  default     = 3020
 }
 
 variable "desired_count" {
   description = "Desired count for ECS service"
   type        = number
+  default     = 1
 }
 
 variable "security_groups" {
@@ -72,6 +80,7 @@ variable "subnets" {
 variable "assign_public_ip" {
   description = "Assign public IP to the ECS Service"
   type        = bool
+  default     = false
 }
 
 variable "target_group_arn" {
@@ -87,11 +96,13 @@ variable "vpc_id" {
 variable "service_name" {
   description = "ECS service name"
   type        = string
+  default     = "backend-service"
 }
 
 variable "region" {
   description = "AWS region for Secrets Manager"
   type        = string
+  default     = "us-east-1"
 }
 
 variable "account_id" {
@@ -107,4 +118,22 @@ variable "db_username_arn" {
 variable "db_password_arn" {
   description = "ARN of the Secrets Manager secret key for DB password"
   type        = string
+}
+
+variable "db_host" {
+  description = "Database host name"
+  type        = string
+  default     = "localhost"
+}
+
+variable "db_port" {
+  description = "Database port"
+  type        = number
+  default     = 5432
+}
+
+variable "db_name" {
+  description = "Database name"
+  type        = string
+  default     = "app_db"
 }
