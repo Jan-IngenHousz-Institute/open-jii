@@ -28,11 +28,11 @@ resource "aws_ecs_task_definition" "app_task" {
       secrets = [
         {
           name      = "DB_USERNAME"
-          valueFrom = "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:myapp/db_credentials:username::"
+          valueFrom = var.db_username_arn
         },
         {
           name      = "DB_PASSWORD"
-          valueFrom = "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:myapp/db_credentials:password::"
+          valueFrom = var.db_password_arn
         }
       ]
     }
