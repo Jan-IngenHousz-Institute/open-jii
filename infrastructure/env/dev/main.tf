@@ -304,4 +304,5 @@ module "aurora_db" {
   master_username = "dev_db"
   db_subnet_group_name = module.vpc.db_subnet_group_name
   vpc_security_group_ids = [module.vpc.aurora_security_group_id]
+  aws_region               = var.aws_region
 }
