@@ -25,18 +25,47 @@ resource "aws_ecs_task_definition" "app_task" {
           hostPort      = var.host_port
         }
       ],
-      secrets = [
-        {
-          name      = "DB_USERNAME"
-          valueFrom = var.db_username_arn
-        },
-        {
-          name      = "DB_PASSWORD"
-          valueFrom = var.db_password_arn
-        }
-      ]
+       environment = [
+      {
+        name  = "PORT"
+        value = tostring(var.container_port)
+      },
+      {
+        name  = "NODE_ENV"
+        value = var.environment == "Prod" ? "production" : lower(var.environment)
+      },
+      {
+        name  = "DB_HOST"
+        value = var.db_host
+      },
+      {
+        name  = "DB_PORT"
+        value = tostring(var.db_port)
+      },
+      {
+        name  = "DB_NAME"
+        value = var.db_name
+      }
+    ],
+    secrets = [
+      {
+        name      = "DB_USERNAME"
+        valueFrom = var.db_username_arn
+      },
+      {
+        name      = "DB_PASSWORD"
+        valueFrom = var.db_password_arn
+      }
+    ],
+    healthCheck = {
+      command     = local.healthcheck_cmd
+      interval    = 60
+      timeout     = 5
+      retries     = 3
+      startPeriod = 30
     }
-  ])
+  }
+])
 }
 
 ##### ECS Service #####
@@ -59,6 +88,8 @@ resource "aws_ecs_service" "app_service" {
     assign_public_ip = false                          # Keep backend private
     security_groups  = var.security_groups       # Reference security group
   }
+
+  depends_on = [aws_ecs_task_definition.app_task]
 }
 
 ##### Auto-Scaling #####
