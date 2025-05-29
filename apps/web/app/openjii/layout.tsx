@@ -1,5 +1,5 @@
 import { Breadcrumbs } from "@/components/app-breadcrumbs";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebarWrapper } from "@/components/app-sidebar-wrapper";
 import { headers } from "next/headers";
 import type React from "react";
 
@@ -22,7 +22,7 @@ export default async function AppLayout({
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebarWrapper />
       <SidebarInset>
         <header className="group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear">
           <div className="flex items-center gap-2 px-4">
