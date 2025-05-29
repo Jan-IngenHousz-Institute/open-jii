@@ -180,12 +180,18 @@ export class TestHarness {
 
   public async createTestUser({
     email = faker.internet.email(),
+    name = faker.person.fullName(),
+    emailVerified = null,
+    image = null,
   }: {
     email?: string;
-  }): Promise<string> {
+    name?: string;
+    emailVerified?: Date | null;
+    image?: string | null;
+  } = {}): Promise<string> {
     const [user] = await this.database
       .insert(users)
-      .values({ email })
+      .values({ email, name, emailVerified, image })
       .returning();
     return user.id;
   }
