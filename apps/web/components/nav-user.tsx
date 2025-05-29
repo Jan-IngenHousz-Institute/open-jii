@@ -78,7 +78,10 @@ export function NavUser({
             <DropdownMenuSeparator />
             <form action={handleLogout}>
               <DropdownMenuItem asChild>
-                <button type="submit" className="flex w-full cursor-default items-center">
+                <button
+                  type="submit"
+                  className="flex w-full cursor-default items-center"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   Log out
                 </button>
