@@ -71,7 +71,7 @@ export interface StatementResponse {
   };
 }
 
-export interface DatabricksExperimentAnalytics {
+export interface SchemaData {
   columns: {
     name: string;
     type_name: string;

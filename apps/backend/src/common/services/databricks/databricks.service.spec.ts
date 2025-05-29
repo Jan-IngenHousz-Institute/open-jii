@@ -558,13 +558,13 @@ describe("DatabricksService", () => {
     });
   });
 
-  describe("getExperimentData", () => {
+  describe("getExperimentSchemaData", () => {
     describe("Success scenarios", () => {
-      it("should fetch experiment analytics data successfully", async () => {
+      it("should fetch experiment data successfully", async () => {
         mockTokenResponse();
         mockSqlStatementSuccess("exp-123");
 
-        const result = await service.getExperimentData("exp-123", "name");
+        const result = await service.getExperimentSchemaData("exp-123", "name");
 
         expect(result.isSuccess()).toBe(true);
         assertSuccess(result);
@@ -588,7 +588,7 @@ describe("DatabricksService", () => {
         const { pendingScope, successScope } =
           mockSqlStatementPendingThenSucceeded("exp-456");
 
-        const result = await service.getExperimentData("exp-456", "name");
+        const result = await service.getExperimentSchemaData("exp-456", "name");
 
         expect(pendingScope.isDone()).toBeTruthy();
         expect(successScope.isDone()).toBeTruthy();
@@ -605,7 +605,7 @@ describe("DatabricksService", () => {
       it("should handle authentication failures", async () => {
         mockTokenFailure();
 
-        const result = await service.getExperimentData("exp-123", "name");
+        const result = await service.getExperimentSchemaData("exp-123", "name");
 
         expect(result.isSuccess()).toBe(false);
         assertFailure(result);
@@ -617,7 +617,7 @@ describe("DatabricksService", () => {
         mockTokenResponse();
         mockSqlStatementExecutionFailure();
 
-        const result = await service.getExperimentData("exp-123", "name");
+        const result = await service.getExperimentSchemaData("exp-123", "name");
 
         expect(result.isSuccess()).toBe(false);
         assertFailure(result);
@@ -633,7 +633,7 @@ describe("DatabricksService", () => {
         mockTokenResponse();
         mockSqlStatementFailure(500, "Internal server error");
 
-        const result = await service.getExperimentData("exp-123", "name");
+        const result = await service.getExperimentSchemaData("exp-123", "name");
 
         expect(result.isSuccess()).toBe(false);
         assertFailure(result);

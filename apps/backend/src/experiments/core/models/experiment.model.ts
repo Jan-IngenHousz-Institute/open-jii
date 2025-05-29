@@ -6,6 +6,8 @@ import type {
 } from "@repo/database";
 import { experiments } from "@repo/database";
 
+import type { SchemaData } from "../../../common/services/databricks/databricks.types";
+
 // Create schemas for database operations
 export const createExperimentSchema = createInsertSchema(experiments).omit({
   id: true,
@@ -27,6 +29,10 @@ export const selectExperimentSchema = createSelectSchema(experiments);
 export type CreateExperimentDto = typeof createExperimentSchema._type;
 export type UpdateExperimentDto = typeof updateExperimentSchema._type;
 export type ExperimentDto = typeof selectExperimentSchema._type;
+
+export type ExperimentDtoWithData = ExperimentDto & {
+  data?: SchemaData;
+};
 
 // Define experiment status type based on the schema
 export type ExperimentStatus = (typeof experimentStatusEnum.enumValues)[number];

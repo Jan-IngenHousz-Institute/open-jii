@@ -23,7 +23,7 @@ import type {
   TokenResponse,
   ExecuteStatementRequest,
   StatementResponse,
-  DatabricksExperimentAnalytics,
+  SchemaData,
 } from "./databricks.types";
 
 @Injectable()
@@ -298,10 +298,10 @@ export class DatabricksService {
     }
   }
 
-  async getExperimentData(
+  async getExperimentSchemaData(
     experimentId: string,
     experimentName: string,
-  ): Promise<Result<DatabricksExperimentAnalytics>> {
+  ): Promise<Result<SchemaData>> {
     return await tryCatch(
       async () => {
         const tokenResult = await this.getAccessToken();
@@ -325,9 +325,7 @@ export class DatabricksService {
         }
 
         // Format the response
-        const response = this.formatExperimentAnalyticsResponse(
-          queryResult.value,
-        );
+        const response = this.formatExperimentDataResponse(queryResult.value);
         return response;
       },
       (error) => {
@@ -475,9 +473,9 @@ export class DatabricksService {
     );
   }
 
-  private formatExperimentAnalyticsResponse(
+  private formatExperimentDataResponse(
     response: StatementResponse,
-  ): DatabricksExperimentAnalytics {
+  ): SchemaData {
     if (!response.manifest || !response.result) {
       throw AppError.internal(
         "Invalid SQL statement response: missing manifest or result data",

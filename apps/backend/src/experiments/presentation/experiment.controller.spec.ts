@@ -37,7 +37,7 @@ describe("ExperimentController", () => {
       }),
     );
 
-    jest.spyOn(databricksService, "getExperimentData").mockResolvedValue(
+    jest.spyOn(databricksService, "getExperimentSchemaData").mockResolvedValue(
       success({
         columns: [
           { name: "experiment_id", type_name: "STRING", type_text: "STRING" },
@@ -338,7 +338,7 @@ describe("ExperimentController", () => {
   });
 
   describe("getExperiment", () => {
-    it("should return an experiment by ID with analytics data", async () => {
+    it("should return an experiment by ID with data", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Experiment to Get",
         description: "Detailed description",
@@ -367,35 +367,37 @@ describe("ExperimentController", () => {
 
       // Type the response properly
       const responseBody = response.body as {
-        analytics?: { columns: unknown[]; rows: unknown[] };
+        data?: { columns: unknown[]; rows: unknown[] };
       };
 
-      // Verify analytics data is included
-      expect(responseBody.analytics).toBeDefined();
-      expect(responseBody.analytics?.columns).toHaveLength(2);
-      expect(responseBody.analytics?.rows).toHaveLength(2);
+      // Verify data is included
+      expect(responseBody.data).toBeDefined();
+      expect(responseBody.data?.columns).toHaveLength(2);
+      expect(responseBody.data?.rows).toHaveLength(2);
 
       // Verify that Databricks was called
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.getExperimentData).toHaveBeenCalledWith(
+      expect(databricksService.getExperimentSchemaData).toHaveBeenCalledWith(
         experiment.id,
         experiment.name,
       );
     });
 
-    it("should return experiment without analytics when Databricks fails", async () => {
+    it("should return experiment without data when Databricks fails", async () => {
       // Mock Databricks to fail
-      jest.spyOn(databricksService, "getExperimentData").mockResolvedValue(
-        failure({
-          name: "DatabricksError",
-          code: "INTERNAL_ERROR",
-          message: "Failed to fetch analytics data",
-          statusCode: 500,
-        }),
-      );
+      jest
+        .spyOn(databricksService, "getExperimentSchemaData")
+        .mockResolvedValue(
+          failure({
+            name: "DatabricksError",
+            code: "INTERNAL_ERROR",
+            message: "Failed to fetch data",
+            statusCode: 500,
+          }),
+        );
 
       const { experiment } = await testApp.createExperiment({
-        name: "Experiment without Analytics",
+        name: "Experiment without Data",
         description: "Detailed description",
         userId: testUserId,
       });
@@ -421,14 +423,14 @@ describe("ExperimentController", () => {
       });
 
       // Type the response properly
-      const responseBody = response.body as { analytics?: unknown };
+      const responseBody = response.body as { data?: unknown };
 
-      // Verify analytics data is undefined when Databricks fails
-      expect(responseBody.analytics).toBeUndefined();
+      // Verify data is undefined when Databricks fails
+      expect(responseBody.data).toBeUndefined();
 
       // Verify that Databricks was still called
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.getExperimentData).toHaveBeenCalledWith(
+      expect(databricksService.getExperimentSchemaData).toHaveBeenCalledWith(
         experiment.id,
         experiment.name,
       );
@@ -453,7 +455,7 @@ describe("ExperimentController", () => {
 
       // Verify that Databricks was not called since experiment wasn't found
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.getExperimentData).not.toHaveBeenCalled();
+      expect(databricksService.getExperimentSchemaData).not.toHaveBeenCalled();
     });
 
     it("should return 400 for invalid UUID", async () => {

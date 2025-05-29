@@ -1,20 +1,17 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { DatabricksService } from "../../../../common/services/databricks/databricks.service";
-import { DatabricksExperimentAnalytics } from "../../../../common/services/databricks/databricks.types";
 import {
   Result,
   success,
   failure,
   AppError,
 } from "../../../../common/utils/fp-utils";
-import { ExperimentDto } from "../../../core/models/experiment.model";
+import {
+  ExperimentDto,
+  ExperimentDtoWithData,
+} from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-
-// Extended response type that includes Databricks SQL data
-interface ExperimentWithAnalytics extends ExperimentDto {
-  analytics?: DatabricksExperimentAnalytics;
-}
 
 @Injectable()
 export class GetExperimentUseCase {
@@ -25,7 +22,7 @@ export class GetExperimentUseCase {
     private readonly databricksService: DatabricksService,
   ) {}
 
-  async execute(id: string): Promise<Result<ExperimentWithAnalytics>> {
+  async execute(id: string): Promise<Result<ExperimentDtoWithData>> {
     this.logger.log(`Getting experiment with ID ${id}`);
 
     const experimentResult = await this.experimentRepository.findOne(id);
@@ -39,17 +36,16 @@ export class GetExperimentUseCase {
       this.logger.debug(`Found experiment "${experiment.name}" (ID: ${id})`);
 
       // Fetch additional data from Databricks
-      const databricksResult = await this.databricksService.getExperimentData(
-        id,
-        experiment.name,
-      );
+      const databricksResult =
+        await this.databricksService.getExperimentSchemaData(
+          id,
+          experiment.name,
+        );
 
-      // Combine experiment data with Databricks analytics data
-      const response: ExperimentWithAnalytics = {
+      // Combine experiment data with Databricks data
+      const response: ExperimentDtoWithData = {
         ...experiment,
-        analytics: databricksResult.isSuccess()
-          ? databricksResult.value
-          : undefined,
+        data: databricksResult.isSuccess() ? databricksResult.value : undefined,
       };
 
       if (databricksResult.isFailure()) {

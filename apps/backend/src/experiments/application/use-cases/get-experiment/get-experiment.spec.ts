@@ -25,8 +25,8 @@ describe("GetExperimentUseCase", () => {
     useCase = testApp.module.get(GetExperimentUseCase);
     databricksService = testApp.module.get(DatabricksService);
 
-    // Mock the Databricks service to return successful analytics data
-    jest.spyOn(databricksService, "getExperimentData").mockResolvedValue(
+    // Mock the Databricks service to return successful data
+    jest.spyOn(databricksService, "getExperimentSchemaData").mockResolvedValue(
       success({
         columns: [
           { name: "id", type_name: "STRING", type_text: "STRING" },
@@ -51,7 +51,7 @@ describe("GetExperimentUseCase", () => {
     await testApp.teardown();
   });
 
-  it("should return an experiment with analytics when found", async () => {
+  it("should return an experiment with data when found", async () => {
     // Create an experiment in the database
     const { experiment } = await testApp.createExperiment({
       name: "Test Experiment",
@@ -82,9 +82,9 @@ describe("GetExperimentUseCase", () => {
       createdBy: testUserId,
     });
 
-    // Verify analytics data was included
-    expect(retrievedExperiment.analytics).toBeDefined();
-    expect(retrievedExperiment.analytics).toEqual({
+    // Verify data was included
+    expect(retrievedExperiment.data).toBeDefined();
+    expect(retrievedExperiment.data).toEqual({
       columns: [
         { name: "id", type_name: "STRING", type_text: "STRING" },
         { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" },
@@ -99,19 +99,19 @@ describe("GetExperimentUseCase", () => {
 
     // Verify Databricks service was called
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksService.getExperimentData).toHaveBeenCalledWith(
+    expect(databricksService.getExperimentSchemaData).toHaveBeenCalledWith(
       experiment.id,
       experiment.name,
     );
   });
 
-  it("should return experiment without analytics when Databricks fails", async () => {
+  it("should return experiment without data when Databricks fails", async () => {
     // Mock Databricks service to fail
-    jest.spyOn(databricksService, "getExperimentData").mockResolvedValue(
+    jest.spyOn(databricksService, "getExperimentSchemaData").mockResolvedValue(
       failure({
         name: "DatabricksError",
         code: "INTERNAL_ERROR",
-        message: "Failed to fetch analytics data",
+        message: "Failed to fetch data",
         statusCode: 500,
       }),
     );
@@ -139,12 +139,12 @@ describe("GetExperimentUseCase", () => {
       createdBy: testUserId,
     });
 
-    // Verify analytics data is undefined when Databricks fails
-    expect(retrievedExperiment.analytics).toBeUndefined();
+    // Verify data is undefined when Databricks fails
+    expect(retrievedExperiment.data).toBeUndefined();
 
     // Verify Databricks service was called
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksService.getExperimentData).toHaveBeenCalledWith(
+    expect(databricksService.getExperimentSchemaData).toHaveBeenCalledWith(
       experiment.id,
       experiment.name,
     );
@@ -166,12 +166,12 @@ describe("GetExperimentUseCase", () => {
 
     // Verify Databricks service was not called since experiment wasn't found
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksService.getExperimentData).not.toHaveBeenCalled();
+    expect(databricksService.getExperimentSchemaData).not.toHaveBeenCalled();
   });
 
-  it("should include analytics with empty data when Databricks returns no results", async () => {
+  it("should include data with empty results when Databricks returns no results", async () => {
     // Mock Databricks service to return empty results
-    jest.spyOn(databricksService, "getExperimentData").mockResolvedValue(
+    jest.spyOn(databricksService, "getExperimentSchemaData").mockResolvedValue(
       success({
         columns: [
           { name: "id", type_name: "STRING", type_text: "STRING" },
@@ -185,7 +185,7 @@ describe("GetExperimentUseCase", () => {
 
     // Create an experiment in the database
     const { experiment } = await testApp.createExperiment({
-      name: "Empty Analytics Experiment",
+      name: "Empty Data Experiment",
       userId: testUserId,
     });
 
@@ -204,14 +204,14 @@ describe("GetExperimentUseCase", () => {
       createdBy: testUserId,
     });
 
-    // Verify analytics data is included but empty
-    expect(retrievedExperiment.analytics).toBeDefined();
-    expect(retrievedExperiment.analytics?.rows).toEqual([]);
-    expect(retrievedExperiment.analytics?.totalRows).toBe(0);
+    // Verify data is included but empty
+    expect(retrievedExperiment.data).toBeDefined();
+    expect(retrievedExperiment.data?.rows).toEqual([]);
+    expect(retrievedExperiment.data?.totalRows).toBe(0);
 
     // Verify Databricks service was called
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksService.getExperimentData).toHaveBeenCalledWith(
+    expect(databricksService.getExperimentSchemaData).toHaveBeenCalledWith(
       experiment.id,
       experiment.name,
     );
