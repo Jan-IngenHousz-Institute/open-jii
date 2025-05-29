@@ -2,6 +2,7 @@ import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { AxiosError, AxiosResponse, isAxiosError } from "axios";
+import z from "zod";
 
 import {
   Result,
@@ -10,7 +11,7 @@ import {
   apiErrorMapper,
   success,
 } from "../../utils/fp-utils";
-import { DatabricksConfig } from "./databricks.types";
+import { DatabricksConfig, PerformanceTarget } from "./databricks.types";
 import type {
   DatabricksHealthCheck,
   DatabricksJobRunResponse,
@@ -53,22 +54,24 @@ export class DatabricksService {
   }
 
   private validateConfig(): void {
-    const { host, clientId, clientSecret, jobId } = this.config;
+    const databricksConfigSchema = z.object({
+      host: z.string().url(),
+      clientId: z.string().min(1),
+      clientSecret: z.string().min(1),
+      jobId: z
+        .string()
+        .min(1)
+        .refine((val) => !isNaN(Number(val)), {
+          message: "Job ID must be numeric",
+        }),
+    });
 
-    if (!host || !clientId || !clientSecret || !jobId) {
+    try {
+      databricksConfigSchema.parse(this.config);
+    } catch {
       throw new Error(
         "Invalid Databricks configuration: all fields must be non-empty strings",
       );
-    }
-
-    try {
-      new URL(host);
-    } catch {
-      throw new Error(`Invalid Databricks host URL: ${host}`);
-    }
-
-    if (isNaN(parseInt(jobId, 10))) {
-      throw new Error(`Invalid Databricks job ID: ${jobId} must be a number`);
     }
   }
 
@@ -269,7 +272,7 @@ export class DatabricksService {
       queue: {
         enabled: true,
       },
-      performance_target: "STANDARD",
+      performance_target: PerformanceTarget.STANDARD,
       idempotency_token: params.experimentId,
     };
   }
