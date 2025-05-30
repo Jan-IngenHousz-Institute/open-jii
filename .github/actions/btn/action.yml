@@ -23,6 +23,10 @@ runs:
       with:
         version: 8  # Or whatever version you need
 
+    - name: Verify pnpm install
+      run: pnpm -v
+      shell: bash
+
     - name: Setup pnpm store path
       run: pnpm config set store-dir ~/.pnpm-store
       shell: bash
