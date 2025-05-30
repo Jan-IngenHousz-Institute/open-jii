@@ -1,3 +1,3 @@
-export default async function seed() {
+export default function seed() {
   return;
 }

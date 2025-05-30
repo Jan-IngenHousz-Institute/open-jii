@@ -37,3 +37,4 @@ jobs:
           repository-name: "open-jii"
           docker-file-path: "apps/backend/Dockerfile"
           build-context: "."
+

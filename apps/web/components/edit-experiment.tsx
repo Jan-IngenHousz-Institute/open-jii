@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import type z from "zod";
 
-import type { UpdateExperimentBody } from "@repo/api";
 import { zExperimentVisibility } from "@repo/api";
 import {
   Button,
@@ -69,32 +68,17 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
   }
 
   async function onSubmit(data: z.infer<typeof editExperimentFormSchema>) {
-    try {
-      const body: UpdateExperimentBody = {
-        name: data.name,
-        description: data.description,
-        visibility: data.visibility,
-        embargoIntervalDays: data.embargoIntervalDays,
-      };
+    await updateExperiment({
+      params: { id: experiment.id },
+      body: data,
+    });
 
-      await updateExperiment({
-        params: { id: experiment.id },
-        body,
-      });
-
-      // Show message
-      toast({
-        description: "Experiment updated successfully",
-      });
-      // Navigate to the list of experiments
-      router.push(`/openjii/experiments`);
-    } catch (error) {
-      toast({
-        description: "Failed to update experiment",
-        variant: "destructive",
-      });
-      console.error("Failed to update experiment:", error);
-    }
+    // Show message
+    toast({
+      description: "Experiment updated successfully",
+    });
+    // Navigate to the list of experiments
+    router.push(`/openjii/experiments`);
   }
 
   return (
@@ -107,7 +91,7 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
             <FormItem>
               <FormLabel>Name</FormLabel>
               <FormControl>
-                <Input data-1p-ignore {...field} />
+                <Input {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -159,7 +143,7 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
             <FormItem>
               <FormLabel>Embargo interval days</FormLabel>
               <FormControl>
-                <Input data-1p-ignore {...field} />
+                <Input {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

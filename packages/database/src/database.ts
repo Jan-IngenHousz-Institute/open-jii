@@ -6,6 +6,7 @@ import * as schema from "./schema";
 // Only load dotenv in non-Next.js environments
 // Next.js handles environment variables differently
 if (!process.env.NEXT_RUNTIME) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   require("dotenv/config");
 }
 

@@ -8,8 +8,8 @@
     "dev": "turbo dev",
     "build:affected": "turbo build --affected",
     "check:affected": "turbo ls --affected",
-    "format": "prettier --write \"**/*.{ts,tsx,js,md,mdx,css,yaml,yml}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,md,mdx,css,yaml,yml}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,js,md,mdx,css,yaml,yml,json}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,md,mdx,css,yaml,yml,json}\"",
     "lint": "turbo run lint --continue -- --cache --cache-location .cache/.eslintcache",
     "lint:fix": "turbo run lint --continue -- --fix --cache --cache-location .cache/.eslintcache",
     "lint:ws": "pnpm dlx sherif@latest",
@@ -29,7 +29,8 @@
     "db:studio": "turbo --filter database db:studio",
     "postinstall": "pnpm lint:ws",
     "typecheck": "turbo run typecheck",
-    "ui-add": "turbo run ui-add"
+    "ui-add": "turbo run ui-add",
+    "dev:fb": "turbo run dev --filter=backend --filter=web"
   },
   "devDependencies": {
     "@asyncapi/cli": "^2.16.0",

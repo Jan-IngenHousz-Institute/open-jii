@@ -10,7 +10,7 @@ import {
   assertSuccess,
   defaultRepositoryErrorMapper,
   failure,
-  handleResult,
+  handleFailure,
   isFailure,
   isSuccess,
   success,
@@ -97,7 +97,7 @@ describe("Functional Programming Utilities", () => {
       it("should fold with the failure function", () => {
         const folded = failureResult.fold(
           (_) => "Success",
-          (err) => `Failure: ${err.message}`,
+          (err: AppError) => `Failure: ${err.message}`,
         );
         expect(folded).toBe("Failure: Test error");
       });
@@ -193,7 +193,7 @@ describe("Functional Programming Utilities", () => {
     });
   });
 
-  describe("handleResult", () => {
+  describe("handleFailure", () => {
     let mockLogger: jest.Mocked<Logger>;
 
     beforeEach(() => {
@@ -206,24 +206,12 @@ describe("Functional Programming Utilities", () => {
       } as unknown as jest.Mocked<Logger>;
     });
 
-    it("should handle success results properly", () => {
-      const result = success({ data: "test" });
-      const handled = handleResult(result, mockLogger);
-
-      expect(handled).toEqual({
-        status: StatusCodes.OK,
-        body: { data: "test" },
-      });
-      expect(mockLogger.error).not.toHaveBeenCalled();
-      expect(mockLogger.warn).not.toHaveBeenCalled();
-    });
-
     it("should handle server errors properly", () => {
       const error = AppError.internal("Server error", "SERVER_ERROR", {
         detail: "test",
       });
-      const result = failure(error);
-      const handled = handleResult(result, mockLogger);
+      const failureResult = failure(error) as Failure<AppError>;
+      const handled = handleFailure(failureResult, mockLogger);
 
       expect(handled).toEqual({
         status: StatusCodes.INTERNAL_SERVER_ERROR,
@@ -233,10 +221,12 @@ describe("Functional Programming Utilities", () => {
           details: { detail: "test" },
         },
       });
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.error).toHaveBeenCalledWith(
         "SERVER_ERROR: Server error",
         { detail: "test" },
       );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });
 
@@ -244,8 +234,8 @@ describe("Functional Programming Utilities", () => {
       const error = AppError.badRequest("Bad request", "BAD_REQUEST", {
         detail: "test",
       });
-      const result = failure(error);
-      const handled = handleResult(result, mockLogger);
+      const failureResult = failure(error) as Failure<AppError>;
+      const handled = handleFailure(failureResult, mockLogger);
 
       expect(handled).toEqual({
         status: StatusCodes.BAD_REQUEST,
@@ -255,7 +245,9 @@ describe("Functional Programming Utilities", () => {
           details: { detail: "test" },
         },
       });
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.error).not.toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.warn).toHaveBeenCalledWith("BAD_REQUEST: Bad request", {
         detail: "test",
       });
@@ -263,17 +255,99 @@ describe("Functional Programming Utilities", () => {
 
     it("should exclude details in production", () => {
       const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = "production";
+      (process.env as { NODE_ENV?: string }).NODE_ENV = "production";
 
       const error = AppError.badRequest("Bad request", "BAD_REQUEST", {
         detail: "test",
       });
-      const result = failure(error);
-      const handled = handleResult(result, mockLogger);
+      const failureResult = failure(error) as Failure<AppError>;
+      const handled = handleFailure(failureResult, mockLogger);
 
       expect(handled.body).not.toHaveProperty("details");
 
-      process.env.NODE_ENV = originalEnv;
+      (process.env as { NODE_ENV?: string }).NODE_ENV = originalEnv;
+    });
+
+    it("should log errors with status code 500 and above using error level", () => {
+      const error = new AppError("Critical error", "CRITICAL_ERROR", 503, {
+        service: "external",
+      });
+      const failureResult = failure(error) as Failure<AppError>;
+      handleFailure(failureResult, mockLogger);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        "CRITICAL_ERROR: Critical error",
+        { service: "external" },
+      );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+
+    it("should log errors with status code below 500 using warn level", () => {
+      const error = AppError.unauthorized("Access denied", "UNAUTHORIZED", {
+        userId: "123",
+      });
+      const failureResult = failure(error) as Failure<AppError>;
+      handleFailure(failureResult, mockLogger);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        "UNAUTHORIZED: Access denied",
+        { userId: "123" },
+      );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    });
+
+    it("should handle errors without details", () => {
+      const error = AppError.notFound("Resource not found", "NOT_FOUND");
+      const failureResult = failure(error) as Failure<AppError>;
+      const handled = handleFailure(failureResult, mockLogger);
+
+      expect(handled).toEqual({
+        status: StatusCodes.NOT_FOUND,
+        body: {
+          message: "Resource not found",
+          code: "NOT_FOUND",
+        },
+      });
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        "NOT_FOUND: Resource not found",
+        undefined,
+      );
+    });
+
+    it("should return proper status codes for different error types", () => {
+      const testCases = [
+        {
+          error: AppError.badRequest(),
+          expectedStatus: StatusCodes.BAD_REQUEST,
+        },
+        {
+          error: AppError.unauthorized(),
+          expectedStatus: StatusCodes.UNAUTHORIZED,
+        },
+        {
+          error: AppError.forbidden(),
+          expectedStatus: StatusCodes.FORBIDDEN,
+        },
+        {
+          error: AppError.notFound(),
+          expectedStatus: StatusCodes.NOT_FOUND,
+        },
+        {
+          error: AppError.internal(),
+          expectedStatus: StatusCodes.INTERNAL_SERVER_ERROR,
+        },
+      ];
+
+      testCases.forEach(({ error, expectedStatus }) => {
+        const failureResult = failure(error) as Failure<AppError>;
+        const handled = handleFailure(failureResult, mockLogger);
+        expect(handled.status).toBe(expectedStatus);
+      });
     });
   });
 
@@ -436,12 +510,8 @@ describe("Functional Programming Utilities", () => {
       const error = (result as Failure<AppError>).error;
       expect(error.details).toBeDefined();
       // The details should contain information about both failed fields
-      expect(error.details).toMatchObject(
-        expect.objectContaining({
-          name: expect.anything(),
-          age: expect.anything(),
-        }),
-      );
+      expect(error.details).toHaveProperty("name");
+      expect(error.details).toHaveProperty("age");
     });
 
     it("should handle non-Zod errors", () => {
@@ -450,7 +520,7 @@ describe("Functional Programming Utilities", () => {
         parse: () => {
           throw new Error("Non-Zod error");
         },
-      } as unknown as z.ZodType<any>;
+      } as unknown as z.ZodType<Record<string, unknown>>;
 
       const result = validate(badSchema, {});
 

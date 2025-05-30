@@ -1,4 +1,5 @@
 import type { Logger } from "@nestjs/common";
+import { isAxiosError } from "axios";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
 
@@ -31,7 +32,7 @@ export function assertFailure<T, E>(
   if (!isFailure(result)) {
     throw new Error(
       `Expected result to be a failure, but got success with value: ${JSON.stringify(
-        result._tag === "success" ? result.value : null,
+        result.value,
       )}`,
     );
   }
@@ -47,7 +48,7 @@ export function assertSuccess<T, E>(
   if (!isSuccess(result)) {
     throw new Error(
       `Expected result to be a success, but got failure with error: ${JSON.stringify(
-        result._tag === "failure" ? result.error : null,
+        result.error,
       )}`,
     );
   }
@@ -64,7 +65,7 @@ export class Success<T> {
     return true;
   }
 
-  isFailure(): boolean {
+  isFailure(): this is Failure<never> {
     return false;
   }
 
@@ -73,14 +74,14 @@ export class Success<T> {
     return success(fn(this.value));
   }
 
-  chain<U>(
-    fn: (value: T) => Result<U> | Promise<Result<U>>,
-  ): Result<U> | Promise<Result<U>> {
+  chain<U, E = AppError>(
+    fn: (value: T) => Result<U, E> | Promise<Result<U, E>>,
+  ): Result<U, E> | Promise<Result<U, E>> {
     return fn(this.value);
   }
 
   // Fold to handle both success and failure cases
-  fold<U>(onSuccess: (value: T) => U, _: (error: never) => U): U {
+  fold<U>(onSuccess: (value: T) => U, _onFailure: (error: never) => U): U {
     return onSuccess(this.value);
   }
 
@@ -97,7 +98,7 @@ export class Failure<E> {
   readonly _tag = "failure";
   constructor(readonly error: E) {}
 
-  isSuccess(): boolean {
+  isSuccess(): this is Success<never> {
     return false;
   }
 
@@ -106,18 +107,18 @@ export class Failure<E> {
   }
 
   // Map and chain for monadic operations
-  map<U>(_: (value: never) => U): Result<U, E> {
+  map<U>(_fn: (value: never) => U): Result<U, E> {
     return this as unknown as Result<U, E>;
   }
 
-  chain<U>(
-    _: (value: never) => Result<U> | Promise<Result<U>>,
+  chain<U, F = E>(
+    _fn: (value: never) => Result<U, F> | Promise<Result<U, F>>,
   ): Result<U, E> | Promise<Result<U, E>> {
     return this as unknown as Result<U, E>;
   }
 
   // Fold to handle both success and failure cases
-  fold<U>(_: (value: never) => U, onFailure: (error: E) => U): U {
+  fold<U>(_onSuccess: (value: never) => U, onFailure: (error: E) => U): U {
     return onFailure(this.error);
   }
 
@@ -130,8 +131,7 @@ export class Failure<E> {
 /**
  * Helper functions to create Result instances
  */
-export const success = <T extends unknown>(value: T): Result<T> =>
-  new Success(value);
+export const success = <T, _>(value: T): Result<T> => new Success(value);
 
 export const failure = <E extends AppError>(error: E): Result<never, E> =>
   new Failure(error);
@@ -139,13 +139,15 @@ export const failure = <E extends AppError>(error: E): Result<never, E> =>
 /**
  * Base application error type
  */
-export class AppError {
+export class AppError extends Error {
   constructor(
     readonly message: string,
     readonly code: string,
     readonly statusCode: number = StatusCodes.INTERNAL_SERVER_ERROR,
     readonly details?: unknown,
-  ) {}
+  ) {
+    super();
+  }
 
   static notFound(
     message = "Resource not found",
@@ -215,38 +217,32 @@ export class AppError {
 }
 
 /**
- * Utility for handling a Result in a controller context
- * @param result The Result object to handle
+ * Utility for handling errors in a controller context
+ * @param error The AppError object to handle
  * @param logger Logger to use for logging errors
  */
-export function handleResult<T>(result: Result<T>, logger: Logger) {
-  return result.fold(
-    // Success case
-    (value) => ({
-      status: StatusCodes.OK as const,
-      body: value,
-    }),
-    // Failure case
-    (error) => {
-      // Log the error
-      if (error.statusCode >= 500) {
-        logger.error(`${error.code}: ${error.message}`, error.details);
-      } else {
-        logger.warn(`${error.code}: ${error.message}`, error.details);
-      }
+export function handleFailure(failure: Failure<AppError>, logger: Logger) {
+  const error = failure.error;
 
-      return {
-        status: error.statusCode as number,
-        body: {
-          message: error.message,
-          code: error.code,
-          ...(process.env.NODE_ENV !== "production" && error.details
-            ? { details: error.details }
-            : {}),
-        },
-      };
+  // Log the error
+  if (error.statusCode >= 500) {
+    logger.error(`${error.code}: ${error.message}`, error.details);
+  } else {
+    logger.warn(`${error.code}: ${error.message}`, error.details);
+  }
+
+  return {
+    // Todo: fix type casting
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    status: error.statusCode as any,
+    body: {
+      message: error.message,
+      code: error.code,
+      ...(process.env.NODE_ENV !== "production" && error.details
+        ? { details: error.details }
+        : {}),
     },
-  );
+  };
 }
 
 /**
@@ -300,6 +296,65 @@ export function defaultRepositoryErrorMapper(error: unknown): AppError {
   }
 
   return AppError.repositoryError(message);
+}
+
+/**
+ * Error mapper for API/external service operations
+ * @param error The original error
+ * @param context A string describing the operation context
+ * @returns AppError instance with appropriate status code and message
+ */
+export function apiErrorMapper(error: unknown, context?: string): AppError {
+  // Return as is if it's already an AppError
+  if (error instanceof AppError) {
+    return error;
+  }
+
+  // Handle Axios errors - check if the error object has isAxiosError property or response property
+  if (typeof error === "object" && error !== null) {
+    const err = error;
+
+    if (
+      isAxiosError<
+        { message?: string; error_description?: string } | undefined
+      >(err)
+    ) {
+      const status = err.response?.status;
+      const message =
+        err.response?.data?.message ??
+        err.response?.data?.error_description ??
+        (err.message || "Unknown API error");
+
+      const displayMessage = context ? `${context}: ${message}` : message;
+
+      // Map common HTTP status codes to appropriate AppError types
+      switch (status) {
+        case 400:
+          return AppError.badRequest(displayMessage);
+        case 401:
+          return AppError.unauthorized(displayMessage);
+        case 403:
+          return AppError.forbidden(displayMessage);
+        case 404:
+          return AppError.notFound(displayMessage);
+        case 429:
+          return AppError.badRequest(displayMessage, "RATE_LIMIT_EXCEEDED");
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+          return AppError.internal(displayMessage, "SERVICE_UNAVAILABLE");
+        default:
+          return AppError.internal(displayMessage);
+      }
+    }
+  }
+
+  // Handle generic errors
+  const message = error instanceof Error ? error.message : String(error);
+  const displayMessage = context ? `${context}: ${message}` : message;
+
+  return AppError.internal(displayMessage);
 }
 
 /**

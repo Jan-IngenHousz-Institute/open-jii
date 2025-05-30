@@ -1,56 +1,86 @@
 "use client";
 
-import { EditIcon, LockIcon } from "lucide-react";
-import Link from "next/link";
-
-import { zExperimentVisibility } from "@repo/api";
+import type { ExperimentStatus } from "@repo/api";
+import { zExperimentStatus } from "@repo/api";
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@repo/ui/components";
 
 import { useExperiments } from "../hooks/experiment/useExperiments/useExperiments";
+import { ExperimentTableContent } from "./experiment-table-rows";
 
-export function ListExperiments() {
-  const { data } = useExperiments();
+interface ListExperimentProps {
+  userId: string;
+}
 
-  if (data) {
-    return (
+export function ListExperiments({ userId }: ListExperimentProps) {
+  const { data, filter, setFilter, status, setStatus } = useExperiments({});
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end space-x-8">
+        <Select
+          defaultValue="my"
+          value={filter}
+          onValueChange={(value: "my" | "member" | "related" | "all") =>
+            setFilter(value)
+          }
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter experiments" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="my">My Experiments</SelectItem>
+            <SelectItem value="member">Member Experiments</SelectItem>
+            <SelectItem value="related">All Related Experiments</SelectItem>
+            <SelectItem value="all">All Experiments</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={status ?? "all"}
+          onValueChange={(v) =>
+            setStatus(v === "all" ? undefined : (v as ExperimentStatus))
+          }
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            {Object.values(zExperimentStatus.enum).map((s) => (
+              <SelectItem key={s} value={s}>
+                {s}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Experiment name</TableHead>
-            <TableHead>Private</TableHead>
+            <TableHead className="text-center">Visibility</TableHead>
+            <TableHead>State</TableHead>
             <TableHead>Created</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead>Updated</TableHead>
+            <TableHead className="text-center">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.body.map((experiment) => {
-            return (
-              <TableRow key={experiment.id}>
-                <TableCell>{experiment.name}</TableCell>
-                <TableCell>
-                  {experiment.visibility ===
-                    zExperimentVisibility.enum.private && (
-                    <LockIcon size={18} />
-                  )}
-                </TableCell>
-                <TableCell>{experiment.createdAt.substring(0, 10)}</TableCell>
-                <TableCell>
-                  <Link href={`/openjii/experiments/${experiment.id}`}>
-                    <EditIcon size={18} />
-                  </Link>
-                </TableCell>
-              </TableRow>
-            );
-          })}
+          <ExperimentTableContent data={data?.body} userId={userId} />
         </TableBody>
       </Table>
-    );
-  }
+    </div>
+  );
 }

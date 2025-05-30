@@ -27,26 +27,16 @@ import { toast } from "@repo/ui/hooks";
 
 import { useExperimentCreate } from "../hooks/experiment/useExperimentCreate/useExperimentCreate";
 
-interface NewExperimentFormProps {
-  name?: string;
-  visibilityPrivate?: boolean;
-}
-
-export function NewExperimentForm({
-  name,
-  visibilityPrivate,
-}: NewExperimentFormProps) {
+export function NewExperimentForm() {
   const router = useRouter();
   const { mutateAsync: createExperiment, isPending } = useExperimentCreate();
 
   const form = useForm<CreateExperimentBody>({
     resolver: zodResolver(zCreateExperimentBody),
     defaultValues: {
-      name: name ?? "",
+      name: "",
       description: "",
-      visibility: visibilityPrivate
-        ? zExperimentVisibility.enum.private
-        : zExperimentVisibility.enum.public,
+      visibility: zExperimentVisibility.enum.private,
       embargoIntervalDays: 90,
     },
   });
@@ -56,31 +46,16 @@ export function NewExperimentForm({
   }
 
   async function onSubmit(data: CreateExperimentBody) {
-    try {
-      const body: CreateExperimentBody = {
-        name: data.name,
-        description: data.description,
-        visibility: data.visibility,
-        embargoIntervalDays: data.embargoIntervalDays,
-      };
+    await createExperiment({
+      body: data,
+    });
 
-      await createExperiment({
-        body,
-      });
-
-      // Show message
-      toast({
-        description: "Experiment created successfully",
-      });
-      // Navigate to the list of experiments
-      router.push(`/openjii/experiments`);
-    } catch (error) {
-      toast({
-        description: "Failed to create experiment",
-        variant: "destructive",
-      });
-      console.error("Failed to create experiment:", error);
-    }
+    // Show message
+    toast({
+      description: "Experiment created successfully",
+    });
+    // Navigate to the experiment page
+    router.push(`/openjii/experiments`);
   }
 
   return (
@@ -93,7 +68,7 @@ export function NewExperimentForm({
             <FormItem>
               <FormLabel>Name</FormLabel>
               <FormControl>
-                <Input data-1p-ignore {...field} />
+                <Input {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -1,7 +1,7 @@
 import { Image } from "react-native";
 import { bluetoothDeviceToMultispeqStream } from "~/services/multispeq-communication/android-bluetooth-connection/bluetooth-device-to-multispeq-stream";
 import { connectWithBluetoothDevice } from "~/services/multispeq-communication/android-bluetooth-connection/connect-with-bluetooth-device";
-import { MultiSpeqCommandExecutor } from "~/services/multispeq-communication/multispeq-command-executor";
+import { MultispeqCommandExecutor } from "~/services/multispeq-communication/multispeq-command-executor";
 import { MultispeqMeasurementWidget } from "~/widgets/multispeq-measurement-widget";
 
 import multispeqButtonImage from "../../assets/multispeq2-button.png";
@@ -35,7 +35,7 @@ export function BluetoothDeviceDetailsScreen({
       }}
       establishDeviceConnection={async () => {
         const device = await connectWithBluetoothDevice(deviceId);
-        return new MultiSpeqCommandExecutor(
+        return new MultispeqCommandExecutor(
           bluetoothDeviceToMultispeqStream(device),
         );
       }}

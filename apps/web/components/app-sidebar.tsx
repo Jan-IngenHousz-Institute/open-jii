@@ -8,6 +8,7 @@ import {
   Webcam,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import * as React from "react";
 
 import {
@@ -26,11 +27,6 @@ import { NavUser } from "./nav-user";
 
 // This is sample data.
 const data = {
-  user: {
-    name: "Jan IngenHousz",
-    email: "jan@openjii.org",
-    avatar: "/avatars/shadcn.jpg",
-  },
   navExperiments: [
     {
       title: "Experiments",
@@ -43,12 +39,8 @@ const data = {
           url: "/openjii/experiments/new",
         },
         {
-          title: "Public",
-          url: "/openjii/experiments?category=public",
-        },
-        {
-          title: "Private",
-          url: "/openjii/experiments?category=private",
+          title: "Overview",
+          url: "/openjii/experiments",
         },
       ],
     },
@@ -105,7 +97,18 @@ const data = {
   ],
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+interface UserData {
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+}
+
+export function AppSidebar({
+  user,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  user?: UserData | null;
+}) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -115,10 +118,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="/openjii/">
+              <Link href="/openjii/">
                 <Image src="/logo.png" alt="JII logo" width={50} height={50} />
                 <span className="text-base font-semibold">openJII</span>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -128,7 +131,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavItems items={data.navHardware} title="Hardware" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        {user ? (
+          <NavUser
+            user={{
+              name: user.name ?? "User",
+              email: user.email ?? "",
+              avatar: user.image ?? "/avatars/default.jpg",
+            }}
+          />
+        ) : (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                className="data-[slot=sidebar-menu-button]:!p-1.5"
+              >
+                <Link href="/">
+                  <span className="text-base font-semibold">Sign In</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        )}
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

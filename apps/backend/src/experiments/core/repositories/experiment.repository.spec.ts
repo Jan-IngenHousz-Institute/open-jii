@@ -5,8 +5,8 @@ import {
   and,
 } from "@repo/database";
 
+import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
-import { assertSuccess } from "../../utils/fp-utils";
 import { ExperimentRepository } from "./experiment.repository";
 
 describe("ExperimentRepository", () => {
@@ -53,7 +53,7 @@ describe("ExperimentRepository", () => {
       const experiment = experiments[0];
 
       expect(experiment).toMatchObject({
-        id: expect.any(String),
+        id: expect.any(String) as string,
         name: createExperimentDto.name,
         description: createExperimentDto.description,
         status: createExperimentDto.status,
@@ -230,6 +230,87 @@ describe("ExperimentRepository", () => {
         ]),
       );
     });
+
+    it("should filter experiments by status", async () => {
+      // Arrange
+      const userId = await testApp.createTestUser({
+        email: "status-test@example.com",
+      });
+
+      // Create experiment with active status
+      const { experiment: activeExperiment } = await testApp.createExperiment({
+        name: "Active Experiment",
+        userId,
+        status: "active",
+      });
+
+      // Create experiment with archived status
+      await testApp.createExperiment({
+        name: "Archived Experiment",
+        userId,
+        status: "archived",
+      });
+
+      // Act - filter by active status
+      const result = await repository.findAll(userId, undefined, "active");
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+
+      assertSuccess(result);
+      const experiments = result.value;
+      expect(experiments.length).toBe(1);
+      expect(experiments[0].id).toBe(activeExperiment.id);
+      expect(experiments[0].name).toBe("Active Experiment");
+      expect(experiments[0].status).toBe("active");
+    });
+
+    it("should combine relationship filter with status filter", async () => {
+      // Arrange
+      const mainUserId = await testApp.createTestUser({
+        email: "main-combo@example.com",
+      });
+      const otherUserId = await testApp.createTestUser({
+        email: "other-combo@example.com",
+      });
+
+      // Create active experiment owned by main user
+      const { experiment: myActive } = await testApp.createExperiment({
+        name: "My Active",
+        userId: mainUserId,
+        status: "active",
+      });
+
+      // Create archived experiment owned by main user
+      await testApp.createExperiment({
+        name: "My Archived",
+        userId: mainUserId,
+        status: "archived",
+      });
+
+      // Create active experiment owned by other user
+      const { experiment: otherActive } = await testApp.createExperiment({
+        name: "Other Active",
+        userId: otherUserId,
+        status: "active",
+      });
+
+      // Act - filter by "my" relationship and "active" status
+      const result = await repository.findAll(mainUserId, "my", "active");
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+
+      assertSuccess(result);
+      const experiments = result.value;
+      expect(experiments.length).toBe(1);
+      expect(experiments[0].id).toBe(myActive.id);
+      expect(experiments[0].name).toBe("My Active");
+      expect(experiments[0].status).toBe("active");
+
+      // This experiment should be filtered out because it's by another user
+      expect(experiments.some((e) => e.id === otherActive.id)).toBe(false);
+    });
   });
 
   describe("findOne", () => {
@@ -316,6 +397,45 @@ describe("ExperimentRepository", () => {
       expect(dbExperiment[0].name).toBe(updateData.name);
       expect(dbExperiment[0].description).toBe(updateData.description);
       expect(dbExperiment[0].status).toBe(updateData.status);
+    });
+
+    it("should update the updatedAt timestamp when an experiment is modified", async () => {
+      // Arrange
+      const { experiment } = await testApp.createExperiment({
+        name: "Timestamp Test Experiment",
+        description: "Testing updatedAt",
+        userId: testUserId,
+      });
+
+      // Store the original updatedAt timestamp
+      const originalExperiment = await testApp.database
+        .select()
+        .from(experimentsTable)
+        .where(eq(experimentsTable.id, experiment.id))
+        .limit(1);
+
+      const originalUpdatedAt = originalExperiment[0].updatedAt;
+
+      // Add a small delay to ensure timestamp will be different
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Act: update the experiment
+      const updateData = {
+        name: "Updated Timestamp Experiment",
+      };
+
+      const updateResult = await repository.update(experiment.id, updateData);
+      expect(updateResult.isSuccess()).toBe(true);
+
+      // Assert: verify updatedAt was changed
+      const updatedExperiment = await testApp.database
+        .select()
+        .from(experimentsTable)
+        .where(eq(experimentsTable.id, experiment.id))
+        .limit(1);
+
+      expect(updatedExperiment[0].updatedAt).not.toEqual(originalUpdatedAt);
+      expect(updatedExperiment[0].updatedAt > originalUpdatedAt).toBe(true);
     });
   });
 
