@@ -35,8 +35,8 @@ jobs:
   # Job 2: Terraform (Plan & Apply)
   tofu:
     name: OpenTofu
-    # needs: build_lint_test
-    # if: needs.build_lint_test.outputs.has_affected_apps == 'true'
+    needs: build_lint_test
+    if: needs.build_lint_test.outputs.has_affected_apps == 'true'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -70,8 +70,7 @@ jobs:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region: ${{ secrets.AWS_REGION }}
           tofu_version: "1.6.0"
-          environment: "${{ inputs.environment }}"
-        
+          environment: "${{ inputs.environment }}"  
 
       - name: Apply Infrastructure
         run: tofu apply -auto-approve
