@@ -26,33 +26,6 @@ runs:
         restore-keys: |
           ${{ runner.os }}-pnpm-
 
-    # - name: Set up Node.js
-    #   uses: actions/setup-node@v3
-    #   with:
-    #     node-version: ${{ inputs.node-version }}
-    #     cache: "pnpm"  # Automatically caches global pnpm installation
-    
-    # - name: Set up pnpm
-    #   uses: pnpm/action-setup@v2
-    #   with:
-    #     version: 8  # Or whatever version you need
-
-    # - name: Verify pnpm install
-    #   run: pnpm -v
-    #   shell: bash
-
-    # - name: Setup pnpm store path
-    #   run: pnpm config set store-dir ~/.pnpm-store
-    #   shell: bash
-
-    # - name: Cache pnpm dependencies
-    #   uses: actions/cache@v4
-    #   with:
-    #     path: ~/.pnpm-store
-    #     key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-    #     restore-keys: |
-    #       ${{ runner.os }}-pnpm-
-
     - name: Install Dependencies
       run: |
         cd apps/backend
