@@ -64,11 +64,9 @@ runs:
         # Store the affected apps for output
         echo "affected_apps=$(echo $AFFECTED_APPS | jq -c .)" >> $GITHUB_OUTPUT
 
-
         # Check if we have any affected apps
         if [ "$(echo $AFFECTED_APPS | jq 'length')" -gt 0 ]; then
           echo "has_affected_apps=true" >> $GITHUB_OUTPUT
-
 
           # Print the affected apps in a more readable format (like the shell script)
           echo "✅ Found affected packages:"
