@@ -102,3 +102,21 @@ variable "kinesis_credential_id" {
   description = "Databricks storage credential ID for Kinesis"
   type        = string
 }
+
+variable "container_port" {
+  description = "Port exposed by the container"
+  type        = number
+  default     = 3020
+}
+
+variable "service_name" {
+  description = "Base name for the service"
+  type        = string
+  default     = "ECS-service-Dev"
+}
+
+variable "image" {
+  description = "Docker image for the ECS container"
+  type        = string
+  default     = "public.ecr.aws/nginx/nginx:latest"
+}

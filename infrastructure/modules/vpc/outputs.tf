@@ -32,3 +32,16 @@ output "default_sg_id" {
   description = "Default security group ID"
   value       = aws_security_group.default.id
 }
+
+output "alb_sg_id" {
+  description = "Default security group ID for ALB"
+  value = aws_security_group.alb_sg.id
+}
+
+output "private_subnet_ids" {
+  value = aws_subnet.private[*].id
+}
+
+output "ecs_sg_id" {
+  value = aws_security_group.ecs_sg.id
+}
