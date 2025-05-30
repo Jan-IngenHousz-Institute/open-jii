@@ -13,6 +13,9 @@ inputs:
     description: "Base reference for detecting changes (commit hash, branch, or tag)"
     required: true
     default: "main"
+  environment:
+    description: "Deployment environment (e.g., dev, staging, production)"
+    required: true
 
 outputs:
   affected_apps:
@@ -81,6 +84,12 @@ runs:
     - name: Build Apps
       if: steps.check.outputs.has_affected_apps == 'true'
       shell: bash
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+        AUTH_URL: ${{ secrets.AUTH_URL }}
+        AUTH_GITHUB_ID: ${{ secrets.AUTH_GITHUB_ID }}
+        AUTH_GITHUB_SECRET: ${{ secrets.AUTH_GITHUB_SECRET }}
       run: |
         echo "🔨 Building affected packages"
         # Build command with individual --filter flags for each package
