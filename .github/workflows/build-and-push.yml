@@ -36,4 +36,4 @@ jobs:
           aws_region: ${{ secrets.AWS_REGION }}
           repository-name: "open-jii"
           docker-file-path: "apps/backend/Dockerfile"
-          build-context: "apps/backend/"
+          build-context: "."
