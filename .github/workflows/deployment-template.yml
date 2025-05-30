@@ -11,31 +11,31 @@ on:
 
 # Job 1: Build, Lint, Test & AsyncAPI
 jobs:
-  # build_lint_test:
-  #   name: Build, Lint, Test & AsyncAPI
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     affected_apps: ${{ steps.build.outputs.affected_apps }}
-  #     has_affected_apps: ${{ steps.build.outputs.has_affected_apps }}
-  #   steps:
-  #     - name: Checkout Repository
-  #       uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
+  build_lint_test:
+    name: Build, Lint, Test & AsyncAPI
+    runs-on: ubuntu-latest
+    outputs:
+      affected_apps: ${{ steps.build.outputs.affected_apps }}
+      has_affected_apps: ${{ steps.build.outputs.has_affected_apps }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-  #     - name: Build, Lint & Test
-  #       id: build
-  #       uses: ./.github/actions/blt
-  #       with:
-  #         node-version: "22"
-  #         artifact_retention: "7"
-  #         base: "HEAD^1"
+      - name: Build, Lint & Test
+        id: build
+        uses: ./.github/actions/blt
+        with:
+          node-version: "22"
+          artifact_retention: "7"
+          base: "HEAD^1"
 
   # Job 2: Terraform (Plan & Apply)
   tofu:
     name: OpenTofu
-    # needs: build_lint_test
-    # if: needs.build_lint_test.outputs.has_affected_apps == 'true'
+    needs: build_lint_test
+    if: needs.build_lint_test.outputs.has_affected_apps == 'true'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -69,40 +69,38 @@ jobs:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region: ${{ secrets.AWS_REGION }}
           tofu_version: "1.6.0"
-          # environment: "${{ inputs.environment }}"
-          # environemnt: "dev"
+          environment: "${{ inputs.environment }}"
 
-
-      # - name: Apply Infrastructure
-      #   run: tofu apply -auto-approve
+      - name: Apply Infrastructure
+        run: tofu apply -auto-approve
 
   # Job 3: Deploy Artifacts
-  # deploy:
-  #   name: Deploy Artifacts
-  #   needs: [build_lint_test, tofu]
-  #   if: needs.build_lint_test.outputs.has_affected_apps == 'true'
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     id-token: write
-  #     contents: read
-  #   steps:
-  #     - name: Configure AWS Credentials via OIDC
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-  #         aws-region: ${{ secrets.AWS_REGION }}
+  deploy:
+    name: Deploy Artifacts
+    needs: [build_lint_test, tofu]
+    if: needs.build_lint_test.outputs.has_affected_apps == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-  #     - name: Download Artifacts
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: app-artifacts
-  #         path: artifacts
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: app-artifacts
+          path: artifacts
 
-  #     - name: Check Artifact Files
-  #       run: |
-  #         if [ -d "artifacts" ] && [ "$(ls -A artifacts)" ]; then
-  #           echo "Artifacts downloaded successfully"
-  #         else
-  #           echo "No artifacts found"
-  #           exit 1
-  #         fi
+      - name: Check Artifact Files
+        run: |
+          if [ -d "artifacts" ] && [ "$(ls -A artifacts)" ]; then
+            echo "Artifacts downloaded successfully"
+          else
+            echo "No artifacts found"
+            exit 1
+          fi
