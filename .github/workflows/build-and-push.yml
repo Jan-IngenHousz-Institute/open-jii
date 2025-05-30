@@ -17,6 +17,7 @@ jobs:
       - name: Run Build & Test Action
         uses: ./.github/actions/btn
         with:
+          project-name: backend
           node-version: "18"
 
   docker-build-push:
