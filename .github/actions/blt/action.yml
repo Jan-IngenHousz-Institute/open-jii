@@ -55,8 +55,8 @@ runs:
         # Get list of affected projects using provided base
         pnpm turbo run build --dry-run=json --filter=...[origin/${{ inputs.base }}] --output-logs=none > affected.json
 
-        # Extract project names from tasks array
-        AFFECTED_APPS=$(jq -r '[.tasks[] | .package] | unique' affected.json)
+        # Extract project names from packages array and filter out "//" entry
+        AFFECTED_APPS=$(jq -c '[.packages[] | select(. != "//")]' affected.json)
                 
         # Store the affected apps for output
         echo "affected_apps=$(echo $AFFECTED_APPS | jq -c .)" >> $GITHUB_OUTPUT
