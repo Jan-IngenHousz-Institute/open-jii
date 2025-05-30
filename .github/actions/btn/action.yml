@@ -18,9 +18,10 @@ runs:
         node-version: ${{ inputs.node-version }}
         cache: "pnpm"  # Automatically caches global pnpm installation
     
-    - name: Install pnpm
-      run: npm install -g pnpm
-      shell: bash 
+    - name: Set up pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8  # Or whatever version you need
 
     - name: Setup pnpm store path
       run: pnpm config set store-dir ~/.pnpm-store
