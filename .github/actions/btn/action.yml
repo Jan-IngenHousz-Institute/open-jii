@@ -9,8 +9,8 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+    # - name: Checkout Code
+    #   uses: actions/checkout@v4
 
     - name: Set up Node.js
       uses: actions/setup-node@v3
@@ -20,9 +20,11 @@ runs:
     
     - name: Install pnpm
       run: npm install -g pnpm
+      shell: bash 
 
     - name: Setup pnpm store path
       run: pnpm config set store-dir ~/.pnpm-store
+      shell: bash
 
     - name: Cache pnpm dependencies
       uses: actions/cache@v4
