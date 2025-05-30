@@ -13,6 +13,9 @@ inputs:
     description: "Base reference for detecting changes (commit hash, branch, or tag)"
     required: true
     default: "main"
+  environment:
+    description: "Deployment environment (e.g., dev, staging, production)"
+    required: true
 
 outputs:
   affected_apps:
@@ -55,17 +58,15 @@ runs:
         # Get list of affected projects using provided base
         pnpm turbo run build --dry-run=json --filter=...[origin/${{ inputs.base }}] --output-logs=none > affected.json
 
-        # Extract project names from tasks array
-        AFFECTED_APPS=$(jq -r '[.tasks[] | .package] | unique' affected.json)
+        # Extract project names from packages array and filter out "//" entry
+        AFFECTED_APPS=$(jq -c '[.packages[] | select(. != "//")]' affected.json)
                 
         # Store the affected apps for output
         echo "affected_apps=$(echo $AFFECTED_APPS | jq -c .)" >> $GITHUB_OUTPUT
 
-
         # Check if we have any affected apps
         if [ "$(echo $AFFECTED_APPS | jq 'length')" -gt 0 ]; then
           echo "has_affected_apps=true" >> $GITHUB_OUTPUT
-
 
           # Print the affected apps in a more readable format (like the shell script)
           echo "✅ Found affected packages:"
@@ -81,6 +82,12 @@ runs:
     - name: Build Apps
       if: steps.check.outputs.has_affected_apps == 'true'
       shell: bash
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+        AUTH_URL: ${{ secrets.AUTH_URL }}
+        AUTH_GITHUB_ID: ${{ secrets.AUTH_GITHUB_ID }}
+        AUTH_GITHUB_SECRET: ${{ secrets.AUTH_GITHUB_SECRET }}
       run: |
         echo "🔨 Building affected packages"
         # Build command with individual --filter flags for each package

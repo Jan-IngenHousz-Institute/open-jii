@@ -36,7 +36,8 @@ jobs:
         with:
           node-version: "22"
           artifact_retention: "7"
-          base: "HEAD^1"
+          base: "main"
+          environment: "dev"
 
   tofu:
     name: OpenTofu

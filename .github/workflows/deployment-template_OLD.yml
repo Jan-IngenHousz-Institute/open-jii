@@ -30,6 +30,7 @@ jobs:
           node-version: "22"
           artifact_retention: "7"
           base: "HEAD^1"
+          environment: "${{ inputs.environment }}"
 
   # Job 2: Terraform (Plan & Apply)
   tofu:
