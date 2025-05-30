@@ -1,0 +1,75 @@
+name: "Build and Push Docker Image to ECR"
+description: "Builds a Docker image and pushes it to Amazon ECR"
+
+inputs:
+  aws-role:
+    description: "IAM role to assume for AWS access"
+    required: true
+  aws-region:
+    description: "AWS region"
+    required: true
+  repository-name:
+    description: "ECR repository name"
+    required: true
+  docker-file-path:
+    description: "Path to the Dockerfile"
+    required: true
+  build-context:
+    description: "Path to the build context"
+    required: true
+  image-tag:
+    description: "Docker image tag"
+    required: false
+    default: ${{ github.sha }}
+  node-version:
+    description: "Node.js version to use (matches Dockerfile ARG)"
+    required: false
+    default: "22"
+  project-name:
+    description: "Name of the project being built (matches Dockerfile ARG)"
+    required: false
+    default: "backend"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.aws-role }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build, tag, and push Docker image to Amazon ECR
+      env:
+        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        REPOSITORY: ${{ inputs.repository-name }}
+        IMAGE_TAG: ${{ inputs.image-tag }}
+      run: |
+        docker build \
+          --build-arg NODE_VERSION=${{ inputs.node-version }} \
+          --build-arg PROJECT=${{ inputs.project-name }} \
+          -t $REGISTRY/$REPOSITORY:$IMAGE_TAG \
+          -f ${{ inputs.docker-file-path }} \
+          ${{ inputs.build-context }}
+
+        docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+      shell: bash
+
+    - name: Save SHA as Artifact
+      run: |
+        mkdir -p docker_artifacts
+        echo "${{ inputs.image-tag }}" > docker_artifacts/image-sha.txt
+      shell: bash
+
+    - name: Upload SHA Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: image-sha
+        path: docker_artifacts/image-sha.txt
