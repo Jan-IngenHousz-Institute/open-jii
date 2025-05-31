@@ -23,6 +23,7 @@ coverage
 
 # Build Outputs
 .next/
+.open-next/
 out/
 build
 dist
@@ -69,8 +70,6 @@ dump
 # Virtual environments
 .venv/
 venv/
-ENV/
-env/
 cert
 
 # Test/Coverage

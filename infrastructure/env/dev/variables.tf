@@ -102,3 +102,52 @@ variable "kinesis_credential_id" {
   description = "Databricks storage credential ID for Kinesis"
   type        = string
 }
+
+# OpenNext Configuration
+variable "opennext_project_name" {
+  description = "Project name for OpenNext deployment"
+  type        = string
+  default     = "open-jii"
+}
+
+variable "opennext_environment" {
+  description = "Environment name for OpenNext deployment"
+  type        = string
+  default     = "dev"
+}
+
+variable "opennext_domain_name" {
+  description = "Custom domain name for the Next.js application (optional)"
+  type        = string
+  default     = ""
+}
+
+variable "opennext_subdomain" {
+  description = "Subdomain for the Next.js application (optional)"
+  type        = string
+  default     = "app"
+}
+
+variable "opennext_certificate_arn" {
+  description = "ACM certificate ARN for HTTPS (required if using custom domain)"
+  type        = string
+  default     = ""
+}
+
+variable "opennext_hosted_zone_id" {
+  description = "Route53 hosted zone ID for DNS records (optional)"
+  type        = string
+  default     = ""
+}
+
+variable "opennext_enable_warming" {
+  description = "Enable Lambda warming for better performance"
+  type        = bool
+  default     = true
+}
+
+variable "opennext_price_class" {
+  description = "CloudFront price class (PriceClass_All, PriceClass_200, PriceClass_100)"
+  type        = string
+  default     = "PriceClass_100"
+}

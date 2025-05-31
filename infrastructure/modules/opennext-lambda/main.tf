@@ -1,0 +1,154 @@
+# Create an empty zip file for initial deployment if no package provided
+data "archive_file" "empty_package" {
+  count       = var.lambda_package_path == null ? 1 : 0
+  type        = "zip"
+  output_path = "${path.module}/empty-function.zip"
+
+  source {
+    content  = ""
+    filename = "placeholder.txt"
+  }
+}
+
+# IAM role for Lambda function
+resource "aws_iam_role" "lambda_role" {
+  name = "${var.function_name}-role"
+  tags = var.tags
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# Basic Lambda execution policy
+resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  role       = aws_iam_role.lambda_role.name
+}
+
+# S3 permissions (conditional)
+resource "aws_iam_role_policy" "s3_permissions" {
+  count = var.s3_permissions ? 1 : 0
+  name  = "${var.function_name}-s3-policy"
+  role  = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:ListBucket"
+        ]
+        Resource = concat(
+          var.s3_bucket_arns,
+          [for arn in var.s3_bucket_arns : "${arn}/*"]
+        )
+      }
+    ]
+  })
+}
+
+# DynamoDB permissions (conditional)
+resource "aws_iam_role_policy" "dynamodb_permissions" {
+  count = var.dynamodb_permissions ? 1 : 0
+  name  = "${var.function_name}-dynamodb-policy"
+  role  = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:Scan"
+        ]
+        Resource = var.dynamodb_table_arns
+      }
+    ]
+  })
+}
+
+# SQS permissions (conditional)
+resource "aws_iam_role_policy" "sqs_permissions" {
+  count = var.sqs_permissions ? 1 : 0
+  name  = "${var.function_name}-sqs-policy"
+  role  = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:SendMessage",
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = var.sqs_queue_arns
+      }
+    ]
+  })
+}
+
+# Lambda function
+resource "aws_lambda_function" "function" {
+  function_name = var.function_name
+  role          = aws_iam_role.lambda_role.arn
+  handler       = var.handler
+  runtime       = var.runtime
+  architectures = [var.architecture]
+  memory_size   = var.memory_size
+  timeout       = var.timeout
+  tags          = var.tags
+
+  filename         = var.lambda_package_path != null ? var.lambda_package_path : data.archive_file.empty_package[0].output_path
+  source_code_hash = var.lambda_package_path != null ? filebase64sha256(var.lambda_package_path) : data.archive_file.empty_package[0].output_base64sha256
+
+  dynamic "environment" {
+    for_each = length(var.environment_variables) > 0 ? [1] : []
+    content {
+      variables = var.environment_variables
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      filename,
+      source_code_hash
+    ]
+  }
+}
+
+# Lambda function URL (conditional)
+resource "aws_lambda_function_url" "function_url" {
+  count              = var.create_function_url ? 1 : 0
+  function_name      = aws_lambda_function.function.function_name
+  authorization_type = "NONE"
+
+  cors {
+    allow_credentials = false
+    allow_methods     = ["*"]
+    allow_origins     = ["*"]
+    expose_headers    = ["date", "keep-alive"]
+    max_age           = 86400
+  }
+}

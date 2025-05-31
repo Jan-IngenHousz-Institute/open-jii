@@ -10,6 +10,7 @@
 /coverage
 
 # next.js
+/.open-next/
 /.next/
 /out/
 
