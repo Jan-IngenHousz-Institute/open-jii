@@ -14,6 +14,9 @@ jobs:
   build-test:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Run Build & Test Action
         uses: ./.github/actions/btn
         with:
@@ -23,6 +26,9 @@ jobs:
     needs: build-test  # Ensures Build & Test runs first
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
       - name: Run Docker Build & Push Action
         uses: ./.github/actions/bpd
         with:
@@ -30,4 +36,5 @@ jobs:
           aws_region: ${{ secrets.AWS_REGION }}
           repository-name: "open-jii"
           docker-file-path: "apps/backend/Dockerfile"
-          build-context: "apps/backend/"
+          build-context: "."
+
