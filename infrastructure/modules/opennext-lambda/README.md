@@ -41,16 +41,6 @@ graph TD;
     style URL fill:#9C27B0,stroke:#4A148C,color:white,stroke-width:2px
 ```
 
-## 🔄 CI/CD Integration
-
-This module is specifically designed to work harmoniously with a CI/CD pipeline (like GitHub Actions) for updating Lambda code:
-
-1. **Initial Deployment**: Terraform creates Lambda functions with placeholder ZIP files
-2. **Code Updates**: CI/CD pipeline updates the functions with actual OpenNext build artifacts
-3. **Drift Prevention**: The module uses `ignore_changes` for `filename` and `source_code_hash` to prevent Terraform from reverting CI/CD-deployed code
-
-This separation of concerns allows infrastructure to be managed by Terraform while application deployment is handled by CI/CD without conflicts.
-
 ## 🛠 Resources Used
 
 | Resource                   | Description                                              | Documentation                                                                                                                |
