@@ -8,14 +8,6 @@ This module creates a complete OpenNext deployment infrastructure following the 
 
 The module orchestrates multiple AWS services to create a highly scalable and cost-effective Next.js deployment that automatically handles traffic spikes and provides global content delivery.
 
-### 🔄 Deployment Model
-
-This infrastructure is designed with a clear separation of concerns:
-
-1. **Infrastructure Provisioning (Terraform)**: This module creates all necessary AWS resources with placeholder/empty Lambda functions
-2. **Application Deployment (CI/CD)**: The GitHub Actions workflow handles building and deploying the Next.js application code
-3. **State Management**: Lambda functions use the `ignore_changes` lifecycle policy to prevent Terraform from reverting CI/CD updates
-
 ```mermaid
 flowchart TD
   %% Subgraphs define logical grouping and node ownership

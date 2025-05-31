@@ -1,7 +1,7 @@
 # Local values for resource naming
 locals {
   # Base naming convention
-  name_prefix = "${var.project_name}-${var.environment}"
+  name_prefix = "${var.project_name}-${var.environment}-opennext"
 
   # Generate names if not provided
   assets_bucket_name       = var.assets_bucket_name != "" ? var.assets_bucket_name : "${local.name_prefix}-assets"
