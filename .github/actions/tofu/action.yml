@@ -61,3 +61,22 @@ runs:
       shell: bash
       working-directory: infrastructure/env/${{ inputs.environment }}
       run: tofu plan -no-color
+
+    # - name: Generate Infrastructure Outputs
+    #   shell: bash
+    #   working-directory: infrastructure/env/${{ inputs.environment }}
+    #   run: |
+    #     # Create outputs directory
+    #     mkdir -p ../../../tofu-outputs
+
+    #     # Generate outputs JSON file (will be populated after apply)
+    #     echo "{}" > ../../../tofu-outputs/infrastructure-outputs-${{ inputs.environment }}.json
+
+    #     echo "Infrastructure outputs artifact placeholder created"
+
+    # - name: Upload Infrastructure Outputs Artifact
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: tofu-outputs-${{ inputs.environment }}
+    #     path: tofu-outputs/
+    #     retention-days: 7

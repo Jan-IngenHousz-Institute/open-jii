@@ -1,6 +1,6 @@
 export default {
   default: {},
-  buildCommand: "pnpm build --filter=web",
+  buildCommand: "exit 0",
   buildOutputPath: ".",
   appPath: ".",
   packageJsonPath: "../../",
