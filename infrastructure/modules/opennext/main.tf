@@ -161,7 +161,6 @@ module "server_function" {
     CACHE_BUCKET_NAME      = aws_s3_bucket.cache.bucket
     REVALIDATION_QUEUE_URL = module.sqs.queue_url
     CACHE_DYNAMO_TABLE     = module.dynamodb.table_name
-    AWS_REGION             = var.region
   }
 
   tags = local.common_tags
@@ -185,7 +184,6 @@ module "image_function" {
 
   environment_variables = {
     ASSETS_BUCKET_NAME = aws_s3_bucket.assets.bucket
-    AWS_REGION         = var.region
   }
 
   tags = local.common_tags
@@ -213,7 +211,6 @@ module "revalidate_function" {
     ASSETS_BUCKET_NAME = aws_s3_bucket.assets.bucket
     CACHE_BUCKET_NAME  = aws_s3_bucket.cache.bucket
     CACHE_DYNAMO_TABLE = module.dynamodb.table_name
-    AWS_REGION         = var.region
   }
 
   tags = local.common_tags
@@ -234,6 +231,27 @@ module "sqs" {
   tags                       = local.common_tags
 }
 
+# Additional SQS permissions for revalidation function
+resource "aws_iam_role_policy" "revalidation_sqs_permissions" {
+  name = "${local.revalidate_function_name}-sqs-policy"
+  role = module.revalidate_function.role_name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = module.sqs.queue_arn
+      }
+    ]
+  })
+}
+
 # Warmer function (optional)
 module "warmer_function" {
   count  = var.enable_lambda_warming ? 1 : 0
@@ -247,11 +265,23 @@ module "warmer_function" {
   architecture        = var.lambda_architecture
   create_function_url = false
 
+  lambda_permissions = true
+  lambda_function_arns = [
+    module.server_function.function_arn,
+    module.image_function.function_arn
+  ]
+
   environment_variables = {
-    SERVER_FUNCTION_NAME     = module.server_function.function_name
-    IMAGE_FUNCTION_NAME      = module.image_function.function_name
-    REVALIDATE_FUNCTION_NAME = module.revalidate_function.function_name
-    AWS_REGION               = var.region
+    WARM_PARAMS = jsonencode([
+      {
+        function    = module.server_function.function_name
+        concurrency = 1
+      },
+      {
+        function    = module.image_function.function_name
+        concurrency = 1
+      }
+    ])
   }
 
   tags = local.common_tags

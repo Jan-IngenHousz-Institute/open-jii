@@ -23,6 +23,11 @@ output "role_arn" {
   value       = aws_iam_role.lambda_role.arn
 }
 
+output "role_name" {
+  description = "Name of the IAM role"
+  value       = aws_iam_role.lambda_role.name
+}
+
 output "invoke_arn" {
   description = "ARN to invoke the Lambda function"
   value       = aws_lambda_function.function.invoke_arn

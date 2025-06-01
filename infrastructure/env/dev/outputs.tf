@@ -33,6 +33,11 @@ output "opennext_revalidation_function_name" {
   value       = module.opennext.revalidation_function_name
 }
 
+output "opennext_warmer_function_name" {
+  description = "Name of the warmer Lambda function (if enabled)"
+  value       = module.opennext.warmer_function_name
+}
+
 output "opennext_application_url" {
   description = "URL to access the Next.js application"
   value       = module.opennext.application_url
@@ -43,13 +48,8 @@ output "opennext_custom_domain" {
   value       = module.opennext.custom_domain
 }
 
-# DynamoDB and SQS outputs for monitoring/debugging
+# DynamoDB outputs for monitoring/debugging
 output "opennext_dynamodb_table_name" {
   description = "Name of the DynamoDB table for ISR"
   value       = module.opennext.dynamodb_table_name
-}
-
-output "opennext_sqs_queue_url" {
-  description = "URL of the SQS revalidation queue"
-  value       = module.opennext.sqs_queue_url
 }

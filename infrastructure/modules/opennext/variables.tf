@@ -94,7 +94,7 @@ variable "warmer_function_name" {
 variable "lambda_runtime" {
   description = "Lambda runtime for all functions"
   type        = string
-  default     = "nodejs20.x"
+  default     = "nodejs22.x"
 }
 
 variable "lambda_architecture" {

@@ -78,6 +78,12 @@ variable "sqs_permissions" {
   default     = false
 }
 
+variable "lambda_permissions" {
+  description = "Whether to grant Lambda invoke permissions to the Lambda function"
+  type        = bool
+  default     = false
+}
+
 variable "lambda_package_path" {
   description = "Path to the Lambda deployment package (zip file)"
   type        = string
@@ -98,6 +104,12 @@ variable "dynamodb_table_arns" {
 
 variable "sqs_queue_arns" {
   description = "List of SQS queue ARNs to grant access to"
+  type        = list(string)
+  default     = []
+}
+
+variable "lambda_function_arns" {
+  description = "List of Lambda function ARNs to grant invoke access to"
   type        = list(string)
   default     = []
 }

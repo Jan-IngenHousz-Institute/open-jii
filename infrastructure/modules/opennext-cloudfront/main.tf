@@ -30,12 +30,11 @@ EOT
 
 # CloudFront distribution
 resource "aws_cloudfront_distribution" "distribution" {
-  enabled             = true
-  is_ipv6_enabled     = true
-  default_root_object = "index.html"
-  price_class         = var.price_class
-  aliases             = var.aliases
-  tags                = var.tags
+  enabled         = true
+  is_ipv6_enabled = true
+  price_class     = var.price_class
+  aliases         = var.aliases
+  tags            = var.tags
 
   # S3 origin for static assets
   origin {

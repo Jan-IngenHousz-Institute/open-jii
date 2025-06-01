@@ -1,12 +1,12 @@
-# Create an empty zip file for initial deployment if no package provided
+# Create a placeholder zip file for initial deployment if no package provided
 data "archive_file" "empty_package" {
   count       = var.lambda_package_path == null ? 1 : 0
   type        = "zip"
   output_path = "${path.module}/empty-function.zip"
 
   source {
-    content  = ""
-    filename = "placeholder.txt"
+    content  = "exports.handler = async (event) => { return { statusCode: 200, body: 'Placeholder function' }; };"
+    filename = "index.js"
   }
 }
 
@@ -80,7 +80,10 @@ resource "aws_iam_role_policy" "dynamodb_permissions" {
           "dynamodb:Query",
           "dynamodb:Scan"
         ]
-        Resource = var.dynamodb_table_arns
+        Resource = concat(
+          var.dynamodb_table_arns,
+          [for arn in var.dynamodb_table_arns : "${arn}/index/*"]
+        )
       }
     ]
   })
@@ -104,6 +107,26 @@ resource "aws_iam_role_policy" "sqs_permissions" {
           "sqs:GetQueueAttributes"
         ]
         Resource = var.sqs_queue_arns
+      }
+    ]
+  })
+}
+
+# Lambda permissions (conditional)
+resource "aws_iam_role_policy" "lambda_permissions" {
+  count = var.lambda_permissions ? 1 : 0
+  name  = "${var.function_name}-lambda-policy"
+  role  = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:InvokeFunction"
+        ]
+        Resource = var.lambda_function_arns
       }
     ]
   })
