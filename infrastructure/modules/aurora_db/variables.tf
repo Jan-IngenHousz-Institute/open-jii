@@ -1,49 +1,17 @@
+# Required variables
 variable "cluster_identifier" {
   description = "Unique identifier for the Aurora cluster"
   type        = string
-  #default     = "mock-aurora-db"
-}
-
-variable "engine_mode" {
-  description = "Defines whether the Aurora cluster is provisioned or serverless"
-  type        = string
-  default     = "provisioned"
-}
-
-variable "engine" {
-  description = "Database engine used in the cluster"
-  type        = string
-  default     = "aurora-postgresql"
-}
-
-variable "engine_version" {
-  description = "Version of the database engine"
-  type        = string
-  default     = "13.6"
 }
 
 variable "database_name" {
   description = "Name of the database"
   type        = string
-  #default     = "mockdb"
-}
-
-variable "manage_master_user_password" {
-  description = "Determines whether Terraform should manage the master password"
-  type        = bool
-  default     = true
 }
 
 variable "master_username" {
   description = "Username for the database master account"
   type        = string
-  #default     = "test"
-}
-
-variable "storage_encrypted" {
-  description = "Whether the storage for the database is encrypted"
-  type        = bool
-  default     = true
 }
 
 variable "vpc_security_group_ids" {
@@ -56,50 +24,63 @@ variable "db_subnet_group_name" {
   type        = string
 }
 
-variable "preferred_backup_window" {
-  description = "Time frame for daily backups"
-  type        = string
-  default     = "00:00-02:00"
-}
-
-variable "preferred_maintenance_window" {
-  description = "Time frame for scheduled maintenance"
-  type        = string
-  default     = "sun:03:00-sun:07:00"
-}
-
+# Configurable variables with sensible defaults
 variable "max_capacity" {
-  description = "Maximum capacity for Aurora Serverless v2 scaling"
+  description = "Maximum capacity for Aurora Serverless v2 scaling (0.5-128 ACU)"
   type        = number
-  default     = 2.0
+  default     = 1.0
 }
 
 variable "min_capacity" {
-  description = "Minimum capacity for Aurora Serverless v2 scaling"
+  description = "Minimum capacity for Aurora Serverless v2 scaling (0.5-128 ACU)"
   type        = number
-  default     = 0.0
+  default     = 0.5
 }
 
 variable "seconds_until_auto_pause" {
-  description = "Seconds before the cluster auto-pauses"
+  description = "Seconds before the cluster auto-pauses (300-86400 seconds, or 5 minutes to 24 hours)"
   type        = number
-  default     = 3600
+  default     = 1800 # 30 minutes
 }
 
-variable "instance_class" {
-  description = "Instance type for the Aurora cluster"
-  type        = string
-  default     = "db.serverless"
+variable "enable_enhanced_monitoring" {
+  description = "Enable RDS Enhanced Monitoring (additional cost of ~$2.50/month per instance)"
+  type        = bool
+  default     = false # Disabled by default for cost optimization
 }
 
-variable "iam_database_authentication_enabled" {
-  description = "IAM authentication for Aurora DB"
+# Optional cost optimization variables
+variable "backup_retention_period" {
+  description = "Number of days to retain automated backups (1-35 days)"
+  type        = number
+  default     = 7
+}
+
+variable "performance_insights_retention_period" {
+  description = "Performance Insights retention period in days (7 days free, 1-24 months paid)"
+  type        = number
+  default     = 7 # Free tier
+}
+
+variable "skip_final_snapshot" {
+  description = "Skip final snapshot on deletion (set to true for dev environments to save costs)"
+  type        = bool
+  default     = false
+}
+
+variable "enable_kms_key_rotation" {
+  description = "Enable automatic rotation for KMS keys"
   type        = bool
   default     = true
 }
 
-variable "aws_region" {
-  description = "The AWS region to deploy resources in"
-  type        = string
-  default     = "eu-central-1"
+variable "kms_key_deletion_window" {
+  description = "Number of days to retain KMS keys before deletion (7-30 days)"
+  type        = number
+  default     = 7
+
+  validation {
+    condition     = var.kms_key_deletion_window >= 7 && var.kms_key_deletion_window <= 30
+    error_message = "KMS key deletion window must be between 7 and 30 days."
+  }
 }
