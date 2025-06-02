@@ -9,15 +9,11 @@ variable "environment" {
   default     = "dev"
 }
 
-variable "family" {
-  description = "Name of the ECS task family"
+variable "service_name" {
+  description = "ECS service name"
   type        = string
 }
 
-variable "execution_role_arn" {
-  description = "IAM role ARN for ECS task execution"
-  type        = string
-}
 
 variable "cpu" {
   description = "CPU units for the ECS task"
@@ -31,32 +27,31 @@ variable "memory" {
   default     = "512"
 }
 
-variable "network_mode" {
-  description = "Network mode for the ECS task"
-  type        = string
-  default     = "awsvpc"
+variable "container_cpu" {
+  description = "The amount of CPU to allocate for the container"
+  type        = number
+  default     = 256 # 0.25 vCPU
 }
 
-variable "container_name" {
-  description = "Name of the container"
-  type        = string
-  default     = "app"
+variable "container_memory" {
+  description = "The amount of memory to allocate for the container"
+  type        = number
+  default     = 512 # 0.5 GB
 }
 
 variable "image" {
-  description = "Docker image for the container"
+  description = "Docker image for the container. Use specific tags instead of :latest for production deployments"
   type        = string
-  default     = "public.ecr.aws/nginx/nginx:latest"
+}
+
+variable "image_tag" {
+  description = "Docker image tag. Use specific tags like Git SHA or semantic version instead of 'latest' for production"
+  type        = string
+  default     = "latest"
 }
 
 variable "container_port" {
   description = "Container port to expose"
-  type        = number
-  default     = 3020
-}
-
-variable "host_port" {
-  description = "Host port to map to the container"
   type        = number
   default     = 3020
 }
@@ -77,12 +72,6 @@ variable "subnets" {
   type        = list(string)
 }
 
-variable "assign_public_ip" {
-  description = "Assign public IP to the ECS Service"
-  type        = bool
-  default     = false
-}
-
 variable "target_group_arn" {
   description = "ARN of the ALB target group"
   type        = string
@@ -93,47 +82,81 @@ variable "vpc_id" {
   type        = string
 }
 
-variable "service_name" {
-  description = "ECS service name"
-  type        = string
-  default     = "backend-service"
-}
-
 variable "region" {
-  description = "AWS region for Secrets Manager"
+  description = "AWS region for resources"
   type        = string
   default     = "us-east-1"
 }
 
-variable "account_id" {
-  description = "AWS account ID for Secrets Manager ARNs"
-  type        = string
-}
-
-variable "db_username_arn" {
-  description = "ARN of the Secrets Manager secret key for DB username"
-  type        = string
-}
-
-variable "db_password_arn" {
-  description = "ARN of the Secrets Manager secret key for DB password"
-  type        = string
-}
-
-variable "db_host" {
-  description = "Database host name"
-  type        = string
-  default     = "localhost"
-}
-
-variable "db_port" {
-  description = "Database port"
+variable "ephemeral_storage" {
+  description = "Amount of ephemeral storage (in GiB) to allocate for the task"
   type        = number
-  default     = 5432
+  default     = 21 # Minimum size
 }
 
-variable "db_name" {
-  description = "Database name"
-  type        = string
-  default     = "app_db"
+# Scaling configuration
+variable "enable_autoscaling" {
+  description = "Whether to enable autoscaling for the service"
+  type        = bool
+  default     = true
+}
+
+variable "min_capacity" {
+  description = "Minimum number of tasks"
+  type        = number
+  default     = 1
+}
+
+variable "max_capacity" {
+  description = "Maximum number of tasks"
+  type        = number
+  default     = 5
+}
+
+variable "cpu_threshold" {
+  description = "CPU utilization threshold for scaling up"
+  type        = number
+  default     = 75 # 75%
+}
+
+variable "log_retention_days" {
+  description = "Number of days to retain CloudWatch logs"
+  type        = number
+  default     = 30
+}
+
+variable "tags" {
+  description = "A map of tags to assign to resources"
+  type        = map(string)
+  default     = {}
+}
+
+variable "enable_service_discovery" {
+  description = "Whether to enable Service Discovery for ECS service"
+  type        = bool
+  default     = false
+}
+
+variable "use_spot_instances" {
+  description = "Whether to use Fargate Spot instances for cost optimization. Recommended for dev/test environments."
+  type        = bool
+  default     = false
+}
+
+variable "secrets" {
+  description = "List of secrets from AWS Secrets Manager to inject into the container"
+  type = list(object({
+    name      = string
+    valueFrom = string
+  }))
+  default = []
+}
+
+variable "environment_variables" {
+  description = "Additional environment variables for the container"
+  type = list(object({
+    name  = string
+    value = string
+  }))
+  default = []
 }

@@ -300,11 +300,27 @@ module "experiment_orchestrator_job" {
   }
 }
 
-module "alb" {
-  source            = "../../modules/alb"
-  service_name      = var.service_name
-  vpc_id            = module.vpc.vpc_id 
-  security_groups   = [module.vpc.alb_sg_id]
+# Backend Service ECR Repository
+module "backend_ecr" {
+  source = "../../modules/ecr"
+
+  repository_name               = "open-jii-backend"
+  max_image_count               = 10
+  enable_vulnerability_scanning = true
+  service_name                  = "backend"
+  ci_cd_role_arn                = module.iam_oidc.oidc_role_arn
+  environment                   = "dev"
+  aws_region                    = var.aws_region
+
+  # Set to MUTABLE for dev, but should be IMMUTABLE for prod
+  image_tag_mutability = "MUTABLE"
+
+  tags = {
+    Environment = "dev"
+    Service     = "backend"
+  }
+}
+
   public_subnet_ids = module.vpc.public_subnets
   container_port    = var.container_port
 }
