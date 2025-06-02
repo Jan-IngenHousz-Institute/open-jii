@@ -89,7 +89,6 @@ module "opennext_dynamodb" {
 | `table_name`                    | Name of the DynamoDB table                                      | `string`      | n/a                 |  ✅ Yes  |
 | `billing_mode`                  | Billing mode for the table (PAY_PER_REQUEST or PROVISIONED)     | `string`      | `"PAY_PER_REQUEST"` |  ❌ No   |
 | `enable_point_in_time_recovery` | Enable point-in-time recovery for data protection               | `bool`        | `true`              |  ❌ No   |
-| `enable_deletion_protection`    | Enable deletion protection to prevent accidental table deletion | `bool`        | `false`             |  ❌ No   |
 | `tags`                          | Tags to apply to the table                                      | `map(string)` | `{}`                |  ❌ No   |
 
 ---
