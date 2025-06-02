@@ -1,4 +1,4 @@
-name: Build Node, Docker and Push 
+name: Build Node, Docker and Push
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 
 permissions:
-      id-token: write
-      contents: read
+  id-token: write
+  contents: read
 
 jobs:
   build-test:
@@ -20,7 +20,7 @@ jobs:
           node-version: "18"
 
   docker-build-push:
-    needs: build-test  # Ensures Build & Test runs first
+    needs: build-test # Ensures Build & Test runs first
     runs-on: ubuntu-latest
     steps:
       - name: Run Docker Build & Push Action
