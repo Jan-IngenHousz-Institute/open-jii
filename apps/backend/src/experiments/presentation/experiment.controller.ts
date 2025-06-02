@@ -49,9 +49,7 @@ export class ExperimentController {
           );
           return {
             status: StatusCodes.CREATED,
-            body: {
-              id: experiment.id,
-            },
+            body: experiment,
           };
         }
 

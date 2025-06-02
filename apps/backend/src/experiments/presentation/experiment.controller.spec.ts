@@ -5,12 +5,15 @@ import type { ErrorResponse, ExperimentMemberList } from "@repo/api";
 import type { ExperimentList } from "@repo/api";
 import { contract } from "@repo/api";
 
+import { DatabricksService } from "../../common/services/databricks/databricks.service";
+import { success, failure } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 
 describe("ExperimentController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
+  let databricksService: DatabricksService;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -20,8 +23,34 @@ describe("ExperimentController", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
 
+    // Get the databricks service instance
+    databricksService = testApp.module.get(DatabricksService);
+
     // Reset any mocks before each test
     jest.restoreAllMocks();
+
+    // Set up default mocks for databricks service
+    jest.spyOn(databricksService, "triggerJob").mockResolvedValue(
+      success({
+        run_id: 12345,
+        number_in_job: 1,
+      }),
+    );
+
+    jest.spyOn(databricksService, "getExperimentSchemaData").mockResolvedValue(
+      success({
+        columns: [
+          { name: "experiment_id", type_name: "STRING", type_text: "STRING" },
+          { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" },
+        ],
+        rows: [
+          ["exp-123", "123.45"],
+          ["exp-123", "67.89"],
+        ],
+        totalRows: 2,
+        truncated: false,
+      }),
+    );
   });
 
   afterEach(() => {
@@ -49,6 +78,56 @@ describe("ExperimentController", () => {
         .expect(StatusCodes.CREATED);
 
       expect(response.body).toHaveProperty("id");
+
+      // Type the response properly
+      const responseBody = response.body as { id: string };
+
+      // Verify that Databricks job was triggered
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksService.triggerJob).toHaveBeenCalledWith({
+        experimentId: responseBody.id,
+        experimentName: experimentData.name,
+        userId: testUserId,
+      });
+    });
+
+    it("should successfully create an experiment even if Databricks fails", async () => {
+      // Mock Databricks to fail
+      jest.spyOn(databricksService, "triggerJob").mockResolvedValue(
+        failure({
+          name: "DatabricksError",
+          code: "INTERNAL_ERROR",
+          message: "Databricks API error",
+          statusCode: 500,
+        }),
+      );
+
+      const experimentData = {
+        name: "Test Experiment with Databricks Failure",
+        description: "Test Description",
+        status: "provisioning",
+        visibility: "private",
+        embargoIntervalDays: 90,
+      };
+
+      const response = await testApp
+        .post(contract.experiments.createExperiment.path)
+        .withAuth(testUserId)
+        .send(experimentData)
+        .expect(StatusCodes.CREATED);
+
+      expect(response.body).toHaveProperty("id");
+
+      // Type the response properly
+      const responseBody = response.body as { id: string };
+
+      // Verify that Databricks job was attempted
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksService.triggerJob).toHaveBeenCalledWith({
+        experimentId: responseBody.id,
+        experimentName: experimentData.name,
+        userId: testUserId,
+      });
     });
 
     it("should return 400 if name is missing", async () => {
@@ -61,6 +140,10 @@ describe("ExperimentController", () => {
           visibility: "private",
         })
         .expect(StatusCodes.BAD_REQUEST);
+
+      // Verify that Databricks was not called for invalid requests
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksService.triggerJob).not.toHaveBeenCalled();
     });
 
     it("should return 401 if not authenticated", async () => {
@@ -74,6 +157,48 @@ describe("ExperimentController", () => {
           visibility: "private",
         })
         .expect(StatusCodes.UNAUTHORIZED);
+
+      // Verify that Databricks was not called for unauthenticated requests
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksService.triggerJob).not.toHaveBeenCalled();
+    });
+
+    it("should return 400 if name is too long", async () => {
+      const tooLongName = "a".repeat(65);
+
+      await testApp
+        .post(contract.experiments.createExperiment.path)
+        .withAuth(testUserId)
+        .send({
+          name: tooLongName,
+          description: "Test Description",
+          status: "provisioning",
+          visibility: "private",
+          embargoIntervalDays: 90,
+        })
+        .expect(StatusCodes.BAD_REQUEST);
+
+      // Verify that Databricks was not called for invalid requests
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksService.triggerJob).not.toHaveBeenCalled();
+    });
+
+    it("should return 400 if embargoIntervalDays is negative", async () => {
+      await testApp
+        .post(contract.experiments.createExperiment.path)
+        .withAuth(testUserId)
+        .send({
+          name: "Test Experiment",
+          description: "Test Description",
+          status: "provisioning",
+          visibility: "private",
+          embargoIntervalDays: -1,
+        })
+        .expect(StatusCodes.BAD_REQUEST);
+
+      // Verify that Databricks was not called for invalid requests
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksService.triggerJob).not.toHaveBeenCalled();
     });
   });
 
@@ -213,7 +338,7 @@ describe("ExperimentController", () => {
   });
 
   describe("getExperiment", () => {
-    it("should return an experiment by ID", async () => {
+    it("should return an experiment by ID with data", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Experiment to Get",
         description: "Detailed description",
@@ -239,6 +364,76 @@ describe("ExperimentController", () => {
         visibility: experiment.visibility,
         createdBy: testUserId,
       });
+
+      // Type the response properly
+      const responseBody = response.body as {
+        data?: { columns: unknown[]; rows: unknown[] };
+      };
+
+      // Verify data is included
+      expect(responseBody.data).toBeDefined();
+      expect(responseBody.data?.columns).toHaveLength(2);
+      expect(responseBody.data?.rows).toHaveLength(2);
+
+      // Verify that Databricks was called
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksService.getExperimentSchemaData).toHaveBeenCalledWith(
+        experiment.id,
+        experiment.name,
+      );
+    });
+
+    it("should return experiment without data when Databricks fails", async () => {
+      // Mock Databricks to fail
+      jest
+        .spyOn(databricksService, "getExperimentSchemaData")
+        .mockResolvedValue(
+          failure({
+            name: "DatabricksError",
+            code: "INTERNAL_ERROR",
+            message: "Failed to fetch data",
+            statusCode: 500,
+          }),
+        );
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Experiment without Data",
+        description: "Detailed description",
+        userId: testUserId,
+      });
+
+      const path = testApp.resolvePath(
+        contract.experiments.getExperiment.path,
+        {
+          id: experiment.id,
+        },
+      );
+
+      const response = await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toMatchObject({
+        id: experiment.id,
+        name: experiment.name,
+        description: experiment.description,
+        visibility: experiment.visibility,
+        createdBy: testUserId,
+      });
+
+      // Type the response properly
+      const responseBody = response.body as { data?: unknown };
+
+      // Verify data is undefined when Databricks fails
+      expect(responseBody.data).toBeUndefined();
+
+      // Verify that Databricks was still called
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksService.getExperimentSchemaData).toHaveBeenCalledWith(
+        experiment.id,
+        experiment.name,
+      );
     });
 
     it("should return 404 if experiment does not exist", async () => {
@@ -257,6 +452,10 @@ describe("ExperimentController", () => {
         .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("not found");
         });
+
+      // Verify that Databricks was not called since experiment wasn't found
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksService.getExperimentSchemaData).not.toHaveBeenCalled();
     });
 
     it("should return 400 for invalid UUID", async () => {

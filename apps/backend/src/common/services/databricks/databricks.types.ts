@@ -4,6 +4,8 @@ export interface DatabricksConfig {
   readonly clientId: string;
   readonly clientSecret: string;
   readonly jobId: string;
+  readonly warehouseId: string;
+  readonly catalogName: string;
 }
 
 // Authentication
@@ -17,6 +19,67 @@ export interface TokenResponse {
 export interface DatabricksHealthCheck {
   readonly healthy: boolean;
   readonly service: string;
+}
+
+// SQL statement execution types
+export interface ExecuteStatementRequest {
+  statement: string;
+  warehouse_id: string;
+  wait_timeout: string;
+  schema: string;
+  catalog: string;
+  disposition: "INLINE" | "EXTERNAL_LINKS";
+  format: "JSON_ARRAY" | "ARROW_STREAM" | "CSV";
+  row_limit?: number;
+  byte_limit?: number;
+  on_wait_timeout?: "CONTINUE" | "CANCEL";
+}
+
+export interface StatementResponse {
+  statement_id: string;
+  status: {
+    state:
+      | "PENDING"
+      | "RUNNING"
+      | "SUCCEEDED"
+      | "FAILED"
+      | "CANCELED"
+      | "CLOSED";
+    error?: {
+      message?: string;
+      error_code?: string;
+    };
+  };
+  manifest?: {
+    schema: {
+      column_count: number;
+      columns: {
+        name: string;
+        position: number;
+        type_name: string;
+        type_text: string;
+      }[];
+    };
+    total_row_count?: number;
+    truncated?: boolean;
+  };
+  result?: {
+    chunk_index: number;
+    data_array: (string | null)[][];
+    row_count: number;
+    row_offset: number;
+  };
+}
+
+export interface SchemaData {
+  columns: {
+    name: string;
+    type_name: string;
+    type_text: string;
+  }[];
+  rows: (string | null)[][];
+  totalRows: number;
+  truncated: boolean;
 }
 
 // Common enums for type safety
