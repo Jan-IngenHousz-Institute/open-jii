@@ -321,32 +321,98 @@ module "backend_ecr" {
   }
 }
 
+# Application Load Balancer for backend service
+module "backend_alb" {
+  source = "../../modules/alb"
+
+  service_name      = "backend"
+  vpc_id            = module.vpc.vpc_id
   public_subnet_ids = module.vpc.public_subnets
-  container_port    = var.container_port
+  container_port    = 3020
+  security_groups   = [module.vpc.alb_sg_id]
+  environment       = "dev"
+
+  # Health check configuration
+  health_check_path = "/api/health"
+
+  # Access logs disabled for now, but can be enabled later if needed
+  enable_access_logs = false
+  access_logs_bucket = ""
+
+  # SSL/TLS configuration - use certificate from Route53 module
+  certificate_arn = module.route53.certificate_arn
+
+  tags = {
+    Environment = "dev"
+    Service     = "backend"
+  }
 }
 
-module "ecs" {
-  source              = "../../modules/ecs"
-  cluster_name        = "ECS-OpenJII-Dev"
-  environment         = "Dev"
-  assign_public_ip    = false
-  family              = "backend-task"
-  cpu                 = 32
-  memory              = 32
-  network_mode        = "awsvpc"
-  container_name      = "open_jii_dev_container"
-  image               = "public.ecr.aws/nginx/nginx:latest"
-  container_port      = 3020
-  host_port           = 3020
-  execution_role_arn  = module.ecs.ecs_execution_role_arn
-  desired_count       = 1
-  subnets             = module.vpc.private_subnet_ids
-  security_groups     = [module.vpc.ecs_sg_id]
-  target_group_arn    = module.alb.target_group_arn
-  vpc_id              = module.vpc.vpc_id
-  service_name        = "ECS-Service-OpenJII-Dev"
-  region              = var.aws_region
-  account_id          = data.aws_caller_identity.current.account_id
-  db_username_arn     = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:open_jii_dev/db_credentials:username::"
-  db_password_arn     = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:open_jii_dev/db_credentials:password::"
+# ECS for backend service
+module "backend_ecs" {
+  source = "../../modules/ecs"
+
+  # Basic settings
+  cluster_name = "open-jii"
+  service_name = "backend"
+  environment  = "dev"
+
+  # Log retention configuration
+  log_retention_days = 30
+
+  # Container configuration
+  image          = module.backend_ecr.repository_url
+  image_tag      = "latest" # TODO: Use specific tags like Git SHA or semantic version for production
+  container_port = 3020
+
+  # Task size
+  cpu              = "512"  # 0.5 vCPU
+  memory           = "1024" # 1 GB
+  container_cpu    = 256    # 0.25 vCPU 
+  container_memory = 512    # 0.5 GB
+
+  # Networking
+  vpc_id          = module.vpc.vpc_id
+  subnets         = module.vpc.private_subnets
+  security_groups = [module.vpc.ecs_sg_id]
+
+  # Load balancer integration
+  target_group_arn = module.backend_alb.target_group_arn
+
+  # Auto-scaling settings (cost-optimized for dev)
+  enable_autoscaling = true
+  min_capacity       = 1
+  max_capacity       = 3
+  cpu_threshold      = 80
+
+  # Service discovery
+  enable_service_discovery = true
+
+  # Use Fargate Spot for cost savings in dev
+  use_spot_instances = true
+  desired_count      = 1
+
+  # AWS account details for IAM
+  region = var.aws_region
+
+  tags = {
+    Environment = "dev"
+    Service     = "backend"
+  }
+}
+
+# WAF for ALB protection
+module "backend_alb_waf" {
+  source = "../../modules/waf"
+
+  service_name       = "backend"
+  environment        = "dev"
+  alb_arn            = module.backend_alb.alb_arn
+  rate_limit         = 2000
+  log_retention_days = 30
+
+  tags = {
+    Environment = "dev"
+    Service     = "backend"
+  }
 }
