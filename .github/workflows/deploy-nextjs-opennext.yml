@@ -42,6 +42,16 @@ jobs:
           pnpm install --node-linker=hoisted --frozen-lockfile
 
       - name: Build Next.js Application
+        env:
+          # Database config
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_ENV: ${{ inputs.environment }}
+
+          # Auth configuration
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          AUTH_URL: ${{ secrets.AUTH_URL }}
+          AUTH_GITHUB_ID: ${{ secrets.AUTH_GITHUB_ID }}
+          AUTH_GITHUB_SECRET: ${{ secrets.AUTH_GITHUB_SECRET }}
         run: pnpm run build --filter=web
 
       - name: Run OpenNext Build
