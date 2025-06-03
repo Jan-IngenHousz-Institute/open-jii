@@ -41,71 +41,87 @@ resource "aws_rds_cluster_parameter_group" "aurora_security" {
   description = "Security-hardened parameter group for Aurora PostgreSQL"
 
   # Security hardening parameters
+
+  # Controls which SQL statements are logged
+  # 'mod' logs all DDL statements and data-modifying statements like INSERT, UPDATE, DELETE
   parameter {
     name  = "log_statement"
-    value = "all"
+    value = "mod"
   }
 
+  # Sets the minimum execution time above which statements will be logged
+  # 1000ms (1 second) means only slow queries will be logged, reducing log noise
   parameter {
     name  = "log_min_duration_statement"
     value = "1000" # Log queries taking longer than 1 second
   }
 
+  # Logs each successful connection attempt to the database
+  # Helps with auditing and security monitoring
   parameter {
     name  = "log_connections"
     value = "1"
   }
 
+  # Logs each session termination, including information about the session
+  # Useful for tracking user activity and troubleshooting connection issues
   parameter {
     name  = "log_disconnections"
     value = "1"
   }
 
-  parameter {
-    name  = "log_checkpoints"
-    value = "1"
-  }
-
+  # Specifies libraries to preload at server start
+  # pg_stat_statements enables the collection of detailed execution statistics for queries
   parameter {
     name  = "shared_preload_libraries"
     value = "pg_stat_statements"
   }
 
+  # Enables logging of client hostnames 
+  # Important for identifying the source of database connections
   parameter {
     name  = "log_hostname"
     value = "1"
   }
 
+  # Customizes the prefix of log lines
+  # This format includes timestamp (%t), remote host (%r), user name (%u), database (%d), and process ID (%p)
   parameter {
     name  = "log_line_prefix"
     value = "%t:%r:%u@%d:[%p]:"
   }
 
-  # Force SSL/TLS encryption for all connections
+  # Forces SSL/TLS encryption for all connections
+  # Critical for data in transit protection and compliance requirements
   parameter {
     name  = "rds.force_ssl"
     value = "1"
   }
 
-  # Use stronger password encryption
+  # Sets password encryption algorithm
+  # scram-sha-256 is more secure than the older md5 method
   parameter {
     name  = "password_encryption"
     value = "scram-sha-256"
   }
 
-  # Log temporary files for security monitoring
+  # Controls logging of temporary files
+  # Setting to '0' logs all temporary file usage, which helps detect inefficient queries
+  # and potential resource issues
   parameter {
     name  = "log_temp_files"
     value = "0"
   }
 
-  # Log lock waits for performance and security analysis
+  # Enables logging when a session waits longer than deadlock_timeout to acquire a lock
+  # Helps identify locking issues and performance bottlenecks
   parameter {
     name  = "log_lock_waits"
     value = "1"
   }
 
-  # Log minimum error statements
+  # Sets the minimum message severity level for which statements are logged
+  # 'error' ensures that error conditions are always recorded in logs
   parameter {
     name  = "log_min_error_statement"
     value = "error"
@@ -175,7 +191,7 @@ resource "aws_rds_cluster_instance" "rds_cluster_instance_aurora" {
   # Performance and monitoring
   performance_insights_enabled          = true
   performance_insights_retention_period = var.performance_insights_retention_period
-  performance_insights_kms_key_id       = aws_kms_key.performance_insights_key.key_id
+  performance_insights_kms_key_id       = aws_kms_key.performance_insights_key.arn
   monitoring_interval                   = var.enable_enhanced_monitoring ? 60 : 0
   monitoring_role_arn                   = var.enable_enhanced_monitoring ? aws_iam_role.rds_enhanced_monitoring[0].arn : null
 

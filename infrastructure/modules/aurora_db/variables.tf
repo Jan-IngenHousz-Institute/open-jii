@@ -34,7 +34,7 @@ variable "max_capacity" {
 variable "min_capacity" {
   description = "Minimum capacity for Aurora Serverless v2 scaling (0.5-128 ACU)"
   type        = number
-  default     = 0.5
+  default     = 0
 }
 
 variable "seconds_until_auto_pause" {

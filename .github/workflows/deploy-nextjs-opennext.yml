@@ -32,6 +32,20 @@ jobs:
         with:
           version: latest
 
+      - name: Download Infrastructure Outputs
+        uses: actions/download-artifact@v4
+        with:
+          name: tofu-outputs-${{ inputs.environment }}
+          path: tofu-outputs/
+
+      - name: Get Database Credentials
+        id: db-secrets
+        uses: ./.github/actions/get-database-credentials
+        with:
+          environment: ${{ inputs.environment }}
+          aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Install dependencies
         run: |
 
@@ -43,8 +57,8 @@ jobs:
 
       - name: Build Next.js Application
         env:
-          # Database config
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Database config - using dynamically constructed URL from composite action
+          DATABASE_URL: ${{ steps.db-secrets.outputs.database-url }}
           NODE_ENV: ${{ inputs.environment }}
 
           # Auth configuration
@@ -181,6 +195,12 @@ jobs:
           DYNAMODB_TABLE=$(jq -r '.dynamodb_table // ""' "$OUTPUTS_FILE")
           CLOUDFRONT_DISTRIBUTION_ID=$(jq -r '.cloudfront_distribution_id // ""' "$OUTPUTS_FILE")
 
+          # Extract database values
+          DB_ENDPOINT=$(jq -r '.database_endpoint // ""' "$OUTPUTS_FILE")
+          DB_PORT=$(jq -r '.database_port // ""' "$OUTPUTS_FILE")
+          DB_NAME=$(jq -r '.database_name // ""' "$OUTPUTS_FILE")
+          DB_CLUSTER_ID=$(jq -r '.database_cluster_id // ""' "$OUTPUTS_FILE")
+
           # Set outputs for use in next steps
           {
             echo "assets_bucket=${ASSETS_BUCKET}"
@@ -191,9 +211,21 @@ jobs:
             echo "warmer_function=${WARMER_FUNCTION}"
             echo "dynamodb_table=${DYNAMODB_TABLE}"
             echo "cloudfront_distribution_id=${CLOUDFRONT_DISTRIBUTION_ID}"
+            echo "db_endpoint=${DB_ENDPOINT}"
+            echo "db_port=${DB_PORT}"
+            echo "db_name=${DB_NAME}"
+            echo "db_cluster_id=${DB_CLUSTER_ID}"
           } >> "$GITHUB_OUTPUT"
 
           echo "Successfully loaded infrastructure outputs for environment: ${{ inputs.environment }}"
+
+      - name: Get Database Credentials
+        id: db-secrets
+        uses: ./.github/actions/get-database-credentials
+        with:
+          environment: ${{ inputs.environment }}
+          aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Upload Static Assets and Cache to S3
         id: upload-assets

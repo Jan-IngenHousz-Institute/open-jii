@@ -42,3 +42,9 @@ output "performance_insights_kms_key_id" {
   value       = aws_kms_key.performance_insights_key.key_id
   description = "KMS key ID used for Performance Insights encryption"
 }
+
+output "master_user_secret_arn" {
+  value       = aws_rds_cluster.rds_cluster_aurora.master_user_secret[0].secret_arn
+  description = "The ARN of the secret in AWS Secrets Manager containing master credentials"
+  sensitive   = true
+}
