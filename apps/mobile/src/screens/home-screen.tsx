@@ -5,8 +5,6 @@ import type { ParamListBase } from "@react-navigation/native";
 import { Text, TouchableOpacity, View } from "react-native";
 import { LoginWidget } from "~/widgets/login-widget";
 
-// Adjust this path to your actual store location
-
 interface RootTabParamList extends ParamListBase {
   Home: undefined;
   Bluetooth: undefined;
