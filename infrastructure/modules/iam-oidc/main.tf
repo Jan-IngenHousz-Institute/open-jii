@@ -32,7 +32,9 @@ resource "aws_iam_policy" "oidc_role_policy" {
   policy = jsonencode({
     "Statement" : [
       {
-        "Action" : [
+        Sid    = "EC2Permissions"
+        Effect = "Allow"
+        Action = [
           "ec2:CreateVpc",
           "ec2:DeleteVpc",
           "ec2:DescribeVpcs",
@@ -65,7 +67,9 @@ resource "aws_iam_policy" "oidc_role_policy" {
         "Sid" : "EC2Permissions"
       },
       {
-        "Action" : [
+        Sid    = "S3Permissions"
+        Effect = "Allow"
+        Action = [
           "s3:CreateBucket",
           "s3:DeleteBucket",
           "s3:ListBucket",
@@ -96,7 +100,9 @@ resource "aws_iam_policy" "oidc_role_policy" {
         "Sid" : "S3Permissions"
       },
       {
-        "Action" : [
+        Sid    = "CloudFrontPermissions"
+        Effect = "Allow"
+        Action = [
           "cloudfront:CreateDistribution",
           "cloudfront:UpdateDistribution",
           "cloudfront:DeleteDistribution",
@@ -110,7 +116,9 @@ resource "aws_iam_policy" "oidc_role_policy" {
         "Sid" : "CloudFrontPermissions"
       },
       {
-        "Action" : [
+        Sid    = "TimestreamPermissions"
+        Effect = "Allow"
+        Action = [
           "timestream:CreateDatabase",
           "timestream:DescribeDatabase",
           "timestream:DeleteDatabase",
@@ -125,7 +133,9 @@ resource "aws_iam_policy" "oidc_role_policy" {
         "Sid" : "TimestreamPermissions"
       },
       {
-        "Action" : [
+        Sid    = "KinesisPermissions"
+        Effect = "Allow"
+        Action = [
           "kinesis:CreateStream",
           "kinesis:DescribeStream",
           "kinesis:DeleteStream",
@@ -140,7 +150,9 @@ resource "aws_iam_policy" "oidc_role_policy" {
         "Sid" : "KinesisPermissions"
       },
       {
-        "Action" : [
+        Sid    = "IoTCorePermissions"
+        Effect = "Allow"
+        Action = [
           "iot:CreateThing",
           "iot:DeleteThing",
           "iot:DescribeThing",
@@ -157,7 +169,9 @@ resource "aws_iam_policy" "oidc_role_policy" {
         "Sid" : "IoTCorePermissions"
       },
       {
-        "Action" : [
+        Sid    = "IAMPermissionsForIoTAndDatabricks"
+        Effect = "Allow"
+        Action = [
           "iam:CreateRole",
           "iam:DeleteRole",
           "iam:AttachRolePolicy",
@@ -176,7 +190,9 @@ resource "aws_iam_policy" "oidc_role_policy" {
         "Sid" : "IAMPermissionsForIoTAndDatabricks"
       },
       {
-        "Action" : [
+        Sid    = "DynamoDBs3lock"
+        Effect = "Allow"
+        Action = [
           "dynamodb:GetItem",
           "dynamodb:PutItem",
           "dynamodb:DescribeTable",
@@ -184,21 +200,52 @@ resource "aws_iam_policy" "oidc_role_policy" {
           "dynamodb:DescribeContinuousBackups",
           "dynamodb:DescribeTimeToLive",
           "dynamodb:ListTagsOfResource"
-        ],
-        "Effect" : "Allow",
-        "Resource" : "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/terraform-state-lock",
-        "Sid" : "DynamoDBs3lock"
+        ]
+        Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/terraform-state-lock"
       },
       {
-        "Action" : [
+        Sid    = "CognitoPools"
+        Effect = "Allow"
+        Action = [
           "cognito-identity:DescribeIdentityPool",
           "cognito-identity:ListIdentityPools",
           "cognito-identity:GetIdentityPoolRoles",
           "cognito-identity:LookupDeveloperIdentity"
-        ],
-        "Effect" : "Allow",
-        "Resource" : "*",
-        "Sid" : "CognitoPools"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "ECRPermissions"
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:ListImages",
+          "ecr:DescribeRepositories",
+          "ecr:TagResource"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "ECSPermissions"
+        Effect = "Allow"
+        Action = [
+          "ecs:RegisterTaskDefinition",
+          "ecs:DeregisterTaskDefinition",
+          "ecs:DescribeTaskDefinition",
+          "ecs:UpdateService",
+          "ecs:DescribeServices",
+          "ecs:CreateService",
+          "ecs:DeleteService",
+          "ecs:ListClusters",
+          "ecs:DescribeClusters",
+          "ecr:DescribeImages",
+          "ecr:ListTagsForResource",
+          "ecs:ListServices"
+        ]
+        Resource = "*"
       }
     ],
     "Version" : "2012-10-17"

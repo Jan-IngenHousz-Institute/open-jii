@@ -48,7 +48,12 @@ output "alb_sg_id" {
   value       = aws_security_group.alb_sg.id
 }
 
+output "private_subnet_ids" {
+  description = "IDs of private subnets for ECS and other services"
+  value       = aws_subnet.private[*].id
+}
+
 output "ecs_sg_id" {
-  description = "ECS security group ID"
+  description = "Security group ID for ECS services"
   value       = aws_security_group.ecs_sg.id
 }
