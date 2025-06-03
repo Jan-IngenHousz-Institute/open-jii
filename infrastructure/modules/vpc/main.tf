@@ -120,7 +120,7 @@ resource "aws_db_subnet_group" "aurora_subnet_group" {
   subnet_ids = aws_subnet.private[*].id
 
   tags = {
-    "Name" = "${var.environment} Aurora DB Subnet Group"
+    "Name"        = "${var.environment} Aurora DB Subnet Group"
     "Environment" = var.environment
   }
 }
