@@ -35,7 +35,7 @@ output "default_sg_id" {
 
 output "alb_sg_id" {
   description = "Default security group ID for ALB"
-  value = aws_security_group.alb_sg.id
+  value       = aws_security_group.alb_sg.id
 }
 
 output "private_subnet_ids" {
