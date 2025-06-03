@@ -18,7 +18,7 @@ export const useUserSearch = (
         query: queryString,
         limit: options?.limit,
         offset: options?.offset,
-      }
+      },
     },
     queryKey: ["user-search", queryString, options?.limit, options?.offset],
     enabled: queryString.trim().length > 0,

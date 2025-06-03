@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDate } from "@/util/date";
-import { UserPlus, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import type { User } from "@repo/api";
@@ -13,12 +13,7 @@ import {
   CardContent,
   Button,
   Badge,
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-  SearchInput,
+  UserSearchWithDropdown,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
@@ -59,13 +54,14 @@ export function ExperimentMemberManagement({
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
 
   // Handle adding a member
-  const handleAddMember = async () => {
-    if (!selectedUserId) return;
+  const handleAddMember = async (userId?: string) => {
+    const idToAdd = userId ?? selectedUserId;
+    if (!idToAdd) return;
 
     await addMember({
       params: { id: experimentId },
       body: {
-        userId: selectedUserId,
+        userId: idToAdd,
         role: "member",
       },
     });
@@ -158,62 +154,32 @@ export function ExperimentMemberManagement({
       <CardContent className="space-y-6">
         {/* Add member section */}
         <div className="space-y-2">
-          <h6 className="text-sm font-medium">Add a Member</h6>
           <div className="flex flex-col space-y-2">
-            <SearchInput
-              value={userSearch}
-              onChange={setUserSearch}
-              placeholder="Search users by name or email..."
-              isLoading={isUsersLoading}
-              clearable={true}
-            />
-
-            {userSearch.length > 0 && (
-              <div className="flex space-x-2">
-                <Select
-                  value={selectedUserId}
-                  onValueChange={setSelectedUserId}
-                  disabled={availableUsers.length === 0}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue
-                      placeholder={
-                        availableUsers.length === 0
-                          ? "No users available"
-                          : "Select user..."
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableUsers.length === 0 ? (
-                      <SelectItem value="no-users-available" disabled>
-                        No users available to add
-                      </SelectItem>
-                    ) : (
-                      availableUsers.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name ?? "Unnamed User"}{" "}
-                          <span className="text-muted-foreground text-xs">
-                            ({user.email ?? "No email"})
-                          </span>
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                <Button
-                  onClick={handleAddMember}
-                  disabled={
-                    isAddingMember ||
-                    !selectedUserId ||
-                    availableUsers.length === 0
-                  }
-                >
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  {isAddingMember ? "Adding..." : "Add"}
-                </Button>
-              </div>
-            )}
+            <div className="flex space-x-2">
+              <UserSearchWithDropdown
+                options={availableUsers.map((user) => ({
+                  value: user.id,
+                  label: (
+                    <div className="flex flex-col">
+                      <span>{user.name}</span>
+                      <span className="text-muted-foreground text-xs">
+                        {user.email}
+                      </span>
+                    </div>
+                  ),
+                }))}
+                value={selectedUserId}
+                onValueChange={(value: string) => {
+                  setSelectedUserId(value);
+                }}
+                placeholder="Add a member"
+                loading={isUsersLoading}
+                searchValue={userSearch}
+                onSearchChange={setUserSearch}
+                onAddUser={handleAddMember}
+                isAddingUser={isAddingMember}
+              />
+            </div>
           </div>
         </div>
 
