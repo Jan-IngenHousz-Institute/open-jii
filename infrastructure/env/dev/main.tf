@@ -366,10 +366,10 @@ module "backend_ecs" {
   container_port = 3020
 
   # Task size
-  cpu              = "512"  # 0.5 vCPU
-  memory           = "1024" # 1 GB
-  container_cpu    = 256    # 0.25 vCPU 
-  container_memory = 512    # 0.5 GB
+  cpu              = 512  # 0.5 vCPU
+  memory           = 1024 # 1 GB
+  container_cpu    = 256  # 0.25 vCPU 
+  container_memory = 512  # 0.5 GB
 
   # Networking
   vpc_id          = module.vpc.vpc_id

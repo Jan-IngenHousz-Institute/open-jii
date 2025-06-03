@@ -17,14 +17,14 @@ variable "service_name" {
 
 variable "cpu" {
   description = "CPU units for the ECS task"
-  type        = string
-  default     = "256"
+  type        = number
+  default     = 256
 }
 
 variable "memory" {
   description = "Memory for the ECS task"
-  type        = string
-  default     = "512"
+  type        = number
+  default     = 512
 }
 
 variable "container_cpu" {

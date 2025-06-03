@@ -4,7 +4,6 @@ locals {
   # If nat_count is explicitly provided, use it; otherwise use environment-based logic
   effective_nat_count = var.nat_count != null ? var.nat_count : (var.environment == "dev" ? 1 : var.az_count)
 }
-data "aws_availability_zones" "available" {}
 
 # ----
 # VPC
