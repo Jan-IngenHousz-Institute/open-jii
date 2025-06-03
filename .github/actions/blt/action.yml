@@ -16,6 +16,26 @@ inputs:
   environment:
     description: "Deployment environment (e.g., dev, staging, production)"
     required: true
+  database_url:
+    description: "Database URL for connecting to the database"
+    required: false
+    default: ""
+  auth_secret:
+    description: "Auth secret for authentication"
+    required: false
+    default: ""
+  auth_url:
+    description: "Auth URL for authentication"
+    required: false
+    default: ""
+  auth_github_id:
+    description: "GitHub OAuth ID for authentication"
+    required: false
+    default: ""
+  auth_github_secret:
+    description: "GitHub OAuth secret for authentication"
+    required: false
+    default: ""
 
 outputs:
   affected_apps:
@@ -83,11 +103,11 @@ runs:
       if: steps.check.outputs.has_affected_apps == 'true'
       shell: bash
       env:
-        DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-        AUTH_URL: ${{ secrets.AUTH_URL }}
-        AUTH_GITHUB_ID: ${{ secrets.AUTH_GITHUB_ID }}
-        AUTH_GITHUB_SECRET: ${{ secrets.AUTH_GITHUB_SECRET }}
+        DATABASE_URL: ${{ inputs.database_url }}
+        AUTH_SECRET: ${{ inputs.auth_secret }}
+        AUTH_URL: ${{ inputs.auth_url }}
+        AUTH_GITHUB_ID: ${{ inputs.auth_github_id }}
+        AUTH_GITHUB_SECRET: ${{ inputs.auth_github_secret }}
       run: |
         echo "🔨 Building affected packages"
         # Build command with individual --filter flags for each package
