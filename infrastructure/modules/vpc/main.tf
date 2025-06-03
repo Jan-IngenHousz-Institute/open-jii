@@ -57,12 +57,31 @@ resource "aws_security_group" "aurora_sg" {
     cidr_blocks = [aws_vpc.this.cidr_block] # Restrict access to VPC only
   }
 
-  # Allow outbound traffic (Aurora needs this to communicate)
+  # Restricted outbound traffic - only HTTPS for AWS services
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTPS for AWS services"
+  }
+
+  # DNS resolution
+  egress {
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
+    cidr_blocks = [aws_vpc.this.cidr_block]
+    description = "DNS resolution"
+  }
+
+  # DNS resolution over TCP (some resolvers use TCP)
+  egress {
+    from_port   = 53
+    to_port     = 53
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.this.cidr_block]
+    description = "DNS resolution TCP"
   }
 
   tags = {

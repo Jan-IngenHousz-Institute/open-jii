@@ -299,11 +299,16 @@ module "experiment_orchestrator_job" {
 }
 
 module "aurora_db" {
-  source              = "../../modules/aurora_db"
-  cluster_identifier = "open-jii-dev-db-cluster"
-  database_name = "open-jii-dev-db"
-  master_username = "dev_db"
-  db_subnet_group_name = module.vpc.db_subnet_group_name
+  source                 = "../../modules/aurora_db"
+  cluster_identifier     = "open-jii-dev-db-cluster"
+  database_name          = "open-jii-dev-db"
+  master_username        = "openjii_dev_admin"
+  db_subnet_group_name   = module.vpc.db_subnet_group_name
   vpc_security_group_ids = [module.vpc.aurora_security_group_id]
-  aws_region               = var.aws_region
+
+  max_capacity             = 1.0  # Conservative max for dev
+  min_capacity             = 0.5  # Minimum cost-effective setting
+  seconds_until_auto_pause = 1800 # Auto-pause after 30 minutes of inactivity
+  backup_retention_period  = 3    # Reduced retention for dev
+  skip_final_snapshot      = true # Skip snapshot on deletion in dev
 }
