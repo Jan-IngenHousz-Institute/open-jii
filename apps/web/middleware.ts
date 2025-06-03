@@ -15,7 +15,7 @@ export default middleware((request) => {
       `${request.nextUrl.origin}${request.nextUrl.pathname}${request.nextUrl.search}`,
     );
     const newUrl = new URL(
-      `/api/auth/signin?callbackUrl=${callbackUrl}`,
+      `/api/auth/signin?=${callbackUrl}`,
       request.nextUrl.origin,
     );
     return Response.redirect(newUrl);
