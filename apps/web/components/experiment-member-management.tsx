@@ -62,21 +62,16 @@ export function ExperimentMemberManagement({
   const handleAddMember = async () => {
     if (!selectedUserId) return;
 
-    try {
-      await addMember({
-        params: { id: experimentId },
-        body: {
-          userId: selectedUserId,
-          role: "member",
-        },
-      });
+    await addMember({
+      params: { id: experimentId },
+      body: {
+        userId: selectedUserId,
+        role: "member",
+      },
+    });
 
-      toast({ description: "Member added successfully" });
-      setSelectedUserId("");
-    } catch (error) {
-      toast({ description: "Failed to add member", variant: "destructive" });
-      console.error("Error adding member:", error);
-    }
+    toast({ description: "Member added successfully" });
+    setSelectedUserId("");
   };
 
   // Handle removing a member
@@ -92,9 +87,6 @@ export function ExperimentMemberManagement({
       });
 
       toast({ description: "Member removed successfully" });
-    } catch (error) {
-      toast({ description: "Failed to remove member", variant: "destructive" });
-      console.error("Error removing member:", error);
     } finally {
       setRemovingMemberId(null);
     }
