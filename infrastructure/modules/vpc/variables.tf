@@ -15,3 +15,9 @@ variable "subnet_bits" {
   type        = number
   default     = 8
 }
+
+variable "environment" {
+  description = "Deployment environment (e.g., dev, staging, production)"
+  type        = string
+  default     = "dev"
+}

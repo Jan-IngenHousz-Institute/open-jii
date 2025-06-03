@@ -34,20 +34,19 @@ graph TD;
 | Name                         | Description                                  | Type     | Default                | Required |
 |------------------------------|----------------------------------------------|----------|------------------------|----------|
 | `cluster_identifier`         | Unique identifier for Aurora cluster       | `string`  | n/a                     | ✅ Yes  |
-| `engine_mode`                | Aurora Engine Mode                         | `string`  | `"provisioned"`         | ❌ No   |
-| `engine`                     | Aurora DB Engine                           | `string`  | `"aurora-postgresql"`   | ❌ No   |
-| `engine_version`             | PostgreSQL version for Aurora              | `string`  | `"13.6"`                | ❌ No   |
 | `database_name`              | Name of the database                       | `string`  | n/a                     | ✅ Yes  |
 | `master_username`            | Master username for DB                     | `string`  | n/a                     | ✅ Yes  |
-| `storage_encrypted`          | Enables database storage encryption        | `bool`    | `true`                  | ❌ No   |
-| `vpc_security_group_ids`     | Security groups assigned to Aurora DB      | `list`    | n/a                     | ✅ Yes  |
+| `vpc_security_group_ids`     | Security groups assigned to Aurora DB      | `list(string)` | n/a              | ✅ Yes  |
 | `db_subnet_group_name`       | Name of the subnet group for Aurora        | `string`  | n/a                     | ✅ Yes  |
-| `preferred_backup_window`    | Automated backup time slot                 | `string`  | `"00:00-02:00"`         | ❌ No   |
-| `preferred_maintenance_window` | Maintenance window                       | `string`  | `"sun:03:00-sun:07:00"` | ❌ No   |
-| `max_capacity`               | Maximum scaling capacity for Serverless v2 | `number`  | `2.0`                   | ❌ No   |
-| `min_capacity`               | Minimum scaling capacity                   | `number`  | `0.0`                   | ❌ No   |
-| `seconds_until_auto_pause`   | Time before cluster auto-pauses            | `number`  | `3600`                  | ❌ No   |
-| `instance_class`             | Instance type for Aurora                   | `string`  | `"db.serverless"`       | ❌ No   |
+| `max_capacity`               | Maximum scaling capacity for Serverless v2 | `number`  | `1.0`                   | ❌ No   |
+| `min_capacity`               | Minimum scaling capacity                   | `number`  | `0.5`                   | ❌ No   |
+| `seconds_until_auto_pause`   | Time before cluster auto-pauses            | `number`  | `1800`                  | ❌ No   |
+| `enable_enhanced_monitoring` | Enable RDS Enhanced Monitoring             | `bool`    | `false`                 | ❌ No   |
+| `backup_retention_period`    | Number of days to retain backups           | `number`  | `7`                     | ❌ No   |
+| `performance_insights_retention_period` | Performance Insights retention  | `number`  | `7`                     | ❌ No   |
+| `skip_final_snapshot`        | Skip final snapshot on deletion            | `bool`    | `false`                 | ❌ No   |
+| `enable_kms_key_rotation`    | Enable automatic KMS key rotation          | `bool`    | `true`                  | ❌ No   |
+| `kms_key_deletion_window`    | Days to retain KMS keys before deletion    | `number`  | `7`                     | ❌ No   |
 
 📤 Outputs
 | Name                  | Description                                     |

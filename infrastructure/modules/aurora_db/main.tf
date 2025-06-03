@@ -175,7 +175,7 @@ resource "aws_rds_cluster_instance" "rds_cluster_instance_aurora" {
   # Performance and monitoring
   performance_insights_enabled          = true
   performance_insights_retention_period = var.performance_insights_retention_period
-  performance_insights_kms_key_id       = aws_kms_key.performance_insights_key.arn
+  performance_insights_kms_key_id       = aws_kms_key.performance_insights_key.key_id
   monitoring_interval                   = var.enable_enhanced_monitoring ? 60 : 0
   monitoring_role_arn                   = var.enable_enhanced_monitoring ? aws_iam_role.rds_enhanced_monitoring[0].arn : null
 
