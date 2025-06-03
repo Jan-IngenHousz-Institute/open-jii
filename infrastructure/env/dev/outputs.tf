@@ -38,3 +38,35 @@ output "opennext_dynamodb_table_name" {
   description = "Name of the DynamoDB table for Next.js cache/revalidation"
   value       = module.opennext.dynamodb_table_name
 }
+
+# Database Infrastructure Outputs
+output "database_endpoint" {
+  description = "Aurora cluster primary endpoint for write operations"
+  value       = module.aurora_db.cluster_endpoint
+}
+
+output "database_reader_endpoint" {
+  description = "Aurora cluster reader endpoint for read-only operations"
+  value       = module.aurora_db.reader_endpoint
+}
+
+output "database_port" {
+  description = "Aurora cluster port number"
+  value       = module.aurora_db.cluster_port
+}
+
+output "database_name" {
+  description = "Name of the default database"
+  value       = module.aurora_db.database_name
+}
+
+output "database_cluster_id" {
+  description = "Aurora cluster identifier"
+  value       = module.aurora_db.cluster_id
+}
+
+output "database_secret_arn" {
+  description = "Secret ARN used by AWS Secrets Manager for the master credentials"
+  value       = module.aurora_db.master_user_secret_arn
+  sensitive   = true
+}
