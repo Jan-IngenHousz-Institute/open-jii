@@ -32,3 +32,11 @@ output "default_sg_id" {
   description = "Default security group ID"
   value       = aws_security_group.default.id
 }
+
+output "db_subnet_group_name" {
+  value = aws_db_subnet_group.aurora_subnet_group.name
+}
+
+output "aurora_security_group_id" {
+  value = aws_security_group.aurora_sg.id
+}
