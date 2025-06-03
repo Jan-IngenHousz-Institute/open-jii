@@ -1,4 +1,3 @@
-import { ExperimentMemberManagement } from "@/components/experiment-member-management";
 import { ExperimentSettings } from "@/components/experiment-settings";
 import { use } from "react";
 
@@ -22,7 +21,6 @@ export default function ExperimentSettingsPage({
       </div>
 
       <div className="space-y-6">
-        <ExperimentMemberManagement experimentId={id} />
         <ExperimentSettings experimentId={id} />
       </div>
     </div>
