@@ -33,7 +33,7 @@ resource "aws_iam_policy" "oidc_role_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid = "EC2Permissions"
+        Sid    = "EC2Permissions"
         Effect = "Allow"
         Action = [
           "ec2:CreateVpc",
@@ -66,7 +66,7 @@ resource "aws_iam_policy" "oidc_role_policy" {
         Resource = "*"
       },
       {
-        Sid = "S3Permissions"
+        Sid    = "S3Permissions"
         Effect = "Allow"
         Action = [
           "s3:CreateBucket",
@@ -97,7 +97,7 @@ resource "aws_iam_policy" "oidc_role_policy" {
         Resource = "*"
       },
       {
-        Sid = "CloudFrontPermissions"
+        Sid    = "CloudFrontPermissions"
         Effect = "Allow"
         Action = [
           "cloudfront:CreateDistribution",
@@ -111,7 +111,7 @@ resource "aws_iam_policy" "oidc_role_policy" {
         Resource = "*"
       },
       {
-        Sid = "TimestreamPermissions"
+        Sid    = "TimestreamPermissions"
         Effect = "Allow"
         Action = [
           "timestream:CreateDatabase",
@@ -126,7 +126,7 @@ resource "aws_iam_policy" "oidc_role_policy" {
         Resource = "*"
       },
       {
-        Sid = "KinesisPermissions"
+        Sid    = "KinesisPermissions"
         Effect = "Allow"
         Action = [
           "kinesis:CreateStream",
@@ -141,7 +141,7 @@ resource "aws_iam_policy" "oidc_role_policy" {
         Resource = "*"
       },
       {
-        Sid = "IoTCorePermissions"
+        Sid    = "IoTCorePermissions"
         Effect = "Allow"
         Action = [
           "iot:CreateThing",
@@ -158,7 +158,7 @@ resource "aws_iam_policy" "oidc_role_policy" {
         Resource = "*"
       },
       {
-        Sid = "IAMPermissionsForIoTAndDatabricks"
+        Sid    = "IAMPermissionsForIoTAndDatabricks"
         Effect = "Allow"
         Action = [
           "iam:CreateRole",
@@ -177,7 +177,7 @@ resource "aws_iam_policy" "oidc_role_policy" {
         Resource = "*"
       },
       {
-        Sid = "DynamoDBs3lock"
+        Sid    = "DynamoDBs3lock"
         Effect = "Allow"
         Action = [
           "dynamodb:GetItem",
@@ -188,10 +188,10 @@ resource "aws_iam_policy" "oidc_role_policy" {
           "dynamodb:DescribeTimeToLive",
           "dynamodb:ListTagsOfResource"
         ]
-        Resource = "arn:aws:dynamodb:eu-central-1:084375565727:table/terraform-state-lock"
+        Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/terraform-state-lock"
       },
       {
-        Sid = "CognitoPools"
+        Sid    = "CognitoPools"
         Effect = "Allow"
         Action = [
           "cognito-identity:DescribeIdentityPool",
@@ -202,7 +202,7 @@ resource "aws_iam_policy" "oidc_role_policy" {
         Resource = "*"
       },
       {
-        Sid = "ECRPermissions"
+        Sid    = "ECRPermissions"
         Effect = "Allow"
         Action = [
           "ecr:GetAuthorizationToken",
@@ -216,7 +216,7 @@ resource "aws_iam_policy" "oidc_role_policy" {
         Resource = "*"
       },
       {
-        Sid = "ECSPermissions"
+        Sid    = "ECSPermissions"
         Effect = "Allow"
         Action = [
           "ecs:RegisterTaskDefinition",
