@@ -1,7 +1,5 @@
-import { LoginScreen } from "~/screens/login-screen/login-screen";
+import { MainRouter } from "~/navigation/main-router";
 
 export function App() {
-  // return <MainRouter />;
-
-  return <LoginScreen />;
+  return <MainRouter />;
 }

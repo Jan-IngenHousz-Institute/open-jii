@@ -11,5 +11,6 @@ export function GET(request: NextRequest) {
   }
 
   const redirectUrl = `photosynq://callback?session_token=${encodeURIComponent(sessionToken)}`;
+  console.log("about to redirect to", redirectUrl);
   return NextResponse.redirect(redirectUrl);
 }

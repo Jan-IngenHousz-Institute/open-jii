@@ -3,11 +3,15 @@ import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
 import type { ParamListBase } from "@react-navigation/native";
 import { Text, TouchableOpacity, View } from "react-native";
+import { LoginWidget } from "~/widgets/login-widget";
+
+// Adjust this path to your actual store location
 
 interface RootTabParamList extends ParamListBase {
   Home: undefined;
   Bluetooth: undefined;
   Serial: undefined;
+  Login: undefined;
 }
 
 export function HomeScreen() {
@@ -15,6 +19,11 @@ export function HomeScreen() {
 
   return (
     <View className="flex-1 bg-white">
+      {/* Top bar: Login / User info */}
+      <View className="flex-row items-center justify-end p-4">
+        <LoginWidget />
+      </View>
+
       {/* Top half: Bluetooth Mode */}
       <TouchableOpacity
         activeOpacity={0.6}
@@ -29,7 +38,7 @@ export function HomeScreen() {
         </View>
       </TouchableOpacity>
 
-      {/* Full-width Divider */}
+      {/* Divider */}
       <View className="h-[1px] w-full bg-gray-300" />
 
       {/* Bottom half: Serial Port Mode */}
