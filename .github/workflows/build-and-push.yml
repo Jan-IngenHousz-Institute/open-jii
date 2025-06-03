@@ -1,0 +1,33 @@
+name: Build Node, Docker and Push
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Build & Test Action
+        uses: ./.github/actions/btn
+        with:
+          node-version: "18"
+
+  docker-build-push:
+    needs: build-test # Ensures Build & Test runs first
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Docker Build & Push Action
+        uses: ./.github/actions/bpd
+        with:
+          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws_region: ${{ secrets.AWS_REGION }}
+          repository-name: "open-jii"
+          docker-file-path: "apps/backend/Dockerfile"
+          build-context: "apps/backend/"

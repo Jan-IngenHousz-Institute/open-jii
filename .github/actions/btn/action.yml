@@ -1,0 +1,51 @@
+name: "Build & Test Node.js App"
+description: "Installs dependencies and runs tests for the Node.js backend"
+
+inputs:
+  node-version:
+    description: "Node.js version"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: "pnpm" # Automatically caches global pnpm installation
+
+    - name: Install pnpm
+      run: npm install -g pnpm
+
+    - name: Setup pnpm store path
+      run: pnpm config set store-dir ~/.pnpm-store
+
+    - name: Cache pnpm dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.pnpm-store
+        key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-
+
+    - name: Install Dependencies
+      run: |
+        cd apps/backend
+        pnpm install --frozen-lockfile
+      shell: bash
+
+    - name: Build the Application
+      run: |
+        cd apps/backend
+        pnpm run build
+      shell: bash
+
+    - name: Run Tests
+      run: |
+        cd apps/backend
+        pnpm test --runInBand --coverage
+      shell: bash
