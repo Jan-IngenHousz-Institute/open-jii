@@ -1,4 +1,5 @@
 import axios from "axios";
+import { assertEnvVariables } from "~/utils/assert";
 
 export interface UserSessionData {
   user: {
@@ -10,8 +11,12 @@ export interface UserSessionData {
   expires: string; // ISO 8601 date string
 }
 
+const { NEXT_AUTH_URI } = assertEnvVariables({
+  NEXT_AUTH_URI: process.env.NEXT_AUTH_URI,
+});
+
 const axiosInstance = axios.create({
-  baseURL: "http://localhost:3000",
+  baseURL: NEXT_AUTH_URI,
   withCredentials: false,
   headers: {
     Cookie: "",
@@ -20,7 +25,7 @@ const axiosInstance = axios.create({
 
 export async function getSession(sessionToken: string) {
   const { data } = await axiosInstance.get<UserSessionData>(
-    "http://localhost:3000/api/auth/session",
+    "/api/auth/session",
     {
       headers: {
         Accept: "*/*",
