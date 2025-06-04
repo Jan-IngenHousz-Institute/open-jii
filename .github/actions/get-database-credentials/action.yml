@@ -1,49 +1,34 @@
 name: "Get Database Credentials"
-description: "Retrieves database credentials from AWS Secrets Manager and constructs DATABASE_URL"
+description: "Retrieve database credentials from AWS Secrets Manager and construct a database connection URL"
+
 inputs:
   environment:
-    description: "The environment (dev, staging, prod)"
+    description: "The deployment environment (dev, staging, prod)"
     required: true
   aws-role-arn:
-    description: "AWS role ARN to assume via OIDC"
+    description: "AWS IAM Role ARN to assume for retrieving secrets"
     required: true
   aws-region:
-    description: "AWS region where resources are deployed"
+    description: "AWS region where Secrets Manager is deployed"
     required: true
-  secret-name-prefix:
-    description: "Prefix for the secret name (defaults to environment)"
-    required: false
-    default: ""
-  database-cluster-id:
-    description: "Database cluster ID"
-    required: false
-    default: ""
 
 outputs:
   database-url:
-    description: "The constructed DATABASE_URL for connecting to the Aurora database"
-    value: ${{ steps.construct-url.outputs.database_url }}
-  database-host:
-    description: "The database host endpoint"
-    value: ${{ steps.extract-values.outputs.db_endpoint }}
-  database-port:
-    description: "The database port"
-    value: ${{ steps.extract-values.outputs.db_port }}
-  database-name:
-    description: "The database name"
-    value: ${{ steps.extract-values.outputs.db_name }}
+    description: "Constructed database URL ready for use with the application"
+    value: ${{ steps.construct-db-url.outputs.db_url }}
 
 runs:
   using: "composite"
   steps:
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
+    - name: Download Infrastructure Outputs
+      uses: actions/download-artifact@v4
       with:
-        role-to-assume: ${{ inputs.aws-role-arn }}
-        aws-region: ${{ inputs.aws-region }}
+        name: tofu-outputs-${{ inputs.environment }}
+        path: tofu-outputs/
+      shell: bash
 
-    - name: Extract database values from Terraform outputs
-      id: extract-values
+    - name: Extract DB Secret ARN
+      id: get-secret-arn
       shell: bash
       run: |
         # Load infrastructure outputs from artifact
@@ -51,45 +36,89 @@ runs:
 
         if [[ ! -f "$OUTPUTS_FILE" ]]; then
           echo "Error: Infrastructure outputs file not found: $OUTPUTS_FILE"
+          echo "Available files:"
+          find tofu-outputs -type f
           exit 1
         fi
 
-        # Extract database values from JSON
+        # Extract the database secret ARN
+        DB_SECRET_ARN=$(jq -r '.database_secret_arn // ""' "$OUTPUTS_FILE")
         DB_ENDPOINT=$(jq -r '.database_endpoint // ""' "$OUTPUTS_FILE")
         DB_PORT=$(jq -r '.database_port // ""' "$OUTPUTS_FILE")
         DB_NAME=$(jq -r '.database_name // ""' "$OUTPUTS_FILE")
-        DB_SECRET_ARN=$(jq -r '.database_secret_arn // ""' "$OUTPUTS_FILE")
 
         # Mask sensitive values
         echo "::add-mask::${DB_SECRET_ARN}"
 
+        if [[ -z "$DB_SECRET_ARN" ]]; then
+          echo "Error: Database secret ARN not found in outputs"
+          exit 1
+        fi
+
         # Save outputs
+        echo "db_secret_arn=${DB_SECRET_ARN}" >> $GITHUB_OUTPUT
         echo "db_endpoint=${DB_ENDPOINT}" >> $GITHUB_OUTPUT
         echo "db_port=${DB_PORT}" >> $GITHUB_OUTPUT
         echo "db_name=${DB_NAME}" >> $GITHUB_OUTPUT
-        echo "db_secret_arn=${DB_SECRET_ARN}" >> $GITHUB_OUTPUT
 
-    - name: Construct DATABASE_URL
-      id: construct-url
+        echo "Successfully extracted DB information for ${{ inputs.environment }} environment"
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.aws-role-arn }}
+        aws-region: ${{ inputs.aws-region }}
+      shell: bash
+
+    - name: Get DB credentials from Secrets Manager
+      id: get-db-creds
       shell: bash
       run: |
-        # Get database credentials from AWS Secrets Manager using the secret ARN
-        SECRET_NAME="${{ steps.extract-values.outputs.db_secret_arn }}"
+        # Retrieve the secret from AWS Secrets Manager
+        SECRET_ARN="${{ steps.get-secret-arn.outputs.db_secret_arn }}"
 
-        # Mask the secret ARN again in this step
-        echo "::add-mask::${SECRET_NAME}"
+        echo "Retrieving database credentials from Secrets Manager..."
 
-        # Get secret and extract credentials
-        DB_SECRET=$(aws secretsmanager get-secret-value --secret-id "$SECRET_NAME" --query SecretString --output text)
-        DB_USERNAME=$(echo "$DB_SECRET" | jq -r '.username // "postgres"')
-        DB_PASSWORD=$(echo "$DB_SECRET" | jq -r '.password')
+        # Get secret value and extract credentials
+        SECRET_VALUE=$(aws secretsmanager get-secret-value --secret-id "$SECRET_ARN" --query 'SecretString' --output text)
 
-        # Construct the DATABASE_URL with properly sanitized values
-        # Format: postgresql://{username}:{password}@{endpoint}:{port}/{dbname}
-        DATABASE_URL="postgresql://${DB_USERNAME}:${DB_PASSWORD}@${{ steps.extract-values.outputs.db_endpoint }}:${{ steps.extract-values.outputs.db_port }}/${{ steps.extract-values.outputs.db_name }}"
+        # Extract username and password from the secret (JSON format)
+        DB_USERNAME=$(echo $SECRET_VALUE | jq -r '.username // ""')
+        DB_PASSWORD=$(echo $SECRET_VALUE | jq -r '.password // ""')
 
-        # Mask the entire URL since it contains sensitive information
-        echo "::add-mask::$DATABASE_URL"
+        if [[ -z "$DB_USERNAME" || -z "$DB_PASSWORD" ]]; then
+          echo "Error: Failed to extract database username or password from secret"
+          exit 1
+        fi
 
-        # Output the masked DATABASE_URL and username
-        echo "database_url=${DATABASE_URL}" >> $GITHUB_OUTPUT
+        # Store credentials securely in environment variables
+        echo "db_username=${DB_USERNAME}" >> $GITHUB_OUTPUT
+
+        # We mask the password in logs but still make it available to the next step
+        echo "::add-mask::${DB_PASSWORD}"
+        echo "db_password=${DB_PASSWORD}" >> $GITHUB_OUTPUT
+
+        echo "Successfully retrieved database credentials"
+
+    - name: Construct Database Connection URL
+      id: construct-db-url
+      shell: bash
+      run: |
+        # Retrieve values from previous steps
+        DB_ENDPOINT="${{ steps.get-secret-arn.outputs.db_endpoint }}"
+        DB_PORT="${{ steps.get-secret-arn.outputs.db_port }}"
+        DB_NAME="${{ steps.get-secret-arn.outputs.db_name }}"
+        DB_USERNAME="${{ steps.get-db-creds.outputs.db_username }}"
+        DB_PASSWORD="${{ steps.get-db-creds.outputs.db_password }}"
+
+        # Construct the database URL
+        # Format: postgresql://username:password@host:port/database
+        DATABASE_URL="postgresql://${DB_USERNAME}:${DB_PASSWORD}@${DB_ENDPOINT}:${DB_PORT}/${DB_NAME}"
+
+        # Mask the complete URL in logs
+        echo "::add-mask::${DATABASE_URL}"
+
+        # Set as output
+        echo "db_url=${DATABASE_URL}" >> $GITHUB_OUTPUT
+
+        echo "Successfully constructed database URL for environment: ${{ inputs.environment }}"
