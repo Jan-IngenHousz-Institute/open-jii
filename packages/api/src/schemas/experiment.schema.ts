@@ -66,6 +66,7 @@ export type Experiment = z.infer<typeof zExperiment>;
 export type ExperimentList = z.infer<typeof zExperimentList>;
 export type ExperimentMember = z.infer<typeof zExperimentMember>;
 export type ExperimentMemberList = z.infer<typeof zExperimentMemberList>;
+export type ErrorResponse = z.infer<typeof zErrorResponse>;
 
 // Define request and response types
 export const zCreateExperimentBody = z.object({
