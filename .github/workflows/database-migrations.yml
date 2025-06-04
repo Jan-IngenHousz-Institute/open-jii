@@ -1,0 +1,166 @@
+name: Database Migrations
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "The deployment environment (dev, staging, prod)"
+        required: true
+        type: string
+
+concurrency:
+  group: migrations-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Build & Run Migrations
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Infrastructure Outputs
+        uses: actions/download-artifact@v4
+        with:
+          name: tofu-outputs-${{ inputs.environment }}
+          path: tofu-outputs/
+
+      - name: Extract Infrastructure Outputs
+        id: infra-outputs
+        run: |
+          if [[ -f "tofu-outputs/infrastructure-outputs-${{ inputs.environment }}.json" ]]; then
+            echo "Using Terraform outputs from artifact"
+            
+            # Extract values from the infrastructure outputs JSON
+            OUTPUTS_JSON=$(cat tofu-outputs/infrastructure-outputs-${{ inputs.environment }}.json)
+            
+            # Extract ECR repository URL (contains repo name)
+            if [[ $(echo "$OUTPUTS_JSON" | jq -e '.ecr_repository_url') ]]; then
+              # Extract just the repository name from the URL (handling nested Terraform output format)
+              ECR_URL=$(echo "$OUTPUTS_JSON" | jq -r '.ecr_repository_url.value // .ecr_repository_url')
+              ECR_REPOSITORY=$(echo "$ECR_URL" | cut -d'/' -f2)
+              echo "ECR_REPOSITORY=$ECR_REPOSITORY" >> $GITHUB_ENV
+              echo "ecr_repository=$ECR_REPOSITORY" >> $GITHUB_OUTPUT
+              echo "Found ECR repository: $ECR_REPOSITORY"
+            fi
+            
+            # Extract ECS cluster name
+            if [[ $(echo "$OUTPUTS_JSON" | jq -e '.ecs_cluster_name') ]]; then
+              ECS_CLUSTER_NAME=$(echo "$OUTPUTS_JSON" | jq -r '.ecs_cluster_name.value // .ecs_cluster_name')
+              echo "ECS_CLUSTER_NAME=$ECS_CLUSTER_NAME" >> $GITHUB_ENV
+              echo "ecs_cluster_name=$ECS_CLUSTER_NAME" >> $GITHUB_OUTPUT
+              echo "Found ECS cluster: $ECS_CLUSTER_NAME"
+            fi
+            
+            # Extract task definition family
+            if [[ $(echo "$OUTPUTS_JSON" | jq -e '.task_definition_family') ]]; then
+              TASK_FAMILY=$(echo "$OUTPUTS_JSON" | jq -r '.task_definition_family.value // .task_definition_family')
+              echo "TASK_FAMILY=$TASK_FAMILY" >> $GITHUB_ENV
+              echo "task_family=$TASK_FAMILY" >> $GITHUB_OUTPUT
+              echo "Found task family: $TASK_FAMILY"
+            fi
+          else
+            echo "No Terraform outputs found, falling back to variables or defaults"
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set environment variables
+        run: |
+          echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
+          
+          # Use ECR repository from Terraform outputs if available, otherwise fall back to default
+          if [[ -z "$ECR_REPOSITORY" ]]; then
+            echo "ECR_REPOSITORY=db-migrations" >> $GITHUB_ENV
+          fi
+          
+          echo "IMAGE_TAG=migrations-$(echo ${{ github.sha }} | cut -c1-7)-$(date +%s)" >> $GITHUB_ENV
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+        run: |
+          # Build a docker container and push it to ECR
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest -f packages/database/Dockerfile .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Run migration task
+        id: run-task
+        run: |
+          # Set cluster name from environment or fall back to default
+          CLUSTER_NAME="${ECS_CLUSTER_NAME:-db-migrations-cluster}"
+          TASK_FAMILY="${TASK_FAMILY:-db-migrations}"
+          
+          echo "Using ECS Cluster: ${CLUSTER_NAME}"
+          echo "Using Task Family: ${TASK_FAMILY}"
+          
+          TASK_ARN=$(aws ecs run-task \
+            --cluster ${CLUSTER_NAME} \
+            --task-definition ${TASK_FAMILY} \
+            --launch-type FARGATE \
+            --network-configuration "$(aws ecs describe-task-definition --task-definition ${TASK_FAMILY} --query 'taskDefinition.networkConfiguration || null' --output json || echo '{\"awsvpcConfiguration\":{\"subnets\":[],\"securityGroups\":[],\"assignPublicIp\":\"DISABLED\"}}')" \
+            --query 'tasks[0].taskArn' \
+            --output text)
+
+          echo "task_arn=$TASK_ARN" >> $GITHUB_OUTPUT
+          echo "Running task: $TASK_ARN"
+
+      - name: Wait for migration to complete
+        run: |
+          # Get task ARN from previous step
+          TASK_ARN="${{ steps.run-task.outputs.task_arn }}"
+          
+          # Set cluster name from environment or fall back to default
+          CLUSTER_NAME="${ECS_CLUSTER_NAME:-db-migrations-cluster}"
+          TASK_FAMILY="${TASK_FAMILY:-db-migrations}"
+          
+          echo "Waiting for migration task to complete..."
+          
+          # Set a maximum wait time (10 minutes) with timeout command
+          timeout 600 aws ecs wait tasks-stopped --cluster ${CLUSTER_NAME} --tasks ${TASK_ARN} || {
+            echo "Timeout reached. Stopping task..."
+            aws ecs stop-task --cluster ${CLUSTER_NAME} --task ${TASK_ARN} --reason "Timeout reached in GitHub Actions"
+            sleep 10  # Give the task time to stop
+          }
+
+          # Check task exit code
+          STATUS=$(aws ecs describe-tasks --cluster ${CLUSTER_NAME} --tasks ${TASK_ARN} --query 'tasks[0].containers[0].exitCode' --output text)
+
+          if [ "$STATUS" != "0" ]; then
+            echo "Migration failed with exit code $STATUS"
+            
+            # Get task status reason
+            REASON=$(aws ecs describe-tasks --cluster ${CLUSTER_NAME} --tasks ${TASK_ARN} --query 'tasks[0].stoppedReason' --output text)
+            echo "Task stopped reason: $REASON"
+            
+            # Get logs from CloudWatch
+            TASK_ID=$(echo $TASK_ARN | cut -d'/' -f2)
+            LOG_GROUP="/ecs/${TASK_FAMILY}"
+            LOG_STREAM="migration-container/$TASK_ID"
+            
+            echo "Fetching logs from CloudWatch log group $LOG_GROUP, stream $LOG_STREAM"
+            aws logs get-log-events --log-group-name "$LOG_GROUP" --log-stream-name "$LOG_STREAM" --query 'events[*].message' --output text
+            
+            exit 1
+          else
+            echo "Migration completed successfully!"
+          fi
