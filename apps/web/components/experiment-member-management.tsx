@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDate } from "@/util/date";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { User } from "@repo/api";
 import {
@@ -10,8 +10,6 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-  UserSearchWithDropdown,
-  MemberList,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
@@ -20,6 +18,8 @@ import { useExperimentMemberRemove } from "../hooks/experiment/useExperimentMemb
 import { useExperimentMembers } from "../hooks/experiment/useExperimentMembers/useExperimentMembers";
 import { useDebounce } from "../hooks/useDebounce";
 import { useUserSearch } from "../hooks/useUserSearch";
+import { MemberList } from "./current-members-list";
+import { UserSearchWithDropdown } from "./user-search-with-dropdown";
 
 interface ExperimentMemberManagementProps {
   experimentId: string;
@@ -34,6 +34,14 @@ export function ExperimentMemberManagement({
     isLoading: isMembersLoading,
     isError: isMembersError,
   } = useExperimentMembers(experimentId);
+
+  const members = useMemo(() => {
+    return membersData?.body ?? [];
+  }, [membersData]);
+
+  const adminCount = useMemo(() => {
+    return members.filter((m) => m.role === "admin").length;
+  }, [members]);
 
   // User search with debounced input
   const [userSearch, setUserSearch] = useState("");
@@ -50,6 +58,16 @@ export function ExperimentMemberManagement({
   // UI state
   const [selectedUserId, setSelectedUserId] = useState("");
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
+
+  // Safely extract available users and filter out existing members
+  const availableUsers = useMemo(() => {
+    if (userSearchData?.body && Array.isArray(userSearchData.body)) {
+      return userSearchData.body.filter(
+        (user) => !members.some((m) => m.userId === user.id),
+      );
+    }
+    return [];
+  }, [userSearchData, members]);
 
   // Handle adding a member
   const handleAddMember = async (userId?: string) => {
@@ -91,7 +109,7 @@ export function ExperimentMemberManagement({
       <Card className="animate-pulse">
         <CardHeader>
           <CardTitle>Member Management</CardTitle>
-          <CardDescription>Loading members...</CardDescription>
+          <div className="bg-muted/40 h-6 w-32 rounded" />
         </CardHeader>
         <CardContent>
           <div className="bg-muted/40 h-64 rounded" />
@@ -110,17 +128,6 @@ export function ExperimentMemberManagement({
           </CardDescription>
         </CardHeader>
       </Card>
-    );
-  }
-
-  const members = membersData?.body ?? [];
-  const adminCount = members.filter((m) => m.role === "admin").length;
-
-  // Safely extract available users and filter out existing members
-  let availableUsers: User[] = [];
-  if (userSearchData?.body && Array.isArray(userSearchData.body)) {
-    availableUsers = userSearchData.body.filter(
-      (user) => !members.some((m) => m.userId === user.id),
     );
   }
 
@@ -154,23 +161,9 @@ export function ExperimentMemberManagement({
         <div className="space-y-2">
           <div className="flex flex-col space-y-2">
             <UserSearchWithDropdown
-              options={availableUsers.map((user) => ({
-                value: user.id,
-                label: (
-                  <div className="flex flex-col">
-                    <span className="overflow-hidden text-ellipsis whitespace-nowrap">
-                      {user.name}
-                    </span>
-                    <span className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
-                      {user.email}
-                    </span>
-                  </div>
-                ),
-              }))}
+              availableUsers={availableUsers}
               value={selectedUserId}
-              onValueChange={(value: string) => {
-                setSelectedUserId(value);
-              }}
+              onValueChange={setSelectedUserId}
               placeholder="Add a member"
               loading={isUsersLoading}
               searchValue={userSearch}
