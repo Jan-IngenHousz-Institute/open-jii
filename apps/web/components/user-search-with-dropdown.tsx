@@ -85,7 +85,7 @@ function UserSearchPopover({
             </div>
           </div>
           <Button
-            variant="ghost"
+            variant="default"
             size="sm"
             onClick={async (e) => {
               e.stopPropagation();
