@@ -66,6 +66,7 @@ export class ExperimentMembersController {
 
         if (result.isSuccess()) {
           const member = result.value;
+
           // Format date to string for the API contract
           const formattedMember = formatDates(member);
 
