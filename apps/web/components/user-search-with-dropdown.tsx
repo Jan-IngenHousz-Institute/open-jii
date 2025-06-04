@@ -4,8 +4,7 @@ import { ChevronsUpDown, UserPlus, SearchX } from "lucide-react";
 import React from "react";
 
 import type { User } from "@repo/api";
-
-import { Button } from "../../../packages/ui/src/components/button";
+import { Button } from "@repo/ui/components";
 import {
   Command,
   CommandEmpty,
@@ -13,12 +12,8 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "../../../packages/ui/src/components/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../../../packages/ui/src/components/popover";
+} from "@repo/ui/components";
+import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components";
 
 export interface UserSearchWithDropdownOption {
   value: string;
