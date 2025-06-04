@@ -15,11 +15,6 @@ import {
 } from "@repo/ui/components";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components";
 
-export interface UserSearchWithDropdownOption {
-  value: string;
-  label: React.ReactNode;
-}
-
 export interface UserSearchWithDropdownProps {
   availableUsers: User[];
   value: string;
