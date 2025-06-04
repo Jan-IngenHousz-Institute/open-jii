@@ -149,6 +149,11 @@ module "server_function" {
   architecture        = var.lambda_architecture
   create_function_url = true
 
+  # VPC Configuration for database access
+  enable_vpc         = var.enable_server_vpc
+  subnet_ids         = var.server_subnet_ids
+  security_group_ids = var.enable_server_vpc ? [var.server_lambda_security_group_id] : []
+
   s3_permissions       = true
   s3_bucket_arns       = [aws_s3_bucket.assets.arn, aws_s3_bucket.cache.arn]
   dynamodb_permissions = true
