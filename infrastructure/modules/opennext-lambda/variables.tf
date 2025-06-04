@@ -119,3 +119,22 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+# VPC Configuration
+variable "enable_vpc" {
+  description = "Whether to deploy the Lambda function within a VPC"
+  type        = bool
+  default     = false
+}
+
+variable "subnet_ids" {
+  description = "List of subnet IDs where the Lambda function should be placed (required if enable_vpc is true)"
+  type        = list(string)
+  default     = []
+}
+
+variable "security_group_ids" {
+  description = "List of security group IDs to associate with the Lambda function (required if enable_vpc is true)"
+  type        = list(string)
+  default     = []
+}

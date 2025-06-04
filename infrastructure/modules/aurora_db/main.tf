@@ -73,8 +73,9 @@ resource "aws_rds_cluster_parameter_group" "aurora_security" {
   # Specifies libraries to preload at server start
   # pg_stat_statements enables the collection of detailed execution statistics for queries
   parameter {
-    name  = "shared_preload_libraries"
-    value = "pg_stat_statements"
+    name         = "shared_preload_libraries"
+    value        = "pg_stat_statements"
+    apply_method = "pending-reboot"
   }
 
   # Enables logging of client hostnames 
@@ -87,8 +88,9 @@ resource "aws_rds_cluster_parameter_group" "aurora_security" {
   # Customizes the prefix of log lines
   # This format includes timestamp (%t), remote host (%r), user name (%u), database (%d), and process ID (%p)
   parameter {
-    name  = "log_line_prefix"
-    value = "%t:%r:%u@%d:[%p]:"
+    name         = "log_line_prefix"
+    value        = "%t:%r:%u@%d:[%p]:"
+    apply_method = "pending-reboot"
   }
 
   # Forces SSL/TLS encryption for all connections
@@ -158,7 +160,7 @@ resource "aws_rds_cluster" "rds_cluster_aurora" {
   backup_retention_period   = var.backup_retention_period
   preferred_backup_window   = "00:00-02:00"
   skip_final_snapshot       = var.skip_final_snapshot
-  final_snapshot_identifier = "${var.cluster_identifier}-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
+  final_snapshot_identifier = var.skip_final_snapshot ? null : "${var.cluster_identifier}-final-snapshot"
   copy_tags_to_snapshot     = true
   deletion_protection       = true
 
