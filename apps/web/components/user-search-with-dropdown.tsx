@@ -29,7 +29,6 @@ export interface UserSearchWithDropdownProps {
 
 interface UserSearchPopoverProps {
   availableUsers: User[];
-  popoverWidth: number | undefined;
   searchValue: string;
   onSearchChange: (value: string) => void;
   onAddUser: (userId: string) => Promise<void>;
@@ -40,7 +39,6 @@ interface UserSearchPopoverProps {
 
 function UserSearchPopover({
   availableUsers,
-  popoverWidth,
   searchValue,
   onSearchChange,
   onAddUser,
@@ -103,7 +101,7 @@ function UserSearchPopover({
   };
 
   return (
-    <PopoverContent style={{ width: popoverWidth }} className="box-border p-0">
+    <PopoverContent className="box-border w-fit p-0">
       <Command shouldFilter={false}>
         <div className="relative">
           <CommandInput
@@ -143,24 +141,6 @@ export function UserSearchWithDropdown({
   isAddingUser,
 }: UserSearchWithDropdownProps) {
   const [open, setOpen] = React.useState(false);
-  const buttonRef = React.useRef<HTMLButtonElement>(null);
-  const [popoverWidth, setPopoverWidth] = React.useState<number>();
-
-  React.useEffect(() => {
-    if (!buttonRef.current) return;
-
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setPopoverWidth(entry.contentRect.width);
-      }
-    });
-
-    observer.observe(buttonRef.current);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
 
   const selectedUser = availableUsers.find((user) => user.id === value);
 
@@ -168,7 +148,6 @@ export function UserSearchWithDropdown({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          ref={buttonRef}
           variant="outline"
           role="combobox"
           aria-expanded={open}
@@ -193,7 +172,6 @@ export function UserSearchWithDropdown({
       </PopoverTrigger>
       <UserSearchPopover
         availableUsers={availableUsers}
-        popoverWidth={popoverWidth}
         searchValue={searchValue}
         onSearchChange={onSearchChange}
         onAddUser={onAddUser}

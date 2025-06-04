@@ -46,7 +46,7 @@ export function ExperimentMemberManagement({
   // User search with debounced input
   const [userSearch, setUserSearch] = useState("");
   const debouncedSearch = useDebounce(userSearch, 300);
-  const { data: userSearchData, isLoading: isUsersLoading } =
+  const { data: userSearchData, isFetched: isFetchingUsers } =
     useUserSearch(debouncedSearch);
 
   // Add/remove member mutations
@@ -165,7 +165,7 @@ export function ExperimentMemberManagement({
               value={selectedUserId}
               onValueChange={setSelectedUserId}
               placeholder="Add a member"
-              loading={isUsersLoading}
+              loading={isFetchingUsers}
               searchValue={userSearch}
               onSearchChange={setUserSearch}
               onAddUser={handleAddMember}
