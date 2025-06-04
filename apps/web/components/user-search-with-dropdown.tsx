@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronsUpDown, UserPlus } from "lucide-react";
+import { ChevronsUpDown, UserPlus, SearchX } from "lucide-react";
 import React from "react";
 
 import type { User } from "@repo/api";
@@ -37,6 +37,111 @@ export interface UserSearchWithDropdownProps {
   isAddingUser: boolean;
 }
 
+interface UserSearchPopoverProps {
+  availableUsers: User[];
+  popoverWidth: number | undefined;
+  searchValue: string;
+  onSearchChange: (value: string) => void;
+  onAddUser: (userId: string) => Promise<void>;
+  isAddingUser: boolean;
+  loading: boolean;
+  setOpen: (open: boolean) => void;
+}
+
+function UserSearchPopover({
+  availableUsers,
+  popoverWidth,
+  searchValue,
+  onSearchChange,
+  onAddUser,
+  isAddingUser,
+  loading,
+  setOpen,
+}: UserSearchPopoverProps) {
+  const RenderContent = () => {
+    if (loading) {
+      return (
+        <div className="text-muted-foreground p-4 text-center text-sm">
+          Loading...
+        </div>
+      );
+    }
+
+    if (availableUsers.length > 0) {
+      return availableUsers.map((user) => (
+        <CommandItem
+          key={user.id}
+          value={user.id}
+          className="flex items-center justify-between"
+        >
+          <div className="flex-1 overflow-hidden">
+            <div className="flex flex-col">
+              <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+                {user.name}
+              </span>
+              <span className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
+                {user.email}
+              </span>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={async (e) => {
+              e.stopPropagation();
+              await onAddUser(user.id);
+              setOpen(false);
+              onSearchChange("");
+            }}
+            disabled={isAddingUser}
+          >
+            <UserPlus className="h-4 w-4" />
+          </Button>
+        </CommandItem>
+      ));
+    }
+
+    if (searchValue) {
+      return <CommandEmpty>No users found for "{searchValue}"</CommandEmpty>;
+    }
+
+    return (
+      <div className="text-muted-foreground p-4 text-center text-sm">
+        Start typing to search users
+      </div>
+    );
+  };
+
+  return (
+    <PopoverContent style={{ width: popoverWidth }} className="box-border p-0">
+      <Command shouldFilter={false}>
+        <div className="relative">
+          <CommandInput
+            placeholder="Search users..."
+            value={searchValue}
+            onValueChange={onSearchChange}
+            disabled={isAddingUser}
+          />
+          {searchValue && (
+            <button
+              type="button"
+              onClick={() => onSearchChange("")}
+              className="text-muted-foreground hover:text-foreground absolute right-3 top-1/2 -translate-y-1/2 text-xl"
+            >
+              <SearchX />
+            </button>
+          )}
+        </div>
+        <CommandList>
+          <CommandGroup>
+            <RenderContent />
+          </CommandGroup>
+        </CommandList>
+      </Command>
+    </PopoverContent>
+  );
+}
+
 export function UserSearchWithDropdown({
   availableUsers,
   value,
@@ -67,24 +172,7 @@ export function UserSearchWithDropdown({
     };
   }, []);
 
-  // Now we map availableUsers internally
-  const options = React.useMemo(() => {
-    return availableUsers.map((user) => ({
-      value: user.id,
-      label: (
-        <div className="flex flex-col">
-          <span className="overflow-hidden text-ellipsis whitespace-nowrap">
-            {user.name}
-          </span>
-          <span className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
-            {user.email}
-          </span>
-        </div>
-      ),
-    }));
-  }, [availableUsers]);
-
-  const selectedOption = options.find((option) => option.value === value);
+  const selectedUser = availableUsers.find((user) => user.id === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -97,73 +185,32 @@ export function UserSearchWithDropdown({
           className="w-full max-w-[240px] justify-between p-0"
         >
           <div className="flex w-full items-center justify-between px-3 py-2">
-            {selectedOption ? selectedOption.label : placeholder}
+            {selectedUser ? (
+              <div className="flex flex-col">
+                <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+                  {selectedUser.name}
+                </span>
+                <span className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
+                  {selectedUser.email}
+                </span>
+              </div>
+            ) : (
+              placeholder
+            )}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        style={{ width: popoverWidth }}
-        className="box-border p-0"
-      >
-        <Command shouldFilter={false}>
-          <div className="relative">
-            <CommandInput
-              placeholder="Search users..."
-              value={searchValue}
-              onValueChange={onSearchChange}
-              disabled={isAddingUser}
-            />
-            {searchValue && (
-              <button
-                type="button"
-                onClick={() => onSearchChange("")}
-                className="text-muted-foreground hover:text-foreground absolute right-3 top-1/2 -translate-y-1/2 text-xl"
-              >
-                ×
-              </button>
-            )}
-          </div>
-          <CommandList>
-            <CommandGroup>
-              {loading ? (
-                <div className="text-muted-foreground p-4 text-center text-sm">
-                  Loading...
-                </div>
-              ) : options.length > 0 ? (
-                options.map((option) => (
-                  <CommandItem
-                    key={option.value}
-                    value={option.value}
-                    className="flex items-center justify-between"
-                  >
-                    <div className="flex-1 overflow-hidden">{option.label}</div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        await onAddUser(option.value);
-                        setOpen(false);
-                        onSearchChange("");
-                      }}
-                      disabled={isAddingUser}
-                    >
-                      <UserPlus className="h-4 w-4" />
-                    </Button>
-                  </CommandItem>
-                ))
-              ) : searchValue ? (
-                <CommandEmpty>No users found for "{searchValue}"</CommandEmpty>
-              ) : (
-                <div className="text-muted-foreground p-4 text-center text-sm">
-                  Start typing to search users
-                </div>
-              )}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
+      <UserSearchPopover
+        availableUsers={availableUsers}
+        popoverWidth={popoverWidth}
+        searchValue={searchValue}
+        onSearchChange={onSearchChange}
+        onAddUser={onAddUser}
+        isAddingUser={isAddingUser}
+        loading={loading}
+        setOpen={setOpen}
+      />
     </Popover>
   );
 }
