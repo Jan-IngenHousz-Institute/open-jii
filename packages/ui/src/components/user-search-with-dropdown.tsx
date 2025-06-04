@@ -46,6 +46,25 @@ export function UserSearchWithDropdown({
     isAddingUser,
 }: UserSearchWithDropdownProps) {
     const [open, setOpen] = React.useState(false);
+    const buttonRef = React.useRef<HTMLButtonElement>(null);
+    const [popoverWidth, setPopoverWidth] = React.useState<number>();
+
+    // ResizeObserver to track button width
+    React.useEffect(() => {
+        if (!buttonRef.current) return;
+
+        const observer = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                setPopoverWidth(entry.contentRect.width);
+            }
+        });
+
+        observer.observe(buttonRef.current);
+
+        return () => {
+            observer.disconnect();
+        };
+    }, []);
 
     const selectedOption = options.find((option) => option.value === value);
 
@@ -53,16 +72,22 @@ export function UserSearchWithDropdown({
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button
+                    ref={buttonRef}
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className="justify-between min-w-[200px]"
+                    className="w-full max-w-[240px] justify-between p-0"
                 >
-                    {selectedOption ? selectedOption.label : placeholder}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    <div className="flex w-full items-center justify-between px-3 py-2">
+                        {selectedOption ? selectedOption.label : placeholder}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </div>
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0">
+            <PopoverContent
+                style={{ width: popoverWidth }}
+                className="p-0 box-border"
+            >
                 <Command shouldFilter={false}>
                     <div className="relative">
                         <CommandInput
@@ -95,7 +120,7 @@ export function UserSearchWithDropdown({
                                         className="flex justify-between items-center"
                                         onSelect={() => { }}
                                     >
-                                        <div className="flex-1">
+                                        <div className="flex-1 overflow-hidden">
                                             {option.label}
                                         </div>
                                         <Button
@@ -104,6 +129,8 @@ export function UserSearchWithDropdown({
                                             onClick={async (e) => {
                                                 e.stopPropagation();
                                                 await onAddUser(option.value);
+                                                setOpen(false);
+                                                onSearchChange("");
                                             }}
                                             disabled={isAddingUser}
                                         >

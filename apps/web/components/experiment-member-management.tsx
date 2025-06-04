@@ -1,7 +1,6 @@
 "use client";
 
 import { formatDate } from "@/util/date";
-import { Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import type { User } from "@repo/api";
@@ -11,9 +10,8 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-  Button,
-  Badge,
   UserSearchWithDropdown,
+  MemberList,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
@@ -155,87 +153,51 @@ export function ExperimentMemberManagement({
         {/* Add member section */}
         <div className="space-y-2">
           <div className="flex flex-col space-y-2">
-            <div className="flex space-x-2">
-              <UserSearchWithDropdown
-                options={availableUsers.map((user) => ({
-                  value: user.id,
-                  label: (
-                    <div className="flex flex-col">
-                      <span>{user.name}</span>
-                      <span className="text-muted-foreground text-xs">
-                        {user.email}
-                      </span>
-                    </div>
-                  ),
-                }))}
-                value={selectedUserId}
-                onValueChange={(value: string) => {
-                  setSelectedUserId(value);
-                }}
-                placeholder="Add a member"
-                loading={isUsersLoading}
-                searchValue={userSearch}
-                onSearchChange={setUserSearch}
-                onAddUser={handleAddMember}
-                isAddingUser={isAddingMember}
-              />
-            </div>
+            <UserSearchWithDropdown
+              options={availableUsers.map((user) => ({
+                value: user.id,
+                label: (
+                  <div className="flex flex-col">
+                    <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+                      {user.name}
+                    </span>
+                    <span className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
+                      {user.email}
+                    </span>
+                  </div>
+                ),
+              }))}
+              value={selectedUserId}
+              onValueChange={(value: string) => {
+                setSelectedUserId(value);
+              }}
+              placeholder="Add a member"
+              loading={isUsersLoading}
+              searchValue={userSearch}
+              onSearchChange={setUserSearch}
+              onAddUser={handleAddMember}
+              isAddingUser={isAddingMember}
+            />
           </div>
         </div>
 
         {/* Current members section */}
         <div>
           <h6 className="mb-2 text-sm font-medium">Current Members</h6>
-          {members.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              No members added yet
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {members.map((member) => {
-                const user = getUserInfo(member.userId);
-                const isLastAdmin = member.role === "admin" && adminCount === 1;
-                return (
-                  <div
-                    key={member.userId}
-                    className="flex items-center justify-between rounded-md border p-3"
-                  >
-                    <div className="flex flex-col">
-                      <span>
-                        {user.name ?? "Unknown User"}{" "}
-                        <span className="text-muted-foreground text-xs">
-                          {user.email ?? "No email"}
-                        </span>
-                      </span>
-                      <span className="text-muted-foreground text-xs">
-                        Joined {formatDate(member.joinedAt)}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Badge>{member.role}</Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveMember(member.userId)}
-                        disabled={
-                          (isRemovingMember &&
-                            removingMemberId === member.userId) ||
-                          isLastAdmin
-                        }
-                        title={
-                          isLastAdmin
-                            ? "Cannot remove the last admin"
-                            : "Remove member"
-                        }
-                      >
-                        <Trash2 className="text-destructive h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <MemberList
+            membersWithUserInfo={members.map((member) => ({
+              ...member,
+              user: {
+                name: getUserInfo(member.userId).name,
+                email: getUserInfo(member.userId).email,
+              },
+            }))}
+            formatDate={formatDate}
+            onRemoveMember={handleRemoveMember}
+            isRemovingMember={isRemovingMember}
+            removingMemberId={removingMemberId}
+            adminCount={adminCount}
+          />
         </div>
       </CardContent>
     </Card>
