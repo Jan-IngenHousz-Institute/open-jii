@@ -16,8 +16,8 @@ runs:
       uses: actions/setup-node@v3
       with:
         node-version: ${{ inputs.node-version }}
-        cache: "pnpm"  # Automatically caches global pnpm installation
-    
+        cache: "pnpm" # Automatically caches global pnpm installation
+
     - name: Install pnpm
       run: npm install -g pnpm
 

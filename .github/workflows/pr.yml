@@ -36,7 +36,13 @@ jobs:
         with:
           node-version: "22"
           artifact_retention: "7"
-          base: "HEAD^1"
+          base: "main"
+          environment: "dev"
+          database_url: ${{ secrets.DATABASE_URL }}
+          auth_secret: ${{ secrets.AUTH_SECRET }}
+          auth_url: ${{ secrets.AUTH_URL }}
+          auth_github_id: ${{ secrets.AUTH_GITHUB_ID }}
+          auth_github_secret: ${{ secrets.AUTH_GITHUB_SECRET }}
 
   tofu:
     name: OpenTofu
