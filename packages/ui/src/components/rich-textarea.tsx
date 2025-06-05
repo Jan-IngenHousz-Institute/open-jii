@@ -53,6 +53,9 @@ export function RichTextarea({ value, onChange, placeholder }: { value: string; 
       <div
         ref={quillRef}
         className="w-full min-h-[300px] max-h-[300px] overflow-hidden"
+        role="textbox"
+        aria-label={placeholder ?? 'Rich text editor'}
+        aria-placeholder={placeholder ?? 'Write something awesome...'}
         style={{
           display: 'flex',
           flexDirection: 'column',
