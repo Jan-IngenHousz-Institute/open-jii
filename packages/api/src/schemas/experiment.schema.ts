@@ -70,7 +70,7 @@ export type ErrorResponse = z.infer<typeof zErrorResponse>;
 
 // Define request and response types
 export const zCreateExperimentBody = z.object({
-  name: z.string().min(1).max(64).describe("The name of the experiment"),
+  name: z.string().min(1).max(255).describe("The name of the experiment"),
   description: z
     .string()
     .optional()
