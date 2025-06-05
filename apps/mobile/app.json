@@ -1,5 +1,6 @@
 {
   "expo": {
+    "scheme": "photosynq",
     "name": "photosynq",
     "slug": "photosynq",
     "version": "1.0.0",
@@ -38,7 +39,9 @@
       [
         "react-native-permissions",
         {
-          "iosPermissions": ["Bluetooth"]
+          "iosPermissions": [
+            "Bluetooth"
+          ]
         }
       ],
       [
@@ -46,9 +49,13 @@
         {
           "peripheralUsageDescription": "Allow myDevice to check bluetooth peripheral info",
           "alwaysUsageDescription": "Allow myDevice to always use bluetooth info",
-          "protocols": ["com.myCompany.p1", "com.myCompany.p2"]
+          "protocols": [
+            "com.myCompany.p1",
+            "com.myCompany.p2"
+          ]
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {
