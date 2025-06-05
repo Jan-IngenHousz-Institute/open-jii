@@ -1,7 +1,7 @@
 "use client";
 
 import "quill/dist/quill.snow.css";
-import React from "react";
+import React, { useEffect } from "react";
 import { useQuill } from "react-quilljs";
 
 export function RichTextarea({
@@ -40,7 +40,7 @@ export function RichTextarea({
     placeholder: placeholder ?? "Write something awesome...",
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (quill) {
       // Set initial value if provided
       if (value && quill.root.innerHTML !== value) {
