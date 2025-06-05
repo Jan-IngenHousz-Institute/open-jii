@@ -20,9 +20,9 @@ import {
   Select,
   SelectItem,
   SelectContent,
-  Textarea,
   SelectValue,
   SelectTrigger,
+  RichTextarea,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
@@ -104,7 +104,11 @@ export function EditExperimentForm({ experiment }: EditExperimentFormProps) {
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea placeholder="" className="resize-none" {...field} />
+                <RichTextarea
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  placeholder="Enter description..."
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
