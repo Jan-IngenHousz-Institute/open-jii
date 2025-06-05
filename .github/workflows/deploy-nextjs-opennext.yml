@@ -12,10 +12,19 @@ jobs:
   # Job 1: Build Next.js App with OpenNext
   build-nextjs:
     name: Build Next.js Application
+    permissions:
+      id-token: write
+      contents: read
     runs-on: ubuntu-latest
     outputs:
-      opennext_assets_uploaded: ${{ steps.upload-assets.outputs.uploaded }}
-      lambda_functions_updated: ${{ steps.update-lambdas.outputs.updated }}
+      assets_bucket: ${{ steps.env-vars.outputs.assets_bucket }}
+      cache_bucket: ${{ steps.env-vars.outputs.cache_bucket }}
+      server_function: ${{ steps.env-vars.outputs.server_function }}
+      image_function: ${{ steps.env-vars.outputs.image_function }}
+      revalidation_function: ${{ steps.env-vars.outputs.revalidation_function }}
+      warmer_function: ${{ steps.env-vars.outputs.warmer_function }}
+      dynamodb_table: ${{ steps.env-vars.outputs.dynamodb_table }}
+      cloudfront_distribution_id: ${{ steps.env-vars.outputs.cloudfront_distribution_id }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -32,13 +41,100 @@ jobs:
         with:
           version: latest
 
-      - name: Get Database Credentials
-        id: db-secrets
-        uses: ./.github/actions/get-database-credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          environment: ${{ inputs.environment }}
-          aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Extract Environment Variables
+        id: env-vars
+        run: |
+          # Download infrastructure outputs artifact
+          echo "Downloading infrastructure outputs for environment: ${{ inputs.environment }}..."
+
+          mkdir -p tofu-outputs/
+          aws s3 cp "s3://${{ secrets.ARTIFACTS_BUCKET }}/tofu-outputs-${{ inputs.environment }}.zip" tofu-outputs/ || true
+
+          if [[ -f "tofu-outputs/tofu-outputs-${{ inputs.environment }}.zip" ]]; then
+            unzip "tofu-outputs/tofu-outputs-${{ inputs.environment }}.zip" -d tofu-outputs/
+            echo "Successfully downloaded artifacts from S3"
+          else
+            echo "Falling back to GitHub artifacts..."
+            # Use GitHub's artifact download action as fallback
+            ARTIFACT_DOWNLOAD_URL="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/artifacts"
+            ARTIFACT_NAME="tofu-outputs-${{ inputs.environment }}"
+            
+            # Try downloading from GitHub artifacts
+            curl -L \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "${ARTIFACT_DOWNLOAD_URL}/${ARTIFACT_NAME}/zip" -o tofu-outputs.zip
+              
+            unzip tofu-outputs.zip -d tofu-outputs/
+          fi
+
+          # Load infrastructure outputs and extract values
+          OUTPUTS_FILE="tofu-outputs/infrastructure-outputs-${{ inputs.environment }}.json"
+
+          if [[ ! -f "$OUTPUTS_FILE" ]]; then
+            echo "Error: Infrastructure outputs file not found: $OUTPUTS_FILE"
+            echo "Available files:"
+            find tofu-outputs -type f
+            exit 1
+          fi
+
+          echo "Loading infrastructure outputs from: $OUTPUTS_FILE"
+
+          # Extract database secret ARN and other values from outputs
+          DB_SECRET_ARN=$(jq -r '.database_secret_arn // ""' "$OUTPUTS_FILE")
+          ASSETS_BUCKET=$(jq -r '.assets_bucket // ""' "$OUTPUTS_FILE")
+          CACHE_BUCKET=$(jq -r '.cache_bucket // ""' "$OUTPUTS_FILE")
+          SERVER_FUNCTION=$(jq -r '.server_function // ""' "$OUTPUTS_FILE")
+          IMAGE_FUNCTION=$(jq -r '.image_function // ""' "$OUTPUTS_FILE")
+          REVALIDATION_FUNCTION=$(jq -r '.revalidation_function // ""' "$OUTPUTS_FILE")
+          WARMER_FUNCTION=$(jq -r '.warmer_function // ""' "$OUTPUTS_FILE")
+          DYNAMODB_TABLE=$(jq -r '.dynamodb_table // ""' "$OUTPUTS_FILE")
+          CLOUDFRONT_DISTRIBUTION_ID=$(jq -r '.cloudfront_distribution_id // ""' "$OUTPUTS_FILE")
+
+          # Mask sensitive values
+          echo "::add-mask::${DB_SECRET_ARN}"
+
+          # Check and retrieve database credentials if ARN exists
+          if [[ -n "$DB_SECRET_ARN" ]]; then
+            echo "Retrieving database credentials from Secrets Manager..."
+            
+            # Get secret value (JSON format)
+            SECRET_VALUE=$(aws secretsmanager get-secret-value --secret-id "$DB_SECRET_ARN" --query 'SecretString' --output text)
+            
+            if [[ -z "$SECRET_VALUE" ]]; then
+              echo "Warning: Failed to retrieve secret from AWS Secrets Manager"
+            else
+              # Mask the credentials in logs
+              echo "::add-mask::${SECRET_VALUE}"
+              
+              # Set as output
+              echo "db_credentials=${SECRET_VALUE}" >> $GITHUB_OUTPUT
+              echo "Successfully retrieved database credentials"
+            fi
+          else
+            echo "No database secret ARN found in outputs, skipping credential retrieval"
+          fi
+
+          # Set infrastructure outputs for use in steps
+          {
+            echo "assets_bucket=${ASSETS_BUCKET}"
+            echo "cache_bucket=${CACHE_BUCKET}"
+            echo "server_function=${SERVER_FUNCTION}"
+            echo "image_function=${IMAGE_FUNCTION}"
+            echo "revalidation_function=${REVALIDATION_FUNCTION}"
+            echo "warmer_function=${WARMER_FUNCTION}"
+            echo "dynamodb_table=${DYNAMODB_TABLE}"
+            echo "cloudfront_distribution_id=${CLOUDFRONT_DISTRIBUTION_ID}"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Successfully extracted environment variables for environment: ${{ inputs.environment }}"
 
       - name: Install dependencies
         run: |
@@ -51,8 +147,8 @@ jobs:
 
       - name: Build Next.js Application
         env:
-          # Database config - using dynamically constructed URL from composite action
-          DATABASE_URL: ${{ steps.db-secrets.outputs.database-url }}
+          # Database credentials from AWS Secrets Manager
+          DB_CREDENTIALS: ${{ steps.env-vars.outputs.db_credentials }}
           NODE_ENV: ${{ inputs.environment }}
 
           # Auth configuration
@@ -77,6 +173,15 @@ jobs:
     name: Deploy OpenNext to AWS
     needs: build-nextjs
     runs-on: ubuntu-latest
+    env:
+      ASSETS_BUCKET: ${{ needs.build-nextjs.outputs.assets_bucket }}
+      CACHE_BUCKET: ${{ needs.build-nextjs.outputs.cache_bucket }}
+      SERVER_FUNCTION: ${{ needs.build-nextjs.outputs.server_function }}
+      IMAGE_FUNCTION: ${{ needs.build-nextjs.outputs.image_function }}
+      REVALIDATION_FUNCTION: ${{ needs.build-nextjs.outputs.revalidation_function }}
+      WARMER_FUNCTION: ${{ needs.build-nextjs.outputs.warmer_function }}
+      DYNAMODB_TABLE: ${{ needs.build-nextjs.outputs.dynamodb_table }}
+      CLOUDFRONT_DISTRIBUTION_ID: ${{ needs.build-nextjs.outputs.cloudfront_distribution_id }}
     permissions:
       id-token: write
       contents: read
@@ -157,51 +262,19 @@ jobs:
             echo "No OpenNext output JSON found"
           fi
 
-      - name: Download Infrastructure Outputs
-        uses: actions/download-artifact@v4
-        with:
-          name: tofu-outputs-${{ inputs.environment }}
-          path: tofu-outputs/
-
-      - name: Get Infrastructure Outputs
-        id: infra-outputs
+      - name: Verify Infrastructure Outputs
         run: |
-          # Load infrastructure outputs from artifact
-          OUTPUTS_FILE="tofu-outputs/infrastructure-outputs-${{ inputs.environment }}.json"
+          echo "Using infrastructure outputs from previous job"
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Assets bucket: ${{ env.ASSETS_BUCKET }}"
+          echo "Cache bucket: ${{ env.CACHE_BUCKET }}"
+          echo "CloudFront distribution: ${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
 
-          if [[ ! -f "$OUTPUTS_FILE" ]]; then
-            echo "Error: Infrastructure outputs file not found: $OUTPUTS_FILE"
-            echo "Available files:"
-            find tofu-outputs -type f
+          # Check for required values
+          if [[ -z "${{ env.ASSETS_BUCKET }}" || -z "${{ env.SERVER_FUNCTION }}" ]]; then
+            echo "Error: Missing required infrastructure outputs. Ensure the build job extracted these correctly."
             exit 1
           fi
-
-          echo "Loading infrastructure outputs from: $OUTPUTS_FILE"
-          # Note: File contents not displayed for security - contains AWS resource names
-
-          # Extract values from JSON
-          ASSETS_BUCKET=$(jq -r '.assets_bucket // ""' "$OUTPUTS_FILE")
-          CACHE_BUCKET=$(jq -r '.cache_bucket // ""' "$OUTPUTS_FILE")
-          SERVER_FUNCTION=$(jq -r '.server_function // ""' "$OUTPUTS_FILE")
-          IMAGE_FUNCTION=$(jq -r '.image_function // ""' "$OUTPUTS_FILE")
-          REVALIDATION_FUNCTION=$(jq -r '.revalidation_function // ""' "$OUTPUTS_FILE")
-          WARMER_FUNCTION=$(jq -r '.warmer_function // ""' "$OUTPUTS_FILE")
-          DYNAMODB_TABLE=$(jq -r '.dynamodb_table // ""' "$OUTPUTS_FILE")
-          CLOUDFRONT_DISTRIBUTION_ID=$(jq -r '.cloudfront_distribution_id // ""' "$OUTPUTS_FILE")
-
-          # Set outputs for use in next steps
-          {
-            echo "assets_bucket=${ASSETS_BUCKET}"
-            echo "cache_bucket=${CACHE_BUCKET}"
-            echo "server_function=${SERVER_FUNCTION}"
-            echo "image_function=${IMAGE_FUNCTION}"
-            echo "revalidation_function=${REVALIDATION_FUNCTION}"
-            echo "warmer_function=${WARMER_FUNCTION}"
-            echo "dynamodb_table=${DYNAMODB_TABLE}"
-            echo "cloudfront_distribution_id=${CLOUDFRONT_DISTRIBUTION_ID}"
-          } >> "$GITHUB_OUTPUT"
-
-          echo "Successfully loaded infrastructure outputs for environment: ${{ inputs.environment }}"
 
       - name: Upload Static Assets and Cache to S3
         id: upload-assets
@@ -213,7 +286,7 @@ jobs:
             echo "Uploading static assets to S3..."
             
             # Upload assets with appropriate cache headers
-            aws s3 sync .open-next/assets/ "s3://${{ steps.infra-outputs.outputs.assets_bucket }}/" \
+            aws s3 sync .open-next/assets/ "s3://${ASSETS_BUCKET}/" \
               --delete \
               --exact-timestamps \
               --cache-control "public, max-age=31536000, immutable" \
@@ -222,14 +295,14 @@ jobs:
             
             # Upload Next.js static files with specific cache headers
             if [[ -d ".open-next/assets/_next/static" ]]; then
-              aws s3 sync .open-next/assets/_next/static/ "s3://${{ steps.infra-outputs.outputs.assets_bucket }}/_next/static/" \
+              aws s3 sync .open-next/assets/_next/static/ "s3://${ASSETS_BUCKET}/_next/static/" \
                 --cache-control "public, max-age=31536000, immutable" \
                 --metadata-directive REPLACE \
                 --quiet
             fi
             
             # Upload other static files with shorter cache
-            aws s3 sync .open-next/assets/ "s3://${{ steps.infra-outputs.outputs.assets_bucket }}/" \
+            aws s3 sync .open-next/assets/ "s3://${ASSETS_BUCKET}/" \
               --exclude "_next/static/*" \
               --cache-control "public, max-age=3600" \
               --metadata-directive REPLACE \
@@ -241,11 +314,11 @@ jobs:
           fi
 
           # Upload cache to S3
-          if [[ -d ".open-next/cache" && -n "${{ steps.infra-outputs.outputs.cache_bucket }}" ]]; then
+          if [[ -d ".open-next/cache" && -n "${CACHE_BUCKET}" ]]; then
             echo "Uploading cache to S3..."
             
             # Upload cache with appropriate headers
-            aws s3 sync .open-next/cache/ "s3://${{ steps.infra-outputs.outputs.cache_bucket }}/" \
+            aws s3 sync .open-next/cache/ "s3://${CACHE_BUCKET}/" \
               --exact-timestamps \
               --quiet
             
@@ -266,72 +339,72 @@ jobs:
           mkdir -p "$LAMBDA_PKG_DIR"
 
           # Update Server Lambda Function
-          if [[ -d ".open-next/server-functions/default" && -n "${{ steps.infra-outputs.outputs.server_function }}" ]]; then
+          if [[ -d ".open-next/server-functions/default" && -n "${SERVER_FUNCTION}" ]]; then
             echo "Creating zip package for server function..."
             SERVER_ZIP="$LAMBDA_PKG_DIR/server-function.zip"
             (cd .open-next/server-functions/default && zip -r "$SERVER_ZIP" .)
             if [[ -f "$SERVER_ZIP" ]]; then
-              echo "Updating server function: ${{ steps.infra-outputs.outputs.server_function }}"
+              echo "Updating server function: ${SERVER_FUNCTION}"
               aws lambda update-function-code \
-                --function-name "${{ steps.infra-outputs.outputs.server_function }}" \
+                --function-name "${SERVER_FUNCTION}" \
                 --zip-file "fileb://$SERVER_ZIP" \
                 --output json >/dev/null
               aws lambda wait function-updated \
-                --function-name "${{ steps.infra-outputs.outputs.server_function }}" 2>/dev/null
+                --function-name "${SERVER_FUNCTION}" 2>/dev/null
             else
               echo "Failed to create server function zip package" >&2
             fi
           fi
 
           # Update Image Optimization Lambda Function
-          if [[ -d ".open-next/image-optimization-function" && -n "${{ steps.infra-outputs.outputs.image_function }}" ]]; then
+          if [[ -d ".open-next/image-optimization-function" && -n "${IMAGE_FUNCTION}" ]]; then
             echo "Creating zip package for image optimization function..."
             IMAGE_ZIP="$LAMBDA_PKG_DIR/image-function.zip"
             (cd .open-next/image-optimization-function && zip -r "$IMAGE_ZIP" .)
             if [[ -f "$IMAGE_ZIP" ]]; then
-              echo "Updating image optimization function: ${{ steps.infra-outputs.outputs.image_function }}"
+              echo "Updating image optimization function: ${IMAGE_FUNCTION}"
               aws lambda update-function-code \
-                --function-name "${{ steps.infra-outputs.outputs.image_function }}" \
+                --function-name "${IMAGE_FUNCTION}" \
                 --zip-file "fileb://$IMAGE_ZIP" \
                 --output json >/dev/null
               aws lambda wait function-updated \
-                --function-name "${{ steps.infra-outputs.outputs.image_function }}" 2>/dev/null
+                --function-name "${IMAGE_FUNCTION}" 2>/dev/null
             else
               echo "Failed to create image optimization function zip package" >&2
             fi
           fi
 
           # Update Revalidation Lambda Function (if exists)
-          if [[ -d ".open-next/revalidation-function" && -n "${{ steps.infra-outputs.outputs.revalidation_function }}" ]]; then
+          if [[ -d ".open-next/revalidation-function" && -n "${REVALIDATION_FUNCTION}" ]]; then
             echo "Creating zip package for revalidation function..."
             REVALIDATION_ZIP="$LAMBDA_PKG_DIR/revalidation-function.zip"
             (cd .open-next/revalidation-function && zip -r "$REVALIDATION_ZIP" .)
             if [[ -f "$REVALIDATION_ZIP" ]]; then
-              echo "Updating revalidation function: ${{ steps.infra-outputs.outputs.revalidation_function }}"
+              echo "Updating revalidation function: ${REVALIDATION_FUNCTION}"
               aws lambda update-function-code \
-                --function-name "${{ steps.infra-outputs.outputs.revalidation_function }}" \
+                --function-name "${REVALIDATION_FUNCTION}" \
                 --zip-file "fileb://$REVALIDATION_ZIP" \
                 --output json >/dev/null
               aws lambda wait function-updated \
-                --function-name "${{ steps.infra-outputs.outputs.revalidation_function }}" 2>/dev/null
+                --function-name "${REVALIDATION_FUNCTION}" 2>/dev/null
             else
               echo "Failed to create revalidation function zip package" >&2
             fi
           fi
 
           # Optional: Update Warmer Lambda Function (if exists)
-          if [[ -d ".open-next/warmer-function" && -n "${{ steps.infra-outputs.outputs.warmer_function }}" ]]; then
+          if [[ -d ".open-next/warmer-function" && -n "${WARMER_FUNCTION}" ]]; then
             echo "Creating zip package for warmer function..."
             WARMER_ZIP="$LAMBDA_PKG_DIR/warmer-function.zip"
             (cd .open-next/warmer-function && zip -r "$WARMER_ZIP" .)
             if [[ -f "$WARMER_ZIP" ]]; then
-              echo "Updating warmer function: ${{ steps.infra-outputs.outputs.warmer_function }}"
+              echo "Updating warmer function: ${WARMER_FUNCTION}"
               aws lambda update-function-code \
-                --function-name "${{ steps.infra-outputs.outputs.warmer_function }}" \
+                --function-name "${WARMER_FUNCTION}" \
                 --zip-file "fileb://$WARMER_ZIP" \
                 --output json >/dev/null
               aws lambda wait function-updated \
-                --function-name "${{ steps.infra-outputs.outputs.warmer_function }}" 2>/dev/null
+                --function-name "${WARMER_FUNCTION}" 2>/dev/null
             else
               echo "Failed to create warmer function zip package" >&2
             fi
@@ -348,10 +421,10 @@ jobs:
       - name: Invalidate CloudFront Distribution
         if: steps.upload-assets.outputs.uploaded == 'true'
         run: |
-          if [[ -n "${{ steps.infra-outputs.outputs.cloudfront_distribution_id }}" ]]; then
+          if [[ -n "${CLOUDFRONT_DISTRIBUTION_ID}" ]]; then
             echo "Creating CloudFront invalidation..."
             INVALIDATION_ID=$(aws cloudfront create-invalidation \
-              --distribution-id "${{ steps.infra-outputs.outputs.cloudfront_distribution_id }}" \
+              --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" \
               --paths "/*" \
               --query 'Invalidation.Id' \
               --output text 2>/dev/null)
@@ -361,7 +434,7 @@ jobs:
             
             # Wait for invalidation to complete (optional, can be removed for faster deployments)
             aws cloudfront wait invalidation-completed \
-              --distribution-id "${{ steps.infra-outputs.outputs.cloudfront_distribution_id }}" \
+              --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" \
               --id "${INVALIDATION_ID}" 2>/dev/null
             
             echo "CloudFront invalidation completed"
@@ -376,12 +449,12 @@ jobs:
           echo "Assets Uploaded: ${{ steps.upload-assets.outputs.uploaded }}"
           echo "Lambda Functions Updated: ${{ steps.update-lambdas.outputs.updated }}"
 
-          if [[ -n "${{ steps.infra-outputs.outputs.cloudfront_distribution_id }}" ]]; then
-            echo "CloudFront Distribution: ${{ steps.infra-outputs.outputs.cloudfront_distribution_id }}"
+          if [[ -n "${CLOUDFRONT_DISTRIBUTION_ID}" ]]; then
+            echo "CloudFront Distribution: ${CLOUDFRONT_DISTRIBUTION_ID}"
             
             # Get CloudFront domain name
             DOMAIN_NAME=$(aws cloudfront get-distribution \
-              --id "${{ steps.infra-outputs.outputs.cloudfront_distribution_id }}" \
+              --id "${CLOUDFRONT_DISTRIBUTION_ID}" \
               --query 'Distribution.DomainName' \
               --output text 2>/dev/null || echo "")
             
