@@ -8,7 +8,8 @@ interface RichTextRendererProps {
 }
 
 export function RichTextRenderer({ content }: RichTextRendererProps) {
-    const isRichText = /<\/?[a-z][\s\S]*>/i.test(content);
+    // Use a safe regex to check for HTML tags
+    const isRichText = /<[^>]+>/.test(content);
 
     if (!content) {
         return <p className="text-sm">No description provided</p>;
