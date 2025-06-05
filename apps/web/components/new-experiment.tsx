@@ -1,5 +1,6 @@
 "use client";
 
+import { useExperimentCreate } from "@/hooks/experiment/useExperimentCreate/useExperimentCreate";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -25,11 +26,17 @@ import {
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-import { useExperimentCreate } from "../hooks/experiment/useExperimentCreate/useExperimentCreate";
-
 export function NewExperimentForm() {
   const router = useRouter();
-  const { mutateAsync: createExperiment, isPending } = useExperimentCreate();
+  const { mutate: createExperiment, isPending } = useExperimentCreate({
+    onSuccess: () => {
+      toast({
+        description: "Experiment created successfully",
+      });
+      // Navigate to the experiment page
+      router.push(`/openjii/experiments`);
+    },
+  });
 
   const form = useForm<CreateExperimentBody>({
     resolver: zodResolver(zCreateExperimentBody),
@@ -45,17 +52,8 @@ export function NewExperimentForm() {
     router.back();
   }
 
-  async function onSubmit(data: CreateExperimentBody) {
-    await createExperiment({
-      body: data,
-    });
-
-    // Show message
-    toast({
-      description: "Experiment created successfully",
-    });
-    // Navigate to the experiment page
-    router.push(`/openjii/experiments`);
+  function onSubmit(data: CreateExperimentBody) {
+    return createExperiment({ body: data });
   }
 
   return (
