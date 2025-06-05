@@ -413,7 +413,6 @@ module "migration_runner_ecs" {
   use_spot_instances = false
   enable_autoscaling = false
 
-  inject_db_url                = true
   enable_container_healthcheck = false
   enable_circuit_breaker       = true
 
