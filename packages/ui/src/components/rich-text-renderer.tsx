@@ -4,27 +4,31 @@ import React from "react";
 import "quill/dist/quill.snow.css";
 
 interface RichTextRendererProps {
-    content: string;
+  content: string;
 }
 
 export function RichTextRenderer({ content }: RichTextRendererProps) {
-    // Use a safe regex to check for HTML tags
-    const isRichText = /<[^>]+>/.test(content);
+  // Use a safe regex to check for HTML tags
+  const isRichText = /<[^>]+>/.test(content);
 
-    if (!content) {
-        return <p className="text-sm">No description provided</p>;
-    }
+  if (!content) {
+    return <p className="text-sm">No description provided</p>;
 
-    if (isRichText) {
-        return (
-            <>
-                <div
-                    className="ql-editor rich-text-renderer"
-                    dangerouslySetInnerHTML={{ __html: content }}
-                />
-                <style
-                    dangerouslySetInnerHTML={{
-                        __html: `
+  }
+
+  if (!isRichText) {
+    return <p className="text-sm">{content}</p>;
+  }
+
+  return (
+    <>
+      <div
+        className="ql-editor rich-text-renderer"
+        dangerouslySetInnerHTML={{ __html: content }}
+      />
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
           .rich-text-renderer {
             padding: 8px 0;
             border: none;
@@ -129,11 +133,8 @@ export function RichTextRenderer({ content }: RichTextRendererProps) {
             margin-bottom: 0;
           }
         `,
-                    }}
-                />
-            </>
-        );
-    } else {
-        return <p className="text-sm">{content}</p>;
-    }
+        }}
+      />
+    </>
+  );
 }
