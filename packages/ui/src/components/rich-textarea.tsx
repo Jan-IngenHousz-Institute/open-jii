@@ -1,28 +1,43 @@
 "use client";
 
-import { useQuill } from "react-quilljs";
-import 'quill/dist/quill.snow.css';
+import "quill/dist/quill.snow.css";
 import React from "react";
+import { useQuill } from "react-quilljs";
 
-export function RichTextarea({ value, onChange, placeholder }: { value: string; onChange: (val: string) => void; placeholder?: string }) {
+export function RichTextarea({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+}) {
   const { quill, quillRef } = useQuill({
-    theme: 'snow',
+    theme: "snow",
     modules: {
       toolbar: [
-        ['bold', 'italic', 'underline'],
+        ["bold", "italic", "underline"],
         [{ header: [1, 2, 3, false] }],
-        [{ list: 'ordered' }, { list: 'bullet' }],
-        ['link'],
-        ['code'],
-        ['blockquote'],
-        ['clean'],
+        [{ list: "ordered" }, { list: "bullet" }],
+        ["link"],
+        ["code"],
+        ["blockquote"],
+        ["clean"],
       ],
     },
     formats: [
-      'header', 'bold', 'italic', 'underline',
-      'list', 'link', 'code', 'code-block', 'blockquote'
+      "header",
+      "bold",
+      "italic",
+      "underline",
+      "list",
+      "link",
+      "code",
+      "code-block",
+      "blockquote",
     ],
-    placeholder: placeholder ?? 'Write something awesome...',
+    placeholder: placeholder ?? "Write something awesome...",
   });
 
   React.useEffect(() => {
@@ -39,26 +54,26 @@ export function RichTextarea({ value, onChange, placeholder }: { value: string; 
         }
       };
 
-      quill.on('text-change', handleTextChange);
+      quill.on("text-change", handleTextChange);
 
       // Cleanup
       return () => {
-        quill.off('text-change', handleTextChange);
+        quill.off("text-change", handleTextChange);
       };
     }
   }, [quill, onChange, value]);
 
   return (
-    <div className="border-input focus-visible:ring-ring flex flex-col w-full rounded-md border bg-transparent text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm">
+    <div className="border-input focus-visible:ring-ring flex w-full flex-col rounded-md border bg-transparent text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm">
       <div
         ref={quillRef}
-        className="w-full min-h-[300px] max-h-[300px] overflow-hidden"
+        className="max-h-[300px] min-h-[300px] w-full overflow-hidden"
         role="textbox"
-        aria-label={placeholder ?? 'Rich text editor'}
-        aria-placeholder={placeholder ?? 'Write something awesome...'}
+        aria-label={placeholder ?? "Rich text editor"}
+        aria-placeholder={placeholder ?? "Write something awesome..."}
         style={{
-          display: 'flex',
-          flexDirection: 'column',
+          display: "flex",
+          flexDirection: "column",
         }}
       />
       <style>

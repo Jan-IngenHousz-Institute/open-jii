@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
 import "quill/dist/quill.snow.css";
+import React from "react";
 
 interface RichTextRendererProps {
   content: string;
@@ -13,7 +13,6 @@ export function RichTextRenderer({ content }: RichTextRendererProps) {
 
   if (!content) {
     return <p className="text-sm">No description provided</p>;
-
   }
 
   if (!isRichText) {
