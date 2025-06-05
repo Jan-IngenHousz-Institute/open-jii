@@ -7,7 +7,7 @@ import { tsr } from "../../../lib/tsr";
  * @returns Mutation object for creating experiments
  */
 interface ExperimentCreateProps {
-  onSuccess?: () => unknown;
+  onSuccess?: () => void;
 }
 
 export const useExperimentCreate = (props: ExperimentCreateProps) => {
