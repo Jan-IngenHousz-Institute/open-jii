@@ -1,5 +1,7 @@
 "use client";
 
+import { useExperimentCreate } from "@/hooks/experiment/useExperimentCreate/useExperimentCreate";
+import { parseApiError } from "@/util/apiError";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -25,8 +27,6 @@ import {
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-import { useExperimentCreate } from "../hooks/experiment/useExperimentCreate/useExperimentCreate";
-
 export function NewExperimentForm() {
   const router = useRouter();
   const { mutateAsync: createExperiment, isPending } = useExperimentCreate();
@@ -46,9 +46,19 @@ export function NewExperimentForm() {
   }
 
   async function onSubmit(data: CreateExperimentBody) {
-    await createExperiment({
-      body: data,
-    });
+    try {
+      await createExperiment({
+        body: data,
+      });
+    } catch (error: unknown) {
+      const parsedError = parseApiError(error);
+      toast({
+        variant: "destructive",
+        title: "Failed to create experiment",
+        description: parsedError?.message,
+      });
+      return;
+    }
 
     // Show message
     toast({
