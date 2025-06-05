@@ -332,6 +332,12 @@ module "opennext" {
   server_subnet_ids               = module.vpc.private_subnets
   server_lambda_security_group_id = module.vpc.server_lambda_security_group_id
 
+  db_environment_variables = {
+    DB_HOST = module.aurora_db.cluster_endpoint
+    DB_PORT = module.aurora_db.cluster_port
+    DB_NAME = module.aurora_db.database_name
+  }
+
   # Performance configuration
   enable_lambda_warming = var.opennext_enable_warming
   price_class           = var.opennext_price_class

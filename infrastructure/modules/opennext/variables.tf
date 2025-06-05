@@ -275,3 +275,10 @@ variable "server_lambda_security_group_id" {
   description = "ID of the security group for the server Lambda function to access Aurora (required if enable_server_vpc is true)"
   type        = string
 }
+
+# Database and Application Configuration
+variable "db_environment_variables" {
+  description = "Database environment variables for the server Lambda function"
+  type        = map(string)
+  default     = {}
+}
