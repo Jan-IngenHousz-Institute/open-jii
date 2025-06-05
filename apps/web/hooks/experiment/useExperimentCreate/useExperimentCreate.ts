@@ -6,7 +6,11 @@ import { tsr } from "../../../lib/tsr";
  * Hook to create a new experiment
  * @returns Mutation object for creating experiments
  */
-export const useExperimentCreate = () => {
+interface ExperimentCreateProps {
+  onSuccess?: () => unknown;
+}
+
+export const useExperimentCreate = (props: ExperimentCreateProps) => {
   const queryClient = tsr.useQueryClient();
 
   return tsr.experiments.createExperiment.useMutation({
@@ -33,6 +37,11 @@ export const useExperimentCreate = () => {
       await queryClient.invalidateQueries({
         queryKey: ["experiments"],
       });
+    },
+    onSuccess: () => {
+      if (props.onSuccess) {
+        props.onSuccess();
+      }
     },
   });
 };

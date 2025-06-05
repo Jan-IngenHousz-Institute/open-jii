@@ -1,7 +1,6 @@
 "use client";
 
 import { useExperimentCreate } from "@/hooks/experiment/useExperimentCreate/useExperimentCreate";
-import { parseApiError } from "@/util/apiError";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -29,7 +28,9 @@ import { toast } from "@repo/ui/hooks";
 
 export function NewExperimentForm() {
   const router = useRouter();
-  const { mutateAsync: createExperiment, isPending } = useExperimentCreate();
+  const { mutateAsync: createExperiment, isPending } = useExperimentCreate({
+    onSuccess: onSuccess,
+  });
 
   const form = useForm<CreateExperimentBody>({
     resolver: zodResolver(zCreateExperimentBody),
@@ -45,27 +46,18 @@ export function NewExperimentForm() {
     router.back();
   }
 
-  async function onSubmit(data: CreateExperimentBody) {
-    try {
-      await createExperiment({
-        body: data,
-      });
-    } catch (error: unknown) {
-      const parsedError = parseApiError(error);
-      toast({
-        variant: "destructive",
-        title: "Failed to create experiment",
-        description: parsedError?.message,
-      });
-      return;
-    }
-
-    // Show message
+  function onSuccess() {
     toast({
       description: "Experiment created successfully",
     });
     // Navigate to the experiment page
     router.push(`/openjii/experiments`);
+  }
+
+  async function onSubmit(data: CreateExperimentBody) {
+    await createExperiment({
+      body: data,
+    });
   }
 
   return (
