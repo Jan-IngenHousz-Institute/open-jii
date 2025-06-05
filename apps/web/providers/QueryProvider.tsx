@@ -1,5 +1,6 @@
 "use client";
 
+import { parseApiError } from "@/util/apiError";
 import {
   QueryClient,
   QueryClientProvider,
@@ -15,9 +16,9 @@ import { tsr } from "../lib/tsr";
 const queryClient = new QueryClient({
   mutationCache: new MutationCache({
     onError: (error) => {
+      const parsedError = parseApiError(error);
       toast({
-        description: error.message,
-        title: error.name,
+        title: parsedError?.message ?? "Error",
         variant: "destructive",
       });
     },
