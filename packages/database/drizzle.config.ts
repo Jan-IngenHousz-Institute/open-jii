@@ -7,7 +7,7 @@ export default {
   dialect: "postgresql",
   dbCredentials: process.env.DATABASE_URL
     ? {
-        url: process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/openjii_local",
+        url: process.env.DATABASE_URL,
         ssl: !process.env.DATABASE_URL.includes("localhost"),
       }
     : {
