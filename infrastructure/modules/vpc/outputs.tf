@@ -40,3 +40,13 @@ output "db_subnet_group_name" {
 output "aurora_security_group_id" {
   value = aws_security_group.aurora_sg.id
 }
+
+output "migration_task_security_group_id" {
+  description = "ID of the security group for migration tasks"
+  value       = aws_security_group.migration_task_sg.id
+}
+
+output "server_lambda_security_group_id" {
+  description = "ID of the security group for the server Lambda function to access Aurora (if enabled)"
+  value       = aws_security_group.server_lambda_aurora.id
+}

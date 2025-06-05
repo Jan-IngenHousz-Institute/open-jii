@@ -35,6 +35,13 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
   role       = aws_iam_role.lambda_role.name
 }
 
+# VPC execution policy (conditional)
+resource "aws_iam_role_policy_attachment" "lambda_vpc_execution" {
+  count      = var.enable_vpc ? 1 : 0
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+  role       = aws_iam_role.lambda_role.name
+}
+
 # S3 permissions (conditional)
 resource "aws_iam_role_policy" "s3_permissions" {
   count = var.s3_permissions ? 1 : 0
@@ -150,6 +157,14 @@ resource "aws_lambda_function" "function" {
     for_each = length(var.environment_variables) > 0 ? [1] : []
     content {
       variables = var.environment_variables
+    }
+  }
+
+  dynamic "vpc_config" {
+    for_each = var.enable_vpc ? [1] : []
+    content {
+      subnet_ids         = var.subnet_ids
+      security_group_ids = var.security_group_ids
     }
   }
 

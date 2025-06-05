@@ -30,7 +30,7 @@ EOT
 
 # CloudFront distribution
 resource "aws_cloudfront_distribution" "distribution" {
-  enabled         = true
+  enabled         = false
   is_ipv6_enabled = true
   price_class     = var.price_class
   aliases         = var.aliases

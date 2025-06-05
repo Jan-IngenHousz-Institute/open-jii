@@ -149,6 +149,11 @@ module "server_function" {
   architecture        = var.lambda_architecture
   create_function_url = true
 
+  # VPC Configuration for database access
+  enable_vpc         = var.enable_server_vpc
+  subnet_ids         = var.server_subnet_ids
+  security_group_ids = var.enable_server_vpc ? [var.server_lambda_security_group_id] : []
+
   s3_permissions       = true
   s3_bucket_arns       = [aws_s3_bucket.assets.arn, aws_s3_bucket.cache.arn]
   dynamodb_permissions = true
@@ -156,12 +161,12 @@ module "server_function" {
   sqs_permissions      = true
   sqs_queue_arns       = [module.sqs.queue_arn]
 
-  environment_variables = {
+  environment_variables = merge({
     ASSETS_BUCKET_NAME     = aws_s3_bucket.assets.bucket
     CACHE_BUCKET_NAME      = aws_s3_bucket.cache.bucket
     REVALIDATION_QUEUE_URL = module.sqs.queue_url
     CACHE_DYNAMO_TABLE     = module.dynamodb.table_name
-  }
+  }, var.db_environment_variables)
 
   tags = local.common_tags
 
@@ -294,7 +299,7 @@ resource "aws_cloudwatch_event_rule" "warmer" {
   count               = var.enable_lambda_warming ? 1 : 0
   name                = "${local.name_prefix}-warmer"
   description         = "Trigger Lambda warmer function"
-  schedule_expression = "rate(5 minutes)"
+  schedule_expression = "rate(8 hours)"
   tags                = local.common_tags
 }
 
