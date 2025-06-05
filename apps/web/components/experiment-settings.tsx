@@ -23,12 +23,12 @@ import {
   FormLabel,
   FormMessage,
   Input,
-  Textarea,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  RichTextarea,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
@@ -143,10 +143,10 @@ function ExperimentDetailsCard({
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea
-                      {...field}
-                      placeholder="Experiment description"
-                      className="min-h-[150px]"
+                    <RichTextarea
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      placeholder="Enter description..."
                     />
                   </FormControl>
                   <FormMessage />

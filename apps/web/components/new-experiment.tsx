@@ -21,7 +21,7 @@ import {
   Select,
   SelectItem,
   SelectContent,
-  Textarea,
+  RichTextarea,
   SelectValue,
   SelectTrigger,
 } from "@repo/ui/components";
@@ -91,7 +91,11 @@ export function NewExperimentForm() {
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea placeholder="" className="resize-none" {...field} />
+                <RichTextarea
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  placeholder="Enter description..."
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -130,7 +134,11 @@ export function NewExperimentForm() {
             <FormItem>
               <FormLabel>Embargo interval days</FormLabel>
               <FormControl>
-                <Input type="number" {...field} />
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(event) => field.onChange(+event.target.value)}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
