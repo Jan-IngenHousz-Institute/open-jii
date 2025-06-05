@@ -28,8 +28,14 @@ import { toast } from "@repo/ui/hooks";
 
 export function NewExperimentForm() {
   const router = useRouter();
-  const { mutateAsync: createExperiment, isPending } = useExperimentCreate({
-    onSuccess: onSuccess,
+  const { mutate: createExperiment, isPending } = useExperimentCreate({
+    onSuccess: () => {
+      toast({
+        description: "Experiment created successfully",
+      });
+      // Navigate to the experiment page
+      router.push(`/openjii/experiments`);
+    },
   });
 
   const form = useForm<CreateExperimentBody>({
@@ -46,18 +52,8 @@ export function NewExperimentForm() {
     router.back();
   }
 
-  function onSuccess() {
-    toast({
-      description: "Experiment created successfully",
-    });
-    // Navigate to the experiment page
-    router.push(`/openjii/experiments`);
-  }
-
-  async function onSubmit(data: CreateExperimentBody) {
-    await createExperiment({
-      body: data,
-    });
+  function onSubmit(data: CreateExperimentBody) {
+    return createExperiment({ body: data });
   }
 
   return (
