@@ -124,7 +124,11 @@ export function NewExperimentForm() {
             <FormItem>
               <FormLabel>Embargo interval days</FormLabel>
               <FormControl>
-                <Input type="number" {...field} />
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(event) => field.onChange(+event.target.value)}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
