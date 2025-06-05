@@ -45,8 +45,8 @@ export function ExperimentMemberManagement({
 
   // User search with debounced input
   const [userSearch, setUserSearch] = useState("");
-  const debouncedSearch = useDebounce(userSearch, 300);
-  const { data: userSearchData, isFetched: isFetchingUsers } =
+  const [debouncedSearch, isDebounced] = useDebounce(userSearch, 300);
+  const { data: userSearchData, isLoading: isFetchingUsers } =
     useUserSearch(debouncedSearch);
 
   // Add/remove member mutations
@@ -158,22 +158,18 @@ export function ExperimentMemberManagement({
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Add member section */}
-        <div className="space-y-2">
-          <div className="flex flex-col space-y-2">
-            <UserSearchWithDropdown
-              availableUsers={availableUsers}
-              value={selectedUserId}
-              onValueChange={setSelectedUserId}
-              placeholder="Add a member"
-              loading={isFetchingUsers}
-              searchValue={userSearch}
-              onSearchChange={setUserSearch}
-              onAddUser={handleAddMember}
-              isAddingUser={isAddingMember}
-            />
-          </div>
-        </div>
 
+        <UserSearchWithDropdown
+          availableUsers={availableUsers}
+          value={selectedUserId}
+          onValueChange={setSelectedUserId}
+          placeholder="Add a member"
+          loading={!isDebounced || isFetchingUsers}
+          searchValue={userSearch}
+          onSearchChange={setUserSearch}
+          onAddUser={handleAddMember}
+          isAddingUser={isAddingMember}
+        />
         {/* Current members section */}
         <div>
           <h6 className="mb-2 text-sm font-medium">Current Members</h6>
