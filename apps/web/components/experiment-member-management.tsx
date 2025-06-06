@@ -130,17 +130,28 @@ export function ExperimentMemberManagement({
       </Card>
     );
   }
-
-  // Helper to get user info from available users or provide default values
-  const getUserInfo = (userId: string): User => {
-    // First try to find the user in the available users list
-    const foundUser = availableUsers.find((u) => u.id === userId);
-    if (foundUser) return foundUser;
-
-    // If not found, return a default user object with the ID
+  // Helper to get user info from member.user if present, then availableUsers, then fallback to userId
+  const getUserInfo = (member: {
+    userId: string;
+    user?: { name?: string | null; email?: string | null };
+  }): User => {
+    if (member.user && typeof member.user.name === "string") {
+      return {
+        id: member.userId,
+        name: member.user.name,
+        email: member.user.email ?? "",
+        emailVerified: null,
+        image: null,
+        createdAt: "",
+      };
+    }
+    const foundUser = availableUsers.find((u) => u.id === member.userId);
+    if (foundUser) {
+      return foundUser;
+    }
     return {
-      id: userId,
-      name: userId,
+      id: member.userId,
+      name: member.userId,
       email: "",
       emailVerified: null,
       image: null,
@@ -176,10 +187,7 @@ export function ExperimentMemberManagement({
           <MemberList
             membersWithUserInfo={members.map((member) => ({
               ...member,
-              user: {
-                name: getUserInfo(member.userId).name,
-                email: getUserInfo(member.userId).email,
-              },
+              user: getUserInfo(member),
             }))}
             formatDate={formatDate}
             onRemoveMember={handleRemoveMember}
