@@ -6,7 +6,10 @@
     "moduleResolution": "node",
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./src/*"]
+      "~/*": ["./src/*"],
+      "@/*": [
+        "./*"
+      ]
     },
     "jsx": "react-native",
     "checkJs": false,
