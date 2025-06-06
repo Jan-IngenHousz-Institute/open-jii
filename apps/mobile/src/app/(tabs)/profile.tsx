@@ -225,7 +225,7 @@ export default function ProfileScreen() {
           title="Log Out"
           onPress={handleLogout}
           variant="outline"
-          style={[styles.actionButton, styles.logoutButton]}
+          style={[styles.actionButton, styles.logoutButton] as any}
           textStyle={styles.logoutButtonText}
           icon={<LogOut size={16} color={colors.semantic.error} />}
         />
