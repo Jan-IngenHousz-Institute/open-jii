@@ -1,6 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, eq, experimentMembers, sql, users } from "@repo/database";
+import { and, eq, experimentMembers, users } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -20,39 +20,20 @@ export class ExperimentMemberRepository {
     experimentId: string,
   ): Promise<Result<ExperimentMemberDto[]>> {
     return tryCatch(async () => {
-      const rows = await this.database
+      return this.database
         .select({
           experimentId: experimentMembers.experimentId,
           userId: experimentMembers.userId,
           role: experimentMembers.role,
           joinedAt: experimentMembers.joinedAt,
           user: {
-            name: sql<string>`COALESCE(${users.name}, '')`.as("name"),
+            name: users.name,
             email: users.email,
           },
         })
         .from(experimentMembers)
         .innerJoin(users, eq(experimentMembers.userId, users.id))
         .where(eq(experimentMembers.experimentId, experimentId));
-
-      // Map: ensure correct types and fields
-      return rows.map((row) => {
-        if (!row.userId) {
-          throw new Error(
-            "User not found for experiment member: " + JSON.stringify(row),
-          );
-        }
-        return {
-          experimentId: row.experimentId,
-          userId: row.userId,
-          role: row.role,
-          joinedAt: row.joinedAt,
-          user: {
-            name: row.user.name,
-            email: row.user.email ?? null,
-          },
-        };
-      });
     });
   }
 
@@ -73,26 +54,27 @@ export class ExperimentMemberRepository {
         .returning();
 
       // Fetch user info for the inserted user
-      const user = await this.database
+      const [user] = await this.database
         .select({
-          name: sql<string>`COALESCE(${users.name}, '')`.as("name"),
+          name: users.name,
           email: users.email,
         })
         .from(users)
-        .where(eq(users.id, userId))
-        .then((rows) => rows[0]);
-
-      // Return the enriched DTO
-      return inserted.map((row) => ({
-        experimentId: row.experimentId,
-        userId: row.userId,
-        role: row.role,
-        joinedAt: row.joinedAt,
-        user: {
-          name: user.name,
-          email: user.email ?? null,
-        },
-      }));
+        .where(eq(users.id, userId));
+      return inserted.length === 0
+        ? []
+        : [
+            {
+              experimentId: inserted[0].experimentId,
+              userId: inserted[0].userId,
+              role: inserted[0].role,
+              joinedAt: inserted[0].joinedAt,
+              user: {
+                name: user.name ?? null,
+                email: user.email ?? null,
+              },
+            },
+          ];
     });
   }
 

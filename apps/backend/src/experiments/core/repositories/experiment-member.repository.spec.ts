@@ -67,6 +67,16 @@ describe("ExperimentMemberRepository", () => {
           expect.objectContaining({ userId: memberId2, role: "admin" }),
         ]),
       );
+
+      // Additional assertions for name and email
+      const member1 = members.find((m) => m.userId === memberId1);
+      expect(member1).toBeDefined();
+      expect(typeof member1?.user.name).toBe("string");
+      expect(member1?.user.email).toBe("member1@example.com");
+      const member2 = members.find((m) => m.userId === memberId2);
+      expect(member2).toBeDefined();
+      expect(typeof member2?.user.name).toBe("string");
+      expect(member2?.user.email).toBe("member2@example.com");
     });
 
     it("should return empty array when experiment has no members", async () => {
@@ -130,6 +140,9 @@ describe("ExperimentMemberRepository", () => {
         userId: memberId,
         role: "member",
       });
+      // Assert name and email are present and correct
+      expect(typeof member.user.name).toBe("string");
+      expect(member.user.email).toBe("new-member@example.com");
 
       // Verify member was added by checking the database
       const allMembersResult = await repository.getMembers(experiment.id);
@@ -207,6 +220,9 @@ describe("ExperimentMemberRepository", () => {
 
       // Assert default role is "member"
       expect(member.role).toBe("member");
+      // Assert name and email are present and correct
+      expect(typeof member.user.name).toBe("string");
+      expect(member.user.email).toBe("default-role@example.com");
     });
   });
 
