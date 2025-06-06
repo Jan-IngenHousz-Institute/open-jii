@@ -15,7 +15,14 @@ export const addExperimentMemberSchema = createInsertSchema(experimentMembers)
   });
 
 // Create schema for returning experiment members
-export const experimentMemberSchema = createSelectSchema(experimentMembers);
+export const experimentMemberSchema = createSelectSchema(
+  experimentMembers,
+).extend({
+  user: z.object({
+    name: z.string(),
+    email: z.string().nullable(),
+  }),
+});
 
 // DTOs
 export type AddExperimentMemberDto = typeof addExperimentMemberSchema._type;

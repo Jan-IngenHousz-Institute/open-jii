@@ -1,6 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, eq, experimentMembers } from "@repo/database";
+import { and, eq, experimentMembers, sql, users } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -19,12 +19,41 @@ export class ExperimentMemberRepository {
   async getMembers(
     experimentId: string,
   ): Promise<Result<ExperimentMemberDto[]>> {
-    return tryCatch(() =>
-      this.database
-        .select()
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select({
+          experimentId: experimentMembers.experimentId,
+          userId: experimentMembers.userId,
+          role: experimentMembers.role,
+          joinedAt: experimentMembers.joinedAt,
+          user: {
+            name: sql<string>`COALESCE(${users.name}, '')`.as("name"),
+            email: users.email,
+          },
+        })
         .from(experimentMembers)
-        .where(eq(experimentMembers.experimentId, experimentId)),
-    );
+        .innerJoin(users, eq(experimentMembers.userId, users.id))
+        .where(eq(experimentMembers.experimentId, experimentId));
+
+      // Map: ensure correct types and fields
+      return rows.map((row) => {
+        if (!row.userId) {
+          throw new Error(
+            "User not found for experiment member: " + JSON.stringify(row),
+          );
+        }
+        return {
+          experimentId: row.experimentId,
+          userId: row.userId,
+          role: row.role,
+          joinedAt: row.joinedAt,
+          user: {
+            name: row.user.name,
+            email: row.user.email ?? null,
+          },
+        };
+      });
+    });
   }
 
   async addMember(
@@ -33,8 +62,8 @@ export class ExperimentMemberRepository {
     role: ExperimentMemberRole = "member",
   ): Promise<Result<ExperimentMemberDto[]>> {
     return tryCatch(async () => {
-      // Otherwise create a new membership
-      return await this.database
+      // Insert the member
+      const inserted = await this.database
         .insert(experimentMembers)
         .values({
           experimentId,
@@ -42,6 +71,28 @@ export class ExperimentMemberRepository {
           role,
         })
         .returning();
+
+      // Fetch user info for the inserted user
+      const user = await this.database
+        .select({
+          name: sql<string>`COALESCE(${users.name}, '')`.as("name"),
+          email: users.email,
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .then((rows) => rows[0]);
+
+      // Return the enriched DTO
+      return inserted.map((row) => ({
+        experimentId: row.experimentId,
+        userId: row.userId,
+        role: row.role,
+        joinedAt: row.joinedAt,
+        user: {
+          name: user.name,
+          email: user.email ?? null,
+        },
+      }));
     });
   }
 
