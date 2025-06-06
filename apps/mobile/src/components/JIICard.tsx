@@ -8,7 +8,7 @@ interface CardProps {
   variant?: "default" | "elevated" | "outlined";
 }
 
-export default function JIICard({
+export function JIICard({
   children,
   style,
   variant = "default",

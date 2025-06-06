@@ -1,11 +1,11 @@
 import { Mail } from "lucide-react-native";
 import React from "react";
 import { ScrollView, View, StyleSheet } from "react-native";
-import JIIButton from "~/components/JIIButton";
-import JIICard from "~/components/JIICard";
-import JIIInput from "~/components/JIIInput";
-import JIIText from "~/components/JIIText";
-import JIIThemeToggle from "~/components/JIIThemeToggle";
+import { JIIButton } from "~/components/JIIButton";
+import { JIICard } from "~/components/JIICard";
+import { JIIInput } from "~/components/JIIInput";
+import { JIIText } from "~/components/JIIText";
+import { JIIThemeToggle } from "~/components/JIIThemeToggle";
 import { useTheme } from "~/hooks/useTheme";
 
 export default function DesignSystemScreen() {

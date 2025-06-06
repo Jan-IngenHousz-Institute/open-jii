@@ -17,7 +17,7 @@ interface ConnectionStatusProps {
   connectionType?: "bluetooth" | "ble" | "usb" | null;
 }
 
-export default function ConnectionStatus({
+export function ConnectionStatus({
   isOnline,
   bluetoothConnected,
   usbConnected,

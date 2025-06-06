@@ -22,7 +22,7 @@ interface ButtonProps extends TouchableOpacityProps {
   icon?: React.ReactNode;
 }
 
-export default function Button({
+export function Button({
   title,
   variant = "primary",
   size = "md",

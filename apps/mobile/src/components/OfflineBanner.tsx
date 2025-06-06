@@ -1,13 +1,13 @@
 import { WifiOff } from "lucide-react-native";
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import Colors from "~/constants/colors";
+import { colors } from "~/constants/colors";
 
 interface OfflineBannerProps {
   visible: boolean;
 }
 
-export default function OfflineBanner({ visible }: OfflineBannerProps) {
+export function OfflineBanner({ visible }: OfflineBannerProps) {
   if (!visible) return null;
 
   return (
@@ -20,7 +20,7 @@ export default function OfflineBanner({ visible }: OfflineBannerProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.semantic.warning,
+    backgroundColor: colors.semantic.warning,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 4,

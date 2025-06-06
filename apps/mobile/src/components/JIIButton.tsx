@@ -22,7 +22,7 @@ interface ButtonProps extends TouchableOpacityProps {
   icon?: React.ReactNode;
 }
 
-export default function JIIButton({
+export function JIIButton({
   title,
   variant = "primary",
   size = "md",

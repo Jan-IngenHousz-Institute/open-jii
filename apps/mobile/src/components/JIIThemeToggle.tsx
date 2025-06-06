@@ -7,7 +7,7 @@ interface ThemeToggleProps {
   style?: any;
 }
 
-export default function JIIThemeToggle({ style }: ThemeToggleProps) {
+export function JIIThemeToggle({ style }: ThemeToggleProps) {
   // Access the enhanced theme with changeTheme function
   const theme = useTheme() as any; // Using any to access the enhanced properties
   const { colors, layout, spacing, typography } = theme;

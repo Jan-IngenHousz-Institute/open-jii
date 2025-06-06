@@ -14,9 +14,9 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import Button from "~/components/Button";
-import Input from "~/components/Input";
-import Toast from "~/components/Toast";
+import { Button } from "~/components/Button";
+import { Input } from "~/components/Input";
+import { Toast } from "~/components/Toast";
 import { useTheme } from "~/hooks/useTheme";
 
 export default function LoginScreen() {

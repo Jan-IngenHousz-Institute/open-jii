@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
 } from "react-native";
-import Colors from "~/constants/colors";
+import { colors } from "~/constants/colors";
 
 interface ToastProps {
   visible: boolean;
@@ -17,7 +17,7 @@ interface ToastProps {
   onDismiss: () => void;
 }
 
-export default function Toast({
+export function Toast({
   visible,
   message,
   type = "info",
@@ -70,14 +70,14 @@ export default function Toast({
   const getBackgroundColor = () => {
     switch (type) {
       case "success":
-        return Colors.semantic.success;
+        return colors.semantic.success;
       case "error":
-        return Colors.semantic.error;
+        return colors.semantic.error;
       case "warning":
-        return Colors.semantic.warning;
+        return colors.semantic.warning;
       case "info":
       default:
-        return Colors.semantic.info;
+        return colors.semantic.info;
     }
   };
 

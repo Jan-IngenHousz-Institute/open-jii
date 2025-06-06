@@ -1,5 +1,5 @@
 // JII Design System - Color Tokens
-export default {
+export const colors = {
   // Primary Colors
   primary: {
     dark: "#005e5e", // Dark green

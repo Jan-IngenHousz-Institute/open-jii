@@ -9,7 +9,7 @@ import {
   ViewStyle,
   TouchableOpacity,
 } from "react-native";
-import Colors from "~/constants/colors";
+import { colors } from "~/constants/colors";
 import { useTheme } from "~/hooks/useTheme";
 
 interface InputProps extends TextInputProps {
@@ -21,7 +21,7 @@ interface InputProps extends TextInputProps {
   helper?: string;
 }
 
-export default function Input({
+export function Input({
   label,
   error,
   containerStyle,
@@ -155,10 +155,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   focused: {
-    borderColor: Colors.primary.dark,
+    borderColor: colors.primary.dark,
   },
   error: {
-    borderColor: Colors.semantic.error,
+    borderColor: colors.semantic.error,
   },
   errorText: {
     fontSize: 12,

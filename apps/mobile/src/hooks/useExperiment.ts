@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useEffect } from "react";
 
-export default function useExperiment() {
+export function useExperiment() {
   const [selectedExperiment, setSelectedExperiment] = useState<string | null>(
     null,
   );

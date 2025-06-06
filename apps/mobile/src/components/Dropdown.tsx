@@ -25,7 +25,7 @@ interface DropdownProps {
   placeholder?: string;
 }
 
-export default function Dropdown({
+export function Dropdown({
   label,
   options,
   selectedValue,

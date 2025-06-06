@@ -1,11 +1,11 @@
 // JII Design System - Theme Configuration
-import Colors from "./colors";
+import { colors } from "./colors";
 import { spacing, layout } from "./spacing";
 import { typography } from "./typography";
 
 // Theme interface
 export interface Theme {
-  colors: typeof Colors;
+  colors: typeof colors;
   typography: typeof typography;
   spacing: typeof spacing;
   layout: typeof layout;
@@ -14,7 +14,7 @@ export interface Theme {
 
 // Create the dark theme
 export const darkTheme: Theme = {
-  colors: Colors,
+  colors: colors,
   typography,
   spacing,
   layout,
@@ -23,7 +23,7 @@ export const darkTheme: Theme = {
 
 // Create the light theme
 export const lightTheme: Theme = {
-  colors: Colors,
+  colors: colors,
   typography,
   spacing,
   layout,

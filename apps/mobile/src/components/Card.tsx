@@ -7,7 +7,7 @@ interface CardProps {
   style?: ViewStyle;
 }
 
-export default function Card({ children, style }: CardProps) {
+export function Card({ children, style }: CardProps) {
   const theme = useTheme();
   const { colors } = theme;
 

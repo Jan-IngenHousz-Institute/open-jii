@@ -9,7 +9,7 @@ interface UnsyncedScanItemProps {
   experimentName: string;
 }
 
-export default function UnsyncedScanItem({
+export function UnsyncedScanItem({
   timestamp,
   experimentName,
 }: UnsyncedScanItemProps) {

@@ -26,7 +26,7 @@ interface JIITextProps extends TextProps {
   color?: string;
 }
 
-export default function JIIText({
+export function JIIText({
   variant = "body",
   color,
   style,

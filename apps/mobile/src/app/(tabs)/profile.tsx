@@ -10,10 +10,10 @@ import {
   Alert,
   Linking,
 } from "react-native";
-import Button from "~/components/Button";
-import Card from "~/components/Card";
-import Toast from "~/components/Toast";
-import Colors from "~/constants/colors";
+import { Button } from "~/components/Button";
+import { Card } from "~/components/Card";
+import { Toast } from "~/components/Toast";
+import { colors } from "~/constants/colors";
 import { useTheme } from "~/hooks/useTheme";
 
 // Mock user data - replace with actual data from your state management
@@ -307,10 +307,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   logoutButton: {
-    borderColor: Colors.semantic.error,
+    borderColor: colors.semantic.error,
   },
   logoutButtonText: {
-    color: Colors.semantic.error,
+    color: colors.semantic.error,
   },
   versionText: {
     textAlign: "center",

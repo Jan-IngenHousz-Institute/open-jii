@@ -8,7 +8,7 @@ interface MeasurementResultProps {
   experimentName?: string;
 }
 
-export default function MeasurementResult({
+export function MeasurementResult({
   data,
   timestamp,
 }: MeasurementResultProps) {

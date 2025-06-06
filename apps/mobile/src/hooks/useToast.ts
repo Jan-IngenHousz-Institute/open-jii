@@ -8,7 +8,7 @@ interface ToastState {
   type: ToastType;
 }
 
-export default function useToast() {
+export function useToast() {
   const [toast, setToast] = useState<ToastState>({
     visible: false,
     message: "",

@@ -17,12 +17,12 @@ import {
   TouchableOpacity,
   Dimensions,
 } from "react-native";
-import Button from "~/components/Button";
-import Card from "~/components/Card";
-import Dropdown from "~/components/Dropdown";
-import MeasurementResult from "~/components/MeasurementResult";
-import Toast from "~/components/Toast";
-import Colors from "~/constants/colors";
+import { Button } from "~/components/Button";
+import { Card } from "~/components/Card";
+import { Dropdown } from "~/components/Dropdown";
+import { MeasurementResult } from "~/components/MeasurementResult";
+import { Toast } from "~/components/Toast";
+import { colors } from "~/constants/colors";
 import { useTheme } from "~/hooks/useTheme";
 
 // Mock data - replace with actual data from your state management
@@ -917,7 +917,7 @@ const styles = StyleSheet.create({
   warningCard: {
     marginBottom: 24,
     borderLeftWidth: 4,
-    borderLeftColor: Colors.semantic.warning,
+    borderLeftColor: colors.semantic.warning,
   },
   warningContent: {
     flexDirection: "row",

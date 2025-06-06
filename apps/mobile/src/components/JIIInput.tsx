@@ -20,7 +20,7 @@ interface InputProps extends TextInputProps {
   helper?: string;
 }
 
-export default function JIIInput({
+export function JIIInput({
   label,
   error,
   containerStyle,
