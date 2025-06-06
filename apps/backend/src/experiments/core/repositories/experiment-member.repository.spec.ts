@@ -40,9 +40,11 @@ describe("ExperimentMemberRepository", () => {
       // Create users to add as members
       const memberId1 = await testApp.createTestUser({
         email: "member1@example.com",
+        name: "Test1 User",
       });
       const memberId2 = await testApp.createTestUser({
         email: "member2@example.com",
+        name: "Test2 User",
       });
 
       // Add members
@@ -71,11 +73,12 @@ describe("ExperimentMemberRepository", () => {
       // Additional assertions for name and email
       const member1 = members.find((m) => m.userId === memberId1);
       expect(member1).toBeDefined();
-      expect(typeof member1?.user.name).toBe("string");
+      expect(member1?.user.name).toBe("Test1 User");
       expect(member1?.user.email).toBe("member1@example.com");
+
       const member2 = members.find((m) => m.userId === memberId2);
       expect(member2).toBeDefined();
-      expect(typeof member2?.user.name).toBe("string");
+      expect(member2?.user.name).toBe("Test2 User");
       expect(member2?.user.email).toBe("member2@example.com");
     });
 
@@ -118,6 +121,7 @@ describe("ExperimentMemberRepository", () => {
       // Create a user to add as member
       const memberId = await testApp.createTestUser({
         email: "new-member@example.com",
+        name: "New Member",
       });
 
       // Act
@@ -141,7 +145,7 @@ describe("ExperimentMemberRepository", () => {
         role: "member",
       });
       // Assert name and email are present and correct
-      expect(typeof member.user.name).toBe("string");
+      expect(member.user.name).toBe("New Member");
       expect(member.user.email).toBe("new-member@example.com");
 
       // Verify member was added by checking the database
@@ -207,6 +211,7 @@ describe("ExperimentMemberRepository", () => {
       // Create a user to add as member
       const memberId = await testApp.createTestUser({
         email: "default-role@example.com",
+        name: "Default Role",
       });
 
       // Add the member without specifying role
@@ -221,7 +226,7 @@ describe("ExperimentMemberRepository", () => {
       // Assert default role is "member"
       expect(member.role).toBe("member");
       // Assert name and email are present and correct
-      expect(typeof member.user.name).toBe("string");
+      expect(member.user.name).toBe("Default Role");
       expect(member.user.email).toBe("default-role@example.com");
     });
   });
