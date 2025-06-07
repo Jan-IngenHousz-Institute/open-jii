@@ -4,7 +4,7 @@ import type { TestingModule } from "@nestjs/testing";
 import { Test } from "@nestjs/testing";
 import nock from "nock";
 
-import { assertFailure, assertSuccess } from "../../utils/fp-utils";
+import { assertFailure, assertSuccess, AppError } from "../../utils/fp-utils";
 import { DatabricksService } from "./databricks.service";
 
 describe("DatabricksService", () => {
@@ -73,31 +73,35 @@ describe("DatabricksService", () => {
   };
 
   const mockTokenResponse = (accessToken = "mock-token", expiresIn = 3600) =>
-    nock(mockConfig.databricksHost).post("/oidc/v1/token").reply(200, {
-      access_token: accessToken,
-      expires_in: expiresIn,
-    });
+    nock(mockConfig.databricksHost)
+      .post(DatabricksService.TOKEN_ENDPOINT)
+      .reply(200, {
+        access_token: accessToken,
+        expires_in: expiresIn,
+      });
 
   const mockTokenFailure = (
     status = 401,
     errorDescription = "Invalid client credentials",
   ) =>
     nock(mockConfig.databricksHost)
-      .post("/oidc/v1/token")
+      .post(DatabricksService.TOKEN_ENDPOINT)
       .reply(status, { error_description: errorDescription });
 
   const mockJobRunSuccess = (runId = 12345, numberInJob = 1) =>
-    nock(mockConfig.databricksHost).post("/api/2.2/jobs/run-now").reply(200, {
-      run_id: runId,
-      number_in_job: numberInJob,
-    });
+    nock(mockConfig.databricksHost)
+      .post(DatabricksService.JOBS_ENDPOINT)
+      .reply(200, {
+        run_id: runId,
+        number_in_job: numberInJob,
+      });
 
   const mockJobRunFailure = (
     status = 404,
     message = "Job not found or access denied",
   ) =>
     nock(mockConfig.databricksHost)
-      .post("/api/2.2/jobs/run-now")
+      .post(DatabricksService.JOBS_ENDPOINT)
       .reply(status, { message });
 
   const mockJobsListSuccess = (jobs = [{ job_id: 1234, name: "Test Job" }]) =>
@@ -114,7 +118,7 @@ describe("DatabricksService", () => {
 
   const mockSqlStatementSuccess = (experimentId = "exp-123") =>
     nock(mockConfig.databricksHost)
-      .post("/api/2.0/sql/statements/")
+      .post(DatabricksService.SQL_STATEMENTS_ENDPOINT)
       .reply(200, {
         statement_id: "statement-123",
         status: {
@@ -153,7 +157,7 @@ describe("DatabricksService", () => {
 
   const mockSqlStatementPendingThenSucceeded = (experimentId = "exp-123") => {
     const pendingScope = nock(mockConfig.databricksHost)
-      .post("/api/2.0/sql/statements/")
+      .post(DatabricksService.SQL_STATEMENTS_ENDPOINT)
       .reply(200, {
         statement_id: "statement-123",
         status: {
@@ -162,7 +166,7 @@ describe("DatabricksService", () => {
       });
 
     const successScope = nock(mockConfig.databricksHost)
-      .get("/api/2.0/sql/statements/statement-123")
+      .get(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/statement-123`)
       .reply(200, {
         statement_id: "statement-123",
         status: {
@@ -207,12 +211,12 @@ describe("DatabricksService", () => {
     message = "SQL syntax error",
   ) =>
     nock(mockConfig.databricksHost)
-      .post("/api/2.0/sql/statements/")
+      .post(DatabricksService.SQL_STATEMENTS_ENDPOINT)
       .reply(status, { message });
 
   const mockSqlStatementExecutionFailure = () =>
     nock(mockConfig.databricksHost)
-      .post("/api/2.0/sql/statements/")
+      .post(DatabricksService.SQL_STATEMENTS_ENDPOINT)
       .reply(200, {
         statement_id: "statement-123",
         status: {
@@ -223,6 +227,45 @@ describe("DatabricksService", () => {
           },
         },
       });
+
+  const mockListTablesSuccess = (
+    tables = [
+      {
+        name: "test_table",
+        catalog_name: "test_catalog",
+        schema_name: "test_schema",
+      },
+    ],
+  ) =>
+    nock(mockConfig.databricksHost)
+      .get(DatabricksService.TABLES_ENDPOINT)
+      .query(true) // Accept any query params
+      .reply(200, { tables });
+
+  const mockListTablesFailure = (status = 404, message = "Schema not found") =>
+    nock(mockConfig.databricksHost)
+      .get(DatabricksService.TABLES_ENDPOINT)
+      .query(true) // Accept any query params
+      .reply(status, { message });
+
+  const mockPollingNetworkError = () => {
+    // Mock for the initial SQL statement request that returns PENDING
+    const initialScope = nock(mockConfig.databricksHost)
+      .post(DatabricksService.SQL_STATEMENTS_ENDPOINT)
+      .reply(200, {
+        statement_id: "statement-123",
+        status: {
+          state: "PENDING",
+        },
+      });
+
+    // Mock for polling request that fails with a network error
+    const pollingScope = nock(mockConfig.databricksHost)
+      .get(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/statement-123`)
+      .replyWithError("Network error: Connection timeout");
+
+    return { initialScope, pollingScope };
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -558,13 +601,93 @@ describe("DatabricksService", () => {
     });
   });
 
-  describe("getExperimentSchemaData", () => {
+  describe("listTables", () => {
     describe("Success scenarios", () => {
-      it("should fetch experiment data successfully", async () => {
+      it("should retrieve tables for an experiment schema", async () => {
+        mockTokenResponse();
+        mockListTablesSuccess([
+          {
+            name: "bronze_data",
+            catalog_name: "test_catalog",
+            schema_name: "exp_test_exp-123",
+          },
+          {
+            name: "silver_data",
+            catalog_name: "test_catalog",
+            schema_name: "exp_test_exp-123",
+          },
+        ]);
+
+        const result = await service.listTables("test", "exp-123");
+
+        expect(result.isSuccess()).toBe(true);
+        assertSuccess(result);
+        expect(result.value).toEqual({
+          tables: [
+            {
+              name: "bronze_data",
+              catalog_name: "test_catalog",
+              schema_name: "exp_test_exp-123",
+            },
+            {
+              name: "silver_data",
+              catalog_name: "test_catalog",
+              schema_name: "exp_test_exp-123",
+            },
+          ],
+        });
+        expect(nock.isDone()).toBeTruthy();
+      });
+
+      it("should handle empty tables list", async () => {
+        mockTokenResponse();
+        mockListTablesSuccess([]);
+
+        const result = await service.listTables("test", "exp-123");
+
+        expect(result.isSuccess()).toBe(true);
+        assertSuccess(result);
+        expect(result.value).toEqual({ tables: [] });
+      });
+    });
+
+    describe("Failure scenarios", () => {
+      it("should handle authentication failures", async () => {
+        mockTokenFailure();
+
+        const result = await service.listTables("test", "exp-123");
+
+        expect(result.isSuccess()).toBe(false);
+        assertFailure(result);
+        expect(result.error.message).toContain("Databricks token request");
+      });
+
+      it("should handle API errors when listing tables", async () => {
+        mockTokenResponse();
+        mockListTablesFailure(404, "Schema not found");
+
+        const result = await service.listTables("test", "exp-123");
+
+        expect(result.isSuccess()).toBe(false);
+        assertFailure(result);
+        expect(result.error.message).toContain(
+          "Failed to list Databricks tables",
+        );
+        expect(result.error.message).toContain("Schema not found");
+      });
+    });
+  });
+
+  describe("executeSqlQuery", () => {
+    describe("Success scenarios", () => {
+      it("should execute SQL query successfully", async () => {
         mockTokenResponse();
         mockSqlStatementSuccess("exp-123");
 
-        const result = await service.getExperimentSchemaData("exp-123", "name");
+        const result = await service.executeSqlQuery(
+          "test_schema",
+          "SELECT * FROM test_table",
+        );
 
         expect(result.isSuccess()).toBe(true);
         assertSuccess(result);
@@ -588,7 +711,10 @@ describe("DatabricksService", () => {
         const { pendingScope, successScope } =
           mockSqlStatementPendingThenSucceeded("exp-456");
 
-        const result = await service.getExperimentSchemaData("exp-456", "name");
+        const result = await service.executeSqlQuery(
+          "test_schema",
+          "SELECT * FROM test_table",
+        );
 
         expect(pendingScope.isDone()).toBeTruthy();
         expect(successScope.isDone()).toBeTruthy();
@@ -605,7 +731,10 @@ describe("DatabricksService", () => {
       it("should handle authentication failures", async () => {
         mockTokenFailure();
 
-        const result = await service.getExperimentSchemaData("exp-123", "name");
+        const result = await service.executeSqlQuery(
+          "test_schema",
+          "SELECT * FROM test_table",
+        );
 
         expect(result.isSuccess()).toBe(false);
         assertFailure(result);
@@ -617,7 +746,10 @@ describe("DatabricksService", () => {
         mockTokenResponse();
         mockSqlStatementExecutionFailure();
 
-        const result = await service.getExperimentSchemaData("exp-123", "name");
+        const result = await service.executeSqlQuery(
+          "test_schema",
+          "SELECT * FROM test_table",
+        );
 
         expect(result.isSuccess()).toBe(false);
         assertFailure(result);
@@ -633,13 +765,54 @@ describe("DatabricksService", () => {
         mockTokenResponse();
         mockSqlStatementFailure(500, "Internal server error");
 
-        const result = await service.getExperimentSchemaData("exp-123", "name");
+        const result = await service.executeSqlQuery(
+          "test_schema",
+          "SELECT * FROM test_table",
+        );
 
         expect(result.isSuccess()).toBe(false);
         assertFailure(result);
         expect(result.error.message).toContain(
-          "Databricks SQL statement execution failed",
+          "Databricks SQL query execution",
         );
+      });
+
+      it("should handle network errors during polling", async () => {
+        mockTokenResponse();
+        const { initialScope, pollingScope } = mockPollingNetworkError();
+
+        const result = await service.executeSqlQuery(
+          "test_schema",
+          "SELECT * FROM test_table",
+        );
+
+        expect(initialScope.isDone()).toBeTruthy();
+        expect(pollingScope.isDone()).toBeTruthy();
+        expect(result.isSuccess()).toBe(false);
+        assertFailure(result);
+        expect(result.error.message).toContain("Databricks SQL polling failed");
+      });
+
+      it("should handle AppError in the inner try-catch block", async () => {
+        mockTokenResponse();
+
+        // Mock the formatExperimentDataResponse to throw an AppError
+        jest
+          .spyOn(service as any, "formatExperimentDataResponse")
+          .mockImplementationOnce(() => {
+            throw AppError.internal("Test AppError");
+          });
+
+        mockSqlStatementSuccess();
+
+        const result = await service.executeSqlQuery(
+          "test_schema",
+          "SELECT * FROM test_table",
+        );
+
+        expect(result.isSuccess()).toBe(false);
+        assertFailure(result);
+        expect(result.error.message).toBe("Test AppError");
       });
     });
   });
