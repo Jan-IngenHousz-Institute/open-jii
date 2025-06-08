@@ -13,61 +13,55 @@ import { BluetoothStackNavigator } from "./bluetooth-stack-navigator";
 const Tab = createBottomTabNavigator();
 
 export function MainRouter() {
-  function renderMainRouter() {
-    return (
-      <Tab.Navigator
-        initialRouteName="Home"
-        screenOptions={({ route }) => ({
-          headerShown: true,
-          tabBarIcon: ({ color, size }) => {
-            const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
-              Home: "home",
-              Bluetooth: "bluetooth",
-              Serial: "terminal",
-              "Bluetooth Low Energy": "bluetooth",
-            };
-            return (
-              <Ionicons name={icons[route.name]} size={size} color={color} />
-            );
-          },
-        })}
-      >
-        <Tab.Screen
-          name="Home"
-          component={HomeScreen}
-          options={{
-            tabBarLabel: "Home",
-          }}
-        />
-        {Platform.OS === "android" && (
-          <>
-            <Tab.Screen
-              name="Bluetooth"
-              component={BluetoothStackNavigator}
-              options={{ tabBarLabel: "Bluetooth", headerShown: false }}
-            />
-            <Tab.Screen
-              name="Serial"
-              component={SerialPortConnectionScreen}
-              options={{ tabBarLabel: "Serial Port" }}
-            />
-          </>
-        )}
-        {Platform.OS === "ios" && (
-          <Tab.Screen
-            name="Bluetooth Low Energy"
-            component={BleStackNavigator}
-            options={{ tabBarLabel: "BLE", headerShown: false }}
-          />
-        )}
-      </Tab.Navigator>
-    );
-  }
-
   return (
     <ToastProvider>
       <NavigationContainer>
-        {renderMainRouter()}
+        <Tab.Navigator
+          initialRouteName="Home"
+          screenOptions={({ route }) => ({
+            headerShown: true,
+            tabBarIcon: ({ color, size }) => {
+              const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
+                Home: "home",
+                Bluetooth: "bluetooth",
+                Serial: "terminal",
+                "Bluetooth Low Energy": "bluetooth",
+              };
+              return (
+                <Ionicons name={icons[route.name]} size={size} color={color} />
+              );
+            },
+          })}
+        >
+          <Tab.Screen
+            name="Home"
+            component={HomeScreen}
+            options={{
+              tabBarLabel: "Home",
+            }}
+          />
+          {Platform.OS === "android" && (
+            <>
+              <Tab.Screen
+                name="Bluetooth"
+                component={BluetoothStackNavigator}
+                options={{ tabBarLabel: "Bluetooth", headerShown: false }}
+              />
+              <Tab.Screen
+                name="Serial"
+                component={SerialPortConnectionScreen}
+                options={{ tabBarLabel: "Serial Port" }}
+              />
+            </>
+          )}
+          {Platform.OS === "ios" && (
+            <Tab.Screen
+              name="Bluetooth Low Energy"
+              component={BleStackNavigator}
+              options={{ tabBarLabel: "BLE", headerShown: false }}
+            />
+          )}
+        </Tab.Navigator>
         <StatusBar style="dark" backgroundColor="white" translucent={false} />
       </NavigationContainer>
     </ToastProvider>
