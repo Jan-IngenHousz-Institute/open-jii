@@ -15,7 +15,6 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
 
   // Determine active tab from URL
   const getActiveTab = () => {
-    if (pathname.endsWith("/edit")) return "edit";
     if (pathname.endsWith("/settings")) return "settings";
     if (pathname.endsWith("/data")) return "data";
     if (pathname.endsWith(`/experiments/${id}`)) return "overview";
@@ -34,12 +33,9 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
       </div>
 
       <Tabs value={activeTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview" asChild>
             <Link href={`/openjii/experiments/${id}`}>Overview</Link>
-          </TabsTrigger>
-          <TabsTrigger value="edit" asChild>
-            <Link href={`/openjii/experiments/${id}/edit`}>Edit</Link>
           </TabsTrigger>
           <TabsTrigger value="data" asChild>
             <Link href={`/openjii/experiments/${id}/data`}>Data</Link>

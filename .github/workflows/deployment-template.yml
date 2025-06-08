@@ -70,10 +70,11 @@ jobs:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region: ${{ secrets.AWS_REGION }}
           tofu_version: "1.6.0"
-          environment: "${{ inputs.environment }}"  
+          environment: "${{ inputs.environment }}"
 
-      - name: Apply Infrastructure
-        run: tofu apply -auto-approve
+      # - name: Apply Infrastructure
+      #   working-directory: infrastructure/env/${{ inputs.environment }}
+      #   run: tofu apply -auto-approve
 
   # Job 3: Deploy Artifacts
   deploy:
@@ -105,3 +106,16 @@ jobs:
             echo "No artifacts found"
             exit 1
           fi
+
+  # # Job 4: Deploy Next.js with OpenNext
+  # deploy-nextjs:
+  #   name: Deploy Next.js with OpenNext
+  #   needs: [build_lint_test, tofu]
+  #   if: needs.build_lint_test.outputs.has_affected_apps == 'true'
+  #   uses: ./.github/workflows/deploy-nextjs-opennext.yml
+  #   with:
+  #     environment: ${{ inputs.environment }}
+  #   secrets: inherit
+  #   permissions:
+  #     id-token: write
+  #     contents: read

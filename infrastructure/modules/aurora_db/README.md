@@ -17,17 +17,17 @@ graph TD;
 
 
 🛠 Resources Used
-| Resource                     | Description  
-| Documentation                                                                                                            
+| Resource                     | Description
+| Documentation
 |------------------------------------------------------------------------------------------------------------------------|
-| `aws_rds_cluster`            | Creates an Aurora DB cluster                
-| [AWS RDS Cluster] (https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/rds_cluster)                
-| `aws_rds_cluster_instance`   | Defines instances in the Aurora cluster     
-| [AWS RDS Cluster Instance] (https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/rds_cluster_instance) 
-| `aws_db_subnet_group`        | Manages the subnet group for the Aurora DB       
-| [AWS DB Subnet Group] (https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_subnet_group)    
-| `aws_security_group`         | Controls inbound/outbound access to Aurora DB 
-| [AWS Security Group] (https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group)  
+| `aws_rds_cluster`            | Creates an Aurora DB cluster
+| [AWS RDS Cluster] (https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/rds_cluster)
+| `aws_rds_cluster_instance`   | Defines instances in the Aurora cluster
+| [AWS RDS Cluster Instance] (https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/rds_cluster_instance)
+| `aws_db_subnet_group`        | Manages the subnet group for the Aurora DB
+| [AWS DB Subnet Group] (https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_subnet_group)
+| `aws_security_group`         | Controls inbound/outbound access to Aurora DB
+| [AWS Security Group] (https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group)
 
 
 🔑 Inputs
@@ -65,3 +65,4 @@ The security group restricts database access to the VPC range to ensure private 
 Private subnets are used to prevent unauthorized external access.
 
 Automatic backups ensure data integrity, following AWS best practices.
+```
