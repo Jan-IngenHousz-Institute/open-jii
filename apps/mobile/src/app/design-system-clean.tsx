@@ -7,10 +7,9 @@ import { JIIInput } from "~/components/JIIInput";
 import { JIIText } from "~/components/JIIText";
 import { JIIThemeToggle } from "~/components/JIIThemeToggle";
 import { useTheme } from "~/hooks/useTheme";
+import { useDesignSystemLogic } from "~/screens/design-system/useDesignSystemLogic";
 
-import { useDesignSystemLogic } from "./useDesignSystemLogic";
-
-export function DesignSystemScreen() {
+export default function DesignSystemTab() {
   const theme = useTheme();
   const { colors } = theme;
   const logic = useDesignSystemLogic();
