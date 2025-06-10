@@ -12,9 +12,10 @@ import {
   TableRow,
 } from "@repo/ui/components";
 
-export function ExperimentDataTable() {
-  const { data, isLoading } = useExperimentMockData();
+export function ExperimentDataTable({ id }: { id: string }) {
+  const { data, isLoading } = useExperimentMockData(id);
 
+  if (isLoading) return <div>Is loading</div>;
   if (data)
     return (
       <Table>
@@ -30,8 +31,7 @@ export function ExperimentDataTable() {
         </TableBody>
       </Table>
     );
-  if (isLoading) return <p>Is loading</p>;
-  return <></>;
+  return <div>No data returned</div>;
 }
 
 interface ExperimentDataContentProps {
@@ -39,7 +39,12 @@ interface ExperimentDataContentProps {
 }
 
 function ExperimentDataContent({ data }: ExperimentDataContentProps) {
-  if (data.rows.length == 0) return <p>No data found</p>;
+  if (data.rows.length == 0)
+    return (
+      <TableRow>
+        <TableCell colSpan={data.columns.length}>No rows found</TableCell>
+      </TableRow>
+    );
   return data.rows.map((row, index) => {
     return (
       <TableRow key={index}>

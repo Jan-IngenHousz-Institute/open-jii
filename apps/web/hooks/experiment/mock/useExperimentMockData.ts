@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import type { ExperimentData } from "@repo/api";
 
-const experimentData: ExperimentData = {
+const experimentData1: ExperimentData = {
   columns: [
     {
       name: "plot_id",
@@ -45,16 +45,111 @@ const experimentData: ExperimentData = {
   truncated: true,
 };
 
-export const useExperimentMockData = () => {
+const experimentData2 = {
+  columns: [
+    {
+      name: "field_id",
+      type_name: "string",
+      type_text: "Field identifier",
+    },
+    {
+      name: "wheat_variety",
+      type_name: "string",
+      type_text: "Wheat variety",
+    },
+    {
+      name: "n_application_kg_ha",
+      type_name: "float",
+      type_text: "Nitrogen application in kg/ha",
+    },
+    {
+      name: "yield_t_ha",
+      type_name: "float",
+      type_text: "Yield in tonnes per hectare",
+    },
+    {
+      name: "grain_protein",
+      type_name: "float",
+      type_text: "Grain protein percentage",
+    },
+    {
+      name: "nue",
+      type_name: "float",
+      type_text: "Nitrogen use efficiency",
+    },
+  ],
+  rows: [
+    ["F1", "Robigus", "0", "6.2", "9.8", "0"],
+    ["F2", "Robigus", "120", "9.5", "11.3", "27.5"],
+    ["F3", "Robigus", "240", "10.8", "13.5", "19.2"],
+    ["F4", "Cordiale", "0", "5.8", "10.2", "0"],
+    ["F5", "Cordiale", "120", "9.1", "12.1", "27.5"],
+    ["F6", "Cordiale", "240", "10.5", "14.2", "19.6"],
+    ["F7", "Hereward", "0", "5.5", "10.5", "0"],
+    ["F8", "Hereward", "120", "8.9", "13.2", "28.3"],
+    ["F9", "Hereward", "240", "10.3", "15.4", "20.0"],
+  ],
+  totalRows: 36,
+  truncated: true,
+};
+
+const experimentData3 = {
+  columns: [
+    {
+      name: "field_id",
+      type_name: "string",
+      type_text: "Field identifier",
+    },
+    {
+      name: "wheat_variety",
+      type_name: "string",
+      type_text: "Wheat variety",
+    },
+    {
+      name: "n_application_kg_ha",
+      type_name: "float",
+      type_text: "Nitrogen application in kg/ha",
+    },
+    {
+      name: "yield_t_ha",
+      type_name: "float",
+      type_text: "Yield in tonnes per hectare",
+    },
+    {
+      name: "grain_protein",
+      type_name: "float",
+      type_text: "Grain protein percentage",
+    },
+    {
+      name: "nue",
+      type_name: "float",
+      type_text: "Nitrogen use efficiency",
+    },
+  ],
+  rows: [],
+  totalRows: 0,
+  truncated: true,
+};
+
+export const useExperimentMockData = (id: string) => {
   const [data, setData] = useState<ExperimentData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
-      setData(experimentData);
+      switch (id) {
+        case "1":
+          setData(experimentData1);
+          break;
+        case "2":
+          setData(experimentData2);
+          break;
+        case "3":
+          setData(experimentData3);
+          break;
+      }
     }, 1000);
-  }, []);
+  }, [id]);
   return { data, isLoading };
 };
