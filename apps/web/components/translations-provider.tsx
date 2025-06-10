@@ -20,7 +20,7 @@ export function TranslationsProvider({
   namespaces,
   resources,
 }: TranslationsProviderProps) {
-  const i18n = use(
+  const { i18n } = use(
     initTranslations({
       locale,
       namespaces,
