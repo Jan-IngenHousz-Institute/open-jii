@@ -149,7 +149,7 @@ export const useExperimentMockData = (id: string) => {
           setData(experimentData3);
           break;
       }
-    }, 1000);
+    }, 500);
   }, [id]);
   return { data, isLoading };
 };
