@@ -22,8 +22,8 @@ resource "aws_iam_role" "oidc_role" {
           "StringLike" : {
             "token.actions.githubusercontent.com:sub" : "repo:${var.repository}:ref:refs/heads/${var.branch}"
           },
-          "StringEquals": {
-            "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+          "StringEquals" : {
+            "token.actions.githubusercontent.com:aud" : "sts.amazonaws.com"
           }
         }
       }
