@@ -43,38 +43,34 @@ export class ExperimentMemberRepository {
     role: ExperimentMemberRole = "member",
   ): Promise<Result<ExperimentMemberDto[]>> {
     return tryCatch(async () => {
-      // Insert the member
-      const inserted = await this.database
-        .insert(experimentMembers)
-        .values({
-          experimentId,
-          userId,
-          role,
-        })
-        .returning();
+      await this.database.insert(experimentMembers).values({
+        experimentId,
+        userId,
+        role,
+      });
 
-      // Fetch user info for the inserted user
-      const [user] = await this.database
+      const result = await this.database
         .select({
-          name: users.name,
-          email: users.email,
+          experimentId: experimentMembers.experimentId,
+          userId: experimentMembers.userId,
+          role: experimentMembers.role,
+          joinedAt: experimentMembers.joinedAt,
+          user: {
+            name: users.name,
+            email: users.email,
+          },
         })
-        .from(users)
-        .where(eq(users.id, userId));
-      return inserted.length === 0
-        ? []
-        : [
-            {
-              experimentId: inserted[0].experimentId,
-              userId: inserted[0].userId,
-              role: inserted[0].role,
-              joinedAt: inserted[0].joinedAt,
-              user: {
-                name: user.name ?? null,
-                email: user.email ?? null,
-              },
-            },
-          ];
+        .from(experimentMembers)
+        .innerJoin(users, eq(experimentMembers.userId, users.id))
+        .where(
+          and(
+            eq(experimentMembers.experimentId, experimentId),
+            eq(experimentMembers.userId, userId),
+          ),
+        )
+        .limit(1);
+
+      return result;
     });
   }
 
