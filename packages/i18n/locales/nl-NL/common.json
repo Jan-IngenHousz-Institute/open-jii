@@ -53,11 +53,7 @@
     "settings": "Experiment instellingen",
     "settingsDescription": "Beheer instellingen en leden voor dit experiment.",
     "noDescription": "Geen beschrijving opgegeven",
-    "experimentId": "Experiment ID",
-    "manageExperimentDescription": "Beheer uw experimentinstellingen, gegevens en configuratie.",
-    "data": "Gegevens",
-    "descriptionTitle": "Experimentbeschrijving",
-    "notFound": "Experiment niet gevonden"
+    "experimentId": "Experiment ID"
   },
   "newExperiment": {
     "description": "Stel een nieuw experiment (project) in.",
@@ -93,13 +89,7 @@
     "created": "Aangemaakt",
     "updated": "Bijgewerkt",
     "memberManagement": "Ledenbeheer",
-    "memberDescription": "Beheer experimentleden en -machtigingen",
-    "unknownUser": "Onbekende gebruiker",
-    "noEmail": "Geen e-mail",
-    "joined": "Toegetreden",
-    "cannotRemoveLastAdmin": "Kan de laatste beheerder niet verwijderen",
-    "removeMember": "Lid verwijderen",
-    "noMembersYet": "Nog geen leden"
+    "memberDescription": "Beheer experimentleden en -machtigingen"
   },
   "jii": {
     "institute": "Jan IngenHousz Instituut",
@@ -152,10 +142,7 @@
     "serverError": "Serverfout opgetreden",
     "validationError": "Validatiefout",
     "unauthorized": "Ongeautoriseerde toegang",
-    "forbidden": "Toegang verboden",
-    "failedToLoadExperiment": "Kon experiment niet laden",
-    "failedToLoadExperimentData": "Kon experimentgegevens niet laden",
-    "experimentNotFound": "Experiment niet gevonden"
+    "forbidden": "Toegang verboden"
   },
   "footer": {
     "aboutUs": "Over ons",

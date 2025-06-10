@@ -27,7 +27,6 @@ const i18nNamespaces: Namespace[] = [
   "navigation",
   "experiments",
   "dashboard",
-  "experimentData",
 ];
 
 interface LocaleLayoutProps {

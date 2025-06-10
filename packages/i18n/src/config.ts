@@ -19,7 +19,6 @@ export const namespaces = [
   "navigation",
   "experiments",
   "dashboard",
-  "experimentData",
 ] as const;
 
 export type Namespace = (typeof namespaces)[number];

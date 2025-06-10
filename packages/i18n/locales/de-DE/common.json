@@ -53,11 +53,7 @@
     "settings": "Experimenteinstellungen",
     "settingsDescription": "Verwalten Sie Einstellungen und Mitglieder für dieses Experiment.",
     "noDescription": "Keine Beschreibung vorhanden",
-    "experimentId": "Experiment-ID",
-    "manageExperimentDescription": "Verwalten Sie Ihre Experimenteinstellungen, Daten und Konfiguration.",
-    "data": "Daten",
-    "descriptionTitle": "Experimentbeschreibung",
-    "notFound": "Experiment nicht gefunden"
+    "experimentId": "Experiment-ID"
   },
   "experimentSettings": {
     "loading": "Experimenteinstellungen werden geladen...",
@@ -82,13 +78,7 @@
     "created": "Erstellt",
     "updated": "Aktualisiert",
     "memberManagement": "Mitgliederverwaltung",
-    "memberDescription": "Verwalten Sie Experimentmitglieder und Berechtigungen",
-    "unknownUser": "Unbekannter Benutzer",
-    "noEmail": "Keine E-Mail",
-    "joined": "Beigetreten",
-    "cannotRemoveLastAdmin": "Der letzte Administrator kann nicht entfernt werden",
-    "removeMember": "Mitglied entfernen",
-    "noMembersYet": "Noch keine Mitglieder"
+    "memberDescription": "Verwalten Sie Experimentmitglieder und Berechtigungen"
   },
   "newExperiment": {
     "description": "Richten Sie ein neues Experiment (Projekt) ein.",
@@ -154,10 +144,7 @@
     "serverError": "Serverfehler aufgetreten",
     "validationError": "Validierungsfehler",
     "unauthorized": "Unbefugter Zugriff",
-    "forbidden": "Zugriff verboten",
-    "failedToLoadExperiment": "Fehler beim Laden des Experiments",
-    "failedToLoadExperimentData": "Fehler beim Laden der Experimentdaten",
-    "experimentNotFound": "Experiment nicht gefunden"
+    "forbidden": "Zugriff verboten"
   },
   "footer": {
     "aboutUs": "Über uns",

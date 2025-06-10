@@ -53,11 +53,7 @@
     "settings": "Experiment Settings",
     "settingsDescription": "Manage settings and members for this experiment.",
     "noDescription": "No description provided",
-    "experimentId": "Experiment ID",
-    "manageExperimentDescription": "Manage your experiment settings, data, and configuration.",
-    "data": "Data",
-    "descriptionTitle": "Experiment Description",
-    "notFound": "Experiment not found"
+    "experimentId": "Experiment ID"
   },
   "newExperiment": {
     "description": "Set up a new experiment (project).",
@@ -94,13 +90,7 @@
     "created": "Created",
     "updated": "Updated",
     "memberManagement": "Member Management",
-    "memberDescription": "Manage experiment members and permissions",
-    "unknownUser": "Unknown User",
-    "noEmail": "No email",
-    "joined": "Joined",
-    "cannotRemoveLastAdmin": "Cannot remove the last admin",
-    "removeMember": "Remove member",
-    "noMembersYet": "No members yet"
+    "memberDescription": "Manage experiment members and permissions"
   },
 
   "dashboard": {
@@ -156,10 +146,7 @@
     "serverError": "Server error occurred",
     "validationError": "Validation error",
     "unauthorized": "Unauthorized access",
-    "forbidden": "Access forbidden",
-    "failedToLoadExperiment": "Failed to load experiment",
-    "failedToLoadExperimentData": "Failed to load experiment data",
-    "experimentNotFound": "Experiment not found"
+    "forbidden": "Access forbidden"
   },
   "footer": {
     "aboutUs": "About Us",
