@@ -12,11 +12,11 @@ export const metadata: Metadata = {
 };
 
 interface ExperimentPageProps {
-  params: { locale: Locale };
+  params: Promise<{ locale: Locale }>;
 }
 
 export default async function ExperimentPage({ params }: ExperimentPageProps) {
-  const { locale } = params;
+  const { locale } = await params;
   const { t } = await initTranslations({
     locale,
     namespaces: ["common"],

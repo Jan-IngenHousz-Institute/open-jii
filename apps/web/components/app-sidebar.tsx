@@ -11,7 +11,7 @@ import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
 
-import { useTranslation } from "@repo/i18n/client";
+import { useTranslation } from "@repo/i18n";
 import {
   Sidebar,
   SidebarContent,
