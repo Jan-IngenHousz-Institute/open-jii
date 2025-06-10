@@ -1,4 +1,4 @@
-import { Trash2 } from "lucide-react";
+import { Trash2, Mail, Calendar } from "lucide-react";
 
 import { Button, Badge } from "@repo/ui/components";
 
@@ -42,21 +42,38 @@ export function MemberList({
         return (
           <div
             key={member.user.id}
-            className="flex items-center justify-between rounded-md border p-3"
+            className="flex items-center justify-between rounded border p-3"
           >
-            <div className="flex flex-col">
-              <span>
-                {member.user.name ?? "Unknown User"}{" "}
-                <span className="text-muted-foreground text-xs">
-                  {member.user.email ?? "No email"}
+            <div className="flex min-w-0 flex-1 flex-col space-y-1">
+              <div className="flex min-w-0 flex-1">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2">
+                  <h4 className="text-foreground truncate text-sm font-medium md:text-base">
+                    {member.user.name ?? "Unknown User"}
+                  </h4>
+                  <span
+                    className="flex min-w-0 items-center gap-x-1"
+                    title={member.user.email ?? "No email"}
+                  >
+                    <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
+                    <span className="text-muted-foreground truncate text-xs md:max-w-[200px] md:text-sm">
+                      {member.user.email ?? "No email"}
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-muted-foreground flex items-center space-x-1 text-[11px] md:text-xs">
+                <Calendar className="relative top-[-1.5px] h-3 w-3 flex-shrink-0" />
+                <span className="whitespace-nowrap">
+                  Joined {formatDate(member.joinedAt)}
                 </span>
-              </span>
-              <span className="text-muted-foreground text-xs">
-                Joined {formatDate(member.joinedAt)}
-              </span>
+              </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <Badge>{member.role}</Badge>
+
+            <div className="flex flex-shrink-0 items-center space-x-3 pl-4">
+              <Badge variant="default" className="whitespace-nowrap">
+                {member.role}
+              </Badge>
               <Button
                 variant="ghost"
                 size="sm"
@@ -68,6 +85,7 @@ export function MemberList({
                 title={
                   isLastAdmin ? "Cannot remove the last admin" : "Remove member"
                 }
+                className="hover:bg-destructive/10 h-8 w-8 p-0"
               >
                 <Trash2 className="text-destructive h-4 w-4" />
               </Button>
