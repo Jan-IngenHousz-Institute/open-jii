@@ -165,12 +165,6 @@ variable "log_group_name" {
   default     = ""
 }
 
-variable "inject_db_url" {
-  description = "Whether to add database credential handling for migrations"
-  type        = bool
-  default     = false
-}
-
 variable "enable_container_healthcheck" {
   description = "Whether to enable container health checks. Disable for migration tasks that don't have a health endpoint."
   type        = bool

@@ -1,3 +1,9 @@
+variable "tags" {
+  description = "A map of tags to add to all resources"
+  type        = map(string)
+  default     = {}
+}
+
 variable "cidr_block" {
   description = "CIDR block for the VPC"
   type        = string
@@ -20,4 +26,10 @@ variable "environment" {
   description = "Deployment environment (e.g., dev, staging, production)"
   type        = string
   default     = "dev"
+}
+
+variable "container_port" {
+  description = "Default container port for ECS tasks"
+  type        = number
+  default     = 3020
 }

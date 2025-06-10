@@ -151,3 +151,56 @@ variable "opennext_price_class" {
   type        = string
   default     = "PriceClass_100"
 }
+
+# variable "domain_name" {
+#   description = "Base domain name (e.g., my-company.com)"
+#   type        = string
+# }
+
+# variable "route53_zone_id" {
+#   description = "Existing Route53 zone ID (required if create_route53_zone is false)"
+#   type        = string
+#   default     = ""
+# }
+
+variable "environment_subdomain" {
+  description = "Environment subdomain prefix (e.g., 'dev' for dev.my-company.com)"
+  type        = string
+  default     = "dev"
+}
+
+variable "backend_ecr_max_images" {
+  description = "Maximum number of images to keep in the backend ECR repository"
+  type        = number
+  default     = 10
+}
+
+variable "backend_container_port" {
+  description = "The port on which the backend container will listen"
+  type        = number
+  default     = 3000
+}
+
+variable "backend_min_capacity" {
+  description = "Minimum number of backend tasks to run"
+  type        = number
+  default     = 1
+}
+
+variable "backend_max_capacity" {
+  description = "Maximum number of backend tasks to run"
+  type        = number
+  default     = 3
+}
+
+variable "backend_cpu_threshold" {
+  description = "CPU threshold for backend autoscaling"
+  type        = number
+  default     = 80
+}
+
+variable "backend_health_check_path" {
+  description = "Path for ALB health checks on the backend service"
+  type        = string
+  default     = "/api/health"
+}
