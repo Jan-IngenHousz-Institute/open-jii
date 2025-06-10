@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 export default async function ExperimentPage() {
   const session = await auth();
-  const userId = session?.user?.id;
+  const userId = session?.user.id;
 
   return (
     <div className="space-y-6">

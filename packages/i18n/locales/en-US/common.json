@@ -1,0 +1,99 @@
+{
+  "common": {
+    "homepage": "Homepage",
+    "language": "Language",
+    "languageDrawer": "Toggle language drawer",
+    "regionalSettings": "Regional Settings",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "remove": "Remove",
+    "confirm": "Confirm",
+    "close": "Close"
+  },
+  "navigation": {
+    "experiments": "Experiments",
+    "archive": "Archive",
+    "devices": "Devices",
+    "settings": "Settings",
+    "dashboard": "Dashboard",
+    "profile": "Profile",
+    "logout": "Logout",
+    "home": "Home"
+  },
+  "experiments": {
+    "title": "Experiments",
+    "newExperiment": "New Experiment",
+    "overview": "Overview",
+    "create": "Create Experiment",
+    "edit": "Edit Experiment",
+    "delete": "Delete Experiment",
+    "status": "Status",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At",
+    "noExperiments": "No experiments found",
+    "experimentCreated": "Experiment created successfully",
+    "experimentUpdated": "Experiment updated successfully",
+    "experimentDeleted": "Experiment deleted successfully"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome to OpenJII",
+    "recentExperiments": "Recent Experiments",
+    "statistics": "Statistics",
+    "quickActions": "Quick Actions"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot Password?",
+    "rememberMe": "Remember Me",
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "signOut": "Sign Out",
+    "welcomeBack": "Welcome Back",
+    "loginSuccess": "Logged in successfully",
+    "logoutSuccess": "Logged out successfully",
+    "invalidCredentials": "Invalid credentials"
+  },
+  "forms": {
+    "required": "This field is required",
+    "invalidEmail": "Please enter a valid email address",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "passwordMismatch": "Passwords do not match",
+    "name": "Name",
+    "description": "Description",
+    "title": "Title",
+    "submit": "Submit",
+    "reset": "Reset"
+  },
+  "errors": {
+    "pageNotFound": "Page not found",
+    "pageNotFoundDescription": "This page doesn't seem to exist. <0>Click here</0> to go back to the homepage.",
+    "somethingWentWrong": "Something went wrong",
+    "tryAgain": "Try again",
+    "networkError": "Network error occurred",
+    "serverError": "Server error occurred",
+    "validationError": "Validation error",
+    "unauthorized": "Unauthorized access",
+    "forbidden": "Access forbidden"
+  },
+  "footer": {
+    "aboutUs": "About Us",
+    "description": "The Jan IngenHousz Institute specializes in the development of advanced technologies for improving photosynthesis and agricultural efficiency. We use cutting-edge techniques and algorithms to create intelligent systems that can help researchers automate tasks, improve efficiency, and drive innovation.",
+    "poweredBy": "Powered by"
+  },
+  "jii": {
+    "institute": "Jan IngenHousz Institute",
+    "mission": "Our Mission",
+    "missionDescription": "Improving photosynthesis is a big challenge: different processes in the plant limit photosynthesis under different conditions, and each of these processes is regulated by different sets of genes. The Jan IngenHousz Institute was founded specifically to meet these major challenges.",
+    "aboutDescription": "The world's population is growing, while the area of suitable agricultural land is shrinking and harvests are declining due to climate change. A breakthrough is urgently needed. To this end, JII-researchers are working to understand and improve the green engine of agriculture: photosynthesis."
+  }
+}

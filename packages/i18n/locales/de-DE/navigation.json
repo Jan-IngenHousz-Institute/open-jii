@@ -1,0 +1,29 @@
+{
+  "main": {
+    "experiments": "Experimente",
+    "overview": "Übersicht",
+    "archive": "Archiv",
+    "devices": "Geräte",
+    "settings": "Einstellungen",
+    "dashboard": "Dashboard",
+    "profile": "Profil",
+    "home": "Startseite"
+  },
+  "sidebar": {
+    "newExperiment": "Neues Experiment",
+    "overview": "Übersicht",
+    "archivedData": "Archivierte Daten",
+    "recentMeasurements": "Neueste Messungen",
+    "deviceConnections": "Geräteverbindungen",
+    "multispectralCamera": "Multispektralkamera",
+    "protocol": "Protokoll",
+    "configuration": "Konfiguration"
+  },
+  "breadcrumbs": {
+    "home": "Startseite",
+    "experiments": "Experimente",
+    "new": "Neu",
+    "edit": "Bearbeiten",
+    "view": "Ansehen"
+  }
+}

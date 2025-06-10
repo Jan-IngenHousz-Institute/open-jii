@@ -17,6 +17,7 @@
     "@repo/api": "workspace:*",
     "@repo/auth": "workspace:*",
     "@repo/database": "workspace:*",
+    "@repo/i18n": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tanstack/react-query": "^5.75.4",
     "@ts-rest/core": "^3.52.1",

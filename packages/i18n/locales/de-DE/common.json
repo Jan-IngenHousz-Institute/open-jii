@@ -1,0 +1,99 @@
+{
+  "common": {
+    "homepage": "Startseite",
+    "language": "Sprache",
+    "languageDrawer": "Sprachschublade umschalten",
+    "regionalSettings": "Regionale Einstellungen",
+    "loading": "Laden...",
+    "error": "Fehler",
+    "success": "Erfolg",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "add": "Hinzufügen",
+    "remove": "Entfernen",
+    "confirm": "Bestätigen",
+    "close": "Schließen"
+  },
+  "navigation": {
+    "experiments": "Experimente",
+    "archive": "Archiv",
+    "devices": "Geräte",
+    "settings": "Einstellungen",
+    "dashboard": "Dashboard",
+    "profile": "Profil",
+    "logout": "Abmelden",
+    "home": "Startseite"
+  },
+  "experiments": {
+    "title": "Experimente",
+    "newExperiment": "Neues Experiment",
+    "overview": "Übersicht",
+    "create": "Experiment erstellen",
+    "edit": "Experiment bearbeiten",
+    "delete": "Experiment löschen",
+    "status": "Status",
+    "createdAt": "Erstellt am",
+    "updatedAt": "Aktualisiert am",
+    "noExperiments": "Keine Experimente gefunden",
+    "experimentCreated": "Experiment erfolgreich erstellt",
+    "experimentUpdated": "Experiment erfolgreich aktualisiert",
+    "experimentDeleted": "Experiment erfolgreich gelöscht"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Willkommen bei OpenJII",
+    "recentExperiments": "Kürzliche Experimente",
+    "statistics": "Statistiken",
+    "quickActions": "Schnellaktionen"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "logout": "Abmelden",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "forgotPassword": "Passwort vergessen?",
+    "rememberMe": "Angemeldet bleiben",
+    "signIn": "Anmelden",
+    "signUp": "Registrieren",
+    "signOut": "Abmelden",
+    "welcomeBack": "Willkommen zurück",
+    "loginSuccess": "Erfolgreich angemeldet",
+    "logoutSuccess": "Erfolgreich abgemeldet",
+    "invalidCredentials": "Ungültige Anmeldedaten"
+  },
+  "forms": {
+    "required": "Dieses Feld ist erforderlich",
+    "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+    "passwordTooShort": "Das Passwort muss mindestens 8 Zeichen lang sein",
+    "passwordMismatch": "Passwörter stimmen nicht überein",
+    "name": "Name",
+    "description": "Beschreibung",
+    "title": "Titel",
+    "submit": "Senden",
+    "reset": "Zurücksetzen"
+  },
+  "errors": {
+    "pageNotFound": "Seite nicht gefunden",
+    "pageNotFoundDescription": "Diese Seite scheint nicht zu existieren. <0>Klicken Sie hier</0>, um zur Startseite zurückzukehren.",
+    "somethingWentWrong": "Etwas ist schief gelaufen",
+    "tryAgain": "Erneut versuchen",
+    "networkError": "Netzwerkfehler aufgetreten",
+    "serverError": "Serverfehler aufgetreten",
+    "validationError": "Validierungsfehler",
+    "unauthorized": "Unbefugter Zugriff",
+    "forbidden": "Zugriff verboten"
+  },
+  "footer": {
+    "aboutUs": "Über uns",
+    "description": "Das Jan IngenHousz Institut ist auf die Entwicklung fortschrittlicher Technologien zur Verbesserung der Photosynthese und landwirtschaftlichen Effizienz spezialisiert. Wir verwenden modernste Techniken und Algorithmen, um intelligente Systeme zu erstellen, die Forschern dabei helfen können, Aufgaben zu automatisieren, die Effizienz zu verbessern und Innovationen voranzutreiben.",
+    "poweredBy": "Unterstützt von"
+  },
+  "jii": {
+    "institute": "Jan IngenHousz Institut",
+    "mission": "Unsere Mission",
+    "missionDescription": "Die Verbesserung der Photosynthese ist eine große Herausforderung: verschiedene Prozesse in der Pflanze begrenzen die Photosynthese unter verschiedenen Bedingungen, und jeder dieser Prozesse wird durch verschiedene Gensätze reguliert. Das Jan IngenHousz Institut wurde speziell gegründet, um diesen großen Herausforderungen zu begegnen.",
+    "aboutDescription": "Die Weltbevölkerung wächst, während die Fläche geeigneter landwirtschaftlicher Flächen schrumpft und die Ernten aufgrund des Klimawandels zurückgehen. Ein Durchbruch ist dringend erforderlich. Zu diesem Zweck arbeiten JII-Forscher daran, den grünen Motor der Landwirtschaft zu verstehen und zu verbessern: die Photosynthese."
+  }
+}
