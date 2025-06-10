@@ -11,11 +11,13 @@ import { Button } from "~/components/Button";
 import { OfflineBanner } from "~/components/OfflineBanner";
 import { Toast } from "~/components/Toast";
 import { UnsyncedScanItem } from "~/components/UnsyncedScanItem";
-import { useColors } from "~/hooks/useColors";
-import { useHomeScreenLogic } from "~/screens/home/useHomeScreenLogic";
+import { colors } from "~/constants/colors";
+import { useTheme } from "~/hooks/useTheme";
 
-export default function HomeTab() {
-  const c = useColors();
+import { useHomeScreenLogic } from "./useHomeScreenLogic";
+
+export function HomeScreen() {
+  const theme = useTheme();
   const logic = useHomeScreenLogic();
 
   return (
@@ -23,7 +25,9 @@ export default function HomeTab() {
       style={[
         styles.container,
         {
-          backgroundColor: c.background,
+          backgroundColor: theme.isDark
+            ? colors.dark.background
+            : colors.light.background,
         },
       ]}
     >
@@ -33,8 +37,8 @@ export default function HomeTab() {
           <RefreshControl
             refreshing={logic.refreshing}
             onRefresh={logic.onRefresh}
-            tintColor={c.primary.dark}
-            colors={[c.primary.dark]}
+            tintColor={colors.primary.dark}
+            colors={[colors.primary.dark]}
           />
         }
       >
@@ -42,7 +46,9 @@ export default function HomeTab() {
           style={[
             styles.welcomeText,
             {
-              color: c.onSurface,
+              color: theme.isDark
+                ? colors.dark.onSurface
+                : colors.light.onSurface,
             },
           ]}
         >
@@ -52,7 +58,9 @@ export default function HomeTab() {
           style={[
             styles.subtitleText,
             {
-              color: c.inactive,
+              color: theme.isDark
+                ? colors.dark.inactive
+                : colors.light.inactive,
             },
           ]}
         >
@@ -67,7 +75,9 @@ export default function HomeTab() {
               style={[
                 styles.sectionTitle,
                 {
-                  color: c.onSurface,
+                  color: theme.isDark
+                    ? colors.dark.onSurface
+                    : colors.light.onSurface,
                 },
               ]}
             >
@@ -80,7 +90,7 @@ export default function HomeTab() {
                 size="sm"
                 onPress={logic.handleSyncAll}
                 isLoading={logic.isSyncingAll}
-                icon={<UploadCloud size={16} color={c.primary.dark} />}
+                icon={<UploadCloud size={16} color={colors.primary.dark} />}
               />
             )}
           </View>
@@ -99,7 +109,9 @@ export default function HomeTab() {
               style={[
                 styles.emptyText,
                 {
-                  color: c.inactive,
+                  color: theme.isDark
+                    ? colors.dark.inactive
+                    : colors.light.inactive,
                 },
               ]}
             >
@@ -113,7 +125,9 @@ export default function HomeTab() {
             style={[
               styles.sectionTitle,
               {
-                color: c.onSurface,
+                color: theme.isDark
+                  ? colors.dark.onSurface
+                  : colors.light.onSurface,
               },
             ]}
           >
@@ -123,7 +137,9 @@ export default function HomeTab() {
             style={[
               styles.emptyText,
               {
-                color: c.inactive,
+                color: theme.isDark
+                  ? colors.dark.inactive
+                  : colors.light.inactive,
               },
             ]}
           >

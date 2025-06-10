@@ -5,11 +5,12 @@ import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
 import { Toast } from "~/components/Toast";
 import { colors } from "~/constants/colors";
-import { useColors } from "~/hooks/useColors";
-import { useProfileScreenLogic } from "~/screens/profile/useProfileScreenLogic";
+import { useTheme } from "~/hooks/useTheme";
 
-export default function ProfileTab() {
-  const c = useColors();
+import { useProfileScreenLogic } from "./useProfileScreenLogic";
+
+export function ProfileScreen() {
+  const theme = useTheme();
   const logic = useProfileScreenLogic();
 
   return (
@@ -17,7 +18,9 @@ export default function ProfileTab() {
       style={[
         styles.container,
         {
-          backgroundColor: c.background,
+          backgroundColor: theme.isDark
+            ? colors.dark.background
+            : colors.light.background,
         },
       ]}
     >
@@ -27,20 +30,22 @@ export default function ProfileTab() {
           style={[
             styles.avatarContainer,
             {
-              backgroundColor: c.primary.dark + "20",
-              borderColor: c.primary.dark,
+              backgroundColor: colors.primary.dark + "20",
+              borderColor: colors.primary.dark,
               borderWidth: 2,
             },
           ]}
         >
-          <User size={40} color={c.primary.dark} />
+          <User size={40} color={colors.primary.dark} />
         </View>
 
         <Text
           style={[
             styles.userName,
             {
-              color: c.onSurface,
+              color: theme.isDark
+                ? colors.dark.onSurface
+                : colors.light.onSurface,
             },
           ]}
         >
@@ -50,7 +55,9 @@ export default function ProfileTab() {
           style={[
             styles.userEmail,
             {
-              color: c.inactive,
+              color: theme.isDark
+                ? colors.dark.inactive
+                : colors.light.inactive,
             },
           ]}
         >
@@ -64,7 +71,9 @@ export default function ProfileTab() {
           style={[
             styles.infoTitle,
             {
-              color: c.onSurface,
+              color: theme.isDark
+                ? colors.dark.onSurface
+                : colors.light.onSurface,
             },
           ]}
         >
@@ -75,7 +84,9 @@ export default function ProfileTab() {
           style={[
             styles.infoRow,
             {
-              borderBottomColor: c.border,
+              borderBottomColor: theme.isDark
+                ? colors.dark.border
+                : colors.light.border,
             },
           ]}
         >
@@ -83,7 +94,9 @@ export default function ProfileTab() {
             style={[
               styles.infoLabel,
               {
-                color: c.inactive,
+                color: theme.isDark
+                  ? colors.dark.inactive
+                  : colors.light.inactive,
               },
             ]}
           >
@@ -93,7 +106,9 @@ export default function ProfileTab() {
             style={[
               styles.infoValue,
               {
-                color: c.onSurface,
+                color: theme.isDark
+                  ? colors.dark.onSurface
+                  : colors.light.onSurface,
               },
             ]}
           >
@@ -105,7 +120,9 @@ export default function ProfileTab() {
           style={[
             styles.infoRow,
             {
-              borderBottomColor: c.border,
+              borderBottomColor: theme.isDark
+                ? colors.dark.border
+                : colors.light.border,
             },
           ]}
         >
@@ -113,7 +130,9 @@ export default function ProfileTab() {
             style={[
               styles.infoLabel,
               {
-                color: c.inactive,
+                color: theme.isDark
+                  ? colors.dark.inactive
+                  : colors.light.inactive,
               },
             ]}
           >
@@ -123,7 +142,9 @@ export default function ProfileTab() {
             style={[
               styles.infoValue,
               {
-                color: c.onSurface,
+                color: theme.isDark
+                  ? colors.dark.onSurface
+                  : colors.light.onSurface,
               },
             ]}
           >
@@ -139,7 +160,7 @@ export default function ProfileTab() {
           onPress={logic.handleOpenWebProfile}
           variant="outline"
           style={styles.actionButton}
-          icon={<ExternalLink size={16} color={c.primary.dark} />}
+          icon={<ExternalLink size={16} color={colors.primary.dark} />}
         />
 
         <Button
@@ -148,7 +169,7 @@ export default function ProfileTab() {
           variant="outline"
           style={[styles.actionButton, styles.logoutButton] as any}
           textStyle={styles.logoutButtonText}
-          icon={<LogOut size={16} color={c.semantic.error} />}
+          icon={<LogOut size={16} color={colors.semantic.error} />}
         />
       </View>
 
@@ -156,7 +177,7 @@ export default function ProfileTab() {
         style={[
           styles.versionText,
           {
-            color: c.inactive,
+            color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
           },
         ]}
       >

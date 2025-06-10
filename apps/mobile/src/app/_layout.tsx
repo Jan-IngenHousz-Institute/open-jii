@@ -7,7 +7,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { View } from "react-native";
 import { ThemeProvider } from "~/context/ThemeContext";
-import { useTheme } from "~/hooks/useTheme";
+import { useColors } from "~/hooks/useColors";
 
 export const unstable_settings = {
   initialRouteName: "(auth)/login",
@@ -55,44 +55,33 @@ export default function RootLayout() {
 
 // Content component that uses the theme
 function RootLayoutContent() {
-  const theme = useTheme();
-  const { colors } = theme;
-  const backgroundColor = theme.isDark
-    ? colors.dark.background
-    : colors.light.background;
+  const c = useColors();
 
   return (
-    <View style={{ flex: 1, backgroundColor }}>
-      <StatusBar style={theme.isDark ? "light" : "dark"} />
+    <View style={{ flex: 1, backgroundColor: c.background }}>
+      <StatusBar style={c.select("dark", "light")} />
       <RootLayoutNav />
     </View>
   );
 }
 
 function RootLayoutNav() {
-  const theme = useTheme();
-  const { colors } = theme;
+  const c = useColors();
 
   return (
     <Stack
       screenOptions={{
         headerStyle: {
-          backgroundColor: theme.isDark
-            ? colors.dark.background
-            : colors.light.background,
+          backgroundColor: c.background,
         },
-        headerTintColor: theme.isDark
-          ? colors.dark.onSurface
-          : colors.light.onSurface,
+        headerTintColor: c.onSurface,
         headerTitleStyle: {
           fontWeight: "bold",
           fontFamily: "Poppins-Bold",
         },
         headerShadowVisible: false,
         contentStyle: {
-          backgroundColor: theme.isDark
-            ? colors.dark.background
-            : colors.light.background,
+          backgroundColor: c.background,
         },
       }}
     >

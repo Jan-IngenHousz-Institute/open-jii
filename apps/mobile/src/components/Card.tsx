@@ -1,6 +1,6 @@
 import React, { ReactNode } from "react";
 import { View, StyleSheet, ViewStyle } from "react-native";
-import { useTheme } from "~/hooks/useTheme";
+import { useColors } from "~/hooks/useColors";
 
 interface CardProps {
   children: ReactNode;
@@ -8,15 +8,14 @@ interface CardProps {
 }
 
 export function Card({ children, style }: CardProps) {
-  const theme = useTheme();
-  const { colors } = theme;
+  const c = useColors();
 
   return (
     <View
       style={[
         styles.card,
         {
-          backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
+          backgroundColor: c.card,
         },
         style,
       ]}
