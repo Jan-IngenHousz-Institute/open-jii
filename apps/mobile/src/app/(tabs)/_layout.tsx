@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home, Beaker, User } from "lucide-react-native";
+import { Home, FlaskConical, Activity, User } from "lucide-react-native";
 import React from "react";
 import { useTheme } from "~/hooks/useTheme";
 
@@ -55,14 +55,18 @@ export default function TabLayout() {
         name="experiments"
         options={{
           title: "Experiments",
-          tabBarIcon: ({ color, size }) => <Beaker size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <FlaskConical size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="measurement"
         options={{
-          title: "Measurement",
-          tabBarIcon: ({ color, size }) => <Beaker size={size} color={color} />,
+          title: "Measure",
+          tabBarIcon: ({ color, size }) => (
+            <Activity size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen

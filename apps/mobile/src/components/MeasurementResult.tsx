@@ -8,10 +8,7 @@ interface MeasurementResultProps {
   experimentName?: string;
 }
 
-export function MeasurementResult({
-  data,
-  timestamp,
-}: MeasurementResultProps) {
+export function MeasurementResult({ data, timestamp }: MeasurementResultProps) {
   const theme = useTheme();
   const { colors } = theme;
 
