@@ -71,12 +71,12 @@ describe("ExperimentMemberRepository", () => {
       );
 
       // Additional assertions for name and email
-      const member1 = members.find((m) => m.userId === memberId1);
+      const member1 = members.find((m) => m.user.id === memberId1);
       expect(member1).toBeDefined();
       expect(member1?.user.name).toBe("Test1 User");
       expect(member1?.user.email).toBe("member1@example.com");
 
-      const member2 = members.find((m) => m.userId === memberId2);
+      const member2 = members.find((m) => m.user.id === memberId2);
       expect(member2).toBeDefined();
       expect(member2?.user.name).toBe("Test2 User");
       expect(member2?.user.email).toBe("member2@example.com");
@@ -152,7 +152,7 @@ describe("ExperimentMemberRepository", () => {
       const allMembersResult = await repository.getMembers(experiment.id);
       assertSuccess(allMembersResult);
       const allMembers = allMembersResult.value;
-      expect(allMembers.some((m) => m.userId === memberId)).toBe(true);
+      expect(allMembers.some((m) => m.user.id === memberId)).toBe(true);
     });
 
     it("should not duplicate membership if already a member", async () => {
@@ -183,7 +183,7 @@ describe("ExperimentMemberRepository", () => {
       // Try to add the same member again with a different role
       const result2 = await repository.addMember(
         member1.experimentId,
-        member1.userId,
+        member1.user.id,
         "admin",
       );
 
@@ -196,7 +196,7 @@ describe("ExperimentMemberRepository", () => {
       assertSuccess(membersResult);
       const members = membersResult.value;
       const membershipCount = members.filter(
-        (m) => m.userId === memberId,
+        (m) => m.user.id === memberId,
       ).length;
       expect(membershipCount).toBe(1);
     });
@@ -251,7 +251,7 @@ describe("ExperimentMemberRepository", () => {
       let membersResult = await repository.getMembers(experiment.id);
       assertSuccess(membersResult);
       let members = membersResult.value;
-      expect(members.some((m) => m.userId === memberId)).toBe(true);
+      expect(members.some((m) => m.user.id === memberId)).toBe(true);
 
       // Act: Remove the member
       const removeResult = await repository.removeMember(
@@ -264,7 +264,7 @@ describe("ExperimentMemberRepository", () => {
       membersResult = await repository.getMembers(experiment.id);
       assertSuccess(membersResult);
       members = membersResult.value;
-      expect(members.some((m) => m.userId === memberId)).toBe(false);
+      expect(members.some((m) => m.user.id === memberId)).toBe(false);
     });
 
     it("should not fail when removing a non-existent member", async () => {

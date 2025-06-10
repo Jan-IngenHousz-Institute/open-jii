@@ -27,6 +27,7 @@ export class ExperimentMemberRepository {
           role: experimentMembers.role,
           joinedAt: experimentMembers.joinedAt,
           user: {
+            id: users.id,
             name: users.name,
             email: users.email,
           },
@@ -56,6 +57,7 @@ export class ExperimentMemberRepository {
           role: experimentMembers.role,
           joinedAt: experimentMembers.joinedAt,
           user: {
+            id: users.id,
             name: users.name,
             email: users.email,
           },

@@ -63,7 +63,7 @@ export function ExperimentMemberManagement({
   const availableUsers = useMemo(() => {
     if (userSearchData?.body && Array.isArray(userSearchData.body)) {
       return userSearchData.body.filter(
-        (user) => !members.some((m) => m.userId === user.id),
+        (user) => !members.some((m) => m.user.id === user.id),
       );
     }
     return [];
@@ -130,14 +130,13 @@ export function ExperimentMemberManagement({
       </Card>
     );
   }
-  // Helper to get user info from member.user if present, then availableUsers, then fallback to userId
+  // Helper to get user info from member.user if present, then availableUsers, then fallback to user.id
   const getUserInfo = (member: {
-    userId: string;
-    user?: { name?: string | null; email?: string | null };
+    user: { id: string; name?: string | null; email?: string | null };
   }): User => {
-    if (member.user && typeof member.user.name === "string") {
+    if (typeof member.user.name === "string") {
       return {
-        id: member.userId,
+        id: member.user.id,
         name: member.user.name,
         email: member.user.email ?? "",
         emailVerified: null,
@@ -145,13 +144,13 @@ export function ExperimentMemberManagement({
         createdAt: "",
       };
     }
-    const foundUser = availableUsers.find((u) => u.id === member.userId);
+    const foundUser = availableUsers.find((u) => u.id === member.user.id);
     if (foundUser) {
       return foundUser;
     }
     return {
-      id: member.userId,
-      name: member.userId,
+      id: member.user.id,
+      name: "Loading user info...",
       email: "",
       emailVerified: null,
       image: null,

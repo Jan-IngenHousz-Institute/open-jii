@@ -85,7 +85,7 @@ export class AddExperimentMemberUseCase {
           } else {
             // Check if current user is an admin
             const currentUserMember = existingMembers.find(
-              (member) => member.userId === currentUserId,
+              (member) => member.user.id === currentUserId,
             );
 
             if (!currentUserMember || currentUserMember.role !== "admin") {

@@ -55,7 +55,7 @@ describe("AddExperimentMemberUseCase", () => {
 
     assertSuccess(result);
     expect(result.value.experimentId).toBe(experiment.id);
-    expect(result.value.userId).toBe(newMemberId);
+    expect(result.value.user.id).toBe(newMemberId);
     expect(result.value.role).toBe("member");
   });
 

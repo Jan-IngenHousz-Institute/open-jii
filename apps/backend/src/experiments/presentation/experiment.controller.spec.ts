@@ -762,7 +762,7 @@ describe("ExperimentController", () => {
         userId: testUserId,
       });
       expect(response.body).toHaveLength(1);
-      expect(response.body[0].userId).toBe(testUserId);
+      expect(response.body[0].user.id).toBe(testUserId);
     });
 
     it("should return 401 if not authenticated when removing a member", async () => {

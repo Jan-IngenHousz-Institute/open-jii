@@ -3,10 +3,10 @@ import { Trash2 } from "lucide-react";
 import { Button, Badge } from "@repo/ui/components";
 
 interface MemberWithUserInfo {
-  userId: string;
   role: string;
   joinedAt: string;
   user: {
+    id: string;
     name: string | null;
     email: string | null;
   };
@@ -41,7 +41,7 @@ export function MemberList({
         const isLastAdmin = member.role === "admin" && adminCount === 1;
         return (
           <div
-            key={member.userId}
+            key={member.user.id}
             className="flex items-center justify-between rounded-md border p-3"
           >
             <div className="flex flex-col">
@@ -60,9 +60,9 @@ export function MemberList({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onRemoveMember(member.userId)}
+                onClick={() => onRemoveMember(member.user.id)}
                 disabled={
-                  (isRemovingMember && removingMemberId === member.userId) ||
+                  (isRemovingMember && removingMemberId === member.user.id) ||
                   isLastAdmin
                 }
                 title={
