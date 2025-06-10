@@ -1,52 +1,45 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { createContext, useContext } from "react";
+import { I18nextProvider } from "react-i18next";
+import { initReactI18next } from "react-i18next";
 
-import type { i18n, Resource, Locale } from "@repo/i18n";
-
-interface TranslationsContextType {
-  locale: Locale;
-  i18n: i18n;
-  resources: Resource;
-}
-
-const TranslationsContext = createContext<TranslationsContextType | null>(null);
+import { createInstance } from "@repo/i18n";
+import type { InitTranslationsProps } from "@repo/i18n";
 
 interface TranslationsProviderProps {
   children: ReactNode;
-  locale: Locale;
-  namespaces: string[];
-  resources: Resource;
-  i18n: i18n;
+  locale: InitTranslationsProps["locale"];
+  namespaces?: InitTranslationsProps["namespaces"];
+  resources: InitTranslationsProps["resources"];
 }
 
 export function TranslationsProvider({
   children,
   locale,
-  namespaces: _namespaces,
+  namespaces,
   resources,
-  i18n,
 }: TranslationsProviderProps) {
-  return (
-    <TranslationsContext.Provider
-      value={{
-        locale,
-        i18n,
-        resources,
-      }}
-    >
-      {children}
-    </TranslationsContext.Provider>
-  );
-}
+  const i18n = createInstance();
 
-export function useTranslationsContext() {
-  const context = useContext(TranslationsContext);
-  if (!context) {
-    throw new Error(
-      "useTranslationsContext must be used within TranslationsProvider",
-    );
-  }
-  return context;
+  // Add react-i18next plugin
+  i18n.use(initReactI18next);
+
+  // Initialize i18next with the resources from server-side
+  // This is synchronous since we already have the resources
+  i18n.init({
+    lng: locale,
+    resources,
+    fallbackLng: "en-US",
+    defaultNS: namespaces?.[0] || "common",
+    ns: namespaces || ["common"],
+    interpolation: {
+      escapeValue: false, // React already does escaping
+    },
+    react: {
+      useSuspense: false,
+    },
+  });
+
+  return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
 }

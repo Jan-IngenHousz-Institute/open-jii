@@ -13,7 +13,7 @@ interface AuthRequest extends NextRequest {
 // Simple locale detection and redirection function
 function handleI18nRouting(request: AuthRequest) {
   const pathname = request.nextUrl.pathname;
-  
+
   // Check if pathname already starts with a locale
   const pathnameHasLocale = locales.some(
     (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`,

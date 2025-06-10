@@ -56,11 +56,7 @@ export default async function LocaleLayout({
   params,
 }: LocaleLayoutProps) {
   const { locale } = await params;
-  const {
-    i18n,
-    resources,
-    t: _t,
-  } = await initTranslations({
+  const { resources } = await initTranslations({
     locale,
     namespaces: i18nNamespaces,
   });
@@ -75,10 +71,9 @@ export default async function LocaleLayout({
         )}
       >
         <TranslationsProvider
-          namespaces={i18nNamespaces}
           locale={locale}
+          namespaces={i18nNamespaces}
           resources={resources}
-          i18n={i18n}
         >
           <QueryProvider>{children}</QueryProvider>
         </TranslationsProvider>

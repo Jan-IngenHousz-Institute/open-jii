@@ -8,19 +8,7 @@ export type { InitTranslationsProps } from "./server";
 // Re-export client-side functionality
 export { useTranslation } from "./client";
 
-// Re-export react-i18next hooks and components
-export {
-  useTranslation as useReactI18next,
-  I18nextProvider,
-  initReactI18next,
-  Trans,
-  Translation,
-  withTranslation,
-  withSSR,
-  useSSR,
-} from "react-i18next";
-
-// Re-export i18next core - only the main functions
+// Re-export i18next core functions (safe for server-side)
 export {
   default as i18next,
   createInstance,
@@ -36,12 +24,6 @@ export {
   use,
   changeLanguage,
 } from "i18next";
-
-// Re-export browser language detector
-export { default as LanguageDetector } from "i18next-browser-languagedetector";
-
-// Re-export HTTP backend
-export { default as HttpBackend } from "i18next-http-backend";
 
 // Re-export resources to backend
 export { default as resourcesToBackend } from "i18next-resources-to-backend";
@@ -70,7 +52,7 @@ export type {
   KeyPrefix,
 } from "i18next";
 
-// Export types from react-i18next
+// Export types from react-i18next (types are safe)
 export type {
   UseTranslationOptions,
   UseTranslationResponse,

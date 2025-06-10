@@ -14,7 +14,13 @@
     "add": "Add",
     "remove": "Remove",
     "confirm": "Confirm",
-    "close": "Close"
+    "close": "Close",
+    "noVariant": "no variant",
+    "destructive": "destructive",
+    "ghost": "ghost",
+    "link": "link",
+    "secondary": "secondary",
+    "outline": "outline"
   },
   "navigation": {
     "experiments": "Experiments",
@@ -24,7 +30,8 @@
     "dashboard": "Dashboard",
     "profile": "Profile",
     "logout": "Logout",
-    "home": "Home"
+    "home": "Home",
+    "openJII": "openJII"
   },
   "experiments": {
     "title": "Experiments",
@@ -39,7 +46,9 @@
     "noExperiments": "No experiments found",
     "experimentCreated": "Experiment created successfully",
     "experimentUpdated": "Experiment updated successfully",
-    "experimentDeleted": "Experiment deleted successfully"
+    "experimentDeleted": "Experiment deleted successfully",
+    "listDescription": "This page will show a list of existing experiments.",
+    "experiment": "Experiment"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -55,13 +64,15 @@
     "password": "Password",
     "forgotPassword": "Forgot Password?",
     "rememberMe": "Remember Me",
-    "signIn": "Sign In",
+    "signIn": "Sign in",
     "signUp": "Sign Up",
-    "signOut": "Sign Out",
+    "signOut": "Sign out",
+    "signOutServer": "Sign out (Server)",
     "welcomeBack": "Welcome Back",
     "loginSuccess": "Logged in successfully",
     "logoutSuccess": "Logged out successfully",
-    "invalidCredentials": "Invalid credentials"
+    "invalidCredentials": "Invalid credentials",
+    "loggedInAs": "Logged in as {{name}}"
   },
   "forms": {
     "required": "This field is required",
@@ -94,6 +105,7 @@
     "institute": "Jan IngenHousz Institute",
     "mission": "Our Mission",
     "missionDescription": "Improving photosynthesis is a big challenge: different processes in the plant limit photosynthesis under different conditions, and each of these processes is regulated by different sets of genes. The Jan IngenHousz Institute was founded specifically to meet these major challenges.",
-    "aboutDescription": "The world's population is growing, while the area of suitable agricultural land is shrinking and harvests are declining due to climate change. A breakthrough is urgently needed. To this end, JII-researchers are working to understand and improve the green engine of agriculture: photosynthesis."
+    "aboutDescription": "The world's population is growing, while the area of suitable agricultural land is shrinking and harvests are declining due to climate change. A breakthrough is urgently needed. To this end, JII-researchers are working to understand and improve the green engine of agriculture: photosynthesis.",
+    "goToPlatform": "Go to the openJII platform"
   }
 }

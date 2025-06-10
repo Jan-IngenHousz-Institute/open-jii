@@ -41,22 +41,43 @@ export default async function initTranslations({
     );
   }
 
-  await i18nInstance.init({
-    lng: locale,
-    resources,
-    fallbackLng,
-    supportedLngs: i18nConfig.locales,
-    defaultNS: namespaces[0],
-    fallbackNS,
-    ns: namespaces,
-    preload: resources ? [] : i18nConfig.locales,
-    interpolation: {
-      escapeValue: false, // React already does escaping
-    },
-    react: {
-      useSuspense: false, // Important for SSR
-    },
-  });
+  // If resources are provided (client-side), initialize synchronously
+  // Otherwise (server-side), initialize asynchronously
+  if (resources) {
+    i18nInstance.init({
+      lng: locale,
+      resources,
+      fallbackLng,
+      supportedLngs: i18nConfig.locales,
+      defaultNS: namespaces[0],
+      fallbackNS,
+      ns: namespaces,
+      preload: [],
+      interpolation: {
+        escapeValue: false, // React already does escaping
+      },
+      react: {
+        useSuspense: false, // Important for SSR
+      },
+    });
+  } else {
+    await i18nInstance.init({
+      lng: locale,
+      resources,
+      fallbackLng,
+      supportedLngs: i18nConfig.locales,
+      defaultNS: namespaces[0],
+      fallbackNS,
+      ns: namespaces,
+      preload: i18nConfig.locales,
+      interpolation: {
+        escapeValue: false, // React already does escaping
+      },
+      react: {
+        useSuspense: false, // Important for SSR
+      },
+    });
+  }
 
   return {
     i18n: i18nInstance,

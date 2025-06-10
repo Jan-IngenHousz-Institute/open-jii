@@ -17,7 +17,18 @@
     "deviceConnections": "Device Connections",
     "multispectralCamera": "Multispectral Camera",
     "protocol": "Protocol",
-    "configuration": "Configuration"
+    "configuration": "Configuration",
+    "experiments": "Experiments",
+    "archive": "Archive",
+    "public": "Public",
+    "private": "Private",
+    "sensors": "Sensors",
+    "multispeq": "MultispeQ",
+    "protocols": "Protocols",
+    "protocol1": "Protocol 1",
+    "otherDevices": "Other devices",
+    "otherDevice1": "Other device 1",
+    "hardware": "Hardware"
   },
   "breadcrumbs": {
     "home": "Home",

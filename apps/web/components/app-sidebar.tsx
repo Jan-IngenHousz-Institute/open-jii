@@ -21,81 +21,10 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@repo/ui/components";
+import { useTranslation } from "@repo/i18n/client";
 
 import { NavItems } from "./nav-items";
 import { NavUser } from "./nav-user";
-
-// This is sample data.
-const data = {
-  navExperiments: [
-    {
-      title: "Experiments",
-      url: "#",
-      icon: Microscope,
-      isActive: true,
-      items: [
-        {
-          title: "New experiment",
-          url: "/openjii/experiments/new",
-        },
-        {
-          title: "Overview",
-          url: "/openjii/experiments",
-        },
-      ],
-    },
-    {
-      title: "Archive",
-      url: "#",
-      icon: Archive,
-      items: [
-        {
-          title: "Public",
-          url: "#",
-        },
-        {
-          title: "Private",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  navHardware: [
-    {
-      title: "Sensors",
-      url: "#",
-      icon: Webcam,
-      items: [
-        {
-          title: "MultispeQ",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Protocols",
-      url: "#",
-      icon: FileSliders,
-      items: [
-        {
-          title: "Protocol 1",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Other devices",
-      url: "#",
-      icon: RadioReceiver,
-      items: [
-        {
-          title: "Other device 1",
-          url: "#",
-        },
-      ],
-    },
-  ],
-};
 
 interface UserData {
   name?: string | null;
@@ -109,6 +38,81 @@ export function AppSidebar({
 }: React.ComponentProps<typeof Sidebar> & {
   user?: UserData | null;
 }) {
+  const { t } = useTranslation(undefined, "navigation");
+  const { t: tAuth } = useTranslation(undefined, "common");
+
+  // Navigation data with translations
+  const data = {
+    navExperiments: [
+      {
+        title: t("sidebar.experiments"),
+        url: "#",
+        icon: Microscope,
+        isActive: true,
+        items: [
+          {
+            title: t("sidebar.newExperiment"),
+            url: "/openjii/experiments/new",
+          },
+          {
+            title: t("sidebar.overview"),
+            url: "/openjii/experiments",
+          },
+        ],
+      },
+      {
+        title: t("sidebar.archive"),
+        url: "#",
+        icon: Archive,
+        items: [
+          {
+            title: t("sidebar.public"),
+            url: "#",
+          },
+          {
+            title: t("sidebar.private"),
+            url: "#",
+          },
+        ],
+      },
+    ],
+    navHardware: [
+      {
+        title: t("sidebar.sensors"),
+        url: "#",
+        icon: Webcam,
+        items: [
+          {
+            title: t("sidebar.multispeq"),
+            url: "#",
+          },
+        ],
+      },
+      {
+        title: t("sidebar.protocols"),
+        url: "#",
+        icon: FileSliders,
+        items: [
+          {
+            title: t("sidebar.protocol1"),
+            url: "#",
+          },
+        ],
+      },
+      {
+        title: t("sidebar.otherDevices"),
+        url: "#",
+        icon: RadioReceiver,
+        items: [
+          {
+            title: t("sidebar.otherDevice1"),
+            url: "#",
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -127,8 +131,8 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavItems items={data.navExperiments} title="Experiments" />
-        <NavItems items={data.navHardware} title="Hardware" />
+        <NavItems items={data.navExperiments} title={t("sidebar.experiments")} />
+        <NavItems items={data.navHardware} title={t("sidebar.hardware")} />
       </SidebarContent>
       <SidebarFooter>
         {user ? (
@@ -147,7 +151,9 @@ export function AppSidebar({
                 className="data-[slot=sidebar-menu-button]:!p-1.5"
               >
                 <Link href="/">
-                  <span className="text-base font-semibold">Sign In</span>
+                  <span className="text-base font-semibold">
+                    {tAuth("auth.signIn")}
+                  </span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

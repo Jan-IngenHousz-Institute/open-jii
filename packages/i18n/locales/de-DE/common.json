@@ -14,7 +14,13 @@
     "add": "Hinzufügen",
     "remove": "Entfernen",
     "confirm": "Bestätigen",
-    "close": "Schließen"
+    "close": "Schließen",
+    "noVariant": "keine Variante",
+    "destructive": "destruktiv",
+    "ghost": "Geist",
+    "link": "Link",
+    "secondary": "sekundär",
+    "outline": "Umriss"
   },
   "navigation": {
     "experiments": "Experimente",
@@ -24,7 +30,8 @@
     "dashboard": "Dashboard",
     "profile": "Profil",
     "logout": "Abmelden",
-    "home": "Startseite"
+    "home": "Startseite",
+    "openJII": "openJII"
   },
   "experiments": {
     "title": "Experimente",
@@ -39,7 +46,9 @@
     "noExperiments": "Keine Experimente gefunden",
     "experimentCreated": "Experiment erfolgreich erstellt",
     "experimentUpdated": "Experiment erfolgreich aktualisiert",
-    "experimentDeleted": "Experiment erfolgreich gelöscht"
+    "experimentDeleted": "Experiment erfolgreich gelöscht",
+    "listDescription": "Diese Seite zeigt eine Liste der vorhandenen Experimente.",
+    "experiment": "Experiment"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -58,10 +67,12 @@
     "signIn": "Anmelden",
     "signUp": "Registrieren",
     "signOut": "Abmelden",
+    "signOutServer": "Abmelden (Server)",
     "welcomeBack": "Willkommen zurück",
     "loginSuccess": "Erfolgreich angemeldet",
     "logoutSuccess": "Erfolgreich abgemeldet",
-    "invalidCredentials": "Ungültige Anmeldedaten"
+    "invalidCredentials": "Ungültige Anmeldedaten",
+    "loggedInAs": "Angemeldet als {{name}}"
   },
   "forms": {
     "required": "Dieses Feld ist erforderlich",
@@ -94,6 +105,7 @@
     "institute": "Jan IngenHousz Institut",
     "mission": "Unsere Mission",
     "missionDescription": "Die Verbesserung der Photosynthese ist eine große Herausforderung: verschiedene Prozesse in der Pflanze begrenzen die Photosynthese unter verschiedenen Bedingungen, und jeder dieser Prozesse wird durch verschiedene Gensätze reguliert. Das Jan IngenHousz Institut wurde speziell gegründet, um diesen großen Herausforderungen zu begegnen.",
-    "aboutDescription": "Die Weltbevölkerung wächst, während die Fläche geeigneter landwirtschaftlicher Flächen schrumpft und die Ernten aufgrund des Klimawandels zurückgehen. Ein Durchbruch ist dringend erforderlich. Zu diesem Zweck arbeiten JII-Forscher daran, den grünen Motor der Landwirtschaft zu verstehen und zu verbessern: die Photosynthese."
+    "aboutDescription": "Die Weltbevölkerung wächst, während die Fläche geeigneter landwirtschaftlicher Flächen schrumpft und die Ernten aufgrund des Klimawandels zurückgehen. Ein Durchbruch ist dringend erforderlich. Zu diesem Zweck arbeiten JII-Forscher daran, den grünen Motor der Landwirtschaft zu verstehen und zu verbessern: die Photosynthese.",
+    "goToPlatform": "Zur openJII-Plattform gehen"
   }
 }

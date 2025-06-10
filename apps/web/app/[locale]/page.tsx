@@ -25,18 +25,18 @@ export default async function Home({ params }: HomePageProps) {
         <LanguageSwitcher locale={locale} />
       </div>
 
-      <AuthShowcase />
+      <AuthShowcase t={t} />
 
       <h1 className="text-jii-dark-green mb-6 text-4xl font-bold">
         {t("jii.institute")}
       </h1>
       <div className="flex items-center gap-2 py-12">
-        <Button>no variant</Button>
-        <Button variant={"destructive"}>destructive</Button>
-        <Button variant={"ghost"}>ghost</Button>
-        <Button variant={"link"}>link</Button>
-        <Button variant={"secondary"}>secondary</Button>
-        <Button variant={"outline"}>outline</Button>
+        <Button>{t("common.noVariant")}</Button>
+        <Button variant={"destructive"}>{t("common.destructive")}</Button>
+        <Button variant={"ghost"}>{t("common.ghost")}</Button>
+        <Button variant={"link"}>{t("common.link")}</Button>
+        <Button variant={"secondary"}>{t("common.secondary")}</Button>
+        <Button variant={"outline"}>{t("common.outline")}</Button>
       </div>
       <p className="mb-4 text-lg">{t("jii.aboutDescription")}</p>
       <div className="bg-jii-light-blue/30 mt-8 h-64 rounded-lg p-6">
@@ -47,7 +47,7 @@ export default async function Home({ params }: HomePageProps) {
       </div>
       <div className="p-6">
         <Link href={`/${locale}/openjii`}>
-          <Button>Go to the openJII platform</Button>
+          <Button>{t("jii.goToPlatform")}</Button>
         </Link>
       </div>
     </>
