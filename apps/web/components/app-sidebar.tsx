@@ -124,8 +124,15 @@ export function AppSidebar({
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
               <Link href={`/${locale}/platform/`}>
-                <Image src="/logo.png" alt="JII logo" width={50} height={50} />
-                <span className="text-base font-semibold">openJII</span>
+                <Image
+                  src="/logo.png"
+                  alt={t("common.logo")}
+                  width={50}
+                  height={50}
+                />
+                <span className="text-base font-semibold">
+                  {t("navigation.openJII")}
+                </span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

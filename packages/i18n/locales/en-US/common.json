@@ -20,7 +20,8 @@
     "ghost": "ghost",
     "link": "link",
     "secondary": "secondary",
-    "outline": "outline"
+    "outline": "outline",
+    "days": "days"
   },
   "navigation": {
     "experiments": "Experiments",
@@ -50,7 +51,9 @@
     "listDescription": "This page will show a list of existing experiments.",
     "experiment": "Experiment",
     "settings": "Experiment Settings",
-    "settingsDescription": "Manage settings and members for this experiment."
+    "settingsDescription": "Manage settings and members for this experiment.",
+    "noDescription": "No description provided",
+    "experimentId": "Experiment ID"
   },
   "newExperiment": {
     "description": "Set up a new experiment (project).",
@@ -112,7 +115,16 @@
     "loginSuccess": "Logged in successfully",
     "logoutSuccess": "Logged out successfully",
     "invalidCredentials": "Invalid credentials",
-    "loggedInAs": "Logged in as {{name}}"
+    "loggedInAs": "Logged in as {{name}}",
+    "loginToAccount": "Login to your account",
+    "continueWith": "Continue with",
+    "loginWith": "Login with {{provider}}",
+    "signInWithEmail": "Sign in with email",
+    "signInWithGoogle": "Sign in with Google",
+    "signInWithGithub": "Sign in with GitHub",
+    "noAccount": "No account?",
+    "createAccount": "Create an account",
+    "errorMessage": "An error occurred during login. Please try again."
   },
   "forms": {
     "required": "This field is required",

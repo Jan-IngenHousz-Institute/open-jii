@@ -20,7 +20,8 @@
     "ghost": "Geist",
     "link": "Link",
     "secondary": "sekundär",
-    "outline": "Umriss"
+    "outline": "Umriss",
+    "days": "Tage"
   },
   "navigation": {
     "experiments": "Experimente",
@@ -50,7 +51,9 @@
     "listDescription": "Diese Seite zeigt eine Liste der vorhandenen Experimente.",
     "experiment": "Experiment",
     "settings": "Experimenteinstellungen",
-    "settingsDescription": "Verwalten Sie Einstellungen und Mitglieder für dieses Experiment."
+    "settingsDescription": "Verwalten Sie Einstellungen und Mitglieder für dieses Experiment.",
+    "noDescription": "Keine Beschreibung vorhanden",
+    "experimentId": "Experiment-ID"
   },
   "experimentSettings": {
     "loading": "Experimenteinstellungen werden geladen...",
@@ -110,7 +113,16 @@
     "loginSuccess": "Erfolgreich angemeldet",
     "logoutSuccess": "Erfolgreich abgemeldet",
     "invalidCredentials": "Ungültige Anmeldedaten",
-    "loggedInAs": "Angemeldet als {{name}}"
+    "loggedInAs": "Angemeldet als {{name}}",
+    "loginToAccount": "In Konto anmelden",
+    "continueWith": "Fortfahren mit",
+    "loginWith": "Anmelden mit {{provider}}",
+    "signInWithEmail": "Mit E-Mail anmelden",
+    "signInWithGoogle": "Mit Google anmelden",
+    "signInWithGithub": "Mit GitHub anmelden",
+    "noAccount": "Kein Konto?",
+    "createAccount": "Konto erstellen",
+    "errorMessage": "Bei der Anmeldung ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
   },
   "forms": {
     "required": "Dieses Feld ist erforderlich",
