@@ -11,20 +11,20 @@
     "resolveJsonModule": true,
     "moduleDetection": "force",
     "isolatedModules": true,
-    
+
     /** Keep TSC performant in monorepos */
     "incremental": true,
     "disableSourceOfProjectReferenceRedirect": true,
     "tsBuildInfoFile": "${configDir}/.cache/tsbuildinfo.json",
-    
+
     /** Strictness */
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitReturns": true,
-    
+
     /** React */
     "jsx": "react-jsx",
-    
+
     /** Output */
     "outDir": "dist",
     "rootDir": "src",

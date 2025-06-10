@@ -27,12 +27,12 @@ export function TranslationsProvider({
 
   // Initialize i18next with the resources from server-side
   // This is synchronous since we already have the resources
-  i18n.init({
+  void i18n.init({
     lng: locale,
     resources,
     fallbackLng: "en-US",
-    defaultNS: namespaces?.[0] || "common",
-    ns: namespaces || ["common"],
+    defaultNS: namespaces?.[0] ?? "common",
+    ns: namespaces ?? ["common"],
     interpolation: {
       escapeValue: false, // React already does escaping
     },

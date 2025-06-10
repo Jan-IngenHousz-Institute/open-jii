@@ -40,12 +40,14 @@ export default middleware((request) => {
   }
 
   // Handle login page redirects - if user is logged in and trying to access login page
-  if (request.nextUrl.pathname === "/login" && request.auth) {
-    return NextResponse.redirect(new URL("/openjii", request.nextUrl.origin));
+  if (request.nextUrl.pathname.includes("/login") && request.auth) {
+    return NextResponse.redirect(
+      new URL(`/${defaultLocale}/platform`, request.nextUrl.origin),
+    );
   }
 
   // Handle protected routes
-  if (request.nextUrl.pathname.startsWith("/openjii") && !request.auth) {
+  if (request.nextUrl.pathname.includes("/platform") && !request.auth) {
     const callbackUrl = encodeURIComponent(
       `${request.nextUrl.origin}${request.nextUrl.pathname}${request.nextUrl.search}`,
     );
@@ -69,7 +71,7 @@ export const config = {
     // Match i18n routes
     "/((?!api|static|.*\\..*|_next).*)",
     // Match auth routes
-    "/openjii/:path*",
+    "/platform/:path*",
     "/login",
   ],
 };

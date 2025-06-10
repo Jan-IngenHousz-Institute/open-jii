@@ -16,10 +16,13 @@ import {
 export default async function AppLayout({
   children,
   pageTitle,
+  params,
 }: Readonly<{
   children: React.ReactNode;
   pageTitle?: string;
+  params: Promise<{ locale: string }>;
 }>) {
+  const { locale } = await params;
   const session = await auth();
 
   if (!session) {
@@ -47,7 +50,12 @@ export default async function AppLayout({
               orientation="vertical"
               className="mr-2 data-[orientation=vertical]:h-4"
             />
-            <Breadcrumbs pathname={pathname} pageTitle={pageTitle} />
+            <Breadcrumbs
+              pathname={pathname}
+              pageTitle={pageTitle}
+              //@ts-expect-error string is not an accepted type for locale
+              locale={locale}
+            />
           </div>
         </header>
         <main className="flex flex-1 flex-col p-4">{children}</main>

@@ -35,13 +35,13 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
       <Tabs value={activeTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview" asChild>
-            <Link href={`/openjii/experiments/${id}`}>Overview</Link>
+            <Link href={`/platform/experiments/${id}`}>Overview</Link>
           </TabsTrigger>
           <TabsTrigger value="data" asChild>
-            <Link href={`/openjii/experiments/${id}/data`}>Data</Link>
+            <Link href={`/platform/experiments/${id}/data`}>Data</Link>
           </TabsTrigger>
           <TabsTrigger value="settings" asChild>
-            <Link href={`/openjii/experiments/${id}/settings`}>Settings</Link>
+            <Link href={`/platform/experiments/${id}/settings`}>Settings</Link>
           </TabsTrigger>
         </TabsList>
 

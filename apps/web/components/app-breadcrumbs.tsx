@@ -1,8 +1,7 @@
-"use client";
-
 import React from "react";
-import type { ReactElement } from "react";
 
+import type { Locale } from "@repo/i18n/config";
+import initTranslations from "@repo/i18n/server";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -10,74 +9,79 @@ import {
   BreadcrumbList,
   BreadcrumbSeparator,
 } from "@repo/ui/components";
-import { useTranslation } from "@repo/i18n/client";
 
 interface BreadcrumbsProps {
   pathname: string;
   pageTitle?: string;
+  locale: Locale;
 }
 
-function getUppercaseTitle(title: string) {
-  switch (title) {
-    case "openjii":
-      return "openJII";
-    default:
-      return title[0].toUpperCase() + title.slice(1);
-  }
-}
+// Translation key mapping for breadcrumb items
+const BREADCRUMB_TRANSLATIONS: Record<string, string> = {
+  platform: "Platform",
+  experiments: "breadcrumbs.experiments",
+  new: "breadcrumbs.new",
+  edit: "breadcrumbs.edit",
+  view: "breadcrumbs.view",
+};
 
-function getTitle(title: string, overrideTitle?: string, t?: (key: string) => string) {
+function getTitle(
+  title: string,
+  overrideTitle?: string,
+  t?: (key: string) => string,
+): string {
   if (overrideTitle) return overrideTitle;
-  
-  // Use translations for known breadcrumb items
-  if (t) {
-    switch (title) {
-      case "openjii":
-        return "openJII";
-      case "experiments":
-        return t("breadcrumbs.experiments");
-      case "new":
-        return t("breadcrumbs.new");
-      case "edit":
-        return t("breadcrumbs.edit");
-      case "view":
-        return t("breadcrumbs.view");
-      default:
-        return title[0].toUpperCase() + title.slice(1);
-    }
+
+  const translationKey = BREADCRUMB_TRANSLATIONS[title];
+  if (translationKey && t) {
+    return translationKey.startsWith("breadcrumbs.")
+      ? t(translationKey)
+      : translationKey;
   }
-  
-  return getUppercaseTitle(title);
+
+  // Fallback to capitalize first letter
+  return title.charAt(0).toUpperCase() + title.slice(1);
 }
 
-export function Breadcrumbs({ pathname, pageTitle }: BreadcrumbsProps) {
-  const { t } = useTranslation(undefined, "navigation");
-  const pathNames = pathname.split("/").filter((path) => path);
-  const breadcrumbItems: ReactElement[] = [];
-  pathNames.forEach((link, index) => {
-    const href = `/${pathNames.slice(0, index + 1).join("/")}`;
-    const title = getTitle(
-      link,
-      index == pathNames.length - 1 ? pageTitle : undefined,
-      t,
-    );
-    breadcrumbItems.push(
-      <React.Fragment key={href}>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbLink href={href}>{title}</BreadcrumbLink>
-        </BreadcrumbItem>
-      </React.Fragment>,
-    );
+export async function Breadcrumbs({
+  pathname,
+  pageTitle,
+  locale,
+}: BreadcrumbsProps) {
+  const { t } = await initTranslations({
+    locale,
+    namespaces: ["common"],
   });
+
+  const pathNames = pathname.split("/").filter((path) => path);
+  // Remove the first item which is the locale (e.g., 'en-US', 'de-DE')
+  const pathNamesWithoutLocale = pathNames.slice(1);
 
   return (
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem>
-          <BreadcrumbLink href="/openjii">{t("breadcrumbs.home")}</BreadcrumbLink>
+          <BreadcrumbLink href={`/${locale}/platform`}>
+            {t("breadcrumbs.home")}
+          </BreadcrumbLink>
         </BreadcrumbItem>
-        {breadcrumbItems}
+        {pathNamesWithoutLocale.map((link, index) => {
+          const href = `/${locale}/${pathNamesWithoutLocale.slice(0, index + 1).join("/")}`;
+          const title = getTitle(
+            link,
+            index === pathNamesWithoutLocale.length - 1 ? pageTitle : undefined,
+            t,
+          );
+
+          return (
+            <React.Fragment key={href}>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink href={href}>{title}</BreadcrumbLink>
+              </BreadcrumbItem>
+            </React.Fragment>
+          );
+        })}
       </BreadcrumbList>
     </Breadcrumb>
   );

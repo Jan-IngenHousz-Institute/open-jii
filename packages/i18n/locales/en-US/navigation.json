@@ -19,6 +19,7 @@
     "protocol": "Protocol",
     "configuration": "Configuration",
     "experiments": "Experiments",
+    "hardware": "Hardware",
     "archive": "Archive",
     "public": "Public",
     "private": "Private",
@@ -27,8 +28,7 @@
     "protocols": "Protocols",
     "protocol1": "Protocol 1",
     "otherDevices": "Other devices",
-    "otherDevice1": "Other device 1",
-    "hardware": "Hardware"
+    "otherDevice1": "Other device 1"
   },
   "breadcrumbs": {
     "home": "Home",

@@ -48,7 +48,56 @@
     "experimentUpdated": "Experiment updated successfully",
     "experimentDeleted": "Experiment deleted successfully",
     "listDescription": "This page will show a list of existing experiments.",
-    "experiment": "Experiment"
+    "experiment": "Experiment",
+    "settings": "Experiment Settings",
+    "settingsDescription": "Manage settings and members for this experiment."
+  },
+  "newExperiment": {
+    "description": "Set up a new experiment (project).",
+    "name": "Name",
+    "description_field": "Description",
+    "visibility": "Visibility",
+    "visibilityPlaceholder": "Select an experiment visibility",
+    "embargoIntervalDays": "Embargo Interval Days",
+    "cancel": "Cancel",
+    "creating": "Creating...",
+    "finalizeSetup": "Finalize setup"
+  },
+  "experimentSettings": {
+    "loading": "Loading experiment settings...",
+    "notFound": "Experiment not found",
+    "generalSettings": "General Settings",
+    "generalDescription": "Basic information about the experiment",
+    "name": "Name",
+    "description": "Description",
+    "visibility": "Visibility",
+    "visibilityPlaceholder": "Select visibility",
+    "embargoIntervalDays": "Embargo Interval Days",
+    "dangerZone": "Danger Zone",
+    "dangerDescription": "Delete this experiment and all of its data",
+    "deleteExperiment": "Delete Experiment",
+    "deleteWarning": "Once you delete an experiment, there is no going back. Please be certain.",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "confirmDelete": "Are you sure? Please type",
+    "toConfirm": "to confirm.",
+    "save": "Save",
+    "saving": "Saving...",
+    "created": "Created",
+    "updated": "Updated",
+    "memberManagement": "Member Management",
+    "memberDescription": "Manage experiment members and permissions"
+  },
+  "newExperiment": {
+    "description": "Set up a new experiment (project).",
+    "name": "Name",
+    "description_field": "Description",
+    "visibility": "Visibility",
+    "visibilityPlaceholder": "Select an experiment visibility",
+    "embargoIntervalDays": "Embargo interval days",
+    "cancel": "Cancel",
+    "creating": "Creating...",
+    "finalizeSetup": "Finalize setup"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -107,5 +156,12 @@
     "missionDescription": "Improving photosynthesis is a big challenge: different processes in the plant limit photosynthesis under different conditions, and each of these processes is regulated by different sets of genes. The Jan IngenHousz Institute was founded specifically to meet these major challenges.",
     "aboutDescription": "The world's population is growing, while the area of suitable agricultural land is shrinking and harvests are declining due to climate change. A breakthrough is urgently needed. To this end, JII-researchers are working to understand and improve the green engine of agriculture: photosynthesis.",
     "goToPlatform": "Go to the openJII platform"
+  },
+  "breadcrumbs": {
+    "home": "Home",
+    "experiments": "Experiments",
+    "new": "New",
+    "edit": "Edit",
+    "view": "View"
   }
 }

@@ -16,7 +16,7 @@ export const i18nConfig = {
 export const defaultNamespace = "common" as const;
 export const namespaces = [
   "common",
-  "navigation", 
+  "navigation",
   "experiments",
   "dashboard",
 ] as const;

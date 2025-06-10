@@ -48,7 +48,45 @@
     "experimentUpdated": "Experiment erfolgreich aktualisiert",
     "experimentDeleted": "Experiment erfolgreich gelöscht",
     "listDescription": "Diese Seite zeigt eine Liste der vorhandenen Experimente.",
-    "experiment": "Experiment"
+    "experiment": "Experiment",
+    "settings": "Experimenteinstellungen",
+    "settingsDescription": "Verwalten Sie Einstellungen und Mitglieder für dieses Experiment."
+  },
+  "experimentSettings": {
+    "loading": "Experimenteinstellungen werden geladen...",
+    "notFound": "Experiment nicht gefunden",
+    "generalSettings": "Allgemeine Einstellungen",
+    "generalDescription": "Grundlegende Informationen über das Experiment",
+    "name": "Name",
+    "description": "Beschreibung",
+    "visibility": "Sichtbarkeit",
+    "visibilityPlaceholder": "Sichtbarkeit auswählen",
+    "embargoIntervalDays": "Embargo-Intervall in Tagen",
+    "dangerZone": "Gefahrenzone",
+    "dangerDescription": "Löschen Sie dieses Experiment und alle zugehörigen Daten",
+    "deleteExperiment": "Experiment löschen",
+    "deleteWarning": "Sobald Sie ein Experiment löschen, gibt es kein Zurück mehr. Bitte seien Sie sicher.",
+    "delete": "Löschen",
+    "cancel": "Abbrechen",
+    "confirmDelete": "Sind Sie sicher? Bitte geben Sie",
+    "toConfirm": "ein, um zu bestätigen.",
+    "save": "Speichern",
+    "saving": "Speichern...",
+    "created": "Erstellt",
+    "updated": "Aktualisiert",
+    "memberManagement": "Mitgliederverwaltung",
+    "memberDescription": "Verwalten Sie Experimentmitglieder und Berechtigungen"
+  },
+  "newExperiment": {
+    "description": "Richten Sie ein neues Experiment (Projekt) ein.",
+    "name": "Name",
+    "description_field": "Beschreibung",
+    "visibility": "Sichtbarkeit",
+    "visibilityPlaceholder": "Wählen Sie eine Experiment-Sichtbarkeit",
+    "embargoIntervalDays": "Embargo-Intervall in Tagen",
+    "cancel": "Abbrechen",
+    "creating": "Wird erstellt...",
+    "finalizeSetup": "Setup abschließen"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -107,5 +145,12 @@
     "missionDescription": "Die Verbesserung der Photosynthese ist eine große Herausforderung: verschiedene Prozesse in der Pflanze begrenzen die Photosynthese unter verschiedenen Bedingungen, und jeder dieser Prozesse wird durch verschiedene Gensätze reguliert. Das Jan IngenHousz Institut wurde speziell gegründet, um diesen großen Herausforderungen zu begegnen.",
     "aboutDescription": "Die Weltbevölkerung wächst, während die Fläche geeigneter landwirtschaftlicher Flächen schrumpft und die Ernten aufgrund des Klimawandels zurückgehen. Ein Durchbruch ist dringend erforderlich. Zu diesem Zweck arbeiten JII-Forscher daran, den grünen Motor der Landwirtschaft zu verstehen und zu verbessern: die Photosynthese.",
     "goToPlatform": "Zur openJII-Plattform gehen"
+  },
+  "breadcrumbs": {
+    "home": "Startseite",
+    "experiments": "Experimente",
+    "new": "Neu",
+    "edit": "Bearbeiten",
+    "view": "Ansehen"
   }
 }

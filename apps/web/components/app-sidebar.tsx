@@ -11,6 +11,7 @@ import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
 
+import { useTranslation } from "@repo/i18n/client";
 import {
   Sidebar,
   SidebarContent,
@@ -21,7 +22,6 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@repo/ui/components";
-import { useTranslation } from "@repo/i18n/client";
 
 import { NavItems } from "./nav-items";
 import { NavUser } from "./nav-user";
@@ -38,8 +38,9 @@ export function AppSidebar({
 }: React.ComponentProps<typeof Sidebar> & {
   user?: UserData | null;
 }) {
-  const { t } = useTranslation(undefined, "navigation");
+  const { t, i18n } = useTranslation(undefined, "navigation");
   const { t: tAuth } = useTranslation(undefined, "common");
+  const locale = i18n.language;
 
   // Navigation data with translations
   const data = {
@@ -52,11 +53,11 @@ export function AppSidebar({
         items: [
           {
             title: t("sidebar.newExperiment"),
-            url: "/openjii/experiments/new",
+            url: `/${locale}/platform/experiments/new`,
           },
           {
             title: t("sidebar.overview"),
-            url: "/openjii/experiments",
+            url: `/${locale}/platform/experiments`,
           },
         ],
       },
@@ -118,11 +119,12 @@ export function AppSidebar({
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
+            {" "}
             <SidebarMenuButton
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <Link href="/openjii/">
+              <Link href={`/${locale}/platform/`}>
                 <Image src="/logo.png" alt="JII logo" width={50} height={50} />
                 <span className="text-base font-semibold">openJII</span>
               </Link>
@@ -131,7 +133,10 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavItems items={data.navExperiments} title={t("sidebar.experiments")} />
+        <NavItems
+          items={data.navExperiments}
+          title={t("sidebar.experiments")}
+        />
         <NavItems items={data.navHardware} title={t("sidebar.hardware")} />
       </SidebarContent>
       <SidebarFooter>
@@ -150,9 +155,9 @@ export function AppSidebar({
                 asChild
                 className="data-[slot=sidebar-menu-button]:!p-1.5"
               >
-                <Link href="/">
+                <Link href={`/${locale}/`}>
                   <span className="text-base font-semibold">
-                    {tAuth("auth.signIn")}
+                    {tAuth("signIn")}
                   </span>
                 </Link>
               </SidebarMenuButton>

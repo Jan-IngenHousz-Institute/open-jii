@@ -2,14 +2,15 @@
 
 import { useTranslation as useTranslationOrg } from "react-i18next";
 
-import {
-  defaultNamespace,
-  type Locale,
-  type Namespace,
-} from "./config";
+import { defaultNamespace, type Locale, type Namespace } from "./config";
 
 // Re-export React components that can only be used on client-side
-export { I18nextProvider, Trans, Translation, withTranslation } from "react-i18next";
+export {
+  I18nextProvider,
+  Trans,
+  Translation,
+  withTranslation,
+} from "react-i18next";
 
 // Simple client-side hook that doesn't initialize i18next
 // Instead, it relies on the server-side initialization passed down via TranslationsProvider
