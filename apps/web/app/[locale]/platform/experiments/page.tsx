@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { auth } from "@repo/auth/next";
-import type { Locale } from "@repo/i18n/config";
+import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { Button } from "@repo/ui/components";
 
