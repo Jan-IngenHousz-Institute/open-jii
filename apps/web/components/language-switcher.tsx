@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe } from "lucide-react";
+import { Languages } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -16,6 +16,7 @@ import {
 const locales = [
   { code: "en-US" as const, name: "English", flag: "🇺🇸" },
   { code: "de-DE" as const, name: "Deutsch", flag: "🇩🇪" },
+  { code: "nl-NL" as const, name: "Nederlands", flag: "🇳🇱" },
 ];
 
 interface LanguageSwitcherProps {
@@ -44,7 +45,7 @@ export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
           className="gap-2"
           aria-label="Switch language"
         >
-          <Globe className="h-4 w-4" />
+          <Languages className="h-4 w-4" />
           <span className="hidden sm:inline">{currentLocale.flag}</span>
           <span className="hidden md:inline">{currentLocale.name}</span>
         </Button>

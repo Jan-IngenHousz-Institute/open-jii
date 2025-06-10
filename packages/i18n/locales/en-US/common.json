@@ -63,6 +63,7 @@
     "creating": "Creating...",
     "finalizeSetup": "Finalize setup"
   },
+
   "experimentSettings": {
     "loading": "Loading experiment settings...",
     "notFound": "Experiment not found",
@@ -88,17 +89,7 @@
     "memberManagement": "Member Management",
     "memberDescription": "Manage experiment members and permissions"
   },
-  "newExperiment": {
-    "description": "Set up a new experiment (project).",
-    "name": "Name",
-    "description_field": "Description",
-    "visibility": "Visibility",
-    "visibilityPlaceholder": "Select an experiment visibility",
-    "embargoIntervalDays": "Embargo interval days",
-    "cancel": "Cancel",
-    "creating": "Creating...",
-    "finalizeSetup": "Finalize setup"
-  },
+
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome to OpenJII",

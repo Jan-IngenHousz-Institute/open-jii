@@ -56,13 +56,9 @@ export default async function LocaleLayout({
   params,
 }: LocaleLayoutProps) {
   const { locale } = await params;
-  const { resources } = await initTranslations({
-    locale,
-    namespaces: i18nNamespaces,
-  });
 
   return (
-    <html lang={locale}>
+    <html>
       <body
         className={cn(
           "bg-background font-overpass min-h-screen antialiased",
@@ -70,11 +66,7 @@ export default async function LocaleLayout({
           overpass.variable,
         )}
       >
-        <TranslationsProvider
-          locale={locale}
-          namespaces={i18nNamespaces}
-          resources={resources}
-        >
+        <TranslationsProvider locale={locale} namespaces={i18nNamespaces}>
           <QueryProvider>{children}</QueryProvider>
         </TranslationsProvider>
       </body>

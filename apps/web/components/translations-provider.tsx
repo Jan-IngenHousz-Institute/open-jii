@@ -11,20 +11,17 @@ interface TranslationsProviderProps {
   children: ReactNode;
   locale: InitTranslationsProps["locale"];
   namespaces?: InitTranslationsProps["namespaces"];
-  resources: InitTranslationsProps["resources"];
 }
 
 export function TranslationsProvider({
   children,
   locale,
   namespaces,
-  resources,
 }: TranslationsProviderProps) {
   const { i18n } = use(
     initTranslations({
       locale,
       namespaces,
-      resources,
     }),
   );
 
