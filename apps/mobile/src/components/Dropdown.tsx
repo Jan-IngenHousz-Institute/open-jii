@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react-native";
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -7,15 +7,8 @@ import {
   TouchableOpacity,
   Modal,
   FlatList,
-  Pressable,
 } from "react-native";
-import { useTheme } from "~/hooks/useTheme";
-
-interface DropdownOption {
-  label: string;
-  value: string;
-  description?: string;
-}
+import { useDropdownLogic, DropdownOption } from "~/hooks/useDropdownLogic";
 
 interface DropdownProps {
   label?: string;
@@ -32,13 +25,19 @@ export function Dropdown({
   onSelect,
   placeholder = "Select an option",
 }: DropdownProps) {
-  const theme = useTheme();
-  const { colors } = theme;
+  const logic = useDropdownLogic({ options, selectedValue, onSelect });
+  const optionStyles = logic.getOptionStyles();
 
-  const [modalVisible, setModalVisible] = useState(false);
-
-  const selectedOption = options.find(
-    (option) => option.value === selectedValue,
+  const renderDropdownOption = ({ item }: { item: DropdownOption }) => (
+    <TouchableOpacity
+      style={optionStyles.optionItem}
+      onPress={() => logic.handleSelect(item.value)}
+    >
+      <Text style={optionStyles.optionText}>{item.label}</Text>
+      {item.description && (
+        <Text style={optionStyles.optionDescription}>{item.description}</Text>
+      )}
+    </TouchableOpacity>
   );
 
   return (
@@ -48,9 +47,9 @@ export function Dropdown({
           style={[
             styles.label,
             {
-              color: theme.isDark
-                ? colors.dark.onSurface
-                : colors.light.onSurface,
+              color: logic.theme.isDark
+                ? logic.colors.dark.onSurface
+                : logic.colors.light.onSurface,
             },
           ]}
         >
@@ -62,129 +61,108 @@ export function Dropdown({
         style={[
           styles.dropdownButton,
           {
-            backgroundColor: theme.isDark
-              ? colors.dark.surface
-              : colors.light.surface,
-            borderColor: theme.isDark
-              ? colors.dark.border
-              : colors.light.border,
+            backgroundColor: logic.theme.isDark
+              ? logic.colors.dark.surface
+              : logic.colors.light.surface,
+            borderColor: logic.theme.isDark
+              ? logic.colors.dark.border
+              : logic.colors.light.border,
           },
         ]}
-        onPress={() => setModalVisible(true)}
+        onPress={logic.openModal}
       >
         <Text
           style={[
             styles.selectedText,
             {
-              color: theme.isDark
-                ? colors.dark.onSurface
-                : colors.light.onSurface,
+              color: logic.theme.isDark
+                ? logic.colors.dark.onSurface
+                : logic.colors.light.onSurface,
             },
-            !selectedOption && [
+            !logic.selectedOption && [
               styles.placeholderText,
               {
-                color: theme.isDark
-                  ? colors.dark.inactive
-                  : colors.light.inactive,
+                color: logic.theme.isDark
+                  ? logic.colors.dark.inactive
+                  : logic.colors.light.inactive,
               },
             ],
           ]}
         >
-          {selectedOption ? selectedOption.label : placeholder}
+          {logic.selectedOption ? logic.selectedOption.label : placeholder}
         </Text>
         <ChevronDown
           size={20}
-          color={theme.isDark ? colors.dark.onSurface : colors.light.onSurface}
+          color={
+            logic.theme.isDark
+              ? logic.colors.dark.onSurface
+              : logic.colors.light.onSurface
+          }
         />
       </TouchableOpacity>
 
       <Modal
-        visible={modalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
+        visible={logic.modalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={logic.closeModal}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setModalVisible(false)}
+        <View
+          style={[
+            styles.modalContainer,
+            {
+              backgroundColor: logic.theme.isDark
+                ? logic.colors.dark.background
+                : logic.colors.light.background,
+            },
+          ]}
         >
-          <View
-            style={[
-              styles.modalContent,
-              {
-                backgroundColor: theme.isDark
-                  ? colors.dark.background
-                  : colors.light.background,
-              },
-            ]}
-          >
+          <View style={styles.modalHeader}>
             <Text
               style={[
                 styles.modalTitle,
                 {
-                  color: theme.isDark
-                    ? colors.dark.onSurface
-                    : colors.light.onSurface,
+                  color: logic.theme.isDark
+                    ? logic.colors.dark.onSurface
+                    : logic.colors.light.onSurface,
                 },
               ]}
             >
-              {label ?? "Select an option"}
+              {label ?? "Select Option"}
             </Text>
-
-            <FlatList
-              data={options}
-              keyExtractor={(item) => item.value}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.optionItem,
-                    selectedValue === item.value && [
-                      styles.selectedItem,
-                      { backgroundColor: colors.primary.dark + "20" },
-                    ],
-                  ]}
-                  onPress={() => {
-                    onSelect(item.value);
-                    setModalVisible(false);
-                  }}
-                >
-                  <View>
-                    <Text
-                      style={[
-                        styles.optionText,
-                        {
-                          color: theme.isDark
-                            ? colors.dark.onSurface
-                            : colors.light.onSurface,
-                        },
-                        selectedValue === item.value && [
-                          styles.selectedItemText,
-                          { color: colors.primary.dark },
-                        ],
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                    {item.description && (
-                      <Text
-                        style={[
-                          styles.descriptionText,
-                          {
-                            color: theme.isDark
-                              ? colors.dark.inactive
-                              : colors.light.inactive,
-                          },
-                        ]}
-                      >
-                        {item.description}
-                      </Text>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              )}
-            />
+            <TouchableOpacity
+              style={[
+                styles.closeButton,
+                {
+                  backgroundColor: logic.theme.isDark
+                    ? logic.colors.dark.surface
+                    : logic.colors.light.surface,
+                },
+              ]}
+              onPress={logic.closeModal}
+            >
+              <Text
+                style={[
+                  styles.closeButtonText,
+                  {
+                    color: logic.theme.isDark
+                      ? logic.colors.dark.onSurface
+                      : logic.colors.light.onSurface,
+                  },
+                ]}
+              >
+                Close
+              </Text>
+            </TouchableOpacity>
           </View>
-        </Pressable>
+
+          <FlatList
+            data={options}
+            keyExtractor={(item) => item.value}
+            renderItem={renderDropdownOption}
+            style={styles.optionsList}
+          />
+        </View>
       </Modal>
     </View>
   );
@@ -197,52 +175,51 @@ const styles = StyleSheet.create({
   label: {
     marginBottom: 6,
     fontSize: 14,
+    fontWeight: "500",
   },
   dropdownButton: {
     borderRadius: 8,
     borderWidth: 1,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 12,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   selectedText: {
+    flex: 1,
     fontSize: 16,
   },
-  placeholderText: {},
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
+  placeholderText: {
+    fontStyle: "italic",
   },
-  modalContent: {
-    borderRadius: 12,
-    width: "90%",
-    maxHeight: "80%",
+  modalContainer: {
+    flex: 1,
     padding: 16,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E5E5",
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 16,
-    textAlign: "center",
   },
-  optionItem: {
-    paddingVertical: 12,
+  closeButton: {
     paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: 8,
+    borderRadius: 6,
   },
-  selectedItem: {},
-  optionText: {
-    fontSize: 16,
-  },
-  selectedItemText: {
-    fontWeight: "bold",
-  },
-  descriptionText: {
+  closeButtonText: {
     fontSize: 14,
-    marginTop: 4,
+    fontWeight: "500",
+  },
+  optionsList: {
+    flex: 1,
   },
 });
