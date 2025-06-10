@@ -1,8 +1,8 @@
 "use client";
 
 import { Globe } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
-import { startTransition } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import type { Locale } from "@repo/i18n";
 import {
@@ -23,23 +23,16 @@ interface LanguageSwitcherProps {
 }
 
 export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
-  const router = useRouter();
   const pathname = usePathname();
-
   const currentLocale = locales.find((l) => l.code === locale) ?? locales[0];
 
-  const switchLanguage = (newLocale: Locale) => {
-    if (newLocale === locale) return;
-
+  // Generate language switch URL
+  const getLanguageSwitchUrl = (newLocale: Locale) => {
     // Remove current locale from pathname if present
     const pathWithoutLocale = pathname.replace(`/${locale}`, "") || "/";
 
     // Construct new path with new locale
-    const newPath = `/${newLocale}${pathWithoutLocale}`;
-
-    startTransition(() => {
-      router.push(newPath);
-    });
+    return `/${newLocale}${pathWithoutLocale}`;
   };
 
   return (
@@ -58,15 +51,16 @@ export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {locales.map((loc) => (
-          <DropdownMenuItem
-            key={loc.code}
-            onClick={() => switchLanguage(loc.code)}
-            className={`cursor-pointer ${
-              loc.code === locale ? "bg-accent" : ""
-            }`}
-          >
-            <span className="mr-2">{loc.flag}</span>
-            {loc.name}
+          <DropdownMenuItem key={loc.code} asChild>
+            <Link
+              href={getLanguageSwitchUrl(loc.code)}
+              className={`w-full cursor-pointer ${
+                loc.code === locale ? "bg-accent" : ""
+              }`}
+            >
+              <span className="mr-2">{loc.flag}</span>
+              {loc.name}
+            </Link>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
