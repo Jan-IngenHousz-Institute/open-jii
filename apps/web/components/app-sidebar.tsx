@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/hooks/useLocale";
 import {
   Archive,
   FileSliders,
@@ -38,9 +39,9 @@ export function AppSidebar({
 }: React.ComponentProps<typeof Sidebar> & {
   user?: UserData | null;
 }) {
-  const { t, i18n } = useTranslation(undefined, "navigation");
+  const { t } = useTranslation(undefined, "navigation");
   const { t: tAuth } = useTranslation(undefined, "common");
-  const locale = i18n.language;
+  const locale = useLocale();
 
   // Navigation data with translations
   const data = {

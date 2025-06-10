@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
 import { editExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -329,6 +330,7 @@ function ExperimentInfoCard({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const router = useRouter();
   const { t } = useTranslation(undefined, "common");
+  const locale = useLocale();
 
   const handleDeleteExperiment = async () => {
     await deleteExperiment({ params: { id: experimentId } });
@@ -336,7 +338,7 @@ function ExperimentInfoCard({
       description: t("experiments.experimentDeleted"),
     });
     // Navigate to experiments list
-    router.push("/platform/experiments");
+    router.push(`/${locale}/platform/experiments`);
   };
 
   return (

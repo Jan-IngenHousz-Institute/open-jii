@@ -1,8 +1,9 @@
 "use client";
 
 import { useExperimentCreate } from "@/hooks/experiment/useExperimentCreate/useExperimentCreate";
+import { useLocale } from "@/hooks/useLocale";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 
 import type { CreateExperimentBody } from "@repo/api";
@@ -29,12 +30,8 @@ import { toast } from "@repo/ui/hooks";
 
 export function NewExperimentForm() {
   const router = useRouter();
-  const pathname = usePathname();
   const { t } = useTranslation(undefined, "common");
-
-  // Extract locale from pathname
-  const pathSegments = pathname.split("/");
-  const locale = pathSegments[1]; // The locale is the first segment after the root
+  const locale = useLocale();
 
   const { mutate: createExperiment, isPending } = useExperimentCreate({
     onSuccess: () => {

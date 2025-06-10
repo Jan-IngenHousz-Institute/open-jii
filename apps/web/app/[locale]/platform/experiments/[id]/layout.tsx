@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 
@@ -14,6 +15,7 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   const pathname = usePathname();
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation(undefined, "common");
+  const locale = useLocale();
 
   // Determine active tab from URL
   const getActiveTab = () => {
@@ -22,7 +24,6 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
     if (pathname.endsWith(`/experiments/${id}`)) return "overview";
     return "overview";
   };
-  const locale = pathname.split("/")[1]; // Extract locale from URL
 
   const activeTab = getActiveTab();
 
