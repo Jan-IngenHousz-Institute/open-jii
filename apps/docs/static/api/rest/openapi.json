@@ -18,7 +18,7 @@
                   "name": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 64,
+                    "maxLength": 255,
                     "description": "The name of the experiment"
                   },
                   "description": {
@@ -180,6 +180,51 @@
                       "updatedAt": {
                         "type": "string",
                         "format": "date-time"
+                      },
+                      "data": {
+                        "type": "object",
+                        "properties": {
+                          "columns": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "type_name": {
+                                  "type": "string"
+                                },
+                                "type_text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["name", "type_name", "type_text"]
+                            }
+                          },
+                          "rows": {
+                            "type": "array",
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            }
+                          },
+                          "totalRows": {
+                            "type": "integer"
+                          },
+                          "truncated": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "columns",
+                          "rows",
+                          "totalRows",
+                          "truncated"
+                        ]
                       }
                     },
                     "required": [
@@ -283,6 +328,46 @@
                     "updatedAt": {
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "columns": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "type_name": {
+                                "type": "string"
+                              },
+                              "type_text": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["name", "type_name", "type_text"]
+                          }
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "nullable": true
+                            }
+                          }
+                        },
+                        "totalRows": {
+                          "type": "integer"
+                        },
+                        "truncated": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["columns", "rows", "totalRows", "truncated"]
                     }
                   },
                   "required": [
@@ -426,6 +511,46 @@
                     "updatedAt": {
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "columns": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "type_name": {
+                                "type": "string"
+                              },
+                              "type_text": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["name", "type_name", "type_text"]
+                          }
+                        },
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "nullable": true
+                            }
+                          }
+                        },
+                        "totalRows": {
+                          "type": "integer"
+                        },
+                        "truncated": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["columns", "rows", "totalRows", "truncated"]
                     }
                   },
                   "required": [

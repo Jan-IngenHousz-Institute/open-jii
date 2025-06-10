@@ -1,5 +1,6 @@
 "use client";
 
+import { useExperimentCreate } from "@/hooks/experiment/useExperimentCreate/useExperimentCreate";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -19,17 +20,23 @@ import {
   Select,
   SelectItem,
   SelectContent,
-  Textarea,
+  RichTextarea,
   SelectValue,
   SelectTrigger,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-import { useExperimentCreate } from "../hooks/experiment/useExperimentCreate/useExperimentCreate";
-
 export function NewExperimentForm() {
   const router = useRouter();
-  const { mutateAsync: createExperiment, isPending } = useExperimentCreate();
+  const { mutate: createExperiment, isPending } = useExperimentCreate({
+    onSuccess: () => {
+      toast({
+        description: "Experiment created successfully",
+      });
+      // Navigate to the experiment page
+      router.push(`/openjii/experiments`);
+    },
+  });
 
   const form = useForm<CreateExperimentBody>({
     resolver: zodResolver(zCreateExperimentBody),
@@ -45,17 +52,8 @@ export function NewExperimentForm() {
     router.back();
   }
 
-  async function onSubmit(data: CreateExperimentBody) {
-    await createExperiment({
-      body: data,
-    });
-
-    // Show message
-    toast({
-      description: "Experiment created successfully",
-    });
-    // Navigate to the experiment page
-    router.push(`/openjii/experiments`);
+  function onSubmit(data: CreateExperimentBody) {
+    return createExperiment({ body: data });
   }
 
   return (
@@ -81,7 +79,11 @@ export function NewExperimentForm() {
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea placeholder="" className="resize-none" {...field} />
+                <RichTextarea
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  placeholder="Enter description..."
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -120,7 +122,11 @@ export function NewExperimentForm() {
             <FormItem>
               <FormLabel>Embargo interval days</FormLabel>
               <FormControl>
-                <Input type="number" {...field} />
+                <Input
+                  type="number"
+                  {...field}
+                  onChange={(event) => field.onChange(+event.target.value)}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

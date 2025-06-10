@@ -312,3 +312,48 @@ module "aurora_db" {
   backup_retention_period  = 3    # Reduced retention for dev
   skip_final_snapshot      = true # Skip snapshot on deletion in dev
 }
+
+# OpenNext Next.js Application Infrastructure
+module "opennext" {
+  source = "../../modules/opennext"
+
+  project_name = var.opennext_project_name
+  environment  = var.opennext_environment
+  region       = var.aws_region
+
+  # Domain configuration
+  domain_name     = var.opennext_domain_name
+  subdomain       = var.opennext_subdomain
+  certificate_arn = var.opennext_certificate_arn
+  hosted_zone_id  = var.opennext_hosted_zone_id
+
+  # Performance configuration
+  enable_lambda_warming = var.opennext_enable_warming
+  price_class           = var.opennext_price_class
+
+  # Monitoring configuration
+  enable_cloudwatch_logs = true
+  log_retention_days     = 14
+  enable_xray_tracing    = false
+
+  # Resource configuration
+  server_memory_size     = 1024
+  image_memory_size      = 1536
+  revalidate_memory_size = 512
+  warmer_memory_size     = 512
+
+  # DynamoDB configuration
+  dynamodb_billing_mode         = "PAY_PER_REQUEST"
+  enable_point_in_time_recovery = true
+
+  # SQS configuration
+  enable_dlq        = true
+  max_receive_count = 3
+
+  tags = {
+    Project     = "open-jii"
+    Environment = "dev"
+    Component   = "nextjs-app"
+    ManagedBy   = "terraform"
+  }
+}

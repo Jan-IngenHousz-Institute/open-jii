@@ -57,7 +57,8 @@
       ],
       "expo-web-browser",
       "expo-router",
-      "expo-font"
+      "expo-font",
+      "expo-web-browser"
     ],
     "extra": {
       "expo-router": {

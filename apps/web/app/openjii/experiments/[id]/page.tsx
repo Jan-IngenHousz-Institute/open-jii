@@ -10,9 +10,9 @@ import {
   Card,
   CardHeader,
   CardTitle,
-  CardDescription,
   CardContent,
   Badge,
+  RichTextRenderer,
 } from "@repo/ui/components";
 
 interface ExperimentOverviewPageProps {
@@ -59,12 +59,7 @@ export default function ExperimentOverviewPage({
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="text-2xl">{experiment.name}</CardTitle>
-              <CardDescription>
-                {experiment.description ?? "No description provided"}
-              </CardDescription>
-            </div>
+            <CardTitle className="text-2xl">{experiment.name}</CardTitle>
             <div className="flex items-center gap-2">
               {getStatusBadge(experiment.status)}
               <Badge variant="outline" className="ml-2 capitalize">
@@ -104,6 +99,12 @@ export default function ExperimentOverviewPage({
               <p className="truncate font-mono text-xs">{experiment.id}</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>Experiment Description</CardHeader>
+        <CardContent>
+          <RichTextRenderer content={experiment.description ?? ""} />
         </CardContent>
       </Card>
     </div>

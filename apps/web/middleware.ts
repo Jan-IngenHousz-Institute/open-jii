@@ -4,12 +4,18 @@ import type { NextMiddleware } from "next/server";
 import { middleware } from "@repo/auth/next";
 
 export default middleware((request) => {
-  if (!request.auth) {
+  // Handle login page redirects - if user is logged in and trying to access login page
+  if (request.nextUrl.pathname === "/login" && request.auth) {
+    return NextResponse.redirect(new URL("/openjii", request.nextUrl.origin));
+  }
+
+  // Handle protected routes
+  if (request.nextUrl.pathname.startsWith("/openjii") && !request.auth) {
     const callbackUrl = encodeURIComponent(
       `${request.nextUrl.origin}${request.nextUrl.pathname}${request.nextUrl.search}`,
     );
     const newUrl = new URL(
-      `/api/auth/signin?callbackUrl=${callbackUrl}`,
+      `/api/auth/signin?=${callbackUrl}`,
       request.nextUrl.origin,
     );
     return Response.redirect(newUrl);
@@ -24,5 +30,5 @@ export default middleware((request) => {
 }) as NextMiddleware;
 
 export const config = {
-  matcher: "/openjii/:path*",
+  matcher: ["/openjii/:path*", "/login"],
 };

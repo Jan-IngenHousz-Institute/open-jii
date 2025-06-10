@@ -1,8 +1,10 @@
 import { Breadcrumbs } from "@/components/app-breadcrumbs";
 import { AppSidebarWrapper } from "@/components/app-sidebar-wrapper";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import type React from "react";
 
+import { auth } from "@repo/auth/next";
 import {
   Separator,
   SidebarInset,
@@ -18,6 +20,20 @@ export default async function AppLayout({
   children: React.ReactNode;
   pageTitle?: string;
 }>) {
+  const session = await auth();
+
+  if (!session) {
+    // Get the current path from the 'x-current-path' header.
+    // This logic mirrors how `pathname` is fetched later in the provided code.
+    // It assumes `x-current-path` provides the necessary path information (path and query string).
+    const currentPathAndQuery = (await headers()).get("x-current-path") ?? "/";
+
+    const callbackUrl = encodeURIComponent(currentPathAndQuery);
+    redirect(`/api/auth/signin?callbackUrl=${callbackUrl}`);
+    // The redirect() function throws an error to stop rendering and initiate the redirect,
+    // so no 'return' statement is needed after it.
+  }
+
   const pathname = (await headers()).get("x-current-path") ?? "/";
 
   return (

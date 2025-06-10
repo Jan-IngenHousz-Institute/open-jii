@@ -158,7 +158,7 @@ export const experimentVisibilityEnum = pgEnum("experiment_visibility", [
 
 export const experiments = pgTable("experiments", {
   id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 64 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull().unique(),
   description: text("description"),
   status: experimentStatusEnum("status").default("provisioning").notNull(),
   visibility: experimentVisibilityEnum("visibility")

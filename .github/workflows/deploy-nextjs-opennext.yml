@@ -1,0 +1,385 @@
+name: Deploy Next.js App with OpenNext
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "The deployment environment (dev, staging, prod)"
+        required: true
+        type: string
+
+jobs:
+  # Job 1: Build Next.js App with OpenNext
+  build-nextjs:
+    name: Build Next.js Application
+    runs-on: ubuntu-latest
+    outputs:
+      opennext_assets_uploaded: ${{ steps.upload-assets.outputs.uploaded }}
+      lambda_functions_updated: ${{ steps.update-lambdas.outputs.updated }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: |
+
+          # Install dependencies using pnpm with hoisted node linker
+          # This is because AWS lambdas (to which we are deploying the Next.js app)
+          # do not support symlinks, Read more at https://pnpm.io/settings#nodelinker
+
+          pnpm install --node-linker=hoisted --frozen-lockfile
+
+      - name: Build Next.js Application
+        env:
+          # Database config
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_ENV: ${{ inputs.environment }}
+
+          # Auth configuration
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          AUTH_URL: ${{ secrets.AUTH_URL }}
+          AUTH_GITHUB_ID: ${{ secrets.AUTH_GITHUB_ID }}
+          AUTH_GITHUB_SECRET: ${{ secrets.AUTH_GITHUB_SECRET }}
+        run: pnpm run build --filter=web
+
+      - name: Run OpenNext Build
+        run: cd apps/web && pnpm run opennext:build
+
+      - name: Upload OpenNext Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: opennext-build-${{ inputs.environment }}
+          path: apps/web/.open-next/
+          retention-days: 7
+
+  # Job 2: Deploy to AWS Infrastructure
+  deploy-opennext:
+    name: Deploy OpenNext to AWS
+    needs: build-nextjs
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Download OpenNext Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: opennext-build-${{ inputs.environment }}
+          path: .open-next/
+
+      - name: Check OpenNext Build Output
+        run: |
+          echo "=== OpenNext Build Structure ==="
+          find .open-next -type d -maxdepth 1 | sort
+
+          echo "=== Server Function Directory ==="
+          if [[ -d ".open-next/server-functions" ]]; then
+            find .open-next/server-functions -type d | sort
+          else
+            echo "No server functions directory found"
+          fi
+
+          echo "=== Image Optimization Function ==="
+          if [[ -d ".open-next/image-optimization-function" ]]; then
+            ls -la .open-next/image-optimization-function/
+          else
+            echo "No image optimization function directory found"
+          fi
+
+          echo "=== Revalidation Function ==="
+          if [[ -d ".open-next/revalidation-function" ]]; then
+            ls -la .open-next/revalidation-function/
+          else
+            echo "No revalidation function directory found"
+          fi
+
+          echo "=== Warmer Function ==="
+          if [[ -d ".open-next/warmer-function" ]]; then
+            ls -la .open-next/warmer-function/
+          else
+            echo "No warmer function directory found"
+          fi
+
+          echo "=== DynamoDB Provider Function ==="
+          if [[ -d ".open-next/dynamodb-provider" ]]; then
+            ls -la .open-next/dynamodb-provider/
+          else
+            echo "No dynamodb provider directory found"
+          fi
+
+          echo "=== Assets Directory ==="
+          if [[ -d ".open-next/assets" ]]; then
+            ls -la .open-next/assets/
+          else
+            echo "No assets directory found"
+          fi
+
+          echo "=== Cache Directory ==="
+          if [[ -d ".open-next/cache" ]]; then
+            ls -la .open-next/cache/
+          else
+            echo "No cache directory found"
+          fi
+
+          echo "=== OpenNext Output JSON ==="
+          if [[ -f ".open-next/open-next.output.json" ]]; then
+            cat .open-next/open-next.output.json
+          else
+            echo "No OpenNext output JSON found"
+          fi
+
+      - name: Download Infrastructure Outputs
+        uses: actions/download-artifact@v4
+        with:
+          name: tofu-outputs-${{ inputs.environment }}
+          path: tofu-outputs/
+
+      - name: Get Infrastructure Outputs
+        id: infra-outputs
+        run: |
+          # Load infrastructure outputs from artifact
+          OUTPUTS_FILE="tofu-outputs/infrastructure-outputs-${{ inputs.environment }}.json"
+
+          if [[ ! -f "$OUTPUTS_FILE" ]]; then
+            echo "Error: Infrastructure outputs file not found: $OUTPUTS_FILE"
+            echo "Available files:"
+            find tofu-outputs -type f
+            exit 1
+          fi
+
+          echo "Loading infrastructure outputs from: $OUTPUTS_FILE"
+          # Note: File contents not displayed for security - contains AWS resource names
+
+          # Extract values from JSON
+          ASSETS_BUCKET=$(jq -r '.assets_bucket // ""' "$OUTPUTS_FILE")
+          CACHE_BUCKET=$(jq -r '.cache_bucket // ""' "$OUTPUTS_FILE")
+          SERVER_FUNCTION=$(jq -r '.server_function // ""' "$OUTPUTS_FILE")
+          IMAGE_FUNCTION=$(jq -r '.image_function // ""' "$OUTPUTS_FILE")
+          REVALIDATION_FUNCTION=$(jq -r '.revalidation_function // ""' "$OUTPUTS_FILE")
+          WARMER_FUNCTION=$(jq -r '.warmer_function // ""' "$OUTPUTS_FILE")
+          DYNAMODB_TABLE=$(jq -r '.dynamodb_table // ""' "$OUTPUTS_FILE")
+          CLOUDFRONT_DISTRIBUTION_ID=$(jq -r '.cloudfront_distribution_id // ""' "$OUTPUTS_FILE")
+
+          # Set outputs for use in next steps
+          {
+            echo "assets_bucket=${ASSETS_BUCKET}"
+            echo "cache_bucket=${CACHE_BUCKET}"
+            echo "server_function=${SERVER_FUNCTION}"
+            echo "image_function=${IMAGE_FUNCTION}"
+            echo "revalidation_function=${REVALIDATION_FUNCTION}"
+            echo "warmer_function=${WARMER_FUNCTION}"
+            echo "dynamodb_table=${DYNAMODB_TABLE}"
+            echo "cloudfront_distribution_id=${CLOUDFRONT_DISTRIBUTION_ID}"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Successfully loaded infrastructure outputs for environment: ${{ inputs.environment }}"
+
+      - name: Upload Static Assets and Cache to S3
+        id: upload-assets
+        run: |
+          UPLOADED=false
+
+          # Upload assets to S3
+          if [[ -d ".open-next/assets" ]]; then
+            echo "Uploading static assets to S3..."
+            
+            # Upload assets with appropriate cache headers
+            aws s3 sync .open-next/assets/ "s3://${{ steps.infra-outputs.outputs.assets_bucket }}/" \
+              --delete \
+              --exact-timestamps \
+              --cache-control "public, max-age=31536000, immutable" \
+              --metadata-directive REPLACE \
+              --quiet
+            
+            # Upload Next.js static files with specific cache headers
+            if [[ -d ".open-next/assets/_next/static" ]]; then
+              aws s3 sync .open-next/assets/_next/static/ "s3://${{ steps.infra-outputs.outputs.assets_bucket }}/_next/static/" \
+                --cache-control "public, max-age=31536000, immutable" \
+                --metadata-directive REPLACE \
+                --quiet
+            fi
+            
+            # Upload other static files with shorter cache
+            aws s3 sync .open-next/assets/ "s3://${{ steps.infra-outputs.outputs.assets_bucket }}/" \
+              --exclude "_next/static/*" \
+              --cache-control "public, max-age=3600" \
+              --metadata-directive REPLACE \
+              --quiet
+            
+            UPLOADED=true
+          else
+            echo "No assets directory found in OpenNext build"
+          fi
+
+          # Upload cache to S3
+          if [[ -d ".open-next/cache" && -n "${{ steps.infra-outputs.outputs.cache_bucket }}" ]]; then
+            echo "Uploading cache to S3..."
+            
+            # Upload cache with appropriate headers
+            aws s3 sync .open-next/cache/ "s3://${{ steps.infra-outputs.outputs.cache_bucket }}/" \
+              --exact-timestamps \
+              --quiet
+            
+            UPLOADED=true
+          else
+            echo "No cache directory found in OpenNext build or no cache bucket configured"
+          fi
+
+          echo "uploaded=${UPLOADED}" >> "$GITHUB_OUTPUT"
+
+      - name: Update Lambda Functions
+        id: update-lambdas
+        run: |
+          echo "Updating Lambda functions..."
+
+          # Create temporary directory for zip files using absolute path
+          LAMBDA_PKG_DIR="$PWD/.lambda-packages"
+          mkdir -p "$LAMBDA_PKG_DIR"
+
+          # Update Server Lambda Function
+          if [[ -d ".open-next/server-functions/default" && -n "${{ steps.infra-outputs.outputs.server_function }}" ]]; then
+            echo "Creating zip package for server function..."
+            SERVER_ZIP="$LAMBDA_PKG_DIR/server-function.zip"
+            (cd .open-next/server-functions/default && zip -r "$SERVER_ZIP" .)
+            if [[ -f "$SERVER_ZIP" ]]; then
+              echo "Updating server function: ${{ steps.infra-outputs.outputs.server_function }}"
+              aws lambda update-function-code \
+                --function-name "${{ steps.infra-outputs.outputs.server_function }}" \
+                --zip-file "fileb://$SERVER_ZIP" \
+                --output json >/dev/null
+              aws lambda wait function-updated \
+                --function-name "${{ steps.infra-outputs.outputs.server_function }}" 2>/dev/null
+            else
+              echo "Failed to create server function zip package" >&2
+            fi
+          fi
+
+          # Update Image Optimization Lambda Function
+          if [[ -d ".open-next/image-optimization-function" && -n "${{ steps.infra-outputs.outputs.image_function }}" ]]; then
+            echo "Creating zip package for image optimization function..."
+            IMAGE_ZIP="$LAMBDA_PKG_DIR/image-function.zip"
+            (cd .open-next/image-optimization-function && zip -r "$IMAGE_ZIP" .)
+            if [[ -f "$IMAGE_ZIP" ]]; then
+              echo "Updating image optimization function: ${{ steps.infra-outputs.outputs.image_function }}"
+              aws lambda update-function-code \
+                --function-name "${{ steps.infra-outputs.outputs.image_function }}" \
+                --zip-file "fileb://$IMAGE_ZIP" \
+                --output json >/dev/null
+              aws lambda wait function-updated \
+                --function-name "${{ steps.infra-outputs.outputs.image_function }}" 2>/dev/null
+            else
+              echo "Failed to create image optimization function zip package" >&2
+            fi
+          fi
+
+          # Update Revalidation Lambda Function (if exists)
+          if [[ -d ".open-next/revalidation-function" && -n "${{ steps.infra-outputs.outputs.revalidation_function }}" ]]; then
+            echo "Creating zip package for revalidation function..."
+            REVALIDATION_ZIP="$LAMBDA_PKG_DIR/revalidation-function.zip"
+            (cd .open-next/revalidation-function && zip -r "$REVALIDATION_ZIP" .)
+            if [[ -f "$REVALIDATION_ZIP" ]]; then
+              echo "Updating revalidation function: ${{ steps.infra-outputs.outputs.revalidation_function }}"
+              aws lambda update-function-code \
+                --function-name "${{ steps.infra-outputs.outputs.revalidation_function }}" \
+                --zip-file "fileb://$REVALIDATION_ZIP" \
+                --output json >/dev/null
+              aws lambda wait function-updated \
+                --function-name "${{ steps.infra-outputs.outputs.revalidation_function }}" 2>/dev/null
+            else
+              echo "Failed to create revalidation function zip package" >&2
+            fi
+          fi
+
+          # Optional: Update Warmer Lambda Function (if exists)
+          if [[ -d ".open-next/warmer-function" && -n "${{ steps.infra-outputs.outputs.warmer_function }}" ]]; then
+            echo "Creating zip package for warmer function..."
+            WARMER_ZIP="$LAMBDA_PKG_DIR/warmer-function.zip"
+            (cd .open-next/warmer-function && zip -r "$WARMER_ZIP" .)
+            if [[ -f "$WARMER_ZIP" ]]; then
+              echo "Updating warmer function: ${{ steps.infra-outputs.outputs.warmer_function }}"
+              aws lambda update-function-code \
+                --function-name "${{ steps.infra-outputs.outputs.warmer_function }}" \
+                --zip-file "fileb://$WARMER_ZIP" \
+                --output json >/dev/null
+              aws lambda wait function-updated \
+                --function-name "${{ steps.infra-outputs.outputs.warmer_function }}" 2>/dev/null
+            else
+              echo "Failed to create warmer function zip package" >&2
+            fi
+          fi
+
+          # Clean up zip packages after deployment
+          if [[ -d "$LAMBDA_PKG_DIR" ]]; then
+            echo "Cleaning up temporary zip packages..."
+            rm -rf "$LAMBDA_PKG_DIR"
+          fi
+
+          echo "updated=true" >> "$GITHUB_OUTPUT"
+
+      - name: Invalidate CloudFront Distribution
+        if: steps.upload-assets.outputs.uploaded == 'true'
+        run: |
+          if [[ -n "${{ steps.infra-outputs.outputs.cloudfront_distribution_id }}" ]]; then
+            echo "Creating CloudFront invalidation..."
+            INVALIDATION_ID=$(aws cloudfront create-invalidation \
+              --distribution-id "${{ steps.infra-outputs.outputs.cloudfront_distribution_id }}" \
+              --paths "/*" \
+              --query 'Invalidation.Id' \
+              --output text 2>/dev/null)
+            
+            echo "CloudFront invalidation created: ${INVALIDATION_ID}"
+            echo "Waiting for invalidation to complete..."
+            
+            # Wait for invalidation to complete (optional, can be removed for faster deployments)
+            aws cloudfront wait invalidation-completed \
+              --distribution-id "${{ steps.infra-outputs.outputs.cloudfront_distribution_id }}" \
+              --id "${INVALIDATION_ID}" 2>/dev/null
+            
+            echo "CloudFront invalidation completed"
+          else
+            echo "No CloudFront distribution ID found, skipping invalidation"
+          fi
+
+      - name: Deployment Summary
+        run: |
+          echo "=== OpenNext Deployment Summary ==="
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Assets Uploaded: ${{ steps.upload-assets.outputs.uploaded }}"
+          echo "Lambda Functions Updated: ${{ steps.update-lambdas.outputs.updated }}"
+
+          if [[ -n "${{ steps.infra-outputs.outputs.cloudfront_distribution_id }}" ]]; then
+            echo "CloudFront Distribution: ${{ steps.infra-outputs.outputs.cloudfront_distribution_id }}"
+            
+            # Get CloudFront domain name
+            DOMAIN_NAME=$(aws cloudfront get-distribution \
+              --id "${{ steps.infra-outputs.outputs.cloudfront_distribution_id }}" \
+              --query 'Distribution.DomainName' \
+              --output text 2>/dev/null || echo "")
+            
+            if [[ -n "${DOMAIN_NAME}" ]]; then
+              echo "Application URL: https://${DOMAIN_NAME}"
+            fi
+          fi
+
+          echo "=== Deployment completed successfully! ==="
