@@ -23,7 +23,6 @@ export class ExperimentMemberRepository {
       return this.database
         .select({
           experimentId: experimentMembers.experimentId,
-          userId: experimentMembers.userId,
           role: experimentMembers.role,
           joinedAt: experimentMembers.joinedAt,
           user: {
@@ -53,7 +52,6 @@ export class ExperimentMemberRepository {
       const result = await this.database
         .select({
           experimentId: experimentMembers.experimentId,
-          userId: experimentMembers.userId,
           role: experimentMembers.role,
           joinedAt: experimentMembers.joinedAt,
           user: {
