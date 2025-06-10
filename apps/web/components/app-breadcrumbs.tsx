@@ -18,7 +18,7 @@ interface BreadcrumbsProps {
 
 // Translation key mapping for breadcrumb items
 const BREADCRUMB_TRANSLATIONS: Record<string, string> = {
-  platform: "Platform",
+  platform: "breadcrumbs.platform",
   experiments: "breadcrumbs.experiments",
   new: "breadcrumbs.new",
   edit: "breadcrumbs.edit",
