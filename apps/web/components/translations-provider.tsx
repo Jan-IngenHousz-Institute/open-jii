@@ -1,29 +1,51 @@
 "use client";
 
-import { useLocale } from "@/hooks/useLocale";
-import { use } from "react";
+import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { I18nextProvider } from "react-i18next";
+import { initReactI18next } from "react-i18next/initReactI18next";
 
-import { initTranslations } from "@repo/i18n";
-import type { InitTranslationsProps } from "@repo/i18n";
+import { createInstance } from "@repo/i18n";
+import type { InitTranslationsProps, Locale } from "@repo/i18n";
+import { fallbackLng, fallbackNS, i18nConfig } from "@repo/i18n/config";
 
 interface TranslationsProviderProps {
   children: ReactNode;
+  locale: Locale;
   namespaces?: InitTranslationsProps["namespaces"];
+  resources?: InitTranslationsProps["resources"];
 }
 
 export function TranslationsProvider({
   children,
-  namespaces,
+  locale,
+  namespaces = ["common"],
+  resources,
 }: TranslationsProviderProps) {
-  const locale = useLocale();
-  const { i18n } = use(
-    initTranslations({
-      locale,
-      namespaces,
-    }),
-  );
+  const i18nInstance = useMemo(() => {
+    const instance = createInstance();
+    instance.use(initReactI18next);
 
-  return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
+    // Since we have resources from the server, we can initialize synchronously
+    instance.init({
+      lng: locale,
+      resources,
+      fallbackLng,
+      supportedLngs: i18nConfig.locales,
+      defaultNS: namespaces[0],
+      fallbackNS,
+      ns: namespaces,
+      preload: [],
+      interpolation: {
+        escapeValue: false, // React already does escaping
+      },
+      react: {
+        useSuspense: false, // Important for SSR
+      },
+    });
+
+    return instance;
+  }, [locale, namespaces, resources]);
+
+  return <I18nextProvider i18n={i18nInstance}>{children}</I18nextProvider>;
 }

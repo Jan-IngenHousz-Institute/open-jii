@@ -1,6 +1,5 @@
 "use client";
 
-import { useLocale } from "@/hooks/useLocale";
 import {
   Archive,
   FileSliders,
@@ -12,7 +11,7 @@ import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
 
-import { useTranslation } from "@repo/i18n";
+import type { Locale } from "@repo/i18n";
 import {
   Sidebar,
   SidebarContent,
@@ -33,87 +32,61 @@ interface UserData {
   image?: string | null;
 }
 
+interface NavigationItem {
+  title: string;
+  url: string;
+  icon: string;
+  isActive?: boolean;
+  items: {
+    title: string;
+    url: string;
+  }[];
+}
+
+interface NavigationData {
+  navExperiments: NavigationItem[];
+  navHardware: NavigationItem[];
+}
+
+interface Translations {
+  openJII: string;
+  logoAlt: string;
+  signIn: string;
+  experimentsTitle: string;
+  hardwareTitle: string;
+}
+
+// Icon mapping for string-based icons
+const iconMap = {
+  Microscope,
+  Archive,
+  Webcam,
+  FileSliders,
+  RadioReceiver,
+} as const;
+
 export function AppSidebar({
   user,
+  locale,
+  navigationData,
+  translations,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   user?: UserData | null;
+  locale: Locale;
+  navigationData: NavigationData;
+  translations: Translations;
 }) {
-  const { t } = useTranslation(undefined, "navigation");
-  const { t: tAuth } = useTranslation(undefined, "common");
-  const locale = useLocale();
+  // Convert string-based icons to actual icon components
+  const processedNavExperiments = navigationData.navExperiments.map((item) => ({
+    ...item,
+    icon: iconMap[item.icon as keyof typeof iconMap],
+  }));
 
-  // Navigation data with translations
-  const data = {
-    navExperiments: [
-      {
-        title: t("sidebar.experiments"),
-        url: "#",
-        icon: Microscope,
-        isActive: true,
-        items: [
-          {
-            title: t("sidebar.newExperiment"),
-            url: `/${locale}/platform/experiments/new`,
-          },
-          {
-            title: t("sidebar.overview"),
-            url: `/${locale}/platform/experiments`,
-          },
-        ],
-      },
-      {
-        title: t("sidebar.archive"),
-        url: "#",
-        icon: Archive,
-        items: [
-          {
-            title: t("sidebar.public"),
-            url: "#",
-          },
-          {
-            title: t("sidebar.private"),
-            url: "#",
-          },
-        ],
-      },
-    ],
-    navHardware: [
-      {
-        title: t("sidebar.sensors"),
-        url: "#",
-        icon: Webcam,
-        items: [
-          {
-            title: t("sidebar.multispeq"),
-            url: "#",
-          },
-        ],
-      },
-      {
-        title: t("sidebar.protocols"),
-        url: "#",
-        icon: FileSliders,
-        items: [
-          {
-            title: t("sidebar.protocol1"),
-            url: "#",
-          },
-        ],
-      },
-      {
-        title: t("sidebar.otherDevices"),
-        url: "#",
-        icon: RadioReceiver,
-        items: [
-          {
-            title: t("sidebar.otherDevice1"),
-            url: "#",
-          },
-        ],
-      },
-    ],
-  };
+  const processedNavHardware = navigationData.navHardware.map((item) => ({
+    ...item,
+    icon: iconMap[item.icon as keyof typeof iconMap],
+  }));
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -127,12 +100,12 @@ export function AppSidebar({
               <Link href={`/${locale}/platform/`}>
                 <Image
                   src="/logo.png"
-                  alt={t("common.logo")}
+                  alt={translations.logoAlt}
                   width={50}
                   height={50}
                 />
                 <span className="text-base font-semibold">
-                  {t("navigation.openJII")}
+                  {translations.openJII}
                 </span>
               </Link>
             </SidebarMenuButton>
@@ -141,10 +114,13 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <NavItems
-          items={data.navExperiments}
-          title={t("sidebar.experiments")}
+          items={processedNavExperiments}
+          title={translations.experimentsTitle}
         />
-        <NavItems items={data.navHardware} title={t("sidebar.hardware")} />
+        <NavItems
+          items={processedNavHardware}
+          title={translations.hardwareTitle}
+        />
       </SidebarContent>
       <SidebarFooter>
         {user ? (
@@ -164,7 +140,7 @@ export function AppSidebar({
               >
                 <Link href={`/${locale}/`}>
                   <span className="text-base font-semibold">
-                    {tAuth("signIn")}
+                    {translations.signIn}
                   </span>
                 </Link>
               </SidebarMenuButton>
