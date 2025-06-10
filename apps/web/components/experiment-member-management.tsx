@@ -63,7 +63,7 @@ export function ExperimentMemberManagement({
   const availableUsers = useMemo(() => {
     if (userSearchData?.body && Array.isArray(userSearchData.body)) {
       return userSearchData.body.filter(
-        (user) => !members.some((m) => m.userId === user.id),
+        (user) => !members.some((m) => m.user.id === user.id),
       );
     }
     return [];
@@ -130,17 +130,27 @@ export function ExperimentMemberManagement({
       </Card>
     );
   }
-
-  // Helper to get user info from available users or provide default values
-  const getUserInfo = (userId: string): User => {
-    // First try to find the user in the available users list
-    const foundUser = availableUsers.find((u) => u.id === userId);
-    if (foundUser) return foundUser;
-
-    // If not found, return a default user object with the ID
+  // Helper to get user info from member.user if present, then availableUsers, then fallback to user.id
+  const getUserInfo = (member: {
+    user: { id: string; name?: string | null; email?: string | null };
+  }): User => {
+    if (typeof member.user.name === "string") {
+      return {
+        id: member.user.id,
+        name: member.user.name,
+        email: member.user.email ?? "",
+        emailVerified: null,
+        image: null,
+        createdAt: "",
+      };
+    }
+    const foundUser = availableUsers.find((u) => u.id === member.user.id);
+    if (foundUser) {
+      return foundUser;
+    }
     return {
-      id: userId,
-      name: userId,
+      id: member.user.id,
+      name: "Loading user info...",
       email: "",
       emailVerified: null,
       image: null,
@@ -176,10 +186,7 @@ export function ExperimentMemberManagement({
           <MemberList
             membersWithUserInfo={members.map((member) => ({
               ...member,
-              user: {
-                name: getUserInfo(member.userId).name,
-                email: getUserInfo(member.userId).email,
-              },
+              user: getUserInfo(member),
             }))}
             formatDate={formatDate}
             onRemoveMember={handleRemoveMember}
