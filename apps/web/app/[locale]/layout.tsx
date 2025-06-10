@@ -51,12 +51,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function LocaleLayout({
-  children,
-  params,
-}: LocaleLayoutProps) {
-  const { locale } = await params;
-
+export default function LocaleLayout({ children }: LocaleLayoutProps) {
   return (
     <html>
       <body
@@ -66,7 +61,7 @@ export default async function LocaleLayout({
           overpass.variable,
         )}
       >
-        <TranslationsProvider locale={locale} namespaces={i18nNamespaces}>
+        <TranslationsProvider namespaces={i18nNamespaces}>
           <QueryProvider>{children}</QueryProvider>
         </TranslationsProvider>
       </body>

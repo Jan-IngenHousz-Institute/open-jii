@@ -22,6 +22,7 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
     if (pathname.endsWith(`/experiments/${id}`)) return "overview";
     return "overview";
   };
+  const locale = pathname.split("/")[1]; // Extract locale from URL
 
   const activeTab = getActiveTab();
 
@@ -47,7 +48,7 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
             </Link>
           </TabsTrigger>
           <TabsTrigger value="settings" asChild>
-            <Link href={`/platform/experiments/${id}/settings`}>
+            <Link href={`${locale}/platform/experiments/${id}/settings`}>
               {t("navigation.settings")}
             </Link>
           </TabsTrigger>
