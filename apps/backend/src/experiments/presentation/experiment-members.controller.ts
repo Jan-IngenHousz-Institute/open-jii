@@ -13,6 +13,7 @@ import {
 } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { AddExperimentMemberUseCase } from "../application/use-cases/experiment-members/add-experiment-member";
+import { AddExperimentMembersUseCase } from "../application/use-cases/experiment-members/add-experiment-members";
 import { ListExperimentMembersUseCase } from "../application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "../application/use-cases/experiment-members/remove-experiment-member";
 
@@ -25,6 +26,7 @@ export class ExperimentMembersController {
     private readonly listExperimentMembersUseCase: ListExperimentMembersUseCase,
     private readonly addExperimentMemberUseCase: AddExperimentMemberUseCase,
     private readonly removeExperimentMemberUseCase: RemoveExperimentMemberUseCase,
+    private readonly addExperimentMembersUseCase: AddExperimentMembersUseCase, // <-- inject your use case
   ) {}
 
   @TsRestHandler(contract.experiments.listExperimentMembers)
@@ -77,6 +79,36 @@ export class ExperimentMembersController {
           return {
             status: StatusCodes.CREATED,
             body: formattedMember,
+          };
+        }
+
+        return handleFailure(result, this.logger);
+      },
+    );
+  }
+
+  @TsRestHandler(contract.experiments.addExperimentMembers)
+  addMembers(@CurrentUser() user: SessionUser) {
+    return tsRestHandler(
+      contract.experiments.addExperimentMembers,
+      async ({ params, body }) => {
+        const result = await this.addExperimentMembersUseCase.execute(
+          params.id,
+          body.members,
+          user.id,
+        );
+
+        if (result.isSuccess()) {
+          const members = result.value;
+          const formattedMembers = formatDatesList(members);
+
+          this.logger.log(
+            `Members [${body.members.map((m) => m.userId).join(", ")}] added to experiment ${params.id} by user ${user.id}`,
+          );
+
+          return {
+            status: StatusCodes.CREATED,
+            body: formattedMembers,
           };
         }
 

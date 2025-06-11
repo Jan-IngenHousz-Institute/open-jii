@@ -91,6 +91,15 @@ export const zCreateExperimentBody = z.object({
     .positive()
     .optional()
     .describe("Embargo period in days"),
+  members: z
+    .array(
+      z.object({
+        userId: z.string().uuid(),
+        role: zExperimentMemberRole.optional(),
+      }),
+    )
+    .optional()
+    .describe("Optional array of member objects with userId and role"),
 });
 
 export const zUpdateExperimentBody = z.object({
@@ -118,6 +127,18 @@ export const zAddExperimentMemberBody = z.object({
     .optional()
     .default("member")
     .describe("Role to assign to the new member"),
+});
+
+export const zAddExperimentMembersBody = z.object({
+  members: z.array(
+    z.object({
+      userId: z.string().uuid().describe("ID of the user to add as a member"),
+      role: zExperimentMemberRole
+        .optional()
+        .default("member")
+        .describe("Role to assign to the new member"),
+    }),
+  ),
 });
 
 export const zExperimentFilterQuery = z.object({

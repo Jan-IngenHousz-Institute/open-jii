@@ -60,17 +60,22 @@ describe("ExperimentMemberRepository", () => {
       assertSuccess(result);
       const members = result.value;
 
-      // Assert
+      // Assert length
       expect(members.length).toBe(3); // Creator + 2 added members
-      expect(members).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ userId: testUserId, role: "admin" }),
-          expect.objectContaining({ userId: memberId1, role: "member" }),
-          expect.objectContaining({ userId: memberId2, role: "admin" }),
-        ]),
-      );
 
-      // Additional assertions for name and email
+      // Assert all expected user IDs and roles are present
+      const memberMap = members.reduce<Record<string, string>>((acc, m) => {
+        acc[m.user.id] = m.role;
+        return acc;
+      }, {});
+
+      expect(memberMap).toMatchObject({
+        [testUserId]: "admin",
+        [memberId1]: "member",
+        [memberId2]: "admin",
+      });
+
+      // Assert user info for each member
       const member1 = members.find((m) => m.user.id === memberId1);
       expect(member1).toBeDefined();
       expect(member1?.user.name).toBe("Test1 User");
@@ -118,10 +123,15 @@ describe("ExperimentMemberRepository", () => {
         userId: testUserId,
       });
 
+      const dummyUser = {
+        name: "New Member",
+        email: "new-member@example.com",
+      };
+
       // Create a user to add as member
       const memberId = await testApp.createTestUser({
         email: "new-member@example.com",
-        name: "New Member",
+        name: dummyUser.name,
       });
 
       // Act
@@ -141,12 +151,13 @@ describe("ExperimentMemberRepository", () => {
       // Assert
       expect(member).toMatchObject({
         experimentId: experiment.id,
-        userId: memberId,
         role: "member",
+        user: {
+          id: memberId,
+          name: dummyUser.name,
+          email: dummyUser.email,
+        },
       });
-      // Assert name and email are present and correct
-      expect(member.user.name).toBe("New Member");
-      expect(member.user.email).toBe("new-member@example.com");
 
       // Verify member was added by checking the database
       const allMembersResult = await repository.getMembers(experiment.id);

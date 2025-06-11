@@ -82,13 +82,18 @@ export class CreateExperimentUseCase {
         );
 
         // Add the user as an admin member
-        const addMemberResult = await this.experimentMemberRepository.addMember(
-          experiment.id,
-          userId,
-          "admin",
-        );
+        const allMembers = [
+          { userId, role: "admin" as const },
+          ...(Array.isArray(data.members) ? data.members : []),
+        ];
 
-        return addMemberResult.chain(async () => {
+        const addMembersResult =
+          await this.experimentMemberRepository.addMembers(
+            experiment.id,
+            allMembers,
+          );
+
+        return addMembersResult.chain(async () => {
           this.logger.debug(
             `Triggering Databricks job for experiment ${experiment.id}`,
           );
