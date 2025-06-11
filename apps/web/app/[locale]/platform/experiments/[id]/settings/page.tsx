@@ -4,13 +4,13 @@ import type { Locale } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";
 
 interface ExperimentSettingsPageProps {
-  params: { id: string; locale: Locale };
+  params: Promise<{ id: string; locale: Locale }>;
 }
 
 export default async function ExperimentSettingsPage({
   params,
 }: ExperimentSettingsPageProps) {
-  const { id, locale } = params;
+  const { id, locale } = await params;
 
   const { t } = await initTranslations({
     locale,

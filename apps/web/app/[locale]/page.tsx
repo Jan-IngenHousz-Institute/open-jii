@@ -46,7 +46,7 @@ export default async function Home({ params }: HomePageProps) {
         <p>{t("jii.missionDescription")}</p>
       </div>
       <div className="p-6">
-        <Link href={`/${locale}/platform`}>
+        <Link href={`/platform`} locale={locale}>
           <Button>{t("jii.goToPlatform")}</Button>
         </Link>
       </div>

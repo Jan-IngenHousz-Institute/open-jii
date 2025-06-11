@@ -31,7 +31,7 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
         <h1 className="text-lg font-medium">{t("experiments.title")}</h1>
         <p>{t("experiments.listDescription")}</p>
       </div>
-      <Link href={`/${locale}/platform/experiments/new`}>
+      <Link href={`/platform/experiments/new`} locale={locale}>
         <Button variant="outline">{t("experiments.create")}</Button>
       </Link>
       <ListExperiments userId={userId ?? ""} />

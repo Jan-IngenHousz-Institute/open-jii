@@ -38,6 +38,7 @@
     "title": "Experimenten",
     "newExperiment": "Nieuw experiment",
     "overview": "Overzicht",
+    "data": "Gegevens",
     "create": "Experiment maken",
     "edit": "Experiment bewerken",
     "delete": "Experiment verwijderen",
@@ -53,7 +54,8 @@
     "settings": "Experiment instellingen",
     "settingsDescription": "Beheer instellingen en leden voor dit experiment.",
     "noDescription": "Geen beschrijving opgegeven",
-    "experimentId": "Experiment ID"
+    "experimentId": "Experiment ID",
+    "descriptionTitle": "Beschrijving"
   },
   "newExperiment": {
     "description": "Stel een nieuw experiment (project) in.",
@@ -163,5 +165,17 @@
     "new": "Nieuw",
     "edit": "Bewerken",
     "view": "Bekijken"
+  },
+  "experimentData": {
+    "title": "Experimentgegevens",
+    "dataSources": {
+      "title": "Gegevensbronnen"
+    },
+    "dataCollection": {
+      "title": "Gegevensverzameling"
+    },
+    "dataAnalysis": {
+      "title": "Gegevensanalyse"
+    }
   }
 }

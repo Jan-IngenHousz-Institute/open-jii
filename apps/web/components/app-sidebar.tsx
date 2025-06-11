@@ -97,7 +97,7 @@ export function AppSidebar({
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <Link href={`/${locale}/platform/`}>
+              <Link href={`/platform/`} locale={locale}>
                 <Image
                   src="/logo.png"
                   alt={translations.logoAlt}
@@ -138,7 +138,7 @@ export function AppSidebar({
                 asChild
                 className="data-[slot=sidebar-menu-button]:!p-1.5"
               >
-                <Link href={`/${locale}/`}>
+                <Link href="/" locale={locale}>
                   <span className="text-base font-semibold">
                     {translations.signIn}
                   </span>

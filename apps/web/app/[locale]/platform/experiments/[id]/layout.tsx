@@ -39,17 +39,17 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
       <Tabs value={activeTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview" asChild>
-            <Link href={`/platform/experiments/${id}`}>
+            <Link href={`/platform/experiments/${id}`} locale={locale}>
               {t("experiments.overview")}
             </Link>
           </TabsTrigger>
           <TabsTrigger value="data" asChild>
-            <Link href={`/platform/experiments/${id}/data`}>
+            <Link href={`/platform/experiments/${id}/data`} locale={locale}>
               {t("experiments.data")}
             </Link>
           </TabsTrigger>
           <TabsTrigger value="settings" asChild>
-            <Link href={`${locale}/platform/experiments/${id}/settings`}>
+            <Link href={`/platform/experiments/${id}/settings`} locale={locale}>
               {t("navigation.settings")}
             </Link>
           </TabsTrigger>

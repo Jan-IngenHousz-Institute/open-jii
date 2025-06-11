@@ -38,6 +38,7 @@
     "title": "Experiments",
     "newExperiment": "New Experiment",
     "overview": "Overview",
+    "data": "Data",
     "create": "Create Experiment",
     "edit": "Edit Experiment",
     "delete": "Delete Experiment",
@@ -53,7 +54,8 @@
     "settings": "Experiment Settings",
     "settingsDescription": "Manage settings and members for this experiment.",
     "noDescription": "No description provided",
-    "experimentId": "Experiment ID"
+    "experimentId": "Experiment ID",
+    "descriptionTitle": "Description"
   },
   "newExperiment": {
     "description": "Set up a new experiment (project).",
@@ -167,5 +169,17 @@
     "new": "New",
     "edit": "Edit",
     "view": "View"
+  },
+  "experimentData": {
+    "title": "Experiment Data",
+    "dataSources": {
+      "title": "Data Sources"
+    },
+    "dataCollection": {
+      "title": "Data Collection"
+    },
+    "dataAnalysis": {
+      "title": "Data Analysis"
+    }
   }
 }

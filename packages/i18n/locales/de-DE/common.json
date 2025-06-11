@@ -38,6 +38,7 @@
     "title": "Experimente",
     "newExperiment": "Neues Experiment",
     "overview": "Übersicht",
+    "data": "Daten",
     "create": "Experiment erstellen",
     "edit": "Experiment bearbeiten",
     "delete": "Experiment löschen",
@@ -53,7 +54,8 @@
     "settings": "Experimenteinstellungen",
     "settingsDescription": "Verwalten Sie Einstellungen und Mitglieder für dieses Experiment.",
     "noDescription": "Keine Beschreibung vorhanden",
-    "experimentId": "Experiment-ID"
+    "experimentId": "Experiment-ID",
+    "descriptionTitle": "Beschreibung"
   },
   "experimentSettings": {
     "loading": "Experimenteinstellungen werden geladen...",
@@ -165,5 +167,17 @@
     "new": "Neu",
     "edit": "Bearbeiten",
     "view": "Ansehen"
+  },
+  "experimentData": {
+    "title": "Experimentdaten",
+    "dataSources": {
+      "title": "Datenquellen"
+    },
+    "dataCollection": {
+      "title": "Datensammlung"
+    },
+    "dataAnalysis": {
+      "title": "Datenanalyse"
+    }
   }
 }
