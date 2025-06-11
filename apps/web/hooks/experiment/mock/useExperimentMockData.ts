@@ -131,6 +131,32 @@ const experimentData3 = {
   truncated: true,
 };
 
+const experimentData4 = {
+  columns: [
+    {
+      name: "field_id",
+      type_name: "string",
+      type_text: "Field identifier",
+    },
+    {
+      name: "crop_length",
+      type_name: "float",
+      type_text: "Crop length (mm)",
+    },
+  ],
+  rows: [],
+  totalRows: 0,
+  truncated: true,
+};
+
+for (let i = 1; i <= 100; i++) {
+  const row = [
+    `F${i}`,
+    (Math.random() * (0.1 - 20.02) + 20.02).toFixed(4).toString(),
+  ];
+  experimentData4.rows.push(row as never);
+}
+
 export const useExperimentMockData = (id: string) => {
   const [data, setData] = useState<ExperimentData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -147,6 +173,9 @@ export const useExperimentMockData = (id: string) => {
           break;
         case "3":
           setData(experimentData3);
+          break;
+        case "4":
+          setData(experimentData4);
           break;
       }
     }, 500);
