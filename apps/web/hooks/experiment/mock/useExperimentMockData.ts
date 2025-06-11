@@ -88,6 +88,7 @@ const experimentData2 = {
     ["F7", "Hereward", "0", "5.5", "10.5", "0"],
     ["F8", "Hereward", "120", "8.9", "13.2", "28.3"],
     ["F9", "Hereward", "240", "10.3", "15.4", "20.0"],
+    ["F10", "Test", "240", "10.3", null, "20.0"],
   ],
   totalRows: 36,
   truncated: true,
