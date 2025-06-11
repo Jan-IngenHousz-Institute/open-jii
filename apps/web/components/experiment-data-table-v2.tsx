@@ -1,7 +1,11 @@
 "use client";
 
 import { useExperimentMockData } from "@/hooks/experiment/mock/useExperimentMockData";
-import type { AccessorKeyColumnDef, ColumnDef } from "@tanstack/react-table";
+import type {
+  AccessorKeyColumnDef,
+  ColumnDef,
+  Row,
+} from "@tanstack/react-table";
 import {
   flexRender,
   getCoreRowModel,
@@ -19,6 +23,10 @@ import {
   TableRow,
 } from "@repo/ui/components";
 
+type DataRow = Record<string, string | number | boolean | null>;
+
+type MetaType = "number" | "text";
+
 function getColumnMetaType(type_name: string) {
   switch (type_name) {
     case "float":
@@ -28,15 +36,46 @@ function getColumnMetaType(type_name: string) {
   }
 }
 
+function getFormattedValue(
+  row: Row<unknown>,
+  columnName: string,
+  metaType: MetaType,
+) {
+  const value = row.getValue(columnName);
+  switch (metaType) {
+    case "number": {
+      return (
+        <div className="text-right font-medium">
+          <i>{value as number}</i>
+        </div>
+      );
+    }
+    default: {
+      return <div className="font-medium">{value as string}</div>;
+    }
+  }
+}
+
 function getReactTableColumns(data: ExperimentData) {
   const columnHelper = createColumnHelper();
   const columns: AccessorKeyColumnDef<unknown, never>[] = [];
   data.columns.forEach((column) => {
+    const metaType = getColumnMetaType(column.type_name);
     columns.push(
       columnHelper.accessor(column.name, {
         header: column.type_text,
         meta: {
-          type: getColumnMetaType(column.type_name),
+          type: metaType,
+        },
+        cell: ({ row }) => {
+          return getFormattedValue(row, column.name, metaType);
+          // const amount = parseFloat(row.getValue("amount"))
+          // const formatted = new Intl.NumberFormat("en-US", {
+          //   style: "currency",
+          //   currency: "USD",
+          // }).format(amount);
+          //
+          // return <div className="text-right font-medium">{formatted}</div>;
         },
       }),
     );
@@ -45,9 +84,9 @@ function getReactTableColumns(data: ExperimentData) {
 }
 
 function getReactTableData(data: ExperimentData) {
-  const newData: Record<string, string | number | boolean | null>[] = [];
+  const newData: DataRow[] = [];
   data.rows.forEach((row) => {
-    const dataRow: Record<string, string | number | boolean | null> = {};
+    const dataRow: DataRow = {};
     row.forEach((dataColumn, index) => {
       dataRow[data.columns[index].name] = dataColumn;
     });
@@ -109,7 +148,7 @@ function DataTable<TData, TValue>({
           ))}
         </TableHeader>
         <TableBody>
-          {table.getRowModel().rows?.length ? (
+          {table.getRowModel().rows.length ? (
             table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
