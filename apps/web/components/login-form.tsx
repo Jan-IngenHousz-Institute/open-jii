@@ -1,18 +1,23 @@
 import { redirect } from "next/navigation";
 
 import { AuthError, providerMap, signIn } from "@repo/auth/next";
-import { useTranslation } from "@repo/i18n";
+import type { Locale } from "@repo/i18n";
+import initTranslations from "@repo/i18n/server";
 import { Button } from "@repo/ui/components";
 
 const SIGNIN_ERROR_URL = "/error";
 
-export function LoginForm({
+export async function LoginForm({
   callbackUrl,
+  locale,
 }: {
   callbackUrl: string | undefined;
+  locale: Locale;
 }) {
-  const { t } = useTranslation(undefined, "common");
-
+  const { t } = await initTranslations({
+    locale,
+    namespaces: ["common"],
+  });
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-center gap-2 text-center">
