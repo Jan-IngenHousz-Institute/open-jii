@@ -1,0 +1,181 @@
+{
+  "common": {
+    "homepage": "Startpagina",
+    "language": "Taal",
+    "languageDrawer": "Taallade schakelen",
+    "regionalSettings": "Regionale instellingen",
+    "loading": "Laden...",
+    "error": "Fout",
+    "success": "Succes",
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "add": "Toevoegen",
+    "remove": "Verwijderen",
+    "confirm": "Bevestigen",
+    "close": "Sluiten",
+    "noVariant": "geen variant",
+    "destructive": "destructief",
+    "ghost": "ghost",
+    "link": "link",
+    "secondary": "secundair",
+    "outline": "omlijning",
+    "days": "dagen"
+  },
+  "navigation": {
+    "experiments": "Experimenten",
+    "archive": "Archief",
+    "devices": "Apparaten",
+    "settings": "Instellingen",
+    "dashboard": "Dashboard",
+    "profile": "Profiel",
+    "logout": "Uitloggen",
+    "home": "Home",
+    "openJII": "openJII"
+  },
+  "experiments": {
+    "title": "Experimenten",
+    "newExperiment": "Nieuw experiment",
+    "overview": "Overzicht",
+    "data": "Gegevens",
+    "create": "Experiment maken",
+    "edit": "Experiment bewerken",
+    "delete": "Experiment verwijderen",
+    "status": "Status",
+    "createdAt": "Aangemaakt op",
+    "updatedAt": "Bijgewerkt op",
+    "noExperiments": "Geen experimenten gevonden",
+    "experimentCreated": "Experiment succesvol aangemaakt",
+    "experimentUpdated": "Experiment succesvol bijgewerkt",
+    "experimentDeleted": "Experiment succesvol verwijderd",
+    "listDescription": "Deze pagina toont een lijst van bestaande experimenten.",
+    "experiment": "Experiment",
+    "settings": "Experiment instellingen",
+    "settingsDescription": "Beheer instellingen en leden voor dit experiment.",
+    "noDescription": "Geen beschrijving opgegeven",
+    "experimentId": "Experiment ID",
+    "descriptionTitle": "Beschrijving"
+  },
+  "newExperiment": {
+    "description": "Stel een nieuw experiment (project) in.",
+    "name": "Naam",
+    "description_field": "Beschrijving",
+    "visibility": "Zichtbaarheid",
+    "visibilityPlaceholder": "Selecteer een experiment zichtbaarheid",
+    "embargoIntervalDays": "Embargo interval dagen",
+    "cancel": "Annuleren",
+    "creating": "Aanmaken...",
+    "finalizeSetup": "Setup afronden"
+  },
+  "experimentSettings": {
+    "loading": "Experiment instellingen laden...",
+    "notFound": "Experiment niet gevonden",
+    "generalSettings": "Algemene instellingen",
+    "generalDescription": "Basisinformatie over het experiment",
+    "name": "Naam",
+    "description": "Beschrijving",
+    "visibility": "Zichtbaarheid",
+    "visibilityPlaceholder": "Selecteer zichtbaarheid",
+    "embargoIntervalDays": "Embargo interval dagen",
+    "dangerZone": "Gevarenzone",
+    "dangerDescription": "Verwijder dit experiment en al zijn gegevens",
+    "deleteExperiment": "Experiment verwijderen",
+    "deleteWarning": "Als je een experiment verwijdert, is er geen weg terug. Wees zeker.",
+    "delete": "Verwijderen",
+    "cancel": "Annuleren",
+    "confirmDelete": "Weet je het zeker? Typ",
+    "toConfirm": "om te bevestigen.",
+    "save": "Opslaan",
+    "saving": "Opslaan...",
+    "created": "Aangemaakt",
+    "updated": "Bijgewerkt",
+    "memberManagement": "Ledenbeheer",
+    "memberDescription": "Beheer experimentleden en -machtigingen"
+  },
+  "jii": {
+    "institute": "Jan IngenHousz Instituut",
+    "aboutDescription": "Verbetering van fotosynthese voor een duurzame toekomst",
+    "mission": "Onze missie",
+    "missionDescription": "Bij het Jan IngenHousz Instituut werken we aan het verbeteren van de fotosynthese, het fundamentele proces waarmee planten zonlicht omzetten in energie. Door dit proces te optimaliseren, kunnen we gewasopbrengsten verhogen en bijdragen aan voedselzekerheid wereldwijd.",
+    "goToPlatform": "Ga naar platform"
+  },
+  "auth": {
+    "signIn": "Inloggen",
+    "signOut": "Uitloggen",
+    "email": "E-mail",
+    "password": "Wachtwoord",
+    "forgotPassword": "Wachtwoord vergeten?",
+    "signInWithEmail": "Inloggen met e-mail",
+    "signInWithGoogle": "Inloggen met Google",
+    "signInWithGithub": "Inloggen met GitHub",
+    "noAccount": "Geen account?",
+    "createAccount": "Account aanmaken",
+    "errorMessage": "Er is een fout opgetreden bij het inloggen. Probeer het opnieuw.",
+    "login": "Inloggen",
+    "logout": "Uitloggen",
+    "rememberMe": "Onthoud mij",
+    "welcomeBack": "Welkom terug",
+    "loginSuccess": "Succesvol ingelogd",
+    "logoutSuccess": "Succesvol uitgelogd",
+    "invalidCredentials": "Ongeldige inloggegevens",
+    "loggedInAs": "Ingelogd als {{name}}",
+    "loginToAccount": "Log in op je account",
+    "continueWith": "Doorgaan met",
+    "loginWith": "Inloggen met {{provider}}"
+  },
+  "forms": {
+    "required": "Dit veld is verplicht",
+    "invalidEmail": "Voer een geldig e-mailadres in",
+    "passwordTooShort": "Wachtwoord moet minimaal 8 tekens bevatten",
+    "passwordMismatch": "Wachtwoorden komen niet overeen",
+    "name": "Naam",
+    "description": "Beschrijving",
+    "title": "Titel",
+    "submit": "Versturen",
+    "reset": "Herstellen"
+  },
+  "errors": {
+    "pageNotFound": "Pagina niet gevonden",
+    "pageNotFoundDescription": "Deze pagina lijkt niet te bestaan. <0>Klik hier</0> om naar de startpagina te gaan.",
+    "somethingWentWrong": "Er is iets misgegaan",
+    "tryAgain": "Probeer opnieuw",
+    "networkError": "Netwerkfout opgetreden",
+    "serverError": "Serverfout opgetreden",
+    "validationError": "Validatiefout",
+    "unauthorized": "Ongeautoriseerde toegang",
+    "forbidden": "Toegang verboden"
+  },
+  "footer": {
+    "aboutUs": "Over ons",
+    "description": "Het Jan IngenHousz Instituut is gespecialiseerd in de ontwikkeling van geavanceerde technologieën voor het verbeteren van fotosynthese en landbouwefficiëntie. We gebruiken geavanceerde technieken en algoritmes om intelligente systemen te creëren die onderzoekers kunnen helpen bij het automatiseren van taken, het verbeteren van de efficiëntie en het stimuleren van innovatie.",
+    "poweredBy": "Mogelijk gemaakt door"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welkom bij OpenJII",
+    "recentExperiments": "Recente experimenten",
+    "statistics": "Statistieken",
+    "quickActions": "Snelle acties"
+  },
+  "breadcrumbs": {
+    "home": "Home",
+    "platform": "Platform",
+    "experiments": "Experimenten",
+    "new": "Nieuw",
+    "edit": "Bewerken",
+    "view": "Bekijken"
+  },
+  "experimentData": {
+    "title": "Experimentgegevens",
+    "dataSources": {
+      "title": "Gegevensbronnen"
+    },
+    "dataCollection": {
+      "title": "Gegevensverzameling"
+    },
+    "dataAnalysis": {
+      "title": "Gegevensanalyse"
+    }
+  }
+}

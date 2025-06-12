@@ -1,5 +1,6 @@
 import { Trash2, Mail, Calendar } from "lucide-react";
 
+import { useTranslation } from "@repo/i18n";
 import { Button, Badge } from "@repo/ui/components";
 
 interface MemberWithUserInfo {
@@ -29,9 +30,13 @@ export function MemberList({
   removingMemberId,
   adminCount,
 }: MemberListProps) {
+  const { t } = useTranslation(undefined, "common");
+
   if (membersWithUserInfo.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">No members added yet</p>
+      <p className="text-muted-foreground text-sm">
+        {t("experimentSettings.noMembersYet")}
+      </p>
     );
   }
 
@@ -48,15 +53,15 @@ export function MemberList({
               <div className="flex min-w-0 flex-1">
                 <div className="flex min-w-0 flex-wrap items-center gap-x-2">
                   <h4 className="text-foreground truncate text-sm font-medium md:text-base">
-                    {member.user.name ?? "Unknown User"}
+                    {member.user.name ?? t("experimentSettings.unknownUser")}
                   </h4>
                   <span
                     className="flex min-w-0 items-center gap-x-1"
-                    title={member.user.email ?? "No email"}
+                    title={member.user.email ?? t("experimentSettings.noEmail")}
                   >
                     <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
                     <span className="text-muted-foreground truncate text-xs md:max-w-[200px] md:text-sm">
-                      {member.user.email ?? "No email"}
+                      {member.user.email ?? t("experimentSettings.noEmail")}
                     </span>
                   </span>
                 </div>
@@ -65,7 +70,7 @@ export function MemberList({
               <div className="text-muted-foreground flex items-center space-x-1 text-[11px] md:text-xs">
                 <Calendar className="relative top-[-1.5px] h-3 w-3 flex-shrink-0" />
                 <span className="whitespace-nowrap">
-                  Joined {formatDate(member.joinedAt)}
+                  {t("experimentSettings.joined")} {formatDate(member.joinedAt)}
                 </span>
               </div>
             </div>
@@ -83,7 +88,9 @@ export function MemberList({
                   isLastAdmin
                 }
                 title={
-                  isLastAdmin ? "Cannot remove the last admin" : "Remove member"
+                  isLastAdmin
+                    ? t("experimentSettings.cannotRemoveLastAdmin")
+                    : t("experimentSettings.removeMember")
                 }
                 className="hover:bg-destructive/10 h-8 w-8 p-0"
               >

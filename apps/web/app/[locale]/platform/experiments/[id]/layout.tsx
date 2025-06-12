@@ -1,8 +1,10 @@
 "use client";
 
+import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 
+import { useTranslation } from "@repo/i18n";
 import { Tabs, TabsList, TabsTrigger } from "@repo/ui/components";
 
 interface ExperimentLayoutProps {
@@ -12,6 +14,8 @@ interface ExperimentLayoutProps {
 export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   const pathname = usePathname();
   const { id } = useParams<{ id: string }>();
+  const { t } = useTranslation(undefined, "common");
+  const locale = useLocale();
 
   // Determine active tab from URL
   const getActiveTab = () => {
@@ -26,22 +30,28 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Experiment</h3>
+        <h3 className="text-lg font-medium">{t("experiments.experiment")}</h3>
         <p className="text-muted-foreground text-sm">
-          Manage your experiment settings, data, and configuration.
+          {t("experiments.manageExperimentDescription")}
         </p>
       </div>
 
       <Tabs value={activeTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview" asChild>
-            <Link href={`/openjii/experiments/${id}`}>Overview</Link>
+            <Link href={`/platform/experiments/${id}`} locale={locale}>
+              {t("experiments.overview")}
+            </Link>
           </TabsTrigger>
           <TabsTrigger value="data" asChild>
-            <Link href={`/openjii/experiments/${id}/data`}>Data</Link>
+            <Link href={`/platform/experiments/${id}/data`} locale={locale}>
+              {t("experiments.data")}
+            </Link>
           </TabsTrigger>
           <TabsTrigger value="settings" asChild>
-            <Link href={`/openjii/experiments/${id}/settings`}>Settings</Link>
+            <Link href={`/platform/experiments/${id}/settings`} locale={locale}>
+              {t("navigation.settings")}
+            </Link>
           </TabsTrigger>
         </TabsList>
 

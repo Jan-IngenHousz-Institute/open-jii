@@ -1,10 +1,12 @@
 import { Breadcrumbs } from "@/components/app-breadcrumbs";
 import { AppSidebarWrapper } from "@/components/app-sidebar-wrapper";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
 
 import { auth } from "@repo/auth/next";
+import type { Locale } from "@repo/i18n";
 import {
   Separator,
   SidebarInset,
@@ -16,10 +18,14 @@ import {
 export default async function AppLayout({
   children,
   pageTitle,
+  params,
 }: Readonly<{
   children: React.ReactNode;
   pageTitle?: string;
+  params: Promise<{ locale: string }>;
 }>) {
+  const { locale } = await params;
+  const typedLocale = locale as Locale;
   const session = await auth();
 
   if (!session) {
@@ -38,16 +44,29 @@ export default async function AppLayout({
 
   return (
     <SidebarProvider>
-      <AppSidebarWrapper />
+      <AppSidebarWrapper locale={typedLocale} />
       <SidebarInset>
         <header className="group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator
-              orientation="vertical"
-              className="mr-2 data-[orientation=vertical]:h-4"
-            />
-            <Breadcrumbs pathname={pathname} pageTitle={pageTitle} />
+          <div className="flex w-full items-center justify-between gap-2 px-4">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger className="-ml-1" />
+              <Separator
+                orientation="vertical"
+                className="mr-2 data-[orientation=vertical]:h-4"
+              />
+              <Breadcrumbs
+                pathname={pathname}
+                pageTitle={pageTitle}
+                locale={typedLocale}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Separator
+                orientation="vertical"
+                className="mr-2 data-[orientation=vertical]:h-4"
+              />
+              <LanguageSwitcher locale={typedLocale} />
+            </div>
           </div>
         </header>
         <main className="flex flex-1 flex-col p-4">{children}</main>

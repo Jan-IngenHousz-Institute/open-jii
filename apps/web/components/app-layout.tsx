@@ -19,6 +19,7 @@ export async function AppLayout({
   pageTitle?: string;
 }>) {
   const pathname = (await headers()).get("x-current-path") ?? "/";
+  const locale = pathname.split("/")[1] || "en-US"; // Default to 'en-US' if no locale is found
 
   return (
     <SidebarProvider>
@@ -31,7 +32,12 @@ export async function AppLayout({
               orientation="vertical"
               className="mr-2 data-[orientation=vertical]:h-4"
             />
-            <Breadcrumbs pathname={pathname} pageTitle={pageTitle} />
+            <Breadcrumbs
+              pathname={pathname}
+              pageTitle={pageTitle}
+              //@ts-expect-error string is not an accepted type for locale
+              locale={locale}
+            />
           </div>
         </header>
         <main className="flex flex-1 flex-col p-4">{children}</main>

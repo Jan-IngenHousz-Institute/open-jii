@@ -1,0 +1,185 @@
+{
+  "common": {
+    "homepage": "Homepage",
+    "language": "Language",
+    "languageDrawer": "Toggle language drawer",
+    "regionalSettings": "Regional Settings",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "remove": "Remove",
+    "confirm": "Confirm",
+    "close": "Close",
+    "noVariant": "no variant",
+    "destructive": "destructive",
+    "ghost": "ghost",
+    "link": "link",
+    "secondary": "secondary",
+    "outline": "outline",
+    "days": "days"
+  },
+  "navigation": {
+    "experiments": "Experiments",
+    "archive": "Archive",
+    "devices": "Devices",
+    "settings": "Settings",
+    "dashboard": "Dashboard",
+    "profile": "Profile",
+    "logout": "Logout",
+    "home": "Home",
+    "openJII": "openJII"
+  },
+  "experiments": {
+    "title": "Experiments",
+    "newExperiment": "New Experiment",
+    "overview": "Overview",
+    "data": "Data",
+    "create": "Create Experiment",
+    "edit": "Edit Experiment",
+    "delete": "Delete Experiment",
+    "status": "Status",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At",
+    "noExperiments": "No experiments found",
+    "experimentCreated": "Experiment created successfully",
+    "experimentUpdated": "Experiment updated successfully",
+    "experimentDeleted": "Experiment deleted successfully",
+    "listDescription": "This page will show a list of existing experiments.",
+    "experiment": "Experiment",
+    "settings": "Experiment Settings",
+    "settingsDescription": "Manage settings and members for this experiment.",
+    "noDescription": "No description provided",
+    "experimentId": "Experiment ID",
+    "descriptionTitle": "Description"
+  },
+  "newExperiment": {
+    "description": "Set up a new experiment (project).",
+    "name": "Name",
+    "description_field": "Description",
+    "visibility": "Visibility",
+    "visibilityPlaceholder": "Select an experiment visibility",
+    "embargoIntervalDays": "Embargo Interval Days",
+    "cancel": "Cancel",
+    "creating": "Creating...",
+    "finalizeSetup": "Finalize setup"
+  },
+
+  "experimentSettings": {
+    "loading": "Loading experiment settings...",
+    "notFound": "Experiment not found",
+    "generalSettings": "General Settings",
+    "generalDescription": "Basic information about the experiment",
+    "name": "Name",
+    "description": "Description",
+    "visibility": "Visibility",
+    "visibilityPlaceholder": "Select visibility",
+    "embargoIntervalDays": "Embargo Interval Days",
+    "dangerZone": "Danger Zone",
+    "dangerDescription": "Delete this experiment and all of its data",
+    "deleteExperiment": "Delete Experiment",
+    "deleteWarning": "Once you delete an experiment, there is no going back. Please be certain.",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "confirmDelete": "Are you sure? Please type",
+    "toConfirm": "to confirm.",
+    "save": "Save",
+    "saving": "Saving...",
+    "created": "Created",
+    "updated": "Updated",
+    "memberManagement": "Member Management",
+    "memberDescription": "Manage experiment members and permissions"
+  },
+
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome to OpenJII",
+    "recentExperiments": "Recent Experiments",
+    "statistics": "Statistics",
+    "quickActions": "Quick Actions"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot Password?",
+    "rememberMe": "Remember Me",
+    "signIn": "Sign in",
+    "signUp": "Sign Up",
+    "signOut": "Sign out",
+    "signOutServer": "Sign out (Server)",
+    "welcomeBack": "Welcome Back",
+    "loginSuccess": "Logged in successfully",
+    "logoutSuccess": "Logged out successfully",
+    "invalidCredentials": "Invalid credentials",
+    "loggedInAs": "Logged in as {{name}}",
+    "loginToAccount": "Login to your account",
+    "continueWith": "Continue with",
+    "loginWith": "Login with {{provider}}",
+    "signInWithEmail": "Sign in with email",
+    "signInWithGoogle": "Sign in with Google",
+    "signInWithGithub": "Sign in with GitHub",
+    "noAccount": "No account?",
+    "createAccount": "Create an account",
+    "errorMessage": "An error occurred during login. Please try again."
+  },
+  "forms": {
+    "required": "This field is required",
+    "invalidEmail": "Please enter a valid email address",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "passwordMismatch": "Passwords do not match",
+    "name": "Name",
+    "description": "Description",
+    "title": "Title",
+    "submit": "Submit",
+    "reset": "Reset"
+  },
+  "errors": {
+    "pageNotFound": "Page not found",
+    "pageNotFoundDescription": "This page doesn't seem to exist. <0>Click here</0> to go back to the homepage.",
+    "somethingWentWrong": "Something went wrong",
+    "tryAgain": "Try again",
+    "networkError": "Network error occurred",
+    "serverError": "Server error occurred",
+    "validationError": "Validation error",
+    "unauthorized": "Unauthorized access",
+    "forbidden": "Access forbidden"
+  },
+  "footer": {
+    "aboutUs": "About Us",
+    "description": "The Jan IngenHousz Institute specializes in the development of advanced technologies for improving photosynthesis and agricultural efficiency. We use cutting-edge techniques and algorithms to create intelligent systems that can help researchers automate tasks, improve efficiency, and drive innovation.",
+    "poweredBy": "Powered by"
+  },
+  "jii": {
+    "institute": "Jan IngenHousz Institute",
+    "mission": "Our Mission",
+    "missionDescription": "Improving photosynthesis is a big challenge: different processes in the plant limit photosynthesis under different conditions, and each of these processes is regulated by different sets of genes. The Jan IngenHousz Institute was founded specifically to meet these major challenges.",
+    "aboutDescription": "The world's population is growing, while the area of suitable agricultural land is shrinking and harvests are declining due to climate change. A breakthrough is urgently needed. To this end, JII-researchers are working to understand and improve the green engine of agriculture: photosynthesis.",
+    "goToPlatform": "Go to the openJII platform"
+  },
+  "breadcrumbs": {
+    "home": "Home",
+    "platform": "Platform",
+    "experiments": "Experiments",
+    "new": "New",
+    "edit": "Edit",
+    "view": "View"
+  },
+  "experimentData": {
+    "title": "Experiment Data",
+    "dataSources": {
+      "title": "Data Sources"
+    },
+    "dataCollection": {
+      "title": "Data Collection"
+    },
+    "dataAnalysis": {
+      "title": "Data Analysis"
+    }
+  }
+}
