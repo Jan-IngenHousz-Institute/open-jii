@@ -1,0 +1,1 @@
+ALTER TABLE "experiments" ALTER COLUMN "visibility" SET DEFAULT 'public';
