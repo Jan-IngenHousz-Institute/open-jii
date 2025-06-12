@@ -38,3 +38,37 @@ output "opennext_dynamodb_table_name" {
   description = "Name of the DynamoDB table for Next.js cache/revalidation"
   value       = module.opennext.dynamodb_table_name
 }
+
+# Database Migration Infrastructure Outputs
+output "migration_runner_ecr_repository_name" {
+  description = "ECR repository name for database migrations Docker images"
+  value       = module.migration_runner_ecr.repository_name
+}
+
+output "migration_runner_ecs_cluster_name" {
+  description = "ECS cluster name for running database migrations"
+  value       = module.migration_runner_ecs.ecs_cluster_name
+}
+
+output "migration_runner_task_definition_family" {
+  description = "Task definition family for database migrations"
+  value       = module.migration_runner_ecs.ecs_task_deifiniton_family
+}
+
+output "migration_runner_container_name" {
+  description = "Name of the primary container in the ECS task definition for migrations"
+  value       = module.migration_runner_ecs.container_name
+  sensitive   = true
+}
+
+output "migration_runner_subnets" {
+  description = "Subnet IDs for the database migration task"
+  value       = jsonencode(module.vpc.private_subnets)
+  sensitive   = true
+}
+
+output "migration_runner_security_group_id" {
+  description = "Security group ID for the database migration task"
+  value       = module.vpc.migration_task_security_group_id
+  sensitive   = true
+}

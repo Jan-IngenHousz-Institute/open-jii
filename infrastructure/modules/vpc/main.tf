@@ -49,44 +49,78 @@ resource "aws_security_group" "aurora_sg" {
   description = "Security group for Aurora DB"
   vpc_id      = aws_vpc.this.id
 
-  # Allow inbound traffic on the DB port (typically 5432 for PostgreSQL)
-  ingress {
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = [aws_vpc.this.cidr_block] # Restrict access to VPC only
-  }
-
-  # Restricted outbound traffic - only HTTPS for AWS services
-  egress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTPS for AWS services"
-  }
-
-  # DNS resolution
-  egress {
-    from_port   = 53
-    to_port     = 53
-    protocol    = "udp"
-    cidr_blocks = [aws_vpc.this.cidr_block]
-    description = "DNS resolution"
-  }
-
-  # DNS resolution over TCP (some resolvers use TCP)
-  egress {
-    from_port   = 53
-    to_port     = 53
-    protocol    = "tcp"
-    cidr_blocks = [aws_vpc.this.cidr_block]
-    description = "DNS resolution TCP"
-  }
 
   tags = {
     "Name" = "open-jii-aurora-sg-dev"
   }
+}
+
+# --------------------------
+# Migration Task Security Group
+# --------------------------
+resource "aws_security_group" "migration_task_sg" {
+  name        = "${var.environment}-migration-task-sg"
+  description = "Security group for database migration ECS tasks"
+  vpc_id      = aws_vpc.this.id
+
+  # Allow all outbound traffic
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    "Name"        = "${var.environment}-migration-task-sg"
+    "Environment" = var.environment
+  }
+}
+
+# Allow migration tasks to access Aurora database
+resource "aws_security_group_rule" "aurora_migration_ingress" {
+  type                     = "ingress"
+  from_port                = 5432
+  to_port                  = 5432
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.migration_task_sg.id
+  security_group_id        = aws_security_group.aurora_sg.id
+  description              = "Allow access from migration ECS tasks"
+}
+
+# -------------------------
+# Server Lambda Aurora Access Security Group
+# -------------------------
+resource "aws_security_group" "server_lambda_aurora" {
+  name        = "${var.environment}-opennext-server-sg"
+  description = "Security group allowing OpenNext server Lambda to access Aurora database"
+  vpc_id      = aws_vpc.this.id
+
+  # Allow all outbound traffic (required for Lambda to access AWS services and database)
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    "Name"        = "${var.environment}-opennext-server-sg"
+    "Environment" = var.environment
+  }
+}
+
+
+
+# Security group rule to allow server Lambda to access Aurora database
+resource "aws_security_group_rule" "server_lambda_to_aurora" {
+  type                     = "ingress"
+  from_port                = 5432
+  to_port                  = 5432
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.server_lambda_aurora.id
+  security_group_id        = aws_security_group.aurora_sg.id
+  description              = "Allow access from OpenNext server Lambda to Aurora database"
 }
 
 # ---------------
