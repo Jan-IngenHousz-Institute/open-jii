@@ -1,0 +1,40 @@
+{
+  "main": {
+    "experiments": "Experimenten",
+    "overview": "Overzicht",
+    "archive": "Archief",
+    "devices": "Apparaten",
+    "settings": "Instellingen",
+    "dashboard": "Dashboard",
+    "profile": "Profiel",
+    "home": "Home"
+  },
+  "sidebar": {
+    "newExperiment": "Nieuw experiment",
+    "overview": "Overzicht",
+    "archivedData": "Gearchiveerde gegevens",
+    "recentMeasurements": "Recente metingen",
+    "deviceConnections": "Apparaatverbindingen",
+    "multispectralCamera": "Multispectrale camera",
+    "protocol": "Protocol",
+    "configuration": "Configuratie",
+    "experiments": "Experimenten",
+    "hardware": "Hardware",
+    "archive": "Archief",
+    "public": "Openbaar",
+    "private": "Privé",
+    "sensors": "Sensoren",
+    "multispeq": "MultispeQ",
+    "protocols": "Protocollen",
+    "protocol1": "Protocol 1",
+    "otherDevices": "Andere apparaten",
+    "otherDevice1": "Ander apparaat 1"
+  },
+  "breadcrumbs": {
+    "home": "Home",
+    "experiments": "Experimenten",
+    "new": "Nieuw",
+    "edit": "Bewerken",
+    "view": "Bekijken"
+  }
+}

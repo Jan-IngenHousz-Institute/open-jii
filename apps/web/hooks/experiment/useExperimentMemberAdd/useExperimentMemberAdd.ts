@@ -23,8 +23,11 @@ export const useExperimentMemberAdd = () => {
 
       // Create an optimistic new member entry
       const optimisticMember: Partial<ExperimentMember> = {
-        // Use a temporary ID that will be replaced with the real one from the server
-        userId: variables.body.userId,
+        user: {
+          id: variables.body.userId,
+          name: null,
+          email: null,
+        },
         role: variables.body.role ?? "member",
         // Use current timestamp as an estimate
         joinedAt: new Date().toISOString(),

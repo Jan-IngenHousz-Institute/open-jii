@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
 import { editExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,6 +10,7 @@ import { useForm } from "react-hook-form";
 
 import type { Experiment } from "@repo/api";
 import { zExperimentVisibility } from "@repo/api";
+import { useTranslation } from "@repo/i18n";
 import {
   Button,
   Card,
@@ -43,13 +45,14 @@ interface ExperimentSettingsProps {
 
 export function ExperimentSettings({ experimentId }: ExperimentSettingsProps) {
   const { data, isLoading } = useExperiment(experimentId);
+  const { t } = useTranslation(undefined, "common");
 
   if (isLoading) {
-    return <div>Loading experiment settings...</div>;
+    return <div>{t("experimentSettings.loading")}</div>;
   }
 
   if (!data) {
-    return <div>Experiment not found</div>;
+    return <div>{t("experimentSettings.notFound")}</div>;
   }
 
   const experiment = data.body;
@@ -93,6 +96,7 @@ function ExperimentDetailsCard({
 }: ExperimentDetailsCardProps) {
   const { mutateAsync: updateExperiment, isPending: isUpdating } =
     useExperimentUpdate();
+  const { t } = useTranslation(undefined, "common");
 
   const form = useForm<{ name: string; description?: string }>({
     resolver: zodResolver(
@@ -109,15 +113,15 @@ function ExperimentDetailsCard({
       params: { id: experimentId },
       body: data,
     });
-    toast({ description: "Experiment details updated successfully" });
+    toast({ description: t("experiments.experimentUpdated") });
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Edit Experiment Details</CardTitle>
+        <CardTitle>{t("experimentSettings.generalSettings")}</CardTitle>
         <CardDescription>
-          Update the name and description of your experiment
+          {t("experimentSettings.generalDescription")}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -128,9 +132,12 @@ function ExperimentDetailsCard({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>{t("experimentSettings.name")}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Experiment name" />
+                    <Input
+                      {...field}
+                      placeholder={t("experimentSettings.name")}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -141,12 +148,12 @@ function ExperimentDetailsCard({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{t("experimentSettings.description")}</FormLabel>
                   <FormControl>
                     <RichTextarea
                       value={field.value ?? ""}
                       onChange={field.onChange}
-                      placeholder="Enter description..."
+                      placeholder={t("experimentSettings.description")}
                     />
                   </FormControl>
                   <FormMessage />
@@ -155,7 +162,9 @@ function ExperimentDetailsCard({
             />
             <div className="flex justify-end">
               <Button type="submit" disabled={isUpdating}>
-                {isUpdating ? "Updating..." : "Update Details"}
+                {isUpdating
+                  ? t("experimentSettings.saving")
+                  : t("experimentSettings.save")}
               </Button>
             </div>
           </form>
@@ -179,6 +188,7 @@ function ExperimentVisibilityCard({
 }: ExperimentVisibilityCardProps) {
   const { mutateAsync: updateExperiment, isPending: isUpdating } =
     useExperimentUpdate();
+  const { t } = useTranslation(undefined, "common");
 
   interface VisibilityFormValues {
     visibility?: "private" | "public";
@@ -219,15 +229,15 @@ function ExperimentVisibilityCard({
       params: { id: experimentId },
       body: updateData,
     });
-    toast({ description: "Visibility settings updated successfully" });
+    toast({ description: t("experiments.experimentUpdated") });
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Visibility Settings</CardTitle>
+        <CardTitle>{t("experimentSettings.visibility")}</CardTitle>
         <CardDescription>
-          Control your experiment's visibility and embargo period
+          {t("experimentSettings.generalDescription")}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -238,14 +248,18 @@ function ExperimentVisibilityCard({
               name="visibility"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Visibility</FormLabel>
+                  <FormLabel>{t("experimentSettings.visibility")}</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select visibility" />
+                        <SelectValue
+                          placeholder={t(
+                            "experimentSettings.visibilityPlaceholder",
+                          )}
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -270,7 +284,9 @@ function ExperimentVisibilityCard({
                 name="embargoIntervalDays"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Embargo Period (days)</FormLabel>
+                    <FormLabel>
+                      {t("experimentSettings.embargoIntervalDays")}
+                    </FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -287,7 +303,9 @@ function ExperimentVisibilityCard({
 
             <div className="flex justify-end">
               <Button type="submit" disabled={isUpdating}>
-                {isUpdating ? "Updating..." : "Update Visibility"}
+                {isUpdating
+                  ? t("experimentSettings.saving")
+                  : t("experimentSettings.save")}
               </Button>
             </div>
           </form>
@@ -311,46 +329,54 @@ function ExperimentInfoCard({
     useExperimentDelete();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const router = useRouter();
+  const { t } = useTranslation(undefined, "common");
+  const locale = useLocale();
 
   const handleDeleteExperiment = async () => {
     await deleteExperiment({ params: { id: experimentId } });
     toast({
-      description: "Experiment deleted successfully",
+      description: t("experiments.experimentDeleted"),
     });
-    router.push("/openjii/experiments");
+    // Navigate to experiments list
+    router.push(`/${locale}/platform/experiments`);
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Experiment Information</CardTitle>
+        <CardTitle>{t("experimentSettings.generalSettings")}</CardTitle>
         <CardDescription>
-          View experiment details and danger zone options
+          {t("experimentSettings.generalDescription")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2 text-sm">
           <div>
-            <span className="font-medium">Created by:</span>{" "}
+            <span className="font-medium">
+              {t("experimentSettings.created")} by:
+            </span>{" "}
             {experiment.createdBy}
           </div>
           <div>
-            <span className="font-medium">Created at:</span>{" "}
+            <span className="font-medium">
+              {t("experimentSettings.created")}:
+            </span>{" "}
             {formatDate(experiment.createdAt)}
           </div>
           <div>
-            <span className="font-medium">Last updated:</span>{" "}
+            <span className="font-medium">
+              {t("experimentSettings.updated")}:
+            </span>{" "}
             {formatDate(experiment.updatedAt)}
           </div>
         </div>
 
         <div className="border-t pt-4">
           <h5 className="text-destructive mb-2 text-base font-medium">
-            Danger Zone
+            {t("experimentSettings.dangerZone")}
           </h5>
           <p className="text-muted-foreground mb-4 text-sm">
-            Once you delete an experiment, there is no going back. Please be
-            certain.
+            {t("experimentSettings.deleteWarning")}
           </p>
 
           {!showDeleteConfirm ? (
@@ -358,13 +384,13 @@ function ExperimentInfoCard({
               variant="destructive"
               onClick={() => setShowDeleteConfirm(true)}
             >
-              Delete Experiment
+              {t("experimentSettings.deleteExperiment")}
             </Button>
           ) : (
             <div className="space-y-4">
               <p className="text-sm font-medium">
-                Are you sure you want to delete "{experiment.name}"? This action
-                cannot be undone.
+                {t("experimentSettings.confirmDelete")} "{experiment.name}"?{" "}
+                {t("experimentSettings.deleteWarning")}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -372,13 +398,15 @@ function ExperimentInfoCard({
                   onClick={handleDeleteExperiment}
                   disabled={isDeleting}
                 >
-                  {isDeleting ? "Deleting..." : "Yes, Delete"}
+                  {isDeleting
+                    ? t("experimentSettings.saving")
+                    : t("experimentSettings.delete")}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setShowDeleteConfirm(false)}
                 >
-                  Cancel
+                  {t("experimentSettings.cancel")}
                 </Button>
               </div>
             </div>

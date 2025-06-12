@@ -69,10 +69,10 @@ runs:
     #     # Create outputs directory
     #     mkdir -p ../../../tofu-outputs
 
-    #     # Generate outputs JSON file (will be populated after apply)
-    #     echo "{}" > ../../../tofu-outputs/infrastructure-outputs-${{ inputs.environment }}.json
+    #     # Generate outputs JSON file with actual outputs from Terraform/OpenTofu
+    #     tofu output -json > ../../../tofu-outputs/infrastructure-outputs-${{ inputs.environment }}.json
 
-    #     echo "Infrastructure outputs artifact placeholder created"
+    #     echo "Infrastructure outputs JSON created from Terraform outputs"
 
     # - name: Upload Infrastructure Outputs Artifact
     #   uses: actions/upload-artifact@v4

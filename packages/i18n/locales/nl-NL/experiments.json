@@ -1,0 +1,46 @@
+{
+  "form": {
+    "name": "Experiment naam",
+    "description": "Beschrijving",
+    "protocol": "Protocol",
+    "device": "Apparaat",
+    "location": "Locatie",
+    "researcher": "Onderzoeker",
+    "startDate": "Startdatum",
+    "endDate": "Einddatum",
+    "tags": "Tags",
+    "notes": "Notities"
+  },
+  "status": {
+    "draft": "Concept",
+    "active": "Actief",
+    "completed": "Voltooid",
+    "paused": "Gepauzeerd",
+    "cancelled": "Geannuleerd"
+  },
+  "actions": {
+    "start": "Experiment starten",
+    "pause": "Experiment pauzeren",
+    "resume": "Experiment hervatten",
+    "complete": "Experiment voltooien",
+    "cancel": "Experiment annuleren",
+    "duplicate": "Experiment dupliceren",
+    "export": "Gegevens exporteren",
+    "share": "Experiment delen"
+  },
+  "measurements": {
+    "title": "Metingen",
+    "addMeasurement": "Meting toevoegen",
+    "viewResults": "Resultaten bekijken",
+    "downloadData": "Gegevens downloaden",
+    "noMeasurements": "Nog geen metingen geregistreerd"
+  },
+  "validation": {
+    "nameRequired": "Experimentnaam is verplicht",
+    "nameMinLength": "Naam moet minimaal 3 tekens bevatten",
+    "descriptionRequired": "Beschrijving is verplicht",
+    "protocolRequired": "Selecteer een protocol",
+    "deviceRequired": "Selecteer een apparaat",
+    "invalidDateRange": "Einddatum moet na startdatum liggen"
+  }
+}

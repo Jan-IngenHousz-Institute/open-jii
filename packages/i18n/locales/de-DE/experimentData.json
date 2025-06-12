@@ -1,0 +1,24 @@
+{
+  "experimentData": {
+    "title": "Experimentdaten",
+    "description": "Anzeigen und Verwalten von Daten, die mit diesem Experiment verbunden sind.",
+    "loading": "Experimentdaten werden geladen...",
+    "notFound": "Experiment nicht gefunden",
+    "failedToLoad": "Fehler beim Laden der Experimentdaten",
+    "dataSources": {
+      "title": "Datenquellen",
+      "noSources": "Noch keine Datenquellen konfiguriert.",
+      "description": "Dieser Bereich zeigt Datensätze, Dateien und andere Datenquellen, die mit Ihrem Experiment verbunden sind."
+    },
+    "dataCollection": {
+      "title": "Datenerfassung",
+      "status": "Status der Datenerfassung: Nicht gestartet",
+      "description": "Konfigurieren Sie hier die Einstellungen für die Datenerfassung und überwachen Sie den Fortschritt."
+    },
+    "dataAnalysis": {
+      "title": "Datenanalyse",
+      "noResults": "Keine Analyseergebnisse verfügbar.",
+      "description": "Analyseergebnisse und Berichte werden hier angezeigt, sobald die Datenerfassung beginnt."
+    }
+  }
+}

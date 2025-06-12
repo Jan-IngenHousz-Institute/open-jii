@@ -1,0 +1,46 @@
+{
+  "form": {
+    "name": "Experiment Name",
+    "description": "Description",
+    "protocol": "Protocol",
+    "device": "Device",
+    "location": "Location",
+    "researcher": "Researcher",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "tags": "Tags",
+    "notes": "Notes"
+  },
+  "status": {
+    "draft": "Draft",
+    "active": "Active",
+    "completed": "Completed",
+    "paused": "Paused",
+    "cancelled": "Cancelled"
+  },
+  "actions": {
+    "start": "Start Experiment",
+    "pause": "Pause Experiment",
+    "resume": "Resume Experiment",
+    "complete": "Complete Experiment",
+    "cancel": "Cancel Experiment",
+    "duplicate": "Duplicate Experiment",
+    "export": "Export Data",
+    "share": "Share Experiment"
+  },
+  "measurements": {
+    "title": "Measurements",
+    "addMeasurement": "Add Measurement",
+    "viewResults": "View Results",
+    "downloadData": "Download Data",
+    "noMeasurements": "No measurements recorded yet"
+  },
+  "validation": {
+    "nameRequired": "Experiment name is required",
+    "nameMinLength": "Name must be at least 3 characters",
+    "descriptionRequired": "Description is required",
+    "protocolRequired": "Please select a protocol",
+    "deviceRequired": "Please select a device",
+    "invalidDateRange": "End date must be after start date"
+  }
+}

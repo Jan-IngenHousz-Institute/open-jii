@@ -1,0 +1,46 @@
+{
+  "form": {
+    "name": "Experimentname",
+    "description": "Beschreibung",
+    "protocol": "Protokoll",
+    "device": "Gerät",
+    "location": "Standort",
+    "researcher": "Forscher",
+    "startDate": "Startdatum",
+    "endDate": "Enddatum",
+    "tags": "Tags",
+    "notes": "Notizen"
+  },
+  "status": {
+    "draft": "Entwurf",
+    "active": "Aktiv",
+    "completed": "Abgeschlossen",
+    "paused": "Pausiert",
+    "cancelled": "Abgebrochen"
+  },
+  "actions": {
+    "start": "Experiment starten",
+    "pause": "Experiment pausieren",
+    "resume": "Experiment fortsetzen",
+    "complete": "Experiment abschließen",
+    "cancel": "Experiment abbrechen",
+    "duplicate": "Experiment duplizieren",
+    "export": "Daten exportieren",
+    "share": "Experiment teilen"
+  },
+  "measurements": {
+    "title": "Messungen",
+    "addMeasurement": "Messung hinzufügen",
+    "viewResults": "Ergebnisse anzeigen",
+    "downloadData": "Daten herunterladen",
+    "noMeasurements": "Noch keine Messungen aufgezeichnet"
+  },
+  "validation": {
+    "nameRequired": "Experimentname ist erforderlich",
+    "nameMinLength": "Name muss mindestens 3 Zeichen lang sein",
+    "descriptionRequired": "Beschreibung ist erforderlich",
+    "protocolRequired": "Bitte wählen Sie ein Protokoll",
+    "deviceRequired": "Bitte wählen Sie ein Gerät",
+    "invalidDateRange": "Enddatum muss nach dem Startdatum liegen"
+  }
+}

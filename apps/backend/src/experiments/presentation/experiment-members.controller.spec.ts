@@ -353,7 +353,7 @@ describe("ExperimentMembersController", () => {
       // Verify the member was removed
       listResponse = await testApp.get(listPath).withAuth(testUserId);
       expect(listResponse.body).toHaveLength(1);
-      expect(listResponse.body[0].userId).toBe(testUserId);
+      expect(listResponse.body[0].user.id).toBe(testUserId);
     });
 
     it("should return 404 when removing member from non-existent experiment", async () => {

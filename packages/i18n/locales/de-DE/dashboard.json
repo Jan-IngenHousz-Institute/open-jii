@@ -1,0 +1,33 @@
+{
+  "title": "Dashboard",
+  "overview": "Übersicht",
+  "analytics": "Analytik",
+  "reports": "Berichte",
+  "settings": "Einstellungen",
+  "profile": "Profil",
+  "experiments": {
+    "title": "Meine Experimente",
+    "create": "Neues Experiment erstellen",
+    "view": "Experiment anzeigen",
+    "edit": "Experiment bearbeiten",
+    "delete": "Experiment löschen",
+    "status": {
+      "draft": "Entwurf",
+      "active": "Aktiv",
+      "completed": "Abgeschlossen",
+      "archived": "Archiviert"
+    }
+  },
+  "data": {
+    "title": "Datenverwaltung",
+    "export": "Daten exportieren",
+    "import": "Daten importieren",
+    "backup": "Backup",
+    "sync": "Synchronisieren"
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "mark_all_read": "Alle als gelesen markieren",
+    "settings": "Benachrichtigungseinstellungen"
+  }
+}

@@ -26,7 +26,7 @@ export const useExperimentMemberRemove = () => {
         queryClient.setQueryData(["experiment-members", variables.params.id], {
           ...previousMembers,
           body: previousMembers.body.filter(
-            (member) => member.userId !== variables.params.memberId,
+            (member) => member.user.id !== variables.params.memberId,
           ),
         });
       }

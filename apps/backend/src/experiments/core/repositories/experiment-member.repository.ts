@@ -1,6 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, eq, experimentMembers } from "@repo/database";
+import { and, eq, experimentMembers, users } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -19,12 +19,22 @@ export class ExperimentMemberRepository {
   async getMembers(
     experimentId: string,
   ): Promise<Result<ExperimentMemberDto[]>> {
-    return tryCatch(() =>
-      this.database
-        .select()
+    return tryCatch(async () => {
+      return this.database
+        .select({
+          experimentId: experimentMembers.experimentId,
+          role: experimentMembers.role,
+          joinedAt: experimentMembers.joinedAt,
+          user: {
+            id: users.id,
+            name: users.name,
+            email: users.email,
+          },
+        })
         .from(experimentMembers)
-        .where(eq(experimentMembers.experimentId, experimentId)),
-    );
+        .innerJoin(users, eq(experimentMembers.userId, users.id))
+        .where(eq(experimentMembers.experimentId, experimentId));
+    });
   }
 
   async addMember(
@@ -33,15 +43,34 @@ export class ExperimentMemberRepository {
     role: ExperimentMemberRole = "member",
   ): Promise<Result<ExperimentMemberDto[]>> {
     return tryCatch(async () => {
-      // Otherwise create a new membership
-      return await this.database
-        .insert(experimentMembers)
-        .values({
-          experimentId,
-          userId,
-          role,
+      await this.database.insert(experimentMembers).values({
+        experimentId,
+        userId,
+        role,
+      });
+
+      const result = await this.database
+        .select({
+          experimentId: experimentMembers.experimentId,
+          role: experimentMembers.role,
+          joinedAt: experimentMembers.joinedAt,
+          user: {
+            id: users.id,
+            name: users.name,
+            email: users.email,
+          },
         })
-        .returning();
+        .from(experimentMembers)
+        .innerJoin(users, eq(experimentMembers.userId, users.id))
+        .where(
+          and(
+            eq(experimentMembers.experimentId, experimentId),
+            eq(experimentMembers.userId, userId),
+          ),
+        )
+        .limit(1);
+
+      return result;
     });
   }
 

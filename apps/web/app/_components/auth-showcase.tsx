@@ -1,7 +1,12 @@
 import { auth, signIn, signOut } from "@repo/auth/next";
+import type { TFunction } from "@repo/i18n";
 import { Button } from "@repo/ui/components";
 
-export async function AuthShowcase() {
+interface AuthShowcaseProps {
+  t: TFunction;
+}
+
+export async function AuthShowcase({ t }: AuthShowcaseProps) {
   const session = await auth();
 
   if (!session) {
@@ -14,7 +19,7 @@ export async function AuthShowcase() {
             await signIn();
           }}
         >
-          Sign in
+          {t("auth.signIn")}
         </Button>
       </form>
     );
@@ -23,7 +28,7 @@ export async function AuthShowcase() {
   return (
     <div className="flex flex-col items-center justify-center gap-4">
       <p className="text-center text-2xl">
-        <span>Logged in as {session.user?.name}</span>
+        <span>{t("auth.loggedInAs", { name: session.user.name })}</span>
       </p>
 
       <div className="flex flex-col gap-2">
@@ -35,7 +40,7 @@ export async function AuthShowcase() {
               await signOut();
             }}
           >
-            Sign out (Server)
+            {t("auth.signOutServer")}
           </Button>
         </form>
       </div>

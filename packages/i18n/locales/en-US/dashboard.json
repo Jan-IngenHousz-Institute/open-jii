@@ -1,0 +1,33 @@
+{
+  "title": "Dashboard",
+  "overview": "Overview",
+  "analytics": "Analytics",
+  "reports": "Reports",
+  "settings": "Settings",
+  "profile": "Profile",
+  "experiments": {
+    "title": "My Experiments",
+    "create": "Create New Experiment",
+    "view": "View Experiment",
+    "edit": "Edit Experiment",
+    "delete": "Delete Experiment",
+    "status": {
+      "draft": "Draft",
+      "active": "Active",
+      "completed": "Completed",
+      "archived": "Archived"
+    }
+  },
+  "data": {
+    "title": "Data Management",
+    "export": "Export Data",
+    "import": "Import Data",
+    "backup": "Backup",
+    "sync": "Sync"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "mark_all_read": "Mark all as read",
+    "settings": "Notification Settings"
+  }
+}
