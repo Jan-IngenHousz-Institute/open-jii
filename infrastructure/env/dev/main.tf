@@ -301,13 +301,13 @@ module "experiment_orchestrator_job" {
 module "aurora_db" {
   source                 = "../../modules/aurora_db"
   cluster_identifier     = "open-jii-dev-db-cluster"
-  database_name          = "open-jii-dev-db"
+  database_name          = "openjii_dev_db"
   master_username        = "openjii_dev_admin"
   db_subnet_group_name   = module.vpc.db_subnet_group_name
   vpc_security_group_ids = [module.vpc.aurora_security_group_id]
 
   max_capacity             = 1.0  # Conservative max for dev
-  min_capacity             = 0.5  # Minimum cost-effective setting
+  min_capacity             = 0    # Minimum cost-effective setting (at 0, auto-pause feature is enabled)
   seconds_until_auto_pause = 1800 # Auto-pause after 30 minutes of inactivity
   backup_retention_period  = 3    # Reduced retention for dev
   skip_final_snapshot      = true # Skip snapshot on deletion in dev
@@ -326,6 +326,17 @@ module "opennext" {
   subdomain       = var.opennext_subdomain
   certificate_arn = var.opennext_certificate_arn
   hosted_zone_id  = var.opennext_hosted_zone_id
+
+  # VPC configuration for server Lambda database access
+  enable_server_vpc               = true
+  server_subnet_ids               = module.vpc.private_subnets
+  server_lambda_security_group_id = module.vpc.server_lambda_security_group_id
+
+  db_environment_variables = {
+    DB_HOST = module.aurora_db.cluster_endpoint
+    DB_PORT = module.aurora_db.cluster_port
+    DB_NAME = module.aurora_db.database_name
+  }
 
   # Performance configuration
   enable_lambda_warming = var.opennext_enable_warming
@@ -355,5 +366,91 @@ module "opennext" {
     Environment = "dev"
     Component   = "nextjs-app"
     ManagedBy   = "terraform"
+  }
+}
+
+module "migration_runner_ecr" {
+  source = "../../modules/ecr"
+
+  aws_region  = var.aws_region
+  environment = "dev"
+
+  repository_name               = "db-migration-runner-ecr"
+  service_name                  = "db-migration-runner"
+  enable_vulnerability_scanning = true
+  encryption_type               = "KMS"
+  image_tag_mutability          = "MUTABLE"
+
+  ci_cd_role_arn = module.iam_oidc.role_arn
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "database-migrations"
+  }
+}
+
+module "migration_runner_ecs" {
+  source = "../../modules/ecs"
+
+  region      = var.aws_region
+  environment = "dev"
+
+  create_ecs_service = false
+  service_name       = "db-migration-runner"
+
+  repository_url = module.migration_runner_ecr.repository_url
+  repository_arn = module.migration_runner_ecr.repository_arn
+
+  security_groups = [module.vpc.migration_task_security_group_id]
+  subnets         = module.vpc.private_subnets
+  vpc_id          = module.vpc.vpc_id
+
+  desired_count      = 1
+  cpu                = 256
+  memory             = 512
+  use_spot_instances = false
+  enable_autoscaling = false
+
+  inject_db_url                = true
+  enable_container_healthcheck = false
+  enable_circuit_breaker       = true
+
+  log_group_name     = "/aws/ecs/db-migration-runner-dev"
+  log_retention_days = 30
+
+  # Database credentials setup
+  secrets = [
+    {
+      name      = "DB_CREDENTIALS"
+      valueFrom = module.aurora_db.master_user_secret_arn
+    }
+  ]
+
+  environment_variables = [
+    {
+      name  = "LOG_LEVEL"
+      value = "debug"
+    },
+    {
+      name  = "DB_HOST"
+      value = module.aurora_db.cluster_endpoint
+    },
+    {
+      name  = "DB_PORT"
+      value = module.aurora_db.cluster_port
+    },
+    {
+      name  = "DB_NAME"
+      value = module.aurora_db.database_name
+    }
+  ]
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "database-migrations"
   }
 }
