@@ -5,28 +5,10 @@ variable "domain_name" {
   type        = string
 }
 
-variable "create_route53_zone" {
-  description = "Whether to create a new Route53 hosted zone (set to false if you've transferred in an existing domain)"
-  type        = bool
-  default     = false
-}
-
-variable "route53_zone_id" {
-  description = "Existing Route53 zone ID (required if create_route53_zone is false)"
-  type        = string
-  default     = ""
-}
-
 variable "environment" {
-  description = "Environment name (e.g., Dev, Staging, Prod)"
+  description = "Environment name/subdomain prefix (e.g., dev, staging, prod)"
   type        = string
-  default     = "Dev"
-}
-
-variable "environments" {
-  description = "List of environments to create subdomains for (e.g., ['dev', 'staging', 'prod'])"
-  type        = list(string)
-  default     = ["dev"]
+  default     = "dev"
 }
 
 variable "create_certificate" {

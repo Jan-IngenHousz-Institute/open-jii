@@ -1,10 +1,8 @@
 # Route53 module for handling DNS resources
 
 # Route53 Hosted Zone - DNS management for the domain
-# Only created if you don't have an existing hosted zone for the domain
 resource "aws_route53_zone" "main" {
-  count = var.create_route53_zone ? 1 : 0
-  name  = var.domain_name
+  name = var.domain_name
 
   tags = merge(
     {
@@ -17,7 +15,7 @@ resource "aws_route53_zone" "main" {
 
 # Local values for DNS configurations
 locals {
-  zone_id = var.create_route53_zone ? aws_route53_zone.main[0].zone_id : var.route53_zone_id
+  zone_id = aws_route53_zone.main.zone_id
 }
 
 # ACM Certificate for SSL/TLS encryption
@@ -28,13 +26,13 @@ resource "aws_acm_certificate" "main_cert" {
   domain_name       = var.domain_name
   validation_method = "DNS"
 
-  # Add wildcard and specific subdomains
-  subject_alternative_names = concat(
-    ["*.${var.domain_name}"],
-    [for env in var.environments : "${env}.${var.domain_name}"],
-    [for env in var.environments : "api.${env}.${var.domain_name}"],
-    [for env in var.environments : "docs.${env}.${var.domain_name}"]
-  )
+  # Add specific subdomains to certificate - more secure than wildcards
+  subject_alternative_names = [
+    # Include environment subdomains and their services
+    "${var.environment}.${var.domain_name}",
+    "api.${var.environment}.${var.domain_name}",
+    "docs.${var.environment}.${var.domain_name}"
+  ]
 
   # Ensures certificate is created before old one is destroyed during updates
   # Prevents downtime during certificate renewals
@@ -88,7 +86,7 @@ resource "aws_route53_record" "api_record" {
   for_each = var.alb_records
 
   zone_id = local.zone_id
-  name    = "${each.key}.${var.domain_name}"
+  name    = "${each.key}.${var.environment}.${var.domain_name}"
   type    = "A"
 
   alias {
@@ -103,8 +101,10 @@ resource "aws_route53_record" "cloudfront_record" {
   for_each = var.cloudfront_records
 
   zone_id = local.zone_id
-  name    = "${each.key}.${var.domain_name}"
-  type    = "A"
+  # If the key is empty (""), we're setting up the root domain for the environment
+  # Otherwise, we're setting up a subdomain
+  name = each.key == "" ? "${var.environment}.${var.domain_name}" : "${each.key}.${var.environment}.${var.domain_name}"
+  type = "A"
 
   alias {
     name                   = each.value.domain_name

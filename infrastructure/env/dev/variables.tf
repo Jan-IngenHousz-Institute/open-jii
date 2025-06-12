@@ -159,19 +159,13 @@ variable "opennext_price_class" {
   default     = "PriceClass_100"
 }
 
-# variable "domain_name" {
-#   description = "Base domain name (e.g., my-company.com)"
-#   type        = string
-# }
+variable "domain_name" {
+  description = "Base domain name (e.g., my-company.com)"
+  type        = string
+}
 
-# variable "route53_zone_id" {
-#   description = "Existing Route53 zone ID (required if create_route53_zone is false)"
-#   type        = string
-#   default     = ""
-# }
-
-variable "environment_subdomain" {
-  description = "Environment subdomain prefix (e.g., 'dev' for dev.my-company.com)"
+variable "environment" {
+  description = "Environment name (e.g., 'dev' for dev.my-company.com)"
   type        = string
   default     = "dev"
 }

@@ -16,27 +16,21 @@ output "certificate_arn" {
 }
 
 output "name_servers" {
-  description = "Name servers for the Route53 zone (if created)"
-  value       = var.create_route53_zone ? aws_route53_zone.main[0].name_servers : []
+  description = "Name servers for the Route53 zone"
+  value       = aws_route53_zone.main.name_servers
 }
 
-output "environment_domains" {
-  description = "Map of environment domain names"
-  value = {
-    for env in var.environments : env => "${env}.${var.domain_name}"
-  }
+output "environment_domain" {
+  description = "Environment domain name"
+  value       = "${var.environment}.${var.domain_name}"
 }
 
-output "api_domains" {
-  description = "Map of API domain names for each environment"
-  value = {
-    for env in var.environments : env => "api.${env}.${var.domain_name}"
-  }
+output "api_domain" {
+  description = "API domain name for environment"
+  value       = "api.${var.environment}.${var.domain_name}"
 }
 
-output "docs_domains" {
-  description = "Map of docs domain names for each environment"
-  value = {
-    for env in var.environments : env => "docs.${env}.${var.domain_name}"
-  }
+output "docs_domain" {
+  description = "Docs domain name for environment"
+  value       = "docs.${var.environment}.${var.domain_name}"
 }
