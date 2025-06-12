@@ -25,32 +25,44 @@ module "cloudwatch" {
 }
 
 # Route53 DNS configuration
-# module "route53" {
-#   source = "../../modules/route53"
+module "route53" {
+  source = "../../modules/route53"
 
-#   domain_name         = var.domain_name
-#   create_route53_zone = var.create_route53_zone
-#   route53_zone_id     = var.route53_zone_id
-#   environment         = "Dev"
-#   environments        = [var.environment_subdomain]
+  domain_name = var.domain_name
+  environment = var.environment
 
-#   # These will be populated after ALB and CloudFront are created
-#   alb_records        = {}
-#   cloudfront_records = {}
+  # Connect your services to your domain
+  alb_records = {
+    "api" = {
+      dns_name = module.backend_alb.alb_dns_name
+      zone_id  = module.backend_alb.alb_zone_id
+    }
+  }
 
-#   tags = {
-#     Environment = "Dev"
-#     ManagedBy   = "Terraform"
-#   }
-# }
+  cloudfront_records = {
+    "docs" = {
+      domain_name    = module.cloudfront.cloudfront_distribution_domain_name
+      hosted_zone_id = module.cloudfront.cloudfront_hosted_zone_id
+    },
+    "" = {
+      domain_name    = module.opennext.cloudfront_distribution_domain_name
+      hosted_zone_id = module.opennext.cloudfront_hosted_zone_id
+    }
+  }
+
+  tags = {
+    Environment = "dev"
+    ManagedBy   = "Terraform"
+  }
+}
 
 
 module "cloudfront" {
-  source      = "../../modules/cloudfront"
-  bucket_name = var.docusaurus_s3_bucket_name
-  aws_region  = var.aws_region
-  # certificate_arn = module.route53.certificate_arn
-  # custom_domain   = "docs.${var.environment_subdomain}.${var.domain_name}"
+  source          = "../../modules/cloudfront"
+  bucket_name     = var.docusaurus_s3_bucket_name
+  aws_region      = var.aws_region
+  certificate_arn = module.route53.certificate_arn
+  custom_domain   = module.route53.docs_domain
 }
 
 
@@ -394,10 +406,9 @@ module "opennext" {
   region       = var.aws_region
 
   # Domain configuration
-  domain_name     = var.opennext_domain_name
-  subdomain       = var.opennext_subdomain
-  certificate_arn = var.opennext_certificate_arn
-  hosted_zone_id  = var.opennext_hosted_zone_id
+  domain_name     = module.route53.environment_domain
+  certificate_arn = module.route53.certificate_arn
+  hosted_zone_id  = module.route53.route53_zone_id
 
   # VPC configuration for server Lambda database access
   enable_server_vpc               = true
@@ -568,8 +579,8 @@ module "backend_alb" {
   health_check_unhealthy_threshold = 3
   health_check_matcher             = "200-299"
 
-  # SSL/TLS configuration - Uncomment when Route53 module is enabled
-  # certificate_arn = module.route53.certificate_arn
+  # SSL/TLS configuration for HTTPS
+  certificate_arn = module.route53.certificate_arn # Use the ACM certificate managed by the Route53 module
 
   # Enable access logs for production but not for dev
   enable_access_logs = false
