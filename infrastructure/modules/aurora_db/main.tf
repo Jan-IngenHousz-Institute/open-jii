@@ -141,7 +141,7 @@ resource "aws_rds_cluster" "rds_cluster_aurora" {
   cluster_identifier = var.cluster_identifier
   engine             = "aurora-postgresql"
   engine_mode        = "provisioned"
-  engine_version     = "16.4"
+  engine_version     = "16.6"
   database_name      = var.database_name
 
   # Authentication and security
