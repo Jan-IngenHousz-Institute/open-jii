@@ -3,8 +3,9 @@
 import { formatDate } from "@/util/date";
 import { editExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 
 import type { Experiment } from "@repo/api";
@@ -34,6 +35,7 @@ import { toast } from "@repo/ui/hooks";
 
 import { useExperiment } from "../hooks/experiment/useExperiment/useExperiment";
 import { useExperimentDelete } from "../hooks/experiment/useExperimentDelete/useExperimentDelete";
+import { useExperimentMembers } from "../hooks/experiment/useExperimentMembers/useExperimentMembers";
 import { useExperimentUpdate } from "../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 import { ExperimentMemberManagement } from "./experiment-member-management";
 
@@ -307,6 +309,26 @@ function ExperimentInfoCard({
   experimentId,
   experiment,
 }: ExperimentInfoCardProps) {
+  // Fetch experiment members to get admin info
+  const { data: membersData } = useExperimentMembers(experimentId);
+
+  const members = useMemo(() => {
+    return membersData?.body ?? [];
+  }, [membersData]);
+
+  // Find the admin member (creator)
+  const adminMember = useMemo(() => {
+    return members.find((m) => m.role === "admin");
+  }, [members]);
+
+  // Helper to get name/email from admin member
+  const adminName =
+    (adminMember?.user.name ??
+      adminMember?.user.email ??
+      experiment.createdBy) ||
+    "Unknown";
+  const adminEmail = adminMember?.user.email;
+
   const { mutateAsync: deleteExperiment, isPending: isDeleting } =
     useExperimentDelete();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -330,9 +352,16 @@ function ExperimentInfoCard({
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2 text-sm">
-          <div>
-            <span className="font-medium">Created by:</span>{" "}
-            {experiment.createdBy}
+          <div className="flex items-center gap-x-2">
+            <span className="font-medium">Created by:</span> {adminName}
+            {adminEmail && adminEmail !== adminName ? (
+              <span className="text-muted-foreground flex items-center gap-x-1">
+                <Mail className="h-3 w-3 flex-shrink-0" />
+                <span className="truncate text-xs md:max-w-[200px] md:text-sm">
+                  {adminEmail}
+                </span>
+              </span>
+            ) : null}
           </div>
           <div>
             <span className="font-medium">Created at:</span>{" "}

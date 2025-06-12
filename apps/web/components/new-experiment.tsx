@@ -25,10 +25,16 @@ import {
   RichTextarea,
   SelectValue,
   SelectTrigger,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 import { useDebounce } from "../hooks/useDebounce";
+import { MemberList } from "./current-members-list";
 import { UserSearchWithDropdown } from "./user-search-with-dropdown";
 
 export function NewExperimentForm() {
@@ -60,6 +66,8 @@ export function NewExperimentForm() {
   const { data: userSearchData, isLoading: isFetchingUsers } =
     useUserSearch(debouncedSearch);
   const [selectedUserId, setSelectedUserId] = useState("");
+  // Track added users for display
+  const [addedUsers, setAddedUsers] = useState<User[]>([]);
 
   // Use form for members instead of useState
   const members = form.watch("members") ?? [];
@@ -80,6 +88,10 @@ export function NewExperimentForm() {
       ...members,
       { userId: user.id, role: "member" as const },
     ]);
+    // Add user info to addedUsers if not already present
+    setAddedUsers((prev) =>
+      prev.some((u) => u.id === user.id) ? prev : [...prev, user],
+    );
     setSelectedUserId("");
     setUserSearch("");
     return Promise.resolve();
@@ -110,136 +122,176 @@ export function NewExperimentForm() {
       body: payload,
     });
   }
+
+  // Format date (showing the current date)
+  const formatDate = (date: string) => {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+    });
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Name</FormLabel>
-              <FormControl>
-                <Input {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <RichTextarea
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  placeholder="Enter description..."
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="visibility"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Visibility</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an experiment visibility" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {Object.entries(zExperimentVisibility.enum).map((key) => {
-                    return (
-                      <SelectItem key={key[0]} value={key[0]}>
-                        {key[0]}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="embargoIntervalDays"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Embargo interval days</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  {...field}
-                  onChange={(event) => field.onChange(+event.target.value)}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        {/* Member selection UI */}
-        <div>
-          <FormLabel>Add Members</FormLabel>
-          <div className="mb-2">
-            <UserSearchWithDropdown
-              availableUsers={availableUsers}
-              value={selectedUserId}
-              onValueChange={setSelectedUserId}
-              placeholder="Search users to add"
-              loading={!isDebounced || isFetchingUsers}
-              searchValue={userSearch}
-              onSearchChange={setUserSearch}
-              onAddUser={handleAddMember}
-              isAddingUser={false}
+        {/* Card 1: Name & Description */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Experiment Details</CardTitle>
+            <CardDescription>
+              Set the name and description for your experiment
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-8">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="space-y-2">
-            {members.length === 0 && (
-              <div className="text-muted-foreground text-sm">
-                No members added yet
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <RichTextarea
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      placeholder="Enter description..."
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+        <div className="flex flex-col gap-6 md:flex-row">
+          {/* Card 2: Add Members */}
+          <Card className="flex-1">
+            <CardHeader>
+              <CardTitle>Add Members</CardTitle>
+              <CardDescription>
+                Manage who has access to this experiment
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="mb-2">
+                <UserSearchWithDropdown
+                  availableUsers={availableUsers}
+                  value={selectedUserId}
+                  onValueChange={setSelectedUserId}
+                  placeholder="Add a member"
+                  loading={!isDebounced || isFetchingUsers}
+                  searchValue={userSearch}
+                  onSearchChange={setUserSearch}
+                  onAddUser={handleAddMember}
+                  isAddingUser={false}
+                />
               </div>
-            )}
-            {members.map((member) => {
-              // Find user info for display
-              const userInfo = userSearchData?.body.find(
-                (u: User) => u.id === member.userId,
-              );
-              return (
-                <div
-                  key={member.userId}
-                  className="flex items-center gap-2 rounded border px-2 py-1"
-                >
-                  <div className="flex-1">
-                    <span className="font-medium">
-                      {userInfo?.name ?? userInfo?.email ?? member.userId}
-                    </span>
-                    {userInfo?.email && (
-                      <span className="text-muted-foreground ml-2 text-xs">
-                        {userInfo.email}
-                      </span>
-                    )}
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleRemoveMember(member.userId)}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
+              <MemberList
+                membersWithUserInfo={members.map((member) => {
+                  const userInfo = addedUsers.find(
+                    (u) => u.id === member.userId,
+                  ) ??
+                    userSearchData?.body.find(
+                      (u: User) => u.id === member.userId,
+                    ) ?? {
+                      id: member.userId,
+                      name: null,
+                      email: null,
+                    };
+                  return {
+                    role: member.role ?? "member",
+                    joinedAt: new Date().toISOString(),
+                    user: {
+                      id: userInfo.id,
+                      name: userInfo.name ?? null,
+                      email: userInfo.email ?? null,
+                    },
+                  };
+                })}
+                formatDate={formatDate}
+                onRemoveMember={handleRemoveMember}
+                isRemovingMember={false}
+                removingMemberId={null}
+                adminCount={0}
+              />
+            </CardContent>
+          </Card>
+          {/* Card 3: Visibility & Embargo */}
+          <Card className="flex-1">
+            <CardHeader>
+              <CardTitle>Visibility Settings</CardTitle>
+              <CardDescription>
+                Control your experiment's visibility and embargo period
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              <FormField
+                control={form.control}
+                name="visibility"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Visibility</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an experiment visibility" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Object.entries(zExperimentVisibility.enum).map(
+                          (key) => {
+                            return (
+                              <SelectItem key={key[0]} value={key[0]}>
+                                {key[0]}
+                              </SelectItem>
+                            );
+                          },
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="embargoIntervalDays"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Embargo period (days)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(event) =>
+                          field.onChange(+event.target.value)
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
         </div>
         <div className="flex gap-2">
           <Button type="button" onClick={cancel} variant="outline">
