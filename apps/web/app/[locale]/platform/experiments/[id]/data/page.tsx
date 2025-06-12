@@ -4,6 +4,8 @@ import { ErrorDisplay } from "@/components/error-display";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { use } from "react";
 
+import { useTranslation } from "@repo/i18n/client";
+
 interface ExperimentDataPageProps {
   params: Promise<{ id: string }>;
 }
@@ -13,59 +15,62 @@ export default function ExperimentDataPage({
 }: ExperimentDataPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useExperiment(id);
+  const { t } = useTranslation(undefined, "experiments");
 
   if (isLoading) {
-    return <div>Loading experiment data...</div>;
+    return <div>{t("loading")}</div>;
   }
 
   if (error) {
-    return (
-      <ErrorDisplay error={error} title="Failed to load experiment data" />
-    );
+    return <ErrorDisplay error={error} title={t("failedToLoad")} />;
   }
 
   if (!data) {
-    return <div>Experiment not found</div>;
+    return <div>{t("notFound")}</div>;
   }
 
   return (
     <div className="space-y-8">
       <div>
-        <h4 className="text-lg font-medium">Experiment Data</h4>
+        <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
         <p className="text-muted-foreground text-sm">
-          View and manage data associated with this experiment.
+          {t("experimentData.description")}
         </p>
       </div>
 
       <div className="space-y-6">
         <div className="rounded-lg border p-6">
-          <h5 className="mb-4 text-base font-medium">Data Sources</h5>
+          <h5 className="mb-4 text-base font-medium">
+            {t("experimentData.dataSources.title")}
+          </h5>
           <div className="text-muted-foreground text-sm">
-            <p>No data sources configured yet.</p>
+            <p>{t("experimentData.dataSources.noSources")}</p>
             <p className="mt-2">
-              This section will show datasets, files, and other data sources
-              associated with your experiment.
+              {t("experimentData.dataSources.description")}
             </p>
           </div>
         </div>
 
         <div className="rounded-lg border p-6">
-          <h5 className="mb-4 text-base font-medium">Data Collection</h5>
+          <h5 className="mb-4 text-base font-medium">
+            {t("experimentData.dataCollection.title")}
+          </h5>
           <div className="text-muted-foreground text-sm">
-            <p>Data collection status: Not started</p>
+            <p>{t("experimentData.dataCollection.status")}</p>
             <p className="mt-2">
-              Configure data collection settings and monitor progress here.
+              {t("experimentData.dataCollection.description")}
             </p>
           </div>
         </div>
 
         <div className="rounded-lg border p-6">
-          <h5 className="mb-4 text-base font-medium">Data Analysis</h5>
+          <h5 className="mb-4 text-base font-medium">
+            {t("experimentData.dataAnalysis.title")}
+          </h5>
           <div className="text-muted-foreground text-sm">
-            <p>No analysis results available.</p>
+            <p>{t("experimentData.dataAnalysis.noResults")}</p>
             <p className="mt-2">
-              Analysis results and reports will appear here once data collection
-              begins.
+              {t("experimentData.dataAnalysis.description")}
             </p>
           </div>
         </div>

@@ -1,0 +1,40 @@
+{
+  "main": {
+    "experiments": "Experiments",
+    "overview": "Overview",
+    "archive": "Archive",
+    "devices": "Devices",
+    "settings": "Settings",
+    "dashboard": "Dashboard",
+    "profile": "Profile",
+    "home": "Home"
+  },
+  "sidebar": {
+    "newExperiment": "New experiment",
+    "overview": "Overview",
+    "archivedData": "Archived Data",
+    "recentMeasurements": "Recent Measurements",
+    "deviceConnections": "Device Connections",
+    "multispectralCamera": "Multispectral Camera",
+    "protocol": "Protocol",
+    "configuration": "Configuration",
+    "experiments": "Experiments",
+    "hardware": "Hardware",
+    "archive": "Archive",
+    "public": "Public",
+    "private": "Private",
+    "sensors": "Sensors",
+    "multispeq": "MultispeQ",
+    "protocols": "Protocols",
+    "protocol1": "Protocol 1",
+    "otherDevices": "Other devices",
+    "otherDevice1": "Other device 1"
+  },
+  "breadcrumbs": {
+    "home": "Home",
+    "experiments": "Experiments",
+    "new": "New",
+    "edit": "Edit",
+    "view": "View"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "title": "Dashboard",
+  "overview": "Overzicht",
+  "analytics": "Analyses",
+  "reports": "Rapporten",
+  "settings": "Instellingen",
+  "profile": "Profiel",
+  "experiments": {
+    "title": "Mijn experimenten",
+    "create": "Nieuw experiment maken",
+    "view": "Experiment bekijken",
+    "edit": "Experiment bewerken",
+    "delete": "Experiment verwijderen",
+    "status": {
+      "draft": "Concept",
+      "active": "Actief",
+      "completed": "Voltooid",
+      "archived": "Gearchiveerd"
+    }
+  },
+  "data": {
+    "title": "Gegevensbeheer",
+    "export": "Gegevens exporteren",
+    "import": "Gegevens importeren",
+    "backup": "Back-up",
+    "sync": "Synchroniseren"
+  },
+  "notifications": {
+    "title": "Meldingen",
+    "mark_all_read": "Markeer alles als gelezen",
+    "settings": "Meldingsinstellingen"
+  }
+}

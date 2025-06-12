@@ -6,6 +6,7 @@ import { formatDate } from "@/util/date";
 import { CalendarIcon } from "lucide-react";
 import { use } from "react";
 
+import { useTranslation } from "@repo/i18n";
 import {
   Card,
   CardHeader,
@@ -24,16 +25,19 @@ export default function ExperimentOverviewPage({
 }: ExperimentOverviewPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useExperiment(id);
+  const { t } = useTranslation(undefined, "common");
   if (isLoading) {
-    return <div>Loading experiment details...</div>;
+    return <div>{t("common.loading")}</div>;
   }
 
   if (error) {
-    return <ErrorDisplay error={error} title="Failed to load experiment" />;
+    return (
+      <ErrorDisplay error={error} title={t("errors.failedToLoadExperiment")} />
+    );
   }
 
   if (!data) {
-    return <div>Experiment not found</div>;
+    return <div>{t("experiments.notFound")}</div>;
   }
 
   const experiment = data.body;
@@ -41,13 +45,25 @@ export default function ExperimentOverviewPage({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-secondary">Active</Badge>;
+        return (
+          <Badge className="bg-secondary">
+            {t("experiments.status.active")}
+          </Badge>
+        );
       case "provisioning":
-        return <Badge className="bg-highlight text-black">Provisioning</Badge>;
+        return (
+          <Badge className="bg-highlight text-black">
+            {t("experiments.status.provisioning")}
+          </Badge>
+        );
       case "archived":
-        return <Badge className="bg-muted">Archived</Badge>;
+        return (
+          <Badge className="bg-muted">{t("experiments.status.archived")}</Badge>
+        );
       case "stale":
-        return <Badge className="bg-tertiary">Stale</Badge>;
+        return (
+          <Badge className="bg-tertiary">{t("experiments.status.stale")}</Badge>
+        );
       default:
         return <Badge>{status}</Badge>;
     }
@@ -72,7 +88,7 @@ export default function ExperimentOverviewPage({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <div>
               <h4 className="text-muted-foreground text-sm font-medium">
-                Created
+                {t("experimentSettings.created")}
               </h4>
               <p className="flex items-center gap-1">
                 <CalendarIcon
@@ -84,25 +100,29 @@ export default function ExperimentOverviewPage({
             </div>
             <div>
               <h4 className="text-muted-foreground text-sm font-medium">
-                Updated
+                {t("experimentSettings.updated")}
               </h4>
               <p>{formatDate(experiment.updatedAt)}</p>
             </div>
             <div>
               <h4 className="text-muted-foreground text-sm font-medium">
-                Embargo Period
+                {t("experimentSettings.embargoIntervalDays")}
               </h4>
-              <p>{experiment.embargoIntervalDays} days</p>
+              <p>
+                {experiment.embargoIntervalDays} {t("common.days")}
+              </p>
             </div>
             <div>
-              <h4 className="text-muted-foreground text-sm font-medium">ID</h4>
+              <h4 className="text-muted-foreground text-sm font-medium">
+                {t("experiments.experimentId")}
+              </h4>
               <p className="truncate font-mono text-xs">{experiment.id}</p>
             </div>
           </div>
         </CardContent>
       </Card>
       <Card>
-        <CardHeader>Experiment Description</CardHeader>
+        <CardHeader>{t("experiments.descriptionTitle")}</CardHeader>
         <CardContent>
           <RichTextRenderer content={experiment.description ?? ""} />
         </CardContent>

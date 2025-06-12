@@ -1,0 +1,24 @@
+{
+  "experimentData": {
+    "title": "Experimentgegevens",
+    "description": "Bekijk en beheer gegevens die bij dit experiment horen.",
+    "loading": "Experimentgegevens laden...",
+    "notFound": "Experiment niet gevonden",
+    "failedToLoad": "Kan experimentgegevens niet laden",
+    "dataSources": {
+      "title": "Gegevensbronnen",
+      "noSources": "Nog geen gegevensbronnen geconfigureerd.",
+      "description": "In dit gedeelte worden datasets, bestanden en andere gegevensbronnen getoond die bij uw experiment horen."
+    },
+    "dataCollection": {
+      "title": "Gegevensverzameling",
+      "status": "Status gegevensverzameling: Niet gestart",
+      "description": "Configureer instellingen voor gegevensverzameling en monitor de voortgang hier."
+    },
+    "dataAnalysis": {
+      "title": "Gegevensanalyse",
+      "noResults": "Geen analyseresultaten beschikbaar.",
+      "description": "Analyseresultaten en rapporten worden hier weergegeven zodra de gegevensverzameling begint."
+    }
+  }
+}

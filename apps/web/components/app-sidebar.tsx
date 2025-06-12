@@ -11,6 +11,7 @@ import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
 
+import type { Locale } from "@repo/i18n";
 import {
   Sidebar,
   SidebarContent,
@@ -25,90 +26,68 @@ import {
 import { NavItems } from "./nav-items";
 import { NavUser } from "./nav-user";
 
-// This is sample data.
-const data = {
-  navExperiments: [
-    {
-      title: "Experiments",
-      url: "#",
-      icon: Microscope,
-      isActive: true,
-      items: [
-        {
-          title: "New experiment",
-          url: "/openjii/experiments/new",
-        },
-        {
-          title: "Overview",
-          url: "/openjii/experiments",
-        },
-      ],
-    },
-    {
-      title: "Archive",
-      url: "#",
-      icon: Archive,
-      items: [
-        {
-          title: "Public",
-          url: "#",
-        },
-        {
-          title: "Private",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  navHardware: [
-    {
-      title: "Sensors",
-      url: "#",
-      icon: Webcam,
-      items: [
-        {
-          title: "MultispeQ",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Protocols",
-      url: "#",
-      icon: FileSliders,
-      items: [
-        {
-          title: "Protocol 1",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Other devices",
-      url: "#",
-      icon: RadioReceiver,
-      items: [
-        {
-          title: "Other device 1",
-          url: "#",
-        },
-      ],
-    },
-  ],
-};
-
 interface UserData {
   name?: string | null;
   email?: string | null;
   image?: string | null;
 }
 
+interface NavigationItem {
+  title: string;
+  url: string;
+  icon: string;
+  isActive?: boolean;
+  items: {
+    title: string;
+    url: string;
+  }[];
+}
+
+interface NavigationData {
+  navExperiments: NavigationItem[];
+  navHardware: NavigationItem[];
+}
+
+interface Translations {
+  openJII: string;
+  logoAlt: string;
+  signIn: string;
+  experimentsTitle: string;
+  hardwareTitle: string;
+}
+
+// Icon mapping for string-based icons
+const iconMap = {
+  Microscope,
+  Archive,
+  Webcam,
+  FileSliders,
+  RadioReceiver,
+} as const;
+
 export function AppSidebar({
   user,
+  locale,
+  navigationData,
+  translations,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   user?: UserData | null;
+  locale: Locale;
+  navigationData: NavigationData;
+  translations: Translations;
 }) {
+  // Convert string-based icons to actual icon components
+  const processedNavExperiments = navigationData.navExperiments.map((item) => ({
+    ...item,
+    icon: iconMap[item.icon as keyof typeof iconMap],
+  }));
+
+  const processedNavHardware = navigationData.navHardware.map((item) => ({
+    ...item,
+    icon: iconMap[item.icon as keyof typeof iconMap],
+  }));
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -118,17 +97,30 @@ export function AppSidebar({
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <Link href="/openjii/">
-                <Image src="/logo.png" alt="JII logo" width={50} height={50} />
-                <span className="text-base font-semibold">openJII</span>
+              <Link href={`/platform/`} locale={locale}>
+                <Image
+                  src="/logo.png"
+                  alt={translations.logoAlt}
+                  width={50}
+                  height={50}
+                />
+                <span className="text-base font-semibold">
+                  {translations.openJII}
+                </span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavItems items={data.navExperiments} title="Experiments" />
-        <NavItems items={data.navHardware} title="Hardware" />
+        <NavItems
+          items={processedNavExperiments}
+          title={translations.experimentsTitle}
+        />
+        <NavItems
+          items={processedNavHardware}
+          title={translations.hardwareTitle}
+        />
       </SidebarContent>
       <SidebarFooter>
         {user ? (
@@ -146,8 +138,10 @@ export function AppSidebar({
                 asChild
                 className="data-[slot=sidebar-menu-button]:!p-1.5"
               >
-                <Link href="/">
-                  <span className="text-base font-semibold">Sign In</span>
+                <Link href="/" locale={locale}>
+                  <span className="text-base font-semibold">
+                    {translations.signIn}
+                  </span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

@@ -2,6 +2,7 @@
 
 import { ChevronsUpDown, LogOut } from "lucide-react";
 
+import { useTranslation } from "@repo/i18n";
 import {
   Avatar,
   AvatarFallback,
@@ -30,7 +31,7 @@ export function NavUser({
   };
 }) {
   const { isMobile } = useSidebar();
-
+  const { t } = useTranslation(undefined, "common");
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -83,7 +84,7 @@ export function NavUser({
                   className="flex w-full cursor-default items-center"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  Log out
+                  {t("logout")}
                 </button>
               </DropdownMenuItem>
             </form>
