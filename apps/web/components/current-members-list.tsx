@@ -31,7 +31,14 @@ export function MemberList({
 }: MemberListProps) {
   if (membersWithUserInfo.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">No members added yet</p>
+      <div className="border-muted flex flex-col items-center justify-center py-4">
+        <p className="text-muted-foreground text-base font-medium">
+          No members added yet
+        </p>
+        <p className="text-muted-foreground mt-1 text-xs">
+          Add collaborators to your experiment
+        </p>
+      </div>
     );
   }
 

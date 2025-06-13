@@ -2,6 +2,7 @@
 
 import { useExperimentCreate } from "@/hooks/experiment/useExperimentCreate/useExperimentCreate";
 import { useUserSearch } from "@/hooks/useUserSearch";
+import { formatDate } from "@/util/date";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -70,10 +71,7 @@ export function NewExperimentForm() {
   // Track added users for display
   const [addedUsers, setAddedUsers] = useState<User[]>([]);
   const { data: session } = useSession();
-  const currentUserId =
-    session?.user && typeof session.user === "object" && "id" in session.user
-      ? (session.user as { id: string }).id
-      : undefined;
+  const currentUserId = session?.user?.id ?? "";
 
   // Use form for members instead of useState
   const members = form.watch("members") ?? [];
@@ -85,16 +83,13 @@ export function NewExperimentForm() {
     ) ?? [];
 
   // Add member handler
-  const handleAddMember = (userId?: string): Promise<void> => {
-    const idToAdd = userId ?? selectedUserId;
-    if (!idToAdd) return Promise.resolve();
-    const user = availableUsers.find((u) => u.id === idToAdd);
+  const handleAddMember = (userId: string): Promise<void> => {
+    const user = availableUsers.find((u) => u.id === userId);
     if (!user) return Promise.resolve();
     form.setValue("members", [
       ...members,
       { userId: user.id, role: "member" as const },
     ]);
-    // Add user info to addedUsers if not already present
     setAddedUsers((prev) =>
       prev.some((u) => u.id === user.id) ? prev : [...prev, user],
     );
@@ -129,15 +124,22 @@ export function NewExperimentForm() {
     });
   }
 
-  // Format date (showing the current date)
-  const formatDate = (date: string) => {
-    const d = new Date(date);
-    if (isNaN(d.getTime())) return "";
-    return d.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-    });
+  // Helper to get user info from addedUsers, then userSearchData, then fallback
+  const getUserInfo = (member: { userId: string }): User => {
+    const found = addedUsers.find((u) => u.id === member.userId);
+    if (found) return found;
+    const foundSearch = userSearchData?.body.find(
+      (u: User) => u.id === member.userId,
+    );
+    if (foundSearch) return foundSearch;
+    return {
+      id: member.userId,
+      name: "Loading user info...",
+      email: "",
+      emailVerified: null,
+      image: null,
+      createdAt: "",
+    };
   };
 
   return (
@@ -186,7 +188,7 @@ export function NewExperimentForm() {
         </Card>
         <div className="flex flex-col gap-6 md:flex-row">
           {/* Card 2: Add Members */}
-          <Card className="flex-1">
+          <Card className="min-w-0 flex-1">
             <CardHeader>
               <CardTitle>Add Members</CardTitle>
               <CardDescription>
@@ -208,27 +210,12 @@ export function NewExperimentForm() {
                 />
               </div>
               <MemberList
-                membersWithUserInfo={members.map((member) => {
-                  const userInfo = addedUsers.find(
-                    (u) => u.id === member.userId,
-                  ) ??
-                    userSearchData?.body.find(
-                      (u: User) => u.id === member.userId,
-                    ) ?? {
-                      id: member.userId,
-                      name: null,
-                      email: null,
-                    };
-                  return {
-                    role: member.role ?? "member",
-                    joinedAt: new Date().toISOString(),
-                    user: {
-                      id: userInfo.id,
-                      name: userInfo.name ?? null,
-                      email: userInfo.email ?? null,
-                    },
-                  };
-                })}
+                membersWithUserInfo={members.map((member) => ({
+                  ...member,
+                  role: member.role ?? "member",
+                  joinedAt: new Date().toISOString(),
+                  user: getUserInfo(member),
+                }))}
                 formatDate={formatDate}
                 onRemoveMember={handleRemoveMember}
                 isRemovingMember={false}
@@ -238,7 +225,7 @@ export function NewExperimentForm() {
             </CardContent>
           </Card>
           {/* Card 3: Visibility & Embargo */}
-          <Card className="flex-1">
+          <Card className="min-w-0 flex-1">
             <CardHeader>
               <CardTitle>Visibility Settings</CardTitle>
               <CardDescription>
