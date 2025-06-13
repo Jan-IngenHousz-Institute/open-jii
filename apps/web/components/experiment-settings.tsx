@@ -5,7 +5,7 @@ import { editExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 
 import type { Experiment } from "@repo/api";
@@ -334,12 +334,26 @@ function ExperimentInfoCard({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const router = useRouter();
 
+  // Ref for Danger Zone section
+  const dangerZoneRef = useRef<HTMLDivElement>(null);
+
   const handleDeleteExperiment = async () => {
     await deleteExperiment({ params: { id: experimentId } });
     toast({
       description: "Experiment deleted successfully",
     });
     router.push("/openjii/experiments");
+  };
+
+  // Scroll to Danger Zone when delete button is pressed
+  const handleShowDeleteConfirm = () => {
+    setShowDeleteConfirm(true);
+    setTimeout(() => {
+      dangerZoneRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 0);
   };
 
   return (
@@ -373,7 +387,7 @@ function ExperimentInfoCard({
           </div>
         </div>
 
-        <div className="border-t pt-4">
+        <div className="border-t pt-4" ref={dangerZoneRef}>
           <h5 className="text-destructive mb-2 text-base font-medium">
             Danger Zone
           </h5>
@@ -383,10 +397,7 @@ function ExperimentInfoCard({
           </p>
 
           {!showDeleteConfirm ? (
-            <Button
-              variant="destructive"
-              onClick={() => setShowDeleteConfirm(true)}
-            >
+            <Button variant="destructive" onClick={handleShowDeleteConfirm}>
               Delete Experiment
             </Button>
           ) : (
