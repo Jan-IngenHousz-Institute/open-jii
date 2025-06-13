@@ -165,7 +165,7 @@ module "databricks_metastore" {
 
 module "databricks_catalog" {
   source             = "../../modules/databricks/catalog"
-  catalog_name       = "open_jii_dev"
+  catalog_name       = var.databricks_catalog_name
   external_bucket_id = module.metastore_s3.bucket_name
 
   providers = {
@@ -177,7 +177,7 @@ module "databricks_catalog" {
 
 module "central_schema" {
   source         = "../../modules/databricks/schema"
-  catalog_name   = "open_jii_dev"
+  catalog_name   = module.databricks_catalog.catalog_name
   schema_name    = "centrum"
   schema_comment = "Central schema for OpenJII sensor data following the medallion architecture"
 
@@ -193,7 +193,7 @@ module "centrum_pipeline" {
 
   name         = "Centrum-DLT-Pipeline-DEV"
   schema_name  = "centrum"
-  catalog_name = "open_jii_dev"
+  catalog_name = module.databricks_catalog.catalog_name
 
   notebook_paths = [
     "/Workspace/Shared/notebooks/pipelines/centrum_pipeline"
@@ -266,7 +266,7 @@ module "kinesis_ingest_job" {
       parameters = {
         "kinesis_stream_name"     = module.kinesis.kinesis_stream_name
         "checkpoint_path"         = "/Volumes/open_jii_dev/centrum/checkpoints/kinesis"
-        "catalog_name"            = "open_jii_dev"
+        "catalog_name"            = module.databricks_catalog.catalog_name
         "schema_name"             = "centrum"
         "target_table"            = "raw_kinesis_data"
         "service_credential_name" = "unity-catalog-kinesis-role"
@@ -295,7 +295,7 @@ module "experiment_orchestrator_job" {
       cluster_id    = module.experiment_orchestrator_cluster.cluster_id
       notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_orchestrator_task"
       parameters = {
-        "catalog_name"             = "open_jii_dev"
+        "catalog_name"             = module.databricks_catalog.catalog_name
         "central_schema"           = "centrum"
         "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
       }
@@ -307,7 +307,7 @@ module "experiment_orchestrator_job" {
       cluster_id    = module.experiment_orchestrator_cluster.cluster_id
       notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_monitor_task"
       parameters = {
-        "catalog_name"   = "open_jii_dev"
+        "catalog_name"   = module.databricks_catalog.catalog_name
         "central_schema" = "centrum"
       }
 
@@ -335,6 +335,54 @@ module "aurora_db" {
   seconds_until_auto_pause = 1800 # Auto-pause after 30 minutes of inactivity
   backup_retention_period  = 3    # Reduced retention for dev
   skip_final_snapshot      = true # Skip snapshot on deletion in dev
+}
+
+# Authentication secrets
+module "auth_secrets" {
+  source = "../../modules/secrets-manager"
+
+  name        = "openjii-auth-secrets-dev"
+  description = "Authentication and OAuth secrets for the OpenJII services"
+
+  # Store secrets as JSON using variables
+  secret_string = jsonencode({
+    AUTH_SECRET        = var.auth_secret
+    AUTH_GITHUB_ID     = var.github_oauth_client_id
+    AUTH_GITHUB_SECRET = var.github_oauth_client_secret
+  })
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+    SecretType  = "authentication"
+  }
+}
+
+# Databricks API secrets
+module "databricks_secrets" {
+  source = "../../modules/secrets-manager"
+
+  name        = "openjii-databricks-secrets-dev"
+  description = "Databricks connection secrets for the OpenJII services"
+
+  # Store secrets as JSON using variables
+  secret_string = jsonencode({
+    DATABRICKS_HOST          = var.databricks_host
+    DATABRICKS_CLIENT_ID     = var.backend_databricks_client_id
+    DATABRICKS_CLIENT_SECRET = var.backend_databricks_client_secret
+    DATABRICKS_JOB_ID        = var.backend_databricks_job_id
+    DATABRICKS_WAREHOUSE_ID  = var.backend_databricks_warehouse_id
+  })
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+    SecretType  = "databricks"
+  }
 }
 
 # OpenNext Next.js Application Infrastructure
@@ -443,7 +491,6 @@ module "migration_runner_ecs" {
   log_group_name     = "/aws/ecs/db-migration-runner-dev"
   log_retention_days = 30
 
-  # Database credentials setup
   secrets = [
     {
       name      = "DB_CREDENTIALS"
@@ -485,7 +532,7 @@ module "backend_ecr" {
   environment                   = "dev"
   repository_name               = "open-jii-backend"
   service_name                  = "backend"
-  max_image_count               = 10
+  max_image_count               = var.backend_ecr_max_images
   enable_vulnerability_scanning = true
   encryption_type               = "KMS"
   image_tag_mutability          = "MUTABLE" # Set to MUTABLE for dev, but should be IMMUTABLE for prod
@@ -506,17 +553,17 @@ module "backend_alb" {
   service_name      = "backend"
   vpc_id            = module.vpc.vpc_id
   public_subnet_ids = module.vpc.public_subnets
-  container_port    = 3020 # Assuming this is the port your backend app listens on
+  container_port    = var.backend_container_port
   security_groups   = [module.vpc.alb_security_group_id]
   environment       = "dev"
 
   # Health check configuration
   health_check_path                = "/health"
   health_check_timeout             = 5
-  health_check_interval            = 30
+  health_check_interval            = 90
   health_check_healthy_threshold   = 3
   health_check_unhealthy_threshold = 3
-  health_check_matcher             = "200-299" # Accept any 2XX response as healthy
+  health_check_matcher             = "200-299"
 
   # SSL/TLS configuration - Uncomment when Route53 module is enabled
   # certificate_arn = module.route53.certificate_arn
@@ -552,9 +599,9 @@ module "backend_ecs" {
   security_groups = [module.vpc.ecs_security_group_id]
 
   # Container configuration
-  container_port = 3020
+  container_port = var.backend_container_port
 
-  # Task size - optimal settings for a Node.js application
+  # Task size
   cpu               = 512  # 0.5 vCPU
   memory            = 1024 # 1 GB
   container_cpu     = 512  # 0.5 vCPU
@@ -566,9 +613,9 @@ module "backend_ecs" {
 
   # Auto-scaling settings
   enable_autoscaling = true
-  min_capacity       = 1
-  max_capacity       = 3
-  cpu_threshold      = 70 # Scale up if CPU utilization exceeds 70%
+  min_capacity       = var.backend_min_capacity  # Scale down to 1 task
+  max_capacity       = var.backend_max_capacity  # Scale up to 3 tasks
+  cpu_threshold      = var.backend_cpu_threshold # Scale out at 80% CPU usage
 
   # Use spot instances for dev to optimize costs
   use_spot_instances = true
@@ -576,7 +623,7 @@ module "backend_ecs" {
 
   # Container health checks
   enable_container_healthcheck = true
-  health_check_path            = "/health"
+  health_check_path            = var.backend_health_check_path
 
   # Deployment configuration
   enable_circuit_breaker               = true
@@ -594,13 +641,12 @@ module "backend_ecs" {
     },
     {
       name  = "PORT"
-      value = "3020"
+      value = var.backend_container_port
     },
     {
       name  = "LOG_LEVEL"
       value = "debug"
     },
-    # Database connection details
     {
       name  = "DB_HOST"
       value = module.aurora_db.cluster_endpoint
@@ -612,6 +658,10 @@ module "backend_ecs" {
     {
       name  = "DB_NAME"
       value = module.aurora_db.database_name
+    },
+    {
+      name  = "DATABRICKS_CATALOG_NAME"
+      value = module.databricks_catalog.catalog_name
     }
   ]
 
@@ -619,6 +669,38 @@ module "backend_ecs" {
     {
       name      = "DB_CREDENTIALS"
       valueFrom = module.aurora_db.master_user_secret_arn
+    },
+    {
+      name      = "AUTH_SECRET"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_SECRET::"
+    },
+    {
+      name      = "AUTH_GITHUB_ID"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_GITHUB_ID::"
+    },
+    {
+      name      = "AUTH_GITHUB_SECRET"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_GITHUB_SECRET::"
+    },
+    {
+      name      = "DATABRICKS_HOST"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_HOST::"
+    },
+    {
+      name      = "DATABRICKS_CLIENT_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_CLIENT_ID::"
+    },
+    {
+      name      = "DATABRICKS_CLIENT_SECRET"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_CLIENT_SECRET::"
+    },
+    {
+      name      = "DATABRICKS_JOB_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_JOB_ID::"
+    },
+    {
+      name      = "DATABRICKS_WAREHOUSE_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WAREHOUSE_ID::"
     }
   ]
 

@@ -88,9 +88,16 @@ variable "databricks_bucket_name" {
   type        = string
 }
 
-variable "databricks_workspace_url" {
-  description = "Databricks workspace name"
+variable "databricks_catalog_name" {
+  description = "Databricks catalog name for backend service"
   type        = string
+  default     = "open_jii_dev"
+}
+
+variable "databricks_host" {
+  description = "Databricks workspace URL"
+  type        = string
+  sensitive   = true
 }
 
 variable "unity_catalog_bucket_name" {
@@ -178,7 +185,7 @@ variable "backend_ecr_max_images" {
 variable "backend_container_port" {
   description = "The port on which the backend container will listen"
   type        = number
-  default     = 3000
+  default     = 3020
 }
 
 variable "backend_min_capacity" {
@@ -202,5 +209,50 @@ variable "backend_cpu_threshold" {
 variable "backend_health_check_path" {
   description = "Path for ALB health checks on the backend service"
   type        = string
-  default     = "/api/health"
+  default     = "/health"
+}
+
+# Backend authentication secrets
+variable "auth_secret" {
+  description = "Authentication secret token"
+  type        = string
+  sensitive   = true
+
+}
+
+variable "github_oauth_client_id" {
+  description = "GitHub OAuth client ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "github_oauth_client_secret" {
+  description = "GitHub OAuth client secret"
+  type        = string
+  sensitive   = true
+}
+
+# Backend Databricks connection secrets
+variable "backend_databricks_client_id" {
+  description = "Databricks client ID for backend service (separate from workspace client ID)"
+  type        = string
+  sensitive   = true
+}
+
+variable "backend_databricks_client_secret" {
+  description = "Databricks client secret for backend service (separate from workspace client secret)"
+  type        = string
+  sensitive   = true
+}
+
+variable "backend_databricks_job_id" {
+  description = "Databricks job ID for backend service"
+  type        = string
+  sensitive   = true
+}
+
+variable "backend_databricks_warehouse_id" {
+  description = "Databricks warehouse ID for backend service"
+  type        = string
+  sensitive   = true
 }

@@ -186,7 +186,18 @@ resource "aws_security_group" "server_lambda_aurora" {
   }
 }
 
-
+# ----------------------
+# Security group rule to allow ECS tasks to access Aurora database
+# ----------------------
+resource "aws_security_group_rule" "ecs_to_aurora" {
+  type                     = "ingress"
+  from_port                = 5432
+  to_port                  = 5432
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.ecs_sg.id
+  security_group_id        = aws_security_group.aurora_sg.id
+  description              = "Allow access from backend ECS tasks to Aurora database"
+}
 
 # Security group rule to allow server Lambda to access Aurora database
 resource "aws_security_group_rule" "server_lambda_to_aurora" {
