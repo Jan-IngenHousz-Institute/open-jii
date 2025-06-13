@@ -81,10 +81,15 @@ export class CreateExperimentUseCase {
           `Adding user ${userId} as admin to experiment ${experiment.id}`,
         );
 
-        // Add the user as an admin member
+        // Filter out any member with the same userId as the admin
+        const filteredMembers = (
+          Array.isArray(data.members) ? data.members : []
+        ).filter((member) => member.userId !== userId);
+
+        // Add the user as an admin member + the rest of the members if provided
         const allMembers = [
           { userId, role: "admin" as const },
-          ...(Array.isArray(data.members) ? data.members : []),
+          ...filteredMembers,
         ];
 
         const addMembersResult =

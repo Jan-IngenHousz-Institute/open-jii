@@ -3,6 +3,7 @@
 import { useExperimentCreate } from "@/hooks/experiment/useExperimentCreate/useExperimentCreate";
 import { useUserSearch } from "@/hooks/useUserSearch";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -68,14 +69,19 @@ export function NewExperimentForm() {
   const [selectedUserId, setSelectedUserId] = useState("");
   // Track added users for display
   const [addedUsers, setAddedUsers] = useState<User[]>([]);
+  const { data: session } = useSession();
+  const currentUserId =
+    session?.user && typeof session.user === "object" && "id" in session.user
+      ? (session.user as { id: string }).id
+      : undefined;
 
   // Use form for members instead of useState
   const members = form.watch("members") ?? [];
-
-  // Filter available users (exclude already added)
+  // Filter available users (exclude already added and current user)
   const availableUsers =
     userSearchData?.body.filter(
-      (user: User) => !members.some((m) => m.userId === user.id),
+      (user: User) =>
+        !members.some((m) => m.userId === user.id) && user.id !== currentUserId,
     ) ?? [];
 
   // Add member handler

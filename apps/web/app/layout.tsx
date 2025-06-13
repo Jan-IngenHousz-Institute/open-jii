@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SessionProvider } from "next-auth/react";
 import { Poppins, Overpass } from "next/font/google";
 import type React from "react";
 
@@ -38,7 +39,9 @@ export default function RootLayout({
           overpass.variable,
         )}
       >
-        <QueryProvider>{children}</QueryProvider>
+        <SessionProvider>
+          <QueryProvider>{children}</QueryProvider>
+        </SessionProvider>
       </body>
     </html>
   );

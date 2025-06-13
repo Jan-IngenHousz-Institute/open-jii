@@ -26,7 +26,7 @@ export class ExperimentMembersController {
     private readonly listExperimentMembersUseCase: ListExperimentMembersUseCase,
     private readonly addExperimentMemberUseCase: AddExperimentMemberUseCase,
     private readonly removeExperimentMemberUseCase: RemoveExperimentMemberUseCase,
-    private readonly addExperimentMembersUseCase: AddExperimentMembersUseCase, // <-- inject your use case
+    private readonly addExperimentMembersUseCase: AddExperimentMembersUseCase,
   ) {}
 
   @TsRestHandler(contract.experiments.listExperimentMembers)
