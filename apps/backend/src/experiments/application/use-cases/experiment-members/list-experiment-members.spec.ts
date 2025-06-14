@@ -1,5 +1,6 @@
 import { assertFailure } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import type { UserDto } from "../../../../users/core/models/user.model";
 import { ListExperimentMembersUseCase } from "./list-experiment-members";
 
 describe("ListExperimentMembersUseCase", () => {
@@ -53,12 +54,14 @@ describe("ListExperimentMembersUseCase", () => {
     expect(members).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          userId: experimentAdmin.userId,
           role: "admin",
+          user: expect.objectContaining({
+            id: experimentAdmin.userId,
+          }) as Partial<UserDto>,
         }),
         expect.objectContaining({
-          userId: memberId,
           role: "member",
+          user: expect.objectContaining({ id: memberId }) as Partial<UserDto>,
         }),
       ]),
     );
@@ -119,8 +122,10 @@ describe("ListExperimentMembersUseCase", () => {
     // Verify members are returned
     expect(members).toHaveLength(1); // Just the creator
     expect(members[0]).toMatchObject({
-      userId: experimentAdmin.userId,
       role: "admin",
+      user: expect.objectContaining({
+        id: experimentAdmin.userId,
+      }) as Partial<UserDto>,
     });
   });
 });

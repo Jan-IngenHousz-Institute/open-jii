@@ -167,7 +167,18 @@ export class GetExperimentDataUseCase {
             // Get 5 rows of data for each table
             // We'll create a combined data object that follows SchemaData structure
             const combinedData: SchemaData = {
-              columns: [],
+              columns: [
+                {
+                  name: "table_name",
+                  type_name: "STRING",
+                  type_text: "STRING",
+                },
+                {
+                  name: "sample_data",
+                  type_name: "STRING",
+                  type_text: "STRING",
+                },
+              ],
               rows: [],
               totalRows: 0,
               truncated: false,

@@ -8,12 +8,19 @@ import {
 import { TestHarness } from "../../../../test/test-harness";
 import { GetExperimentDataUseCase } from "./get-experiment-data";
 
-const DATABRICKS_HOST = "https://databricks.example.com";
+const DATABRICKS_HOST = "https://test-databricks.example.com";
 
 describe("GetExperimentDataUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: GetExperimentDataUseCase;
+  // Define constants for Databricks mock values to ensure consistency
+  const MOCK_WAREHOUSE_ID = "test-warehouse-id";
+  const MOCK_CATALOG_NAME = "test_catalog";
+  const MOCK_WAIT_TIMEOUT = "50s";
+  const MOCK_DISPOSITION = "INLINE";
+  const MOCK_FORMAT = "JSON_ARRAY";
+  const SAMPLE_DATA_LIMIT = 5; // Assuming a default limit for sample data
 
   beforeAll(async () => {
     await testApp.setup();
@@ -80,22 +87,69 @@ describe("GetExperimentDataUseCase", () => {
 
     // Mock SQL query for row count
     nock(DATABRICKS_HOST)
-      .post(DatabricksService.SQL_STATEMENTS_ENDPOINT)
-      .query(() => true)
+      .post(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "SELECT COUNT(*) as count FROM test_table",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_${experiment.name}_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
       .reply(200, {
         statement_id: "mock-count-id",
         status: { state: "SUCCEEDED" },
-        result: mockCountData,
+        manifest: {
+          schema: {
+            column_count: mockCountData.columns.length,
+            columns: mockCountData.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockCountData.totalRows,
+          truncated: mockCountData.truncated,
+        },
+        result: {
+          data_array: mockCountData.rows,
+          chunk_index: 0,
+          row_count: mockCountData.rows.length,
+          row_offset: 0,
+        },
       });
 
     // Mock SQL query for table data
+    // pageSize is 20, page is 1 => LIMIT 20 OFFSET 0
     nock(DATABRICKS_HOST)
-      .post(DatabricksService.SQL_STATEMENTS_ENDPOINT)
-      .query(() => true)
+      .post(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "SELECT * FROM test_table LIMIT 20 OFFSET 0",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_${experiment.name}_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
       .reply(200, {
         statement_id: "mock-data-id",
         status: { state: "SUCCEEDED" },
-        result: mockTableData,
+        manifest: {
+          schema: {
+            column_count: mockTableData.columns.length,
+            columns: mockTableData.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockTableData.totalRows,
+          truncated: mockTableData.truncated,
+        },
+        result: {
+          data_array: mockTableData.rows,
+          chunk_index: 0,
+          row_count: mockTableData.rows.length,
+          row_offset: 0,
+        },
       });
 
     // Act
@@ -137,12 +191,12 @@ describe("GetExperimentDataUseCase", () => {
       tables: [
         {
           name: "table1",
-          catalog_name: "catalog1",
+          catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
           schema_name: `exp_${experiment.name}_${experiment.id}`,
         },
         {
           name: "table2",
-          catalog_name: "catalog1",
+          catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
           schema_name: `exp_${experiment.name}_${experiment.id}`,
         },
       ],
@@ -184,27 +238,74 @@ describe("GetExperimentDataUseCase", () => {
 
     // Mock listTables API call
     nock(DATABRICKS_HOST)
-      .post(DatabricksService.TABLES_ENDPOINT)
+      .get(DatabricksService.TABLES_ENDPOINT)
+      .query(true)
       .reply(200, mockTables);
 
-    // Mock SQL query for sample data - first table
+    // Mock SQL query for sample data - first table ("table1")
     nock(DATABRICKS_HOST)
-      .post(DatabricksService.SQL_STATEMENTS_ENDPOINT)
-      .query(() => true)
+      .post(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: `SELECT * FROM table1 LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_${experiment.name}_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
       .reply(200, {
         statement_id: "mock-sample1-id",
         status: { state: "SUCCEEDED" },
-        result: mockSampleData1,
+        manifest: {
+          schema: {
+            column_count: mockSampleData1.columns.length,
+            columns: mockSampleData1.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockSampleData1.totalRows,
+          truncated: mockSampleData1.truncated,
+        },
+        result: {
+          data_array: mockSampleData1.rows,
+          chunk_index: 0,
+          row_count: mockSampleData1.rows.length,
+          row_offset: 0,
+        },
       });
 
-    // Mock SQL query for sample data - second table
+    // Mock SQL query for sample data - second table ("table2")
     nock(DATABRICKS_HOST)
-      .post(DatabricksService.SQL_STATEMENTS_ENDPOINT)
-      .query(() => true)
+      .post(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: `SELECT * FROM table2 LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_${experiment.name}_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
       .reply(200, {
         statement_id: "mock-sample2-id",
         status: { state: "SUCCEEDED" },
-        result: mockSampleData2,
+        manifest: {
+          schema: {
+            column_count: mockSampleData2.columns.length,
+            columns: mockSampleData2.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockSampleData2.totalRows,
+          truncated: mockSampleData2.truncated,
+        },
+        result: {
+          data_array: mockSampleData2.rows,
+          chunk_index: 0,
+          row_count: mockSampleData2.rows.length,
+          row_offset: 0,
+        },
       });
 
     // Act
@@ -317,7 +418,7 @@ describe("GetExperimentDataUseCase", () => {
       tables: [
         {
           name: "public_table",
-          catalog_name: "catalog1",
+          catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
           schema_name: `exp_${experiment.name}_${experiment.id}`,
         },
       ],
@@ -346,17 +447,41 @@ describe("GetExperimentDataUseCase", () => {
 
     // Mock listTables API call
     nock(DATABRICKS_HOST)
-      .post(DatabricksService.TABLES_ENDPOINT)
+      .get(DatabricksService.TABLES_ENDPOINT)
+      .query(true)
       .reply(200, mockTables);
 
-    // Mock SQL query for sample data
+    // Mock SQL query for sample data ("public_table")
     nock(DATABRICKS_HOST)
-      .post(DatabricksService.SQL_STATEMENTS_ENDPOINT)
-      .query(() => true)
+      .post(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: `SELECT * FROM public_table LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_${experiment.name}_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
       .reply(200, {
         statement_id: "mock-statement-id",
         status: { state: "SUCCEEDED" },
-        result: mockSampleData,
+        manifest: {
+          schema: {
+            column_count: mockSampleData.columns.length,
+            columns: mockSampleData.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockSampleData.totalRows,
+          truncated: mockSampleData.truncated,
+        },
+        result: {
+          data_array: mockSampleData.rows,
+          chunk_index: 0,
+          row_count: mockSampleData.rows.length,
+          row_offset: 0,
+        },
       });
 
     // Act
@@ -398,19 +523,50 @@ describe("GetExperimentDataUseCase", () => {
 
     // Mock SQL query for row count - success
     nock(DATABRICKS_HOST)
-      .post(DatabricksService.SQL_STATEMENTS_ENDPOINT)
-      .query(() => true)
+      .post(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "SELECT COUNT(*) as count FROM test_table",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_${experiment.name}_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
       .reply(200, {
         statement_id: "mock-count-id",
         status: { state: "SUCCEEDED" },
-        result: mockCountData,
+        manifest: {
+          schema: {
+            column_count: mockCountData.columns.length,
+            columns: mockCountData.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockCountData.totalRows,
+          truncated: mockCountData.truncated,
+        },
+        result: {
+          data_array: mockCountData.rows,
+          chunk_index: 0,
+          row_count: mockCountData.rows.length,
+          row_offset: 0,
+        },
       });
 
     // Mock SQL query for table data - error
+    // pageSize is 20, page is 1 => LIMIT 20 OFFSET 0
     nock(DATABRICKS_HOST)
-      .post(DatabricksService.SQL_STATEMENTS_ENDPOINT)
-      .query(() => true)
-      .reply(500, { error: "Databricks error" });
+      .post(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "SELECT * FROM test_table LIMIT 20 OFFSET 0",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_${experiment.name}_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(500, { error: "Databricks error" }); // Error response does not need manifest/result
 
     // Act
     const result = await useCase.execute(experiment.id, testUserId, {
@@ -442,9 +598,16 @@ describe("GetExperimentDataUseCase", () => {
 
     // Mock SQL query for row count - error
     nock(DATABRICKS_HOST)
-      .post(DatabricksService.SQL_STATEMENTS_ENDPOINT)
-      .query(() => true)
-      .reply(500, { error: "Count query error" });
+      .post(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "SELECT COUNT(*) as count FROM test_table",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_${experiment.name}_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(500, { error: "Count query error" }); // Error response does not need manifest/result
 
     // Act
     const result = await useCase.execute(experiment.id, testUserId, {
@@ -476,7 +639,8 @@ describe("GetExperimentDataUseCase", () => {
 
     // Mock listTables API call - error
     nock(DATABRICKS_HOST)
-      .post(DatabricksService.TABLES_ENDPOINT)
+      .get(DatabricksService.TABLES_ENDPOINT)
+      .query(true)
       .reply(500, { error: "Tables listing error" });
 
     // Act
