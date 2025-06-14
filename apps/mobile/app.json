@@ -50,7 +50,6 @@
           "protocols": ["com.myCompany.p1", "com.myCompany.p2"]
         }
       ],
-      "expo-web-browser",
       "expo-router",
       "expo-font",
       "expo-web-browser"

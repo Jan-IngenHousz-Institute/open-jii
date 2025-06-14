@@ -1,6 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   View,
@@ -12,44 +10,34 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+import { useLoginFlow } from "~/api/hooks/use-login";
 import { Button } from "~/components/Button";
 import { Toast } from "~/components/Toast";
+import { useSessionStore } from "~/hooks/use-session-store";
 import { useTheme } from "~/hooks/useTheme";
 
 export default function LoginScreen() {
   const theme = useTheme();
   const { colors } = theme;
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
-    {},
-  );
   const [toast, setToast] = useState({
     visible: false,
     message: "",
     type: "error" as "success" | "error" | "info" | "warning",
   });
 
-  const handleSSOLogin = async () => {
-    try {
-      const result = await WebBrowser.openAuthSessionAsync(
-        "https://your-sso-provider.com/auth",
-        "multispeqapp://auth/callback",
-      );
+  const router = useRouter();
+  const { startLoginFlow } = useLoginFlow();
+  const { setSession } = useSessionStore();
 
-      if (result.type === "success") {
-        await AsyncStorage.setItem("auth_token", "mock_sso_token_123");
-        router.replace("/(tabs)");
-      }
-    } catch {
-      setToast({
-        visible: true,
-        message: "SSO login failed. Please try again.",
-        type: "error",
-      });
+  async function handleLogin() {
+    const session = await startLoginFlow();
+    if (!session) {
+      return;
     }
-  };
+    setSession(session);
+    router.replace("(tabs)");
+  }
 
   return (
     <SafeAreaView
@@ -108,7 +96,7 @@ export default function LoginScreen() {
             <Button
               title="Sign in with SSO"
               variant="outline"
-              onPress={handleSSOLogin}
+              onPress={handleLogin}
               style={styles.ssoButton}
             />
           </View>

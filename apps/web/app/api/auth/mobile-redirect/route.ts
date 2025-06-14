@@ -2,6 +2,12 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 export function GET(request: NextRequest) {
+  // Log all headers
+  console.log("Request Headers:");
+  for (const [key, value] of request.headers.entries()) {
+    console.log(`${key}: ${value}`);
+  }
+
   const sessionToken = request.cookies.get("authjs.session-token")?.value;
 
   if (!sessionToken) {

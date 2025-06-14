@@ -23,7 +23,7 @@ const axiosInstance = axios.create({
   },
 });
 
-export async function getSession(sessionToken: string) {
+export async function getSessionData(sessionToken: string) {
   const { data } = await axiosInstance.get<UserSessionData>(
     "/api/auth/session",
     {
@@ -33,6 +33,8 @@ export async function getSession(sessionToken: string) {
       },
     },
   );
+
+  console.log("data", data);
 
   return data;
 }

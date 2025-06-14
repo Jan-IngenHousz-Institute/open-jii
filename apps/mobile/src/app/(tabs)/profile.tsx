@@ -1,5 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
+import { useRouter } from "expo-router";
 import { User, ExternalLink, LogOut } from "lucide-react-native";
 import React, { useState } from "react";
 import {
@@ -14,17 +13,15 @@ import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
 import { Toast } from "~/components/Toast";
 import { colors } from "~/constants/colors";
+import { useSessionStore } from "~/hooks/use-session-store";
 import { useTheme } from "~/hooks/useTheme";
+import { formatIsoDateString } from "~/utils/format-iso-date-string";
 
-// Mock user data - replace with actual data from your state management
-const mockUser = {
-  email: "researcher@example.com",
-  name: "Alex Researcher",
-  organization: "Plant Science Institute",
-  lastLogin: "2025-06-05 09:30:15",
-};
+import packageJson from "../../../package.json";
 
 export default function ProfileScreen() {
+  const { clearSession, session } = useSessionStore();
+  const router = useRouter();
   const theme = useTheme();
   const { colors } = theme;
 
@@ -35,28 +32,8 @@ export default function ProfileScreen() {
   });
 
   const handleLogout = async () => {
-    try {
-      // Clear auth token
-      await AsyncStorage.removeItem("auth_token");
-
-      setToast({
-        visible: true,
-        message: "Logged out successfully",
-        type: "success",
-      });
-
-      // Short delay to show the toast before navigating
-      setTimeout(() => {
-        // Navigate to login screen
-        router.replace("/(auth)/login");
-      }, 1000);
-    } catch {
-      setToast({
-        visible: true,
-        message: "Error logging out",
-        type: "error",
-      });
-    }
+    clearSession();
+    router.replace("(auth)/login");
   };
 
   const handleOpenWebProfile = async () => {
@@ -72,6 +49,12 @@ export default function ProfileScreen() {
       );
     }
   };
+
+  if (!session) {
+    return null;
+  }
+
+  const { user, expires } = session.data;
 
   return (
     <ScrollView
@@ -109,7 +92,7 @@ export default function ProfileScreen() {
             },
           ]}
         >
-          {mockUser.name}
+          {user.name}
         </Text>
         <Text
           style={[
@@ -121,7 +104,7 @@ export default function ProfileScreen() {
             },
           ]}
         >
-          {mockUser.email}
+          {user.email}
         </Text>
       </View>
 
@@ -171,7 +154,7 @@ export default function ProfileScreen() {
               },
             ]}
           >
-            {mockUser.organization}
+            N/A
           </Text>
         </View>
 
@@ -195,7 +178,7 @@ export default function ProfileScreen() {
               },
             ]}
           >
-            Last Login
+            Login Expires
           </Text>
           <Text
             style={[
@@ -207,7 +190,7 @@ export default function ProfileScreen() {
               },
             ]}
           >
-            {mockUser.lastLogin}
+            {formatIsoDateString(expires)}
           </Text>
         </View>
       </Card>
@@ -239,7 +222,7 @@ export default function ProfileScreen() {
           },
         ]}
       >
-        MultiSpeq App v1.0.0
+        MultiSpeq App v{packageJson.version}
       </Text>
 
       <Toast
