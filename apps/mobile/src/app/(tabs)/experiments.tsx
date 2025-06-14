@@ -208,13 +208,19 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 16,
   },
+  measurementsList: {
+    flexGrow: 1,
+  },
   placeholderContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  emptyText: {
+  placeholderText: {
     fontSize: 16,
+    textAlign: "center",
+  },
+  emptyText: {
     textAlign: "center",
     padding: 24,
   },
