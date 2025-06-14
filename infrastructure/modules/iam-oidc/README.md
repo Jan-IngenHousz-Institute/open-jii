@@ -39,7 +39,7 @@ output "github_oidc_role_arn" {
 }
 ```
 
-This configuration creates an OIDC provider (if not already present) and an IAM role that GitHub Actions can assume via OIDC. The trust policy is limited to workflows originating from the specified repository and branch. The role will have permissions to manage infrastructure related to infrastructure modules.
+This configuration creates an OIDC provider (if not already present) and an IAM role that GitHub Actions can assume via OIDC. The trust policy is limited to workflows originating from the specified repository and branch, as well as from pull requests. The role will have permissions to manage infrastructure related to infrastructure modules.
 
 ## 🔑 Inputs
 
@@ -50,7 +50,7 @@ This configuration creates an OIDC provider (if not already present) and an IAM 
 | `thumbprint_list`   | SHA-1 thumbprint(s) of the OIDC provider's TLS certificate, as a lowercase hexadecimal string without colons. | `list(string)` | `["6938fd4d98bab03faadb97b34396831e3780aea1"]`  |    No    |
 | `role_name`         | The name of the IAM role to create.                                                                           | `string`       | n/a                                             |   Yes    |
 | `repository`        | The GitHub repository in the format `owner/repo` that is allowed to assume the role.                          | `string`       | n/a                                             |   Yes    |
-| `branch`            | The branch that is allowed to assume the role.                                                                | `string`       | `"main"`                                        |    No    |
+| `branch`            | The main branch that is allowed to assume the role. Pull requests are also allowed by default.                | `string`       | `"main"`                                        |    No    |
 
 ## 📤 Outputs
 

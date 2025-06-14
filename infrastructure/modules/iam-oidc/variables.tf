@@ -32,7 +32,7 @@ variable "repository" {
 }
 
 variable "branch" {
-  description = "The branch allowed to assume the role (used in the OIDC condition)."
+  description = "The main branch allowed to assume the role (used in the OIDC condition). Pull requests are also allowed by default."
   type        = string
   default     = "main"
 }
