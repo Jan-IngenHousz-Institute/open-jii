@@ -1,12 +1,16 @@
 {
   "extends": "@repo/typescript-config/base.json",
   "compilerOptions": {
+    "resolveJsonModule": true,
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "node",
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./src/*"]
+      "~/*": ["./src/*"],
+      "@/*": [
+        "./*"
+      ]
     },
     "jsx": "react-native",
     "checkJs": false,

@@ -3,23 +3,8 @@ import { openAuthSessionAsync } from "expo-web-browser";
 import { useAsyncCallback } from "react-async-hook";
 import { Text, TouchableOpacity, View } from "react-native";
 import { getLoginArgs } from "~/api/get-login-args";
-import { getSession } from "~/api/get-session";
-
-async function signIn() {
-  const { expectedRedirectUrl, loginUrl } = getLoginArgs();
-  const result = await openAuthSessionAsync(loginUrl, expectedRedirectUrl);
-
-  if (result.type !== "success") {
-    return undefined;
-  }
-  const url = parse(result.url);
-  const sessionToken = String(url.queryParams?.session_token);
-  if (!sessionToken) {
-    throw new Error("No session token found");
-  }
-
-  return sessionToken;
-}
+import { getSessionData } from "~/api/get-session-data";
+import { login } from "~/auth/login";
 
 export function LoginWidget() {
   const {
@@ -27,13 +12,13 @@ export function LoginWidget() {
     result: user,
     reset,
   } = useAsyncCallback(async () => {
-    const token = await signIn();
+    const token = await login();
 
     if (!token) {
       return undefined;
     }
 
-    return getSession(token);
+    return getSessionData(token);
   });
 
   function handleLogout() {
