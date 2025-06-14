@@ -1,6 +1,7 @@
 "use client";
 
 import { useExperimentCreate } from "@/hooks/experiment/useExperimentCreate/useExperimentCreate";
+import { useLocale } from "@/hooks/useLocale";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -8,6 +9,7 @@ import { useForm } from "react-hook-form";
 import type { CreateExperimentBody } from "@repo/api";
 import { zCreateExperimentBody } from "@repo/api";
 import { zExperimentVisibility } from "@repo/api";
+import { useTranslation } from "@repo/i18n";
 import {
   Button,
   Input,
@@ -28,13 +30,16 @@ import { toast } from "@repo/ui/hooks";
 
 export function NewExperimentForm() {
   const router = useRouter();
+  const { t } = useTranslation(undefined, "common");
+  const locale = useLocale();
+
   const { mutate: createExperiment, isPending } = useExperimentCreate({
     onSuccess: () => {
       toast({
-        description: "Experiment created successfully",
+        description: t("experiments.experimentCreated"),
       });
-      // Navigate to the experiment page
-      router.push(`/openjii/experiments`);
+      // Navigate to the experiment page with locale
+      router.push(`/${locale}/platform/experiments`);
     },
   });
 
@@ -43,7 +48,7 @@ export function NewExperimentForm() {
     defaultValues: {
       name: "",
       description: "",
-      visibility: zExperimentVisibility.enum.private,
+      visibility: zExperimentVisibility.enum.public,
       embargoIntervalDays: 90,
     },
   });
@@ -64,7 +69,7 @@ export function NewExperimentForm() {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Name</FormLabel>
+              <FormLabel>{t("newExperiment.name")}</FormLabel>
               <FormControl>
                 <Input {...field} />
               </FormControl>
@@ -77,12 +82,12 @@ export function NewExperimentForm() {
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
+              <FormLabel>{t("newExperiment.description_field")}</FormLabel>
               <FormControl>
                 <RichTextarea
                   value={field.value ?? ""}
                   onChange={field.onChange}
-                  placeholder="Enter description..."
+                  placeholder={t("newExperiment.description_field")}
                 />
               </FormControl>
               <FormMessage />
@@ -94,11 +99,13 @@ export function NewExperimentForm() {
           name="visibility"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Visibility</FormLabel>
+              <FormLabel>{t("newExperiment.visibility")}</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select an experiment visibility" />
+                    <SelectValue
+                      placeholder={t("newExperiment.visibilityPlaceholder")}
+                    />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -120,7 +127,7 @@ export function NewExperimentForm() {
           name="embargoIntervalDays"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Embargo interval days</FormLabel>
+              <FormLabel>{t("newExperiment.embargoIntervalDays")}</FormLabel>
               <FormControl>
                 <Input
                   type="number"
@@ -134,10 +141,12 @@ export function NewExperimentForm() {
         />
         <div className="flex gap-2">
           <Button type="button" onClick={cancel} variant="outline">
-            Cancel
+            {t("newExperiment.cancel")}
           </Button>
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Creating..." : "Finalize setup"}
+            {isPending
+              ? t("newExperiment.creating")
+              : t("newExperiment.finalizeSetup")}
           </Button>
         </div>
       </form>

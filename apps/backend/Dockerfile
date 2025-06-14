@@ -1,14 +1,18 @@
+# Base image with Node
 ARG NODE_VERSION=22
 
 # Alpine image
 FROM node:${NODE_VERSION}-alpine AS alpine
 RUN apk update
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat tini
+ENV TURBO_TELEMETRY_DISABLED=1
 
 # Setup pnpm and turbo on the alpine base
 FROM alpine AS base
-RUN npm install pnpm turbo --global
-RUN pnpm config set store-dir ~/.pnpm-store
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+RUN npm install turbo --global
 
 # Prune projects
 FROM base AS pruner
@@ -30,13 +34,21 @@ COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .
 
 # First install the dependencies (as they change less often)
-RUN --mount=type=cache,id=pnpm,target=~/.pnpm-store pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 # Copy source code of isolated subworkspace
 COPY --from=pruner /app/out/full/ .
 
 RUN turbo build --filter=${PROJECT}
-RUN --mount=type=cache,id=pnpm,target=~/.pnpm-store pnpm prune --prod --no-optional
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
+
+# Dependencies stage - create a clean production dependencies directory
+FROM builder AS dependencies
+ARG PROJECT=backend
+
+WORKDIR /app
+# Deploy only production dependencies to a separate directory
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter=${PROJECT} deploy --prod --ignore-scripts --no-optional --legacy /dependencies
 
 # Final image
 FROM alpine AS runner
@@ -46,31 +58,13 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nodejs
 USER nodejs
 
-WORKDIR /app
-
-# Only copy the necessary production files to the final image
-COPY --from=builder --chown=nodejs:nodejs /app/apps/${PROJECT}/dist /app/apps/${PROJECT}/dist
-COPY --from=builder --chown=nodejs:nodejs /app/apps/${PROJECT}/node_modules /app/apps/${PROJECT}/node_modules
-COPY --from=builder --chown=nodejs:nodejs /app/apps/${PROJECT}/package.json /app/apps/${PROJECT}/package.json
-
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules /app/node_modules
-
-COPY --from=builder --chown=nodejs:nodejs /app/packages/api/node_modules /app/packages/api/node_modules
-COPY --from=builder --chown=nodejs:nodejs /app/packages/api/package.json /app/packages/api/package.json
-COPY --from=builder --chown=nodejs:nodejs /app/packages/api/dist /app/packages/api/dist
-
-COPY --from=builder --chown=nodejs:nodejs /app/packages/database/node_modules /app/packages/database/node_modules
-COPY --from=builder --chown=nodejs:nodejs /app/packages/database/package.json /app/packages/database/package.json
-COPY --from=builder --chown=nodejs:nodejs /app/packages/database/dist /app/packages/database/dist
-
-COPY --from=builder --chown=nodejs:nodejs /app/packages/validator/node_modules /app/packages/validator/node_modules
-COPY --from=builder --chown=nodejs:nodejs /app/packages/validator/package.json /app/packages/validator/package.json
-COPY --from=builder --chown=nodejs:nodejs /app/packages/validator/dist /app/packages/validator/dist
-
-COPY --from=builder --chown=nodejs:nodejs /app/packages/eslint-config /app/packages/eslint-config
-COPY --from=builder --chown=nodejs:nodejs /app/packages/typescript-config /app/packages/typescript-config
-
 WORKDIR /app/apps/${PROJECT}
+
+# Copy necessary files for the backend service
+COPY --from=builder --chown=nodejs:nodejs /app/apps/${PROJECT}/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/apps/${PROJECT}/package.json ./package.json
+# Copy only the production dependencies from the dedicated directory
+COPY --from=dependencies --chown=nodejs:nodejs /dependencies/node_modules ./node_modules
 
 ARG PORT=3020
 ENV PORT=${PORT}
@@ -81,4 +75,6 @@ EXPOSE ${PORT}
 HEALTHCHECK --interval=60s --timeout=5s --start-period=30s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/health || exit 1
 
+# Use tini as init process
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "dist/main"]

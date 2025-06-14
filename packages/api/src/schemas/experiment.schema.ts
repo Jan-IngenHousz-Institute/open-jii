@@ -45,7 +45,11 @@ export const zExperiment = z.object({
 export const zExperimentList = z.array(zExperiment);
 
 export const zExperimentMember = z.object({
-  userId: z.string().uuid(),
+  user: z.object({
+    id: z.string().uuid(),
+    name: z.string().nullable(),
+    email: z.string().email().nullable(),
+  }),
   role: zExperimentMemberRole,
   joinedAt: z.string().datetime(),
 });
@@ -93,7 +97,7 @@ export const zUpdateExperimentBody = z.object({
   name: z
     .string()
     .min(1)
-    .max(100)
+    .max(255)
     .optional()
     .describe("Updated experiment name"),
   description: z.string().optional().describe("Updated experiment description"),

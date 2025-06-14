@@ -53,7 +53,7 @@ export function ExperimentRow({ experiment, userId }: ExperimentRowProps) {
       <TableCell className="text-center">
         {isOwner && (
           <div className="inline-flex justify-center">
-            <Link href={`/openjii/experiments/${experiment.id}`}>
+            <Link href={`/platform/experiments/${experiment.id}`}>
               <EditIcon size={18} />
             </Link>
           </div>

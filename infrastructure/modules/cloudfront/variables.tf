@@ -14,3 +14,15 @@ variable "default_root_object" {
   default     = "index.html"
 }
 
+variable "certificate_arn" {
+  description = "ARN of the ACM certificate for HTTPS (if using custom domain)"
+  type        = string
+  default     = ""
+}
+
+variable "custom_domain" {
+  description = "Custom domain for CloudFront distribution (e.g., docs.dev.my-company.com)"
+  type        = string
+  default     = ""
+}
+

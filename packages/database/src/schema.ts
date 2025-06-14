@@ -162,7 +162,7 @@ export const experiments = pgTable("experiments", {
   description: text("description"),
   status: experimentStatusEnum("status").default("provisioning").notNull(),
   visibility: experimentVisibilityEnum("visibility")
-    .default("private")
+    .default("public")
     .notNull(),
   embargoIntervalDays: integer("embargo_interval_days").default(90).notNull(),
   createdBy: uuid("created_by")

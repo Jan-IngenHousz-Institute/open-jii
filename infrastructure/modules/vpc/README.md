@@ -64,14 +64,14 @@ graph TD;
 
 ## 🛠 Resources Used
 
-| Resource                                                                                                               | Description                                                     | Documentation                                                                                  |
-| ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| [`aws_vpc`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc)                           | Creates a new VPC with DNS support and hostnames                | [Amazon VPC](https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html)         |
-| [`aws_internet_gateway`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/internet_gateway) | Provides internet connectivity for public subnets               | [Internet Gateway](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html) |
-| [`aws_subnet`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/subnet)                     | Creates public, private, and isolated subnets within the VPC    | [Subnets](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Subnets.html)                   |
-| [`aws_nat_gateway`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/nat_gateway)           | Provides outbound internet access to private subnets            | [NAT Gateways](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html)          |
-| [`aws_route_table`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table)           | Defines custom routes for public, private, and isolated subnets | [Route Tables](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Route_Tables.html)         |
-| [`aws_security_group`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group)     | Default security group restricting access                       | [Security Groups](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_SecurityGroups.html)    |
+| Resource                                                                                                               | Description                                                                         | Documentation                                                                                  |
+| ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [`aws_vpc`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc)                           | Creates a new VPC with DNS support and hostnames                                    | [Amazon VPC](https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html)         |
+| [`aws_internet_gateway`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/internet_gateway) | Provides internet connectivity for public subnets                                   | [Internet Gateway](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html) |
+| [`aws_subnet`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/subnet)                     | Creates public, private, and isolated subnets within the VPC                        | [Subnets](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Subnets.html)                   |
+| [`aws_nat_gateway`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/nat_gateway)           | Provides outbound internet access to private subnets                                | [NAT Gateways](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html)          |
+| [`aws_route_table`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table)           | Defines custom routes for public, private, and isolated subnets                     | [Route Tables](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Route_Tables.html)         |
+| [`aws_security_group`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group)     | Default security group, Aurora DB security group, and migration task security group | [Security Groups](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_SecurityGroups.html)    |
 
 ---
 
@@ -109,15 +109,18 @@ module "vpc" {
 
 ## 📤 Outputs
 
-| Name               | Description                      |
-| ------------------ | -------------------------------- |
-| `vpc_id`           | The ID of the created VPC        |
-| `public_subnets`   | List of public subnet IDs        |
-| `private_subnets`  | List of private subnet IDs       |
-| `isolated_subnets` | List of isolated subnet IDs      |
-| `private_rt_id`    | ID of the private route table    |
-| `isolated_rt_id`   | ID of the isolated route table   |
-| `default_sg_id`    | ID of the default security group |
+| Name                               | Description                              |
+| ---------------------------------- | ---------------------------------------- |
+| `vpc_id`                           | The ID of the created VPC                |
+| `public_subnets`                   | List of public subnet IDs                |
+| `private_subnets`                  | List of private subnet IDs               |
+| `isolated_subnets`                 | List of isolated subnet IDs              |
+| `public_rt_ids`                    | IDs of the public route tables           |
+| `private_rt_ids`                   | IDs of the private route tables          |
+| `default_sg_id`                    | ID of the default security group         |
+| `db_subnet_group_name`             | Name of the Aurora DB subnet group       |
+| `aurora_security_group_id`         | ID of the Aurora database security group |
+| `migration_task_security_group_id` | ID of the migration task security group  |
 
 ---
 

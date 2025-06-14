@@ -47,7 +47,7 @@ export class RemoveExperimentMemberUseCase {
 
       return membersResult.chain((members: ExperimentMemberDto[]) => {
         const currentUserMember = members.find(
-          (member) => member.userId === currentUserId,
+          (member) => member.user.id === currentUserId,
         );
 
         if (!currentUserMember || currentUserMember.role !== "admin") {
@@ -61,7 +61,7 @@ export class RemoveExperimentMemberUseCase {
 
         // Check if memberId exists and belongs to this experiment
         const memberExists = members.some(
-          (member) => member.userId === memberId,
+          (member) => member.user.id === memberId,
         );
         if (!memberExists) {
           this.logger.warn(
@@ -76,7 +76,7 @@ export class RemoveExperimentMemberUseCase {
 
         // Check if trying to remove the last admin
         const memberToRemove = members.find(
-          (member: ExperimentMemberDto) => member.userId === memberId,
+          (member: ExperimentMemberDto) => member.user.id === memberId,
         );
         if (memberToRemove && memberToRemove.role === "admin") {
           // Count how many admins we have
