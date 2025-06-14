@@ -88,9 +88,16 @@ variable "databricks_bucket_name" {
   type        = string
 }
 
-variable "databricks_workspace_url" {
-  description = "Databricks workspace name"
+variable "databricks_catalog_name" {
+  description = "Databricks catalog name for backend service"
   type        = string
+  default     = "open_jii_dev"
+}
+
+variable "databricks_host" {
+  description = "Databricks workspace URL"
+  type        = string
+  sensitive   = true
 }
 
 variable "unity_catalog_bucket_name" {
@@ -150,4 +157,102 @@ variable "opennext_price_class" {
   description = "CloudFront price class (PriceClass_All, PriceClass_200, PriceClass_100)"
   type        = string
   default     = "PriceClass_100"
+}
+
+# variable "domain_name" {
+#   description = "Base domain name (e.g., my-company.com)"
+#   type        = string
+# }
+
+# variable "route53_zone_id" {
+#   description = "Existing Route53 zone ID (required if create_route53_zone is false)"
+#   type        = string
+#   default     = ""
+# }
+
+variable "environment_subdomain" {
+  description = "Environment subdomain prefix (e.g., 'dev' for dev.my-company.com)"
+  type        = string
+  default     = "dev"
+}
+
+variable "backend_ecr_max_images" {
+  description = "Maximum number of images to keep in the backend ECR repository"
+  type        = number
+  default     = 10
+}
+
+variable "backend_container_port" {
+  description = "The port on which the backend container will listen"
+  type        = number
+  default     = 3020
+}
+
+variable "backend_min_capacity" {
+  description = "Minimum number of backend tasks to run"
+  type        = number
+  default     = 1
+}
+
+variable "backend_max_capacity" {
+  description = "Maximum number of backend tasks to run"
+  type        = number
+  default     = 3
+}
+
+variable "backend_cpu_threshold" {
+  description = "CPU threshold for backend autoscaling"
+  type        = number
+  default     = 80
+}
+
+variable "backend_health_check_path" {
+  description = "Path for ALB health checks on the backend service"
+  type        = string
+  default     = "/health"
+}
+
+# Backend authentication secrets
+variable "auth_secret" {
+  description = "Authentication secret token"
+  type        = string
+  sensitive   = true
+
+}
+
+variable "github_oauth_client_id" {
+  description = "GitHub OAuth client ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "github_oauth_client_secret" {
+  description = "GitHub OAuth client secret"
+  type        = string
+  sensitive   = true
+}
+
+# Backend Databricks connection secrets
+variable "backend_databricks_client_id" {
+  description = "Databricks client ID for backend service (separate from workspace client ID)"
+  type        = string
+  sensitive   = true
+}
+
+variable "backend_databricks_client_secret" {
+  description = "Databricks client secret for backend service (separate from workspace client secret)"
+  type        = string
+  sensitive   = true
+}
+
+variable "backend_databricks_job_id" {
+  description = "Databricks job ID for backend service"
+  type        = string
+  sensitive   = true
+}
+
+variable "backend_databricks_warehouse_id" {
+  description = "Databricks warehouse ID for backend service"
+  type        = string
+  sensitive   = true
 }

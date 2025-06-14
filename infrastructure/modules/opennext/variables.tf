@@ -276,7 +276,6 @@ variable "server_lambda_security_group_id" {
   type        = string
 }
 
-# Database and Application Configuration
 variable "db_environment_variables" {
   description = "Database environment variables for the server Lambda function"
   type        = map(string)

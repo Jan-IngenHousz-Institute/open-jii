@@ -55,6 +55,82 @@ resource "aws_security_group" "aurora_sg" {
   }
 }
 
+# -----------------------
+# ALB Security Group
+# -----------------------
+resource "aws_security_group" "alb_sg" {
+  name        = "${var.environment}-alb-sg"
+  description = "Security group for Application Load Balancer"
+  vpc_id      = aws_vpc.this.id
+
+  # HTTP access - typically redirects to HTTPS for security
+  ingress {
+    description      = "Allow HTTP from anywhere"
+    from_port        = 80
+    to_port          = 80
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"] # All IPv4 addresses
+    ipv6_cidr_blocks = ["::/0"]      # All IPv6 addresses
+  }
+
+  # HTTPS access - encrypted traffic
+  ingress {
+    description      = "Allow HTTPS from anywhere"
+    from_port        = 443
+    to_port          = 443
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
+  # ALB needs outbound access to forward requests to ECS tasks
+  egress {
+    description      = "Allow all outbound traffic"
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1" # All protocols
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.environment}-alb-sg"
+  })
+}
+
+# -----------------------
+# ECS Security Group
+# -----------------------
+resource "aws_security_group" "ecs_sg" {
+  name        = "${var.environment}-ecs-sg"
+  description = "Security group for ECS tasks"
+  vpc_id      = aws_vpc.this.id
+
+  # Only allow traffic from ALB on the application port
+  ingress {
+    description     = "Allow traffic from ALB on container port"
+    from_port       = var.container_port
+    to_port         = var.container_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
+  }
+
+  # ECS tasks need outbound access for:
+  # - Pulling images from ECR
+  # - Sending logs to CloudWatch
+  # - API calls to AWS services
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.environment}-ecs-sg"
+  })
+}
+
 # --------------------------
 # Migration Task Security Group
 # --------------------------
@@ -110,7 +186,18 @@ resource "aws_security_group" "server_lambda_aurora" {
   }
 }
 
-
+# ----------------------
+# Security group rule to allow ECS tasks to access Aurora database
+# ----------------------
+resource "aws_security_group_rule" "ecs_to_aurora" {
+  type                     = "ingress"
+  from_port                = 5432
+  to_port                  = 5432
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.ecs_sg.id
+  security_group_id        = aws_security_group.aurora_sg.id
+  description              = "Allow access from backend ECS tasks to Aurora database"
+}
 
 # Security group rule to allow server Lambda to access Aurora database
 resource "aws_security_group_rule" "server_lambda_to_aurora" {

@@ -1,3 +1,8 @@
+# ---------------------------
+# WIP
+# Don't use this yet please.
+# ---------------------------
+
 name: Database Migrations
 
 on:

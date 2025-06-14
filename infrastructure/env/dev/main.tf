@@ -24,11 +24,35 @@ module "cloudwatch" {
   cloudwatch_policy_name = var.iot_logging_policy_name
 }
 
+# Route53 DNS configuration
+# module "route53" {
+#   source = "../../modules/route53"
+
+#   domain_name         = var.domain_name
+#   create_route53_zone = var.create_route53_zone
+#   route53_zone_id     = var.route53_zone_id
+#   environment         = "Dev"
+#   environments        = [var.environment_subdomain]
+
+#   # These will be populated after ALB and CloudFront are created
+#   alb_records        = {}
+#   cloudfront_records = {}
+
+#   tags = {
+#     Environment = "Dev"
+#     ManagedBy   = "Terraform"
+#   }
+# }
+
+
 module "cloudfront" {
   source      = "../../modules/cloudfront"
   bucket_name = var.docusaurus_s3_bucket_name
   aws_region  = var.aws_region
+  # certificate_arn = module.route53.certificate_arn
+  # custom_domain   = "docs.${var.environment_subdomain}.${var.domain_name}"
 }
+
 
 module "docusaurus_s3" {
   source                      = "../../modules/s3"
@@ -141,7 +165,7 @@ module "databricks_metastore" {
 
 module "databricks_catalog" {
   source             = "../../modules/databricks/catalog"
-  catalog_name       = "open_jii_dev"
+  catalog_name       = var.databricks_catalog_name
   external_bucket_id = module.metastore_s3.bucket_name
 
   providers = {
@@ -153,7 +177,7 @@ module "databricks_catalog" {
 
 module "central_schema" {
   source         = "../../modules/databricks/schema"
-  catalog_name   = "open_jii_dev"
+  catalog_name   = module.databricks_catalog.catalog_name
   schema_name    = "centrum"
   schema_comment = "Central schema for OpenJII sensor data following the medallion architecture"
 
@@ -169,7 +193,7 @@ module "centrum_pipeline" {
 
   name         = "Centrum-DLT-Pipeline-DEV"
   schema_name  = "centrum"
-  catalog_name = "open_jii_dev"
+  catalog_name = module.databricks_catalog.catalog_name
 
   notebook_paths = [
     "/Workspace/Shared/notebooks/pipelines/centrum_pipeline"
@@ -242,7 +266,7 @@ module "kinesis_ingest_job" {
       parameters = {
         "kinesis_stream_name"     = module.kinesis.kinesis_stream_name
         "checkpoint_path"         = "/Volumes/open_jii_dev/centrum/checkpoints/kinesis"
-        "catalog_name"            = "open_jii_dev"
+        "catalog_name"            = module.databricks_catalog.catalog_name
         "schema_name"             = "centrum"
         "target_table"            = "raw_kinesis_data"
         "service_credential_name" = "unity-catalog-kinesis-role"
@@ -271,7 +295,7 @@ module "experiment_orchestrator_job" {
       cluster_id    = module.experiment_orchestrator_cluster.cluster_id
       notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_orchestrator_task"
       parameters = {
-        "catalog_name"             = "open_jii_dev"
+        "catalog_name"             = module.databricks_catalog.catalog_name
         "central_schema"           = "centrum"
         "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
       }
@@ -283,7 +307,7 @@ module "experiment_orchestrator_job" {
       cluster_id    = module.experiment_orchestrator_cluster.cluster_id
       notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_monitor_task"
       parameters = {
-        "catalog_name"   = "open_jii_dev"
+        "catalog_name"   = module.databricks_catalog.catalog_name
         "central_schema" = "centrum"
       }
 
@@ -311,6 +335,54 @@ module "aurora_db" {
   seconds_until_auto_pause = 1800 # Auto-pause after 30 minutes of inactivity
   backup_retention_period  = 3    # Reduced retention for dev
   skip_final_snapshot      = true # Skip snapshot on deletion in dev
+}
+
+# Authentication secrets
+module "auth_secrets" {
+  source = "../../modules/secrets-manager"
+
+  name        = "openjii-auth-secrets-dev"
+  description = "Authentication and OAuth secrets for the OpenJII services"
+
+  # Store secrets as JSON using variables
+  secret_string = jsonencode({
+    AUTH_SECRET        = var.auth_secret
+    AUTH_GITHUB_ID     = var.github_oauth_client_id
+    AUTH_GITHUB_SECRET = var.github_oauth_client_secret
+  })
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+    SecretType  = "authentication"
+  }
+}
+
+# Databricks API secrets
+module "databricks_secrets" {
+  source = "../../modules/secrets-manager"
+
+  name        = "openjii-databricks-secrets-dev"
+  description = "Databricks connection secrets for the OpenJII services"
+
+  # Store secrets as JSON using variables
+  secret_string = jsonencode({
+    DATABRICKS_HOST          = var.databricks_host
+    DATABRICKS_CLIENT_ID     = var.backend_databricks_client_id
+    DATABRICKS_CLIENT_SECRET = var.backend_databricks_client_secret
+    DATABRICKS_JOB_ID        = var.backend_databricks_job_id
+    DATABRICKS_WAREHOUSE_ID  = var.backend_databricks_warehouse_id
+  })
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+    SecretType  = "databricks"
+  }
 }
 
 # OpenNext Next.js Application Infrastructure
@@ -413,14 +485,14 @@ module "migration_runner_ecs" {
   use_spot_instances = false
   enable_autoscaling = false
 
-  inject_db_url                = true
   enable_container_healthcheck = false
   enable_circuit_breaker       = true
 
   log_group_name     = "/aws/ecs/db-migration-runner-dev"
   log_retention_days = 30
 
-  # Database credentials setup
+
+  # Secrets configuration
   secrets = [
     {
       name      = "DB_CREDENTIALS"
@@ -428,23 +500,24 @@ module "migration_runner_ecs" {
     }
   ]
 
+  # Environment variables for the migration runner
   environment_variables = [
-    {
-      name  = "LOG_LEVEL"
-      value = "debug"
-    },
     {
       name  = "DB_HOST"
       value = module.aurora_db.cluster_endpoint
+    },
+    {
+      name  = "DB_NAME"
+      value = module.aurora_db.database_name
     },
     {
       name  = "DB_PORT"
       value = module.aurora_db.cluster_port
     },
     {
-      name  = "DB_NAME"
-      value = module.aurora_db.database_name
-    }
+      name  = "LOG_LEVEL"
+      value = "debug"
+    },
   ]
 
   tags = {
@@ -452,5 +525,204 @@ module "migration_runner_ecs" {
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "database-migrations"
+  }
+}
+
+module "backend_ecr" {
+  source = "../../modules/ecr"
+
+  aws_region                    = var.aws_region
+  environment                   = "dev"
+  repository_name               = "open-jii-backend"
+  service_name                  = "backend"
+  max_image_count               = var.backend_ecr_max_images
+  enable_vulnerability_scanning = true
+  encryption_type               = "KMS"
+  image_tag_mutability          = "MUTABLE" # Set to MUTABLE for dev, but should be IMMUTABLE for prod
+
+  ci_cd_role_arn = module.iam_oidc.role_arn
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+  }
+}
+
+module "backend_alb" {
+  source = "../../modules/alb"
+
+  service_name      = "backend"
+  vpc_id            = module.vpc.vpc_id
+  public_subnet_ids = module.vpc.public_subnets
+  container_port    = var.backend_container_port
+  security_groups   = [module.vpc.alb_security_group_id]
+  environment       = "dev"
+
+  # Health check configuration
+  health_check_path                = "/health"
+  health_check_timeout             = 5
+  health_check_interval            = 90
+  health_check_healthy_threshold   = 3
+  health_check_unhealthy_threshold = 3
+  health_check_matcher             = "200-299"
+
+  # SSL/TLS configuration - Uncomment when Route53 module is enabled
+  # certificate_arn = module.route53.certificate_arn
+
+  # Enable access logs for production but not for dev
+  enable_access_logs = false
+  access_logs_bucket = ""
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+  }
+}
+
+module "backend_ecs" {
+  source = "../../modules/ecs"
+
+  region      = var.aws_region
+  environment = "dev"
+
+  # Unlike migration runner, we want a long-running service
+  create_ecs_service = true
+  service_name       = "backend"
+
+  repository_url = module.backend_ecr.repository_url
+  repository_arn = module.backend_ecr.repository_arn
+
+  # Networking configuration
+  vpc_id          = module.vpc.vpc_id
+  subnets         = module.vpc.private_subnets
+  security_groups = [module.vpc.ecs_security_group_id]
+
+  # Container configuration
+  container_port = var.backend_container_port
+
+  # Task size
+  cpu               = 512  # 0.5 vCPU
+  memory            = 1024 # 1 GB
+  container_cpu     = 512  # 0.5 vCPU
+  container_memory  = 1024 # 1 GB
+  ephemeral_storage = 21   # Minimum size (21 GiB)
+
+  # Load balancer integration
+  target_group_arn = module.backend_alb.target_group_arn
+
+  # Auto-scaling settings
+  enable_autoscaling = true
+  min_capacity       = var.backend_min_capacity  # Scale down to 1 task
+  max_capacity       = var.backend_max_capacity  # Scale up to 3 tasks
+  cpu_threshold      = var.backend_cpu_threshold # Scale out at 80% CPU usage
+
+  # Mixed capacity strategy for cost optimization and stability
+  enable_mixed_capacity = true
+  fargate_spot_weight   = 0.8 # 80% of tasks on Spot for dev environment (cost saving)
+  fargate_base_count    = 1   # Keep at least 1 task on regular Fargate for stability 
+  desired_count         = 1
+
+  # Container health checks
+  enable_container_healthcheck = true
+  health_check_path            = var.backend_health_check_path
+
+  # Deployment configuration
+  enable_circuit_breaker               = true
+  enable_circuit_breaker_with_rollback = true
+
+  # Logs configuration
+  log_group_name     = "/aws/ecs/backend-service-dev"
+  log_retention_days = 30
+
+  # Secrets configuration
+  secrets = [
+    {
+      name      = "AUTH_GITHUB_ID"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_GITHUB_ID::"
+    },
+    {
+      name      = "AUTH_GITHUB_SECRET"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_GITHUB_SECRET::"
+    },
+    {
+      name      = "AUTH_SECRET"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_SECRET::"
+    },
+    {
+      name      = "DATABRICKS_CLIENT_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_CLIENT_ID::"
+    },
+    {
+      name      = "DATABRICKS_CLIENT_SECRET"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_CLIENT_SECRET::"
+    },
+    {
+      name      = "DATABRICKS_HOST"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_HOST::"
+    },
+    {
+      name      = "DATABRICKS_JOB_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_JOB_ID::"
+    },
+    {
+      name      = "DATABRICKS_WAREHOUSE_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WAREHOUSE_ID::"
+    },
+    {
+      name      = "DB_CREDENTIALS"
+      valueFrom = module.aurora_db.master_user_secret_arn
+    },
+  ]
+
+  # Environment variables for the backend service
+  environment_variables = [
+    {
+      name  = "DATABRICKS_CATALOG_NAME"
+      value = module.databricks_catalog.catalog_name
+    },
+    {
+      name  = "DB_HOST"
+      value = module.aurora_db.cluster_endpoint
+    },
+    {
+      name  = "DB_NAME"
+      value = module.aurora_db.database_name
+    },
+    {
+      name  = "DB_PORT"
+      value = module.aurora_db.cluster_port
+    },
+    {
+      name  = "LOG_LEVEL"
+      value = "debug"
+    }
+  ]
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+  }
+}
+
+module "backend_waf" {
+  source = "../../modules/waf"
+
+  service_name       = "backend"
+  environment        = "dev"
+  alb_arn            = module.backend_alb.alb_arn
+  rate_limit         = 2000 # Requests per 5-minute period per IP
+  log_retention_days = 30
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
   }
 }

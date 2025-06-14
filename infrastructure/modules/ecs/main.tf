@@ -66,9 +66,11 @@ resource "aws_iam_role_policy" "ecs_execution_additional_policy" {
         Effect = "Allow"
         Action = [
           "secretsmanager:GetSecretValue",
-          "kms:Decrypt"
+          "kms:Decrypt" # kms:Decrypt is often needed if the secrets are encrypted with a customer-managed KMS key
         ]
-        Resource = length(var.secrets) > 0 ? [for secret in var.secrets : secret.valueFrom] : []
+        # Grant access to the ARNs of the secrets themselves, not the specific versions or keys.
+        # Extract the base ARN using a regular expression.
+        Resource = length(var.secrets) > 0 ? distinct([for secret in var.secrets : regex("^arn:aws:secretsmanager:[^:]+:[^:]+:secret:[^:]+", secret.valueFrom)]) : []
       }
     ]
   })
@@ -125,12 +127,27 @@ resource "aws_ecs_cluster_capacity_providers" "cluster_capacity" {
   capacity_providers = ["FARGATE", "FARGATE_SPOT"]
 
   # Default strategy determines which capacity provider to use by default
-  # base = minimum number of tasks to run on this capacity provider
-  # weight = relative proportion of tasks to run on this provider
-  default_capacity_provider_strategy {
-    capacity_provider = var.use_spot_instances ? "FARGATE_SPOT" : "FARGATE"
-    weight            = 1
-    base              = 1
+  # Mixed capacity configuration:
+  # - When enabled, uses both FARGATE and FARGATE_SPOT with configurable weights
+  # - FARGATE base ensures some tasks always run on regular Fargate for stability
+  # - FARGATE_SPOT used for cost savings on remaining tasks
+  dynamic "default_capacity_provider_strategy" {
+    for_each = var.enable_mixed_capacity ? [1, 2] : []
+    content {
+      capacity_provider = default_capacity_provider_strategy.key == 1 ? "FARGATE" : "FARGATE_SPOT"
+      weight            = default_capacity_provider_strategy.key == 1 ? ceil((1 - var.fargate_spot_weight) * 100) : floor(var.fargate_spot_weight * 100)
+      base              = default_capacity_provider_strategy.key == 1 ? var.fargate_base_count : 0
+    }
+  }
+
+  # Single capacity provider strategy when mixed capacity is disabled
+  dynamic "default_capacity_provider_strategy" {
+    for_each = var.enable_mixed_capacity ? [] : [1]
+    content {
+      capacity_provider = var.use_spot_instances ? "FARGATE_SPOT" : "FARGATE"
+      weight            = 1
+      base              = 1
+    }
   }
 }
 
@@ -225,8 +242,31 @@ resource "aws_ecs_service" "app_service" {
   name            = "${var.service_name}-${var.environment}"
   cluster         = aws_ecs_cluster.ecs_cluster.id
   task_definition = aws_ecs_task_definition.app_task.arn
-  launch_type     = "FARGATE"
   desired_count   = var.desired_count
+
+  # Use launch_type only when not using capacity provider strategies
+  launch_type = length(var.capacity_provider_strategy) > 0 || var.enable_mixed_capacity ? null : "FARGATE"
+
+  # Configure mixed capacity provider strategy at service level when enabled
+  # This overrides the default_capacity_provider_strategy defined at cluster level
+  dynamic "capacity_provider_strategy" {
+    for_each = var.enable_mixed_capacity ? [1, 2] : []
+    content {
+      capacity_provider = capacity_provider_strategy.key == 1 ? "FARGATE" : "FARGATE_SPOT"
+      weight            = capacity_provider_strategy.key == 1 ? ceil((1 - var.fargate_spot_weight) * 100) : floor(var.fargate_spot_weight * 100)
+      base              = capacity_provider_strategy.key == 1 ? var.fargate_base_count : 0
+    }
+  }
+
+  # Use custom capacity provider strategy when specified
+  dynamic "capacity_provider_strategy" {
+    for_each = !var.enable_mixed_capacity && length(var.capacity_provider_strategy) > 0 ? var.capacity_provider_strategy : []
+    content {
+      capacity_provider = capacity_provider_strategy.value.capacity_provider
+      weight            = capacity_provider_strategy.value.weight
+      base              = capacity_provider_strategy.value.base
+    }
+  }
 
   # Rolling deployment configuration for zero-downtime deployments
   # 200% max allows starting new tasks before stopping old ones

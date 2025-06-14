@@ -4,6 +4,29 @@ variable "environment" {
   default     = "dev"
 }
 
+variable "enable_mixed_capacity" {
+  description = "Whether to enable mixed capacity providers (both FARGATE and FARGATE_SPOT) for cost optimization with stability"
+  type        = bool
+  default     = false
+}
+
+variable "fargate_spot_weight" {
+  description = "The relative percentage of tasks to place on FARGATE_SPOT when mixed capacity is enabled (0.0-1.0). For example, 0.7 means 70% of tasks use FARGATE_SPOT"
+  type        = number
+  default     = 0.7
+
+  validation {
+    condition     = var.fargate_spot_weight >= 0 && var.fargate_spot_weight <= 1
+    error_message = "The fargate_spot_weight must be between 0 and 1 inclusive"
+  }
+}
+
+variable "fargate_base_count" {
+  description = "The minimum number of tasks that should always run on regular FARGATE when mixed capacity is enabled, for stability"
+  type        = number
+  default     = 1
+}
+
 variable "create_ecs_service" {
   description = "Whether to create an ECS service (set to false for migration tasks that don't need a long-running service). When set to false, only the ECS task definition and cluster are created, but no service is deployed. This is useful for tasks that run once and exit, like database migrations."
   type        = bool
@@ -136,9 +159,19 @@ variable "enable_service_discovery" {
 }
 
 variable "use_spot_instances" {
-  description = "Whether to use Fargate Spot instances for cost optimization. Recommended for dev/test environments."
+  description = "Whether to use Fargate Spot instances for cost optimization. Recommended for dev/test environments. If true and capacity_provider_strategy is empty, all instances will use FARGATE_SPOT."
   type        = bool
   default     = false
+}
+
+variable "capacity_provider_strategy" {
+  description = "A list of capacity provider strategies to use for the service. If not provided, will use either all FARGATE or all FARGATE_SPOT based on use_spot_instances variable."
+  type = list(object({
+    capacity_provider = string
+    weight            = number
+    base              = optional(number)
+  }))
+  default = []
 }
 
 variable "secrets" {
@@ -163,12 +196,6 @@ variable "log_group_name" {
   description = "Name of the CloudWatch log group to use"
   type        = string
   default     = ""
-}
-
-variable "inject_db_url" {
-  description = "Whether to add database credential handling for migrations"
-  type        = bool
-  default     = false
 }
 
 variable "enable_container_healthcheck" {
