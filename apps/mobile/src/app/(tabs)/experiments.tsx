@@ -1,13 +1,10 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { View, Text, StyleSheet, FlatList, RefreshControl } from "react-native";
 import { Dropdown } from "~/components/Dropdown";
-import { MeasurementResult } from "~/components/MeasurementResult";
-import { OfflineBanner } from "~/components/OfflineBanner";
 import { Toast } from "~/components/Toast";
 import { useTheme } from "~/hooks/useTheme";
 
-// Mock data - replace with actual data from your state management
+// Updated mock data with protocol name
 const mockExperiments = [
   {
     label: "Leaf Photosynthesis",
@@ -31,61 +28,40 @@ const mockMeasurements = {
     {
       id: "lp1",
       timestamp: "2025-06-06 14:30:22",
-      data: {
-        photosynthetic_rate: 12.5,
-        stomatal_conductance: 0.15,
-        transpiration_rate: 2.3,
-        sample_id: "leaf_sample_1",
-        metadata: {
-          temperature: 25.2,
-          humidity: 65,
-          light_intensity: 1200,
-        },
-      },
+      protocol: "LPX-2025-A1",
     },
     {
       id: "lp2",
       timestamp: "2025-06-05 11:15:43",
-      data: {
-        photosynthetic_rate: 10.8,
-        stomatal_conductance: 0.12,
-        transpiration_rate: 1.9,
-        sample_id: "leaf_sample_2",
-        metadata: {
-          temperature: 23.8,
-          humidity: 70,
-          light_intensity: 1050,
-        },
-      },
+      protocol: "LPX-2025-B7",
     },
   ],
   chlorophyll_fluorescence: [
     {
       id: "cf1",
       timestamp: "2025-06-06 09:45:11",
-      data: {
-        fv_fm: 0.83,
-        npq: 1.2,
-        phi2: 0.72,
-        sample_id: "leaf_sample_3",
-        metadata: {
-          dark_adaptation_time: 20,
-          temperature: 24.5,
-        },
-      },
+      protocol: "CF-PROT-77",
     },
   ],
-  absorbance_spectrum: [],
+  absorbance_spectrum: [
+    {
+      id: "as1",
+      timestamp: "2025-06-04 16:20:10",
+      protocol: "ABS-RANGE-14",
+    },
+    {
+      id: "as2",
+      timestamp: "2025-06-03 10:10:00",
+      protocol: "ABS-RANGE-15",
+    },
+  ],
 };
 
 export default function ExperimentsScreen() {
   const theme = useTheme();
   const { colors } = theme;
 
-  const [selectedExperiment, setSelectedExperiment] = useState<string | null>(
-    null,
-  );
-  const [isOffline, setIsOffline] = useState(false);
+  const [selectedExperiment, setSelectedExperiment] = useState<string>();
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState({
     visible: false,
@@ -93,70 +69,10 @@ export default function ExperimentsScreen() {
     type: "info" as "success" | "error" | "info" | "warning",
   });
 
-  useEffect(() => {
-    // Load the selected experiment from storage
-    const loadSelectedExperiment = async () => {
-      try {
-        const storedExperiment = await AsyncStorage.getItem(
-          "selected_experiment",
-        );
-        if (storedExperiment) {
-          setSelectedExperiment(storedExperiment);
-        }
-      } catch (error) {
-        console.error("Error loading selected experiment:", error);
-      }
-    };
+  const onRefresh = async () => {};
 
-    // Simulate checking network status
-    const randomOffline = Math.random() > 0.7;
-    setIsOffline(randomOffline);
-
-    if (randomOffline) {
-      setToast({
-        visible: true,
-        message: "You are offline. Showing cached experiments.",
-        type: "warning",
-      });
-    }
-
-    loadSelectedExperiment();
-  }, []);
-
-  // Simulate refresh
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setRefreshing(false);
-
-    // Simulate network check
-    const randomOffline = Math.random() > 0.7;
-    setIsOffline(randomOffline);
-
-    if (!randomOffline) {
-      setToast({
-        visible: true,
-        message: "Experiments refreshed",
-        type: "success",
-      });
-    }
-  };
-
-  const handleSelectExperiment = async (value: string) => {
+  const handleSelectExperiment = (value: string) => {
     setSelectedExperiment(value);
-
-    // Store the selected experiment in AsyncStorage
-    try {
-      await AsyncStorage.setItem("selected_experiment", value);
-    } catch (error) {
-      console.error("Error storing selected experiment:", error);
-    }
-
-    setToast({
-      visible: true,
-      message: `Selected experiment: ${mockExperiments.find((e) => e.value === value)?.label}`,
-      type: "success",
-    });
   };
 
   const getMeasurementsForSelectedExperiment = () => {
@@ -167,17 +83,21 @@ export default function ExperimentsScreen() {
     );
   };
 
-  const renderMeasurementItem = ({ item }: { item: any }) => {
-    return (
-      <MeasurementResult
-        data={item.data}
-        timestamp={item.timestamp}
-        experimentName={
-          mockExperiments.find((e) => e.value === selectedExperiment)?.label
-        }
-      />
-    );
-  };
+  const renderTableHeader = () => (
+    <View style={styles.tableRow}>
+      <Text style={[styles.headerCell, styles.flex2]}>ID</Text>
+      <Text style={[styles.headerCell, styles.flex3]}>Protocol</Text>
+      <Text style={[styles.headerCell, styles.flex3]}>Timestamp</Text>
+    </View>
+  );
+
+  const renderTableRow = ({ item }: { item: any }) => (
+    <View style={styles.tableRow}>
+      <Text style={[styles.cell, styles.flex2]}>{item.id}</Text>
+      <Text style={[styles.cell, styles.flex3]}>{item.protocol}</Text>
+      <Text style={[styles.cell, styles.flex3]}>{item.timestamp}</Text>
+    </View>
+  );
 
   return (
     <View
@@ -190,8 +110,6 @@ export default function ExperimentsScreen() {
         },
       ]}
     >
-      <OfflineBanner visible={isOffline} />
-
       <View style={styles.dropdownContainer}>
         <Dropdown
           label="Select Experiment"
@@ -214,13 +132,14 @@ export default function ExperimentsScreen() {
               },
             ]}
           >
-            Previous Measurements
+            Measurements
           </Text>
 
           <FlatList
             data={getMeasurementsForSelectedExperiment()}
             keyExtractor={(item) => item.id}
-            renderItem={renderMeasurementItem}
+            ListHeaderComponent={renderTableHeader}
+            renderItem={renderTableRow}
             contentContainerStyle={styles.measurementsList}
             refreshControl={
               <RefreshControl
@@ -304,5 +223,24 @@ const styles = StyleSheet.create({
   emptyText: {
     textAlign: "center",
     padding: 24,
+  },
+  tableRow: {
+    flexDirection: "row",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderColor: "#ccc",
+  },
+  headerCell: {
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  cell: {
+    fontSize: 13,
+  },
+  flex2: {
+    flex: 2,
+  },
+  flex3: {
+    flex: 3,
   },
 });
