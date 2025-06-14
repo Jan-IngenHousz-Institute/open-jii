@@ -4,6 +4,7 @@ import { experiments } from "@repo/database";
 
 import { assertFailure, assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
+import type { UserDto } from "../../../users/core/models/user.model";
 import { ExperimentMemberRepository } from "./experiment-member.repository";
 
 describe("ExperimentMemberRepository", () => {
@@ -64,9 +65,24 @@ describe("ExperimentMemberRepository", () => {
       expect(members.length).toBe(3); // Creator + 2 added members
       expect(members).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ userId: testUserId, role: "admin" }),
-          expect.objectContaining({ userId: memberId1, role: "member" }),
-          expect.objectContaining({ userId: memberId2, role: "admin" }),
+          expect.objectContaining({
+            role: "admin",
+            user: expect.objectContaining({
+              id: testUserId,
+            }) as Partial<UserDto>,
+          }),
+          expect.objectContaining({
+            role: "member",
+            user: expect.objectContaining({
+              id: memberId1,
+            }) as Partial<UserDto>,
+          }),
+          expect.objectContaining({
+            role: "admin",
+            user: expect.objectContaining({
+              id: memberId2,
+            }) as Partial<UserDto>,
+          }),
         ]),
       );
 
@@ -141,8 +157,10 @@ describe("ExperimentMemberRepository", () => {
       // Assert
       expect(member).toMatchObject({
         experimentId: experiment.id,
-        userId: memberId,
         role: "member",
+        user: expect.objectContaining({
+          id: memberId,
+        }) as Partial<UserDto>,
       });
       // Assert name and email are present and correct
       expect(member.user.name).toBe("New Member");

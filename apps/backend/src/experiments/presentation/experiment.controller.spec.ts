@@ -13,6 +13,7 @@ import { DatabricksService } from "../../common/services/databricks/databricks.s
 import { success, failure } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
+import type { UserDto } from "../../users/core/models/user.model";
 
 describe("ExperimentController", () => {
   const testApp = TestHarness.App;
@@ -552,8 +553,10 @@ describe("ExperimentController", () => {
 
       expect(response.body).toHaveLength(1);
       expect(response.body[0]).toMatchObject({
-        userId: testUserId,
         role: "admin",
+        user: expect.objectContaining({
+          id: testUserId,
+        }) as Partial<UserDto>,
       });
     });
 
@@ -596,8 +599,10 @@ describe("ExperimentController", () => {
         .expect(StatusCodes.CREATED)
         .expect(({ body }) => {
           expect(body).toMatchObject({
-            userId: newMemberId,
             role: "member",
+            user: expect.objectContaining({
+              id: newMemberId,
+            }) as Partial<UserDto>,
           });
         });
 
