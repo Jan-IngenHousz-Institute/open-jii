@@ -1,3 +1,8 @@
+# ---------------------------
+# WIP
+# Don't use this yet please.
+# ---------------------------
+
 name: Deploy Next.js App with OpenNext
 
 on:

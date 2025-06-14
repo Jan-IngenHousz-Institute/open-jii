@@ -491,6 +491,8 @@ module "migration_runner_ecs" {
   log_group_name     = "/aws/ecs/db-migration-runner-dev"
   log_retention_days = 30
 
+
+  # Secrets configuration
   secrets = [
     {
       name      = "DB_CREDENTIALS"
@@ -498,23 +500,24 @@ module "migration_runner_ecs" {
     }
   ]
 
+  # Environment variables for the migration runner
   environment_variables = [
-    {
-      name  = "LOG_LEVEL"
-      value = "debug"
-    },
     {
       name  = "DB_HOST"
       value = module.aurora_db.cluster_endpoint
+    },
+    {
+      name  = "DB_NAME"
+      value = module.aurora_db.database_name
     },
     {
       name  = "DB_PORT"
       value = module.aurora_db.cluster_port
     },
     {
-      name  = "DB_NAME"
-      value = module.aurora_db.database_name
-    }
+      name  = "LOG_LEVEL"
+      value = "debug"
+    },
   ]
 
   tags = {
@@ -617,9 +620,11 @@ module "backend_ecs" {
   max_capacity       = var.backend_max_capacity  # Scale up to 3 tasks
   cpu_threshold      = var.backend_cpu_threshold # Scale out at 80% CPU usage
 
-  # Use spot instances for dev to optimize costs
-  use_spot_instances = true
-  desired_count      = 1
+  # Mixed capacity strategy for cost optimization and stability
+  enable_mixed_capacity = true
+  fargate_spot_weight   = 0.8 # 80% of tasks on Spot for dev environment (cost saving)
+  fargate_base_count    = 1   # Keep at least 1 task on regular Fargate for stability 
+  desired_count         = 1
 
   # Container health checks
   enable_container_healthcheck = true
@@ -633,47 +638,8 @@ module "backend_ecs" {
   log_group_name     = "/aws/ecs/backend-service-dev"
   log_retention_days = 30
 
-  # Environment variables and secrets
-  environment_variables = [
-    {
-      name  = "NODE_ENV"
-      value = "development"
-    },
-    {
-      name  = "PORT"
-      value = var.backend_container_port
-    },
-    {
-      name  = "LOG_LEVEL"
-      value = "debug"
-    },
-    {
-      name  = "DB_HOST"
-      value = module.aurora_db.cluster_endpoint
-    },
-    {
-      name  = "DB_PORT"
-      value = module.aurora_db.cluster_port
-    },
-    {
-      name  = "DB_NAME"
-      value = module.aurora_db.database_name
-    },
-    {
-      name  = "DATABRICKS_CATALOG_NAME"
-      value = module.databricks_catalog.catalog_name
-    }
-  ]
-
+  # Secrets configuration
   secrets = [
-    {
-      name      = "DB_CREDENTIALS"
-      valueFrom = module.aurora_db.master_user_secret_arn
-    },
-    {
-      name      = "AUTH_SECRET"
-      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_SECRET::"
-    },
     {
       name      = "AUTH_GITHUB_ID"
       valueFrom = "${module.auth_secrets.secret_arn}:AUTH_GITHUB_ID::"
@@ -683,8 +649,8 @@ module "backend_ecs" {
       valueFrom = "${module.auth_secrets.secret_arn}:AUTH_GITHUB_SECRET::"
     },
     {
-      name      = "DATABRICKS_HOST"
-      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_HOST::"
+      name      = "AUTH_SECRET"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_SECRET::"
     },
     {
       name      = "DATABRICKS_CLIENT_ID"
@@ -695,12 +661,44 @@ module "backend_ecs" {
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_CLIENT_SECRET::"
     },
     {
+      name      = "DATABRICKS_HOST"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_HOST::"
+    },
+    {
       name      = "DATABRICKS_JOB_ID"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_JOB_ID::"
     },
     {
       name      = "DATABRICKS_WAREHOUSE_ID"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WAREHOUSE_ID::"
+    },
+    {
+      name      = "DB_CREDENTIALS"
+      valueFrom = module.aurora_db.master_user_secret_arn
+    },
+  ]
+
+  # Environment variables for the backend service
+  environment_variables = [
+    {
+      name  = "DATABRICKS_CATALOG_NAME"
+      value = module.databricks_catalog.catalog_name
+    },
+    {
+      name  = "DB_HOST"
+      value = module.aurora_db.cluster_endpoint
+    },
+    {
+      name  = "DB_NAME"
+      value = module.aurora_db.database_name
+    },
+    {
+      name  = "DB_PORT"
+      value = module.aurora_db.cluster_port
+    },
+    {
+      name  = "LOG_LEVEL"
+      value = "debug"
     }
   ]
 

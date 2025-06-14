@@ -1,0 +1,200 @@
+# ---------------------------
+# WIP
+# Don't use this yet please.
+# ---------------------------
+
+name: Deploy Backend
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "The deployment environment (dev, staging, prod)"
+        required: true
+        type: string
+
+env:
+  AWS_REGION: eu-central-1
+  ENV: ${{ inputs.environment }}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy Backend
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GithubActionsDeployAccess
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set environment variables
+        run: |
+          echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
+          echo "ECR_REPOSITORY=open-jii-backend" >> $GITHUB_ENV
+          echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_ENV
+
+          # Get and validate AWS region
+          AWS_REGION="${{ env.AWS_REGION }}"
+          if [[ -z "$AWS_REGION" ]]; then
+            echo "::warning::AWS_REGION not set, using default: eu-central-1"
+            echo "AWS_REGION=eu-central-1" >> $GITHUB_ENV
+          else
+            echo "AWS_REGION=$AWS_REGION" >> $GITHUB_ENV
+          fi
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+        run: |
+          echo "Building Docker image for backend"
+
+          # Check if Dockerfile exists
+          if [[ ! -f "apps/backend/Dockerfile" ]]; then
+            echo "::error::Dockerfile not found at apps/backend/Dockerfile"
+            exit 1
+          fi
+
+          # Build image
+          echo "Building Docker image for backend"
+          docker build \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            --build-arg PROJECT=backend \
+            -f apps/backend/Dockerfile . > /dev/null
+
+          if [ $? -ne 0 ]; then
+            echo "::error::Docker build failed"
+            exit 1
+          fi
+
+          # Define the full image reference for consistency
+          FULL_IMAGE_REF="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          echo "Pushing image to ECR repository"
+          docker push $FULL_IMAGE_REF > /dev/null
+          if [ $? -ne 0 ]; then
+            echo "::error::Failed to push image to ECR"
+            exit 1
+          fi
+
+          # Add latest tag using AWS ECR put-image command (no need to push again)
+          if ! aws ecr put-image --repository-name ${ECR_REPOSITORY} --image-tag latest \
+            --image-manifest "$(aws ecr batch-get-image --repository-name ${ECR_REPOSITORY} \
+            --image-ids imageTag=${IMAGE_TAG} --query 'images[].imageManifest' --output text)" \
+            --region ${AWS_REGION} &>/dev/null; then
+            echo "::warning::Failed to tag image as latest, but the version-specific tag was pushed successfully"
+          fi
+
+          # Store the full image reference for later use
+          echo "full_image_ref=$FULL_IMAGE_REF" >> $GITHUB_OUTPUT
+
+          echo "✅ Successfully built and pushed Docker image"
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Download ECS Task Definition
+        run: |
+          aws ecs describe-task-definition --task-definition backend-${{ env.ENV }} \
+          --query taskDefinition > task-definition.json
+
+      - name: Update ECS task definition
+        id: update-task-def
+        run: |
+          echo "Updating task definition with new image..."
+
+          # Create a temporary file with the updated task definition
+          jq --arg IMAGE "${{ steps.build-image.outputs.full_image_ref }}" \
+            '.containerDefinitions[0].image = $IMAGE' \
+            task-definition.json > updated-task-definition.json
+            
+          if [ $? -ne 0 ]; then
+            echo "::error::Failed to update task definition"
+            exit 1
+          fi
+
+          # Remove fields that can't be included in RegisterTaskDefinition
+          jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' \
+            updated-task-definition.json > final-task-definition.json
+            
+          if [ $? -ne 0 ]; then
+            echo "::error::Failed to clean task definition"
+            exit 1
+          fi
+
+          # Register the new task definition
+          echo "Registering new task definition..."
+          TASK_DEF_ARN=$(aws ecs register-task-definition \
+            --cli-input-json "file://final-task-definition.json" \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+            
+          if [ $? -ne 0 ]; then
+            echo "::error::Failed to register task definition"
+            exit 1
+          fi
+
+          echo "task_def_arn=$TASK_DEF_ARN" >> $GITHUB_OUTPUT
+          echo "✅ Registered new task definition: $TASK_DEF_ARN"
+
+      - name: Deploy to ECS service
+        run: |
+          TASK_DEF_ARN="${{ steps.update-task-def.outputs.task_def_arn }}"
+          CLUSTER_NAME="backend-cluster-${{ env.ENV }}"
+          SERVICE_NAME="backend-${{ env.ENV }}"
+
+          echo "Updating ECS service..."
+          aws ecs update-service \
+            --cluster $CLUSTER_NAME \
+            --service $SERVICE_NAME \
+            --task-definition $TASK_DEF_ARN \
+            --force-new-deployment > /dev/null
+            
+          if [ $? -ne 0 ]; then
+            echo "::error::Failed to update ECS service"
+            exit 1
+          fi
+
+          echo "Waiting for service to stabilize..."
+          aws ecs wait services-stable \
+            --cluster $CLUSTER_NAME \
+            --services $SERVICE_NAME
+            
+          if [ $? -ne 0 ]; then
+            echo "::error::Service failed to stabilize"
+            exit 1
+          fi
+
+          echo "✅ Deployment completed successfully!"
+
+          # Clean up temporary files
+          rm -f task-definition.json updated-task-definition.json final-task-definition.json

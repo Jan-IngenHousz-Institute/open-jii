@@ -148,12 +148,14 @@ resource "aws_wafv2_web_acl_association" "main" {
 # Stores detailed logs of blocked/allowed requests for analysis and troubleshooting
 # Retention period balances storage costs with compliance/debugging needs
 resource "aws_cloudwatch_log_group" "waf_logs" {
-  name              = "/aws/waf/${var.service_name}-${var.environment}"
+  # AWS requires log group names for WAF to begin with "aws-waf-logs-"
+  # https://docs.aws.amazon.com/waf/latest/developerguide/logging-cw-logs.html#logging-cw-logs-naming
+  name              = "aws-waf-logs-${var.service_name}-${var.environment}"
   retention_in_days = var.log_retention_days
 
   tags = merge(
     {
-      Name        = "/aws/waf/${var.service_name}-${var.environment}"
+      Name        = "aws-waf-logs-${var.service_name}-${var.environment}"
       Environment = var.environment
       Service     = var.service_name
     },
@@ -165,7 +167,8 @@ resource "aws_cloudwatch_log_group" "waf_logs" {
 # Logs all requests processed by WAF including blocked and allowed traffic
 # Essential for security analysis, false positive identification, and compliance
 resource "aws_wafv2_web_acl_logging_configuration" "main" {
-  resource_arn            = aws_wafv2_web_acl.main.arn
+  resource_arn = aws_wafv2_web_acl.main.arn
+  # Use the ARN of our correctly named CloudWatch log group (with aws-waf-logs- prefix)
   log_destination_configs = [aws_cloudwatch_log_group.waf_logs.arn]
 
   # Redact sensitive headers from logs to comply with security/privacy requirements
