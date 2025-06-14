@@ -2,7 +2,6 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { View } from "react-native";
@@ -12,9 +11,6 @@ import { useTheme } from "~/hooks/useTheme";
 export const unstable_settings = {
   initialRouteName: "(auth)/login",
 };
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
 
 // Root layout wrapper with theme provider
 export default function RootLayout() {
@@ -35,12 +31,6 @@ export default function RootLayout() {
       throw error;
     }
   }, [error]);
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
 
   if (!loaded) {
     return null;
