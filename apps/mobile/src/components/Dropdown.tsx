@@ -1,13 +1,14 @@
 import { ChevronDown } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   Modal,
   FlatList,
   Pressable,
+  TextInput,
+  StyleSheet,
 } from "react-native";
 import { useTheme } from "~/hooks/useTheme";
 
@@ -36,10 +37,23 @@ export function Dropdown({
   const { colors } = theme;
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const selectedOption = options.find(
     (option) => option.value === selectedValue,
   );
+
+  const filteredOptions = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return options.filter(
+      (opt) =>
+        opt.label.toLowerCase().includes(query) ||
+        opt.description?.toLowerCase().includes(query),
+    );
+  }, [options, searchQuery]);
+
+  const ITEM_HEIGHT = 56;
+  const MAX_VISIBLE_ITEMS = 6;
 
   return (
     <View style={styles.container}>
@@ -76,18 +90,14 @@ export function Dropdown({
           style={[
             styles.selectedText,
             {
-              color: theme.isDark
-                ? colors.dark.onSurface
-                : colors.light.onSurface,
-            },
-            !selectedOption && [
-              styles.placeholderText,
-              {
-                color: theme.isDark
+              color: selectedOption
+                ? theme.isDark
+                  ? colors.dark.onSurface
+                  : colors.light.onSurface
+                : theme.isDark
                   ? colors.dark.inactive
                   : colors.light.inactive,
-              },
-            ],
+            },
           ]}
         >
           {selectedOption ? selectedOption.label : placeholder}
@@ -100,7 +110,7 @@ export function Dropdown({
 
       <Modal
         visible={modalVisible}
-        transparent={true}
+        transparent
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
@@ -118,71 +128,103 @@ export function Dropdown({
               },
             ]}
           >
-            <Text
+            <TextInput
+              placeholder="Search experiments..."
+              placeholderTextColor={
+                theme.isDark ? colors.dark.inactive : colors.light.inactive
+              }
               style={[
-                styles.modalTitle,
+                styles.searchInput,
                 {
                   color: theme.isDark
                     ? colors.dark.onSurface
                     : colors.light.onSurface,
+                  borderColor: theme.isDark
+                    ? colors.dark.border
+                    : colors.light.border,
+                  backgroundColor: theme.isDark
+                    ? colors.dark.surface
+                    : colors.light.surface,
                 },
               ]}
-            >
-              {label ?? "Select an option"}
-            </Text>
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
 
-            <FlatList
-              data={options}
-              keyExtractor={(item) => item.value}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.optionItem,
-                    selectedValue === item.value && [
-                      styles.selectedItem,
-                      { backgroundColor: colors.primary.dark + "20" },
-                    ],
-                  ]}
-                  onPress={() => {
-                    onSelect(item.value);
-                    setModalVisible(false);
-                  }}
-                >
-                  <View>
-                    <Text
-                      style={[
-                        styles.optionText,
-                        {
-                          color: theme.isDark
-                            ? colors.dark.onSurface
-                            : colors.light.onSurface,
-                        },
-                        selectedValue === item.value && [
-                          styles.selectedItemText,
-                          { color: colors.primary.dark },
-                        ],
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                    {item.description && (
+            <View
+              style={[
+                styles.listWrapper,
+                { height: ITEM_HEIGHT * MAX_VISIBLE_ITEMS },
+              ]}
+            >
+              <FlatList
+                data={filteredOptions}
+                keyExtractor={(item) => item.value}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ flexGrow: 1 }}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[
+                      styles.optionItem,
+                      selectedValue === item.value && {
+                        backgroundColor: colors.primary.dark + "20",
+                      },
+                    ]}
+                    onPress={() => {
+                      onSelect(item.value);
+                      setModalVisible(false);
+                      setSearchQuery("");
+                    }}
+                  >
+                    <View>
                       <Text
                         style={[
-                          styles.descriptionText,
+                          styles.optionText,
                           {
-                            color: theme.isDark
-                              ? colors.dark.inactive
-                              : colors.light.inactive,
+                            color:
+                              selectedValue === item.value
+                                ? colors.primary.dark
+                                : theme.isDark
+                                  ? colors.dark.onSurface
+                                  : colors.light.onSurface,
+                            fontWeight:
+                              selectedValue === item.value ? "bold" : "normal",
                           },
                         ]}
                       >
-                        {item.description}
+                        {item.label}
                       </Text>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              )}
-            />
+                      {item.description && (
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            marginTop: 4,
+                            color: theme.isDark
+                              ? colors.dark.inactive
+                              : colors.light.inactive,
+                          }}
+                        >
+                          {item.description}
+                        </Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={
+                  <Text
+                    style={{
+                      textAlign: "center",
+                      padding: 16,
+                      color: theme.isDark
+                        ? colors.dark.inactive
+                        : colors.light.inactive,
+                    }}
+                  >
+                    No results found
+                  </Text>
+                }
+              />
+            </View>
           </View>
         </Pressable>
       </Modal>
@@ -210,39 +252,35 @@ const styles = StyleSheet.create({
   selectedText: {
     fontSize: 16,
   },
-  placeholderText: {},
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
-    alignItems: "center",
+    padding: 16,
   },
   modalContent: {
     borderRadius: 12,
-    width: "90%",
+    width: "100%",
     maxHeight: "80%",
     padding: 16,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
+  searchInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     marginBottom: 16,
-    textAlign: "center",
+    fontSize: 16,
+  },
+  listWrapper: {
+    flexGrow: 0,
   },
   optionItem: {
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
   },
-  selectedItem: {},
   optionText: {
     fontSize: 16,
-  },
-  selectedItemText: {
-    fontWeight: "bold",
-  },
-  descriptionText: {
-    fontSize: 14,
-    marginTop: 4,
   },
 });

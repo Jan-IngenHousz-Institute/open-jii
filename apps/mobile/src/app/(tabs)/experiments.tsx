@@ -21,6 +21,21 @@ const mockExperiments = [
     value: "absorbance_spectrum",
     description: "Measures light absorbance across wavelengths",
   },
+  {
+    label: "Leaf Photosynthesis2",
+    value: "leaf_photosynthesis2",
+    description: "Measures photosynthetic activity in leaves",
+  },
+  {
+    label: "Chlorophyll Fluorescence2",
+    value: "chlorophyll_fluorescence2",
+    description: "Analyzes chlorophyll fluorescence parameters",
+  },
+  {
+    label: "Absorbance Spectrum2",
+    value: "absorbance_spectrum2",
+    description: "Measures light absorbance across wavelengths",
+  },
 ];
 
 const mockMeasurements = {
