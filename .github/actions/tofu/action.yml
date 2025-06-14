@@ -57,10 +57,10 @@ runs:
       working-directory: infrastructure/env/${{ inputs.environment }}
       run: tofu validate
 
-    - name: OpenTofu Plan
-      shell: bash
-      working-directory: infrastructure/env/${{ inputs.environment }}
-      run: tofu plan -no-color
+    # - name: OpenTofu Plan
+    #   shell: bash
+    #   working-directory: infrastructure/env/${{ inputs.environment }}
+    #   run: tofu plan -no-color
 
     # - name: Generate Infrastructure Outputs
     #   shell: bash
