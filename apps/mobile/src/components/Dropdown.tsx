@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useTheme } from "~/hooks/useTheme";
 
-interface DropdownOption {
+export interface DropdownOption {
   label: string;
   value: string;
   description?: string;

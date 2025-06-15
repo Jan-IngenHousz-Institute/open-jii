@@ -1,101 +1,51 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, FlatList, RefreshControl } from "react-native";
-import { Dropdown } from "~/components/Dropdown";
-import { Toast } from "~/components/Toast";
+import { useExperimentsDropdownOptions } from "~/api/hooks/use-experiments-dropdown-options";
+import { tsr } from "~/api/tsr";
+import { Dropdown, DropdownOption } from "~/components/Dropdown";
 import { useTheme } from "~/hooks/useTheme";
 
-// Updated mock data with protocol name
-const mockExperiments = [
+const mockMeasurements = [
   {
-    label: "Leaf Photosynthesis",
-    value: "leaf_photosynthesis",
-    description: "Measures photosynthetic activity in leaves",
+    id: "lp1",
+    timestamp: "2025-06-06 14:30:22",
+    protocol: "LPX-2025-A1",
   },
   {
-    label: "Chlorophyll Fluorescence",
-    value: "chlorophyll_fluorescence",
-    description: "Analyzes chlorophyll fluorescence parameters",
+    id: "lp2",
+    timestamp: "2025-06-05 11:15:43",
+    protocol: "LPX-2025-B7",
   },
   {
-    label: "Absorbance Spectrum",
-    value: "absorbance_spectrum",
-    description: "Measures light absorbance across wavelengths",
+    id: "cf1",
+    timestamp: "2025-06-06 09:45:11",
+    protocol: "CF-PROT-77",
   },
   {
-    label: "Leaf Photosynthesis2",
-    value: "leaf_photosynthesis2",
-    description: "Measures photosynthetic activity in leaves",
+    id: "as1",
+    timestamp: "2025-06-04 16:20:10",
+    protocol: "ABS-RANGE-14",
   },
   {
-    label: "Chlorophyll Fluorescence2",
-    value: "chlorophyll_fluorescence2",
-    description: "Analyzes chlorophyll fluorescence parameters",
-  },
-  {
-    label: "Absorbance Spectrum2",
-    value: "absorbance_spectrum2",
-    description: "Measures light absorbance across wavelengths",
+    id: "as2",
+    timestamp: "2025-06-03 10:10:00",
+    protocol: "ABS-RANGE-15",
   },
 ];
-
-const mockMeasurements = {
-  leaf_photosynthesis: [
-    {
-      id: "lp1",
-      timestamp: "2025-06-06 14:30:22",
-      protocol: "LPX-2025-A1",
-    },
-    {
-      id: "lp2",
-      timestamp: "2025-06-05 11:15:43",
-      protocol: "LPX-2025-B7",
-    },
-  ],
-  chlorophyll_fluorescence: [
-    {
-      id: "cf1",
-      timestamp: "2025-06-06 09:45:11",
-      protocol: "CF-PROT-77",
-    },
-  ],
-  absorbance_spectrum: [
-    {
-      id: "as1",
-      timestamp: "2025-06-04 16:20:10",
-      protocol: "ABS-RANGE-14",
-    },
-    {
-      id: "as2",
-      timestamp: "2025-06-03 10:10:00",
-      protocol: "ABS-RANGE-15",
-    },
-  ],
-};
 
 export default function ExperimentsScreen() {
   const theme = useTheme();
   const { colors } = theme;
 
   const [selectedExperiment, setSelectedExperiment] = useState<string>();
-  const [refreshing, setRefreshing] = useState(false);
-  const [toast, setToast] = useState({
-    visible: false,
-    message: "",
-    type: "info" as "success" | "error" | "info" | "warning",
-  });
+  const [refreshing] = useState(false);
+
+  const { options } = useExperimentsDropdownOptions();
 
   const onRefresh = async () => {};
 
   const handleSelectExperiment = (value: string) => {
     setSelectedExperiment(value);
-  };
-
-  const getMeasurementsForSelectedExperiment = () => {
-    if (!selectedExperiment) return [];
-    return (
-      mockMeasurements[selectedExperiment as keyof typeof mockMeasurements] ||
-      []
-    );
   };
 
   const renderTableHeader = () => (
@@ -128,7 +78,7 @@ export default function ExperimentsScreen() {
       <View style={styles.dropdownContainer}>
         <Dropdown
           label="Select Experiment"
-          options={mockExperiments}
+          options={options}
           selectedValue={selectedExperiment ?? undefined}
           onSelect={handleSelectExperiment}
           placeholder="Choose an experiment"
@@ -151,7 +101,7 @@ export default function ExperimentsScreen() {
           </Text>
 
           <FlatList
-            data={getMeasurementsForSelectedExperiment()}
+            data={mockMeasurements}
             keyExtractor={(item) => item.id}
             ListHeaderComponent={renderTableHeader}
             renderItem={renderTableRow}
@@ -196,13 +146,6 @@ export default function ExperimentsScreen() {
           </Text>
         </View>
       )}
-
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        type={toast.type}
-        onDismiss={() => setToast({ ...toast, visible: false })}
-      />
     </View>
   );
 }

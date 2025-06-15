@@ -17,6 +17,7 @@ import {
   TouchableOpacity,
   Dimensions,
 } from "react-native";
+import { useExperimentsDropdownOptions } from "~/api/hooks/use-experiments-dropdown-options";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
 import { Dropdown } from "~/components/Dropdown";
@@ -24,25 +25,6 @@ import { MeasurementResult } from "~/components/MeasurementResult";
 import { Toast } from "~/components/Toast";
 import { colors } from "~/constants/colors";
 import { useTheme } from "~/hooks/useTheme";
-
-// Mock data - replace with actual data from your state management
-const mockExperiments = [
-  {
-    label: "Leaf Photosynthesis",
-    value: "leaf_photosynthesis",
-    description: "Measures photosynthetic activity in leaves",
-  },
-  {
-    label: "Chlorophyll Fluorescence",
-    value: "chlorophyll_fluorescence",
-    description: "Analyzes chlorophyll fluorescence parameters",
-  },
-  {
-    label: "Absorbance Spectrum",
-    value: "absorbance_spectrum",
-    description: "Measures light absorbance across wavelengths",
-  },
-];
 
 const mockProtocols = [
   {
@@ -75,6 +57,7 @@ const { height } = Dimensions.get("window");
 export default function MeasurementScreen() {
   const theme = useTheme();
   const { colors } = theme;
+  const { options } = useExperimentsDropdownOptions();
 
   // Track which step we're on (1: Setup, 2: Measurement)
   const [currentStep, setCurrentStep] = useState(1);
@@ -288,9 +271,8 @@ export default function MeasurementScreen() {
         case "standard":
           mockData = {
             protocol: "standard",
-            experiment: mockExperiments.find(
-              (e) => e.value === selectedExperiment,
-            )?.label,
+            experiment: options.find((e) => e.value === selectedExperiment)
+              ?.label,
             timestamp: new Date().toISOString(),
             readings: {
               absorbance: [0.12, 0.15, 0.18, 0.22, 0.25],
@@ -306,9 +288,8 @@ export default function MeasurementScreen() {
         case "extended":
           mockData = {
             protocol: "extended",
-            experiment: mockExperiments.find(
-              (e) => e.value === selectedExperiment,
-            )?.label,
+            experiment: options.find((e) => e.value === selectedExperiment)
+              ?.label,
             timestamp: new Date().toISOString(),
             readings: {
               absorbance: [0.12, 0.15, 0.18, 0.22, 0.25, 0.28, 0.3],
@@ -332,9 +313,8 @@ export default function MeasurementScreen() {
         case "quick":
           mockData = {
             protocol: "quick",
-            experiment: mockExperiments.find(
-              (e) => e.value === selectedExperiment,
-            )?.label,
+            experiment: options.find((e) => e.value === selectedExperiment)
+              ?.label,
             timestamp: new Date().toISOString(),
             readings: {
               absorbance_avg: 0.18,
@@ -412,7 +392,7 @@ export default function MeasurementScreen() {
 
   const isConnected = bluetoothConnected || usbConnected;
   const experimentName = selectedExperiment
-    ? mockExperiments.find((e) => e.value === selectedExperiment)?.label
+    ? options.find((e) => e.value === selectedExperiment)?.label
     : "No experiment selected";
 
   const renderDeviceItem = ({ item }: { item: any }) => (
@@ -481,7 +461,7 @@ export default function MeasurementScreen() {
           Select Experiment
         </Text>
         <Dropdown
-          options={mockExperiments}
+          options={options}
           selectedValue={selectedExperiment ?? undefined}
           onSelect={handleSelectExperiment}
           placeholder="Choose an experiment"

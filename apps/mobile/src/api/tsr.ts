@@ -1,12 +1,16 @@
 import { tsRestFetchApi } from "@ts-rest/core";
 import type { ApiFetcherArgs } from "@ts-rest/core";
 import { initTsrReactQuery } from "@ts-rest/react-query/v5";
+import { useSessionStore } from "~/hooks/use-session-store";
 
 import { contract } from "@repo/api";
 
 const customApiFetcher = async (args: ApiFetcherArgs) => {
+  const token = useSessionStore.getState().session?.token;
+
   const enhancedHeaders = {
     ...args.headers,
+    Cookie: token ? `authjs.session-token=${token}` : "",
   };
 
   return tsRestFetchApi({
@@ -21,5 +25,4 @@ export const tsr = initTsrReactQuery(contract, {
     "x-app-source": "ts-rest",
   },
   api: customApiFetcher,
-  credentials: "include",
 });

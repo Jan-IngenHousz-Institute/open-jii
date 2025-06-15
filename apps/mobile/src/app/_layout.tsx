@@ -1,4 +1,5 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -36,15 +37,19 @@ export default function RootLayout() {
   );
 }
 
+const queryClient = new QueryClient();
+
 function RootLayoutContent() {
   const theme = useTheme();
 
   return (
     <View style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <StatusBar style={theme.isDark ? "light" : "dark"} />
-        <RootLayoutNav />
-      </SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          <StatusBar style={theme.isDark ? "light" : "dark"} />
+          <RootLayoutNav />
+        </SafeAreaProvider>
+      </QueryClientProvider>
     </View>
   );
 }
