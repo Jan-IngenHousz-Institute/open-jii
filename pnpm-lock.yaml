@@ -6,20 +6,38 @@ settings:
 
 catalogs:
   default:
+    '@types/node':
+      specifier: ^22.15.3
+      version: 22.15.30
     eslint:
       specifier: ^9.25.1
       version: 9.26.0
+    prettier:
+      specifier: ^3.5.3
+      version: 3.5.3
+    react-hook-form:
+      specifier: ^7.56.2
+      version: 7.56.3
     tailwindcss:
       specifier: ^3.4.15
       version: 3.4.17
     typescript:
       specifier: ^5.8.3
       version: 5.8.3
+    zod:
+      specifier: ^3.24.3
+      version: 3.24.4
   react19:
     '@types/react':
       specifier: ^19.0.12
       version: 19.1.4
+    '@types/react-dom':
+      specifier: ^19.0.4
+      version: 19.1.5
     react:
+      specifier: 19.0.0
+      version: 19.0.0
+    react-dom:
       specifier: 19.0.0
       version: 19.0.0
 
@@ -265,6 +283,18 @@ importers:
       '@react-navigation/native-stack':
         specifier: ^7.3.10
         version: 7.3.13(@react-navigation/native@7.1.9(react-native@0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0))(react@19.0.0))(react-native-safe-area-context@5.4.0(react-native@0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0))(react@19.0.0))(react-native-screens@4.10.0(react-native@0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0))(react@19.0.0))(react-native@0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0))(react@19.0.0)
+      '@repo/api':
+        specifier: workspace:*
+        version: link:../../packages/api
+      '@tanstack/react-query':
+        specifier: ^5.75.4
+        version: 5.76.0(react@19.0.0)
+      '@ts-rest/core':
+        specifier: ^3.52.1
+        version: 3.52.1(@types/node@22.15.30)(zod@3.24.4)
+      '@ts-rest/react-query':
+        specifier: ^3.52.1
+        version: 3.52.1(@tanstack/react-query@5.76.0(react@19.0.0))(@ts-rest/core@3.52.1(@types/node@22.15.30)(zod@3.24.4))(react@19.0.0)(zod@3.24.4)
       axios:
         specifier: ^1.9.0
         version: 1.9.0
@@ -3083,7 +3113,7 @@ packages:
 
   '@expo/bunyan@4.0.1':
     resolution: {integrity: sha512-+Lla7nYSiHZirgK+U/uYzsLv/X+HaJienbD5AKX1UQZHYfWaP+9uuQluRB4GrEVWF0GZ7vEVp/jzaOT9k/SQlg==}
-    engines: {'0': node >=0.10.0}
+    engines: {node: '>=0.10.0'}
 
   '@expo/cli@0.24.13':
     resolution: {integrity: sha512-2LSdbvYs+WmUljnplQXMCUyNzyX4H+F4l8uExfA1hud25Bl5kyaGrx1jjtgNxMTXmfmMjvgBdK798R50imEhkA==}
