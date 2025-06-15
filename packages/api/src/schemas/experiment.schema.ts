@@ -156,19 +156,17 @@ export const zExperimentDataTableInfo = z.object({
   name: z.string().describe("Name of the table"),
   catalog_name: z.string().describe("Catalog name"),
   schema_name: z.string().describe("Schema name"),
-});
-
-export const zExperimentDataTableList = z.array(zExperimentDataTableInfo);
-
-export const zExperimentDataResponse = z.object({
-  tables: zExperimentDataTableList.optional(),
   data: zExperimentData.optional(),
-  tableName: z.string().optional(),
   page: z.number().int(),
   pageSize: z.number().int(),
   totalPages: z.number().int(),
   totalRows: z.number().int(),
 });
+
+export const zExperimentDataTableList = z.array(zExperimentDataTableInfo);
+
+// Now the response is an array of table data objects
+export const zExperimentDataResponse = zExperimentDataTableList;
 
 export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
 

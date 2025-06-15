@@ -163,10 +163,14 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
 
-    // Verify response structure
-    expect(result.value).toMatchObject({
+    // Verify response structure - now an array with one element
+    expect(Array.isArray(result.value)).toBe(true);
+    expect(result.value).toHaveLength(1);
+    expect(result.value[0]).toMatchObject({
+      name: "test_table",
+      catalog_name: experiment.name,
+      schema_name: `exp_${experiment.name}_${experiment.id}`,
       data: mockTableData,
-      tableName: "test_table",
       page: 1,
       pageSize: 20,
       totalRows: 100,
@@ -318,38 +322,33 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
 
-    // Verify response structure
-    // Check main structure properties
-    expect(result.value.tables).toEqual(mockTables.tables);
-    expect(result.value.page).toBe(1);
-    expect(result.value.pageSize).toBe(5);
-    expect(result.value.totalRows).toBe(2);
-    expect(result.value.totalPages).toBe(1);
+    // Verify response structure with our new array-based format
+    expect(Array.isArray(result.value)).toBe(true);
+    expect(result.value).toHaveLength(2); // Should have 2 tables
 
-    // Check data structure
-    expect(result.value.data?.totalRows).toBe(2);
-
-    // Check columns
-    const columns = result.value.data?.columns;
-    expect(columns).toHaveLength(2);
-    expect(columns?.[0]).toMatchObject({
-      name: "table_name",
-      type_name: "STRING",
-      type_text: "STRING",
-    });
-    expect(columns?.[1]).toMatchObject({
-      name: "sample_data",
-      type_name: "STRING",
-      type_text: "STRING",
+    // Check first table
+    expect(result.value[0]).toMatchObject({
+      name: mockTables.tables[0].name,
+      catalog_name: mockTables.tables[0].catalog_name,
+      schema_name: mockTables.tables[0].schema_name,
+      page: 1,
+      pageSize: 5,
+      totalPages: 1,
     });
 
-    // Check rows
-    const rows = result.value.data?.rows;
-    expect(rows).toHaveLength(2);
-    expect(rows?.[0][0]).toBe("table1");
-    expect(rows?.[1][0]).toBe("table2");
-    expect(typeof rows?.[0][1]).toBe("string");
-    expect(typeof rows?.[1][1]).toBe("string");
+    // Check second table
+    expect(result.value[1]).toMatchObject({
+      name: mockTables.tables[1].name,
+      catalog_name: mockTables.tables[1].catalog_name,
+      schema_name: mockTables.tables[1].schema_name,
+      page: 1,
+      pageSize: 5,
+      totalPages: 1,
+    });
+
+    // Check data exists for each table
+    expect(result.value[0].data).toBeDefined();
+    expect(result.value[1].data).toBeDefined();
   });
 
   it("should return not found error when experiment does not exist", async () => {
@@ -494,9 +493,16 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
 
-    // Verify tables are returned
-    expect(result.value).toHaveProperty("tables");
-    expect(result.value.tables).toEqual(mockTables.tables);
+    // Verify the array response structure
+    expect(Array.isArray(result.value)).toBe(true);
+    expect(result.value).toHaveLength(1);
+
+    // Verify the table data
+    expect(result.value[0].name).toBe(mockTables.tables[0].name);
+    expect(result.value[0].catalog_name).toBe(
+      mockTables.tables[0].catalog_name,
+    );
+    expect(result.value[0].schema_name).toBe(mockTables.tables[0].schema_name);
   });
 
   it("should handle Databricks service errors appropriately when getting table data", async () => {

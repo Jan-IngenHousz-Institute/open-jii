@@ -5,7 +5,9 @@
       "post": {
         "description": "Creates a new experiment with the provided configuration",
         "summary": "Create a new experiment",
-        "tags": ["experiments"],
+        "tags": [
+          "experiments"
+        ],
         "parameters": [],
         "operationId": "experiments.createExperiment",
         "requestBody": {
@@ -39,7 +41,10 @@
                   },
                   "visibility": {
                     "type": "string",
-                    "enum": ["private", "public"],
+                    "enum": [
+                      "private",
+                      "public"
+                    ],
                     "description": "Experiment visibility setting"
                   },
                   "embargoIntervalDays": {
@@ -49,7 +54,9 @@
                     "description": "Embargo period in days"
                   }
                 },
-                "required": ["name"]
+                "required": [
+                  "name"
+                ]
               }
             }
           }
@@ -67,7 +74,9 @@
                       "format": "uuid"
                     }
                   },
-                  "required": ["id"]
+                  "required": [
+                    "id"
+                  ]
                 }
               }
             }
@@ -83,7 +92,9 @@
                       "type": "string"
                     }
                   },
-                  "required": ["message"]
+                  "required": [
+                    "message"
+                  ]
                 }
               }
             }
@@ -93,7 +104,9 @@
       "get": {
         "description": "Returns a list of experiments based on the specified filter criteria",
         "summary": "List experiments",
-        "tags": ["experiments"],
+        "tags": [
+          "experiments"
+        ],
         "parameters": [
           {
             "name": "filter",
@@ -103,7 +116,11 @@
               "application/json": {
                 "schema": {
                   "type": "string",
-                  "enum": ["my", "member", "related"]
+                  "enum": [
+                    "my",
+                    "member",
+                    "related"
+                  ]
                 }
               }
             }
@@ -164,7 +181,10 @@
                       },
                       "visibility": {
                         "type": "string",
-                        "enum": ["private", "public"]
+                        "enum": [
+                          "private",
+                          "public"
+                        ]
                       },
                       "embargoIntervalDays": {
                         "type": "integer"
@@ -199,7 +219,11 @@
                                   "type": "string"
                                 }
                               },
-                              "required": ["name", "type_name", "type_text"]
+                              "required": [
+                                "name",
+                                "type_name",
+                                "type_text"
+                              ]
                             }
                           },
                           "rows": {
@@ -254,7 +278,9 @@
                       "type": "string"
                     }
                   },
-                  "required": ["message"]
+                  "required": [
+                    "message"
+                  ]
                 }
               }
             }
@@ -266,7 +292,9 @@
       "get": {
         "description": "Returns detailed information about a specific experiment",
         "summary": "Get experiment details",
-        "tags": ["experiments"],
+        "tags": [
+          "experiments"
+        ],
         "parameters": [
           {
             "name": "id",
@@ -312,7 +340,10 @@
                     },
                     "visibility": {
                       "type": "string",
-                      "enum": ["private", "public"]
+                      "enum": [
+                        "private",
+                        "public"
+                      ]
                     },
                     "embargoIntervalDays": {
                       "type": "integer"
@@ -347,7 +378,11 @@
                                 "type": "string"
                               }
                             },
-                            "required": ["name", "type_name", "type_text"]
+                            "required": [
+                              "name",
+                              "type_name",
+                              "type_text"
+                            ]
                           }
                         },
                         "rows": {
@@ -367,7 +402,12 @@
                           "type": "boolean"
                         }
                       },
-                      "required": ["columns", "rows", "totalRows", "truncated"]
+                      "required": [
+                        "columns",
+                        "rows",
+                        "totalRows",
+                        "truncated"
+                      ]
                     }
                   },
                   "required": [
@@ -396,7 +436,9 @@
                       "type": "string"
                     }
                   },
-                  "required": ["message"]
+                  "required": [
+                    "message"
+                  ]
                 }
               }
             }
@@ -406,7 +448,9 @@
       "patch": {
         "description": "Updates an existing experiment with the provided changes",
         "summary": "Update experiment",
-        "tags": ["experiments"],
+        "tags": [
+          "experiments"
+        ],
         "parameters": [
           {
             "name": "id",
@@ -451,7 +495,10 @@
                   },
                   "visibility": {
                     "type": "string",
-                    "enum": ["private", "public"],
+                    "enum": [
+                      "private",
+                      "public"
+                    ],
                     "description": "Updated visibility setting"
                   },
                   "embargoIntervalDays": {
@@ -495,7 +542,10 @@
                     },
                     "visibility": {
                       "type": "string",
-                      "enum": ["private", "public"]
+                      "enum": [
+                        "private",
+                        "public"
+                      ]
                     },
                     "embargoIntervalDays": {
                       "type": "integer"
@@ -530,7 +580,11 @@
                                 "type": "string"
                               }
                             },
-                            "required": ["name", "type_name", "type_text"]
+                            "required": [
+                              "name",
+                              "type_name",
+                              "type_text"
+                            ]
                           }
                         },
                         "rows": {
@@ -550,7 +604,12 @@
                           "type": "boolean"
                         }
                       },
-                      "required": ["columns", "rows", "totalRows", "truncated"]
+                      "required": [
+                        "columns",
+                        "rows",
+                        "totalRows",
+                        "truncated"
+                      ]
                     }
                   },
                   "required": [
@@ -579,7 +638,9 @@
                       "type": "string"
                     }
                   },
-                  "required": ["message"]
+                  "required": [
+                    "message"
+                  ]
                 }
               }
             }
@@ -589,7 +650,9 @@
       "delete": {
         "description": "Deletes an experiment and all associated data",
         "summary": "Delete experiment",
-        "tags": ["experiments"],
+        "tags": [
+          "experiments"
+        ],
         "parameters": [
           {
             "name": "id",
@@ -618,7 +681,9 @@
                       "type": "string"
                     }
                   },
-                  "required": ["message"]
+                  "required": [
+                    "message"
+                  ]
                 }
               }
             }
@@ -630,7 +695,9 @@
       "get": {
         "description": "Returns a list of all users who are members of the specified experiment",
         "summary": "List experiment members",
-        "tags": ["experiments"],
+        "tags": [
+          "experiments"
+        ],
         "parameters": [
           {
             "name": "id",
@@ -654,20 +721,46 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "userId": {
-                        "type": "string",
-                        "format": "uuid"
+                      "user": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "email": {
+                            "type": "string",
+                            "format": "email",
+                            "nullable": true
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "email"
+                        ]
                       },
                       "role": {
                         "type": "string",
-                        "enum": ["admin", "member"]
+                        "enum": [
+                          "admin",
+                          "member"
+                        ]
                       },
                       "joinedAt": {
                         "type": "string",
                         "format": "date-time"
                       }
                     },
-                    "required": ["userId", "role", "joinedAt"]
+                    "required": [
+                      "user",
+                      "role",
+                      "joinedAt"
+                    ]
                   }
                 }
               }
@@ -684,7 +777,9 @@
                       "type": "string"
                     }
                   },
-                  "required": ["message"]
+                  "required": [
+                    "message"
+                  ]
                 }
               }
             }
@@ -700,7 +795,9 @@
                       "type": "string"
                     }
                   },
-                  "required": ["message"]
+                  "required": [
+                    "message"
+                  ]
                 }
               }
             }
@@ -710,7 +807,9 @@
       "post": {
         "description": "Adds a new member to the experiment with the specified role",
         "summary": "Add experiment member",
-        "tags": ["experiments"],
+        "tags": [
+          "experiments"
+        ],
         "parameters": [
           {
             "name": "id",
@@ -739,11 +838,16 @@
                   "role": {
                     "default": "member",
                     "type": "string",
-                    "enum": ["admin", "member"],
+                    "enum": [
+                      "admin",
+                      "member"
+                    ],
                     "description": "Role to assign to the new member"
                   }
                 },
-                "required": ["userId"]
+                "required": [
+                  "userId"
+                ]
               }
             }
           }
@@ -756,20 +860,46 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "userId": {
-                      "type": "string",
-                      "format": "uuid"
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "email"
+                      ]
                     },
                     "role": {
                       "type": "string",
-                      "enum": ["admin", "member"]
+                      "enum": [
+                        "admin",
+                        "member"
+                      ]
                     },
                     "joinedAt": {
                       "type": "string",
                       "format": "date-time"
                     }
                   },
-                  "required": ["userId", "role", "joinedAt"]
+                  "required": [
+                    "user",
+                    "role",
+                    "joinedAt"
+                  ]
                 }
               }
             }
@@ -785,7 +915,9 @@
                       "type": "string"
                     }
                   },
-                  "required": ["message"]
+                  "required": [
+                    "message"
+                  ]
                 }
               }
             }
@@ -801,7 +933,9 @@
                       "type": "string"
                     }
                   },
-                  "required": ["message"]
+                  "required": [
+                    "message"
+                  ]
                 }
               }
             }
@@ -813,7 +947,9 @@
       "delete": {
         "description": "Removes a member from the experiment",
         "summary": "Remove experiment member",
-        "tags": ["experiments"],
+        "tags": [
+          "experiments"
+        ],
         "parameters": [
           {
             "name": "id",
@@ -852,7 +988,9 @@
                       "type": "string"
                     }
                   },
-                  "required": ["message"]
+                  "required": [
+                    "message"
+                  ]
                 }
               }
             }
@@ -868,7 +1006,9 @@
                       "type": "string"
                     }
                   },
-                  "required": ["message"]
+                  "required": [
+                    "message"
+                  ]
                 }
               }
             }
@@ -880,7 +1020,9 @@
       "get": {
         "description": "Retrieves data tables from the experiment with pagination support",
         "summary": "Get experiment data",
-        "tags": ["experiments"],
+        "tags": [
+          "experiments"
+        ],
         "parameters": [
           {
             "name": "id",
@@ -941,86 +1083,94 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "tables": {
-                      "type": "array",
-                      "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Name of the table"
+                      },
+                      "catalog_name": {
+                        "type": "string",
+                        "description": "Catalog name"
+                      },
+                      "schema_name": {
+                        "type": "string",
+                        "description": "Schema name"
+                      },
+                      "data": {
                         "type": "object",
                         "properties": {
-                          "name": {
-                            "type": "string",
-                            "description": "Name of the table"
-                          },
-                          "catalog_name": {
-                            "type": "string",
-                            "description": "Catalog name"
-                          },
-                          "schema_name": {
-                            "type": "string",
-                            "description": "Schema name"
-                          }
-                        },
-                        "required": ["name", "catalog_name", "schema_name"]
-                      }
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "columns": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "name": {
-                                "type": "string"
-                              },
-                              "type_name": {
-                                "type": "string"
-                              },
-                              "type_text": {
-                                "type": "string"
-                              }
-                            },
-                            "required": ["name", "type_name", "type_text"]
-                          }
-                        },
-                        "rows": {
-                          "type": "array",
-                          "items": {
+                          "columns": {
                             "type": "array",
                             "items": {
-                              "type": "string",
-                              "nullable": true
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "type_name": {
+                                  "type": "string"
+                                },
+                                "type_text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "type_name",
+                                "type_text"
+                              ]
                             }
+                          },
+                          "rows": {
+                            "type": "array",
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            }
+                          },
+                          "totalRows": {
+                            "type": "integer"
+                          },
+                          "truncated": {
+                            "type": "boolean"
                           }
                         },
-                        "totalRows": {
-                          "type": "integer"
-                        },
-                        "truncated": {
-                          "type": "boolean"
-                        }
+                        "required": [
+                          "columns",
+                          "rows",
+                          "totalRows",
+                          "truncated"
+                        ]
                       },
-                      "required": ["columns", "rows", "totalRows", "truncated"]
+                      "page": {
+                        "type": "integer"
+                      },
+                      "pageSize": {
+                        "type": "integer"
+                      },
+                      "totalPages": {
+                        "type": "integer"
+                      },
+                      "totalRows": {
+                        "type": "integer"
+                      }
                     },
-                    "tableName": {
-                      "type": "string"
-                    },
-                    "page": {
-                      "type": "integer"
-                    },
-                    "pageSize": {
-                      "type": "integer"
-                    },
-                    "totalPages": {
-                      "type": "integer"
-                    },
-                    "totalRows": {
-                      "type": "integer"
-                    }
-                  },
-                  "required": ["page", "pageSize", "totalPages", "totalRows"]
+                    "required": [
+                      "name",
+                      "catalog_name",
+                      "schema_name",
+                      "page",
+                      "pageSize",
+                      "totalPages",
+                      "totalRows"
+                    ]
+                  }
                 }
               }
             }
@@ -1036,7 +1186,9 @@
                       "type": "string"
                     }
                   },
-                  "required": ["message"]
+                  "required": [
+                    "message"
+                  ]
                 }
               }
             }
@@ -1052,7 +1204,9 @@
                       "type": "string"
                     }
                   },
-                  "required": ["message"]
+                  "required": [
+                    "message"
+                  ]
                 }
               }
             }
@@ -1068,7 +1222,9 @@
                       "type": "string"
                     }
                   },
-                  "required": ["message"]
+                  "required": [
+                    "message"
+                  ]
                 }
               }
             }
@@ -1080,7 +1236,9 @@
       "get": {
         "description": "Search for users by name or email with pagination support",
         "summary": "Search users",
-        "tags": ["users"],
+        "tags": [
+          "users"
+        ],
         "parameters": [
           {
             "name": "query",
@@ -1187,7 +1345,9 @@
                       "type": "string"
                     }
                   },
-                  "required": ["message"]
+                  "required": [
+                    "message"
+                  ]
                 }
               }
             }
@@ -1199,7 +1359,9 @@
       "get": {
         "description": "Returns a single user by their unique identifier",
         "summary": "Get a user by ID",
-        "tags": ["users"],
+        "tags": [
+          "users"
+        ],
         "parameters": [
           {
             "name": "id",
@@ -1271,7 +1433,9 @@
                       "type": "string"
                     }
                   },
-                  "required": ["message"]
+                  "required": [
+                    "message"
+                  ]
                 }
               }
             }
