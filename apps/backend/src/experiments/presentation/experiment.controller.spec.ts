@@ -1,7 +1,11 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
-import type { ErrorResponse, ExperimentMemberList } from "@repo/api";
+import type {
+  ErrorResponse,
+  Experiment,
+  ExperimentMemberList,
+} from "@repo/api";
 import type { ExperimentList } from "@repo/api";
 import { contract } from "@repo/api";
 
@@ -9,6 +13,7 @@ import { DatabricksService } from "../../common/services/databricks/databricks.s
 import { success, failure } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
+import type { UserDto } from "../../users/core/models/user.model";
 
 describe("ExperimentController", () => {
   const testApp = TestHarness.App;
@@ -23,32 +28,17 @@ describe("ExperimentController", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
 
-    // Get the databricks service instance
+    // Get the databricks service instance for create experiment tests
     databricksService = testApp.module.get(DatabricksService);
 
     // Reset any mocks before each test
     jest.restoreAllMocks();
 
-    // Set up default mocks for databricks service
+    // Set up default mocks for databricks service (only needed for create experiment)
     jest.spyOn(databricksService, "triggerJob").mockResolvedValue(
       success({
         run_id: 12345,
         number_in_job: 1,
-      }),
-    );
-
-    jest.spyOn(databricksService, "getExperimentSchemaData").mockResolvedValue(
-      success({
-        columns: [
-          { name: "experiment_id", type_name: "STRING", type_text: "STRING" },
-          { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" },
-        ],
-        rows: [
-          ["exp-123", "123.45"],
-          ["exp-123", "67.89"],
-        ],
-        totalRows: 2,
-        truncated: false,
       }),
     );
   });
@@ -164,7 +154,7 @@ describe("ExperimentController", () => {
     });
 
     it("should return 400 if name is too long", async () => {
-      const tooLongName = "a".repeat(65);
+      const tooLongName = "a".repeat(300);
 
       await testApp
         .post(contract.experiments.createExperiment.path)
@@ -338,7 +328,7 @@ describe("ExperimentController", () => {
   });
 
   describe("getExperiment", () => {
-    it("should return an experiment by ID with data", async () => {
+    it("should return an experiment by ID", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Experiment to Get",
         description: "Detailed description",
@@ -352,7 +342,7 @@ describe("ExperimentController", () => {
         },
       );
 
-      const response = await testApp
+      const response: SuperTestResponse<Experiment> = await testApp
         .get(path)
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -365,75 +355,8 @@ describe("ExperimentController", () => {
         createdBy: testUserId,
       });
 
-      // Type the response properly
-      const responseBody = response.body as {
-        data?: { columns: unknown[]; rows: unknown[] };
-      };
-
-      // Verify data is included
-      expect(responseBody.data).toBeDefined();
-      expect(responseBody.data?.columns).toHaveLength(2);
-      expect(responseBody.data?.rows).toHaveLength(2);
-
-      // Verify that Databricks was called
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.getExperimentSchemaData).toHaveBeenCalledWith(
-        experiment.id,
-        experiment.name,
-      );
-    });
-
-    it("should return experiment without data when Databricks fails", async () => {
-      // Mock Databricks to fail
-      jest
-        .spyOn(databricksService, "getExperimentSchemaData")
-        .mockResolvedValue(
-          failure({
-            name: "DatabricksError",
-            code: "INTERNAL_ERROR",
-            message: "Failed to fetch data",
-            statusCode: 500,
-          }),
-        );
-
-      const { experiment } = await testApp.createExperiment({
-        name: "Experiment without Data",
-        description: "Detailed description",
-        userId: testUserId,
-      });
-
-      const path = testApp.resolvePath(
-        contract.experiments.getExperiment.path,
-        {
-          id: experiment.id,
-        },
-      );
-
-      const response = await testApp
-        .get(path)
-        .withAuth(testUserId)
-        .expect(StatusCodes.OK);
-
-      expect(response.body).toMatchObject({
-        id: experiment.id,
-        name: experiment.name,
-        description: experiment.description,
-        visibility: experiment.visibility,
-        createdBy: testUserId,
-      });
-
-      // Type the response properly
-      const responseBody = response.body as { data?: unknown };
-
-      // Verify data is undefined when Databricks fails
-      expect(responseBody.data).toBeUndefined();
-
-      // Verify that Databricks was still called
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.getExperimentSchemaData).toHaveBeenCalledWith(
-        experiment.id,
-        experiment.name,
-      );
+      // Verify no data is included (since we removed experiment data functionality)
+      expect(response.body.data).toBeUndefined();
     });
 
     it("should return 404 if experiment does not exist", async () => {
@@ -452,10 +375,6 @@ describe("ExperimentController", () => {
         .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("not found");
         });
-
-      // Verify that Databricks was not called since experiment wasn't found
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.getExperimentSchemaData).not.toHaveBeenCalled();
     });
 
     it("should return 400 for invalid UUID", async () => {
@@ -634,8 +553,10 @@ describe("ExperimentController", () => {
 
       expect(response.body).toHaveLength(1);
       expect(response.body[0]).toMatchObject({
-        userId: testUserId,
         role: "admin",
+        user: expect.objectContaining({
+          id: testUserId,
+        }) as Partial<UserDto>,
       });
     });
 
@@ -678,8 +599,10 @@ describe("ExperimentController", () => {
         .expect(StatusCodes.CREATED)
         .expect(({ body }) => {
           expect(body).toMatchObject({
-            userId: newMemberId,
             role: "member",
+            user: expect.objectContaining({
+              id: newMemberId,
+            }) as Partial<UserDto>,
           });
         });
 
@@ -790,38 +713,6 @@ describe("ExperimentController", () => {
         .delete(removePath)
         .withoutAuth()
         .expect(StatusCodes.UNAUTHORIZED);
-    });
-  });
-
-  describe("createExperiment", () => {
-    it("should return 400 if name is too long", async () => {
-      const tooLongName = "a".repeat(65);
-
-      await testApp
-        .post(contract.experiments.createExperiment.path)
-        .withAuth(testUserId)
-        .send({
-          name: tooLongName,
-          description: "Test Description",
-          status: "provisioning",
-          visibility: "private",
-          embargoIntervalDays: 90,
-        })
-        .expect(StatusCodes.BAD_REQUEST);
-    });
-
-    it("should return 400 if embargoIntervalDays is negative", async () => {
-      await testApp
-        .post(contract.experiments.createExperiment.path)
-        .withAuth(testUserId)
-        .send({
-          name: "Test Experiment",
-          description: "Test Description",
-          status: "provisioning",
-          visibility: "private",
-          embargoIntervalDays: -1,
-        })
-        .expect(StatusCodes.BAD_REQUEST);
     });
   });
 });
