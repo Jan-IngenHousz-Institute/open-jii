@@ -13,19 +13,24 @@ import {
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
-export interface ExperimentDataDto {
-  tables?: {
-    name: string;
-    catalog_name: string;
-    schema_name: string;
-  }[];
+/**
+ * Single table data structure that forms our array response
+ */
+export interface TableDataDto {
+  name: string;
+  catalog_name: string;
+  schema_name: string;
   data?: SchemaData;
-  tableName?: string;
   page: number;
   pageSize: number;
   totalPages: number;
   totalRows: number;
 }
+
+/**
+ * Response is now an array of table data
+ */
+export type ExperimentDataDto = TableDataDto[];
 
 @Injectable()
 export class GetExperimentDataUseCase {
@@ -75,21 +80,15 @@ export class GetExperimentDataUseCase {
           );
         }
 
-        // Initialize response with pagination info
+        // Initialize pagination variables
         const page = query.page || 1;
         const pageSize = query.pageSize || 5; // Default to 5 rows per table
-        const response: ExperimentDataDto = {
-          page,
-          pageSize,
-          totalPages: 0,
-          totalRows: 0,
-        };
 
         // Form the schema name based on experiment ID and name
         const schemaName = `exp_${experiment.name}_${experimentId}`;
 
         try {
-          // If table name is specified, fetch data for that table
+          // If table name is specified, fetch data for that single table
           if (query.tableName) {
             this.logger.debug(
               `Fetching data for table ${query.tableName} in experiment ${experimentId}`,
@@ -134,14 +133,23 @@ export class GetExperimentDataUseCase {
               );
             }
 
-            response.data = dataResult.value;
-            response.tableName = query.tableName;
-            response.totalRows = totalRows;
-            response.totalPages = totalPages;
+            // Create a single-element array with the table data
+            const response: ExperimentDataDto = [
+              {
+                name: query.tableName,
+                catalog_name: experiment.name,
+                schema_name: schemaName,
+                data: dataResult.value,
+                page,
+                pageSize,
+                totalRows,
+                totalPages,
+              },
+            ];
 
             return success(response);
           }
-          // Otherwise, list all tables in the schema
+          // Otherwise, list all tables in the schema with their data
           else {
             this.logger.debug(
               `Listing all tables for experiment ${experimentId}`,
@@ -160,61 +168,41 @@ export class GetExperimentDataUseCase {
               );
             }
 
-            response.tables = tablesResult.value.tables;
-            response.totalRows = tablesResult.value.tables.length;
-            response.totalPages = 1; // Tables listing is not paginated in this implementation
+            // Create an array of table data objects
+            const response: ExperimentDataDto = [];
 
-            // Get 5 rows of data for each table
-            // We'll create a combined data object that follows SchemaData structure
-            const combinedData: SchemaData = {
-              columns: [
-                {
-                  name: "table_name",
-                  type_name: "STRING",
-                  type_text: "STRING",
-                },
-                {
-                  name: "sample_data",
-                  type_name: "STRING",
-                  type_text: "STRING",
-                },
-              ],
-              rows: [],
-              totalRows: 0,
-              truncated: false,
-            };
-
+            // Fetch data for each table
             for (const table of tablesResult.value.tables) {
+              // Get sample data
               const sqlQuery = `SELECT * FROM ${table.name} LIMIT ${pageSize}`;
               const dataResult = await this.databricksService.executeSqlQuery(
                 schemaName,
                 sqlQuery,
               );
 
+              const tableInfo: TableDataDto = {
+                name: table.name,
+                catalog_name: table.catalog_name,
+                schema_name: table.schema_name,
+                page,
+                pageSize,
+                totalPages: 1, // Sample data is just 1 page
+                totalRows: dataResult.isSuccess()
+                  ? dataResult.value.totalRows
+                  : 0,
+              };
+
               if (dataResult.isSuccess()) {
-                // Add sample data rows for this table
-                const tableData = dataResult.value;
-
-                // Create a simplified string representation of the table data
-                const sampleData = JSON.stringify(tableData);
-
-                // Add a row for this table
-                combinedData.rows.push([table.name, sampleData]);
-                combinedData.totalRows += 1;
+                tableInfo.data = dataResult.value;
               } else {
                 this.logger.warn(
                   `Failed to get sample data for table ${table.name}: ${dataResult.error.message}`,
                 );
-                // Still include the table but with error message as sample
-                combinedData.rows.push([
-                  table.name,
-                  `Error retrieving data: ${dataResult.error.message}`,
-                ]);
-                combinedData.totalRows += 1;
               }
+
+              response.push(tableInfo);
             }
 
-            response.data = combinedData;
             return success(response);
           }
         } catch (error) {

@@ -93,10 +93,14 @@ describe("ExperimentDataController", () => {
         .query(queryParams)
         .expect(StatusCodes.OK);
 
-      // Verify the response structure
-      expect(response.body).toMatchObject({
+      // Verify the response structure - now an array with one element
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0]).toMatchObject({
+        name: "test_table",
+        catalog_name: experiment.name,
+        schema_name: `exp_${experiment.name}_${experiment.id}`,
         data: mockTableData,
-        tableName: "test_table",
         page: 1,
         pageSize: 5,
         totalPages: 20, // 100 / 5
@@ -194,17 +198,33 @@ describe("ExperimentDataController", () => {
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
-      // Verify the response structure
-      expect(response.body).toMatchObject({
-        tables: mockTablesResponse.tables,
+      // Verify the response structure - array with two elements
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body).toHaveLength(2);
+
+      // Check first table
+      expect(response.body[0]).toMatchObject({
+        name: mockTablesResponse.tables[0].name,
+        catalog_name: mockTablesResponse.tables[0].catalog_name,
+        schema_name: mockTablesResponse.tables[0].schema_name,
         page: 1,
         pageSize: 5,
         totalPages: 1,
-        totalRows: 2, // Number of tables
       });
 
-      // Check data exists
-      expect(response.body.data).toBeDefined();
+      // Check second table
+      expect(response.body[1]).toMatchObject({
+        name: mockTablesResponse.tables[1].name,
+        catalog_name: mockTablesResponse.tables[1].catalog_name,
+        schema_name: mockTablesResponse.tables[1].schema_name,
+        page: 1,
+        pageSize: 5,
+        totalPages: 1,
+      });
+
+      // Check data exists for each table
+      expect(response.body[0].data).toBeDefined();
+      expect(response.body[1].data).toBeDefined();
 
       // Verify the DatabricksService was called correctly
       // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -424,11 +444,15 @@ describe("ExperimentDataController", () => {
         })
         .expect(StatusCodes.OK);
 
+      // Verify the response is an array with one element
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body).toHaveLength(1);
+
       // Verify the response includes correct pagination information
-      expect(response.body.page).toBe(page);
-      expect(response.body.pageSize).toBe(pageSize);
-      expect(response.body.totalPages).toBe(5); // Math.ceil(42 / 10)
-      expect(response.body.totalRows).toBe(42);
+      expect(response.body[0].page).toBe(page);
+      expect(response.body[0].pageSize).toBe(pageSize);
+      expect(response.body[0].totalPages).toBe(5); // Math.ceil(42 / 10)
+      expect(response.body[0].totalRows).toBe(42);
 
       // Verify the DatabricksService was called with correct pagination
       // eslint-disable-next-line @typescript-eslint/unbound-method
