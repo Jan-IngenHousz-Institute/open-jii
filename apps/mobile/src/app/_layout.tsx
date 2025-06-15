@@ -4,6 +4,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ThemeProvider } from "~/context/ThemeContext";
 import { useTheme } from "~/hooks/useTheme";
 
@@ -35,18 +36,15 @@ export default function RootLayout() {
   );
 }
 
-// Content component that uses the theme
 function RootLayoutContent() {
   const theme = useTheme();
-  const { colors } = theme;
-  const backgroundColor = theme.isDark
-    ? colors.dark.background
-    : colors.light.background;
 
   return (
-    <View style={{ flex: 1, backgroundColor }}>
-      <StatusBar style={theme.isDark ? "light" : "dark"} />
-      <RootLayoutNav />
+    <View style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <StatusBar style={theme.isDark ? "light" : "dark"} />
+        <RootLayoutNav />
+      </SafeAreaProvider>
     </View>
   );
 }
@@ -73,8 +71,8 @@ function RootLayoutNav() {
         headerShadowVisible: false,
         contentStyle: {
           backgroundColor: theme.isDark
-            ? colors.dark.background
-            : colors.light.background,
+            ? colors.dark.surface
+            : colors.light.surface,
         },
       }}
     >
