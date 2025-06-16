@@ -6,7 +6,7 @@ import { formatDate } from "@/util/date";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import type { CreateExperimentBody, User } from "@repo/api";
@@ -74,13 +74,22 @@ export function NewExperimentForm() {
   const currentUserId = session?.user?.id ?? "";
 
   // Use form for members instead of useState
-  const members = form.watch("members") ?? [];
+  const watchedMembers = form.watch("members");
+  const members = useMemo(() => watchedMembers ?? [], [watchedMembers]);
   // Filter available users (exclude already added and current user)
-  const availableUsers =
-    userSearchData?.body.filter(
-      (user: User) =>
-        !members.some((m) => m.userId === user.id) && user.id !== currentUserId,
-    ) ?? [];
+  const availableUsers = useMemo(
+    () =>
+      userSearchData?.body.filter(
+        (user: User) =>
+          !members.some((m) => m.userId === user.id) &&
+          user.id !== currentUserId,
+      ) ?? [],
+    [userSearchData, members, currentUserId],
+  );
+
+  const adminCount = useMemo(() => {
+    return members.filter((m) => m.role === "admin").length;
+  }, [members]);
 
   // Add member handler
   const handleAddMember = (userId: string): Promise<void> => {
@@ -220,7 +229,7 @@ export function NewExperimentForm() {
                 onRemoveMember={handleRemoveMember}
                 isRemovingMember={false}
                 removingMemberId={null}
-                adminCount={0}
+                adminCount={adminCount}
               />
             </CardContent>
           </Card>
