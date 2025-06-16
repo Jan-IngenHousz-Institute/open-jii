@@ -66,7 +66,14 @@
     "embargoIntervalDays": "Embargo Interval Days",
     "cancel": "Cancel",
     "creating": "Creating...",
-    "finalizeSetup": "Finalize setup"
+    "finalizeSetup": "Finalize setup",
+    "detailsTitle": "Experiment Details",
+    "detailsDescription": "Set the name and description for your experiment",
+    "addMembersTitle": "Add Members",
+    "addMembersDescription": "Manage who has access to this experiment",
+    "addMemberPlaceholder": "Add a member",
+    "visibilityTitle": "Visibility Settings",
+    "visibilityDescription": "Control your experiment's visibility and embargo period"
   },
 
   "experimentSettings": {
@@ -92,7 +99,14 @@
     "created": "Created",
     "updated": "Updated",
     "memberManagement": "Member Management",
-    "memberDescription": "Manage experiment members and permissions"
+    "memberDescription": "Manage experiment members and permissions",
+    "noMembersYet": "No members yet",
+    "addCollaborators": "Add collaborators to your experiment",
+    "unknownUser": "Unknown user",
+    "noEmail": "No email",
+    "joined": "Joined",
+    "cannotRemoveLastAdmin": "Cannot remove last admin",
+    "removeMember": "Remove member"
   },
 
   "dashboard": {

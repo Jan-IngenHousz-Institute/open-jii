@@ -66,7 +66,14 @@
     "embargoIntervalDays": "Embargo interval dagen",
     "cancel": "Annuleren",
     "creating": "Aanmaken...",
-    "finalizeSetup": "Setup afronden"
+    "finalizeSetup": "Setup afronden",
+    "detailsTitle": "Experimentdetails",
+    "detailsDescription": "Stel de naam en beschrijving van je experiment in",
+    "addMembersTitle": "Leden toevoegen",
+    "addMembersDescription": "Beheer wie toegang heeft tot dit experiment",
+    "addMemberPlaceholder": "Lid toevoegen",
+    "visibilityTitle": "Zichtbaarheidsinstellingen",
+    "visibilityDescription": "Beheer de zichtbaarheid en embargo-periode van je experiment"
   },
   "experimentSettings": {
     "loading": "Experiment instellingen laden...",
@@ -91,7 +98,14 @@
     "created": "Aangemaakt",
     "updated": "Bijgewerkt",
     "memberManagement": "Ledenbeheer",
-    "memberDescription": "Beheer experimentleden en -machtigingen"
+    "memberDescription": "Beheer experimentleden en -machtigingen",
+    "noMembersYet": "Nog geen leden",
+    "addCollaborators": "Voeg medewerkers toe aan je experiment",
+    "unknownUser": "Onbekende gebruiker",
+    "noEmail": "Geen e-mail",
+    "joined": "Toegetreden",
+    "cannotRemoveLastAdmin": "Kan laatste admin niet verwijderen",
+    "removeMember": "Lid verwijderen"
   },
   "jii": {
     "institute": "Jan IngenHousz Instituut",

@@ -34,9 +34,14 @@ export function MemberList({
 
   if (membersWithUserInfo.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
-        {t("experimentSettings.noMembersYet")}
-      </p>
+      <div className="border-muted flex flex-col items-center justify-center py-4">
+        <p className="text-muted-foreground text-base font-medium">
+          {t("experimentSettings.noMembersYet")}
+        </p>
+        <p className="text-muted-foreground mt-1 text-xs">
+          {t("experimentSettings.addCollaborators")}
+        </p>
+      </div>
     );
   }
 

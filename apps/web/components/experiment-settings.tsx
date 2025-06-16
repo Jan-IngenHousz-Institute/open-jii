@@ -4,8 +4,9 @@ import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
 import { editExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 
 import type { Experiment } from "@repo/api";
@@ -36,6 +37,7 @@ import { toast } from "@repo/ui/hooks";
 
 import { useExperiment } from "../hooks/experiment/useExperiment/useExperiment";
 import { useExperimentDelete } from "../hooks/experiment/useExperimentDelete/useExperimentDelete";
+import { useExperimentMembers } from "../hooks/experiment/useExperimentMembers/useExperimentMembers";
 import { useExperimentUpdate } from "../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 import { ExperimentMemberManagement } from "./experiment-member-management";
 
@@ -325,10 +327,33 @@ function ExperimentInfoCard({
   experimentId,
   experiment,
 }: ExperimentInfoCardProps) {
+  // Fetch experiment members to get admin info
+  const { data: membersData } = useExperimentMembers(experimentId);
+
+  const members = useMemo(() => {
+    return membersData?.body ?? [];
+  }, [membersData]);
+
+  // Find the admin member (creator)
+  const adminMember = useMemo(() => {
+    return members.find((m) => m.role === "admin");
+  }, [members]);
+
+  // Helper to get name/email from admin member
+  const adminName =
+    (adminMember?.user.name ??
+      adminMember?.user.email ??
+      experiment.createdBy) ||
+    "Unknown";
+  const adminEmail = adminMember?.user.email;
+
   const { mutateAsync: deleteExperiment, isPending: isDeleting } =
     useExperimentDelete();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const router = useRouter();
+  // Ref for Danger Zone section
+  const dangerZoneRef = useRef<HTMLDivElement>(null);
+
   const { t } = useTranslation(undefined, "common");
   const locale = useLocale();
 
@@ -341,6 +366,17 @@ function ExperimentInfoCard({
     router.push(`/${locale}/platform/experiments`);
   };
 
+  // Scroll to Danger Zone when delete button is pressed
+  const handleShowDeleteConfirm = () => {
+    setShowDeleteConfirm(true);
+    setTimeout(() => {
+      dangerZoneRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 0);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -351,11 +387,19 @@ function ExperimentInfoCard({
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2 text-sm">
-          <div>
+          <div className="flex items-center gap-x-2">
             <span className="font-medium">
               {t("experimentSettings.created")} by:
             </span>{" "}
-            {experiment.createdBy}
+            {adminName}
+            {adminEmail && adminEmail !== adminName ? (
+              <span className="text-muted-foreground flex items-center gap-x-1">
+                <Mail className="h-3 w-3 flex-shrink-0" />
+                <span className="truncate text-xs md:max-w-[200px] md:text-sm">
+                  {adminEmail}
+                </span>
+              </span>
+            ) : null}
           </div>
           <div>
             <span className="font-medium">
@@ -371,7 +415,7 @@ function ExperimentInfoCard({
           </div>
         </div>
 
-        <div className="border-t pt-4">
+        <div className="border-t pt-4" ref={dangerZoneRef}>
           <h5 className="text-destructive mb-2 text-base font-medium">
             {t("experimentSettings.dangerZone")}
           </h5>
@@ -380,10 +424,7 @@ function ExperimentInfoCard({
           </p>
 
           {!showDeleteConfirm ? (
-            <Button
-              variant="destructive"
-              onClick={() => setShowDeleteConfirm(true)}
-            >
+            <Button variant="destructive" onClick={handleShowDeleteConfirm}>
               {t("experimentSettings.deleteExperiment")}
             </Button>
           ) : (

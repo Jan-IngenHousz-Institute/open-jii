@@ -1,5 +1,6 @@
 import { TranslationsProvider } from "@/components/translations-provider";
 import type { Metadata } from "next";
+import { SessionProvider } from "next-auth/react";
 import { Poppins, Overpass } from "next/font/google";
 import type React from "react";
 
@@ -75,7 +76,9 @@ export default async function LocaleLayout({
           namespaces={i18nNamespaces}
           resources={resources}
         >
-          <QueryProvider>{children}</QueryProvider>
+          <SessionProvider>
+            <QueryProvider>{children}</QueryProvider>
+          </SessionProvider>
         </TranslationsProvider>
       </body>
     </html>

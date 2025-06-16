@@ -13,6 +13,7 @@ import {
   zCreateExperimentResponse,
   zIdPathParam,
   zExperimentMemberPathParam,
+  zAddExperimentMembersBody,
 } from "../schemas/experiment.schema";
 
 const c = initContract();
@@ -106,6 +107,20 @@ export const experimentContract = c.router({
     },
     summary: "Add experiment member",
     description: "Adds a new member to the experiment with the specified role",
+  },
+
+  addExperimentMembers: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/members/batch",
+    pathParams: zIdPathParam,
+    body: zAddExperimentMembersBody,
+    responses: {
+      201: zExperimentMemberList,
+      404: zErrorResponse,
+      403: zErrorResponse,
+    },
+    summary: "Add multiple experiment members",
+    description: "Adds multiple members to the experiment with specified roles",
   },
 
   removeExperimentMember: {

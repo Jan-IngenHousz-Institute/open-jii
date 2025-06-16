@@ -80,7 +80,14 @@
     "created": "Erstellt",
     "updated": "Aktualisiert",
     "memberManagement": "Mitgliederverwaltung",
-    "memberDescription": "Verwalten Sie Experimentmitglieder und Berechtigungen"
+    "memberDescription": "Verwalten Sie Experimentmitglieder und Berechtigungen",
+    "noMembersYet": "Noch keine Mitglieder",
+    "addCollaborators": "Fügen Sie Mitarbeiter zu Ihrem Experiment hinzu",
+    "unknownUser": "Unbekannter Benutzer",
+    "noEmail": "Keine E-Mail",
+    "joined": "Beigetreten am",
+    "cannotRemoveLastAdmin": "Letzten Admin kann man nicht entfernen",
+    "removeMember": "Mitglied entfernen"
   },
   "newExperiment": {
     "description": "Richten Sie ein neues Experiment (Projekt) ein.",
@@ -91,7 +98,14 @@
     "embargoIntervalDays": "Embargo-Intervall in Tagen",
     "cancel": "Abbrechen",
     "creating": "Wird erstellt...",
-    "finalizeSetup": "Setup abschließen"
+    "finalizeSetup": "Setup abschließen",
+    "detailsTitle": "Experimentdetails",
+    "detailsDescription": "Legen Sie den Namen und die Beschreibung für Ihr Experiment fest",
+    "addMembersTitle": "Mitglieder hinzufügen",
+    "addMembersDescription": "Verwalten Sie, wer Zugriff auf dieses Experiment hat",
+    "addMemberPlaceholder": "Mitglied hinzufügen",
+    "visibilityTitle": "Sichtbarkeitseinstellungen",
+    "visibilityDescription": "Steuern Sie die Sichtbarkeit und Embargoperiode Ihres Experiments"
   },
   "dashboard": {
     "title": "Dashboard",
