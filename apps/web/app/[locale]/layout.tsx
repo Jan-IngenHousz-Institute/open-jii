@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Poppins, Overpass } from "next/font/google";
 import type React from "react";
 
+import { SessionProvider } from "@repo/auth/client";
 import type { Locale, Namespace } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { cn } from "@repo/ui/lib/utils";
@@ -75,7 +76,9 @@ export default async function LocaleLayout({
           namespaces={i18nNamespaces}
           resources={resources}
         >
-          <QueryProvider>{children}</QueryProvider>
+          <SessionProvider>
+            <QueryProvider>{children}</QueryProvider>
+          </SessionProvider>
         </TranslationsProvider>
       </body>
     </html>
