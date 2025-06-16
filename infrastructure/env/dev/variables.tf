@@ -250,3 +250,9 @@ variable "backend_databricks_warehouse_id" {
   type        = string
   sensitive   = true
 }
+
+variable "api_cloudfront_header_value" {
+  description = "Custom header value for CloudFront-ALB authentication"
+  type        = string
+  sensitive   = true
+}

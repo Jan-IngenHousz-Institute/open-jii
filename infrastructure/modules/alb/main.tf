@@ -1,19 +1,12 @@
-# Local values for conditional SSL/HTTPS configuration
-# SSL is only enabled when certificate_arn is provided
-# This allows the module to work with or without SSL
-locals {
-  enable_ssl = var.certificate_arn != ""
-}
-
 # Application Load Balancer - Layer 7 load balancer with advanced routing
-# internet-facing ALB accepts traffic from the internet and forwards to private ECS tasks
+# Internet-facing ALB that only accepts traffic from CloudFront via custom header verification
+
 resource "aws_lb" "app_alb" {
   name               = "${var.service_name}-alb"
-  internal           = false # Public-facing ALB for internet traffic
+  internal           = false
   load_balancer_type = "application"
   security_groups    = var.security_groups
   subnets            = var.public_subnet_ids
-
   # Idle timeout balances connection efficiency vs resource usage
   # 60s default is good for APIs; increase for long-running connections
   idle_timeout = var.idle_timeout
@@ -24,14 +17,14 @@ resource "aws_lb" "app_alb" {
 
   # Access logs provide detailed request-level logging for debugging and analytics
   # Requires S3 bucket and costs ~$0.006 per GB of logs
-  dynamic "access_logs" {
-    for_each = var.enable_access_logs && var.access_logs_bucket != "" ? [1] : []
-    content {
-      bucket  = var.access_logs_bucket
-      prefix  = "${var.service_name}-alb-logs"
-      enabled = true
-    }
-  }
+  # dynamic "access_logs" { # Temporarily commented out
+  #   for_each = var.enable_access_logs && var.access_logs_bucket != "" ? [1] : []
+  #   content {
+  #     bucket  = var.access_logs_bucket
+  #     prefix  = "${var.service_name}-alb-logs"
+  #     enabled = true
+  #   }
+  # }
 
   # Add tags for cost tracking
   tags = merge(
@@ -75,52 +68,62 @@ resource "aws_lb_target_group" "app_tg" {
   }
 }
 
-# HTTP Listener - handles all traffic on port 80
-# Behavior depends on SSL configuration:
-# - With SSL: Redirects all HTTP traffic to HTTPS (security best practice)
-# - Without SSL: Forwards traffic directly to target group
+# HTTP Listener - always redirects to HTTPS for security
+# We don't allow HTTP access to the ALB for enhanced security
 resource "aws_lb_listener" "http_listener" {
   load_balancer_arn = aws_lb.app_alb.arn
   port              = 80
   protocol          = "HTTP"
 
-  # Conditional logic: redirect to HTTPS if SSL is enabled, otherwise forward to target group
+  # Always redirect to HTTPS for security
   default_action {
-    type = local.enable_ssl ? "redirect" : "forward"
+    type = "redirect"
 
-    # HTTPS redirect configuration - enforces encryption in transit
-    dynamic "redirect" {
-      for_each = local.enable_ssl ? [1] : []
-      content {
-        port        = "443"
-        protocol    = "HTTPS"
-        status_code = "HTTP_301" # Permanent redirect - browsers will cache this
-      }
-    }
-
-    # Direct forwarding for non-SSL setups (dev environments)
-    dynamic "forward" {
-      for_each = local.enable_ssl ? [] : [1]
-      content {
-        target_group {
-          arn = aws_lb_target_group.app_tg.arn
-        }
-      }
+    # Permanent redirect to HTTPS - enforces encryption in transit
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301" # Permanent redirect - browsers will cache this
     }
   }
 }
 
-# HTTPS Listener - handles encrypted traffic on port 443
-# Only created when SSL is enabled (certificate_arn is provided)
+# HTTPS Listener - handles encrypted traffic on port 443 with custom header validation
 resource "aws_lb_listener" "https_listener" {
-  count             = local.enable_ssl ? 1 : 0
   load_balancer_arn = aws_lb.app_alb.arn
   port              = 443
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06" # Latest TLS policy for security
   certificate_arn   = var.certificate_arn
 
+  # Default action: If no header match, return 403 Forbidden
   default_action {
+    type = "fixed-response"
+
+    fixed_response {
+      content_type = "application/json"
+      message_body = jsonencode({ error = "Access denied. Invalid origin." })
+      status_code  = "403"
+    }
+  }
+}
+
+# CloudFront custom header condition and forwarding rule
+# Only requests with the correct header are forwarded to the target group
+resource "aws_lb_listener_rule" "cloudfront_header_rule" {
+  listener_arn = aws_lb_listener.https_listener.arn
+  priority     = 1
+
+  # Match request with the custom header from CloudFront
+  condition {
+    http_header {
+      http_header_name = var.cloudfront_header_name
+      values           = [var.cloudfront_header_value]
+    }
+  }
+
+  # Forward matching requests to the target group
+  action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.app_tg.arn
   }

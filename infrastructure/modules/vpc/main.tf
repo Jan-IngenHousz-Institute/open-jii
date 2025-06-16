@@ -1,5 +1,9 @@
 data "aws_availability_zones" "available" {}
 
+data "aws_ec2_managed_prefix_list" "cloudfront_global" {
+  name = "com.amazonaws.global.cloudfront.origin-facing"
+}
+
 # ----
 # VPC
 # ----
@@ -60,27 +64,17 @@ resource "aws_security_group" "aurora_sg" {
 # -----------------------
 resource "aws_security_group" "alb_sg" {
   name        = "${var.environment}-alb-sg"
-  description = "Security group for Application Load Balancer"
+  description = "Security group for Application Load Balancer (CloudFront HTTPS access only)"
   vpc_id      = aws_vpc.this.id
 
-  # HTTP access - typically redirects to HTTPS for security
+  # Allow HTTPS (443) from CloudFront IP ranges only
   ingress {
-    description      = "Allow HTTP from anywhere"
-    from_port        = 80
-    to_port          = 80
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"] # All IPv4 addresses
-    ipv6_cidr_blocks = ["::/0"]      # All IPv6 addresses
-  }
-
-  # HTTPS access - encrypted traffic
-  ingress {
-    description      = "Allow HTTPS from anywhere"
-    from_port        = 443
-    to_port          = 443
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    description = "Allow HTTPS from CloudFront IP ranges only"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    # cidr_blocks = data.aws_ip_ranges.cloudfront.cidr_blocks # CHANGED to use prefix list
+    prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront_global.id]
   }
 
   # ALB needs outbound access to forward requests to ECS tasks

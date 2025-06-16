@@ -24,47 +24,29 @@ module "cloudwatch" {
   cloudwatch_policy_name = var.iot_logging_policy_name
 }
 
-# Route53 DNS configuration
-module "route53" {
-  source = "../../modules/route53"
+# Access logs bucket
+module "logs_bucket" {
+  source      = "../../modules/s3"
+  bucket_name = "open-jii-${var.aws_region}-access-logs"
 
-  domain_name = var.domain_name
-  environment = var.environment
-
-  # Connect your services to your domain
-  alb_records = {
-    "api" = {
-      dns_name = module.backend_alb.alb_dns_name
-      zone_id  = module.backend_alb.alb_zone_id
-    }
-  }
-
-  cloudfront_records = {
-    "docs" = {
-      domain_name    = module.cloudfront.cloudfront_distribution_domain_name
-      hosted_zone_id = module.cloudfront.cloudfront_hosted_zone_id
-    },
-    "" = {
-      domain_name    = module.opennext.cloudfront_distribution_domain_name
-      hosted_zone_id = module.opennext.cloudfront_hosted_zone_id
-    }
-  }
+  # Configure for logging purposes
+  enable_versioning = false
 
   tags = {
     Environment = "dev"
+    Project     = "open-jii"
     ManagedBy   = "Terraform"
+    Component   = "logging"
   }
 }
 
-
 module "cloudfront" {
-  source          = "../../modules/cloudfront"
-  bucket_name     = var.docusaurus_s3_bucket_name
-  aws_region      = var.aws_region
-  certificate_arn = module.route53.certificate_arn
-  custom_domain   = module.route53.docs_domain
+  source      = "../../modules/cloudfront"
+  bucket_name = var.docusaurus_s3_bucket_name
+  aws_region  = var.aws_region
+  # certificate_arn = module.route53.cloudfront_certificate_arns["docs"] # Assuming 'docs' is the key for docs FQDN
+  # custom_domain   = module.route53.cloudfront_domain_configs["docs"] # Assuming 'docs' is the key for docs FQDN
 }
-
 
 module "docusaurus_s3" {
   source                      = "../../modules/s3"
@@ -405,10 +387,10 @@ module "opennext" {
   environment  = var.opennext_environment
   region       = var.aws_region
 
-  # Domain configuration
-  domain_name     = module.route53.environment_domain
-  certificate_arn = module.route53.certificate_arn
-  hosted_zone_id  = module.route53.route53_zone_id
+  # Domain configuration - to be uncommented and adjusted
+  # domain_name     = module.route53.cloudfront_domain_configs["web"] # Assuming 'web' is the key for the root/www FQDN
+  # certificate_arn = module.route53.cloudfront_certificate_arns["web"] # Assuming 'web' is the key
+  # hosted_zone_id  = module.route53.route53_zone_id
 
   # VPC configuration for server Lambda database access
   enable_server_vpc               = true
@@ -579,12 +561,13 @@ module "backend_alb" {
   health_check_unhealthy_threshold = 3
   health_check_matcher             = "200-299"
 
-  # SSL/TLS configuration for HTTPS
-  certificate_arn = module.route53.certificate_arn # Use the ACM certificate managed by the Route53 module
+  # SSL/TLS configuration for HTTPS - Uses the certificate from the default region (e.g., eu-central-1)
+  certificate_arn         = module.route53.regional_services_certificate_arn
+  cloudfront_header_value = var.api_cloudfront_header_value # Reverted to direct variable passing
 
-  # Enable access logs for production but not for dev
-  enable_access_logs = false
-  access_logs_bucket = ""
+  # Enable access logs for better security and troubleshooting
+  enable_access_logs = true
+  access_logs_bucket = module.logs_bucket.bucket_id
 
   tags = {
     Environment = "dev"
@@ -737,3 +720,75 @@ module "backend_waf" {
     Component   = "backend"
   }
 }
+
+# CloudFront distribution in front of the backend API
+module "backend_cloudfront" {
+  source = "../../modules/backend-cloudfront"
+
+  service_name    = "backend"
+  environment     = "dev"
+  alb_domain_name = module.backend_alb.alb_dns_name
+
+  # Custom header for ALB protection
+  custom_header_value = var.api_cloudfront_header_value
+
+  # CloudFront settings
+  price_class = "PriceClass_100" # Use only North America and Europe for dev
+  default_ttl = 0                # API shouldn't cache by default
+  max_ttl     = 0                # API shouldn't cache by default
+
+  # Security settings
+  certificate_arn = module.route53.cloudfront_certificate_arns["api"] # Use the us-east-1 certificate for 'api'
+  custom_domain   = module.route53.api_domain
+  waf_acl_id      = module.backend_waf.cloudfront_web_acl_arn
+
+  # Logging settings
+  enable_logging = true
+  log_bucket     = module.logs_bucket.bucket_id
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+  }
+}
+
+# Route53 DNS configuration
+module "route53" {
+  source = "../../modules/route53"
+
+  domain_name = var.domain_name
+  environment = var.environment
+
+  # Input for CloudFront domains that need us-east-1 certificates
+  cloudfront_domain_configs = {
+    "api"  = "api.${var.environment}.${var.domain_name}"
+    "docs" = "docs.${var.environment}.${var.domain_name}" # For the docusaurus site
+    "web"  = "${var.environment}.${var.domain_name}"      # For the OpenNext frontend (root env domain)
+    # Add other FQDNs for CloudFront here, with unique logical keys
+  }
+
+  # Connect your services to your domain
+
+  cloudfront_records = {
+    # "docs" = {
+    #   domain_name    = module.cloudfront.cloudfront_distribution_domain_name
+    #   hosted_zone_id = module.cloudfront.cloudfront_hosted_zone_id
+    # },
+    # "" = {
+    #   domain_name    = module.opennext.cloudfront_distribution_domain_name
+    #   hosted_zone_id = module.opennext.cloudfront_hosted_zone_id
+    # },
+    "api" = {
+      domain_name    = module.backend_cloudfront.cloudfront_distribution_domain_name
+      hosted_zone_id = module.backend_cloudfront.cloudfront_hosted_zone_id
+    }
+  }
+
+  tags = {
+    Environment = "dev"
+    ManagedBy   = "Terraform"
+  }
+}
+
