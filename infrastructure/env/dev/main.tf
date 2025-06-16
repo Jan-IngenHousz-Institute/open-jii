@@ -40,19 +40,11 @@ module "logs_bucket" {
   }
 }
 
-module "cloudfront" {
-  source      = "../../modules/cloudfront"
-  bucket_name = var.docusaurus_s3_bucket_name
-  aws_region  = var.aws_region
-  # certificate_arn = module.route53.cloudfront_certificate_arns["docs"] # Assuming 'docs' is the key for docs FQDN
-  # custom_domain   = module.route53.cloudfront_domain_configs["docs"] # Assuming 'docs' is the key for docs FQDN
-}
-
 module "docusaurus_s3" {
   source                      = "../../modules/s3"
   enable_versioning           = false
   bucket_name                 = var.docusaurus_s3_bucket_name
-  cloudfront_distribution_arn = module.cloudfront.cloudfront_distribution_arn
+  cloudfront_distribution_arn = module.docs_cloudfront.cloudfront_distribution_arn
 }
 
 module "timestream" {
@@ -385,7 +377,7 @@ module "opennext_waf" {
 
   service_name       = "opennext"
   environment        = "dev"
-  rate_limit         = 5000 # Higher rate limit for web frontend
+  rate_limit         = 2000
   log_retention_days = 30
 
   tags = {
@@ -734,7 +726,7 @@ module "backend_waf" {
 
   service_name       = "backend"
   environment        = "dev"
-  rate_limit         = 2000 # Requests per 5-minute period per IP
+  rate_limit         = 2000
   log_retention_days = 30
 
   tags = {
@@ -778,7 +770,35 @@ module "backend_cloudfront" {
   }
 }
 
-# Route53 DNS configuration
+# WAF for Documentation Site
+module "docs_waf" {
+  source = "../../modules/waf"
+
+  service_name       = "docs"
+  environment        = "dev"
+  rate_limit         = 500
+  log_retention_days = 30
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "Terraform"
+    Component   = "documentation-waf"
+  }
+}
+
+module "docs_cloudfront" {
+  source          = "../../modules/cloudfront"
+  bucket_name     = var.docusaurus_s3_bucket_name
+  aws_region      = var.aws_region
+  certificate_arn = module.route53.cloudfront_certificate_arns["docs"]
+  custom_domain   = module.route53.docs_domain
+  waf_acl_id      = module.docs_waf.cloudfront_web_acl_arn
+
+  # TODO: Add tags, logging configuration
+}
+
+# Route53 configuration for OpenJII services
 module "route53" {
   source = "../../modules/route53"
 
@@ -795,15 +815,15 @@ module "route53" {
   # Connect your services to your domain
 
   cloudfront_records = {
-    # Docusaurus Static Site Record
-    # "docs" = {
-    #   domain_name    = module.cloudfront.cloudfront_distribution_domain_name
-    #   hosted_zone_id = module.cloudfront.cloudfront_hosted_zone_id
-    # },
     # Root Domain Record
     "" = {
       domain_name    = module.opennext.cloudfront_domain_name
       hosted_zone_id = module.opennext.cloudfront_hosted_zone_id
+    },
+    # Documentation Site Record
+    "docs" = {
+      domain_name    = module.docs_cloudfront.cloudfront_distribution_domain_name
+      hosted_zone_id = module.docs_cloudfront.cloudfront_hosted_zone_id
     },
     # Backend API Record
     "api" = {
