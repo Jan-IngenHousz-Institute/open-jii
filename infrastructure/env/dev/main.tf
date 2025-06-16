@@ -379,6 +379,23 @@ module "databricks_secrets" {
   }
 }
 
+# WAF for OpenNext Web Application
+module "opennext_waf" {
+  source = "../../modules/waf"
+
+  service_name       = "opennext"
+  environment        = "dev"
+  rate_limit         = 5000 # Higher rate limit for web frontend
+  log_retention_days = 30
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "frontend"
+  }
+}
+
 # OpenNext Next.js Application Infrastructure
 module "opennext" {
   source = "../../modules/opennext"
@@ -387,20 +404,28 @@ module "opennext" {
   environment  = var.opennext_environment
   region       = var.aws_region
 
-  # Domain configuration - to be uncommented and adjusted
-  # domain_name     = module.route53.cloudfront_domain_configs["web"] # Assuming 'web' is the key for the root/www FQDN
-  # certificate_arn = module.route53.cloudfront_certificate_arns["web"] # Assuming 'web' is the key
-  # hosted_zone_id  = module.route53.route53_zone_id
+  # Domain configuration - now uncommented and connected
+  domain_name     = module.route53.environment_domain
+  certificate_arn = module.route53.cloudfront_certificate_arns["web"]
+  hosted_zone_id  = module.route53.route53_zone_id
 
   # VPC configuration for server Lambda database access
   enable_server_vpc               = true
   server_subnet_ids               = module.vpc.private_subnets
   server_lambda_security_group_id = module.vpc.server_lambda_security_group_id
 
-  db_environment_variables = {
-    DB_HOST = module.aurora_db.cluster_endpoint
-    DB_PORT = module.aurora_db.cluster_port
-    DB_NAME = module.aurora_db.database_name
+  # WAF integration
+  waf_acl_id = module.opennext_waf.cloudfront_web_acl_arn
+
+  # Logging configuration
+  enable_logging = true
+  log_bucket     = module.logs_bucket.bucket_id
+
+  server_environment_variables = {
+    DB_HOST             = module.aurora_db.cluster_endpoint
+    DB_PORT             = module.aurora_db.cluster_port
+    DB_NAME             = module.aurora_db.database_name
+    NEXT_PUBLIC_API_URL = module.route53.api_domain
   }
 
   # Performance configuration
@@ -563,7 +588,7 @@ module "backend_alb" {
 
   # SSL/TLS configuration for HTTPS - Uses the certificate from the default region (e.g., eu-central-1)
   certificate_arn         = module.route53.regional_services_certificate_arn
-  cloudfront_header_value = var.api_cloudfront_header_value # Reverted to direct variable passing
+  cloudfront_header_value = var.api_cloudfront_header_value
 
   # Enable access logs for better security and troubleshooting
   enable_access_logs = true
@@ -709,7 +734,6 @@ module "backend_waf" {
 
   service_name       = "backend"
   environment        = "dev"
-  alb_arn            = module.backend_alb.alb_arn
   rate_limit         = 2000 # Requests per 5-minute period per IP
   log_retention_days = 30
 
@@ -763,23 +787,25 @@ module "route53" {
 
   # Input for CloudFront domains that need us-east-1 certificates
   cloudfront_domain_configs = {
-    "api"  = "api.${var.environment}.${var.domain_name}"
-    "docs" = "docs.${var.environment}.${var.domain_name}" # For the docusaurus site
-    "web"  = "${var.environment}.${var.domain_name}"      # For the OpenNext frontend (root env domain)
-    # Add other FQDNs for CloudFront here, with unique logical keys
+    "api"  = "api.${var.environment}.${var.domain_name}"  # For the backend API
+    "docs" = "docs.${var.environment}.${var.domain_name}" # For the Docusaurus static site
+    "web"  = "${var.environment}.${var.domain_name}"      # For the OpenNext frontend
   }
 
   # Connect your services to your domain
 
   cloudfront_records = {
+    # Docusaurus Static Site Record
     # "docs" = {
     #   domain_name    = module.cloudfront.cloudfront_distribution_domain_name
     #   hosted_zone_id = module.cloudfront.cloudfront_hosted_zone_id
     # },
-    # "" = {
-    #   domain_name    = module.opennext.cloudfront_distribution_domain_name
-    #   hosted_zone_id = module.opennext.cloudfront_hosted_zone_id
-    # },
+    # Root Domain Record
+    "" = {
+      domain_name    = module.opennext.cloudfront_domain_name
+      hosted_zone_id = module.opennext.cloudfront_hosted_zone_id
+    },
+    # Backend API Record
     "api" = {
       domain_name    = module.backend_cloudfront.cloudfront_distribution_domain_name
       hosted_zone_id = module.backend_cloudfront.cloudfront_hosted_zone_id
