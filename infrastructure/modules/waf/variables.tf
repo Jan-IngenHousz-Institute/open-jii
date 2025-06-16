@@ -8,11 +8,6 @@ variable "environment" {
   type        = string
 }
 
-variable "alb_arn" {
-  description = "ARN of the Application Load Balancer to protect"
-  type        = string
-}
-
 variable "rate_limit" {
   description = "Rate limit for requests per 5-minute period from a single IP"
   type        = number

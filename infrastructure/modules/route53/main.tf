@@ -1,5 +1,3 @@
-# Route53 module for handling DNS resources
-
 locals {
   zone_id = aws_route53_zone.main.zone_id
 }

@@ -66,6 +66,12 @@ variable "enable_logging" {
   default     = true
 }
 
+variable "log_bucket" {
+  description = "S3 bucket name for CloudFront access logs"
+  type        = string
+  default     = ""
+}
+
 # Lambda Configuration
 variable "server_function_name" {
   description = "Name for the server Lambda function (optional, auto-generated if not provided)"
@@ -232,6 +238,12 @@ variable "enable_ipv6" {
   default     = true
 }
 
+variable "waf_acl_id" {
+  description = "ARN of the WAFv2 ACL to associate with the CloudFront distribution"
+  type        = string
+  default     = ""
+}
+
 # Monitoring and Logging
 variable "enable_cloudwatch_logs" {
   description = "Enable CloudWatch logs for Lambda functions"
@@ -276,8 +288,8 @@ variable "server_lambda_security_group_id" {
   type        = string
 }
 
-variable "db_environment_variables" {
-  description = "Database environment variables for the server Lambda function"
+variable "server_environment_variables" {
+  description = "Environment variables for the server Lambda function"
   type        = map(string)
   default     = {}
 }
