@@ -10,9 +10,9 @@ output "domain_name" {
   value       = var.domain_name
 }
 
-output "certificate_arn" {
-  description = "ARN of the ACM certificate"
-  value       = var.create_certificate ? aws_acm_certificate.main_cert[0].arn : ""
+output "regional_services_certificate_arn" {
+  description = "ARN of the ACM certificate for regional services (e.g., ALB)"
+  value       = aws_acm_certificate.regional_services_cert.arn
 }
 
 output "name_servers" {
@@ -33,4 +33,11 @@ output "api_domain" {
 output "docs_domain" {
   description = "Docs domain name for environment"
   value       = "docs.${var.environment}.${var.domain_name}"
+}
+
+output "cloudfront_certificate_arns" {
+  description = "A map of CloudFront domain logical names to their ACM certificate ARNs in us-east-1."
+  value = {
+    for key, cert in aws_acm_certificate.cloudfront_certs : key => cert.arn
+  }
 }

@@ -11,21 +11,6 @@ variable "environment" {
   default     = "dev"
 }
 
-variable "create_certificate" {
-  description = "Whether to create an ACM certificate for the domain and its subdomains"
-  type        = bool
-  default     = true
-}
-
-variable "alb_records" {
-  description = "Map of ALB records to create. Key is the subdomain prefix (e.g., 'api' for api.domain.com)"
-  type = map(object({
-    dns_name = string
-    zone_id  = string
-  }))
-  default = {}
-}
-
 variable "cloudfront_records" {
   description = "Map of CloudFront records to create. Key is the subdomain prefix (e.g., 'docs' for docs.domain.com)"
   type = map(object({
@@ -37,6 +22,12 @@ variable "cloudfront_records" {
 
 variable "tags" {
   description = "A map of tags to assign to resources"
+  type        = map(string)
+  default     = {}
+}
+
+variable "cloudfront_domain_configs" {
+  description = "A map of configurations for CloudFront certificates in us-east-1. Key is a logical name (e.g., 'api', 'docs', 'web'), value is the FQDN."
   type        = map(string)
   default     = {}
 }
