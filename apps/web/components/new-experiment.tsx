@@ -3,9 +3,7 @@
 import { useExperimentCreate } from "@/hooks/experiment/useExperimentCreate/useExperimentCreate";
 import { useLocale } from "@/hooks/useLocale";
 import { useUserSearch } from "@/hooks/useUserSearch";
-import { formatDate } from "@/util/date";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -13,33 +11,15 @@ import { useForm } from "react-hook-form";
 import type { CreateExperimentBody, User } from "@repo/api";
 import { zCreateExperimentBody } from "@repo/api";
 import { zExperimentVisibility } from "@repo/api";
+import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import {
-  Button,
-  Input,
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  Select,
-  SelectItem,
-  SelectContent,
-  RichTextarea,
-  SelectValue,
-  SelectTrigger,
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@repo/ui/components";
+import { Button, Form } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 import { useDebounce } from "../hooks/useDebounce";
-import { MemberList } from "./current-members-list";
-import { UserSearchWithDropdown } from "./user-search-with-dropdown";
+import { NewExperimentDetailsCard } from "./new-experiment-details-card";
+import { NewExperimentMembersCard } from "./new-experiment-members-card";
+import { NewExperimentVisibilityCard } from "./new-experiment-visibility-card";
 
 export function NewExperimentForm() {
   const router = useRouter();
@@ -160,151 +140,26 @@ export function NewExperimentForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         {/* Card 1: Name & Description */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("newExperiment.detailsTitle")}</CardTitle>
-            <CardDescription>
-              {t("newExperiment.detailsDescription")}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-8">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("newExperiment.name")}</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("newExperiment.description_field")}</FormLabel>
-                  <FormControl>
-                    <RichTextarea
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                      placeholder={t("newExperiment.description_field")}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
+        <NewExperimentDetailsCard form={form} />
         <div className="flex flex-col gap-6 md:flex-row">
           {/* Card 2: Add Members */}
-          <Card className="min-w-0 flex-1">
-            <CardHeader>
-              <CardTitle>{t("newExperiment.addMembersTitle")}</CardTitle>
-              <CardDescription>
-                {t("newExperiment.addMembersDescription")}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="mb-2">
-                <UserSearchWithDropdown
-                  availableUsers={availableUsers}
-                  value={selectedUserId}
-                  onValueChange={setSelectedUserId}
-                  placeholder={t("newExperiment.addMemberPlaceholder")}
-                  loading={!isDebounced || isFetchingUsers}
-                  searchValue={userSearch}
-                  onSearchChange={setUserSearch}
-                  onAddUser={handleAddMember}
-                  isAddingUser={false}
-                />
-              </div>
-              <MemberList
-                membersWithUserInfo={members.map((member) => ({
-                  ...member,
-                  role: member.role ?? "member",
-                  joinedAt: new Date().toISOString(),
-                  user: getUserInfo(member),
-                }))}
-                formatDate={formatDate}
-                onRemoveMember={handleRemoveMember}
-                isRemovingMember={false}
-                removingMemberId={null}
-                adminCount={adminCount}
-              />
-            </CardContent>
-          </Card>
+          <NewExperimentMembersCard
+            form={form}
+            availableUsers={availableUsers}
+            selectedUserId={selectedUserId}
+            setSelectedUserId={setSelectedUserId}
+            userSearch={userSearch}
+            setUserSearch={setUserSearch}
+            isDebounced={isDebounced}
+            isFetchingUsers={isFetchingUsers}
+            handleAddMember={handleAddMember}
+            members={members}
+            getUserInfo={getUserInfo}
+            handleRemoveMember={handleRemoveMember}
+            adminCount={adminCount}
+          />
           {/* Card 3: Visibility & Embargo */}
-          <Card className="min-w-0 flex-1">
-            <CardHeader>
-              <CardTitle>{t("newExperiment.visibilityTitle")}</CardTitle>
-              <CardDescription>
-                {t("newExperiment.visibilityDescription")}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-8">
-              <FormField
-                control={form.control}
-                name="visibility"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("newExperiment.visibility")}</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue
-                            placeholder={t(
-                              "newExperiment.visibilityPlaceholder",
-                            )}
-                          />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Object.entries(zExperimentVisibility.enum).map(
-                          (key) => {
-                            return (
-                              <SelectItem key={key[0]} value={key[0]}>
-                                {key[0]}
-                              </SelectItem>
-                            );
-                          },
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="embargoIntervalDays"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {t("newExperiment.embargoIntervalDays")}
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        {...field}
-                        onChange={(event) =>
-                          field.onChange(+event.target.value)
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
+          <NewExperimentVisibilityCard form={form} />
         </div>
         <div className="flex gap-2">
           <Button type="button" onClick={cancel} variant="outline">

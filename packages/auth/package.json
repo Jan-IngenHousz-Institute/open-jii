@@ -17,6 +17,10 @@
     "./express": {
       "types": "./src/express.d.ts",
       "default": "./dist/express.js"
+    },
+    "./client": {
+      "types": "./src/client.d.ts",
+      "default": "./dist/client.js"
     }
   },
   "private": true,

@@ -106,7 +106,7 @@ export const zUpdateExperimentBody = z.object({
   name: z
     .string()
     .min(1)
-    .max(100)
+    .max(255)
     .optional()
     .describe("Updated experiment name"),
   description: z.string().optional().describe("Updated experiment description"),

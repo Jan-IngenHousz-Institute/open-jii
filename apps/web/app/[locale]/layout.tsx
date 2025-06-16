@@ -1,9 +1,9 @@
 import { TranslationsProvider } from "@/components/translations-provider";
 import type { Metadata } from "next";
-import { SessionProvider } from "next-auth/react";
 import { Poppins, Overpass } from "next/font/google";
 import type React from "react";
 
+import { SessionProvider } from "@repo/auth/client";
 import type { Locale, Namespace } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { cn } from "@repo/ui/lib/utils";
