@@ -18,7 +18,7 @@ resource "aws_cloudfront_distribution" "cdn" {
     origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
   }
 
-  enabled             = false
+  enabled             = true
   default_root_object = var.default_root_object
 
   # Set aliases for custom domain if provided
@@ -51,4 +51,7 @@ resource "aws_cloudfront_distribution" "cdn" {
     minimum_protocol_version       = local.has_custom_domain ? "TLSv1.2_2021" : null
     cloudfront_default_certificate = !local.has_custom_domain
   }
+
+  price_class = "PriceClass_100"
+  web_acl_id = var.waf_acl_id
 }

@@ -97,6 +97,36 @@ resource "aws_wafv2_web_acl" "main" {
     }
   }
 
+  # Rule to block requests for sensitive paths like .git
+  rule {
+    name     = "BlockSensitivePaths"
+    priority = 0 # Highest priority to block these requests first
+
+    action {
+      block {}
+    }
+
+    statement {
+      byte_match_statement {
+        search_string         = "/.git"
+        positional_constraint = "STARTS_WITH"
+        field_to_match {
+          uri_path {}
+        }
+        text_transformation {
+          priority = 0
+          type     = "NONE"
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "BlockSensitivePathsMetric"
+      sampled_requests_enabled   = true
+    }
+  }
+
   # Geographic blocking - optional security measure
   # Useful for compliance requirements or reducing attack surface
   # Only creates the rule if blocked_countries list is provided

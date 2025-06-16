@@ -25,3 +25,9 @@ variable "custom_domain" {
   type        = string
   default     = ""
 }
+
+variable "waf_acl_id" {
+  description = "The ARN of the WAF Web ACL to associate with the CloudFront distribution."
+  type        = string
+  default     = null
+}

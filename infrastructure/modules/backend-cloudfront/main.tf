@@ -2,7 +2,7 @@
 # Secures ALB by placing CloudFront in front, restricting direct access
 
 resource "aws_cloudfront_distribution" "api_distribution" {
-  enabled             = true
+  enabled             = false
   is_ipv6_enabled     = true
   comment             = "API Distribution for ${var.service_name}-${var.environment}"
   default_root_object = ""
