@@ -7,12 +7,9 @@ import type { SessionUser } from "@repo/auth/config";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
-import {
-  formatDates,
-  formatDatesList,
-} from "../../common/utils/date-formatter";
+import { formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
-import { AddExperimentMemberUseCase } from "../application/use-cases/experiment-members/add-experiment-member";
+import { AddExperimentMembersUseCase } from "../application/use-cases/experiment-members/add-experiment-members";
 import { ListExperimentMembersUseCase } from "../application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "../application/use-cases/experiment-members/remove-experiment-member";
 
@@ -23,7 +20,7 @@ export class ExperimentMembersController {
 
   constructor(
     private readonly listExperimentMembersUseCase: ListExperimentMembersUseCase,
-    private readonly addExperimentMemberUseCase: AddExperimentMemberUseCase,
+    private readonly addExperimentMembersUseCase: AddExperimentMembersUseCase,
     private readonly removeExperimentMemberUseCase: RemoveExperimentMemberUseCase,
   ) {}
 
@@ -53,30 +50,28 @@ export class ExperimentMembersController {
     );
   }
 
-  @TsRestHandler(contract.experiments.addExperimentMember)
-  addMember(@CurrentUser() user: SessionUser) {
+  @TsRestHandler(contract.experiments.addExperimentMembers)
+  addMembers(@CurrentUser() user: SessionUser) {
     return tsRestHandler(
-      contract.experiments.addExperimentMember,
+      contract.experiments.addExperimentMembers,
       async ({ params, body }) => {
-        const result = await this.addExperimentMemberUseCase.execute(
+        const result = await this.addExperimentMembersUseCase.execute(
           params.id,
-          body,
+          body.members,
           user.id,
         );
 
         if (result.isSuccess()) {
-          const member = result.value;
-
-          // Format date to string for the API contract
-          const formattedMember = formatDates(member);
+          const members = result.value;
+          const formattedMembers = formatDatesList(members);
 
           this.logger.log(
-            `Member ${body.userId} added to experiment ${params.id} by user ${user.id}`,
+            `Members [${body.members.map((m) => m.userId).join(", ")}] added to experiment ${params.id} by user ${user.id}`,
           );
 
           return {
             status: StatusCodes.CREATED,
-            body: formattedMember,
+            body: formattedMembers,
           };
         }
 

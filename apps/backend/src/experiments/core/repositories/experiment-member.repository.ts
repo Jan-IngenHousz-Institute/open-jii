@@ -1,6 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, eq, experimentMembers, users } from "@repo/database";
+import { and, eq, experimentMembers, inArray, users } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -37,17 +37,22 @@ export class ExperimentMemberRepository {
     });
   }
 
-  async addMember(
+  async addMembers(
     experimentId: string,
-    userId: string,
-    role: ExperimentMemberRole = "member",
+    members: { userId: string; role?: ExperimentMemberRole }[],
   ): Promise<Result<ExperimentMemberDto[]>> {
     return tryCatch(async () => {
-      await this.database.insert(experimentMembers).values({
-        experimentId,
-        userId,
-        role,
-      });
+      if (!members.length) return [];
+
+      await this.database.insert(experimentMembers).values(
+        members.map((m) => ({
+          experimentId,
+          userId: m.userId,
+          role: m.role,
+        })),
+      );
+
+      const userIds = members.map((m) => m.userId);
 
       const result = await this.database
         .select({
@@ -65,10 +70,9 @@ export class ExperimentMemberRepository {
         .where(
           and(
             eq(experimentMembers.experimentId, experimentId),
-            eq(experimentMembers.userId, userId),
+            inArray(experimentMembers.userId, userIds),
           ),
-        )
-        .limit(1);
+        );
 
       return result;
     });

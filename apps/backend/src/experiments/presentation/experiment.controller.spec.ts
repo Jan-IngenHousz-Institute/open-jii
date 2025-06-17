@@ -634,7 +634,7 @@ describe("ExperimentController", () => {
 
       expect(response.body).toHaveLength(1);
       expect(response.body[0]).toMatchObject({
-        userId: testUserId,
+        user: { id: testUserId },
         role: "admin",
       });
     });
@@ -665,7 +665,7 @@ describe("ExperimentController", () => {
       });
 
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },
@@ -674,11 +674,17 @@ describe("ExperimentController", () => {
       await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ userId: newMemberId, role: "member" })
+        .send({ members: [{ userId: newMemberId, role: "member" }] })
         .expect(StatusCodes.CREATED)
         .expect(({ body }) => {
-          expect(body).toMatchObject({
-            userId: newMemberId,
+          expect(Array.isArray(body)).toBe(true);
+          const addedMember = (body as ExperimentMemberList).find(
+            (member) =>
+              member.role === "member" && member.user.id === newMemberId,
+          );
+          expect(addedMember).toBeDefined();
+          expect(addedMember).toMatchObject({
+            user: { id: newMemberId },
             role: "member",
           });
         });
@@ -704,7 +710,7 @@ describe("ExperimentController", () => {
       });
 
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },

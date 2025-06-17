@@ -105,7 +105,9 @@ describe("CreateExperimentUseCase", () => {
     // Verify the creator was added as an admin
     expect(members[0]).toMatchObject({
       experimentId: createdExperiment.id,
-      userId: testUserId,
+      user: {
+        id: testUserId,
+      },
       role: "admin",
     });
   });

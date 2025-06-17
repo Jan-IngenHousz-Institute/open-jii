@@ -50,18 +50,13 @@ describe("ListExperimentMembersUseCase", () => {
     expect(members).toHaveLength(2); // Creator + added member
 
     // Verify members by role rather than hardcoded IDs
-    expect(members).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          userId: experimentAdmin.userId,
-          role: "admin",
-        }),
-        expect.objectContaining({
-          userId: memberId,
-          role: "member",
-        }),
-      ]),
-    );
+    const adminMember = members.find((member) => member.role === "admin");
+    const regularMember = members.find((member) => member.role === "member");
+
+    expect(adminMember).toBeDefined();
+    expect(regularMember).toBeDefined();
+    expect(adminMember?.user.id).toBe(experimentAdmin.userId);
+    expect(regularMember?.user.id).toBe(memberId);
   });
 
   it("should return NOT_FOUND error if experiment does not exist", async () => {
@@ -118,9 +113,7 @@ describe("ListExperimentMembersUseCase", () => {
 
     // Verify members are returned
     expect(members).toHaveLength(1); // Just the creator
-    expect(members[0]).toMatchObject({
-      userId: experimentAdmin.userId,
-      role: "admin",
-    });
+    expect(members[0]?.role).toBe("admin");
+    expect(members[0]?.user.id).toBe(experimentAdmin.userId);
   });
 });

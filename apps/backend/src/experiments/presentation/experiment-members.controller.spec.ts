@@ -62,14 +62,20 @@ describe("ExperimentMembersController", () => {
 
       // Assert the response
       expect(response.body).toHaveLength(2);
-      expect(response.body).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ userId: testUserId, role: "admin" }),
-          expect.objectContaining({ userId: memberId, role: "member" }),
-        ]),
-      );
-    });
 
+      // Find members by role to avoid object shape matching issues
+      const adminMember = response.body.find(
+        (member) => member.role === "admin",
+      );
+      const regularMember = response.body.find(
+        (member) => member.role === "member",
+      );
+
+      expect(adminMember).toBeDefined();
+      expect(regularMember).toBeDefined();
+      expect(adminMember?.user.id).toBe(testUserId);
+      expect(regularMember?.user.id).toBe(memberId);
+    });
     it("should return 404 if experiment doesn't exist", async () => {
       const nonExistentId = faker.string.uuid();
       const path = testApp.resolvePath(
@@ -135,28 +141,32 @@ describe("ExperimentMembersController", () => {
 
       // Construct the path
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },
       );
 
       // Create the member data
-      const memberData = { userId: newMemberId, role: "member" };
+      const memberData = { members: [{ userId: newMemberId, role: "member" }] };
 
       // Send the request
-      const response = await testApp
+      const response: SuperTestResponse<ExperimentMemberList> = await testApp
         .post(path)
         .withAuth(testUserId)
         .send(memberData)
         .expect(StatusCodes.CREATED);
 
-      // Assert the response
-      expect(response.body).toMatchObject({
-        userId: newMemberId,
-        role: "member",
-        experimentId: experiment.id,
-      });
+      // Assert the response shape: find the new member in the array and check nested properties
+      const members: ExperimentMemberList = response.body;
+      expect(Array.isArray(members)).toBe(true);
+      const addedMember = members.find(
+        (member) => member.role === "member" && member.user.id === newMemberId,
+      );
+      expect(addedMember).toBeDefined();
+      expect(addedMember?.role).toBe("member");
+      expect(addedMember?.user.id).toBe(newMemberId);
+      expect(addedMember?.user.email).toBe("new-member@example.com");
 
       // Verify with a list request
       const listPath = testApp.resolvePath(
@@ -172,12 +182,18 @@ describe("ExperimentMembersController", () => {
         .expect(StatusCodes.OK);
 
       expect(listResponse.body).toHaveLength(2);
-      expect(listResponse.body).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ userId: testUserId, role: "admin" }),
-          expect.objectContaining({ userId: newMemberId, role: "member" }),
-        ]),
+
+      const listedMembers = listResponse.body as ExperimentMemberList;
+      const adminMember = listedMembers.find(
+        (member) => member.role === "admin",
       );
+      const regularMember = listedMembers.find(
+        (member) => member.role === "member",
+      );
+      expect(adminMember).toBeDefined();
+      expect(regularMember).toBeDefined();
+      expect(adminMember?.user.id).toBe(testUserId);
+      expect(regularMember?.user.id).toBe(newMemberId);
     });
 
     it("should return 404 when adding member to non-existent experiment", async () => {
@@ -187,7 +203,7 @@ describe("ExperimentMembersController", () => {
       });
 
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: nonExistentId,
         },
@@ -196,7 +212,7 @@ describe("ExperimentMembersController", () => {
       await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ userId: memberId, role: "member" })
+        .send({ members: [{ userId: memberId, role: "member" }] })
         .expect(StatusCodes.NOT_FOUND)
         .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("not found");
@@ -211,7 +227,7 @@ describe("ExperimentMembersController", () => {
       });
 
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },
@@ -249,7 +265,7 @@ describe("ExperimentMembersController", () => {
 
       // Try to add the same member again
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },
@@ -271,7 +287,7 @@ describe("ExperimentMembersController", () => {
 
       // Try to add self again
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },
@@ -295,7 +311,7 @@ describe("ExperimentMembersController", () => {
       });
 
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },
