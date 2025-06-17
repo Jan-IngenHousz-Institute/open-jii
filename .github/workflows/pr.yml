@@ -25,7 +25,7 @@ jobs:
     name: Build, Lint, Test & AsyncAPI
     runs-on: ubuntu-latest
     env:
-      TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      TURBO_REF_FILTER: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
