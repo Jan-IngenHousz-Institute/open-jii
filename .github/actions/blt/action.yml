@@ -76,7 +76,7 @@ runs:
         echo "Using base for change detection: ${{ inputs.base }}"
 
         # Get list of affected projects using provided base
-        pnpm turbo run build --dry-run=json --filter=...[origin/${{ inputs.base }}] --output-logs=none > affected.json
+        pnpm turbo run build --dry-run=json --filter=...[$TURBO_REF_FILTER] --output-logs=none > affected.json
 
         # Extract project names from packages array and filter out "//" entry
         AFFECTED_APPS=$(jq -c '[.packages[] | select(. != "//")]' affected.json)
