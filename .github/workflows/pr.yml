@@ -24,6 +24,8 @@ jobs:
   build_lint_test:
     name: Build, Lint, Test & AsyncAPI
     runs-on: ubuntu-latest
+    env:
+      TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -38,11 +40,6 @@ jobs:
           artifact_retention: "7"
           base: "main"
           environment: "dev"
-          database_url: ${{ secrets.DATABASE_URL }}
-          auth_secret: ${{ secrets.AUTH_SECRET }}
-          auth_url: ${{ secrets.AUTH_URL }}
-          auth_github_id: ${{ secrets.AUTH_GITHUB_ID }}
-          auth_github_secret: ${{ secrets.AUTH_GITHUB_SECRET }}
 
   tofu:
     name: OpenTofu
