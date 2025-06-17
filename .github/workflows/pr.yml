@@ -21,11 +21,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  identify_affected:
+    name: Identify Affected Projects
+    uses: ./.github/workflows/identify-affected.yml
+    with:
+      node-version: "22"
+
   build_lint_test:
     name: Build, Lint, Test & AsyncAPI
+    needs: identify_affected
     runs-on: ubuntu-latest
-    env:
-      TURBO_REF_FILTER: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -38,8 +43,9 @@ jobs:
         with:
           node-version: "22"
           artifact_retention: "7"
-          base: "main"
           environment: "dev"
+          affected_apps: ${{ needs.identify_affected.outputs.affected_apps }}
+          has_affected_apps: ${{ needs.identify_affected.outputs.has_affected_apps }}
 
   tofu:
     name: OpenTofu
