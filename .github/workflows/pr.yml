@@ -38,11 +38,11 @@ jobs:
           artifact_retention: "7"
           base: "main"
           environment: "dev"
-          database_url: ${{ secrets.DATABASE_URL }}
-          auth_secret: ${{ secrets.AUTH_SECRET }}
-          auth_url: ${{ secrets.AUTH_URL }}
-          auth_github_id: ${{ secrets.AUTH_GITHUB_ID }}
-          auth_github_secret: ${{ secrets.AUTH_GITHUB_SECRET }}
+          # database_url: ${{ secrets.DATABASE_URL }}
+          # auth_secret: ${{ secrets.AUTH_SECRET }}
+          # auth_url: ${{ secrets.AUTH_URL }}
+          # auth_github_id: ${{ secrets.AUTH_GITHUB_ID }}
+          # auth_github_secret: ${{ secrets.AUTH_GITHUB_SECRET }}
 
   tofu:
     name: OpenTofu
@@ -51,20 +51,20 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    env:
-      TF_VAR_terraform_state_s3_bucket_name: ${{ secrets.TERRAFORM_STATE_S3_BUCKET_NAME }}
-      TF_VAR_docusaurus_s3_bucket_name: ${{ secrets.DOCUSAURUS_S3_BUCKET_NAME }}
-      TF_VAR_databricks_bucket_name: ${{ secrets.DATABRICKS_S3_BUCKET_NAME }}
-      TF_VAR_timestream_database_name: ${{ secrets.TIMESTREAM_DB_NAME }}
-      TF_VAR_timestream_table_name: ${{ secrets.TIMESTREAM_TABLE_NAME }}
-      TF_VAR_iot_timestream_policy_name: ${{ secrets.IOT_TIMESTREAM_POLICY_NAME }}
-      TF_VAR_iot_timestream_role_name: ${{ secrets.IOT_TIMESTREAM_ROLE_NAME }}
-      TF_VAR_iot_kinesis_policy_name: ${{ secrets.IOT_KINESIS_POLICY_NAME }}
-      TF_VAR_iot_kinesis_role_name: ${{ secrets.IOT_KINESIS_ROLE_NAME }}
-      TF_VAR_kinesis_stream_name: ${{ secrets.KINESIS_STREAM_NAME }}
-      TF_VAR_databricks_account_id: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
-      TF_VAR_databricks_client_id: ${{ secrets.DATABRICKS_CLIENT_ID }}
-      TF_VAR_databricks_client_secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+    # env:
+    #   TF_VAR_terraform_state_s3_bucket_name: ${{ secrets.TERRAFORM_STATE_S3_BUCKET_NAME }}
+    #   TF_VAR_docusaurus_s3_bucket_name: ${{ secrets.DOCUSAURUS_S3_BUCKET_NAME }}
+    #   TF_VAR_databricks_bucket_name: ${{ secrets.DATABRICKS_S3_BUCKET_NAME }}
+    #   TF_VAR_timestream_database_name: ${{ secrets.TIMESTREAM_DB_NAME }}
+    #   TF_VAR_timestream_table_name: ${{ secrets.TIMESTREAM_TABLE_NAME }}
+    #   TF_VAR_iot_timestream_policy_name: ${{ secrets.IOT_TIMESTREAM_POLICY_NAME }}
+    #   TF_VAR_iot_timestream_role_name: ${{ secrets.IOT_TIMESTREAM_ROLE_NAME }}
+    #   TF_VAR_iot_kinesis_policy_name: ${{ secrets.IOT_KINESIS_POLICY_NAME }}
+    #   TF_VAR_iot_kinesis_role_name: ${{ secrets.IOT_KINESIS_ROLE_NAME }}
+    #   TF_VAR_kinesis_stream_name: ${{ secrets.KINESIS_STREAM_NAME }}
+    #   TF_VAR_databricks_account_id: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
+    #   TF_VAR_databricks_client_id: ${{ secrets.DATABRICKS_CLIENT_ID }}
+    #   TF_VAR_databricks_client_secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
