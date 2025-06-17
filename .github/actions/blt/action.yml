@@ -16,26 +16,26 @@ inputs:
   environment:
     description: "Deployment environment (e.g., dev, staging, production)"
     required: true
-  database_url:
-    description: "Database URL for connecting to the database"
-    required: false
-    default: ""
-  auth_secret:
-    description: "Auth secret for authentication"
-    required: false
-    default: ""
-  auth_url:
-    description: "Auth URL for authentication"
-    required: false
-    default: ""
-  auth_github_id:
-    description: "GitHub OAuth ID for authentication"
-    required: false
-    default: ""
-  auth_github_secret:
-    description: "GitHub OAuth secret for authentication"
-    required: false
-    default: ""
+  # database_url:
+  #   description: "Database URL for connecting to the database"
+  #   required: false
+  #   default: ""
+  # auth_secret:
+  #   description: "Auth secret for authentication"
+  #   required: false
+  #   default: ""
+  # auth_url:
+  #   description: "Auth URL for authentication"
+  #   required: false
+  #   default: ""
+  # auth_github_id:
+  #   description: "GitHub OAuth ID for authentication"
+  #   required: false
+  #   default: ""
+  # auth_github_secret:
+  #   description: "GitHub OAuth secret for authentication"
+  #   required: false
+  #   default: ""
 
 outputs:
   affected_apps:
