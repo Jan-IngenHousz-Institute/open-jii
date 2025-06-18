@@ -6,6 +6,7 @@ import { contract } from "@repo/api";
 
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
+import type { UserDto } from "../../users/core/models/user.model";
 
 describe("ExperimentMembersController", () => {
   const testApp = TestHarness.App;
@@ -64,8 +65,18 @@ describe("ExperimentMembersController", () => {
       expect(response.body).toHaveLength(2);
       expect(response.body).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ userId: testUserId, role: "admin" }),
-          expect.objectContaining({ userId: memberId, role: "member" }),
+          expect.objectContaining({
+            role: "admin",
+            user: expect.objectContaining({
+              id: testUserId,
+            }) as Partial<UserDto>,
+          }),
+          expect.objectContaining({
+            role: "member",
+            user: expect.objectContaining({
+              id: memberId,
+            }) as Partial<UserDto>,
+          }),
         ]),
       );
     });
@@ -153,9 +164,11 @@ describe("ExperimentMembersController", () => {
 
       // Assert the response
       expect(response.body).toMatchObject({
-        userId: newMemberId,
         role: "member",
         experimentId: experiment.id,
+        user: expect.objectContaining({
+          id: newMemberId,
+        }) as Partial<UserDto>,
       });
 
       // Verify with a list request
@@ -174,8 +187,18 @@ describe("ExperimentMembersController", () => {
       expect(listResponse.body).toHaveLength(2);
       expect(listResponse.body).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ userId: testUserId, role: "admin" }),
-          expect.objectContaining({ userId: newMemberId, role: "member" }),
+          expect.objectContaining({
+            role: "admin",
+            user: expect.objectContaining({
+              id: testUserId,
+            }) as Partial<UserDto>,
+          }),
+          expect.objectContaining({
+            role: "member",
+            user: expect.objectContaining({
+              id: newMemberId,
+            }) as Partial<UserDto>,
+          }),
         ]),
       );
     });

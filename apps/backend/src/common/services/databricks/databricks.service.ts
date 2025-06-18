@@ -24,6 +24,7 @@ import type {
   ExecuteStatementRequest,
   StatementResponse,
   SchemaData,
+  ListTablesResponse,
 } from "./databricks.types";
 
 @Injectable()
@@ -34,10 +35,12 @@ export class DatabricksService {
   private tokenExpiresAt = 0;
 
   private static readonly TOKEN_BUFFER_MS = 5 * 60 * 1000; // 5 minutes
-  private static readonly TOKEN_ENDPOINT = "/oidc/v1/token";
-  private static readonly JOBS_ENDPOINT = "/api/2.2/jobs";
-  private static readonly SQL_STATEMENTS_ENDPOINT = "/api/2.0/sql/statements";
   private static readonly DEFAULT_REQUEST_TIMEOUT = 30000; // 30 seconds
+
+  public static readonly TOKEN_ENDPOINT = "/oidc/v1/token";
+  public static readonly JOBS_ENDPOINT = "/api/2.2/jobs";
+  public static readonly SQL_STATEMENTS_ENDPOINT = "/api/2.0/sql/statements";
+  public static readonly TABLES_ENDPOINT = "/api/2.1/unity-catalog/tables";
 
   constructor(
     private readonly configService: ConfigService,
@@ -298,115 +301,6 @@ export class DatabricksService {
     }
   }
 
-  async getExperimentSchemaData(
-    experimentId: string,
-    experimentName: string,
-  ): Promise<Result<SchemaData>> {
-    return await tryCatch(
-      async () => {
-        const tokenResult = await this.getAccessToken();
-        if (tokenResult.isFailure()) {
-          throw tokenResult.error;
-        }
-
-        const token = tokenResult.value;
-
-        const schemaName = `exp_${experimentName}_${experimentId}`;
-
-        // Execute SQL query to get experiment data
-        const queryResult = await this.executeSqlStatement(
-          token,
-          schemaName,
-          `SELECT * FROM bronze_data_exp`,
-        );
-
-        if (queryResult.isFailure()) {
-          throw queryResult.error;
-        }
-
-        // Format the response
-        const response = this.formatExperimentDataResponse(queryResult.value);
-        return response;
-      },
-      (error) => {
-        this.logger.error(
-          `Failed to get experiment data from Databricks: ${this.getErrorMessage(error)}`,
-        );
-        return apiErrorMapper(error, "Databricks SQL query execution");
-      },
-    );
-  }
-
-  private async executeSqlStatement(
-    token: string,
-    schemaName: string,
-    sqlStatement: string,
-  ): Promise<Result<StatementResponse>> {
-    const statementUrl = `${this.config.host}${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`;
-
-    this.logger.debug(`Executing SQL statement in Databricks: ${sqlStatement}`);
-
-    const requestBody: ExecuteStatementRequest = {
-      statement: sqlStatement,
-      warehouse_id: this.config.warehouseId,
-      schema: schemaName,
-      catalog: this.config.catalogName,
-      wait_timeout: "50s", // Maximum supported wait time
-      disposition: "INLINE", // We want the data inline with the response
-      format: "JSON_ARRAY",
-    };
-
-    try {
-      const response: AxiosResponse<StatementResponse> =
-        await this.httpService.axiosRef.post(statementUrl, requestBody, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          timeout: 60000, // Longer timeout for SQL queries
-        });
-
-      const statementResponse = response.data;
-
-      // Check if the statement is in a terminal state
-      if (statementResponse.status.state === "SUCCEEDED") {
-        return success(statementResponse);
-      } else if (
-        ["FAILED", "CANCELED", "CLOSED"].includes(
-          statementResponse.status.state,
-        )
-      ) {
-        if (statementResponse.status.error) {
-          return failure(
-            AppError.internal(
-              `SQL statement execution failed: ${statementResponse.status.error.message ?? "Unknown error"}`,
-            ),
-          );
-        }
-        return failure(
-          AppError.internal(
-            `SQL statement execution ${statementResponse.status.state.toLowerCase()}`,
-          ),
-        );
-      }
-
-      // For PENDING or RUNNING states, poll until completion
-      return await this.pollStatementExecution(
-        token,
-        statementResponse.statement_id,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Error executing SQL statement: ${this.getErrorMessage(error)}`,
-      );
-      return failure(
-        AppError.internal(
-          `Databricks SQL statement execution failed: ${this.getErrorMessage(error)}`,
-        ),
-      );
-    }
-  }
-
   private async pollStatementExecution(
     token: string,
     statementId: string,
@@ -514,15 +408,19 @@ export class DatabricksService {
           expand_tasks: false,
         };
 
-        const response = await this.httpService.axiosRef.get(apiUrl, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          params: requestParams,
-          timeout: DatabricksService.DEFAULT_REQUEST_TIMEOUT,
-        });
+        const response =
+          await this.httpService.axiosRef.get<DatabricksJobsListResponse>(
+            apiUrl,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+              params: requestParams,
+              timeout: DatabricksService.DEFAULT_REQUEST_TIMEOUT,
+            },
+          );
 
-        const jobsListResponse = response.data as DatabricksJobsListResponse;
+        const jobsListResponse = response.data;
 
         return {
           healthy:
@@ -535,6 +433,144 @@ export class DatabricksService {
           `Databricks health check failed: ${this.getErrorMessage(error)}`,
         );
         return apiErrorMapper(error, "Databricks service unavailable");
+      },
+    );
+  }
+
+  async listTables(
+    experimentName: string,
+    experimentId: string,
+  ): Promise<Result<ListTablesResponse>> {
+    return await tryCatch(
+      async () => {
+        const tokenResult = await this.getAccessToken();
+        if (tokenResult.isFailure()) {
+          throw tokenResult.error;
+        }
+
+        const token = tokenResult.value;
+        const schemaName = `exp_${experimentName}_${experimentId}`;
+        const apiUrl = `${this.config.host}${DatabricksService.TABLES_ENDPOINT}`;
+
+        this.logger.debug(`Listing tables for schema ${schemaName}`);
+
+        const response =
+          await this.httpService.axiosRef.get<ListTablesResponse>(apiUrl, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            params: {
+              catalog_name: this.config.catalogName,
+              schema_name: schemaName,
+            },
+            timeout: DatabricksService.DEFAULT_REQUEST_TIMEOUT,
+          });
+
+        return {
+          next_page_token: response.data.next_page_token,
+          tables: response.data.tables.map((table) => ({
+            name: table.name,
+            catalog_name: table.catalog_name,
+            schema_name: table.schema_name,
+            table_type: table.table_type,
+            comment: table.comment,
+            created_at: table.created_at,
+          })),
+        };
+      },
+      (error) => {
+        this.logger.error(
+          `Failed to list tables: ${this.getErrorMessage(error)}`,
+        );
+        return apiErrorMapper(error, "Failed to list Databricks tables");
+      },
+    );
+  }
+
+  async executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+  ): Promise<Result<SchemaData>> {
+    return await tryCatch(
+      async () => {
+        const tokenResult = await this.getAccessToken();
+        if (tokenResult.isFailure()) {
+          throw tokenResult.error;
+        }
+
+        const token = tokenResult.value;
+        this.logger.debug(
+          `Executing SQL query in schema ${schemaName}: ${sqlStatement}`,
+        );
+
+        const statementUrl = `${this.config.host}${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`;
+        const requestBody: ExecuteStatementRequest = {
+          statement: sqlStatement,
+          warehouse_id: this.config.warehouseId,
+          schema: schemaName,
+          catalog: this.config.catalogName,
+          wait_timeout: "50s", // Maximum supported wait time
+          disposition: "INLINE", // We want the data inline with the response
+          format: "JSON_ARRAY",
+        };
+
+        try {
+          const response: AxiosResponse<StatementResponse> =
+            await this.httpService.axiosRef.post(statementUrl, requestBody, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              timeout: 60000, // Longer timeout for SQL queries
+            });
+
+          const statementResponse = response.data;
+
+          // Check if the statement is in a terminal state
+          if (statementResponse.status.state === "SUCCEEDED") {
+            return this.formatExperimentDataResponse(statementResponse);
+          } else if (
+            ["FAILED", "CANCELED", "CLOSED"].includes(
+              statementResponse.status.state,
+            )
+          ) {
+            if (statementResponse.status.error) {
+              throw AppError.internal(
+                `SQL statement execution failed: ${statementResponse.status.error.message ?? "Unknown error"}`,
+              );
+            }
+            throw AppError.internal(
+              `SQL statement execution ${statementResponse.status.state.toLowerCase()}`,
+            );
+          }
+
+          // For PENDING or RUNNING states, poll until completion
+          const pollResult = await this.pollStatementExecution(
+            token,
+            statementResponse.statement_id,
+          );
+
+          if (pollResult.isFailure()) {
+            throw pollResult.error;
+          }
+
+          return this.formatExperimentDataResponse(pollResult.value);
+        } catch (error) {
+          this.logger.error(
+            `Error executing SQL query: ${this.getErrorMessage(error)}`,
+          );
+          throw error instanceof AppError
+            ? error
+            : AppError.internal(
+                `Databricks SQL query execution failed: ${this.getErrorMessage(error)}`,
+              );
+        }
+      },
+      (error) => {
+        this.logger.error(
+          `Failed to execute SQL query: ${this.getErrorMessage(error)}`,
+        );
+        return apiErrorMapper(error, "Databricks SQL query execution");
       },
     );
   }

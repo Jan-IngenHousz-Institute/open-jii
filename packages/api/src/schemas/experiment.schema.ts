@@ -130,6 +130,44 @@ export const zExperimentFilterQuery = z.object({
     .describe("Filter experiments by their status"),
 });
 
+export const zExperimentDataQuery = z.object({
+  page: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .default(1)
+    .describe("Page number for pagination"),
+  pageSize: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .optional()
+    .default(5)
+    .describe("Number of rows per page"),
+  tableName: z
+    .string()
+    .optional()
+    .describe("Optional table name to filter results to a specific table"),
+});
+
+export const zExperimentDataTableInfo = z.object({
+  name: z.string().describe("Name of the table"),
+  catalog_name: z.string().describe("Catalog name"),
+  schema_name: z.string().describe("Schema name"),
+  data: zExperimentData.optional(),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  totalPages: z.number().int(),
+  totalRows: z.number().int(),
+});
+
+export const zExperimentDataTableList = z.array(zExperimentDataTableInfo);
+
+// Now the response is an array of table data objects
+export const zExperimentDataResponse = zExperimentDataTableList;
+
 export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
 
 // Infer request and response types
@@ -141,6 +179,8 @@ export type ExperimentFilter = ExperimentFilterQuery["filter"];
 export type CreateExperimentResponse = z.infer<
   typeof zCreateExperimentResponse
 >;
+export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
+export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
 
 export const zIdPathParam = z.object({
   id: z.string().uuid().describe("ID of the experiment"),
