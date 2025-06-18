@@ -16,26 +16,26 @@ inputs:
   environment:
     description: "Deployment environment (e.g., dev, staging, production)"
     required: true
-  database_url:
-    description: "Database URL for connecting to the database"
-    required: false
-    default: ""
-  auth_secret:
-    description: "Auth secret for authentication"
-    required: false
-    default: ""
-  auth_url:
-    description: "Auth URL for authentication"
-    required: false
-    default: ""
-  auth_github_id:
-    description: "GitHub OAuth ID for authentication"
-    required: false
-    default: ""
-  auth_github_secret:
-    description: "GitHub OAuth secret for authentication"
-    required: false
-    default: ""
+  # database_url:
+  #   description: "Database URL for connecting to the database"
+  #   required: false
+  #   default: ""
+  # auth_secret:
+  #   description: "Auth secret for authentication"
+  #   required: false
+  #   default: ""
+  # auth_url:
+  #   description: "Auth URL for authentication"
+  #   required: false
+  #   default: ""
+  # auth_github_id:
+  #   description: "GitHub OAuth ID for authentication"
+  #   required: false
+  #   default: ""
+  # auth_github_secret:
+  #   description: "GitHub OAuth secret for authentication"
+  #   required: false
+  #   default: ""
 
 outputs:
   affected_apps:
@@ -69,6 +69,16 @@ runs:
       shell: bash
       run: pnpm install --frozen-lockfile
 
+    - name: Fetch Git branches
+      shell: bash
+      run: |
+        git fetch origin
+        git branch -r
+
+    - name: Debug TURBO_REF_FILTER
+      shell: bash
+      run: echo "Turbo filter is $TURBO_REF_FILTER"
+
     - name: Identify Affected Projects
       id: check
       shell: bash
@@ -77,6 +87,14 @@ runs:
 
         # Get list of affected projects using provided base
         pnpm turbo run build --dry-run=json --filter=...[$TURBO_REF_FILTER] --output-logs=none > affected.json
+
+        echo "### DEBUG ###"
+        echo $TURBO_REF_FILTER
+
+        git fetch origin
+        git diff --name-only $TURBO_REF_FILTER
+
+        echo "### DEBUG ###"
 
         # Extract project names from packages array and filter out "//" entry
         AFFECTED_APPS=$(jq -c '[.packages[] | select(. != "//")]' affected.json)
