@@ -30,6 +30,7 @@ export function NewExperimentVisibilityCard({
   form,
 }: NewExperimentVisibilityCardProps) {
   const { t } = useTranslation(undefined, "common");
+  const visibility = form.watch("visibility");
   return (
     <Card className="min-w-0 flex-1">
       <CardHeader>
@@ -67,23 +68,25 @@ export function NewExperimentVisibilityCard({
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="embargoIntervalDays"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("newExperiment.embargoIntervalDays")}</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  {...field}
-                  onChange={(event) => field.onChange(+event.target.value)}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {visibility !== zExperimentVisibility.enum.public && (
+          <FormField
+            control={form.control}
+            name="embargoIntervalDays"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("newExperiment.embargoIntervalDays")}</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    {...field}
+                    onChange={(event) => field.onChange(+event.target.value)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
       </CardContent>
     </Card>
   );

@@ -392,14 +392,12 @@ function ExperimentInfoCard({
               {t("experimentSettings.created")} by:
             </span>{" "}
             {adminName}
-            {adminEmail && adminEmail !== adminName ? (
-              <span className="text-muted-foreground flex items-center gap-x-1">
-                <Mail className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate text-xs md:max-w-[200px] md:text-sm">
-                  {adminEmail}
-                </span>
+            <span className="text-muted-foreground flex items-center gap-x-1">
+              <Mail className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate text-xs md:max-w-[200px] md:text-sm">
+                {adminEmail}
               </span>
-            ) : null}
+            </span>
           </div>
           <div>
             <span className="font-medium">
