@@ -37,7 +37,7 @@ runs:
       id: check
       shell: bash
       env:
-        TURBO_REF_FILTER: ${{ github.event_name == '''pull_request''' && github.event.pull_request.base.sha || github.event.before }}
+        TURBO_REF_FILTER: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
       run: |
         echo "Using base for change detection: $TURBO_REF_FILTER"
 
