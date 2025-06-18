@@ -32,6 +32,6 @@ export const userContract = c.router({
       404: zErrorResponse,
     },
     summary: "Get a user by ID",
-    description: "Returns a single user by their unique identifier",
+    description: "Returns a single user by their unique identifier - test123",
   },
 });
