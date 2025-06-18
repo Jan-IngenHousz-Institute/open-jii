@@ -12,6 +12,8 @@ import {
   zCreateExperimentResponse,
   zIdPathParam,
   zExperimentMemberPathParam,
+  zExperimentDataQuery,
+  zExperimentDataResponse,
 } from "../schemas/experiment.schema";
 
 const c = initContract();
@@ -118,5 +120,21 @@ export const experimentContract = c.router({
     },
     summary: "Remove experiment member",
     description: "Removes a member from the experiment",
+  },
+
+  getExperimentData: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/data",
+    pathParams: zIdPathParam,
+    query: zExperimentDataQuery,
+    responses: {
+      200: zExperimentDataResponse,
+      404: zErrorResponse,
+      403: zErrorResponse,
+      400: zErrorResponse,
+    },
+    summary: "Get experiment data",
+    description:
+      "Retrieves data tables from the experiment with pagination support",
   },
 });

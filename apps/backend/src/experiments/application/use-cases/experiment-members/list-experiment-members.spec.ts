@@ -1,5 +1,6 @@
 import { assertFailure } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import type { UserDto } from "../../../../users/core/models/user.model";
 import { ListExperimentMembersUseCase } from "./list-experiment-members";
 
 describe("ListExperimentMembersUseCase", () => {
@@ -50,13 +51,20 @@ describe("ListExperimentMembersUseCase", () => {
     expect(members).toHaveLength(2); // Creator + added member
 
     // Verify members by role rather than hardcoded IDs
-    const adminMember = members.find((member) => member.role === "admin");
-    const regularMember = members.find((member) => member.role === "member");
-
-    expect(adminMember).toBeDefined();
-    expect(regularMember).toBeDefined();
-    expect(adminMember?.user.id).toBe(experimentAdmin.userId);
-    expect(regularMember?.user.id).toBe(memberId);
+    expect(members).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: "admin",
+          user: expect.objectContaining({
+            id: experimentAdmin.userId,
+          }) as Partial<UserDto>,
+        }),
+        expect.objectContaining({
+          role: "member",
+          user: expect.objectContaining({ id: memberId }) as Partial<UserDto>,
+        }),
+      ]),
+    );
   });
 
   it("should return NOT_FOUND error if experiment does not exist", async () => {
@@ -113,7 +121,11 @@ describe("ListExperimentMembersUseCase", () => {
 
     // Verify members are returned
     expect(members).toHaveLength(1); // Just the creator
-    expect(members[0]?.role).toBe("admin");
-    expect(members[0]?.user.id).toBe(experimentAdmin.userId);
+    expect(members[0]).toMatchObject({
+      role: "admin",
+      user: expect.objectContaining({
+        id: experimentAdmin.userId,
+      }) as Partial<UserDto>,
+    });
   });
 });

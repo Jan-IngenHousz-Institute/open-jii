@@ -4,6 +4,7 @@ import { experiments } from "@repo/database";
 
 import { assertFailure, assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
+import type { UserDto } from "../../../users/core/models/user.model";
 import { ExperimentMemberRepository } from "./experiment-member.repository";
 
 describe("ExperimentMemberRepository", () => {
@@ -67,20 +68,22 @@ describe("ExperimentMemberRepository", () => {
       expect(members).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            user: {
-              id: memberId1,
-              name: "Test1 User",
-              email: "member1@example.com",
-            },
-            role: "member",
+            role: "admin",
+            user: expect.objectContaining({
+              id: testUserId,
+            }) as Partial<UserDto>,
           }),
           expect.objectContaining({
-            user: {
-              id: memberId2,
-              name: "Test2 User",
-              email: "member2@example.com",
-            },
+            role: "member",
+            user: expect.objectContaining({
+              id: memberId1,
+            }) as Partial<UserDto>,
+          }),
+          expect.objectContaining({
             role: "admin",
+            user: expect.objectContaining({
+              id: memberId2,
+            }) as Partial<UserDto>,
           }),
         ]),
       );
@@ -151,15 +154,19 @@ describe("ExperimentMemberRepository", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       const members = result.value;
-      expect(members.length).toBe(2);
-      const memberMap = members.reduce<Record<string, string>>((acc, m) => {
-        acc[m.user.id] = m.role;
-        return acc;
-      }, {});
-      expect(memberMap).toMatchObject({
-        [memberId1]: "member",
-        [memberId2]: "admin",
+      const member = members[0];
+
+      // Assert
+      expect(member).toMatchObject({
+        experimentId: experiment.id,
+        role: "member",
+        user: expect.objectContaining({
+          id: memberId1,
+        }) as Partial<UserDto>,
       });
+      // Assert name and email are present and correct
+      expect(member.user.name).toBe("Multi User 1");
+      expect(member.user.email).toBe("multi1@example.com");
 
       // Verify all members are present in the experiment
       const allMembersResult = await repository.getMembers(experiment.id);

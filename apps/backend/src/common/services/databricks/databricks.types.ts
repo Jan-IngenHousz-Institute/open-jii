@@ -82,6 +82,22 @@ export interface SchemaData {
   truncated: boolean;
 }
 
+export interface TableInfo {
+  name: string;
+  catalog_name: string;
+  schema_name: string;
+  table_id?: string;
+  table_type?: string;
+  comment?: string;
+  created_at?: number;
+  owner?: string;
+}
+
+export interface ListTablesResponse {
+  tables: TableInfo[];
+  next_page_token?: string;
+}
+
 // Common enums for type safety
 export enum LifeCycleState {
   PENDING = "PENDING",

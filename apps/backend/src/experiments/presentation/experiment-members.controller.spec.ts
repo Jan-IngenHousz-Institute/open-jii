@@ -6,6 +6,7 @@ import { contract } from "@repo/api";
 
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
+import type { UserDto } from "../../users/core/models/user.model";
 
 describe("ExperimentMembersController", () => {
   const testApp = TestHarness.App;
@@ -62,19 +63,22 @@ describe("ExperimentMembersController", () => {
 
       // Assert the response
       expect(response.body).toHaveLength(2);
-
-      // Find members by role to avoid object shape matching issues
-      const adminMember = response.body.find(
-        (member) => member.role === "admin",
+      expect(response.body).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            role: "admin",
+            user: expect.objectContaining({
+              id: testUserId,
+            }) as Partial<UserDto>,
+          }),
+          expect.objectContaining({
+            role: "member",
+            user: expect.objectContaining({
+              id: memberId,
+            }) as Partial<UserDto>,
+          }),
+        ]),
       );
-      const regularMember = response.body.find(
-        (member) => member.role === "member",
-      );
-
-      expect(adminMember).toBeDefined();
-      expect(regularMember).toBeDefined();
-      expect(adminMember?.user.id).toBe(testUserId);
-      expect(regularMember?.user.id).toBe(memberId);
     });
     it("should return 404 if experiment doesn't exist", async () => {
       const nonExistentId = faker.string.uuid();
@@ -157,16 +161,14 @@ describe("ExperimentMembersController", () => {
         .send(memberData)
         .expect(StatusCodes.CREATED);
 
-      // Assert the response shape: find the new member in the array and check nested properties
-      const members: ExperimentMemberList = response.body;
-      expect(Array.isArray(members)).toBe(true);
-      const addedMember = members.find(
-        (member) => member.role === "member" && member.user.id === newMemberId,
-      );
-      expect(addedMember).toBeDefined();
-      expect(addedMember?.role).toBe("member");
-      expect(addedMember?.user.id).toBe(newMemberId);
-      expect(addedMember?.user.email).toBe("new-member@example.com");
+      // Assert the response
+      expect(response.body).toMatchObject({
+        role: "member",
+        experimentId: experiment.id,
+        user: expect.objectContaining({
+          id: newMemberId,
+        }) as Partial<UserDto>,
+      });
 
       // Verify with a list request
       const listPath = testApp.resolvePath(
@@ -182,18 +184,22 @@ describe("ExperimentMembersController", () => {
         .expect(StatusCodes.OK);
 
       expect(listResponse.body).toHaveLength(2);
-
-      const listedMembers = listResponse.body as ExperimentMemberList;
-      const adminMember = listedMembers.find(
-        (member) => member.role === "admin",
+      expect(listResponse.body).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            role: "admin",
+            user: expect.objectContaining({
+              id: testUserId,
+            }) as Partial<UserDto>,
+          }),
+          expect.objectContaining({
+            role: "member",
+            user: expect.objectContaining({
+              id: newMemberId,
+            }) as Partial<UserDto>,
+          }),
+        ]),
       );
-      const regularMember = listedMembers.find(
-        (member) => member.role === "member",
-      );
-      expect(adminMember).toBeDefined();
-      expect(regularMember).toBeDefined();
-      expect(adminMember?.user.id).toBe(testUserId);
-      expect(regularMember?.user.id).toBe(newMemberId);
     });
 
     it("should return 404 when adding member to non-existent experiment", async () => {

@@ -7,6 +7,7 @@ import {
 } from "../../../../common/utils/fp-utils";
 import { ExperimentMemberRepository } from "../../../../experiments/core/repositories/experiment-member.repository";
 import { TestHarness } from "../../../../test/test-harness";
+import type { UserDto } from "../../../../users/core/models/user.model";
 import { CreateExperimentUseCase } from "./create-experiment";
 
 describe("CreateExperimentUseCase", () => {
@@ -105,10 +106,8 @@ describe("CreateExperimentUseCase", () => {
     // Verify the creator was added as an admin
     expect(members[0]).toMatchObject({
       experimentId: createdExperiment.id,
-      user: {
-        id: testUserId,
-      },
       role: "admin",
+      user: expect.objectContaining({ id: testUserId }) as Partial<UserDto>,
     });
   });
 
