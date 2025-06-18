@@ -69,6 +69,15 @@ runs:
       shell: bash
       run: pnpm install --frozen-lockfile
 
+    - name: Fetch Git branches
+      shell: bash
+      run: |
+        git fetch origin
+        git branch -r
+
+    - name: Debug TURBO_REF_FILTER
+      run: echo "Turbo filter is $TURBO_REF_FILTER"
+
     - name: Identify Affected Projects
       id: check
       shell: bash
