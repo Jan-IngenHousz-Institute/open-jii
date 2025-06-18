@@ -78,6 +78,14 @@ runs:
         # Get list of affected projects using provided base
         pnpm turbo run build --dry-run=json --filter=...[$TURBO_REF_FILTER] --output-logs=none > affected.json
 
+        echo "### DEBUG ###"
+        echo $TURBO_REF_FILTER
+
+        git fetch origin
+        git diff --name-only $TURBO_REF_FILTER
+
+        echo "### DEBUG ###"
+
         # Extract project names from packages array and filter out "//" entry
         AFFECTED_APPS=$(jq -c '[.packages[] | select(. != "//")]' affected.json)
                 
