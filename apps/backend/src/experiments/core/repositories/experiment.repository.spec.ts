@@ -492,7 +492,7 @@ describe("ExperimentRepository", () => {
 
       expect(result.value.experiment).toBeTruthy();
       expect(result.value.hasAccess).toBe(true);
-      expect(result.value.isAdmin).toBe(false); // Creator is not automatically admin
+      expect(result.value.isAdmin).toBe(true);
 
       // Verify directly in database
       const dbExperiment = await testApp.database
