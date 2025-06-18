@@ -24,13 +24,22 @@ jobs:
   build_lint_test:
     name: Build, Lint, Test & AsyncAPI
     runs-on: ubuntu-latest
-    env:
-      TURBO_REF_FILTER: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+    # env:
+    #   TURBO_REF_FILTER: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      
+      - name: Set TURBO_REF_FILTER
+        id: set-ref
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
+            echo "TURBO_REF_FILTER=origin/${{ github.event.pull_request.base.ref }}" >> $GITHUB_ENV
+          else
+            echo "TURBO_REF_FILTER=origin/${{ github.event.before }}" >> $GITHUB_ENV
+          fi
 
       - name: Build, Lint & Test
         id: blt
