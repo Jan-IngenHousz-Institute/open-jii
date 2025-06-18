@@ -3,13 +3,13 @@ import type { ExperimentMember } from "@repo/api";
 import { tsr } from "../../../lib/tsr";
 
 /**
- * Hook to add a member to an experiment
+ * Hook to add members to an experiment (batch)
  * @returns Mutation object for adding members to an experiment
  */
 export const useExperimentMemberAdd = () => {
   const queryClient = tsr.useQueryClient();
 
-  return tsr.experiments.addExperimentMember.useMutation({
+  return tsr.experiments.addExperimentMembers.useMutation({
     onMutate: async (variables) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({
@@ -21,23 +21,24 @@ export const useExperimentMemberAdd = () => {
         body: ExperimentMember[];
       }>(["experiment-members", variables.params.id]);
 
-      // Create an optimistic new member entry
-      const optimisticMember: Partial<ExperimentMember> = {
-        user: {
-          id: variables.body.userId,
-          name: null,
-          email: null,
-        },
-        role: variables.body.role ?? "member",
-        // Use current timestamp as an estimate
-        joinedAt: new Date().toISOString(),
-      };
+      // Create optimistic new member entries
+      const optimisticMembers: Partial<ExperimentMember>[] =
+        variables.body.members.map((member) => ({
+          user: {
+            id: member.userId,
+            name: null,
+            email: null,
+          },
+          role: member.role ?? "member",
+          // Use current timestamp as an estimate
+          joinedAt: new Date().toISOString(),
+        }));
 
-      // Optimistically add the new member to the cache
+      // Optimistically add the new members to the cache
       if (previousMembers?.body) {
         queryClient.setQueryData(["experiment-members", variables.params.id], {
           ...previousMembers,
-          body: [...previousMembers.body, optimisticMember],
+          body: [...previousMembers.body, ...optimisticMembers],
         });
       }
 

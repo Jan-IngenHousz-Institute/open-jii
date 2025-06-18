@@ -586,7 +586,7 @@ describe("ExperimentController", () => {
       });
 
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },
@@ -595,7 +595,7 @@ describe("ExperimentController", () => {
       await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ userId: newMemberId, role: "member" })
+        .send({ members: [{ userId: newMemberId, role: "member" }] })
         .expect(StatusCodes.CREATED)
         .expect(({ body }) => {
           expect(body).toMatchObject({
@@ -627,7 +627,7 @@ describe("ExperimentController", () => {
       });
 
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },

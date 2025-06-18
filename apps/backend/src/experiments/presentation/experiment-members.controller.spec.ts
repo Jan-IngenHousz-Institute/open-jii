@@ -80,7 +80,6 @@ describe("ExperimentMembersController", () => {
         ]),
       );
     });
-
     it("should return 404 if experiment doesn't exist", async () => {
       const nonExistentId = faker.string.uuid();
       const path = testApp.resolvePath(
@@ -146,17 +145,17 @@ describe("ExperimentMembersController", () => {
 
       // Construct the path
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },
       );
 
       // Create the member data
-      const memberData = { userId: newMemberId, role: "member" };
+      const memberData = { members: [{ userId: newMemberId, role: "member" }] };
 
       // Send the request
-      const response = await testApp
+      const response: SuperTestResponse<ExperimentMemberList> = await testApp
         .post(path)
         .withAuth(testUserId)
         .send(memberData)
@@ -210,7 +209,7 @@ describe("ExperimentMembersController", () => {
       });
 
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: nonExistentId,
         },
@@ -219,7 +218,7 @@ describe("ExperimentMembersController", () => {
       await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ userId: memberId, role: "member" })
+        .send({ members: [{ userId: memberId, role: "member" }] })
         .expect(StatusCodes.NOT_FOUND)
         .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("not found");
@@ -234,7 +233,7 @@ describe("ExperimentMembersController", () => {
       });
 
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },
@@ -272,7 +271,7 @@ describe("ExperimentMembersController", () => {
 
       // Try to add the same member again
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },
@@ -294,7 +293,7 @@ describe("ExperimentMembersController", () => {
 
       // Try to add self again
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },
@@ -318,7 +317,7 @@ describe("ExperimentMembersController", () => {
       });
 
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },

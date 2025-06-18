@@ -112,12 +112,16 @@ export const zUpdateExperimentBody = z.object({
     .describe("Updated embargo period in days"),
 });
 
-export const zAddExperimentMemberBody = z.object({
-  userId: z.string().uuid().describe("ID of the user to add as a member"),
-  role: zExperimentMemberRole
-    .optional()
-    .default("member")
-    .describe("Role to assign to the new member"),
+export const zAddExperimentMembersBody = z.object({
+  members: z.array(
+    z.object({
+      userId: z.string().uuid().describe("ID of the user to add as a member"),
+      role: zExperimentMemberRole
+        .optional()
+        .default("member")
+        .describe("Role to assign to the new member"),
+    }),
+  ),
 });
 
 export const zExperimentFilterQuery = z.object({
@@ -173,7 +177,9 @@ export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
 // Infer request and response types
 export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;
 export type UpdateExperimentBody = z.infer<typeof zUpdateExperimentBody>;
-export type AddExperimentMemberBody = z.infer<typeof zAddExperimentMemberBody>;
+export type AddExperimentMembersBody = z.infer<
+  typeof zAddExperimentMembersBody
+>;
 export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;
 export type ExperimentFilter = ExperimentFilterQuery["filter"];
 export type CreateExperimentResponse = z.infer<

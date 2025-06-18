@@ -475,8 +475,8 @@ describe("ExperimentRepository", () => {
     });
   });
 
-  describe("hasAccess", () => {
-    it("should return true if user created the experiment", async () => {
+  describe("checkAccess", () => {
+    it("should return experiment and access info when user is creator", async () => {
       // Arrange
       const { experiment } = await testApp.createExperiment({
         name: "Creator Access Test",
@@ -484,14 +484,17 @@ describe("ExperimentRepository", () => {
       });
 
       // Act
-      const result = await repository.hasAccess(experiment.id, testUserId);
+      const result = await repository.checkAccess(experiment.id, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toBe(true);
 
-      // Verify relationship directly in database
+      expect(result.value.experiment).toBeTruthy();
+      expect(result.value.hasAccess).toBe(true);
+      expect(result.value.isAdmin).toBe(true);
+
+      // Verify directly in database
       const dbExperiment = await testApp.database
         .select()
         .from(experimentsTable)
@@ -504,7 +507,48 @@ describe("ExperimentRepository", () => {
       expect(dbExperiment.length).toBe(1);
     });
 
-    it("should return true if user is a member of the experiment", async () => {
+    it("should return experiment and access info when user is an admin member", async () => {
+      // Arrange
+      const creatorId = await testApp.createTestUser({
+        email: "creator@example.com",
+      });
+      const adminId = await testApp.createTestUser({
+        email: "admin@example.com",
+      });
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Admin Access Test",
+        userId: creatorId,
+      });
+
+      await testApp.addExperimentMember(experiment.id, adminId, "admin");
+
+      // Act
+      const result = await repository.checkAccess(experiment.id, adminId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+
+      expect(result.value.experiment).toBeTruthy();
+      expect(result.value.hasAccess).toBe(true);
+      expect(result.value.isAdmin).toBe(true);
+
+      // Verify relationship directly in database
+      const membership = await testApp.database
+        .select()
+        .from(experimentMembers)
+        .where(
+          and(
+            eq(experimentMembers.experimentId, experiment.id),
+            eq(experimentMembers.userId, adminId),
+            eq(experimentMembers.role, "admin"),
+          ),
+        );
+      expect(membership.length).toBe(1);
+    });
+
+    it("should return experiment and access info when user is a regular member", async () => {
       // Arrange
       const creatorId = await testApp.createTestUser({
         email: "creator@example.com",
@@ -521,12 +565,15 @@ describe("ExperimentRepository", () => {
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
       // Act
-      const result = await repository.hasAccess(experiment.id, memberId);
+      const result = await repository.checkAccess(experiment.id, memberId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toBe(true);
+
+      expect(result.value.experiment).toBeTruthy();
+      expect(result.value.hasAccess).toBe(true);
+      expect(result.value.isAdmin).toBe(false);
 
       // Verify relationship directly in database
       const membership = await testApp.database
@@ -541,7 +588,7 @@ describe("ExperimentRepository", () => {
       expect(membership.length).toBe(1);
     });
 
-    it("should return false if user has no relation to the experiment", async () => {
+    it("should indicate no access when user has no relation to the experiment", async () => {
       // Arrange
       const { experiment } = await testApp.createExperiment({
         name: "No Access Test",
@@ -553,13 +600,15 @@ describe("ExperimentRepository", () => {
       });
 
       // Act
-      const result = await repository.hasAccess(experiment.id, nonMemberId);
+      const result = await repository.checkAccess(experiment.id, nonMemberId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
 
-      expect(result.value).toBe(false);
+      expect(result.value.experiment).toBeTruthy();
+      expect(result.value.hasAccess).toBe(false);
+      expect(result.value.isAdmin).toBe(false);
 
       // Verify absence of relationship directly in database
       const membership = await testApp.database
@@ -572,22 +621,11 @@ describe("ExperimentRepository", () => {
           ),
         );
       expect(membership.length).toBe(0);
-
-      const creatorCheck = await testApp.database
-        .select()
-        .from(experimentsTable)
-        .where(
-          and(
-            eq(experimentsTable.id, experiment.id),
-            eq(experimentsTable.createdBy, nonMemberId),
-          ),
-        );
-      expect(creatorCheck.length).toBe(0);
     });
 
-    it("should return false if experiment does not exist", async () => {
+    it("should return null experiment and no access when experiment does not exist", async () => {
       // Act
-      const result = await repository.hasAccess(
+      const result = await repository.checkAccess(
         "00000000-0000-0000-0000-000000000000",
         testUserId,
       );
@@ -595,7 +633,10 @@ describe("ExperimentRepository", () => {
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toBe(false);
+
+      expect(result.value.experiment).toBeNull();
+      expect(result.value.hasAccess).toBe(false);
+      expect(result.value.isAdmin).toBe(false);
 
       // Verify directly in database
       const experimentCheck = await testApp.database

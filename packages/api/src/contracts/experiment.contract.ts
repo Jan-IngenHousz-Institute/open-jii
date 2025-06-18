@@ -3,12 +3,11 @@ import { initContract } from "@ts-rest/core";
 import {
   zExperiment,
   zExperimentList,
-  zExperimentMember,
   zExperimentMemberList,
   zErrorResponse,
   zCreateExperimentBody,
+  zAddExperimentMembersBody,
   zUpdateExperimentBody,
-  zAddExperimentMemberBody,
   zExperimentFilterQuery,
   zCreateExperimentResponse,
   zIdPathParam,
@@ -96,18 +95,18 @@ export const experimentContract = c.router({
       "Returns a list of all users who are members of the specified experiment",
   },
 
-  addExperimentMember: {
+  addExperimentMembers: {
     method: "POST",
-    path: "/api/v1/experiments/:id/members",
+    path: "/api/v1/experiments/:id/members/batch",
     pathParams: zIdPathParam,
-    body: zAddExperimentMemberBody,
+    body: zAddExperimentMembersBody,
     responses: {
-      201: zExperimentMember,
+      201: zExperimentMemberList,
       404: zErrorResponse,
       403: zErrorResponse,
     },
-    summary: "Add experiment member",
-    description: "Adds a new member to the experiment with the specified role",
+    summary: "Add multiple experiment members",
+    description: "Adds multiple members to the experiment with specified roles",
   },
 
   removeExperimentMember: {

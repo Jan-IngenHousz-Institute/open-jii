@@ -1,4 +1,5 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { z } from "zod";
 
 import type {
   experimentStatusEnum,
@@ -9,12 +10,24 @@ import { experiments } from "@repo/database";
 import type { SchemaData } from "../../../common/services/databricks/databricks.types";
 
 // Create schemas for database operations
-export const createExperimentSchema = createInsertSchema(experiments).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  createdBy: true,
-});
+export const createExperimentSchema = createInsertSchema(experiments)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    createdBy: true,
+  })
+  .extend({
+    members: z
+      .array(
+        z.object({
+          userId: z.string(),
+          role: z.enum(["admin", "member"]).optional(),
+        }),
+      )
+      .min(1)
+      .optional(),
+  });
 export const updateExperimentSchema = createInsertSchema(experiments)
   .partial()
   .omit({

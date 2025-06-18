@@ -53,24 +53,25 @@ export class GetExperimentDataUseCase {
     );
 
     // Check if experiment exists and user has access
-    const experimentResult =
-      await this.experimentRepository.findOne(experimentId);
+    const accessResult = await this.experimentRepository.checkAccess(
+      experimentId,
+      userId,
+    );
 
-    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
-      if (!experiment) {
-        this.logger.warn(`Experiment with ID ${experimentId} not found`);
-        return failure(
-          AppError.notFound(`Experiment with ID ${experimentId} not found`),
-        );
-      }
-
-      // Check if user has access to the experiment
-      const accessResult = await this.experimentRepository.hasAccess(
-        experimentId,
-        userId,
-      );
-
-      return accessResult.chain(async (hasAccess: boolean) => {
+    return accessResult.chain(
+      async ({
+        hasAccess,
+        experiment,
+      }: {
+        hasAccess: boolean;
+        experiment: ExperimentDto | null;
+      }) => {
+        if (!experiment) {
+          this.logger.warn(`Experiment with ID ${experimentId} not found`);
+          return failure(
+            AppError.notFound(`Experiment with ID ${experimentId} not found`),
+          );
+        }
         if (!hasAccess && experiment.visibility !== "public") {
           this.logger.warn(
             `User ${userId} attempted to access data of experiment ${experimentId} without proper permissions`,
@@ -219,7 +220,7 @@ export class GetExperimentDataUseCase {
             ),
           );
         }
-      });
-    });
+      },
+    );
   }
 }

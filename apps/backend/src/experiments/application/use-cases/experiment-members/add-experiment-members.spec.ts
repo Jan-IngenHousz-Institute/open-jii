@@ -3,12 +3,12 @@ import {
   assertSuccess,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import { AddExperimentMemberUseCase } from "./add-experiment-member";
+import { AddExperimentMembersUseCase } from "./add-experiment-members";
 
-describe("AddExperimentMemberUseCase", () => {
+describe("AddExperimentMembersUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
-  let useCase: AddExperimentMemberUseCase;
+  let useCase: AddExperimentMembersUseCase;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -17,8 +17,7 @@ describe("AddExperimentMemberUseCase", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
-
-    useCase = testApp.module.get(AddExperimentMemberUseCase);
+    useCase = testApp.module.get(AddExperimentMembersUseCase);
   });
 
   afterEach(() => {
@@ -29,45 +28,59 @@ describe("AddExperimentMemberUseCase", () => {
     await testApp.teardown();
   });
 
-  it("should add a member to an experiment", async () => {
+  it("should add multiple members to an experiment", async () => {
     // Create an experiment
     const { experiment } = await testApp.createExperiment({
-      name: "Add Member Test Experiment",
+      name: "Add Members Test Experiment",
       userId: testUserId,
     });
 
-    // Create a new user to add as a member
-    const newMemberId = await testApp.createTestUser({
-      email: "newmember@example.com",
+    // Create new users to add as members
+    const member1Id = await testApp.createTestUser({
+      email: "member1@example.com",
+    });
+    const member2Id = await testApp.createTestUser({
+      email: "member2@example.com",
     });
 
-    // Add the member through the use case
+    // Add the members through the use case
     const result = await useCase.execute(
       experiment.id,
-      { userId: newMemberId, role: "member" },
+      [
+        { userId: member1Id, role: "member" },
+        { userId: member2Id, role: "admin" },
+      ],
       testUserId,
     );
 
     // Verify result is success
     expect(result.isSuccess()).toBe(true);
-
-    expect(result._tag).toBe("success");
-
     assertSuccess(result);
-    expect(result.value.experimentId).toBe(experiment.id);
-    expect(result.value.user.id).toBe(newMemberId);
-    expect(result.value.role).toBe("member");
+
+    const members = result.value;
+    expect(Array.isArray(members)).toBe(true);
+    expect(members.length).toBe(2);
+
+    const memberIds = members.map((m) => m.user.id);
+    expect(memberIds).toContain(member1Id);
+    expect(memberIds).toContain(member2Id);
+
+    const member1 = members.find((m) => m.user.id === member1Id);
+    const member2 = members.find((m) => m.user.id === member2Id);
+
+    expect(member1?.role).toBe("member");
+    expect(member2?.role).toBe("admin");
   });
 
   it("should return NOT_FOUND error if experiment does not exist", async () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
-    const newMemberId = await testApp.createTestUser({
-      email: "nonexistent@example.com",
+    const memberId = await testApp.createTestUser({
+      email: "nonexistent-batch@example.com",
     });
 
     const result = await useCase.execute(
       nonExistentId,
-      { userId: newMemberId, role: "member" },
+      [{ userId: memberId, role: "member" }],
       testUserId,
     );
 
@@ -79,22 +92,22 @@ describe("AddExperimentMemberUseCase", () => {
   it("should return FORBIDDEN error if user is not an admin", async () => {
     // Create an experiment
     const { experiment } = await testApp.createExperiment({
-      name: "Forbidden Test Experiment",
+      name: "Forbidden Batch Test Experiment",
       userId: testUserId,
     });
 
     // Create a non-admin user
     const nonAdminId = await testApp.createTestUser({
-      email: "nonadmin@example.com",
+      email: "nonadmin-batch@example.com",
     });
-    const newMemberId = await testApp.createTestUser({
-      email: "newmember2@example.com",
+    const memberId = await testApp.createTestUser({
+      email: "member-batch@example.com",
     });
 
-    // Try to add a member as a non-admin user
+    // Try to add members as a non-admin user
     const result = await useCase.execute(
       experiment.id,
-      { userId: newMemberId, role: "member" },
+      [{ userId: memberId, role: "member" }],
       nonAdminId,
     );
 
