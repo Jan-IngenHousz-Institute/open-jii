@@ -11,6 +11,7 @@ on:
 
 permissions:
   pull-requests: read
+  contents: read
 
 jobs:
   validate_pr:
@@ -23,9 +24,16 @@ jobs:
 
   identify_affected:
     name: Identify Affected Projects
-    uses: ./.github/workflows/identify-affected.yml
-    with:
-      node-version: "22"
+    runs-on: ubuntu-latest
+    outputs:
+      affected_apps: ${{ steps.identify.outputs.affected_apps }}
+      has_affected_apps: ${{ steps.identify.outputs.has_affected_apps }}
+    steps:
+      - name: Identify Affected Projects
+        id: identify
+        uses: ./.github/actions/identify-affected
+        with:
+          node-version: "22"
 
   build_lint_test:
     name: Build, Lint, Test & AsyncAPI
