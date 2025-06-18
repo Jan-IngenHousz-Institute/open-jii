@@ -76,6 +76,7 @@ runs:
         git branch -r
 
     - name: Debug TURBO_REF_FILTER
+      shell: bash
       run: echo "Turbo filter is $TURBO_REF_FILTER"
 
     - name: Identify Affected Projects
