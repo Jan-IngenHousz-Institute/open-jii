@@ -33,13 +33,15 @@ jobs:
           fetch-depth: 0
       
       - name: Set TURBO_REF_FILTER
-        id: set-ref
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
-            echo "TURBO_REF_FILTER=origin/${{ github.event.pull_request.base.ref }}" >> $GITHUB_ENV
+          DEFAULT_REF="main"
+          BASE_REF="${{ github.base_ref }}"
+          if [ -z "$BASE_REF" ]; then
+            echo "TURBO_REF_FILTER=origin/$DEFAULT_REF" >> $GITHUB_ENV
           else
-            echo "TURBO_REF_FILTER=origin/${{ github.event.before }}" >> $GITHUB_ENV
+            echo "TURBO_REF_FILTER=origin/$BASE_REF" >> $GITHUB_ENV
           fi
+
 
 
       - name: Build, Lint & Test
