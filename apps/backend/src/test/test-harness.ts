@@ -4,6 +4,7 @@ import type { ModuleMetadata } from "@nestjs/common/interfaces";
 import type { TestingModule } from "@nestjs/testing";
 import { Test } from "@nestjs/testing";
 import { config } from "dotenv";
+import nock from "nock";
 import { resolve } from "path";
 import request from "supertest";
 import type { Response } from "supertest";
@@ -46,6 +47,11 @@ export class TestHarness {
    */
   public async setup() {
     if (!this.app) {
+      // Configure nock to prevent any real HTTP requests during tests
+      nock.disableNetConnect();
+      // But allow localhost connections for the test server
+      nock.enableNetConnect("127.0.0.1");
+
       this._module = await Test.createTestingModule({
         imports: this._imports,
       }).compile();
@@ -85,6 +91,10 @@ export class TestHarness {
 
     // Close database connections
     await this.database.$client.end();
+
+    // Clean up nock
+    nock.cleanAll();
+    nock.enableNetConnect();
   }
 
   /**

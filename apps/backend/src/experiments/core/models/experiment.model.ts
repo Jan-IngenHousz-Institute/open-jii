@@ -25,6 +25,7 @@ export const createExperimentSchema = createInsertSchema(experiments)
           role: z.enum(["admin", "member"]).optional(),
         }),
       )
+      .min(1)
       .optional(),
   });
 export const updateExperimentSchema = createInsertSchema(experiments)

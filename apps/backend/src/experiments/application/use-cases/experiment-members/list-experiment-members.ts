@@ -23,30 +23,30 @@ export class ListExperimentMembersUseCase {
       `Listing members of experiment ${experimentId} for user ${userId}`,
     );
 
-    // Check if experiment exists
-    const experimentResult =
-      await this.experimentRepository.findOne(experimentId);
+    // Check if experiment exists and if user has access
+    const accessResult = await this.experimentRepository.checkAccess(
+      experimentId,
+      userId,
+    );
 
-    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
-      if (!experiment) {
-        this.logger.warn(
-          `Attempt to list members of non-existent experiment with ID ${experimentId}`,
-        );
-        return failure(
-          AppError.notFound(`Experiment with ID ${experimentId} not found`),
-        );
-      }
+    return accessResult.chain(
+      async ({
+        experiment,
+        hasAccess,
+      }: {
+        experiment: ExperimentDto | null;
+        hasAccess: boolean;
+        isAdmin: boolean;
+      }) => {
+        if (!experiment) {
+          this.logger.warn(
+            `Attempt to list members of non-existent experiment with ID ${experimentId}`,
+          );
+          return failure(
+            AppError.notFound(`Experiment with ID ${experimentId} not found`),
+          );
+        }
 
-      this.logger.debug(
-        `Checking if user ${userId} has access to experiment "${experiment.name}" (ID: ${experimentId})`,
-      );
-      // Check if user has access (is a member or experiment is public)
-      const accessResult = await this.experimentRepository.hasAccess(
-        experimentId,
-        userId,
-      );
-
-      return accessResult.chain((hasAccess: boolean) => {
         if (!hasAccess && experiment.visibility !== "public") {
           this.logger.warn(
             `User ${userId} attempted to access members of experiment ${experimentId} without proper permissions`,
@@ -66,7 +66,7 @@ export class ListExperimentMembersUseCase {
           `Successfully retrieved members for experiment "${experiment.name}" (ID: ${experimentId})`,
         );
         return result;
-      });
-    });
+      },
+    );
   }
 }

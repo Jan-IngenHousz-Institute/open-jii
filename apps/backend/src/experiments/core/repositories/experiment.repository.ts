@@ -177,40 +177,54 @@ export class ExperimentRepository {
     });
   }
 
-  async hasAccess(
+  async checkAccess(
     experimentId: string,
     userId: string,
-  ): Promise<Result<boolean>> {
+  ): Promise<
+    Result<{
+      experiment: ExperimentDto | null;
+      hasAccess: boolean;
+      isAdmin: boolean;
+    }>
+  > {
     return tryCatch(async () => {
-      const experiment = await this.database
-        .select()
+      const experimentFields = {
+        id: experiments.id,
+        name: experiments.name,
+        description: experiments.description,
+        status: experiments.status,
+        visibility: experiments.visibility,
+        embargoIntervalDays: experiments.embargoIntervalDays,
+        createdAt: experiments.createdAt,
+        createdBy: experiments.createdBy,
+        updatedAt: experiments.updatedAt,
+      };
+
+      const result = await this.database
+        .select({
+          experiment: experimentFields,
+          memberRole: experimentMembers.role,
+        })
         .from(experiments)
-        .where(eq(experiments.id, experimentId))
-        .limit(1);
-
-      // If experiment doesn't exist, no access
-      if (experiment.length === 0) {
-        return false;
-      }
-
-      // If user created the experiment, they have access
-      if (experiment[0].createdBy === userId) {
-        return true;
-      }
-
-      // Check if user is a member
-      const membership = await this.database
-        .select()
-        .from(experimentMembers)
-        .where(
+        .leftJoin(
+          experimentMembers,
           and(
-            eq(experimentMembers.experimentId, experimentId),
+            eq(experimentMembers.experimentId, experiments.id),
             eq(experimentMembers.userId, userId),
           ),
         )
+        .where(eq(experiments.id, experimentId))
         .limit(1);
 
-      return membership.length > 0;
+      if (result.length === 0) {
+        return { experiment: null, hasAccess: false, isAdmin: false };
+      }
+
+      const { experiment, memberRole } = result[0];
+      const isMember = memberRole !== null;
+      const isAdmin = memberRole === "admin";
+
+      return { experiment, hasAccess: isMember, isAdmin };
     });
   }
 }

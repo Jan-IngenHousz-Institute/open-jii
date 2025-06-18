@@ -77,8 +77,12 @@ export function ExperimentMemberManagement({
     await addMember({
       params: { id: experimentId },
       body: {
-        userId: idToAdd,
-        role: "member",
+        members: [
+          {
+            userId: idToAdd,
+            role: "member",
+          },
+        ],
       },
     });
 

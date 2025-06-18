@@ -3,17 +3,17 @@ import { initContract } from "@ts-rest/core";
 import {
   zExperiment,
   zExperimentList,
-  zExperimentMember,
   zExperimentMemberList,
   zErrorResponse,
   zCreateExperimentBody,
+  zAddExperimentMembersBody,
   zUpdateExperimentBody,
-  zAddExperimentMemberBody,
   zExperimentFilterQuery,
   zCreateExperimentResponse,
   zIdPathParam,
   zExperimentMemberPathParam,
-  zAddExperimentMembersBody,
+  zExperimentDataQuery,
+  zExperimentDataResponse,
 } from "../schemas/experiment.schema";
 
 const c = initContract();
@@ -95,20 +95,6 @@ export const experimentContract = c.router({
       "Returns a list of all users who are members of the specified experiment",
   },
 
-  addExperimentMember: {
-    method: "POST",
-    path: "/api/v1/experiments/:id/members",
-    pathParams: zIdPathParam,
-    body: zAddExperimentMemberBody,
-    responses: {
-      201: zExperimentMember,
-      404: zErrorResponse,
-      403: zErrorResponse,
-    },
-    summary: "Add experiment member",
-    description: "Adds a new member to the experiment with the specified role",
-  },
-
   addExperimentMembers: {
     method: "POST",
     path: "/api/v1/experiments/:id/members/batch",
@@ -134,5 +120,21 @@ export const experimentContract = c.router({
     },
     summary: "Remove experiment member",
     description: "Removes a member from the experiment",
+  },
+
+  getExperimentData: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/data",
+    pathParams: zIdPathParam,
+    query: zExperimentDataQuery,
+    responses: {
+      200: zExperimentDataResponse,
+      404: zErrorResponse,
+      403: zErrorResponse,
+      400: zErrorResponse,
+    },
+    summary: "Get experiment data",
+    description:
+      "Retrieves data tables from the experiment with pagination support",
   },
 });

@@ -69,7 +69,9 @@ export default async function AppLayout({
             </div>
           </div>
         </header>
-        <main className="flex flex-1 flex-col p-4">{children}</main>
+        <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col p-4">
+          {children}
+        </main>
         <Toaster />
       </SidebarInset>
     </SidebarProvider>

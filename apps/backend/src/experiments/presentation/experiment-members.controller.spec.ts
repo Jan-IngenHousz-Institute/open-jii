@@ -6,6 +6,7 @@ import { contract } from "@repo/api";
 
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
+import type { UserDto } from "../../users/core/models/user.model";
 
 describe("ExperimentMembersController", () => {
   const testApp = TestHarness.App;
@@ -64,12 +65,21 @@ describe("ExperimentMembersController", () => {
       expect(response.body).toHaveLength(2);
       expect(response.body).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ userId: testUserId, role: "admin" }),
-          expect.objectContaining({ userId: memberId, role: "member" }),
+          expect.objectContaining({
+            role: "admin",
+            user: expect.objectContaining({
+              id: testUserId,
+            }) as Partial<UserDto>,
+          }),
+          expect.objectContaining({
+            role: "member",
+            user: expect.objectContaining({
+              id: memberId,
+            }) as Partial<UserDto>,
+          }),
         ]),
       );
     });
-
     it("should return 404 if experiment doesn't exist", async () => {
       const nonExistentId = faker.string.uuid();
       const path = testApp.resolvePath(
@@ -135,17 +145,17 @@ describe("ExperimentMembersController", () => {
 
       // Construct the path
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },
       );
 
       // Create the member data
-      const memberData = { userId: newMemberId, role: "member" };
+      const memberData = { members: [{ userId: newMemberId, role: "member" }] };
 
       // Send the request
-      const response = await testApp
+      const response: SuperTestResponse<ExperimentMemberList> = await testApp
         .post(path)
         .withAuth(testUserId)
         .send(memberData)
@@ -153,9 +163,11 @@ describe("ExperimentMembersController", () => {
 
       // Assert the response
       expect(response.body).toMatchObject({
-        userId: newMemberId,
         role: "member",
         experimentId: experiment.id,
+        user: expect.objectContaining({
+          id: newMemberId,
+        }) as Partial<UserDto>,
       });
 
       // Verify with a list request
@@ -174,8 +186,18 @@ describe("ExperimentMembersController", () => {
       expect(listResponse.body).toHaveLength(2);
       expect(listResponse.body).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ userId: testUserId, role: "admin" }),
-          expect.objectContaining({ userId: newMemberId, role: "member" }),
+          expect.objectContaining({
+            role: "admin",
+            user: expect.objectContaining({
+              id: testUserId,
+            }) as Partial<UserDto>,
+          }),
+          expect.objectContaining({
+            role: "member",
+            user: expect.objectContaining({
+              id: newMemberId,
+            }) as Partial<UserDto>,
+          }),
         ]),
       );
     });
@@ -187,7 +209,7 @@ describe("ExperimentMembersController", () => {
       });
 
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: nonExistentId,
         },
@@ -196,7 +218,7 @@ describe("ExperimentMembersController", () => {
       await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ userId: memberId, role: "member" })
+        .send({ members: [{ userId: memberId, role: "member" }] })
         .expect(StatusCodes.NOT_FOUND)
         .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("not found");
@@ -211,7 +233,7 @@ describe("ExperimentMembersController", () => {
       });
 
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },
@@ -249,7 +271,7 @@ describe("ExperimentMembersController", () => {
 
       // Try to add the same member again
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },
@@ -271,7 +293,7 @@ describe("ExperimentMembersController", () => {
 
       // Try to add self again
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },
@@ -295,7 +317,7 @@ describe("ExperimentMembersController", () => {
       });
 
       const path = testApp.resolvePath(
-        contract.experiments.addExperimentMember.path,
+        contract.experiments.addExperimentMembers.path,
         {
           id: experiment.id,
         },

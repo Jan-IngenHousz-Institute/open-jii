@@ -37,43 +37,6 @@ export class ExperimentMemberRepository {
     });
   }
 
-  async addMember(
-    experimentId: string,
-    userId: string,
-    role: ExperimentMemberRole = "member",
-  ): Promise<Result<ExperimentMemberDto[]>> {
-    return tryCatch(async () => {
-      await this.database.insert(experimentMembers).values({
-        experimentId,
-        userId,
-        role,
-      });
-
-      const result = await this.database
-        .select({
-          experimentId: experimentMembers.experimentId,
-          role: experimentMembers.role,
-          joinedAt: experimentMembers.joinedAt,
-          user: {
-            id: users.id,
-            name: users.name,
-            email: users.email,
-          },
-        })
-        .from(experimentMembers)
-        .innerJoin(users, eq(experimentMembers.userId, users.id))
-        .where(
-          and(
-            eq(experimentMembers.experimentId, experimentId),
-            eq(experimentMembers.userId, userId),
-          ),
-        )
-        .limit(1);
-
-      return result;
-    });
-  }
-
   async addMembers(
     experimentId: string,
     members: { userId: string; role?: ExperimentMemberRole }[],

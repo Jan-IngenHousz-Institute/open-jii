@@ -7,12 +7,8 @@ import type { SessionUser } from "@repo/auth/config";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
-import {
-  formatDates,
-  formatDatesList,
-} from "../../common/utils/date-formatter";
+import { formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
-import { AddExperimentMemberUseCase } from "../application/use-cases/experiment-members/add-experiment-member";
 import { AddExperimentMembersUseCase } from "../application/use-cases/experiment-members/add-experiment-members";
 import { ListExperimentMembersUseCase } from "../application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "../application/use-cases/experiment-members/remove-experiment-member";
@@ -24,9 +20,8 @@ export class ExperimentMembersController {
 
   constructor(
     private readonly listExperimentMembersUseCase: ListExperimentMembersUseCase,
-    private readonly addExperimentMemberUseCase: AddExperimentMemberUseCase,
-    private readonly removeExperimentMemberUseCase: RemoveExperimentMemberUseCase,
     private readonly addExperimentMembersUseCase: AddExperimentMembersUseCase,
+    private readonly removeExperimentMemberUseCase: RemoveExperimentMemberUseCase,
   ) {}
 
   @TsRestHandler(contract.experiments.listExperimentMembers)
@@ -47,38 +42,6 @@ export class ExperimentMembersController {
           return {
             status: StatusCodes.OK as const,
             body: formattedMembers,
-          };
-        }
-
-        return handleFailure(result, this.logger);
-      },
-    );
-  }
-
-  @TsRestHandler(contract.experiments.addExperimentMember)
-  addMember(@CurrentUser() user: SessionUser) {
-    return tsRestHandler(
-      contract.experiments.addExperimentMember,
-      async ({ params, body }) => {
-        const result = await this.addExperimentMemberUseCase.execute(
-          params.id,
-          body,
-          user.id,
-        );
-
-        if (result.isSuccess()) {
-          const member = result.value;
-
-          // Format date to string for the API contract
-          const formattedMember = formatDates(member);
-
-          this.logger.log(
-            `Member ${body.userId} added to experiment ${params.id} by user ${user.id}`,
-          );
-
-          return {
-            status: StatusCodes.CREATED,
-            body: formattedMember,
           };
         }
 
