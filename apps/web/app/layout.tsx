@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Jan IngenHousz Institute",
-  description: "Improving photosynthesis for a sustainable future-test",
+  description: "Improving photosynthesis for a sustainable future",
 };
 
 export default function RootLayout({
