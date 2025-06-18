@@ -46,56 +46,50 @@ export class AddExperimentMembersUseCase {
         );
       }
 
+      // Check if current user is admin
+      const isAdminResult = await this.experimentMemberRepository.isAdmin(
+        experimentId,
+        currentUserId,
+      );
+      if (isAdminResult.isFailure() || !isAdminResult.value) {
+        this.logger.warn(
+          `User ${currentUserId} is not admin for experiment ${experimentId}`,
+        );
+        return failure(
+          AppError.forbidden("Only admins can add experiment members"),
+        );
+      }
+
       // Get existing members to perform validations
       const existingMembersResult =
         await this.experimentMemberRepository.getMembers(experimentId);
 
       return existingMembersResult.chain(
-        async (existingMembers: ExperimentMemberDto[]) => {
-          // Check if current user has permission to add members (must be admin or creator)
-          if (
-            experiment.createdBy === currentUserId ||
-            existingMembers.some(
-              (member) =>
-                member.user.id === currentUserId && member.role === "admin",
-            )
-          ) {
-            this.logger.debug(
-              `User ${currentUserId} is authorized to add members`,
+        async (_existingMembers: ExperimentMemberDto[]) => {
+          // Add the members
+          const addMembersResult =
+            await this.experimentMemberRepository.addMembers(
+              experimentId,
+              members,
             );
 
-            // Add the members
-            const addMembersResult =
-              await this.experimentMemberRepository.addMembers(
-                experimentId,
-                members,
-              );
-
-            if (addMembersResult.isFailure()) {
-              this.logger.error(
-                `Failed to add members to experiment ${experimentId}`,
-              );
-              return failure(
-                AppError.internal("Failed to add experiment members"),
-              );
-            }
-
-            this.logger.log(
-              `Successfully added members [${members
-                .map((m) => m.userId)
-                .join(
-                  ", ",
-                )}] to experiment "${experiment.name}" (ID: ${experimentId})`,
-            );
-            return success(addMembersResult.value);
-          } else {
-            this.logger.warn(
-              `User ${currentUserId} attempted to add members to experiment ${experimentId} without admin privileges`,
+          if (addMembersResult.isFailure()) {
+            this.logger.error(
+              `Failed to add members to experiment ${experimentId}`,
             );
             return failure(
-              AppError.forbidden("Only experiment admins can add members"),
+              AppError.internal("Failed to add experiment members"),
             );
           }
+
+          this.logger.log(
+            `Successfully added members [${members
+              .map((m) => m.userId)
+              .join(
+                ", ",
+              )}] to experiment "${experiment.name}" (ID: ${experimentId})`,
+          );
+          return success(addMembersResult.value);
         },
       );
     });

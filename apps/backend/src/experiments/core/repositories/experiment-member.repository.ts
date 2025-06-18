@@ -120,4 +120,24 @@ export class ExperimentMemberRepository {
       return membership[0].role;
     });
   }
+
+  async isAdmin(
+    experimentId: string,
+    userId: string,
+  ): Promise<Result<boolean>> {
+    return tryCatch(async () => {
+      const membership = await this.database
+        .select()
+        .from(experimentMembers)
+        .where(
+          and(
+            eq(experimentMembers.experimentId, experimentId),
+            eq(experimentMembers.userId, userId),
+            eq(experimentMembers.role, "admin"),
+          ),
+        )
+        .limit(1);
+      return membership.length > 0;
+    });
+  }
 }
