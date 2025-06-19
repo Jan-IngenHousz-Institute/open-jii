@@ -63,7 +63,7 @@ describe("ExperimentMemberRepository", () => {
       assertSuccess(result);
       const members = result.value;
 
-      // Assert
+      // Assert length
       expect(members.length).toBe(3); // Creator + 2 added members
       expect(members).toEqual(
         expect.arrayContaining([
@@ -88,7 +88,7 @@ describe("ExperimentMemberRepository", () => {
         ]),
       );
 
-      // Additional assertions for name and email
+      // Assert user info for each member
       const member1 = members.find((m) => m.user.id === memberId1);
       expect(member1).toBeDefined();
       expect(member1?.user.name).toBe("Test1 User");
@@ -496,6 +496,138 @@ describe("ExperimentMemberRepository", () => {
 
       // Assert
       expect(role).toBeNull();
+    });
+  });
+
+  describe("addMembers", () => {
+    it("should add multiple members to an experiment", async () => {
+      // Create experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Experiment for Adding Multiple Members",
+        userId: testUserId,
+      });
+
+      // Create users to add as members
+      const memberId1 = await testApp.createTestUser({
+        email: "multi1@example.com",
+        name: "Multi User 1",
+      });
+      const memberId2 = await testApp.createTestUser({
+        email: "multi2@example.com",
+        name: "Multi User 2",
+      });
+
+      // Act
+      const result = await repository.addMembers(experiment.id, [
+        { userId: memberId1, role: "member" },
+        { userId: memberId2, role: "admin" },
+      ]);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const members = result.value;
+      expect(members.length).toBe(2);
+      const memberMap = members.reduce<Record<string, string>>((acc, m) => {
+        acc[m.user.id] = m.role;
+        return acc;
+      }, {});
+      expect(memberMap).toMatchObject({
+        [memberId1]: "member",
+        [memberId2]: "admin",
+      });
+
+      // Verify all members are present in the experiment
+      const allMembersResult = await repository.getMembers(experiment.id);
+      assertSuccess(allMembersResult);
+      const allMembers = allMembersResult.value;
+      expect(allMembers.some((m) => m.user.id === memberId1)).toBe(true);
+      expect(allMembers.some((m) => m.user.id === memberId2)).toBe(true);
+    });
+
+    it("should not duplicate memberships if already a member", async () => {
+      // Create experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Experiment for Duplicate Members Batch Test",
+        userId: testUserId,
+      });
+
+      // Create a user to add as member
+      const memberId = await testApp.createTestUser({
+        email: "batch-duplicate@example.com",
+      });
+
+      // Add the member first time
+      const result1 = await repository.addMembers(experiment.id, [
+        { userId: memberId, role: "member" },
+      ]);
+      expect(result1.isSuccess()).toBe(true);
+      assertSuccess(result1);
+      const members1 = result1.value;
+      expect(members1.length).toBe(1);
+
+      // Try to add the same member again with a different role
+      const result2 = await repository.addMembers(experiment.id, [
+        { userId: memberId, role: "admin" },
+      ]);
+      expect(result2.isSuccess()).toBe(false);
+      assertFailure(result2);
+      expect(result2.error.statusCode).toBe(StatusCodes.BAD_REQUEST);
+
+      // Verify only one membership exists
+      const membersResult = await repository.getMembers(experiment.id);
+      assertSuccess(membersResult);
+      const members = membersResult.value;
+      const membershipCount = members.filter(
+        (m) => m.user.id === memberId,
+      ).length;
+      expect(membershipCount).toBe(1);
+    });
+
+    it("should use the default role if none is provided for some members", async () => {
+      // Create experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Default Role Batch Test",
+        userId: testUserId,
+      });
+
+      // Create users to add as members
+      const memberId1 = await testApp.createTestUser({
+        email: "batch-default1@example.com",
+        name: "Batch Default 1",
+      });
+      const memberId2 = await testApp.createTestUser({
+        email: "batch-default2@example.com",
+        name: "Batch Default 2",
+      });
+
+      // Add the members, omitting role for one
+      const result = await repository.addMembers(experiment.id, [
+        { userId: memberId1 },
+        { userId: memberId2, role: "admin" },
+      ]);
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const members = result.value;
+      const member1 = members.find((m) => m.user.id === memberId1);
+      const member2 = members.find((m) => m.user.id === memberId2);
+      expect(member1?.role).toBe("member");
+      expect(member2?.role).toBe("admin");
+      expect(member1?.user.name).toBe("Batch Default 1");
+      expect(member2?.user.name).toBe("Batch Default 2");
+    });
+
+    it("should return empty array and not fail if members array is empty", async () => {
+      // Create experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Empty Members Array Test",
+        userId: testUserId,
+      });
+
+      // Act
+      const result = await repository.addMembers(experiment.id, []);
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual([]);
     });
   });
 });

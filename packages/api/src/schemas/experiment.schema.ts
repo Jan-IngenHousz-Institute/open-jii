@@ -91,6 +91,15 @@ export const zCreateExperimentBody = z.object({
     .positive()
     .optional()
     .describe("Embargo period in days"),
+  members: z
+    .array(
+      z.object({
+        userId: z.string().uuid(),
+        role: zExperimentMemberRole.optional(),
+      }),
+    )
+    .optional()
+    .describe("Optional array of member objects with userId and role"),
 });
 
 export const zUpdateExperimentBody = z.object({

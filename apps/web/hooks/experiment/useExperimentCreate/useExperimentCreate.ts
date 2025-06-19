@@ -2,12 +2,8 @@ import type { Experiment } from "@repo/api";
 
 import { tsr } from "../../../lib/tsr";
 
-/**
- * Hook to create a new experiment
- * @returns Mutation object for creating experiments
- */
 interface ExperimentCreateProps {
-  onSuccess?: () => void;
+  onSuccess?: (id: string) => void;
 }
 
 export const useExperimentCreate = (props: ExperimentCreateProps) => {
@@ -38,9 +34,10 @@ export const useExperimentCreate = (props: ExperimentCreateProps) => {
         queryKey: ["experiments"],
       });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Call the provided onSuccess callback if it exists
       if (props.onSuccess) {
-        props.onSuccess();
+        props.onSuccess(data.body.id);
       }
     },
   });

@@ -1,6 +1,5 @@
 "use client";
 
-import { formatDate } from "@/util/date";
 import { useMemo, useState } from "react";
 
 import type { User } from "@repo/api";
@@ -13,13 +12,13 @@ import {
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-import { useExperimentMemberAdd } from "../hooks/experiment/useExperimentMemberAdd/useExperimentMemberAdd";
-import { useExperimentMemberRemove } from "../hooks/experiment/useExperimentMemberRemove/useExperimentMemberRemove";
-import { useExperimentMembers } from "../hooks/experiment/useExperimentMembers/useExperimentMembers";
-import { useDebounce } from "../hooks/useDebounce";
-import { useUserSearch } from "../hooks/useUserSearch";
-import { MemberList } from "./current-members-list";
-import { UserSearchWithDropdown } from "./user-search-with-dropdown";
+import { useExperimentMemberAdd } from "../../hooks/experiment/useExperimentMemberAdd/useExperimentMemberAdd";
+import { useExperimentMemberRemove } from "../../hooks/experiment/useExperimentMemberRemove/useExperimentMemberRemove";
+import { useExperimentMembers } from "../../hooks/experiment/useExperimentMembers/useExperimentMembers";
+import { useDebounce } from "../../hooks/useDebounce";
+import { useUserSearch } from "../../hooks/useUserSearch";
+import { MemberList } from "../current-members-list";
+import { UserSearchWithDropdown } from "../user-search-with-dropdown";
 
 interface ExperimentMemberManagementProps {
   experimentId: string;
@@ -192,7 +191,6 @@ export function ExperimentMemberManagement({
               ...member,
               user: getUserInfo(member),
             }))}
-            formatDate={formatDate}
             onRemoveMember={handleRemoveMember}
             isRemovingMember={isRemovingMember}
             removingMemberId={removingMemberId}
