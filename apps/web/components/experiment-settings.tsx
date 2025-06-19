@@ -6,7 +6,7 @@ import { editExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 
 import type { Experiment } from "@repo/api";
@@ -32,6 +32,13 @@ import {
   SelectTrigger,
   SelectValue,
   RichTextarea,
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
@@ -349,32 +356,20 @@ function ExperimentInfoCard({
 
   const { mutateAsync: deleteExperiment, isPending: isDeleting } =
     useExperimentDelete();
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const router = useRouter();
-  // Ref for Danger Zone section
-  const dangerZoneRef = useRef<HTMLDivElement>(null);
 
   const { t } = useTranslation(undefined, "common");
   const locale = useLocale();
 
   const handleDeleteExperiment = async () => {
     await deleteExperiment({ params: { id: experimentId } });
+    setIsDeleteDialogOpen(false);
     toast({
       description: t("experiments.experimentDeleted"),
     });
     // Navigate to experiments list
     router.push(`/${locale}/platform/experiments`);
-  };
-
-  // Scroll to Danger Zone when delete button is pressed
-  const handleShowDeleteConfirm = () => {
-    setShowDeleteConfirm(true);
-    setTimeout(() => {
-      dangerZoneRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    }, 0);
   };
 
   return (
@@ -413,7 +408,7 @@ function ExperimentInfoCard({
           </div>
         </div>
 
-        <div className="border-t pt-4" ref={dangerZoneRef}>
+        <div className="border-t pt-4">
           <h5 className="text-destructive mb-2 text-base font-medium">
             {t("experimentSettings.dangerZone")}
           </h5>
@@ -421,17 +416,32 @@ function ExperimentInfoCard({
             {t("experimentSettings.deleteWarning")}
           </p>
 
-          {!showDeleteConfirm ? (
-            <Button variant="destructive" onClick={handleShowDeleteConfirm}>
-              {t("experimentSettings.deleteExperiment")}
-            </Button>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm font-medium">
-                {t("experimentSettings.confirmDelete")} "{experiment.name}"?{" "}
-                {t("experimentSettings.deleteWarning")}
-              </p>
-              <div className="flex gap-2">
+          <Dialog
+            open={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+          >
+            <DialogTrigger asChild>
+              <Button variant="destructive">
+                {t("experimentSettings.deleteExperiment")}
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="text-destructive">
+                  {t("experimentSettings.deleteExperiment")}
+                </DialogTitle>
+                <DialogDescription>
+                  {t("experimentSettings.confirmDelete")} "{experiment.name}"?{" "}
+                  {t("experimentSettings.deleteWarning")}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDeleteDialogOpen(false)}
+                >
+                  {t("experimentSettings.cancel")}
+                </Button>
                 <Button
                   variant="destructive"
                   onClick={handleDeleteExperiment}
@@ -441,15 +451,9 @@ function ExperimentInfoCard({
                     ? t("experimentSettings.saving")
                     : t("experimentSettings.delete")}
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowDeleteConfirm(false)}
-                >
-                  {t("experimentSettings.cancel")}
-                </Button>
-              </div>
-            </div>
-          )}
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </CardContent>
     </Card>
