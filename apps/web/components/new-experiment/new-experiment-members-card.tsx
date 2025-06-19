@@ -16,8 +16,8 @@ import {
   CardContent,
 } from "@repo/ui/components";
 
-import { MemberList } from "./current-members-list";
-import { UserSearchWithDropdown } from "./user-search-with-dropdown";
+import { MemberList } from "../current-members-list";
+import { UserSearchWithDropdown } from "../user-search-with-dropdown";
 
 interface Member {
   userId: string;
