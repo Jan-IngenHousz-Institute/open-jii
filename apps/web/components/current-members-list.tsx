@@ -1,3 +1,4 @@
+import { formatDate } from "@/util/date";
 import { Trash2, Mail, Calendar } from "lucide-react";
 import { useMemo } from "react";
 
@@ -113,7 +114,7 @@ export function MemberList({
               <div className="text-muted-foreground flex items-center space-x-1 text-[11px] md:text-xs">
                 <Calendar className="relative top-[-1.5px] h-3 w-3 flex-shrink-0" />
                 <span className="whitespace-nowrap">
-                  {t("experimentSettings.joined")} {member.joinedAt}
+                  {t("experimentSettings.joined")} {formatDate(member.joinedAt)}
                 </span>
               </div>
             </div>

@@ -55,7 +55,9 @@
     "settingsDescription": "Manage settings and members for this experiment.",
     "noDescription": "No description provided",
     "experimentId": "Experiment ID",
-    "descriptionTitle": "Description"
+    "descriptionTitle": "Description",
+    "searchUsers": "Search users",
+    "startTypingToSearch": "Start typing to search"
   },
   "newExperiment": {
     "description": "Set up a new experiment (project).",

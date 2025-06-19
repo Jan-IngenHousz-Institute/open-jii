@@ -55,7 +55,9 @@
     "settingsDescription": "Verwalten Sie Einstellungen und Mitglieder für dieses Experiment.",
     "noDescription": "Keine Beschreibung vorhanden",
     "experimentId": "Experiment-ID",
-    "descriptionTitle": "Beschreibung"
+    "descriptionTitle": "Beschreibung",
+    "searchUsers": "Benutzer suchen",
+    "startTypingToSearch": "Tippen Sie, um zu suchen"
   },
   "experimentSettings": {
     "loading": "Experimenteinstellungen werden geladen...",

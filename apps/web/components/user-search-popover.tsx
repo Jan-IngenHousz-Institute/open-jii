@@ -106,7 +106,7 @@ function SearchStatus({
   if (!hasUsers && !hasSearchQuery) {
     return (
       <div className="text-muted-foreground p-4 text-center text-sm">
-        {t("common.startTypingToSearch")}
+        {t("experiments.startTypingToSearch")}
       </div>
     );
   }
@@ -131,7 +131,7 @@ function SearchField({
   return (
     <div className="relative">
       <CommandInput
-        placeholder={t("common.searchUsers")}
+        placeholder={t("experiments.searchUsers")}
         value={searchValue}
         onValueChange={onSearchChange}
         disabled={isAddingUser}

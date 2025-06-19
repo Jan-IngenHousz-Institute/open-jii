@@ -23,7 +23,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
 
 import { useExperimentDelete } from "../../hooks/experiment/useExperimentDelete/useExperimentDelete";
 import { useExperimentMembers } from "../../hooks/experiment/useExperimentMembers/useExperimentMembers";

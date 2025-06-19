@@ -55,7 +55,9 @@
     "settingsDescription": "Beheer instellingen en leden voor dit experiment.",
     "noDescription": "Geen beschrijving opgegeven",
     "experimentId": "Experiment ID",
-    "descriptionTitle": "Beschrijving"
+    "descriptionTitle": "Beschrijving",
+    "searchUsers": "Gebruikers zoeken",
+    "startTypingToSearch": "Begin met typen om te zoeken"
   },
   "newExperiment": {
     "description": "Stel een nieuw experiment (project) in.",
