@@ -1,6 +1,5 @@
 "use client";
 
-import { formatDate } from "@/util/date";
 import { useMemo, useState } from "react";
 
 import type { User } from "@repo/api";
@@ -192,7 +191,6 @@ export function ExperimentMemberManagement({
               ...member,
               user: getUserInfo(member),
             }))}
-            formatDate={formatDate}
             onRemoveMember={handleRemoveMember}
             isRemovingMember={isRemovingMember}
             removingMemberId={removingMemberId}

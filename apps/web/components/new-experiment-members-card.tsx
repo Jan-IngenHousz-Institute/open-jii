@@ -1,6 +1,7 @@
+"use client";
+
 import { useDebounce } from "@/hooks/useDebounce";
 import { useUserSearch } from "@/hooks/useUserSearch";
-import { formatDate } from "@/util/date";
 import { useMemo, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
@@ -40,15 +41,16 @@ export function NewExperimentMembersCard({
   const { data: userSearchData, isLoading: isFetchingUsers } =
     useUserSearch(debouncedSearch);
   const [selectedUserId, setSelectedUserId] = useState("");
-  // Track added users for display
+  // Track added users for display - we collect users as we add them
   const [addedUsers, setAddedUsers] = useState<User[]>([]);
 
   // Use form for members instead of useState
   const watchedMembers = form.watch("members");
   const members: Member[] = useMemo(
-    () => (watchedMembers ?? []) as Member[],
+    () => watchedMembers ?? [],
     [watchedMembers],
   );
+
   // Filter available users (exclude already added and current user)
   const availableUsers = useMemo(
     () =>
@@ -60,21 +62,16 @@ export function NewExperimentMembersCard({
     [userSearchData, members, currentUserId],
   );
 
-  const adminCount = useMemo(() => {
-    return members.filter((m) => m.role === "admin").length;
-  }, [members]);
-
   // Add member handler
-  const handleAddMember = (userId: string): Promise<void> => {
+  const handleAddMember = (userId: string) => {
     const user = availableUsers.find((u) => u.id === userId);
-    if (!user) return Promise.resolve();
+    if (!user) return;
     form.setValue("members", [...members, { userId: user.id, role: "member" }]);
     setAddedUsers((prev) =>
       prev.some((u) => u.id === user.id) ? prev : [...prev, user],
     );
     setSelectedUserId("");
     setUserSearch("");
-    return Promise.resolve();
   };
 
   // Remove member handler
@@ -85,23 +82,27 @@ export function NewExperimentMembersCard({
     );
   };
 
-  // Helper to get user info from addedUsers, then userSearchData, then fallback
-  const getUserInfo = (member: { userId: string }): User => {
-    const found = addedUsers.find((u) => u.id === member.userId);
-    if (found) return found;
-    const foundSearch = userSearchData?.body.find(
-      (u: User) => u.id === member.userId,
-    );
-    if (foundSearch) return foundSearch;
-    return {
-      id: member.userId,
-      name: "Loading user info...",
-      email: "",
-      emailVerified: null,
-      image: null,
-      createdAt: "",
-    };
-  };
+  // Calculate admin count
+  const adminCount = useMemo(() => {
+    return members.filter((m) => m.role === "admin").length;
+  }, [members]);
+
+  // Combine added users with users from search results to pass to MemberList
+  const combinedUsers = useMemo(() => {
+    // Start with users we've added
+    const allUsers = [...addedUsers];
+
+    // Add any users from search results that aren't already in the list
+    if (userSearchData?.body) {
+      userSearchData.body.forEach((user: User) => {
+        if (!allUsers.some((u) => u.id === user.id)) {
+          allUsers.push(user);
+        }
+      });
+    }
+
+    return allUsers;
+  }, [addedUsers, userSearchData]);
 
   return (
     <Card className="min-w-0 flex-1">
@@ -126,13 +127,8 @@ export function NewExperimentMembersCard({
           />
         </div>
         <MemberList
-          membersWithUserInfo={members.map((member) => ({
-            ...member,
-            role: member.role ?? "member",
-            joinedAt: new Date().toISOString(),
-            user: getUserInfo(member),
-          }))}
-          formatDate={formatDate}
+          members={members}
+          users={combinedUsers}
           onRemoveMember={handleRemoveMember}
           isRemovingMember={false}
           removingMemberId={null}

@@ -11,7 +11,6 @@ import { zCreateExperimentBody } from "@repo/api";
 import { zExperimentVisibility } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Button, Form } from "@repo/ui/components";
-import { toast } from "@repo/ui/hooks";
 
 import { NewExperimentDetailsCard } from "./new-experiment-details-card";
 import { NewExperimentMembersCard } from "./new-experiment-members-card";
@@ -23,13 +22,8 @@ export function NewExperimentForm() {
   const locale = useLocale();
 
   const { mutate: createExperiment, isPending } = useExperimentCreate({
-    onSuccess: () => {
-      toast({
-        description: t("experiments.experimentCreated"),
-      });
-      // Navigate to the experiment page with locale
-      router.push(`/${locale}/platform/experiments`);
-    },
+    onSuccess: (id: string) =>
+      router.push(`/${locale}/platform/experiments/${id}`),
   });
 
   const form = useForm<CreateExperimentBody>({
@@ -48,15 +42,8 @@ export function NewExperimentForm() {
   }
 
   function onSubmit(data: CreateExperimentBody) {
-    const payload = {
-      ...data,
-      members: (data.members ?? []).map((m) => ({
-        userId: m.userId,
-      })),
-    };
-
     return createExperiment({
-      body: payload,
+      body: data,
     });
   }
 
