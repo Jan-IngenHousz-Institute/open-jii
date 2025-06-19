@@ -3,9 +3,9 @@
 import { useTranslation } from "@repo/i18n";
 
 import { useExperiment } from "../../hooks/experiment/useExperiment/useExperiment";
-import { ExperimentMemberManagement } from "../experiment-member-management";
 import { ExperimentDetailsCard } from "./experiment-details-card";
 import { ExperimentInfoCard } from "./experiment-info-card";
+import { ExperimentMemberManagement } from "./experiment-member-management-card";
 import { ExperimentVisibilityCard } from "./experiment-visibility-card";
 
 interface ExperimentSettingsProps {
