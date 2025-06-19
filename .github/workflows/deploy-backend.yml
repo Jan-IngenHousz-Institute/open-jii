@@ -56,6 +56,14 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Validate AWS Region
+        uses: ./.github/actions/backend-deployment/check-aws-region
+
+      - name: Validate Dockerfile Exists
+        uses: ./.github/actions/backend-deployment/check-dockerfile
+        with:
+          path: apps/backend/Dockerfile
+
       - name: Build and Push Docker Image
         id: build-image
         uses: docker/build-push-action@v5

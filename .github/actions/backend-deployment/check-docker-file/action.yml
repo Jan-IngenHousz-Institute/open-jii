@@ -1,0 +1,16 @@
+name: Check Dockerfile Exists
+description: Fails if the specified Dockerfile is missing
+inputs:
+  path:
+    description: Path to the Dockerfile
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Validate Dockerfile
+      shell: bash
+      run: |
+        if [[ ! -f "${{ inputs.path }}" ]]; then
+          echo "::error::Dockerfile not found at ${{ inputs.path }}"
+          exit 1
+        fi
