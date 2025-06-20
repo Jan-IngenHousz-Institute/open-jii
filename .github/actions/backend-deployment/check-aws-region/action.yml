@@ -1,0 +1,14 @@
+name: Check AWS Region
+description: Ensures AWS_REGION is set and defaults if missing
+runs:
+  using: "composite"
+  steps:
+    - name: Validate AWS_REGION
+      shell: bash
+      run: |
+        if [[ -z "${AWS_REGION}" ]]; then
+          echo "::warning::AWS_REGION not set, using default: eu-central-1"
+          echo "AWS_REGION=eu-central-1" >> $GITHUB_ENV
+        else
+          echo "AWS_REGION=${AWS_REGION}" >> $GITHUB_ENV
+        fi
