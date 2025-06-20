@@ -95,3 +95,15 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "cloudfront_header_value" {
+  description = "The value for the custom header that CloudFront sends to the ALB."
+  type        = string
+  sensitive   = true
+}
+
+variable "cloudfront_header_name" {
+  description = "The name of the custom header that CloudFront sends to the ALB."
+  type        = string
+  default     = "X-Origin-Verify"
+}

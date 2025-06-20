@@ -1,10 +1,16 @@
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+}
+
 # Web Application Firewall (WAF) v2 for comprehensive application-layer protection
 # WAF inspects HTTP/HTTPS requests before they reach the ALB
 # Provides protection against common web exploits and application-layer attacks
 resource "aws_wafv2_web_acl" "main" {
+  provider    = aws.us_east_1
   name        = "${var.service_name}-waf-${var.environment}"
-  description = "WAF for ${var.service_name} ALB"
-  scope       = "REGIONAL" # REGIONAL for ALB/API Gateway, CLOUDFRONT for CloudFront
+  description = "WAF for ${var.service_name} CloudFront Distribution"
+  scope       = "CLOUDFRONT"
 
   # Default action when no rules match - allows legitimate traffic through
   # Consider changing to "block" for high-security environments with comprehensive rules
@@ -91,6 +97,36 @@ resource "aws_wafv2_web_acl" "main" {
     }
   }
 
+  # Rule to block requests for sensitive paths like .git
+  rule {
+    name     = "BlockSensitivePaths"
+    priority = 0 # Highest priority to block these requests first
+
+    action {
+      block {}
+    }
+
+    statement {
+      byte_match_statement {
+        search_string         = "/.git"
+        positional_constraint = "STARTS_WITH"
+        field_to_match {
+          uri_path {}
+        }
+        text_transformation {
+          priority = 0
+          type     = "NONE"
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "BlockSensitivePathsMetric"
+      sampled_requests_enabled   = true
+    }
+  }
+
   # Geographic blocking - optional security measure
   # Useful for compliance requirements or reducing attack surface
   # Only creates the rule if blocked_countries list is provided
@@ -131,23 +167,16 @@ resource "aws_wafv2_web_acl" "main" {
   # Enables monitoring and analysis of all WAF activity
   visibility_config {
     cloudwatch_metrics_enabled = true
-    metric_name                = "${var.service_name}WAF${var.environment}"
+    metric_name                = "${var.service_name}WAF${var.environment}" # Consider adding "CloudFront" to metric name for clarity
     sampled_requests_enabled   = true
   }
-}
-
-# Associate WAF with the Application Load Balancer
-# This attachment ensures all ALB traffic is inspected by WAF rules
-# Multiple ALBs can be associated with the same WAF if needed
-resource "aws_wafv2_web_acl_association" "main" {
-  resource_arn = var.alb_arn
-  web_acl_arn  = aws_wafv2_web_acl.main.arn
 }
 
 # CloudWatch Log Group for WAF request logging
 # Stores detailed logs of blocked/allowed requests for analysis and troubleshooting
 # Retention period balances storage costs with compliance/debugging needs
 resource "aws_cloudwatch_log_group" "waf_logs" {
+  provider = aws.us_east_1 # Ensure log group is in us-east-1 for CloudFront WAF
   # AWS requires log group names for WAF to begin with "aws-waf-logs-"
   # https://docs.aws.amazon.com/waf/latest/developerguide/logging-cw-logs.html#logging-cw-logs-naming
   name              = "aws-waf-logs-${var.service_name}-${var.environment}"
@@ -167,6 +196,7 @@ resource "aws_cloudwatch_log_group" "waf_logs" {
 # Logs all requests processed by WAF including blocked and allowed traffic
 # Essential for security analysis, false positive identification, and compliance
 resource "aws_wafv2_web_acl_logging_configuration" "main" {
+  provider     = aws.us_east_1
   resource_arn = aws_wafv2_web_acl.main.arn
   # Use the ARN of our correctly named CloudWatch log group (with aws-waf-logs- prefix)
   log_destination_configs = [aws_cloudwatch_log_group.waf_logs.arn]

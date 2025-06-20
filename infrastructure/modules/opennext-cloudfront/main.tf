@@ -34,7 +34,18 @@ resource "aws_cloudfront_distribution" "distribution" {
   is_ipv6_enabled = true
   price_class     = var.price_class
   aliases         = var.aliases
+  web_acl_id      = var.waf_acl_id
   tags            = var.tags
+
+  # Access logging to S3
+  dynamic "logging_config" {
+    for_each = var.enable_logging && var.log_bucket != "" ? [1] : []
+    content {
+      include_cookies = true
+      bucket          = "${var.log_bucket}.s3.amazonaws.com"
+      prefix          = "cloudfront-logs/opennext"
+    }
+  }
 
   # S3 origin for static assets
   origin {

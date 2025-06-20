@@ -1,10 +1,10 @@
-# Route53 module for handling DNS resources
+locals {
+  zone_id = aws_route53_zone.main.zone_id
+}
 
 # Route53 Hosted Zone - DNS management for the domain
-# Only created if you don't have an existing hosted zone for the domain
 resource "aws_route53_zone" "main" {
-  count = var.create_route53_zone ? 1 : 0
-  name  = var.domain_name
+  name = var.domain_name
 
   tags = merge(
     {
@@ -15,96 +15,131 @@ resource "aws_route53_zone" "main" {
   )
 }
 
-# Local values for DNS configurations
-locals {
-  zone_id = var.create_route53_zone ? aws_route53_zone.main[0].zone_id : var.route53_zone_id
+provider "aws" {
+  alias  = "us_east_1_for_cloudfront"
+  region = "us-east-1"
 }
 
-# ACM Certificate for SSL/TLS encryption
-# DNS validation is preferred over email validation for automation
-# Wildcard certificate (*.domain.com) allows multiple subdomains without additional certificates
-resource "aws_acm_certificate" "main_cert" {
-  count             = var.create_certificate ? 1 : 0
-  domain_name       = var.domain_name
+# ACM Certificate for SSL/TLS encryption (Regional - for ALB and other regional services)
+resource "aws_acm_certificate" "regional_services_cert" {
+  domain_name       = "api.${var.environment}.${var.domain_name}" # Primary domain for this cert
   validation_method = "DNS"
 
-  # Add wildcard and specific subdomains
-  subject_alternative_names = concat(
-    ["*.${var.domain_name}"],
-    [for env in var.environments : "${env}.${var.domain_name}"],
-    [for env in var.environments : "api.${env}.${var.domain_name}"],
-    [for env in var.environments : "docs.${env}.${var.domain_name}"]
-  )
+  # Only include SANs that regional services (like ALB) would directly serve.
+  # If other domains (like root env domain or docs) are only via CloudFront,
+  # they don't need to be on this regional cert.
+  subject_alternative_names = [
+    # Potentially other regional-specific subdomains if needed in the future.
+    # For now, focused on what the ALB needs.
+    # If var.domain_name itself or other subdomains are needed by regional services, add them here.
+    # Example: If you had a regional API Gateway for "internal.env.domain.com"
+  ]
 
-  # Ensures certificate is created before old one is destroyed during updates
-  # Prevents downtime during certificate renewals
   lifecycle {
     create_before_destroy = true
   }
 
   tags = merge(
     {
-      Name        = "${var.domain_name}-certificate"
+      Name        = "regional-services-${var.environment}-certificate"
       Environment = var.environment
     },
     var.tags
   )
 }
 
-# DNS validation records for automatic certificate validation
-# ACM requires DNS records to prove domain ownership
-# for_each creates one record per domain in the certificate (main + SANs)
-resource "aws_route53_record" "cert_validation" {
-  for_each = var.create_certificate ? {
-    for dvo in aws_acm_certificate.main_cert[0].domain_validation_options : dvo.domain_name => {
+# DNS validation records for the regional services certificate
+resource "aws_route53_record" "regional_cert_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.regional_services_cert.domain_validation_options : dvo.domain_name => {
       name   = dvo.resource_record_name
       record = dvo.resource_record_value
       type   = dvo.resource_record_type
     }
-  } : {}
+  }
 
-  allow_overwrite = true # Prevents conflicts if records already exist
+  allow_overwrite = true
   name            = each.value.name
   records         = [each.value.record]
-  ttl             = 60 # Short TTL for faster propagation during validation
+  ttl             = 60
   type            = each.value.type
   zone_id         = local.zone_id
 }
 
-# Certificate validation waits for DNS propagation and ACM validation
-# This resource blocks until the certificate is fully validated and ready to use
-resource "aws_acm_certificate_validation" "main_cert" {
-  count                   = var.create_certificate ? 1 : 0
-  certificate_arn         = aws_acm_certificate.main_cert[0].arn
-  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+# Certificate validation for the regional services certificate
+resource "aws_acm_certificate_validation" "regional_services_cert" {
+  certificate_arn         = aws_acm_certificate.regional_services_cert.arn
+  validation_record_fqdns = [for record in aws_route53_record.regional_cert_validation : record.fqdn]
 
   timeouts {
-    create = "5m" # Timeout if validation takes longer than 5 minutes
+    create = "5m"
   }
 }
 
-# Create API record pointing to ALB when alb_dns_name is provided
-resource "aws_route53_record" "api_record" {
-  for_each = var.alb_records
+# ACM Certificates for CloudFront (us-east-1)
+resource "aws_acm_certificate" "cloudfront_certs" {
+  for_each = var.cloudfront_domain_configs
 
-  zone_id = local.zone_id
-  name    = "${each.key}.${var.domain_name}"
-  type    = "A"
+  provider          = aws.us_east_1_for_cloudfront
+  domain_name       = each.value # each.value is the FQDN from the map
+  validation_method = "DNS"
 
-  alias {
-    name                   = each.value.dns_name
-    zone_id                = each.value.zone_id
-    evaluate_target_health = true
+  tags = merge(
+    {
+      Name        = "${each.key}-cloudfront-certificate" # Use the map key for a descriptive name
+      Environment = var.environment
+      Service     = "CloudFront"
+    },
+    var.tags
+  )
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
+
+# DNS validation records for the CloudFront (us-east-1) certificates
+resource "aws_route53_record" "cloudfront_cert_validation" {
+  # Iterate over each certificate created for CloudFront
+  for_each = aws_acm_certificate.cloudfront_certs
+
+  allow_overwrite = true
+  # Assuming one validation option per certificate, which is typical for DNS validation.
+  # Convert the set to a list to access the first element.
+  name    = tolist(each.value.domain_validation_options)[0].resource_record_name
+  records = [tolist(each.value.domain_validation_options)[0].resource_record_value]
+  ttl     = 60
+  type    = tolist(each.value.domain_validation_options)[0].resource_record_type
+  zone_id = local.zone_id # Corrected to use the simplified local.zone_id
+}
+
+# Certificate validation for the CloudFront (us-east-1) certificates
+resource "aws_acm_certificate_validation" "cloudfront_certs_validation" {
+  provider = aws.us_east_1_for_cloudfront
+  # Iterate over each certificate created for CloudFront
+  for_each = aws_acm_certificate.cloudfront_certs
+
+  certificate_arn = each.value.arn
+  # Construct the FQDN for the validation record based on the for_each key
+  validation_record_fqdns = [aws_route53_record.cloudfront_cert_validation[each.key].fqdn]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  depends_on = [aws_route53_record.cloudfront_cert_validation]
+}
+
 
 # Create records for CloudFront distributions (docs, root domain)
 resource "aws_route53_record" "cloudfront_record" {
   for_each = var.cloudfront_records
 
   zone_id = local.zone_id
-  name    = "${each.key}.${var.domain_name}"
-  type    = "A"
+  # If the key is empty (""), we're setting up the root domain for the environment
+  # Otherwise, we're setting up a subdomain
+  name = each.key == "" ? "${var.environment}.${var.domain_name}" : "${each.key}.${var.environment}.${var.domain_name}"
+  type = "A"
 
   alias {
     name                   = each.value.domain_name
