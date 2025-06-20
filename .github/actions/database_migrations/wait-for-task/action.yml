@@ -1,0 +1,29 @@
+name: Wait for ECS Tasks to Complete
+description: Waits for provided ECS tasks to stop
+
+inputs:
+  cluster:
+    description: ECS cluster name
+    required: true
+  tasks:
+    description: Space-separated list of ECS task ARNs
+    required: true
+  timeout_seconds:
+    description: Max time to wait in seconds
+    required: false
+    default: "900"
+
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      run: |
+        echo "Waiting for migration tasks to complete..."
+        if timeout "${{ inputs.timeout_seconds }}" aws ecs wait tasks-stopped \
+          --cluster "${{ inputs.cluster }}" \
+          --tasks ${{ inputs.tasks }}; then
+          echo "✓ Migration tasks completed."
+        else
+          echo "::error::Timeout reached waiting for tasks to complete"
+          exit 1
+        fi

@@ -1,0 +1,39 @@
+name: Check Running Migration Task
+description: Checks if an ECS migration task is already running
+
+inputs:
+  cluster:
+    description: ECS cluster name
+    required: true
+  family:
+    description: Task definition family
+    required: true
+
+outputs:
+  already_running:
+    description: Whether a task is running
+  running_tasks:
+    description: List of running task ARNs
+
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      run: |
+        echo "Checking for running migrations..."
+
+        TASKS=$(aws ecs list-tasks \
+          --cluster "${{ inputs.cluster }}" \
+          --family "${{ inputs.family }}" \
+          --desired-status RUNNING \
+          --query 'taskArns[*]' \
+          --output text)
+
+        if [[ -n "$TASKS" ]]; then
+          echo "already_running=true" >> $GITHUB_OUTPUT
+          echo "running_tasks=$TASKS" >> $GITHUB_OUTPUT
+          echo "::warning::Another migration is already in progress."
+        else
+          echo "already_running=false" >> $GITHUB_OUTPUT
+          echo "✓ No running migration tasks found."
+        fi
