@@ -18,7 +18,7 @@ runs:
   steps:
     - shell: bash
       run: |
-        echo "Waiting for migration tasks to complete..."
+        echo "Waiting for migration tasks to complete... "
         if timeout "${{ inputs.timeout_seconds }}" aws ecs wait tasks-stopped \
           --cluster "${{ inputs.cluster }}" \
           --tasks ${{ inputs.tasks }}; then
