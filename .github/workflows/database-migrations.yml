@@ -54,7 +54,7 @@ jobs:
         uses: ./.github/actions/database_migrations/extraction_outputs
         with:
           environment: ${{ inputs.environment }}
-          
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -70,14 +70,8 @@ jobs:
           echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
           echo "IMAGE_TAG=migrations-$(echo ${{ github.sha }} | cut -c1-7)-$(date +%s)" >> $GITHUB_ENV
 
-          # Get and validate AWS region
-          AWS_REGION="${{ secrets.AWS_REGION }}"
-          if [[ -z "$AWS_REGION" ]]; then
-            echo "::warning::AWS_REGION not set in secrets, using default: eu-central-1"
-            echo "AWS_REGION=eu-central-1" >> $GITHUB_ENV
-          else
-            echo "AWS_REGION=$AWS_REGION" >> $GITHUB_ENV
-          fi
+      - name: Validate AWS Region
+        uses: ./.github/actions/database_migrations/check-aws-region
 
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
