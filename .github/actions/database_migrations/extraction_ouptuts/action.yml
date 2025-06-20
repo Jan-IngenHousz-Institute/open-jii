@@ -1,0 +1,62 @@
+name: Extract Infra Outputs
+description: Extracts required and optional values from Terraform/Tofu outputs
+
+inputs:
+  environment:
+    description: The deployment environment (e.g., dev, staging, prod)
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Read and Validate Infrastructure Outputs
+      shell: bash
+      run: |
+        FILE="tofu-outputs/infrastructure-outputs-${{ inputs.environment }}.json"
+
+        if [[ ! -f "$FILE" ]]; then
+          echo "::error::No infrastructure outputs found at $FILE"
+          exit 1
+        fi
+
+        echo "✓ Found infrastructure output file: $FILE"
+        OUTPUTS_JSON=$(cat "$FILE")
+
+        extract_value() {
+          local key=$1
+          local env_key=$2
+          local required=${3:-true}
+          local value=$(echo "$OUTPUTS_JSON" | jq -r ".$key.value // .$key")
+
+          if [[ "$value" == "null" || -z "$value" ]]; then
+            if [[ "$required" == "true" ]]; then
+              echo "::error::$env_key not found in infrastructure outputs"
+              exit 1
+            else
+              echo "::warning::Optional output $env_key not found"
+              return 1
+            fi
+          fi
+
+          echo "$env_key=$value" >> $GITHUB_ENV
+          echo "${env_key,,}=$value" >> $GITHUB_OUTPUT
+          echo "✓ Extracted $env_key"
+        }
+
+        # Optional: convert array to CSV (if needed later)
+        parse_array_output() {
+          echo "$1" | jq -r 'if type == "array" then join(",") else . end' 2>/dev/null || echo "$1"
+        }
+
+        # Extract required values
+        extract_value "migration_runner_ecr_repository_name" "ECR_REPOSITORY"
+        extract_value "migration_runner_ecs_cluster_name" "ECS_CLUSTER_NAME"
+        extract_value "migration_runner_task_definition_family" "TASK_FAMILY"
+        extract_value "migration_runner_container_name" "PRIMARY_CONTAINER"
+
+        # Extract optional values
+        extract_value "migration_runner_subnets" "SUBNETS" false
+        extract_value "migration_runner_security_group_id" "SECURITY_GROUP_ID" false
+
+        # Static derived output
+        echo "LOG_GROUP_NAME=/aws/ecs/db-migration-runner-${{ inputs.environment }}" >> $GITHUB_ENV

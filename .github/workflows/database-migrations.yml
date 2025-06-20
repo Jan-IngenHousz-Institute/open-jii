@@ -36,9 +36,11 @@ jobs:
       - name: Set timeout seconds
         id: set-timeout
         run: |
-          echo "seconds=$((${{ inputs.timeout_minutes }} * 60))" >> $GITHUB_OUTPUT
-          echo "MIGRATION_TIMEOUT=$((${{ inputs.timeout_minutes }} * 60))" >> $GITHUB_ENV
-          echo "Setting migration timeout to $((${{ inputs.timeout_minutes }} * 60)) seconds"
+          TIMEOUT_SECONDS=$(( ${{ inputs.timeout_minutes }} * 60 ))
+          echo "seconds=$TIMEOUT_SECONDS" >> $GITHUB_OUTPUT
+          echo "MIGRATION_TIMEOUT=$TIMEOUT_SECONDS" >> $GITHUB_ENV
+          echo "Setting migration timeout to $TIMEOUT_SECONDS seconds"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -49,59 +51,10 @@ jobs:
           path: tofu-outputs/
 
       - name: Extract Infrastructure Outputs
-        id: infra-outputs
-        run: |
-          if [[ ! -f "tofu-outputs/infrastructure-outputs-${{ inputs.environment }}.json" ]]; then
-            echo "::error::No infrastructure outputs found at tofu-outputs/infrastructure-outputs-${{ inputs.environment }}.json"
-            exit 1
-          fi
-
-          echo "Using infrastructure outputs from artifact"
-          OUTPUTS_JSON=$(cat tofu-outputs/infrastructure-outputs-${{ inputs.environment }}.json)
-
-          # Function to extract values from JSON with fallback pattern
-          function extract_value() {
-            local key=$1
-            local display_name=$2
-            local required=${3:-true}
-            
-            if [[ $(echo "$OUTPUTS_JSON" | jq -e ".$key") ]]; then
-              # Handle both nested and flat output formats
-              local value=$(echo "$OUTPUTS_JSON" | jq -r ".$key.value // .$key")
-              echo "$display_name=$value" >> $GITHUB_ENV
-              echo "${display_name,,}=$value" >> $GITHUB_OUTPUT
-              echo "✓ Extracted $display_name"
-              return 0
-            else
-              if [[ "$required" == "true" ]]; then
-                echo "::error::$display_name not found in infrastructure outputs"
-                exit 1
-              else
-                echo "::warning::Optional output $display_name not found in infrastructure outputs"
-                return 1
-              fi
-            fi
-          }
-
-          # Helper function to parse JSON array or string into comma-separated list
-          function parse_array_output() {
-            # Simpler approach: always try to parse as JSON with jq, fall back to original input if that fails
-            echo "$1" | jq -r 'if type == "array" then join(",") else . end' 2>/dev/null || echo "$1"
-          }
-
-          # Extract required values
-          extract_value "migration_runner_ecr_repository_name" "ECR_REPOSITORY"
-          extract_value "migration_runner_ecs_cluster_name" "ECS_CLUSTER_NAME"
-          extract_value "migration_runner_task_definition_family" "TASK_FAMILY"
-          extract_value "migration_runner_container_name" "PRIMARY_CONTAINER"
-
-          # Extract optional networking values (these will be used if available)
-          extract_value "migration_runner_subnets" "SUBNETS" false
-          extract_value "migration_runner_security_group_id" "SECURITY_GROUP_ID" false
-
-          # Set log group name based on environment
-          echo "LOG_GROUP_NAME=/aws/ecs/db-migration-runner-${{ inputs.environment }}" >> $GITHUB_ENV
-
+        uses: ./.github/actions/database_migrations/extraction_outputs
+        with:
+          environment: ${{ inputs.environment }}
+          
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
