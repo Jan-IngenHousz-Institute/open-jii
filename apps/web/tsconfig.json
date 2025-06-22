@@ -13,7 +13,8 @@
       "@/components/*": ["./components/*"],
       "@/util/*": ["./util/*"],
       "@/hooks/*": ["./hooks/*"],
-      "@/lib/*": ["../../packages/cms/src/lib/*"]
+      "@repo/cms/lib/*": ["../../packages/cms/src/lib/*"],
+      "@/lib/*": ["./lib/*"]
     },
     "incremental": true,
     "resolveJsonModule": true

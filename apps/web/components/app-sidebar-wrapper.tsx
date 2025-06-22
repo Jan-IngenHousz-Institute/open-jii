@@ -1,6 +1,6 @@
+import { auth } from "@/lib/auth";
 import * as React from "react";
 
-import { auth } from "@repo/auth/next";
 import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 

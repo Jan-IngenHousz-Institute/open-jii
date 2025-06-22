@@ -293,3 +293,23 @@ variable "server_environment_variables" {
   type        = map(string)
   default     = {}
 }
+
+variable "db_credentials_secret_arn" {
+  description = "ARN of the database credentials secret in AWS Secrets Manager."
+  type        = string
+  default     = "" # Or a specific default ARN if applicable
+}
+
+variable "oauth_secret_arn" {
+  description = "ARN of the OAuth client secret in AWS Secrets Manager."
+  type        = string
+  default     = "" # Or a specific default ARN if applicable
+}
+
+variable "secrets_extension_layer_arn" {
+  description = "ARN of the AWS-Parameters-and-Secrets-Lambda-Extension layer. Ensure this is correct for your deployment region."
+  type        = string
+  # Example for eu-central-1, replace if deploying to other regions
+  # You can find the latest ARNs here: https://docs.aws.amazon.com/systems-manager/latest/userguide/ps-integration-lambda-extensions.html#ps-integration-lambda-extensions-add
+  default = "arn:aws:lambda:eu-central-1:187925254637:layer:AWS-Parameters-and-Secrets-Lambda-Extension:17"
+}

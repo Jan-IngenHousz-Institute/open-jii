@@ -24,6 +24,18 @@ locals {
     ManagedBy   = "terraform"
     Component   = "opennext"
   })
+
+  # IAM policy for Lambda to read secrets
+  lambda_secrets_policy_json = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect    = "Allow",
+        Action    = "secretsmanager:GetSecretValue",
+        Resources = compact([var.db_credentials_secret_arn, var.oauth_secret_arn])
+      }
+    ]
+  })
 }
 
 # S3 Buckets
@@ -161,11 +173,19 @@ module "server_function" {
   sqs_permissions      = true
   sqs_queue_arns       = [module.sqs.queue_arn]
 
+  lambda_layers = compact([var.secrets_extension_layer_arn]) # compact removes empty strings if var is empty
+
+  additional_iam_policies = {
+    "SecretsManagerRead" = local.lambda_secrets_policy_json
+  }
+
   environment_variables = merge({
     ASSETS_BUCKET_NAME     = aws_s3_bucket.assets.bucket
     CACHE_BUCKET_NAME      = aws_s3_bucket.cache.bucket
     REVALIDATION_QUEUE_URL = module.sqs.queue_url
     CACHE_DYNAMO_TABLE     = module.dynamodb.table_name
+    DB_SECRET_ARN          = var.db_credentials_secret_arn
+    OAUTH_SECRET_ARN       = var.oauth_secret_arn
   }, var.server_environment_variables)
 
   tags = local.common_tags

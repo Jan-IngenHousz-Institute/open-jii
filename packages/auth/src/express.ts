@@ -1,12 +1,12 @@
-import { getSession as getExpressSession } from "@auth/express";
 import type { ExpressAuthConfig } from "@auth/express";
+import { getSession as getExpressSession } from "@auth/express";
 import type * as e from "express";
 
 import { adapter } from "./adapter";
-import { authConfig } from "./config";
+import { baseAuthConfig } from "./config";
 
 const config = {
-  ...authConfig,
+  ...baseAuthConfig,
   adapter,
   session: { strategy: "jwt" },
 } satisfies ExpressAuthConfig;

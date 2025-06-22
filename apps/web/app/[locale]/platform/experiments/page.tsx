@@ -1,8 +1,8 @@
 import { ListExperiments } from "@/components/list-experiments";
+import { auth } from "@/lib/auth";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { auth } from "@repo/auth/next";
 import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { Button } from "@repo/ui/components";
@@ -23,7 +23,7 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
   });
 
   const session = await auth();
-  const userId = session?.user.id;
+  const userId = session?.user?.id;
 
   return (
     <div className="space-y-6">

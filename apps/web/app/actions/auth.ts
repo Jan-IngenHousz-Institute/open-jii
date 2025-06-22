@@ -1,6 +1,6 @@
 "use server";
 
-import { signIn, signOut } from "@repo/auth/next";
+import { signIn, signOut } from "@/lib/auth";
 
 export async function handleLogin() {
   await signIn();

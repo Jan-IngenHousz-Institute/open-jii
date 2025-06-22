@@ -1,12 +1,11 @@
 "use client";
 
+import { tsr } from "@/lib/tsr";
 import { parseApiError } from "@/util/apiError";
 import { QueryClient, QueryClientProvider, MutationCache } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 import { toast } from "@repo/ui/hooks";
-
-import { tsr } from "../lib/tsr";
 
 // Create a client-side QueryClient instance
 const queryClient = new QueryClient({
