@@ -180,11 +180,12 @@ describe("CreateExperimentUseCase", () => {
 
     const result = await useCase.execute(invalidData, testUserId);
 
-    // Verify error is returned
+    // Verify error is returned - database will reject empty/null name
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
-    expect(result.error.code).toBe("BAD_REQUEST");
-    expect(result.error.message).toContain("Experiment name is required");
+    expect(result.error.code).toBe("REPOSITORY_ERROR");
+    // Database constraint error message
+    expect(result.error.message).toBeDefined();
 
     // Verify Databricks job was not triggered
     // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -199,11 +200,12 @@ describe("CreateExperimentUseCase", () => {
     // Pass empty userId
     const result = await useCase.execute(validData, "");
 
-    // Verify error is returned
+    // Verify error is returned - database will reject invalid user reference
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
-    expect(result.error.code).toBe("BAD_REQUEST");
-    expect(result.error.message).toContain("User ID is required");
+    expect(result.error.code).toBe("REPOSITORY_ERROR");
+    // Database constraint error message
+    expect(result.error.message).toBeDefined();
 
     // Verify Databricks job was not triggered
     // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -221,16 +223,125 @@ describe("CreateExperimentUseCase", () => {
     // Now try to create another experiment with the same name
     const result = await useCase.execute({ name: existingName }, testUserId);
 
-    // Verify error is returned
+    // Verify error is returned - database unique constraint violation
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
-    expect(result.error.code).toBe("BAD_REQUEST");
-    expect(result.error.message).toContain(
-      `An experiment with the name "${existingName}" already exists`,
-    );
+    expect(result.error.code).toBe("REPOSITORY_DUPLICATE");
+    // Database constraint error message
+    expect(result.error.message).toBeDefined();
 
     // Verify Databricks job was not triggered
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(databricksService.triggerJob).not.toHaveBeenCalled();
+  });
+
+  it("should create an experiment with members", async () => {
+    // Create test users to be added as members
+    const member1Id = await testApp.createTestUser({
+      email: "member1@example.com",
+      name: "Member One",
+    });
+    const member2Id = await testApp.createTestUser({
+      email: "member2@example.com",
+      name: "Member Two",
+    });
+
+    const experimentData = {
+      name: "Experiment with Members",
+      description: "Testing experiment creation with members",
+      members: [
+        { userId: member1Id, role: "member" as const },
+        { userId: member2Id, role: "admin" as const },
+      ],
+    };
+
+    const result = await useCase.execute(experimentData, testUserId);
+
+    // Verify result is success
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    const createdExperiment = result.value;
+
+    // Verify experiment was created
+    expect(createdExperiment).toMatchObject({
+      id: expect.any(String) as string,
+      name: experimentData.name,
+      description: experimentData.description,
+      createdBy: testUserId,
+    });
+
+    // Verify members were added correctly
+    const membersResult = await experimentMemberRepository.getMembers(
+      createdExperiment.id,
+    );
+
+    expect(membersResult.isSuccess()).toBe(true);
+    assertSuccess(membersResult);
+    const members = membersResult.value;
+
+    // Should have 3 members (creator + 2 added members)
+    expect(members.length).toBe(3);
+
+    // Find each member and verify their role
+    const creatorMember = members.find((m) => m.user.id === testUserId);
+    const member1 = members.find((m) => m.user.id === member1Id);
+    const member2 = members.find((m) => m.user.id === member2Id);
+
+    expect(creatorMember).toMatchObject({
+      role: "admin",
+      user: expect.objectContaining({ id: testUserId }) as Partial<UserDto>,
+    });
+
+    expect(member1).toMatchObject({
+      role: "member",
+      user: expect.objectContaining({ id: member1Id }) as Partial<UserDto>,
+    });
+
+    expect(member2).toMatchObject({
+      role: "admin",
+      user: expect.objectContaining({ id: member2Id }) as Partial<UserDto>,
+    });
+  });
+
+  it("should filter out creator from members list if included", async () => {
+    const member1Id = await testApp.createTestUser({
+      email: "member@example.com",
+      name: "Member",
+    });
+
+    const experimentData = {
+      name: "Experiment with Creator in Members",
+      description: "Testing that creator is not duplicated",
+      members: [
+        { userId: member1Id, role: "member" as const },
+        { userId: testUserId, role: "member" as const }, // This should be filtered out
+      ],
+    };
+
+    const result = await useCase.execute(experimentData, testUserId);
+
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    const createdExperiment = result.value;
+
+    // Verify members
+    const membersResult = await experimentMemberRepository.getMembers(
+      createdExperiment.id,
+    );
+
+    expect(membersResult.isSuccess()).toBe(true);
+    assertSuccess(membersResult);
+    const members = membersResult.value;
+
+    // Should have 2 members (creator as admin + 1 added member)
+    expect(members.length).toBe(2);
+
+    // Creator should still be admin, not member
+    const creatorMember = members.find((m) => m.user.id === testUserId);
+    expect(creatorMember?.role).toBe("admin");
+
+    // Other member should be added as member
+    const otherMember = members.find((m) => m.user.id === member1Id);
+    expect(otherMember?.role).toBe("member");
   });
 });

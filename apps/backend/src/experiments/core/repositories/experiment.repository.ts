@@ -4,7 +4,13 @@ import { ExperimentFilter, ExperimentStatus } from "@repo/api";
 import { eq, or, and, experiments, experimentMembers } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
-import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import {
+  Result,
+  tryCatch,
+  AppError,
+  defaultRepositoryErrorMapper,
+} from "../../../common/utils/fp-utils";
+import { ExperimentMemberRole } from "../models/experiment-members.model";
 import {
   CreateExperimentDto,
   UpdateExperimentDto,
@@ -226,5 +232,115 @@ export class ExperimentRepository {
 
       return { experiment, hasAccess: isMember, isAdmin };
     });
+  }
+
+  async createWithMembers(
+    createExperimentDto: CreateExperimentDto,
+    userId: string,
+    members?: { userId: string; role?: ExperimentMemberRole }[],
+  ): Promise<Result<ExperimentDto>> {
+    return tryCatch(
+      () => {
+        return this.database.transaction(async (tx) => {
+          // Create the experiment
+          const [experiment] = await tx
+            .insert(experiments)
+            .values({
+              ...createExperimentDto,
+              createdBy: userId,
+            })
+            .returning();
+
+          // Filter out any member with the same userId as the admin
+          const filteredMembers = (
+            Array.isArray(members) ? members : []
+          ).filter((member) => member.userId !== userId);
+
+          // Add the user as an admin member + the rest of the members if provided
+          const allMembers = [
+            { userId, role: "admin" as const },
+            ...filteredMembers,
+          ];
+
+          // Insert all members in a single operation (we always have at least the admin)
+          await tx.insert(experimentMembers).values(
+            allMembers.map((member) => ({
+              experimentId: experiment.id,
+              userId: member.userId,
+              role: member.role,
+            })),
+          );
+
+          return experiment;
+        });
+      },
+      (error: unknown) => {
+        // Enhanced error mapping for createWithMembers
+        if (error instanceof Error) {
+          const message = error.message.toLowerCase();
+
+          // Handle specific database constraint violations with better messages
+          if (message.includes("experiments_name_unique")) {
+            return AppError.badRequest(
+              `An experiment with the name "${createExperimentDto.name}" already exists`,
+              "REPOSITORY_DUPLICATE",
+              error,
+            );
+          }
+
+          if (message.includes("name_not_empty")) {
+            return AppError.badRequest(
+              "Experiment name cannot be empty or contain only whitespace",
+              "REPOSITORY_ERROR",
+              error,
+            );
+          }
+
+          if (
+            message.includes("foreign key constraint") &&
+            message.includes("users")
+          ) {
+            return AppError.badRequest(
+              "One or more specified user IDs do not exist",
+              "REPOSITORY_ERROR",
+              error,
+            );
+          }
+
+          if (
+            message.includes("foreign key constraint") &&
+            message.includes("created_by")
+          ) {
+            return AppError.badRequest(
+              "The specified creator user ID does not exist",
+              "REPOSITORY_ERROR",
+              error,
+            );
+          }
+
+          if (message.includes("null value in column")) {
+            const nullColumnRegex = /null value in column "([^"]+)"/;
+            const columnMatch = nullColumnRegex.exec(message);
+            const column = columnMatch ? columnMatch[1] : "required field";
+            return AppError.badRequest(
+              `${column} is required and cannot be null`,
+              "REPOSITORY_ERROR",
+              error,
+            );
+          }
+
+          if (message.includes("invalid input syntax for type uuid")) {
+            return AppError.badRequest(
+              "Invalid user ID format provided",
+              "REPOSITORY_ERROR",
+              error,
+            );
+          }
+        }
+
+        // Fall back to default error mapping
+        return defaultRepositoryErrorMapper(error);
+      },
+    );
   }
 }

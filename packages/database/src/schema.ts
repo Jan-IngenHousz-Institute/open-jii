@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { primaryKey } from "drizzle-orm/pg-core";
 import {
   pgTable,
@@ -9,6 +10,7 @@ import {
   pgEnum,
   uuid,
   integer,
+  check,
 } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
@@ -156,24 +158,28 @@ export const experimentVisibilityEnum = pgEnum("experiment_visibility", [
   "public",
 ]);
 
-export const experiments = pgTable("experiments", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull().unique(),
-  description: text("description"),
-  status: experimentStatusEnum("status").default("provisioning").notNull(),
-  visibility: experimentVisibilityEnum("visibility")
-    .default("public")
-    .notNull(),
-  embargoIntervalDays: integer("embargo_interval_days").default(90).notNull(),
-  createdBy: uuid("created_by")
-    .references(() => users.id)
-    .notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-});
+export const experiments = pgTable(
+  "experiments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull().unique(),
+    description: text("description"),
+    status: experimentStatusEnum("status").default("provisioning").notNull(),
+    visibility: experimentVisibilityEnum("visibility")
+      .default("public")
+      .notNull(),
+    embargoIntervalDays: integer("embargo_interval_days").default(90).notNull(),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [check("name_not_empty", sql`length(trim(${table.name})) > 0`)],
+);
 
 export const experimentMembersEnum = pgEnum("experiment_members_role", [
   "admin",
