@@ -19,6 +19,11 @@ output "cloudfront_hosted_zone_id" {
   value       = module.cloudfront.distribution_hosted_zone_id
 }
 
+output "cloudfront_domain_name" {
+  description = "Domain name of the CloudFront distribution (alias for cloudfront_distribution_domain_name)"
+  value       = module.cloudfront.distribution_domain_name
+}
+
 # S3 Bucket Outputs
 output "assets_bucket_name" {
   description = "Name of the S3 assets bucket"

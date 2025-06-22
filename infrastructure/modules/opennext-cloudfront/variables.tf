@@ -50,6 +50,24 @@ variable "price_class" {
   }
 }
 
+variable "waf_acl_id" {
+  description = "ARN of the WAFv2 ACL to associate with the CloudFront distribution"
+  type        = string
+  default     = ""
+}
+
+variable "enable_logging" {
+  description = "Enable CloudFront access logging"
+  type        = bool
+  default     = false
+}
+
+variable "log_bucket" {
+  description = "S3 bucket name for CloudFront access logs"
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)
