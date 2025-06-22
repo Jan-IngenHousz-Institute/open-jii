@@ -188,13 +188,5 @@ resource "aws_iam_role_policy" "additional_policies" {
 resource "aws_lambda_function_url" "function_url" {
   count              = var.create_function_url ? 1 : 0
   function_name      = aws_lambda_function.function.function_name
-  authorization_type = "NONE"
-
-  cors {
-    allow_credentials = false
-    allow_methods     = ["*"]
-    allow_origins     = ["*"]
-    expose_headers    = ["date", "keep-alive"]
-    max_age           = 86400
-  }
+  authorization_type = var.function_url_authorization_type
 }

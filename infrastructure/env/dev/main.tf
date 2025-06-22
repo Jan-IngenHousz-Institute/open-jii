@@ -401,6 +401,8 @@ module "opennext" {
   certificate_arn = module.route53.cloudfront_certificate_arns["web"]
   hosted_zone_id  = module.route53.route53_zone_id
 
+  function_url_authorization_type = "AWS_IAM"
+
   # VPC configuration for server Lambda database access
   enable_server_vpc               = true
   server_subnet_ids               = module.vpc.private_subnets
@@ -421,7 +423,7 @@ module "opennext" {
     DB_HOST             = module.aurora_db.cluster_endpoint
     DB_PORT             = module.aurora_db.cluster_port
     DB_NAME             = module.aurora_db.database_name
-    NEXT_PUBLIC_API_URL = module.route53.api_domain
+    NEXT_PUBLIC_API_URL = "https://${module.route53.api_domain}"
   }
 
   # Performance configuration

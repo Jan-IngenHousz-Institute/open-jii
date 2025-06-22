@@ -7,6 +7,15 @@ resource "aws_cloudfront_origin_access_control" "s3_oac" {
   signing_protocol                  = "sigv4"
 }
 
+# OAC for Lambda Function URLs
+resource "aws_cloudfront_origin_access_control" "lambda_oac" {
+  name                              = "${var.project_name}-lambda-oac"
+  description                       = "SigV4 OAC for ${var.project_name} Lambda Function URLs"
+  origin_access_control_origin_type = "lambda"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
 # CloudFront Function for header forwarding
 resource "aws_cloudfront_function" "forward_host_header" {
   name    = "${var.project_name}-forward-host-header"
@@ -30,7 +39,7 @@ EOT
 
 # CloudFront distribution
 resource "aws_cloudfront_distribution" "distribution" {
-  enabled         = false
+  enabled         = true
   is_ipv6_enabled = true
   price_class     = var.price_class
   aliases         = var.aliases
@@ -56,8 +65,9 @@ resource "aws_cloudfront_distribution" "distribution" {
 
   # Server Lambda origin for SSR/API
   origin {
-    origin_id   = "ServerLambda"
-    domain_name = var.server_function_url_domain
+    origin_id                = "ServerLambda"
+    domain_name              = var.server_function_url_domain
+    origin_access_control_id = aws_cloudfront_origin_access_control.lambda_oac.id
 
     custom_origin_config {
       http_port              = 443
@@ -69,8 +79,9 @@ resource "aws_cloudfront_distribution" "distribution" {
 
   # Image optimization Lambda origin
   origin {
-    origin_id   = "ImageLambda"
-    domain_name = var.image_function_url_domain
+    origin_id                = "ImageLambda"
+    domain_name              = var.image_function_url_domain
+    origin_access_control_id = aws_cloudfront_origin_access_control.lambda_oac.id
 
     custom_origin_config {
       http_port              = 443
@@ -115,7 +126,7 @@ resource "aws_cloudfront_distribution" "distribution" {
     compress               = true
 
     cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingOptimized
-    origin_request_policy_id = "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf" # Managed-CORS-S3Origin
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
   }
 
   # Cache behavior for API routes
@@ -128,7 +139,7 @@ resource "aws_cloudfront_distribution" "distribution" {
     compress               = true
 
     cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingOptimized
-    origin_request_policy_id = "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf" # Managed-CORS-S3Origin
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
 
     function_association {
       event_type   = "viewer-request"
@@ -146,7 +157,7 @@ resource "aws_cloudfront_distribution" "distribution" {
     compress               = true
 
     cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingOptimized
-    origin_request_policy_id = "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf" # Managed-CORS-S3Origin
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
 
     function_association {
       event_type   = "viewer-request"
@@ -164,7 +175,7 @@ resource "aws_cloudfront_distribution" "distribution" {
     compress               = true
 
     cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingOptimized
-    origin_request_policy_id = "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf" # Managed-CORS-S3Origin
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
 
     function_association {
       event_type   = "viewer-request"
@@ -197,5 +208,23 @@ resource "aws_cloudfront_distribution" "distribution" {
     geo_restriction {
       restriction_type = "none"
     }
+  }
+}
+
+# Origin Request Policy for Lambda signed requests
+resource "aws_cloudfront_origin_request_policy" "lambda_signed_requests" {
+  name    = "${var.project_name}-lambda-signed-requests"
+  comment = "Policy to forward necessary headers for signed Lambda requests"
+  headers_config {
+    header_behavior = "whitelist"
+    headers {
+      items = ["x-forwarded-host"]
+    }
+  }
+  cookies_config {
+    cookie_behavior = "none"
+  }
+  query_strings_config {
+    query_string_behavior = "all"
   }
 }

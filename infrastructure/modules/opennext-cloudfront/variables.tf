@@ -11,16 +11,19 @@ variable "assets_bucket_name" {
 variable "assets_bucket_domain_name" {
   description = "Domain name of the S3 assets bucket"
   type        = string
+  sensitive   = true
 }
 
 variable "server_function_url_domain" {
   description = "Domain of the server Lambda function URL"
   type        = string
+  sensitive   = true
 }
 
 variable "image_function_url_domain" {
   description = "Domain of the image optimization Lambda function URL"
   type        = string
+  sensitive   = true
 }
 
 variable "aliases" {

@@ -30,9 +30,9 @@ locals {
     Version = "2012-10-17",
     Statement = [
       {
-        Effect    = "Allow",
-        Action    = "secretsmanager:GetSecretValue",
-        Resources = compact([var.db_credentials_secret_arn, var.oauth_secret_arn])
+        Effect   = "Allow",
+        Action   = "secretsmanager:GetSecretValue",
+        Resource = compact([var.db_credentials_secret_arn, var.oauth_secret_arn])
       }
     ]
   })
@@ -153,13 +153,14 @@ resource "aws_cloudwatch_log_group" "warmer" {
 module "server_function" {
   source = "../opennext-lambda"
 
-  function_name       = local.server_function_name
-  runtime             = var.lambda_runtime
-  handler             = "index.handler"
-  memory_size         = var.server_memory_size
-  timeout             = var.server_timeout
-  architecture        = var.lambda_architecture
-  create_function_url = true
+  function_name                   = local.server_function_name
+  runtime                         = var.lambda_runtime
+  handler                         = "index.handler"
+  memory_size                     = var.server_memory_size
+  timeout                         = var.server_timeout
+  architecture                    = var.lambda_architecture
+  create_function_url             = true
+  function_url_authorization_type = var.function_url_authorization_type
 
   # VPC Configuration for database access
   enable_vpc         = var.enable_server_vpc
@@ -196,13 +197,14 @@ module "server_function" {
 module "image_function" {
   source = "../opennext-lambda"
 
-  function_name       = local.image_function_name
-  runtime             = var.lambda_runtime
-  handler             = "index.handler"
-  memory_size         = var.image_memory_size
-  timeout             = var.image_timeout
-  architecture        = var.lambda_architecture
-  create_function_url = true
+  function_name                   = local.image_function_name
+  runtime                         = var.lambda_runtime
+  handler                         = "index.handler"
+  memory_size                     = var.image_memory_size
+  timeout                         = var.image_timeout
+  architecture                    = var.lambda_architecture
+  create_function_url             = true
+  function_url_authorization_type = var.function_url_authorization_type
 
   s3_permissions = true
   s3_bucket_arns = [aws_s3_bucket.assets.arn]
@@ -332,7 +334,7 @@ resource "aws_cloudwatch_event_target" "warmer" {
 
 resource "aws_lambda_permission" "allow_eventbridge" {
   count         = var.enable_lambda_warming ? 1 : 0
-  statement_id  = "AllowExecutionFromEventBridge"
+  statement_id  = "AllowCloudFrontInvoke"
   action        = "lambda:InvokeFunction"
   function_name = module.warmer_function[0].function_name
   principal     = "events.amazonaws.com"
@@ -385,4 +387,20 @@ resource "aws_s3_bucket_policy" "assets" {
   })
 
   depends_on = [module.cloudfront]
+}
+
+resource "aws_lambda_permission" "allow_cloudfront_server" {
+  statement_id  = "AllowCloudFrontInvokeServer"
+  action        = "lambda:InvokeFunctionUrl"
+  function_name = module.server_function.function_name
+  principal     = "cloudfront.amazonaws.com"
+  source_arn    = module.cloudfront.distribution_arn
+}
+
+resource "aws_lambda_permission" "allow_cloudfront_image" {
+  statement_id  = "AllowCloudFrontInvokeImage"
+  action        = "lambda:InvokeFunctionUrl"
+  function_name = module.image_function.function_name
+  principal     = "cloudfront.amazonaws.com"
+  source_arn    = module.cloudfront.distribution_arn
 }
