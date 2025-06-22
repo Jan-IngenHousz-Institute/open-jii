@@ -414,8 +414,8 @@ module "opennext" {
   log_bucket     = module.logs_bucket.bucket_id
 
   # Secrets Manager Integration
-  db_credentials_secret_arn = module.aurora_db.master_user_secret_arn # Corrected: Use Aurora's secret ARN
-  oauth_secret_arn          = module.auth_secrets.secret_arn          # Corrected: Use auth_secrets ARN
+  db_credentials_secret_arn = module.aurora_db.master_user_secret_arn
+  oauth_secret_arn          = module.auth_secrets.secret_arn
 
   server_environment_variables = {
     DB_HOST             = module.aurora_db.cluster_endpoint
