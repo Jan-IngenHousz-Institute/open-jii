@@ -81,12 +81,8 @@
           "name": "accounts_userId_users_id_fk",
           "tableFrom": "accounts",
           "tableTo": "users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -140,12 +136,8 @@
           "name": "audit_logs_user_id_users_id_fk",
           "tableFrom": "audit_logs",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -215,12 +207,8 @@
           "name": "authenticators_userId_users_id_fk",
           "tableFrom": "authenticators",
           "tableTo": "users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -230,9 +218,7 @@
         "authenticators_credentialID_unique": {
           "name": "authenticators_credentialID_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "credentialID"
-          ]
+          "columns": ["credentialID"]
         }
       },
       "policies": {},
@@ -277,12 +263,8 @@
           "name": "experiment_members_experiment_id_experiments_id_fk",
           "tableFrom": "experiment_members",
           "tableTo": "experiments",
-          "columnsFrom": [
-            "experiment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["experiment_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -290,12 +272,8 @@
           "name": "experiment_members_user_id_users_id_fk",
           "tableFrom": "experiment_members",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -303,10 +281,7 @@
       "compositePrimaryKeys": {
         "experiment_members_experiment_id_user_id_pk": {
           "name": "experiment_members_experiment_id_user_id_pk",
-          "columns": [
-            "experiment_id",
-            "user_id"
-          ]
+          "columns": ["experiment_id", "user_id"]
         }
       },
       "uniqueConstraints": {},
@@ -387,12 +362,8 @@
           "name": "experiments_created_by_users_id_fk",
           "tableFrom": "experiments",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -402,9 +373,7 @@
         "experiments_name_unique": {
           "name": "experiments_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         }
       },
       "policies": {},
@@ -535,12 +504,8 @@
           "name": "profiles_user_id_users_id_fk",
           "tableFrom": "profiles",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -548,12 +513,8 @@
           "name": "profiles_organization_id_organizations_id_fk",
           "tableFrom": "profiles",
           "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -615,9 +576,7 @@
         "sensors_serial_number_unique": {
           "name": "sensors_serial_number_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "serial_number"
-          ]
+          "columns": ["serial_number"]
         }
       },
       "policies": {},
@@ -653,12 +612,8 @@
           "name": "sessions_userId_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -719,9 +674,7 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -764,10 +717,7 @@
     "public.experiment_members_role": {
       "name": "experiment_members_role",
       "schema": "public",
-      "values": [
-        "admin",
-        "member"
-      ]
+      "values": ["admin", "member"]
     },
     "public.experiment_status": {
       "name": "experiment_status",
@@ -784,10 +734,7 @@
     "public.experiment_visibility": {
       "name": "experiment_visibility",
       "schema": "public",
-      "values": [
-        "private",
-        "public"
-      ]
+      "values": ["private", "public"]
     },
     "public.organization_type": {
       "name": "organization_type",
