@@ -812,8 +812,6 @@ module "route53" {
     "web"  = "${var.environment}.${var.domain_name}"      # For the OpenNext frontend
   }
 
-  # Connect your services to your domain
-
   cloudfront_records = {
     # Root Domain Record
     "" = {
