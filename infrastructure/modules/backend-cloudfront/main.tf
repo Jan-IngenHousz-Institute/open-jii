@@ -17,9 +17,9 @@ resource "aws_cloudfront_distribution" "api_distribution" {
     custom_origin_config {
       http_port                = 80
       https_port               = 443
-      origin_protocol_policy   = "https-only" # Changed to HTTPS to match ALB security group rules
+      origin_protocol_policy   = "https-only"
       origin_ssl_protocols     = ["TLSv1.2"]
-      origin_read_timeout      = 60 # Increased timeout to handle potential long-running requests
+      origin_read_timeout      = 60
       origin_keepalive_timeout = 5
     }
 
