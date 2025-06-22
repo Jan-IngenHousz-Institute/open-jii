@@ -73,7 +73,6 @@ resource "aws_security_group" "alb_sg" {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    # cidr_blocks = data.aws_ip_ranges.cloudfront.cidr_blocks # CHANGED to use prefix list
     prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront_global.id]
   }
 
