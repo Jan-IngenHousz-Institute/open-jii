@@ -48,7 +48,7 @@ describe("UpdateExperimentUseCase", () => {
     };
 
     // Execute the update
-    const result = await useCase.execute(experiment.id, updateData);
+    const result = await useCase.execute(experiment.id, updateData, testUserId);
 
     // Verify result is success
     expect(result.isSuccess()).toBe(true);
@@ -82,7 +82,11 @@ describe("UpdateExperimentUseCase", () => {
       name: "Updated Name Only",
     };
 
-    const result = await useCase.execute(experiment.id, partialUpdate);
+    const result = await useCase.execute(
+      experiment.id,
+      partialUpdate,
+      testUserId,
+    );
 
     // Verify result is success
     expect(result.isSuccess()).toBe(true);
@@ -104,7 +108,7 @@ describe("UpdateExperimentUseCase", () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
     const updateData = { name: "Won't Update" };
 
-    const result = await useCase.execute(nonExistentId, updateData);
+    const result = await useCase.execute(nonExistentId, updateData, testUserId);
 
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);

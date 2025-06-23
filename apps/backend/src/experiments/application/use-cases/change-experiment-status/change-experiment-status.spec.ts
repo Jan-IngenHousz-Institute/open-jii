@@ -37,7 +37,7 @@ describe("ChangeExperimentStatusUseCase", () => {
     });
 
     // Change the status to 'active'
-    const result = await useCase.execute(experiment.id, "active");
+    const result = await useCase.execute(experiment.id, "active", testUserId);
 
     expect(result.isSuccess()).toBe(true);
 
@@ -56,7 +56,7 @@ describe("ChangeExperimentStatusUseCase", () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
 
     // Try to update a non-existent experiment
-    const result = await useCase.execute(nonExistentId, "active");
+    const result = await useCase.execute(nonExistentId, "active", testUserId);
 
     expect(result.isSuccess()).toBe(false);
     expect(result._tag).toBe("failure");
@@ -73,8 +73,12 @@ describe("ChangeExperimentStatusUseCase", () => {
       userId: testUserId,
     });
 
-    // @ts-expect-error - Testing invalid status
-    const result = await useCase.execute(experiment.id, "invalid_status");
+    const result = await useCase.execute(
+      experiment.id,
+      // @ts-expect-error - Testing invalid status
+      "invalid_status",
+      testUserId,
+    );
 
     expect(result.isSuccess()).toBe(false);
     expect(result._tag).toBe("failure");
@@ -93,28 +97,28 @@ describe("ChangeExperimentStatusUseCase", () => {
     });
 
     // Change to active
-    let result = await useCase.execute(experiment.id, "active");
+    let result = await useCase.execute(experiment.id, "active", testUserId);
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     let updatedExperiment = result.value;
     expect(updatedExperiment.status).toBe("active");
 
     // Change to archived
-    result = await useCase.execute(experiment.id, "archived");
+    result = await useCase.execute(experiment.id, "archived", testUserId);
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     updatedExperiment = result.value;
     expect(updatedExperiment.status).toBe("archived");
 
     // Change back to active
-    result = await useCase.execute(experiment.id, "active");
+    result = await useCase.execute(experiment.id, "active", testUserId);
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     updatedExperiment = result.value;
     expect(updatedExperiment.status).toBe("active");
 
     // Change back to provisioning
-    result = await useCase.execute(experiment.id, "provisioning");
+    result = await useCase.execute(experiment.id, "provisioning", testUserId);
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     updatedExperiment = result.value;

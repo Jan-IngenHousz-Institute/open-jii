@@ -41,7 +41,7 @@ describe("GetExperimentUseCase", () => {
     });
 
     // Act
-    const result = await useCase.execute(experiment.id);
+    const result = await useCase.execute(experiment.id, testUserId);
 
     // Assert result is success
     expect(result.isSuccess()).toBe(true);
@@ -65,7 +65,7 @@ describe("GetExperimentUseCase", () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
 
     // Act
-    const result = await useCase.execute(nonExistentId);
+    const result = await useCase.execute(nonExistentId, testUserId);
 
     // Assert result is failure
     expect(result.isSuccess()).toBe(false);
