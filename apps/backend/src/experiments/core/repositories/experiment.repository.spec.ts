@@ -311,6 +311,54 @@ describe("ExperimentRepository", () => {
       // This experiment should be filtered out because it's by another user
       expect(experiments.some((e) => e.id === otherActive.id)).toBe(false);
     });
+
+    it("should return all experiments when filter is unrecognized", async () => {
+      // Arrange
+      const { experiment: experiment1 } = await testApp.createExperiment({
+        name: "Experiment 1",
+        userId: testUserId,
+      });
+
+      const { experiment: experiment2 } = await testApp.createExperiment({
+        name: "Experiment 2",
+        userId: testUserId,
+      });
+
+      // Act - use an unrecognized filter
+      const result = await repository.findAll(testUserId, "invalid" as any);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+      expect(experiments.length).toBeGreaterThanOrEqual(2);
+      expect(experiments.some((e) => e.id === experiment1.id)).toBe(true);
+      expect(experiments.some((e) => e.id === experiment2.id)).toBe(true);
+    });
+
+    it("should return all experiments when no filter is provided", async () => {
+      // Arrange
+      const { experiment: experiment1 } = await testApp.createExperiment({
+        name: "No Filter Experiment 1",
+        userId: testUserId,
+      });
+
+      const { experiment: experiment2 } = await testApp.createExperiment({
+        name: "No Filter Experiment 2",
+        userId: testUserId,
+      });
+
+      // Act - no filter provided
+      const result = await repository.findAll(testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+      expect(experiments.length).toBeGreaterThanOrEqual(2);
+      expect(experiments.some((e) => e.id === experiment1.id)).toBe(true);
+      expect(experiments.some((e) => e.id === experiment2.id)).toBe(true);
+    });
   });
 
   describe("findOne", () => {
@@ -347,6 +395,36 @@ describe("ExperimentRepository", () => {
       // Assert
       expect(result.isSuccess()).toBe(true);
 
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+  });
+
+  describe("findByName", () => {
+    it("should find an experiment by name", async () => {
+      // Arrange
+      const { experiment } = await testApp.createExperiment({
+        name: "Unique Experiment Name",
+        userId: testUserId,
+      });
+
+      // Act
+      const result = await repository.findByName("Unique Experiment Name");
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).not.toBeNull();
+      expect(result.value?.id).toBe(experiment.id);
+      expect(result.value?.name).toBe("Unique Experiment Name");
+    });
+
+    it("should return null if experiment with name not found", async () => {
+      // Act
+      const result = await repository.findByName("Non-existent Experiment");
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toBeNull();
     });

@@ -115,4 +115,45 @@ describe("AddExperimentMembersUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("FORBIDDEN");
   });
+
+  it("should handle repository failure when adding members", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Repository Failure Test",
+      userId: testUserId,
+    });
+
+    // Create a member to add
+    const memberId = await testApp.createTestUser({
+      email: "repo-failure@example.com",
+    });
+
+    // Mock the repository to return a failure result
+    const repositoryAddMembersSpy = jest
+      .spyOn(useCase["experimentMemberRepository"], "addMembers")
+      .mockResolvedValueOnce({
+        isSuccess: () => false,
+        isFailure: () => true,
+        _tag: "failure",
+        error: { message: "Database error" },
+      } as any);
+
+    try {
+      const result = await useCase.execute(
+        experiment.id,
+        [{ userId: memberId, role: "member" }],
+        testUserId,
+      );
+
+      expect(result.isSuccess()).toBe(false);
+      expect(result._tag).toBe("failure");
+
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toBe("Failed to add experiment members");
+    } finally {
+      // Restore original method
+      repositoryAddMembersSpy.mockRestore();
+    }
+  });
 });
