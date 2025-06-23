@@ -3,17 +3,18 @@ import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
 
 import {
+  apiErrorMapper,
   AppError,
-  Failure,
-  Success,
   assertFailure,
   assertSuccess,
   defaultRepositoryErrorMapper,
   failure,
+  Failure,
   handleFailure,
   isFailure,
   isSuccess,
   success,
+  Success,
   tryCatch,
   validate,
 } from "./fp-utils";
@@ -490,6 +491,325 @@ describe("Functional Programming Utilities", () => {
       expect(mappedError.message).toBe("String error");
       expect(mappedError.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
       expect(mappedError.code).toBe("REPOSITORY_ERROR");
+    });
+
+    it("should map check constraint violations correctly", () => {
+      const error = new Error("check constraint violation");
+      const mappedError = defaultRepositoryErrorMapper(error);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(mappedError.message).toBe("Data validation failed");
+      expect(mappedError.code).toBe("REPOSITORY_ERROR");
+    });
+
+    it("should map name_not_empty check constraint violations", () => {
+      const error = new Error("check constraint name_not_empty violation");
+      const mappedError = defaultRepositoryErrorMapper(error);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(mappedError.message).toBe(
+        "Name cannot be empty or contain only whitespace",
+      );
+      expect(mappedError.code).toBe("REPOSITORY_ERROR");
+    });
+
+    it("should map null constraint violations correctly", () => {
+      const error = new Error(
+        'null value in column "name" violates not-null constraint',
+      );
+      const mappedError = defaultRepositoryErrorMapper(error);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(mappedError.message).toBe("name is required and cannot be null");
+      expect(mappedError.code).toBe("REPOSITORY_ERROR");
+    });
+
+    it("should map invalid UUID format errors correctly", () => {
+      const error = new Error("invalid input syntax for type uuid");
+      const mappedError = defaultRepositoryErrorMapper(error);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(mappedError.message).toBe("Invalid ID format provided");
+      expect(mappedError.code).toBe("REPOSITORY_ERROR");
+    });
+
+    it("should map experiments_name_unique constraint violations", () => {
+      const error = new Error(
+        "unique constraint experiments_name_unique violation",
+      );
+      const mappedError = defaultRepositoryErrorMapper(error);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(mappedError.message).toBe(
+        "An experiment with this name already exists",
+      );
+      expect(mappedError.code).toBe("REPOSITORY_DUPLICATE");
+    });
+
+    it("should map users_email_unique constraint violations", () => {
+      const error = new Error("unique constraint users_email_unique violation");
+      const mappedError = defaultRepositoryErrorMapper(error);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(mappedError.message).toBe("A user with this email already exists");
+      expect(mappedError.code).toBe("REPOSITORY_DUPLICATE");
+    });
+
+    it("should map created_by foreign key constraint violations", () => {
+      const error = new Error("foreign key constraint created_by violation");
+      const mappedError = defaultRepositoryErrorMapper(error);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(mappedError.message).toBe(
+        "The specified creator user ID does not exist",
+      );
+      expect(mappedError.code).toBe("REPOSITORY_ERROR");
+    });
+
+    it("should map users foreign key constraint violations", () => {
+      const error = new Error("foreign key constraint users violation");
+      const mappedError = defaultRepositoryErrorMapper(error);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(mappedError.message).toBe(
+        "One or more specified user IDs do not exist",
+      );
+      expect(mappedError.code).toBe("REPOSITORY_ERROR");
+    });
+
+    it("should include context in error messages when provided", () => {
+      const error = new Error("Some database error");
+      const mappedError = defaultRepositoryErrorMapper(error, "User creation");
+
+      expect(mappedError.message).toBe("User creation: Some database error");
+    });
+  });
+
+  describe("apiErrorMapper", () => {
+    it("should return the AppError if one is passed", () => {
+      const originalError = AppError.badRequest("Test error");
+      const mappedError = apiErrorMapper(originalError);
+
+      expect(mappedError).toBe(originalError);
+    });
+
+    it("should map Axios errors with status 400 to badRequest", () => {
+      const axiosError = {
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: { message: "Bad request from API" },
+        },
+        message: "Request failed",
+      };
+
+      const mappedError = apiErrorMapper(axiosError);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(mappedError.message).toBe("Bad request from API");
+      expect(mappedError.code).toBe("BAD_REQUEST");
+    });
+
+    it("should map Axios errors with status 401 to unauthorized", () => {
+      const axiosError = {
+        isAxiosError: true,
+        response: {
+          status: 401,
+          data: { error_description: "Unauthorized access" },
+        },
+        message: "Request failed",
+      };
+
+      const mappedError = apiErrorMapper(axiosError);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.UNAUTHORIZED);
+      expect(mappedError.message).toBe("Unauthorized access");
+      expect(mappedError.code).toBe("UNAUTHORIZED");
+    });
+
+    it("should map Axios errors with status 403 to forbidden", () => {
+      const axiosError = {
+        isAxiosError: true,
+        response: {
+          status: 403,
+        },
+        message: "Forbidden",
+      };
+
+      const mappedError = apiErrorMapper(axiosError);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.FORBIDDEN);
+      expect(mappedError.message).toBe("Forbidden");
+      expect(mappedError.code).toBe("FORBIDDEN");
+    });
+
+    it("should map Axios errors with status 404 to notFound", () => {
+      const axiosError = {
+        isAxiosError: true,
+        response: {
+          status: 404,
+        },
+        message: "Not found",
+      };
+
+      const mappedError = apiErrorMapper(axiosError);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.NOT_FOUND);
+      expect(mappedError.message).toBe("Not found");
+      expect(mappedError.code).toBe("NOT_FOUND");
+    });
+
+    it("should map Axios errors with status 429 to rate limit error", () => {
+      const axiosError = {
+        isAxiosError: true,
+        response: {
+          status: 429,
+        },
+        message: "Too many requests",
+      };
+
+      const mappedError = apiErrorMapper(axiosError);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(mappedError.message).toBe("Too many requests");
+      expect(mappedError.code).toBe("RATE_LIMIT_EXCEEDED");
+    });
+
+    it("should map Axios errors with status 500 to service unavailable", () => {
+      const axiosError = {
+        isAxiosError: true,
+        response: {
+          status: 500,
+        },
+        message: "Internal server error",
+      };
+
+      const mappedError = apiErrorMapper(axiosError);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
+      expect(mappedError.message).toBe("Internal server error");
+      expect(mappedError.code).toBe("SERVICE_UNAVAILABLE");
+    });
+
+    it("should map Axios errors with status 502 to service unavailable", () => {
+      const axiosError = {
+        isAxiosError: true,
+        response: {
+          status: 502,
+        },
+        message: "Bad gateway",
+      };
+
+      const mappedError = apiErrorMapper(axiosError);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
+      expect(mappedError.message).toBe("Bad gateway");
+      expect(mappedError.code).toBe("SERVICE_UNAVAILABLE");
+    });
+
+    it("should map Axios errors with status 503 to service unavailable", () => {
+      const axiosError = {
+        isAxiosError: true,
+        response: {
+          status: 503,
+        },
+        message: "Service unavailable",
+      };
+
+      const mappedError = apiErrorMapper(axiosError);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
+      expect(mappedError.message).toBe("Service unavailable");
+      expect(mappedError.code).toBe("SERVICE_UNAVAILABLE");
+    });
+
+    it("should map Axios errors with status 504 to service unavailable", () => {
+      const axiosError = {
+        isAxiosError: true,
+        response: {
+          status: 504,
+        },
+        message: "Gateway timeout",
+      };
+
+      const mappedError = apiErrorMapper(axiosError);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
+      expect(mappedError.message).toBe("Gateway timeout");
+      expect(mappedError.code).toBe("SERVICE_UNAVAILABLE");
+    });
+
+    it("should map Axios errors with unknown status to internal error", () => {
+      const axiosError = {
+        isAxiosError: true,
+        response: {
+          status: 418, // I'm a teapot
+        },
+        message: "Unknown error",
+      };
+
+      const mappedError = apiErrorMapper(axiosError);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
+      expect(mappedError.message).toBe("Unknown error");
+      expect(mappedError.code).toBe("INTERNAL_ERROR");
+    });
+
+    it("should handle Axios errors without response data", () => {
+      const axiosError = {
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: null,
+        },
+        message: "Network error",
+      };
+
+      const mappedError = apiErrorMapper(axiosError);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(mappedError.message).toBe("Network error");
+      expect(mappedError.code).toBe("BAD_REQUEST");
+    });
+
+    it("should add context to error messages when provided", () => {
+      const axiosError = {
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: { message: "Bad request" },
+        },
+        message: "Request failed",
+      };
+
+      const mappedError = apiErrorMapper(axiosError, "Databricks API");
+
+      expect(mappedError.message).toBe("Databricks API: Bad request");
+    });
+
+    it("should handle generic Error objects", () => {
+      const error = new Error("Generic error");
+      const mappedError = apiErrorMapper(error);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
+      expect(mappedError.message).toBe("Generic error");
+      expect(mappedError.code).toBe("INTERNAL_ERROR");
+    });
+
+    it("should handle non-Error objects", () => {
+      const error = "String error";
+      const mappedError = apiErrorMapper(error);
+
+      expect(mappedError.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
+      expect(mappedError.message).toBe("String error");
+      expect(mappedError.code).toBe("INTERNAL_ERROR");
+    });
+
+    it("should handle context with generic errors", () => {
+      const error = new Error("Generic error");
+      const mappedError = apiErrorMapper(error, "External API");
+
+      expect(mappedError.message).toBe("External API: Generic error");
     });
   });
 
