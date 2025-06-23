@@ -7,7 +7,6 @@ import type { DatabaseInstance } from "@repo/database";
 import {
   Result,
   tryCatch,
-  AppError,
   defaultRepositoryErrorMapper,
 } from "../../../common/utils/fp-utils";
 import { ExperimentMemberRole } from "../models/experiment-members.model";
@@ -28,14 +27,17 @@ export class ExperimentRepository {
     createExperimentDto: CreateExperimentDto,
     userId: string,
   ): Promise<Result<ExperimentDto[]>> {
-    return tryCatch(() =>
-      this.database
-        .insert(experiments)
-        .values({
-          ...createExperimentDto,
-          createdBy: userId,
-        })
-        .returning(),
+    return tryCatch(
+      () =>
+        this.database
+          .insert(experiments)
+          .values({
+            ...createExperimentDto,
+            createdBy: userId,
+          })
+          .returning(),
+      defaultRepositoryErrorMapper,
+      "ExperimentRepository.create",
     );
   }
 
@@ -58,72 +60,76 @@ export class ExperimentRepository {
       updatedAt: experiments.updatedAt,
     };
 
-    return tryCatch(() => {
-      // Start with a base query builder
-      const query = this.database.select(experimentFields).from(experiments);
+    return tryCatch(
+      () => {
+        // Start with a base query builder
+        const query = this.database.select(experimentFields).from(experiments);
 
-      // Apply filter and status conditions without nested conditionals
-      if (filter === "my") {
-        if (status) {
-          return query.where(
-            and(
-              eq(experiments.createdBy, userId),
-              eq(experiments.status, status),
-            ),
-          );
-        }
-        return query.where(eq(experiments.createdBy, userId));
-      }
-
-      if (filter === "member") {
-        const joinedQuery = query.innerJoin(
-          experimentMembers,
-          eq(experiments.id, experimentMembers.experimentId),
-        );
-
-        if (status) {
-          return joinedQuery.where(
-            and(
-              eq(experimentMembers.userId, userId),
-              eq(experiments.status, status),
-            ),
-          );
-        }
-        return joinedQuery.where(eq(experimentMembers.userId, userId));
-      }
-
-      if (filter === "related") {
-        const joinedQuery = query.leftJoin(
-          experimentMembers,
-          eq(experiments.id, experimentMembers.experimentId),
-        );
-
-        if (status) {
-          return joinedQuery.where(
-            and(
-              or(
+        // Apply filter and status conditions without nested conditionals
+        if (filter === "my") {
+          if (status) {
+            return query.where(
+              and(
                 eq(experiments.createdBy, userId),
-                eq(experimentMembers.userId, userId),
+                eq(experiments.status, status),
               ),
-              eq(experiments.status, status),
+            );
+          }
+          return query.where(eq(experiments.createdBy, userId));
+        }
+
+        if (filter === "member") {
+          const joinedQuery = query.innerJoin(
+            experimentMembers,
+            eq(experiments.id, experimentMembers.experimentId),
+          );
+
+          if (status) {
+            return joinedQuery.where(
+              and(
+                eq(experimentMembers.userId, userId),
+                eq(experiments.status, status),
+              ),
+            );
+          }
+          return joinedQuery.where(eq(experimentMembers.userId, userId));
+        }
+
+        if (filter === "related") {
+          const joinedQuery = query.leftJoin(
+            experimentMembers,
+            eq(experiments.id, experimentMembers.experimentId),
+          );
+
+          if (status) {
+            return joinedQuery.where(
+              and(
+                or(
+                  eq(experiments.createdBy, userId),
+                  eq(experimentMembers.userId, userId),
+                ),
+                eq(experiments.status, status),
+              ),
+            );
+          }
+          return joinedQuery.where(
+            or(
+              eq(experiments.createdBy, userId),
+              eq(experimentMembers.userId, userId),
             ),
           );
         }
-        return joinedQuery.where(
-          or(
-            eq(experiments.createdBy, userId),
-            eq(experimentMembers.userId, userId),
-          ),
-        );
-      }
 
-      // Default cases (no filter or unrecognized filter)
-      if (status) {
-        return query.where(eq(experiments.status, status));
-      }
+        // Default cases (no filter or unrecognized filter)
+        if (status) {
+          return query.where(eq(experiments.status, status));
+        }
 
-      return query;
-    });
+        return query;
+      },
+      defaultRepositoryErrorMapper,
+      "ExperimentRepository.findAll",
+    );
   }
 
   async findOne(id: string): Promise<Result<ExperimentDto | null>> {
@@ -274,73 +280,8 @@ export class ExperimentRepository {
           return experiment;
         });
       },
-      (error: unknown) => {
-        // Enhanced error mapping for createWithMembers
-        if (error instanceof Error) {
-          const message = error.message.toLowerCase();
-
-          // Handle specific database constraint violations with better messages
-          if (message.includes("experiments_name_unique")) {
-            return AppError.badRequest(
-              `An experiment with the name "${createExperimentDto.name}" already exists`,
-              "REPOSITORY_DUPLICATE",
-              error,
-            );
-          }
-
-          if (message.includes("name_not_empty")) {
-            return AppError.badRequest(
-              "Experiment name cannot be empty or contain only whitespace",
-              "REPOSITORY_ERROR",
-              error,
-            );
-          }
-
-          if (
-            message.includes("foreign key constraint") &&
-            message.includes("users")
-          ) {
-            return AppError.badRequest(
-              "One or more specified user IDs do not exist",
-              "REPOSITORY_ERROR",
-              error,
-            );
-          }
-
-          if (
-            message.includes("foreign key constraint") &&
-            message.includes("created_by")
-          ) {
-            return AppError.badRequest(
-              "The specified creator user ID does not exist",
-              "REPOSITORY_ERROR",
-              error,
-            );
-          }
-
-          if (message.includes("null value in column")) {
-            const nullColumnRegex = /null value in column "([^"]+)"/;
-            const columnMatch = nullColumnRegex.exec(message);
-            const column = columnMatch ? columnMatch[1] : "required field";
-            return AppError.badRequest(
-              `${column} is required and cannot be null`,
-              "REPOSITORY_ERROR",
-              error,
-            );
-          }
-
-          if (message.includes("invalid input syntax for type uuid")) {
-            return AppError.badRequest(
-              "Invalid user ID format provided",
-              "REPOSITORY_ERROR",
-              error,
-            );
-          }
-        }
-
-        // Fall back to default error mapping
-        return defaultRepositoryErrorMapper(error);
-      },
+      defaultRepositoryErrorMapper,
+      "ExperimentRepository.createWithMembers",
     );
   }
 }

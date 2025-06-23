@@ -908,7 +908,7 @@ describe("ExperimentRepository", () => {
 
       if (result._tag === "failure") {
         expect(result.error.code).toBe("REPOSITORY_ERROR");
-        expect(result.error.message).toContain("name");
+        expect(result.error.message).toContain("Name cannot be empty");
       }
     });
 
@@ -934,7 +934,7 @@ describe("ExperimentRepository", () => {
 
       if (result._tag === "failure") {
         expect(result.error.code).toBe("REPOSITORY_ERROR");
-        expect(result.error.message).toContain("name");
+        expect(result.error.message).toContain("Name cannot be empty");
       }
     });
 

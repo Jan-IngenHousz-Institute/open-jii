@@ -19,6 +19,24 @@ import {
 } from "./fp-utils";
 
 describe("Functional Programming Utilities", () => {
+  describe("defaultRepositoryErrorMapper", () => {
+    it('should map "foreign key" errors correctly', () => {
+      const error = new Error("foreign key constraint failed");
+      const mappedError = defaultRepositoryErrorMapper(error, "test context");
+
+      expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
+      expect(mappedError.code).toBe("REPOSITORY_ERROR");
+    });
+
+    it('should map "reference" errors correctly', () => {
+      const error = new Error("reference not found");
+      const mappedError = defaultRepositoryErrorMapper(error, "test context");
+
+      expect(mappedError.statusCode).toBe(StatusCodes.NOT_FOUND);
+      expect(mappedError.code).toBe("REPOSITORY_NOT_FOUND");
+    });
+  });
+
   describe("Result Type", () => {
     describe("Success", () => {
       const successResult = success("test value");
@@ -380,7 +398,7 @@ describe("Functional Programming Utilities", () => {
       const result = await tryCatch(fn, customMapper);
 
       expect(result.isFailure()).toBe(true);
-      expect(customMapper).toHaveBeenCalledWith(error);
+      expect(customMapper).toHaveBeenCalledWith(error, undefined);
       expect((result as Failure<AppError>).error.message).toBe("Custom error");
     });
   });
@@ -437,8 +455,8 @@ describe("Functional Programming Utilities", () => {
       const error = new Error("user already exists");
       const mappedError = defaultRepositoryErrorMapper(error);
 
-      expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
-      expect(mappedError.code).toBe("REPOSITORY_DUPLICATE");
+      expect(mappedError.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
+      expect(mappedError.code).toBe("REPOSITORY_ERROR");
     });
 
     it('should map "foreign key" errors correctly', () => {
@@ -446,15 +464,15 @@ describe("Functional Programming Utilities", () => {
       const mappedError = defaultRepositoryErrorMapper(error);
 
       expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
-      expect(mappedError.code).toBe("REPOSITORY_REFERENCE");
+      expect(mappedError.code).toBe("REPOSITORY_ERROR");
     });
 
     it('should map "reference" errors correctly', () => {
       const error = new Error("reference integrity constraint violation");
       const mappedError = defaultRepositoryErrorMapper(error);
 
-      expect(mappedError.statusCode).toBe(StatusCodes.BAD_REQUEST);
-      expect(mappedError.code).toBe("REPOSITORY_REFERENCE");
+      expect(mappedError.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
+      expect(mappedError.code).toBe("REPOSITORY_ERROR");
     });
 
     it("should map unknown errors to repository errors", () => {

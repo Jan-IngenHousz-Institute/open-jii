@@ -251,51 +251,141 @@ export function handleFailure(failure: Failure<AppError>, logger: Logger) {
  */
 export async function tryCatch<T>(
   fn: () => Promise<T> | T,
-  errorMapper: (error: unknown) => AppError = defaultRepositoryErrorMapper,
+  errorMapper: (
+    error: unknown,
+    context?: string,
+  ) => AppError = defaultRepositoryErrorMapper,
+  context?: string,
 ): Promise<Result<T>> {
   try {
     const result = await fn();
     return success(result);
   } catch (error) {
-    return failure(errorMapper(error));
+    return failure(errorMapper(error, context));
   }
 }
 
 /**
  * Default error mapper for repository operations
  */
-export function defaultRepositoryErrorMapper(error: unknown): AppError {
+export function defaultRepositoryErrorMapper(
+  error: unknown,
+  context?: string,
+): AppError {
   if (error instanceof AppError) {
     return error;
   }
 
   const message = error instanceof Error ? error.message : String(error);
+  const lowerMessage = message.toLowerCase();
+  const contextPrefix = context ? `${context}: ` : "";
 
-  // Check for common database error patterns
+  // Handle specific constraint violations with better messages
   if (
-    message.toLowerCase().includes("not found") ||
-    message.toLowerCase().includes("no rows") ||
-    message.toLowerCase().includes("does not exist")
+    lowerMessage.includes("unique constraint") ||
+    lowerMessage.includes("duplicate")
   ) {
-    return AppError.notFound(message, "REPOSITORY_NOT_FOUND");
+    // Extract table and column info if available
+    if (lowerMessage.includes("experiments_name_unique")) {
+      return AppError.badRequest(
+        `${contextPrefix}An experiment with this name already exists`,
+        "REPOSITORY_DUPLICATE",
+        error,
+      );
+    }
+    if (lowerMessage.includes("users_email_unique")) {
+      return AppError.badRequest(
+        `${contextPrefix}A user with this email already exists`,
+        "REPOSITORY_DUPLICATE",
+        error,
+      );
+    }
+    return AppError.badRequest(
+      `${contextPrefix}A record with these values already exists`,
+      "REPOSITORY_DUPLICATE",
+      error,
+    );
   }
 
-  if (
-    message.toLowerCase().includes("duplicate") ||
-    message.toLowerCase().includes("unique constraint") ||
-    message.toLowerCase().includes("already exists")
-  ) {
-    return AppError.badRequest(message, "REPOSITORY_DUPLICATE");
+  // Handle check constraint violations
+  if (lowerMessage.includes("check constraint")) {
+    if (lowerMessage.includes("name_not_empty")) {
+      return AppError.badRequest(
+        `${contextPrefix}Name cannot be empty or contain only whitespace`,
+        "REPOSITORY_ERROR",
+        error,
+      );
+    }
+    return AppError.badRequest(
+      `${contextPrefix}Data validation failed`,
+      "REPOSITORY_ERROR",
+      error,
+    );
   }
 
-  if (
-    message.toLowerCase().includes("foreign key") ||
-    message.toLowerCase().includes("reference")
-  ) {
-    return AppError.badRequest(message, "REPOSITORY_REFERENCE");
+  // Handle foreign key constraint violations
+  if (lowerMessage.includes("foreign key")) {
+    if (lowerMessage.includes("users")) {
+      return AppError.badRequest(
+        `${contextPrefix}One or more specified user IDs do not exist`,
+        "REPOSITORY_ERROR",
+        error,
+      );
+    }
+    if (lowerMessage.includes("created_by")) {
+      return AppError.badRequest(
+        `${contextPrefix}The specified creator user ID does not exist`,
+        "REPOSITORY_ERROR",
+        error,
+      );
+    }
+    return AppError.badRequest(
+      `${contextPrefix}Referenced record does not exist`,
+      "REPOSITORY_ERROR",
+      error,
+    );
   }
 
-  return AppError.repositoryError(message);
+  // Handle null constraint violations
+  if (lowerMessage.includes("null value in column")) {
+    const nullColumnRegex = /null value in column "([^"]+)"/;
+    const columnMatch = nullColumnRegex.exec(lowerMessage);
+    const column = columnMatch ? columnMatch[1] : "required field";
+    return AppError.badRequest(
+      `${contextPrefix}${column} is required and cannot be null`,
+      "REPOSITORY_ERROR",
+      error,
+    );
+  }
+
+  // Handle invalid UUID format
+  if (lowerMessage.includes("invalid input syntax for type uuid")) {
+    return AppError.badRequest(
+      `${contextPrefix}Invalid ID format provided`,
+      "REPOSITORY_ERROR",
+      error,
+    );
+  }
+
+  // Handle not found cases
+  if (
+    lowerMessage.includes("not found") ||
+    lowerMessage.includes("no rows") ||
+    lowerMessage.includes("does not exist")
+  ) {
+    return AppError.notFound(
+      `${contextPrefix}${message}`,
+      "REPOSITORY_NOT_FOUND",
+      error,
+    );
+  }
+
+  // Generic repository error
+  return AppError.repositoryError(
+    `${contextPrefix}${message}`,
+    "REPOSITORY_ERROR",
+    error,
+  );
 }
 
 /**
