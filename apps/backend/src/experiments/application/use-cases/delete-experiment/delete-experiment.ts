@@ -10,35 +10,61 @@ export class DeleteExperimentUseCase {
 
   constructor(private readonly experimentRepository: ExperimentRepository) {}
 
-  async execute(id: string): Promise<Result<void>> {
-    this.logger.log(`Deleting experiment with ID ${id}`);
+  async execute(id: string, currentUserId: string): Promise<Result<void>> {
+    this.logger.log(
+      `Deleting experiment with ID ${id} by user ${currentUserId}`,
+    );
 
-    // Check if experiment exists
-    const experimentResult = await this.experimentRepository.findOne(id);
+    // Check if the experiment exists and if the user is an admin
+    const accessCheckResult = await this.experimentRepository.checkAccess(
+      id,
+      currentUserId,
+    );
 
-    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
-      if (!experiment) {
-        this.logger.warn(
-          `Attempt to delete non-existent experiment with ID ${id}`,
+    return accessCheckResult.chain(
+      async ({
+        experiment,
+        isAdmin,
+      }: {
+        experiment: ExperimentDto | null;
+        isAdmin: boolean;
+      }) => {
+        if (!experiment) {
+          this.logger.warn(
+            `Attempt to delete non-existent experiment with ID ${id}`,
+          );
+          return failure(
+            AppError.notFound(`Experiment with ID ${id} not found`),
+          );
+        }
+
+        if (!isAdmin) {
+          this.logger.warn(
+            `User ${currentUserId} is not admin for experiment ${id}`,
+          );
+          return failure(
+            AppError.forbidden("Only admins can delete experiments"),
+          );
+        }
+
+        this.logger.debug(
+          `Deleting experiment "${experiment.name}" (ID: ${id})`,
         );
-        return failure(AppError.notFound(`Experiment with ID ${id} not found`));
-      }
+        // Delete the experiment
+        const deleteResult = await this.experimentRepository.delete(id);
 
-      this.logger.debug(`Deleting experiment "${experiment.name}" (ID: ${id})`);
-      // Delete the experiment
-      const deleteResult = await this.experimentRepository.delete(id);
+        if (deleteResult.isSuccess()) {
+          this.logger.log(
+            `Successfully deleted experiment "${experiment.name}" (ID: ${id})`,
+          );
+        } else {
+          this.logger.error(
+            `Failed to delete experiment "${experiment.name}" (ID: ${id})`,
+          );
+        }
 
-      if (deleteResult.isSuccess()) {
-        this.logger.log(
-          `Successfully deleted experiment "${experiment.name}" (ID: ${id})`,
-        );
-      } else {
-        this.logger.error(
-          `Failed to delete experiment "${experiment.name}" (ID: ${id})`,
-        );
-      }
-
-      return deleteResult;
-    });
+        return deleteResult;
+      },
+    );
   }
 }
