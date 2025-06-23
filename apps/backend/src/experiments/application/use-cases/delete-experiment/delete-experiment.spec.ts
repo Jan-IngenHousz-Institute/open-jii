@@ -60,4 +60,53 @@ describe("DeleteExperimentUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
   });
+
+  it("should return FORBIDDEN error when user is not admin", async () => {
+    // Create an experiment with the test user as owner
+    const { experiment } = await testApp.createExperiment({
+      name: "Admin Only Delete Test",
+      userId: testUserId,
+    });
+
+    // Create another user who is not an admin
+    const nonAdminUserId = await testApp.createTestUser({});
+
+    // Try to delete as non-admin user
+    const result = await useCase.execute(experiment.id, nonAdminUserId);
+
+    expect(result.isSuccess()).toBe(false);
+    expect(result._tag).toBe("failure");
+
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+    expect(result.error.message).toBe("Only admins can delete experiments");
+  });
+
+  it("should handle repository deletion failure", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Delete Failure Test",
+      userId: testUserId,
+    });
+
+    // Mock the repository to return a failure result
+    const repositoryDeleteSpy = jest
+      .spyOn(useCase["experimentRepository"], "delete")
+      .mockResolvedValueOnce({
+        isSuccess: () => false,
+        isFailure: () => true,
+        _tag: "failure",
+        error: { message: "Database error" },
+      } as any);
+
+    try {
+      const result = await useCase.execute(experiment.id, testUserId);
+
+      expect(result.isSuccess()).toBe(false);
+      expect(result._tag).toBe("failure");
+    } finally {
+      // Restore original method
+      repositoryDeleteSpy.mockRestore();
+    }
+  });
 });

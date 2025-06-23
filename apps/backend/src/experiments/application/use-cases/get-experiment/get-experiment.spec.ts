@@ -75,4 +75,27 @@ describe("GetExperimentUseCase", () => {
       `Experiment with ID ${nonExistentId} not found`,
     );
   });
+
+  it("should return FORBIDDEN error when user does not have access", async () => {
+    // Create an experiment with the test user as owner
+    const { experiment } = await testApp.createExperiment({
+      name: "Access Denied Test",
+      userId: testUserId,
+    });
+
+    // Create another user who doesn't have access
+    const unauthorizedUserId = await testApp.createTestUser({});
+
+    // Try to get experiment as unauthorized user
+    const result = await useCase.execute(experiment.id, unauthorizedUserId);
+
+    expect(result.isSuccess()).toBe(false);
+    expect(result._tag).toBe("failure");
+
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+    expect(result.error.message).toBe(
+      "You do not have access to this experiment",
+    );
+  });
 });

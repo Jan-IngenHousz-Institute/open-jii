@@ -124,4 +124,63 @@ describe("ChangeExperimentStatusUseCase", () => {
     updatedExperiment = result.value;
     expect(updatedExperiment.status).toBe("provisioning");
   });
+
+  it("should return FORBIDDEN error when user is not admin", async () => {
+    // Create an experiment with the test user as owner
+    const { experiment } = await testApp.createExperiment({
+      name: "Admin Only Test",
+      userId: testUserId,
+    });
+
+    // Create another user who is not an admin
+    const nonAdminUserId = await testApp.createTestUser({});
+
+    // Try to change status as non-admin user
+    const result = await useCase.execute(
+      experiment.id,
+      "active",
+      nonAdminUserId,
+    );
+
+    expect(result.isSuccess()).toBe(false);
+    expect(result._tag).toBe("failure");
+
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+    expect(result.error.message).toBe(
+      "Only admins can change experiment status",
+    );
+  });
+
+  it("should return INTERNAL_ERROR when repository update fails", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Update Failure Test",
+      userId: testUserId,
+    });
+
+    // Create a spy on the use case's repository dependency
+    const repositoryUpdateSpy = jest
+      .spyOn(useCase["experimentRepository"], "update")
+      .mockResolvedValueOnce({
+        isSuccess: () => true,
+        chain: (fn: any) => fn([]), // Return empty array to simulate failure
+      } as any);
+
+    try {
+      const result = await useCase.execute(experiment.id, "active", testUserId);
+
+      expect(result.isSuccess()).toBe(false);
+      expect(result._tag).toBe("failure");
+
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toBe(
+        `Failed to update status for experiment ${experiment.id}`,
+      );
+    } finally {
+      // Restore original method
+      repositoryUpdateSpy.mockRestore();
+    }
+  });
 });

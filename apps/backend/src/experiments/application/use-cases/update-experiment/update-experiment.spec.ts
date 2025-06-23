@@ -117,4 +117,67 @@ describe("UpdateExperimentUseCase", () => {
       `Experiment with ID ${nonExistentId} not found`,
     );
   });
+
+  it("should return FORBIDDEN error when user is not admin", async () => {
+    // Create an experiment with the test user as owner
+    const { experiment } = await testApp.createExperiment({
+      name: "Admin Only Update Test",
+      userId: testUserId,
+    });
+
+    // Create another user who is not an admin
+    const nonAdminUserId = await testApp.createTestUser({});
+
+    // Try to update as non-admin user
+    const updateData = { name: "Unauthorized Update" };
+    const result = await useCase.execute(
+      experiment.id,
+      updateData,
+      nonAdminUserId,
+    );
+
+    expect(result.isSuccess()).toBe(false);
+    expect(result._tag).toBe("failure");
+
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+    expect(result.error.message).toBe("Only admins can update experiments");
+  });
+
+  it("should return INTERNAL_ERROR when repository update fails", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Update Failure Test",
+      userId: testUserId,
+    });
+
+    // Mock the repository to return empty array (simulating update failure)
+    const repositoryUpdateSpy = jest
+      .spyOn(useCase["experimentRepository"], "update")
+      .mockResolvedValueOnce({
+        isSuccess: () => true,
+        chain: (fn: any) => fn([]), // Return empty array to simulate failure
+      } as any);
+
+    try {
+      const updateData = { name: "Failed Update" };
+      const result = await useCase.execute(
+        experiment.id,
+        updateData,
+        testUserId,
+      );
+
+      expect(result.isSuccess()).toBe(false);
+      expect(result._tag).toBe("failure");
+
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toBe(
+        `Failed to update experiment ${experiment.id}`,
+      );
+    } finally {
+      // Restore original method
+      repositoryUpdateSpy.mockRestore();
+    }
+  });
 });
