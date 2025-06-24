@@ -4,10 +4,10 @@ import { useAsync } from "react-async-hook";
 import { FlatList, Text, TouchableOpacity, View } from "react-native";
 import type { BluetoothStackParamList } from "~/navigation/bluetooth-stack-navigator";
 
-import { BigActionButton } from "../../components/big-action-button";
-import { ErrorView } from "../../components/error-view";
-import { LargeSpinner } from "../../components/large-spinner";
-import { getBluetoothClassicDevices } from "../../services/multispeq-communication/android-bluetooth-connection/get-bluetooth-classic-devices";
+import { BigActionButton } from "../../../components/big-action-button";
+import { ErrorView } from "../../../components/error-view";
+import { LargeSpinner } from "../../../components/large-spinner";
+import { getBluetoothClassicDevices } from "../../../services/multispeq-communication/android-bluetooth-connection/get-bluetooth-classic-devices";
 import { compareBluetoothDevices } from "./utils/compare-bluetooth-devices";
 
 export function BluetoothDevicesListScreen() {

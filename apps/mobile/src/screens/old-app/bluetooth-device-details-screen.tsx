@@ -4,7 +4,7 @@ import { connectWithBluetoothDevice } from "~/services/multispeq-communication/a
 import { MultispeqCommandExecutor } from "~/services/multispeq-communication/multispeq-command-executor";
 import { MultispeqMeasurementWidget } from "~/widgets/multispeq-measurement-widget";
 
-import multispeqButtonImage from "../../assets/multispeq2-button.png";
+import multispeqButtonImage from "../../../assets/multispeq2-button.png";
 
 interface BluetoothDeviceDetailsScreenProps {
   route: {

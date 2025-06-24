@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useAsync } from "react-async-hook";
 import { BleStackParamList } from "~/navigation/ble-stack-navigator";
 
-import { ErrorView } from "../../components/error-view";
-import { startDeviceScan } from "../../services/bluetooth-ble/start-ble-devices-scan";
+import { ErrorView } from "../../../components/error-view";
+import { startDeviceScan } from "../../../services/bluetooth-ble/start-ble-devices-scan";
 import { DevicesListView } from "./components/item-card/components/devices-list-view";
 import type { BluetoothDevice } from "./utils/bluetooth-device";
 import { orderDevices } from "./utils/order-devices";

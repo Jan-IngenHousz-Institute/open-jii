@@ -3,8 +3,8 @@ import { openSerialPortConnection } from "~/services/multispeq-communication/and
 import { serialPortToMultispeqStream } from "~/services/multispeq-communication/android-serial-port-connection/serial-port-to-multispeq-stream";
 import { MultispeqMeasurementWidget } from "~/widgets/multispeq-measurement-widget";
 
-import multispeqMicroUsbImage from "../../assets/multispeq2-microusb.png";
-import { MultispeqCommandExecutor } from "../services/multispeq-communication/multispeq-command-executor";
+import multispeqMicroUsbImage from "../../../assets/multispeq2-microusb.png";
+import { MultispeqCommandExecutor } from "../../services/multispeq-communication/multispeq-command-executor";
 
 export function SerialPortConnectionScreen() {
   return (

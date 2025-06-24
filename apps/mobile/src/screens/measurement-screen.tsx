@@ -1,15 +1,15 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Bluetooth, Usb, Radio, AlertTriangle, ArrowLeft } from "lucide-react-native";
-import React, { useState, useEffect } from "react";
+import { AlertTriangle, ArrowLeft, Bluetooth, Radio, Usb } from "lucide-react-native";
+import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Platform,
-  FlatList,
-  TouchableOpacity,
   Dimensions,
+  FlatList,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useExperimentsDropdownOptions } from "~/api/hooks/use-experiments-dropdown-options";
 import { Button } from "~/components/Button";
@@ -19,36 +19,12 @@ import { MeasurementResult } from "~/components/MeasurementResult";
 import { Toast } from "~/components/Toast";
 import { colors } from "~/constants/colors";
 import { useTheme } from "~/hooks/useTheme";
-
-const mockProtocols = [
-  {
-    label: "Standard Protocol",
-    value: "standard",
-    description: "Basic measurement protocol",
-  },
-  {
-    label: "Extended Protocol",
-    value: "extended",
-    description: "Detailed measurement with additional parameters",
-  },
-  {
-    label: "Quick Scan",
-    value: "quick",
-    description: "Rapid measurement with minimal parameters",
-  },
-];
-
-// Mock discovered devices
-const mockDevices = [
-  { id: "dev1", name: "MultiSpeq v2.0", rssi: -65, type: "bluetooth" },
-  { id: "dev2", name: "MultiSpeq v2.1", rssi: -72, type: "bluetooth" },
-  { id: "dev3", name: "USB Serial Device", rssi: null, type: "usb" },
-  { id: "dev4", name: "BLE Device", rssi: -58, type: "ble" },
-];
+import { mockDevices } from "~/mocks/mock-devices";
+import { mockProtocols } from "~/mocks/mock-protocols";
 
 const { height } = Dimensions.get("window");
 
-export default function MeasurementScreen() {
+export function MeasurementScreen() {
   const theme = useTheme();
   const { colors } = theme;
   const { options } = useExperimentsDropdownOptions();

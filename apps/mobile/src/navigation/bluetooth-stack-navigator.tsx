@@ -1,9 +1,9 @@
 import type { ParamListBase } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BluetoothDevicesListScreen } from "~/screens/old-app/bluetooth-devices-list-screen/bluetooth-devices-list-screen";
 
-import { BluetoothDeviceDetailsScreen } from "../screens/bluetooth-device-details-screen";
-import { BluetoothDevicesListScreen } from "../screens/bluetooth-devices-list-screen/bluetooth-devices-list-screen";
+import { BluetoothDeviceDetailsScreen } from "../screens/old-app/bluetooth-device-details-screen";
 
 export interface BluetoothStackParamList extends ParamListBase {
   DeviceList: undefined;

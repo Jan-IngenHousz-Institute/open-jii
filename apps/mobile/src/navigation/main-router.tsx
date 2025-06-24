@@ -5,8 +5,8 @@ import { StatusBar } from "expo-status-bar";
 import { Platform } from "react-native";
 import { ToastProvider } from "~/components/toast-provider";
 import { BleStackNavigator } from "~/navigation/ble-stack-navigator";
-import { HomeScreen } from "~/screens/home-screen";
-import { SerialPortConnectionScreen } from "~/screens/serial-port-connection-screen";
+import { HomeScreen } from "~/screens/old-app/home-screen";
+import { SerialPortConnectionScreen } from "~/screens/old-app/serial-port-connection-screen";
 
 import { BluetoothStackNavigator } from "./bluetooth-stack-navigator";
 
