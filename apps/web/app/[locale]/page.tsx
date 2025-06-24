@@ -3,8 +3,6 @@ import { UnifiedNavbar } from "@/components/unified-navbar";
 import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
-import { AuthShowcase } from "../_components/auth-showcase";
-
 interface HomePageProps {
   params: Promise<{ locale: Locale }>;
 }
