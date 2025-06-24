@@ -27,6 +27,7 @@
     "db:migrate": "turbo db:migrate",
     "db:generate": "turbo --filter database db:generate",
     "db:studio": "turbo --filter database db:studio",
+    "db:setup": "turbo db:setup",
     "postinstall": "pnpm lint:ws",
     "typecheck": "turbo run typecheck",
     "ui-add": "turbo run ui-add",

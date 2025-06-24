@@ -4,6 +4,7 @@ import { TranslationsProvider } from "@/components/translations-provider";
 import type { Metadata, Viewport } from "next";
 import { Urbanist } from "next/font/google";
 import { draftMode } from "next/headers";
+import { env } from "~/env";
 
 import { ContentfulPreviewProvider } from "@repo/cms/contentful";
 import { dir } from "@repo/i18n";
@@ -13,9 +14,7 @@ import initTranslations from "@repo/i18n/server";
 
 export function generateMetadata(): Metadata {
   return {
-    metadataBase: new URL(
-      process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000",
-    ),
+    metadataBase: new URL(env.NEXT_PUBLIC_BASE_URL),
     twitter: {
       card: "summary_large_image",
     },

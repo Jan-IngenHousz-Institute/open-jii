@@ -1,6 +1,7 @@
 import { cookies, draftMode } from "next/headers";
 import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
+import { env } from "~/env";
 
 interface VercelJwt {
   bypass: string;
@@ -115,7 +116,7 @@ export async function GET(request: NextRequest): Promise<Response | void> {
     contentfulPreviewSecret: contentfulPreviewSecretFromQuery,
   } = parseRequestUrl(request.url);
   // if we're in development, we don't need to check, we can just enable draft mode
-  if (process.env.NODE_ENV === "development") {
+  if (env.NODE_ENV === "development") {
     await enableDraftMode();
     const redirectUrl = buildRedirectUrl({ path, base, bypassTokenFromQuery });
     return redirect(redirectUrl);
