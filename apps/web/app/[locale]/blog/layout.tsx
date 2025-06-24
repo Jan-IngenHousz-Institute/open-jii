@@ -1,6 +1,6 @@
 import { Footer } from "@/components/blog/footer";
-import { Header } from "@/components/blog/header";
 import { TranslationsProvider } from "@/components/translations-provider";
+import { UnifiedNavbar } from "@/components/unified-navbar";
 import type { Metadata, Viewport } from "next";
 import { Urbanist } from "next/font/google";
 import { draftMode } from "next/headers";
@@ -53,7 +53,7 @@ export default async function PageLayout({
   });
 
   return (
-    <html lang={locale} dir={dir(locale)}>
+    <html lang={locale} dir={dir(locale)} className="h-full">
       <head>
         <link
           rel="mask-icon"
@@ -62,7 +62,7 @@ export default async function PageLayout({
         />
       </head>
 
-      <body>
+      <body className="h-full">
         <TranslationsProvider locale={locale as Locale} resources={resources}>
           <ContentfulPreviewProvider
             locale={locale}
@@ -70,11 +70,13 @@ export default async function PageLayout({
             enableLiveUpdates={preview}
             targetOrigin={allowedOriginList}
           >
-            <main className={`${urbanist.variable} font-sans`}>
-              <Header locale={locale} />
-              {children}
+            <UnifiedNavbar locale={typedLocale} />
+            <div
+              className={`${urbanist.variable}  flex min-h-screen flex-col font-sans`}
+            >
+              <main className="flex-1 pt-8">{children}</main>
               <Footer />
-            </main>
+            </div>
             <div id="portal" className={`${urbanist.variable} font-sans`} />
           </ContentfulPreviewProvider>
         </TranslationsProvider>
