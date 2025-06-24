@@ -16,8 +16,7 @@ export default function DesignSystemScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <JIIText variant="h2">JII Design System</JIIText>
       <JIIText variant="lead" style={styles.sectionDescription}>
-        A comprehensive design system for building beautiful, consistent
-        interfaces.
+        A comprehensive design system for building beautiful, consistent interfaces.
       </JIIText>
 
       <View style={styles.section}>
@@ -33,22 +32,12 @@ export default function DesignSystemScreen() {
 
         <View style={styles.colorGrid}>
           <View style={styles.colorRow}>
-            <View
-              style={[
-                styles.colorSwatch,
-                { backgroundColor: colors.primary.dark },
-              ]}
-            >
+            <View style={[styles.colorSwatch, { backgroundColor: colors.primary.dark }]}>
               <JIIText variant="caption" color="#fff">
                 Primary Dark
               </JIIText>
             </View>
-            <View
-              style={[
-                styles.colorSwatch,
-                { backgroundColor: colors.primary.bright },
-              ]}
-            >
+            <View style={[styles.colorSwatch, { backgroundColor: colors.primary.bright }]}>
               <JIIText variant="caption" color="#000">
                 Primary Bright
               </JIIText>
@@ -56,22 +45,12 @@ export default function DesignSystemScreen() {
           </View>
 
           <View style={styles.colorRow}>
-            <View
-              style={[
-                styles.colorSwatch,
-                { backgroundColor: colors.secondary.blue },
-              ]}
-            >
+            <View style={[styles.colorSwatch, { backgroundColor: colors.secondary.blue }]}>
               <JIIText variant="caption" color="#000">
                 Secondary Blue
               </JIIText>
             </View>
-            <View
-              style={[
-                styles.colorSwatch,
-                { backgroundColor: colors.secondary.blueLight },
-              ]}
-            >
+            <View style={[styles.colorSwatch, { backgroundColor: colors.secondary.blueLight }]}>
               <JIIText variant="caption" color="#000">
                 Secondary Blue 50%
               </JIIText>
@@ -79,22 +58,12 @@ export default function DesignSystemScreen() {
           </View>
 
           <View style={styles.colorRow}>
-            <View
-              style={[
-                styles.colorSwatch,
-                { backgroundColor: colors.secondary.yellow },
-              ]}
-            >
+            <View style={[styles.colorSwatch, { backgroundColor: colors.secondary.yellow }]}>
               <JIIText variant="caption" color="#000">
                 Secondary Yellow
               </JIIText>
             </View>
-            <View
-              style={[
-                styles.colorSwatch,
-                { backgroundColor: colors.secondary.yellowLight },
-              ]}
-            >
+            <View style={[styles.colorSwatch, { backgroundColor: colors.secondary.yellowLight }]}>
               <JIIText variant="caption" color="#000">
                 Secondary Yellow 50%
               </JIIText>
@@ -119,45 +88,38 @@ export default function DesignSystemScreen() {
         <View style={styles.spacer} />
 
         <JIIText variant="lead">
-          This is a lead paragraph that introduces a section with important
-          information.
+          This is a lead paragraph that introduces a section with important information.
         </JIIText>
 
         <View style={styles.spacer} />
 
         <JIIText variant="body">
-          This is regular body text used for the main content. The JII Design
-          System uses Overpass for body text to ensure readability across
-          different screen sizes and devices.
+          This is regular body text used for the main content. The JII Design System uses Overpass
+          for body text to ensure readability across different screen sizes and devices.
         </JIIText>
 
         <View style={styles.spacer} />
 
         <JIIText variant="bodyMedium">
-          This is medium body text that provides slightly more emphasis than
-          regular body text.
+          This is medium body text that provides slightly more emphasis than regular body text.
         </JIIText>
 
         <View style={styles.spacer} />
 
         <JIIText variant="quote">
-          "This is a quote style that can be used for testimonials or important
-          statements that need to stand out."
+          "This is a quote style that can be used for testimonials or important statements that need
+          to stand out."
         </JIIText>
 
         <View style={styles.spacer} />
 
         <JIIText variant="subheader">This is a subheader (Bold)</JIIText>
-        <JIIText variant="subheaderExtraBold">
-          This is a subheader (Extra Bold)
-        </JIIText>
+        <JIIText variant="subheaderExtraBold">This is a subheader (Extra Bold)</JIIText>
         <JIIText variant="subheaderBlack">This is a subheader (Black)</JIIText>
 
         <View style={styles.spacer} />
 
-        <JIIText variant="caption">
-          This is caption text used for supplementary information
-        </JIIText>
+        <JIIText variant="caption">This is caption text used for supplementary information</JIIText>
         <JIIText variant="overline">This is overline text</JIIText>
       </View>
 
@@ -169,11 +131,7 @@ export default function DesignSystemScreen() {
 
         <View style={styles.buttonRow}>
           <JIIButton title="Primary" variant="primary" style={styles.button} />
-          <JIIButton
-            title="Secondary"
-            variant="secondary"
-            style={styles.button}
-          />
+          <JIIButton title="Secondary" variant="secondary" style={styles.button} />
         </View>
 
         <View style={styles.buttonRow}>
@@ -213,16 +171,12 @@ export default function DesignSystemScreen() {
 
         <JIICard variant="elevated">
           <JIIText variant="h5">Elevated Card</JIIText>
-          <JIIText variant="body">
-            This card has elevation to create a sense of hierarchy.
-          </JIIText>
+          <JIIText variant="body">This card has elevation to create a sense of hierarchy.</JIIText>
         </JIICard>
 
         <JIICard variant="outlined">
           <JIIText variant="h5">Outlined Card</JIIText>
-          <JIIText variant="body">
-            This card has an outline instead of a background color.
-          </JIIText>
+          <JIIText variant="body">This card has an outline instead of a background color.</JIIText>
         </JIICard>
       </View>
 
@@ -253,20 +207,12 @@ export default function DesignSystemScreen() {
           leftIcon={
             <Mail
               size={20}
-              color={
-                theme.isDark
-                  ? theme.colors.dark.inactive
-                  : theme.colors.light.inactive
-              }
+              color={theme.isDark ? theme.colors.dark.inactive : theme.colors.light.inactive}
             />
           }
         />
 
-        <JIIInput
-          label="Password Input"
-          placeholder="Enter your password"
-          isPassword={true}
-        />
+        <JIIInput label="Password Input" placeholder="Enter your password" isPassword={true} />
       </View>
     </ScrollView>
   );

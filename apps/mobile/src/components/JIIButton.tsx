@@ -37,8 +37,7 @@ export function JIIButton({
   const { colors, layout, typography } = theme;
 
   const getBackgroundColor = () => {
-    if (isDisabled)
-      return theme.isDark ? colors.dark.inactive : colors.light.inactive;
+    if (isDisabled) return theme.isDark ? colors.dark.inactive : colors.light.inactive;
 
     switch (variant) {
       case "primary":
@@ -54,8 +53,7 @@ export function JIIButton({
   };
 
   const getBorderColor = () => {
-    if (isDisabled)
-      return theme.isDark ? colors.dark.inactive : colors.light.inactive;
+    if (isDisabled) return theme.isDark ? colors.dark.inactive : colors.light.inactive;
 
     switch (variant) {
       case "outline":
@@ -67,9 +65,7 @@ export function JIIButton({
 
   const getTextColor = () => {
     if (isDisabled) {
-      return theme.isDark
-        ? colors.dark.onSurface + "80"
-        : colors.light.onSurface + "80";
+      return theme.isDark ? colors.dark.onSurface + "80" : colors.light.onSurface + "80";
     }
 
     switch (variant) {
@@ -135,18 +131,12 @@ export function JIIButton({
       {isLoading ? (
         <ActivityIndicator
           size="small"
-          color={
-            variant === "primary" ? colors.neutral.white : colors.primary.dark
-          }
+          color={variant === "primary" ? colors.neutral.white : colors.primary.dark}
         />
       ) : (
         <View style={styles.buttonContent}>
           {icon && <View style={styles.iconContainer}>{icon}</View>}
-          <Text
-            style={[getButtonTextStyle(), { color: getTextColor() }, textStyle]}
-          >
-            {title}
-          </Text>
+          <Text style={[getButtonTextStyle(), { color: getTextColor() }, textStyle]}>{title}</Text>
         </View>
       )}
     </TouchableOpacity>

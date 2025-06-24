@@ -62,22 +62,16 @@ function RootLayoutNav() {
     <Stack
       screenOptions={{
         headerStyle: {
-          backgroundColor: theme.isDark
-            ? colors.dark.background
-            : colors.light.background,
+          backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
         },
-        headerTintColor: theme.isDark
-          ? colors.dark.onSurface
-          : colors.light.onSurface,
+        headerTintColor: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
         headerTitleStyle: {
           fontWeight: "bold",
           fontFamily: "Poppins-Bold",
         },
         headerShadowVisible: false,
         contentStyle: {
-          backgroundColor: theme.isDark
-            ? colors.dark.surface
-            : colors.light.surface,
+          backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
         },
       }}
     >

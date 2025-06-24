@@ -2,9 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useEffect } from "react";
 
 export function useExperiment() {
-  const [selectedExperiment, setSelectedExperiment] = useState<string | null>(
-    null,
-  );
+  const [selectedExperiment, setSelectedExperiment] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

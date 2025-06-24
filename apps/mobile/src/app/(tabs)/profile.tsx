@@ -1,14 +1,7 @@
 import { useRouter } from "expo-router";
 import { User, ExternalLink, LogOut } from "lucide-react-native";
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  Linking,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, Alert, Linking } from "react-native";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
 import { Toast } from "~/components/Toast";
@@ -43,10 +36,7 @@ export default function ProfileScreen() {
     if (canOpen) {
       await Linking.openURL(url);
     } else {
-      Alert.alert(
-        "Error",
-        "Cannot open web profile. Please check your internet connection.",
-      );
+      Alert.alert("Error", "Cannot open web profile. Please check your internet connection.");
     }
   };
 
@@ -61,34 +51,20 @@ export default function ProfileScreen() {
       style={[
         styles.container,
         {
-          backgroundColor: theme.isDark
-            ? colors.dark.background
-            : colors.light.background,
+          backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
         },
       ]}
       contentContainerStyle={styles.contentContainer}
     >
       <View style={styles.profileHeader}>
-        <View
-          style={[
-            styles.avatarContainer,
-            { backgroundColor: colors.primary.dark + "30" },
-          ]}
-        >
-          <User
-            size={40}
-            color={
-              theme.isDark ? colors.dark.onSurface : colors.light.onSurface
-            }
-          />
+        <View style={[styles.avatarContainer, { backgroundColor: colors.primary.dark + "30" }]}>
+          <User size={40} color={theme.isDark ? colors.dark.onSurface : colors.light.onSurface} />
         </View>
         <Text
           style={[
             styles.userName,
             {
-              color: theme.isDark
-                ? colors.dark.onSurface
-                : colors.light.onSurface,
+              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
             },
           ]}
         >
@@ -98,9 +74,7 @@ export default function ProfileScreen() {
           style={[
             styles.userEmail,
             {
-              color: theme.isDark
-                ? colors.dark.inactive
-                : colors.light.inactive,
+              color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
             },
           ]}
         >
@@ -113,9 +87,7 @@ export default function ProfileScreen() {
           style={[
             styles.infoTitle,
             {
-              color: theme.isDark
-                ? colors.dark.onSurface
-                : colors.light.onSurface,
+              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
             },
           ]}
         >
@@ -126,9 +98,7 @@ export default function ProfileScreen() {
           style={[
             styles.infoRow,
             {
-              borderBottomColor: theme.isDark
-                ? colors.dark.border
-                : colors.light.border,
+              borderBottomColor: theme.isDark ? colors.dark.border : colors.light.border,
             },
           ]}
         >
@@ -136,9 +106,7 @@ export default function ProfileScreen() {
             style={[
               styles.infoLabel,
               {
-                color: theme.isDark
-                  ? colors.dark.inactive
-                  : colors.light.inactive,
+                color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
               },
             ]}
           >
@@ -148,9 +116,7 @@ export default function ProfileScreen() {
             style={[
               styles.infoValue,
               {
-                color: theme.isDark
-                  ? colors.dark.onSurface
-                  : colors.light.onSurface,
+                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
               },
             ]}
           >
@@ -162,9 +128,7 @@ export default function ProfileScreen() {
           style={[
             styles.infoRow,
             {
-              borderBottomColor: theme.isDark
-                ? colors.dark.border
-                : colors.light.border,
+              borderBottomColor: theme.isDark ? colors.dark.border : colors.light.border,
             },
           ]}
         >
@@ -172,9 +136,7 @@ export default function ProfileScreen() {
             style={[
               styles.infoLabel,
               {
-                color: theme.isDark
-                  ? colors.dark.inactive
-                  : colors.light.inactive,
+                color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
               },
             ]}
           >
@@ -184,9 +146,7 @@ export default function ProfileScreen() {
             style={[
               styles.infoValue,
               {
-                color: theme.isDark
-                  ? colors.dark.onSurface
-                  : colors.light.onSurface,
+                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
               },
             ]}
           >

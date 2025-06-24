@@ -32,18 +32,12 @@ export function LoginWidget() {
           <Text className="text-base font-medium text-gray-800">
             Hello {user?.user.email ?? "unknown"}
           </Text>
-          <TouchableOpacity
-            onPress={handleLogout}
-            className="rounded-full bg-red-500 px-3 py-1"
-          >
+          <TouchableOpacity onPress={handleLogout} className="rounded-full bg-red-500 px-3 py-1">
             <Text className="font-semibold text-white">Logout</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <TouchableOpacity
-          onPress={startLoginFlow}
-          className="rounded-full bg-blue-600 px-4 py-2"
-        >
+        <TouchableOpacity onPress={startLoginFlow} className="rounded-full bg-blue-600 px-4 py-2">
           <Text className="font-semibold text-white">Login</Text>
         </TouchableOpacity>
       )}

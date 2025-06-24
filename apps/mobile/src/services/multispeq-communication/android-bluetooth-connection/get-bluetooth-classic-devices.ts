@@ -16,8 +16,5 @@ export async function getBluetoothClassicDevices() {
     RNBluetoothClassic.startDiscovery(),
   ]);
 
-  return _.uniqBy(
-    [...bondedDevices, ...connectedDevices, ...visibleDevices],
-    "id",
-  );
+  return _.uniqBy([...bondedDevices, ...connectedDevices, ...visibleDevices], "id");
 }

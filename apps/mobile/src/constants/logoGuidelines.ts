@@ -24,14 +24,7 @@ export const logoGuidelines = {
   // File formats
   fileFormats: {
     print: ["EPS (CMYK)", "EPS (B&W)", "PDF (CMYK)", "PDF (B&W)"],
-    digital: [
-      "EPS (RGB)",
-      "EPS (B&W)",
-      "SVG (RGB)",
-      "SVG (B&W)",
-      "PNG (RGB)",
-      "PNG (B&W)",
-    ],
+    digital: ["EPS (RGB)", "EPS (B&W)", "SVG (RGB)", "SVG (B&W)", "PNG (RGB)", "PNG (B&W)"],
   },
 
   // Logo variations

@@ -85,10 +85,7 @@ export function JIIThemeToggle({ style }: ThemeToggleProps) {
       >
         <Sun size={20} color={getIconColor("light")} />
         <Text
-          style={[
-            typography.bodySmall,
-            { color: getTextColor("light"), marginLeft: spacing["2"] },
-          ]}
+          style={[typography.bodySmall, { color: getTextColor("light"), marginLeft: spacing["2"] }]}
         >
           Light
         </Text>
@@ -107,10 +104,7 @@ export function JIIThemeToggle({ style }: ThemeToggleProps) {
       >
         <Moon size={20} color={getIconColor("dark")} />
         <Text
-          style={[
-            typography.bodySmall,
-            { color: getTextColor("dark"), marginLeft: spacing["2"] },
-          ]}
+          style={[typography.bodySmall, { color: getTextColor("dark"), marginLeft: spacing["2"] }]}
         >
           Dark
         </Text>

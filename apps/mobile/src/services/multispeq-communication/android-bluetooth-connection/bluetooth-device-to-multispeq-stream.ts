@@ -4,9 +4,7 @@ import { Emitter } from "../../../utils/emitter";
 import { stringifyIfObject } from "../../../utils/stringify-if-object";
 import type { MultispeqStreamEvents } from "../multispeq-stream-events";
 
-export function bluetoothDeviceToMultispeqStream(
-  connectedDevice: BluetoothDevice,
-) {
+export function bluetoothDeviceToMultispeqStream(connectedDevice: BluetoothDevice) {
   const emitter = new Emitter<MultispeqStreamEvents>();
 
   connectedDevice.onDataReceived((event) => {
@@ -35,9 +33,7 @@ export function bluetoothDeviceToMultispeqStream(
   });
 
   emitter.on("sendCommandToDevice", async (data: string | object) => {
-    const result = await connectedDevice.write(
-      stringifyIfObject(data) + "\r\n",
-    );
+    const result = await connectedDevice.write(stringifyIfObject(data) + "\r\n");
     if (!result) {
       throw new Error("Failed to write to device");
     }

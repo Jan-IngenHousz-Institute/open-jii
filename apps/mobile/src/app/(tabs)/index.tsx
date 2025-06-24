@@ -1,12 +1,6 @@
 import { UploadCloud } from "lucide-react-native";
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, RefreshControl } from "react-native";
 import { Button } from "~/components/Button";
 import { OfflineBanner } from "~/components/OfflineBanner";
 import { Toast } from "~/components/Toast";
@@ -99,9 +93,7 @@ export default function HomeScreen() {
       style={[
         styles.container,
         {
-          backgroundColor: theme.isDark
-            ? colors.dark.background
-            : colors.light.background,
+          backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
         },
       ]}
     >
@@ -120,9 +112,7 @@ export default function HomeScreen() {
           style={[
             styles.welcomeText,
             {
-              color: theme.isDark
-                ? colors.dark.onSurface
-                : colors.light.onSurface,
+              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
             },
           ]}
         >
@@ -132,9 +122,7 @@ export default function HomeScreen() {
           style={[
             styles.subtitleText,
             {
-              color: theme.isDark
-                ? colors.dark.inactive
-                : colors.light.inactive,
+              color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
             },
           ]}
         >
@@ -149,9 +137,7 @@ export default function HomeScreen() {
               style={[
                 styles.sectionTitle,
                 {
-                  color: theme.isDark
-                    ? colors.dark.onSurface
-                    : colors.light.onSurface,
+                  color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
                 },
               ]}
             >
@@ -183,9 +169,7 @@ export default function HomeScreen() {
               style={[
                 styles.emptyText,
                 {
-                  color: theme.isDark
-                    ? colors.dark.inactive
-                    : colors.light.inactive,
+                  color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
                 },
               ]}
             >
@@ -199,9 +183,7 @@ export default function HomeScreen() {
             style={[
               styles.sectionTitle,
               {
-                color: theme.isDark
-                  ? colors.dark.onSurface
-                  : colors.light.onSurface,
+                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
               },
             ]}
           >
@@ -211,9 +193,7 @@ export default function HomeScreen() {
             style={[
               styles.emptyText,
               {
-                color: theme.isDark
-                  ? colors.dark.inactive
-                  : colors.light.inactive,
+                color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
               },
             ]}
           >

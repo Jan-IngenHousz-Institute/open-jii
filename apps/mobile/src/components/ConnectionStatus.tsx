@@ -1,10 +1,4 @@
-import {
-  Wifi,
-  WifiOff,
-  Bluetooth,
-  BluetoothOff,
-  Usb,
-} from "lucide-react-native";
+import { Wifi, WifiOff, Bluetooth, BluetoothOff, Usb } from "lucide-react-native";
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "~/hooks/useTheme";
@@ -47,9 +41,7 @@ export function ConnectionStatus({
             style={[
               styles.statusText,
               {
-                color: theme.isDark
-                  ? colors.dark.onSurface
-                  : colors.light.onSurface,
+                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
               },
               !isOnline && { color: colors.semantic.error },
             ]}
@@ -64,23 +56,17 @@ export function ConnectionStatus({
           ) : (
             <BluetoothOff
               size={20}
-              color={
-                theme.isDark ? colors.dark.inactive : colors.light.inactive
-              }
+              color={theme.isDark ? colors.dark.inactive : colors.light.inactive}
             />
           )}
           <Text
             style={[
               styles.statusText,
               {
-                color: theme.isDark
-                  ? colors.dark.onSurface
-                  : colors.light.onSurface,
+                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
               },
               !bluetoothConnected && {
-                color: theme.isDark
-                  ? colors.dark.inactive
-                  : colors.light.inactive,
+                color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
               },
             ]}
           >
@@ -103,14 +89,10 @@ export function ConnectionStatus({
             style={[
               styles.statusText,
               {
-                color: theme.isDark
-                  ? colors.dark.onSurface
-                  : colors.light.onSurface,
+                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
               },
               !usbConnected && {
-                color: theme.isDark
-                  ? colors.dark.inactive
-                  : colors.light.inactive,
+                color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
               },
             ]}
           >
@@ -124,9 +106,7 @@ export function ConnectionStatus({
           style={[
             styles.deviceInfo,
             {
-              borderTopColor: theme.isDark
-                ? colors.dark.border
-                : colors.light.border,
+              borderTopColor: theme.isDark ? colors.dark.border : colors.light.border,
             },
           ]}
         >
@@ -134,24 +114,18 @@ export function ConnectionStatus({
             style={[
               styles.deviceInfoText,
               {
-                color: theme.isDark
-                  ? colors.dark.onSurface
-                  : colors.light.onSurface,
+                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
               },
             ]}
           >
             Connected to:{" "}
-            <Text style={[styles.deviceName, { color: colors.primary.dark }]}>
-              {deviceName}
-            </Text>
+            <Text style={[styles.deviceName, { color: colors.primary.dark }]}>{deviceName}</Text>
           </Text>
           <Text
             style={[
               styles.connectionTypeText,
               {
-                color: theme.isDark
-                  ? colors.dark.inactive
-                  : colors.light.inactive,
+                color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
               },
             ]}
           >

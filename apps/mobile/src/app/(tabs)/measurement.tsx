@@ -1,11 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  Bluetooth,
-  Usb,
-  Radio,
-  AlertTriangle,
-  ArrowLeft,
-} from "lucide-react-native";
+import { Bluetooth, Usb, Radio, AlertTriangle, ArrowLeft } from "lucide-react-native";
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -66,12 +60,8 @@ export default function MeasurementScreen() {
   const [bluetoothConnected, setBluetoothConnected] = useState(false);
   const [usbConnected, setUsbConnected] = useState(false);
   const [, setDeviceName] = useState<string | undefined>(undefined);
-  const [, setConnectionType] = useState<"bluetooth" | "ble" | "usb" | null>(
-    null,
-  );
-  const [selectedProtocol, setSelectedProtocol] = useState<string | undefined>(
-    undefined,
-  );
+  const [, setConnectionType] = useState<"bluetooth" | "ble" | "usb" | null>(null);
+  const [selectedProtocol, setSelectedProtocol] = useState<string | undefined>(undefined);
   const [isScanning, setIsScanning] = useState(false);
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -81,9 +71,7 @@ export default function MeasurementScreen() {
   const [selectedConnectionType, setSelectedConnectionType] = useState<
     "bluetooth" | "ble" | "usb" | null
   >(null);
-  const [selectedExperiment, setSelectedExperiment] = useState<string | null>(
-    null,
-  );
+  const [selectedExperiment, setSelectedExperiment] = useState<string | null>(null);
   const [toast, setToast] = useState({
     visible: false,
     message: "",
@@ -94,9 +82,7 @@ export default function MeasurementScreen() {
   useEffect(() => {
     const loadSelectedExperiment = async () => {
       try {
-        const storedExperiment = await AsyncStorage.getItem(
-          "selected_experiment",
-        );
+        const storedExperiment = await AsyncStorage.getItem("selected_experiment");
         if (storedExperiment) {
           setSelectedExperiment(storedExperiment);
         }
@@ -271,8 +257,7 @@ export default function MeasurementScreen() {
         case "standard":
           mockData = {
             protocol: "standard",
-            experiment: options.find((e) => e.value === selectedExperiment)
-              ?.label,
+            experiment: options.find((e) => e.value === selectedExperiment)?.label,
             timestamp: new Date().toISOString(),
             readings: {
               absorbance: [0.12, 0.15, 0.18, 0.22, 0.25],
@@ -288,8 +273,7 @@ export default function MeasurementScreen() {
         case "extended":
           mockData = {
             protocol: "extended",
-            experiment: options.find((e) => e.value === selectedExperiment)
-              ?.label,
+            experiment: options.find((e) => e.value === selectedExperiment)?.label,
             timestamp: new Date().toISOString(),
             readings: {
               absorbance: [0.12, 0.15, 0.18, 0.22, 0.25, 0.28, 0.3],
@@ -313,8 +297,7 @@ export default function MeasurementScreen() {
         case "quick":
           mockData = {
             protocol: "quick",
-            experiment: options.find((e) => e.value === selectedExperiment)
-              ?.label,
+            experiment: options.find((e) => e.value === selectedExperiment)?.label,
             timestamp: new Date().toISOString(),
             readings: {
               absorbance_avg: 0.18,
@@ -410,9 +393,7 @@ export default function MeasurementScreen() {
           style={[
             styles.deviceName,
             {
-              color: theme.isDark
-                ? colors.dark.onSurface
-                : colors.light.onSurface,
+              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
             },
           ]}
         >
@@ -423,21 +404,16 @@ export default function MeasurementScreen() {
             style={[
               styles.deviceRssi,
               {
-                color: theme.isDark
-                  ? colors.dark.inactive
-                  : colors.light.inactive,
+                color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
               },
             ]}
           >
-            Signal:{" "}
-            {item.rssi > -70 ? "Strong" : item.rssi > -80 ? "Medium" : "Weak"}
+            Signal: {item.rssi > -70 ? "Strong" : item.rssi > -80 ? "Medium" : "Weak"}
           </Text>
         )}
       </View>
       <View style={styles.deviceTypeContainer}>
-        {item.type === "bluetooth" && (
-          <Bluetooth size={16} color={colors.primary.dark} />
-        )}
+        {item.type === "bluetooth" && <Bluetooth size={16} color={colors.primary.dark} />}
         {item.type === "ble" && <Radio size={16} color={colors.primary.dark} />}
         {item.type === "usb" && <Usb size={16} color={colors.primary.dark} />}
       </View>
@@ -452,9 +428,7 @@ export default function MeasurementScreen() {
           style={[
             styles.sectionTitle,
             {
-              color: theme.isDark
-                ? colors.dark.onSurface
-                : colors.light.onSurface,
+              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
             },
           ]}
         >
@@ -476,9 +450,7 @@ export default function MeasurementScreen() {
               style={[
                 styles.warningText,
                 {
-                  color: theme.isDark
-                    ? colors.dark.onSurface
-                    : colors.light.onSurface,
+                  color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
                 },
               ]}
             >
@@ -494,9 +466,7 @@ export default function MeasurementScreen() {
             style={[
               styles.sectionTitle,
               {
-                color: theme.isDark
-                  ? colors.dark.onSurface
-                  : colors.light.onSurface,
+                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
               },
             ]}
           >
@@ -507,9 +477,7 @@ export default function MeasurementScreen() {
               style={[
                 styles.connectionTypeButton,
                 {
-                  backgroundColor: theme.isDark
-                    ? colors.dark.card
-                    : colors.light.card,
+                  backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
                 },
                 selectedConnectionType === "bluetooth" && [
                   styles.selectedConnectionType,
@@ -540,9 +508,7 @@ export default function MeasurementScreen() {
                 style={[
                   styles.connectionTypeText,
                   {
-                    color: theme.isDark
-                      ? colors.dark.onSurface
-                      : colors.light.onSurface,
+                    color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
                   },
                   selectedConnectionType === "bluetooth" && [
                     styles.selectedConnectionTypeText,
@@ -551,9 +517,7 @@ export default function MeasurementScreen() {
                   Platform.OS === "ios" && [
                     styles.disabledText,
                     {
-                      color: theme.isDark
-                        ? colors.dark.inactive
-                        : colors.light.inactive,
+                      color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
                     },
                   ],
                 ]}
@@ -565,9 +529,7 @@ export default function MeasurementScreen() {
                   style={[
                     styles.platformNote,
                     {
-                      color: theme.isDark
-                        ? colors.dark.inactive
-                        : colors.light.inactive,
+                      color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
                     },
                   ]}
                 >
@@ -580,9 +542,7 @@ export default function MeasurementScreen() {
               style={[
                 styles.connectionTypeButton,
                 {
-                  backgroundColor: theme.isDark
-                    ? colors.dark.card
-                    : colors.light.card,
+                  backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
                 },
                 selectedConnectionType === "ble" && [
                   styles.selectedConnectionType,
@@ -608,9 +568,7 @@ export default function MeasurementScreen() {
                 style={[
                   styles.connectionTypeText,
                   {
-                    color: theme.isDark
-                      ? colors.dark.onSurface
-                      : colors.light.onSurface,
+                    color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
                   },
                   selectedConnectionType === "ble" && [
                     styles.selectedConnectionTypeText,
@@ -626,9 +584,7 @@ export default function MeasurementScreen() {
               style={[
                 styles.connectionTypeButton,
                 {
-                  backgroundColor: theme.isDark
-                    ? colors.dark.card
-                    : colors.light.card,
+                  backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
                 },
                 selectedConnectionType === "usb" && [
                   styles.selectedConnectionType,
@@ -659,9 +615,7 @@ export default function MeasurementScreen() {
                 style={[
                   styles.connectionTypeText,
                   {
-                    color: theme.isDark
-                      ? colors.dark.onSurface
-                      : colors.light.onSurface,
+                    color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
                   },
                   selectedConnectionType === "usb" && [
                     styles.selectedConnectionTypeText,
@@ -670,9 +624,7 @@ export default function MeasurementScreen() {
                   Platform.OS === "ios" && [
                     styles.disabledText,
                     {
-                      color: theme.isDark
-                        ? colors.dark.inactive
-                        : colors.light.inactive,
+                      color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
                     },
                   ],
                 ]}
@@ -684,9 +636,7 @@ export default function MeasurementScreen() {
                   style={[
                     styles.platformNote,
                     {
-                      color: theme.isDark
-                        ? colors.dark.inactive
-                        : colors.light.inactive,
+                      color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
                     },
                   ]}
                 >
@@ -712,9 +662,7 @@ export default function MeasurementScreen() {
                 style={[
                   styles.deviceListTitle,
                   {
-                    color: theme.isDark
-                      ? colors.dark.onSurface
-                      : colors.light.onSurface,
+                    color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
                   },
                 ]}
               >
@@ -726,9 +674,7 @@ export default function MeasurementScreen() {
                   style={[
                     styles.emptyDeviceList,
                     {
-                      color: theme.isDark
-                        ? colors.dark.inactive
-                        : colors.light.inactive,
+                      color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
                     },
                   ]}
                 >
@@ -756,9 +702,7 @@ export default function MeasurementScreen() {
       <View style={styles.compactHeader}>
         <TouchableOpacity style={styles.backButton} onPress={handleDisconnect}>
           <ArrowLeft size={18} color={colors.primary.dark} />
-          <Text style={[styles.backButtonText, { color: colors.primary.dark }]}>
-            Back
-          </Text>
+          <Text style={[styles.backButtonText, { color: colors.primary.dark }]}>Back</Text>
         </TouchableOpacity>
 
         <View
@@ -770,9 +714,7 @@ export default function MeasurementScreen() {
             },
           ]}
         >
-          <Text
-            style={[styles.experimentBadgeText, { color: colors.primary.dark }]}
-          >
+          <Text style={[styles.experimentBadgeText, { color: colors.primary.dark }]}>
             {experimentName}
           </Text>
         </View>
@@ -805,9 +747,7 @@ export default function MeasurementScreen() {
               style={[
                 styles.resultTitle,
                 {
-                  color: theme.isDark
-                    ? colors.dark.onSurface
-                    : colors.light.onSurface,
+                  color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
                 },
               ]}
             >
@@ -826,9 +766,7 @@ export default function MeasurementScreen() {
             style={[
               styles.noResultContainer,
               {
-                backgroundColor: theme.isDark
-                  ? colors.dark.card
-                  : colors.light.card,
+                backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
               },
             ]}
           >
@@ -836,9 +774,7 @@ export default function MeasurementScreen() {
               style={[
                 styles.noResultText,
                 {
-                  color: theme.isDark
-                    ? colors.dark.inactive
-                    : colors.light.inactive,
+                  color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
                 },
               ]}
             >
@@ -866,9 +802,7 @@ export default function MeasurementScreen() {
       style={[
         styles.container,
         {
-          backgroundColor: theme.isDark
-            ? colors.dark.background
-            : colors.light.background,
+          backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
         },
       ]}
     >

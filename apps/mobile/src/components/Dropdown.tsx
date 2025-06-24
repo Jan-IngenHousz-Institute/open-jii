@@ -39,16 +39,13 @@ export function Dropdown({
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const selectedOption = options.find(
-    (option) => option.value === selectedValue,
-  );
+  const selectedOption = options.find((option) => option.value === selectedValue);
 
   const filteredOptions = useMemo(() => {
     const query = searchQuery.toLowerCase();
     return options.filter(
       (opt) =>
-        opt.label.toLowerCase().includes(query) ||
-        opt.description?.toLowerCase().includes(query),
+        opt.label.toLowerCase().includes(query) || opt.description?.toLowerCase().includes(query),
     );
   }, [options, searchQuery]);
 
@@ -62,9 +59,7 @@ export function Dropdown({
           style={[
             styles.label,
             {
-              color: theme.isDark
-                ? colors.dark.onSurface
-                : colors.light.onSurface,
+              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
             },
           ]}
         >
@@ -76,12 +71,8 @@ export function Dropdown({
         style={[
           styles.dropdownButton,
           {
-            backgroundColor: theme.isDark
-              ? colors.dark.surface
-              : colors.light.surface,
-            borderColor: theme.isDark
-              ? colors.dark.border
-              : colors.light.border,
+            backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
+            borderColor: theme.isDark ? colors.dark.border : colors.light.border,
           },
         ]}
         onPress={() => setModalVisible(true)}
@@ -114,49 +105,31 @@ export function Dropdown({
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setModalVisible(false)}
-        >
+        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
           <View
             style={[
               styles.modalContent,
               {
-                backgroundColor: theme.isDark
-                  ? colors.dark.background
-                  : colors.light.background,
+                backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
               },
             ]}
           >
             <TextInput
               placeholder="Search experiments..."
-              placeholderTextColor={
-                theme.isDark ? colors.dark.inactive : colors.light.inactive
-              }
+              placeholderTextColor={theme.isDark ? colors.dark.inactive : colors.light.inactive}
               style={[
                 styles.searchInput,
                 {
-                  color: theme.isDark
-                    ? colors.dark.onSurface
-                    : colors.light.onSurface,
-                  borderColor: theme.isDark
-                    ? colors.dark.border
-                    : colors.light.border,
-                  backgroundColor: theme.isDark
-                    ? colors.dark.surface
-                    : colors.light.surface,
+                  color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
+                  borderColor: theme.isDark ? colors.dark.border : colors.light.border,
+                  backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
                 },
               ]}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
 
-            <View
-              style={[
-                styles.listWrapper,
-                { height: ITEM_HEIGHT * MAX_VISIBLE_ITEMS },
-              ]}
-            >
+            <View style={[styles.listWrapper, { height: ITEM_HEIGHT * MAX_VISIBLE_ITEMS }]}>
               <FlatList
                 data={filteredOptions}
                 keyExtractor={(item) => item.value}
@@ -187,8 +160,7 @@ export function Dropdown({
                                 : theme.isDark
                                   ? colors.dark.onSurface
                                   : colors.light.onSurface,
-                            fontWeight:
-                              selectedValue === item.value ? "bold" : "normal",
+                            fontWeight: selectedValue === item.value ? "bold" : "normal",
                           },
                         ]}
                       >
@@ -199,9 +171,7 @@ export function Dropdown({
                           style={{
                             fontSize: 14,
                             marginTop: 4,
-                            color: theme.isDark
-                              ? colors.dark.inactive
-                              : colors.light.inactive,
+                            color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
                           }}
                         >
                           {item.description}
@@ -215,9 +185,7 @@ export function Dropdown({
                     style={{
                       textAlign: "center",
                       padding: 16,
-                      color: theme.isDark
-                        ? colors.dark.inactive
-                        : colors.light.inactive,
+                      color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
                     }}
                   >
                     No results found

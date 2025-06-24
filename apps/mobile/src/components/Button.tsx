@@ -37,8 +37,7 @@ export function Button({
   const { colors } = theme;
 
   const getBackgroundColor = () => {
-    if (isDisabled)
-      return theme.isDark ? colors.dark.inactive : colors.light.inactive;
+    if (isDisabled) return theme.isDark ? colors.dark.inactive : colors.light.inactive;
 
     switch (variant) {
       case "primary":
@@ -54,8 +53,7 @@ export function Button({
   };
 
   const getBorderColor = () => {
-    if (isDisabled)
-      return theme.isDark ? colors.dark.inactive : colors.light.inactive;
+    if (isDisabled) return theme.isDark ? colors.dark.inactive : colors.light.inactive;
 
     switch (variant) {
       case "outline":
@@ -67,17 +65,13 @@ export function Button({
 
   const getTextColor = () => {
     if (isDisabled)
-      return theme.isDark
-        ? colors.dark.onSurface + "80"
-        : colors.light.onSurface + "80";
+      return theme.isDark ? colors.dark.onSurface + "80" : colors.light.onSurface + "80";
 
     switch (variant) {
       case "primary":
         return theme.isDark ? colors.dark.onPrimary : colors.light.onPrimary;
       case "secondary":
-        return theme.isDark
-          ? colors.dark.onSecondary
-          : colors.light.onSecondary;
+        return theme.isDark ? colors.dark.onSecondary : colors.light.onSecondary;
       case "outline":
       case "ghost":
         return colors.primary.dark;
@@ -138,11 +132,7 @@ export function Button({
         <View style={styles.buttonContent}>
           {icon && <View style={styles.iconContainer}>{icon}</View>}
           <Text
-            style={[
-              styles.text,
-              { color: getTextColor(), fontSize: getFontSize() },
-              textStyle,
-            ]}
+            style={[styles.text, { color: getTextColor(), fontSize: getFontSize() }, textStyle]}
           >
             {title}
           </Text>

@@ -8,11 +8,7 @@ interface CardProps {
   variant?: "default" | "elevated" | "outlined";
 }
 
-export function JIICard({
-  children,
-  style,
-  variant = "default",
-}: CardProps) {
+export function JIICard({ children, style, variant = "default" }: CardProps) {
   const theme = useTheme();
   const { colors, layout } = theme;
 

@@ -15,9 +15,7 @@ interface ThemeProviderProps {
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const systemColorScheme = useColorScheme();
   const [theme, setTheme] = useState<Theme>(lightTheme);
-  const [themePreference, setThemePreference] = useState<
-    "system" | "light" | "dark"
-  >("light");
+  const [themePreference, setThemePreference] = useState<"system" | "light" | "dark">("light");
 
   // Load theme preference from storage
   useEffect(() => {
@@ -64,9 +62,5 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     themePreference,
   };
 
-  return (
-    <ThemeContext.Provider value={enhancedTheme}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={enhancedTheme}>{children}</ThemeContext.Provider>;
 };

@@ -69,9 +69,7 @@ export default function ExperimentsScreen() {
       style={[
         styles.container,
         {
-          backgroundColor: theme.isDark
-            ? colors.dark.background
-            : colors.light.background,
+          backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
         },
       ]}
     >
@@ -91,9 +89,7 @@ export default function ExperimentsScreen() {
             style={[
               styles.sectionTitle,
               {
-                color: theme.isDark
-                  ? colors.dark.onSurface
-                  : colors.light.onSurface,
+                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
               },
             ]}
           >
@@ -119,9 +115,7 @@ export default function ExperimentsScreen() {
                 style={[
                   styles.emptyText,
                   {
-                    color: theme.isDark
-                      ? colors.dark.inactive
-                      : colors.light.inactive,
+                    color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
                   },
                 ]}
               >
@@ -136,9 +130,7 @@ export default function ExperimentsScreen() {
             style={[
               styles.placeholderText,
               {
-                color: theme.isDark
-                  ? colors.dark.inactive
-                  : colors.light.inactive,
+                color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
               },
             ]}
           >

@@ -9,10 +9,7 @@ interface UnsyncedScanItemProps {
   experimentName: string;
 }
 
-export function UnsyncedScanItem({
-  timestamp,
-  experimentName,
-}: UnsyncedScanItemProps) {
+export function UnsyncedScanItem({ timestamp, experimentName }: UnsyncedScanItemProps) {
   const theme = useTheme();
   const { colors } = theme;
 
@@ -34,9 +31,7 @@ export function UnsyncedScanItem({
           style={[
             styles.experimentName,
             {
-              color: theme.isDark
-                ? colors.dark.onSurface
-                : colors.light.onSurface,
+              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
             },
           ]}
         >
@@ -46,9 +41,7 @@ export function UnsyncedScanItem({
           style={[
             styles.timestamp,
             {
-              color: theme.isDark
-                ? colors.dark.inactive
-                : colors.light.inactive,
+              color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
             },
           ]}
         >
@@ -56,11 +49,7 @@ export function UnsyncedScanItem({
         </Text>
 
         <View style={styles.footer}>
-          <Text
-            style={[styles.pendingText, { color: colors.semantic.warning }]}
-          >
-            Pending Sync
-          </Text>
+          <Text style={[styles.pendingText, { color: colors.semantic.warning }]}>Pending Sync</Text>
         </View>
       </View>
     </View>

@@ -26,29 +26,18 @@ interface JIITextProps extends TextProps {
   color?: string;
 }
 
-export function JIIText({
-  variant = "body",
-  color,
-  style,
-  children,
-  ...props
-}: JIITextProps) {
+export function JIIText({ variant = "body", color, style, children, ...props }: JIITextProps) {
   const theme = useTheme();
   const { typography, colors } = theme;
 
   // Get the default text color based on theme
-  const defaultColor = theme.isDark
-    ? colors.dark.onSurface
-    : colors.light.onSurface;
+  const defaultColor = theme.isDark ? colors.dark.onSurface : colors.light.onSurface;
 
   // Get the typography style for the variant
   const variantStyle = typography[variant];
 
   return (
-    <RNText
-      style={[variantStyle, { color: color ?? defaultColor }, style]}
-      {...props}
-    >
+    <RNText style={[variantStyle, { color: color ?? defaultColor }, style]} {...props}>
       {children}
     </RNText>
   );

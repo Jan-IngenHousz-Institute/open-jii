@@ -43,9 +43,7 @@ export function Input({
           style={[
             styles.label,
             {
-              color: theme.isDark
-                ? colors.dark.onSurface
-                : colors.light.onSurface,
+              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
             },
           ]}
         >
@@ -56,9 +54,7 @@ export function Input({
         style={[
           styles.inputContainer,
           {
-            backgroundColor: theme.isDark
-              ? colors.dark.surface
-              : colors.light.surface,
+            backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
             borderColor: error
               ? colors.semantic.error
               : isFocused
@@ -76,54 +72,39 @@ export function Input({
           style={[
             styles.input,
             {
-              color: theme.isDark
-                ? colors.dark.onSurface
-                : colors.light.onSurface,
+              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
             },
           ]}
-          placeholderTextColor={
-            theme.isDark ? colors.dark.inactive : colors.light.inactive
-          }
+          placeholderTextColor={theme.isDark ? colors.dark.inactive : colors.light.inactive}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           secureTextEntry={isPassword && !showPassword}
           {...props}
         />
         {isPassword && (
-          <TouchableOpacity
-            onPress={() => setShowPassword(!showPassword)}
-            style={styles.eyeIcon}
-          >
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
             {showPassword ? (
               <EyeOff
                 size={20}
-                color={
-                  theme.isDark ? colors.dark.onSurface : colors.light.onSurface
-                }
+                color={theme.isDark ? colors.dark.onSurface : colors.light.onSurface}
               />
             ) : (
               <Eye
                 size={20}
-                color={
-                  theme.isDark ? colors.dark.onSurface : colors.light.onSurface
-                }
+                color={theme.isDark ? colors.dark.onSurface : colors.light.onSurface}
               />
             )}
           </TouchableOpacity>
         )}
       </View>
       {error ? (
-        <Text style={[styles.errorText, { color: colors.semantic.error }]}>
-          {error}
-        </Text>
+        <Text style={[styles.errorText, { color: colors.semantic.error }]}>{error}</Text>
       ) : helper ? (
         <Text
           style={[
             styles.helperText,
             {
-              color: theme.isDark
-                ? colors.dark.inactive
-                : colors.light.inactive,
+              color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
             },
           ]}
         >

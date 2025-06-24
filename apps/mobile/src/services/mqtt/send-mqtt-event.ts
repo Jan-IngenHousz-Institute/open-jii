@@ -1,7 +1,4 @@
-import {
-  createMqttConnection,
-  ReceivedMessage,
-} from "~/services/mqtt/create-mqtt-connection";
+import { createMqttConnection, ReceivedMessage } from "~/services/mqtt/create-mqtt-connection";
 
 export async function sendMqttEvent(topic: string, payload: object) {
   const emitter = await createMqttConnection();
@@ -15,17 +12,13 @@ export async function sendMqttEvent(topic: string, payload: object) {
       console.log("message delivered!");
       resolve(message);
     });
-    emitter.on("connectionLost", (error) =>
-      reject(new Error(error.errorMessage)),
-    );
+    emitter.on("connectionLost", (error) => reject(new Error(error.errorMessage)));
   });
 
   try {
     await resultPromise;
   } finally {
-    emitter
-      .emit("destroy")
-      .catch((e) => console.log("connection already destroyed", e));
+    emitter.emit("destroy").catch((e) => console.log("connection already destroyed", e));
   }
 
   return resultPromise;

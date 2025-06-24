@@ -17,9 +17,7 @@ export function ItemCard({
     >
       <View>
         <Text className="mb-1 text-lg font-semibold">Name</Text>
-        <Text className="mb-2 text-base">
-          {(item.name ?? item.id) || "N/A"}
-        </Text>
+        <Text className="mb-2 text-base">{(item.name ?? item.id) || "N/A"}</Text>
 
         <View className="my-1 flex-row justify-between">
           <Text>Connectable: {item.isConnectable ? "Yes" : "No"}</Text>

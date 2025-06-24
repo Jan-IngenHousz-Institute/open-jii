@@ -15,11 +15,7 @@ export function useToast() {
     type: "info",
   });
 
-  const showToast = (
-    message: string,
-    type: ToastType = "info",
-    duration = 3000,
-  ) => {
+  const showToast = (message: string, type: ToastType = "info", duration = 3000) => {
     setToast({
       visible: true,
       message,

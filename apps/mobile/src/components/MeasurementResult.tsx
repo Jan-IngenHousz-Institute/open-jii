@@ -8,10 +8,7 @@ interface MeasurementResultProps {
   experimentName?: string;
 }
 
-export function MeasurementResult({
-  data,
-  timestamp,
-}: MeasurementResultProps) {
+export function MeasurementResult({ data, timestamp }: MeasurementResultProps) {
   const theme = useTheme();
   const { colors } = theme;
 
@@ -32,9 +29,7 @@ export function MeasurementResult({
             style={[
               styles.timestamp,
               {
-                color: theme.isDark
-                  ? colors.dark.inactive
-                  : colors.light.inactive,
+                color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
               },
             ]}
           >
@@ -47,9 +42,7 @@ export function MeasurementResult({
         style={[
           styles.dataContainer,
           {
-            backgroundColor: theme.isDark
-              ? colors.dark.background
-              : colors.light.background,
+            backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
           },
         ]}
         nestedScrollEnabled={true}
@@ -59,9 +52,7 @@ export function MeasurementResult({
           style={[
             styles.dataText,
             {
-              color: theme.isDark
-                ? colors.dark.onSurface
-                : colors.light.onSurface,
+              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
             },
           ]}
         >

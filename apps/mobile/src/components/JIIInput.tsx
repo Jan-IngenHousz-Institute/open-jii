@@ -34,15 +34,9 @@ export function JIIInput({
   const theme = useTheme();
   const { colors, layout } = theme;
 
-  const inputBgColor = theme.isDark
-    ? colors.dark.surface
-    : colors.light.surface;
-  const inputTextColor = theme.isDark
-    ? colors.dark.onSurface
-    : colors.light.onSurface;
-  const placeholderColor = theme.isDark
-    ? colors.dark.inactive
-    : colors.light.inactive;
+  const inputBgColor = theme.isDark ? colors.dark.surface : colors.light.surface;
+  const inputTextColor = theme.isDark ? colors.dark.onSurface : colors.light.onSurface;
+  const placeholderColor = theme.isDark ? colors.dark.inactive : colors.light.inactive;
   const borderColor = theme.isDark ? colors.dark.border : colors.light.border;
   const focusedBorderColor = colors.primary.dark;
   const errorColor = colors.semantic.error;
@@ -65,11 +59,7 @@ export function JIIInput({
           styles.inputContainer,
           {
             backgroundColor: inputBgColor,
-            borderColor: error
-              ? errorColor
-              : isFocused
-                ? focusedBorderColor
-                : borderColor,
+            borderColor: error ? errorColor : isFocused ? focusedBorderColor : borderColor,
             borderRadius: layout.radiusMedium,
           },
           isFocused && styles.focused,
@@ -79,11 +69,7 @@ export function JIIInput({
         {leftIcon && <View style={styles.leftIconContainer}>{leftIcon}</View>}
 
         <TextInput
-          style={[
-            theme.typography.body,
-            styles.input,
-            { color: inputTextColor },
-          ]}
+          style={[theme.typography.body, styles.input, { color: inputTextColor }]}
           placeholderTextColor={placeholderColor}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
@@ -92,10 +78,7 @@ export function JIIInput({
         />
 
         {isPassword && (
-          <TouchableOpacity
-            onPress={() => setShowPassword(!showPassword)}
-            style={styles.eyeIcon}
-          >
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
             {showPassword ? (
               <EyeOff size={20} color={inputTextColor} />
             ) : (
@@ -107,10 +90,7 @@ export function JIIInput({
 
       {error ? (
         <Text
-          style={[
-            theme.typography.caption,
-            { color: errorColor, marginTop: theme.spacing["1"] },
-          ]}
+          style={[theme.typography.caption, { color: errorColor, marginTop: theme.spacing["1"] }]}
         >
           {error}
         </Text>

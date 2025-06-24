@@ -17,11 +17,7 @@ export async function connectToBteDevice(deviceId: string) {
   emitter.on("sendCommandToDevice", async (command: string | object) => {
     const stringData = stringifyIfObject(command);
     const base64Data = btoa(stringData);
-    await device.writeCharacteristicWithResponseForService(
-      SERVICE_UUID,
-      WRITE_UUID,
-      base64Data,
-    );
+    await device.writeCharacteristicWithResponseForService(SERVICE_UUID, WRITE_UUID, base64Data);
   });
 
   const values: string[] = [];

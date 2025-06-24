@@ -1,7 +1,4 @@
-import {
-  Parity,
-  UsbSerialManager,
-} from "react-native-usb-serialport-for-android";
+import { Parity, UsbSerialManager } from "react-native-usb-serialport-for-android";
 
 import { delay } from "../../../utils/delay";
 import { Emitter } from "../../../utils/emitter";

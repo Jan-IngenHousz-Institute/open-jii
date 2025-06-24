@@ -11,8 +11,7 @@ import { getBluetoothClassicDevices } from "../../services/multispeq-communicati
 import { compareBluetoothDevices } from "./utils/compare-bluetooth-devices";
 
 export function BluetoothDevicesListScreen() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<BluetoothStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<BluetoothStackParamList>>();
 
   const {
     error,
@@ -47,19 +46,13 @@ export function BluetoothDevicesListScreen() {
         renderItem={({ item }) => (
           <TouchableOpacity
             className="mb-4 w-full rounded-2xl border bg-gray-50 p-4"
-            onPress={() =>
-              navigation.navigate("DeviceDetails", { deviceId: item.id })
-            }
+            onPress={() => navigation.navigate("DeviceDetails", { deviceId: item.id })}
           >
             <View className="mb-1 flex-row items-center justify-between">
-              <Text className="text-lg font-semibold">
-                {item.name || "Unknown Device"}
-              </Text>
+              <Text className="text-lg font-semibold">{item.name || "Unknown Device"}</Text>
               {item.bonded && (
                 <View className="rounded-full bg-green-100 px-2 py-0.5">
-                  <Text className="text-xs font-semibold text-green-700">
-                    Paired
-                  </Text>
+                  <Text className="text-xs font-semibold text-green-700">Paired</Text>
                 </View>
               )}
             </View>
