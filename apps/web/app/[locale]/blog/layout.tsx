@@ -72,7 +72,7 @@ export default async function PageLayout({
           >
             <UnifiedNavbar locale={typedLocale} />
             <div
-              className={`${urbanist.variable}  flex min-h-screen flex-col font-sans`}
+              className={`${urbanist.variable} mx-auto flex min-h-screen w-full max-w-7xl flex-col font-sans`}
             >
               <main className="flex-1 pt-8">{children}</main>
               <Footer />
