@@ -195,5 +195,12 @@
     "dataAnalysis": {
       "title": "Datenanalyse"
     }
+  },
+  "landingPage": {
+    "latestArticles": "Neueste artikel"
+  },
+  "article": {
+    "featured": "vorgestellt",
+    "relatedArticles": "Verwandte artikel"
   }
 }

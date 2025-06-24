@@ -16,7 +16,7 @@ import {
 const locales = [
   { code: "en-US" as const, name: "English", flag: "🇺🇸" },
   { code: "de-DE" as const, name: "Deutsch", flag: "🇩🇪" },
-  { code: "nl-NL" as const, name: "Nederlands", flag: "🇳🇱" },
+  // { code: "nl-NL" as const, name: "Nederlands", flag: "🇳🇱" },
 ];
 
 interface LanguageSwitcherProps {

@@ -8,6 +8,7 @@ export default {
   content: [
     ...baseConfig.content,
     "../../packages/ui/src/**/*.{ts,tsx}",
+    "../../packages/cms/src/**/*.{ts,tsx}",
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
   ],

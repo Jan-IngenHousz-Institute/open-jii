@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "moduleDetection": "force",
+    "isolatedModules": true,
+    "incremental": true,
+    "disableSourceOfProjectReferenceRedirect": true,
+    "tsBuildInfoFile": "${configDir}/.cache/tsbuildinfo.json",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "jsx": "react-jsx",
+    "outDir": "dist",
+    "rootDir": "../../packages",
+    "declaration": true,
+    "declarationMap": true,
+    "baseUrl": "../../packages",
+    "paths": {
+      "@repo/i18n": ["i18n/src/index.ts"],
+      "@repo/i18n/*": ["i18n/src/*"],
+      "@repo/api": ["api/src/index.ts"],
+      "@repo/api/*": ["api/src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
