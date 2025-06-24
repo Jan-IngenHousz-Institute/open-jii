@@ -166,7 +166,7 @@ module "server_function" {
     CACHE_BUCKET_NAME      = aws_s3_bucket.cache.bucket
     REVALIDATION_QUEUE_URL = module.sqs.queue_url
     CACHE_DYNAMO_TABLE     = module.dynamodb.table_name
-  }, var.db_environment_variables)
+  }, var.server_environment_variables)
 
   tags = local.common_tags
 
@@ -332,6 +332,13 @@ module "cloudfront" {
   acm_certificate_arn        = var.certificate_arn != "" ? var.certificate_arn : null
   price_class                = var.price_class
   tags                       = local.common_tags
+
+  # WAF integration
+  waf_acl_id = var.waf_acl_id
+
+  # Logging configuration
+  enable_logging = var.enable_logging
+  log_bucket     = var.log_bucket
 }
 
 # S3 bucket policy to allow CloudFront OAC access
@@ -358,18 +365,4 @@ resource "aws_s3_bucket_policy" "assets" {
   })
 
   depends_on = [module.cloudfront]
-}
-
-# Route53 DNS record (optional)
-resource "aws_route53_record" "app" {
-  count   = var.hosted_zone_id != "" && local.domain_name != "" ? 1 : 0
-  zone_id = var.hosted_zone_id
-  name    = local.domain_name
-  type    = "A"
-
-  alias {
-    name                   = module.cloudfront.distribution_domain_name
-    zone_id                = module.cloudfront.distribution_hosted_zone_id
-    evaluate_target_health = false
-  }
 }

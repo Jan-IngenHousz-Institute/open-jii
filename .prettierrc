@@ -4,7 +4,7 @@
   "jsxSingleQuote": false,
   "trailingComma": "all",
   "endOfLine": "lf",
-  "printWidth": 80,
+  "printWidth": 100,
   "plugins": [
     "@trivago/prettier-plugin-sort-imports",
     "prettier-plugin-tailwindcss"
