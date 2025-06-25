@@ -1,10 +1,7 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-import type {
-  experimentStatusEnum,
-  experimentVisibilityEnum,
-} from "@repo/database";
+import type { experimentStatusEnum, experimentVisibilityEnum } from "@repo/database";
 import { experiments } from "@repo/database";
 
 import type { SchemaData } from "../../../common/services/databricks/databricks.types";
@@ -28,14 +25,12 @@ export const createExperimentSchema = createInsertSchema(experiments)
       .min(1)
       .optional(),
   });
-export const updateExperimentSchema = createInsertSchema(experiments)
-  .partial()
-  .omit({
-    id: true,
-    createdAt: true,
-    updatedAt: true,
-    createdBy: true,
-  });
+export const updateExperimentSchema = createInsertSchema(experiments).partial().omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  createdBy: true,
+});
 export const selectExperimentSchema = createSelectSchema(experiments);
 
 // Define the types
@@ -49,5 +44,4 @@ export type ExperimentDtoWithData = ExperimentDto & {
 
 // Define experiment status type based on the schema
 export type ExperimentStatus = (typeof experimentStatusEnum.enumValues)[number];
-export type ExperimentVisibility =
-  (typeof experimentVisibilityEnum.enumValues)[number];
+export type ExperimentVisibility = (typeof experimentVisibilityEnum.enumValues)[number];

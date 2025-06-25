@@ -717,14 +717,7 @@
     "public.experiment_status": {
       "name": "experiment_status",
       "schema": "public",
-      "values": [
-        "provisioning",
-        "provisioning_failed",
-        "active",
-        "stale",
-        "archived",
-        "published"
-      ]
+      "values": ["provisioning", "provisioning_failed", "active", "stale", "archived", "published"]
     },
     "public.experiment_visibility": {
       "name": "experiment_visibility",

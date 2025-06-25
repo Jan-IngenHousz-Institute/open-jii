@@ -24,8 +24,7 @@ interface ExperimentRowProps {
 
 export function ExperimentRow({ experiment, userId }: ExperimentRowProps) {
   const isOwner = experiment.createdBy === userId;
-  const isPrivate =
-    experiment.visibility === zExperimentVisibility.enum.private;
+  const isPrivate = experiment.visibility === zExperimentVisibility.enum.private;
 
   return (
     <TableRow key={experiment.id}>
@@ -124,11 +123,7 @@ export function ExperimentTableContent({
   return (
     <>
       {data.map((experiment: Experiment) => (
-        <ExperimentRow
-          key={experiment.id}
-          experiment={experiment}
-          userId={userId}
-        />
+        <ExperimentRow key={experiment.id} experiment={experiment} userId={userId} />
       ))}
     </>
   );

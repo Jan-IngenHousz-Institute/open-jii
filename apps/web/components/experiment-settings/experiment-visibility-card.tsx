@@ -41,8 +41,7 @@ export function ExperimentVisibilityCard({
   initialVisibility,
   initialEmbargoIntervalDays,
 }: ExperimentVisibilityCardProps) {
-  const { mutateAsync: updateExperiment, isPending: isUpdating } =
-    useExperimentUpdate();
+  const { mutateAsync: updateExperiment, isPending: isUpdating } = useExperimentUpdate();
   const { t } = useTranslation(undefined, "common");
 
   interface VisibilityFormValues {
@@ -91,9 +90,7 @@ export function ExperimentVisibilityCard({
     <Card>
       <CardHeader>
         <CardTitle>{t("experimentSettings.visibility")}</CardTitle>
-        <CardDescription>
-          {t("experimentSettings.generalDescription")}
-        </CardDescription>
+        <CardDescription>{t("experimentSettings.generalDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -104,27 +101,18 @@ export function ExperimentVisibilityCard({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("experimentSettings.visibility")}</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue
-                          placeholder={t(
-                            "experimentSettings.visibilityPlaceholder",
-                          )}
-                        />
+                        <SelectValue placeholder={t("experimentSettings.visibilityPlaceholder")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Object.values(zExperimentVisibility.enum).map(
-                        (value) => (
-                          <SelectItem key={value} value={value}>
-                            {value.charAt(0).toUpperCase() + value.slice(1)}
-                          </SelectItem>
-                        ),
-                      )}
+                      {Object.values(zExperimentVisibility.enum).map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {value.charAt(0).toUpperCase() + value.slice(1)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -139,9 +127,7 @@ export function ExperimentVisibilityCard({
                 name="embargoIntervalDays"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      {t("experimentSettings.embargoIntervalDays")}
-                    </FormLabel>
+                    <FormLabel>{t("experimentSettings.embargoIntervalDays")}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -158,9 +144,7 @@ export function ExperimentVisibilityCard({
 
             <div className="flex justify-end">
               <Button type="submit" disabled={isUpdating}>
-                {isUpdating
-                  ? t("experimentSettings.saving")
-                  : t("experimentSettings.save")}
+                {isUpdating ? t("experimentSettings.saving") : t("experimentSettings.save")}
               </Button>
             </div>
           </form>

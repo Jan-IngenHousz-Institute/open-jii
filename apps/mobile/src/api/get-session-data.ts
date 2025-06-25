@@ -31,7 +31,5 @@ export async function getSessionData(sessionToken: string) {
     },
   });
 
-  console.log("data", data);
-
   return data;
 }

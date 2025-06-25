@@ -3,13 +3,7 @@
 import { useMemo, useState } from "react";
 
 import type { User } from "@repo/api";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@repo/ui/components";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 import { useExperimentMemberAdd } from "../../hooks/experiment/useExperimentMemberAdd/useExperimentMemberAdd";
@@ -24,9 +18,7 @@ interface ExperimentMemberManagementProps {
   experimentId: string;
 }
 
-export function ExperimentMemberManagement({
-  experimentId,
-}: ExperimentMemberManagementProps) {
+export function ExperimentMemberManagement({ experimentId }: ExperimentMemberManagementProps) {
   // Get experiment members
   const {
     data: membersData,
@@ -45,14 +37,11 @@ export function ExperimentMemberManagement({
   // User search with debounced input
   const [userSearch, setUserSearch] = useState("");
   const [debouncedSearch, isDebounced] = useDebounce(userSearch, 300);
-  const { data: userSearchData, isLoading: isFetchingUsers } =
-    useUserSearch(debouncedSearch);
+  const { data: userSearchData, isLoading: isFetchingUsers } = useUserSearch(debouncedSearch);
 
   // Add/remove member mutations
-  const { mutateAsync: addMember, isPending: isAddingMember } =
-    useExperimentMemberAdd();
-  const { mutateAsync: removeMember, isPending: isRemovingMember } =
-    useExperimentMemberRemove();
+  const { mutateAsync: addMember, isPending: isAddingMember } = useExperimentMemberAdd();
+  const { mutateAsync: removeMember, isPending: isRemovingMember } = useExperimentMemberRemove();
 
   // UI state
   const [selectedUserId, setSelectedUserId] = useState("");
@@ -61,9 +50,7 @@ export function ExperimentMemberManagement({
   // Safely extract available users and filter out existing members
   const availableUsers = useMemo(() => {
     if (userSearchData?.body && Array.isArray(userSearchData.body)) {
-      return userSearchData.body.filter(
-        (user) => !members.some((m) => m.user.id === user.id),
-      );
+      return userSearchData.body.filter((user) => !members.some((m) => m.user.id === user.id));
     }
     return [];
   }, [userSearchData, members]);
@@ -165,9 +152,7 @@ export function ExperimentMemberManagement({
     <Card>
       <CardHeader>
         <CardTitle>Member Management</CardTitle>
-        <CardDescription>
-          Manage who has access to this experiment
-        </CardDescription>
+        <CardDescription>Manage who has access to this experiment</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Add member section */}

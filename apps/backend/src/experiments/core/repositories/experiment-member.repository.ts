@@ -4,10 +4,7 @@ import { and, eq, experimentMembers, inArray, users } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import {
-  ExperimentMemberRole,
-  ExperimentMemberDto,
-} from "../models/experiment-members.model";
+import { ExperimentMemberRole, ExperimentMemberDto } from "../models/experiment-members.model";
 
 @Injectable()
 export class ExperimentMemberRepository {
@@ -16,9 +13,7 @@ export class ExperimentMemberRepository {
     private readonly database: DatabaseInstance,
   ) {}
 
-  async getMembers(
-    experimentId: string,
-  ): Promise<Result<ExperimentMemberDto[]>> {
+  async getMembers(experimentId: string): Promise<Result<ExperimentMemberDto[]>> {
     return tryCatch(async () => {
       return this.database
         .select({
@@ -78,10 +73,7 @@ export class ExperimentMemberRepository {
     });
   }
 
-  async removeMember(
-    experimentId: string,
-    userId: string,
-  ): Promise<Result<void>> {
+  async removeMember(experimentId: string, userId: string): Promise<Result<void>> {
     return tryCatch(async () => {
       await this.database
         .delete(experimentMembers)

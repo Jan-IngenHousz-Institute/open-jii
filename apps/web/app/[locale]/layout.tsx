@@ -23,12 +23,7 @@ const overpass = Overpass({
   variable: "--font-overpass",
 });
 
-const i18nNamespaces: Namespace[] = [
-  "common",
-  "navigation",
-  "experiments",
-  "dashboard",
-];
+const i18nNamespaces: Namespace[] = ["common", "navigation", "experiments", "dashboard"];
 
 interface LocaleLayoutProps {
   children: React.ReactNode;
@@ -52,10 +47,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function LocaleLayout({
-  children,
-  params,
-}: LocaleLayoutProps) {
+export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
   const { locale } = await params;
   const { resources } = await initTranslations({
     locale,
@@ -71,11 +63,7 @@ export default async function LocaleLayout({
           overpass.variable,
         )}
       >
-        <TranslationsProvider
-          locale={locale}
-          namespaces={i18nNamespaces}
-          resources={resources}
-        >
+        <TranslationsProvider locale={locale} namespaces={i18nNamespaces} resources={resources}>
           <SessionProvider>
             <QueryProvider>{children}</QueryProvider>
           </SessionProvider>
