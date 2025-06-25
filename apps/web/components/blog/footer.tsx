@@ -14,7 +14,7 @@ const Footer = () => {
         <h2 className="h4 mb-4">{t("footer.aboutUs")}</h2>
         <div className="max-w-4xl">{t("footer.description")}</div>
         <div className="mt-8">
-          {t("footer.poweredBy")}{" "}
+          {t("footer.learnMoreAt")}{" "}
           <Link
             href="https://www.jan-ingenhousz-institute.org/"
             rel="noopener noreferrer"
