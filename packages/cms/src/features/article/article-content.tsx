@@ -9,7 +9,7 @@ import type { FC } from "react";
 
 import type { PageBlogPostFieldsFragment } from "../../lib/__generated/sdk";
 import { CtfRichText } from "../contentful";
-import type { EmbeddedEntryType } from "../contentful/CtfRichText";
+import type { EmbeddedEntryType } from "../contentful/ctf-rich-text";
 
 interface ArticleContentProps {
   article: PageBlogPostFieldsFragment;

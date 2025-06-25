@@ -3,44 +3,6 @@ import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
 import { env } from "~/env";
 
-interface VercelJwt {
-  bypass: string;
-  aud: string;
-  iat: number;
-  sub: string;
-}
-
-const getVercelJwtCookie = (request: NextRequest): string | undefined => {
-  const vercelJwtCookie = request.cookies.get("_vercel_jwt");
-  if (!vercelJwtCookie) return;
-  return vercelJwtCookie.value;
-};
-
-const parseVercelJwtCookie = (vercelJwtCookie: string): VercelJwt => {
-  const base64Payload = vercelJwtCookie.split(".")[1];
-  if (!base64Payload) throw new Error("Malformed `_vercel_jwt` cookie value");
-
-  const base64 = base64Payload.replace("-", "+").replace("_", "/");
-  const payload = atob(base64);
-  const parsed = JSON.parse(payload) as unknown;
-
-  assertVercelJwt(parsed as object);
-
-  return parsed as VercelJwt;
-};
-
-function assertVercelJwt(value: object): asserts value is VercelJwt {
-  const vercelJwt = value as VercelJwt;
-  if (typeof vercelJwt.bypass !== "string")
-    throw new TypeError("'bypass' property in VercelJwt is not a string");
-  if (typeof vercelJwt.aud !== "string")
-    throw new TypeError("'aud' property in VercelJwt is not a string");
-  if (typeof vercelJwt.sub !== "string")
-    throw new TypeError("'sub' property in VercelJwt is not a string");
-  if (typeof vercelJwt.iat !== "number")
-    throw new TypeError("'iat' property in VercelJwt is not a number");
-}
-
 interface ParsedRequestUrl {
   origin: string;
   host: string;
@@ -111,71 +73,13 @@ export async function GET(request: NextRequest): Promise<Response | void> {
   const {
     origin: base,
     path,
-    host,
     bypassToken: bypassTokenFromQuery,
-    contentfulPreviewSecret: contentfulPreviewSecretFromQuery,
   } = parseRequestUrl(request.url);
   // if we're in development, we don't need to check, we can just enable draft mode
   if (env.NODE_ENV === "development") {
     await enableDraftMode();
     const redirectUrl = buildRedirectUrl({ path, base, bypassTokenFromQuery });
     return redirect(redirectUrl);
-  }
-
-  const vercelJwtCookie = getVercelJwtCookie(request);
-  // let bypassToken: string;
-  let aud: string;
-  let vercelJwt: VercelJwt | null = null;
-
-  if (bypassTokenFromQuery) {
-    // bypassToken = bypassTokenFromQuery;
-    aud = host;
-  } else if (contentfulPreviewSecretFromQuery) {
-    // bypassToken = contentfulPreviewSecretFromQuery;
-    aud = host;
-  } else {
-    // if we don't have a bypass token from the query we fall back to the _vercel_jwt cookie to find
-    // the correct authorization bypass elements
-    if (!vercelJwtCookie) {
-      return new Response(
-        "Missing _vercel_jwt cookie required for authorization bypass",
-        {
-          status: 401,
-        },
-      );
-    }
-    try {
-      vercelJwt = parseVercelJwtCookie(vercelJwtCookie);
-    } catch (e) {
-      if (!(e instanceof Error)) throw e;
-      return new Response(
-        "Malformed bypass authorization token in _vercel_jwt cookie",
-        {
-          status: 401,
-        },
-      );
-    }
-    // bypassToken = vercelJwt.bypass;
-    aud = vercelJwt.aud;
-  }
-
-  // certain Vercel account tiers may not have a VERCEL_AUTOMATION_BYPASS_SECRET, so we fallback to checking the value against the CONTENTFUL_PREVIEW_SECRET
-  // env var, which is supported as a workaround for these accounts
-  // if (
-  //   bypassToken !== process.env.VERCEL_AUTOMATION_BYPASS_SECRET &&
-  //   contentfulPreviewSecretFromQuery !== process.env.CONTENTFUL_PREVIEW_SECRET
-  // ) {
-  //   return new Response(
-  //     "The bypass token you are authorized with does not match the bypass secret for this deployment. You might need to redeploy or go back and try the link again.",
-  //     { status: 403 },
-  //   );
-  // }
-
-  if (aud !== host) {
-    return new Response(
-      `The bypass token you are authorized with is not valid for this host (${host}). You might need to redeploy or go back and try the link again.`,
-      { status: 403 },
-    );
   }
 
   if (!path) {
@@ -186,16 +90,10 @@ export async function GET(request: NextRequest): Promise<Response | void> {
 
   await enableDraftMode();
 
-  // if a _vercel_jwt cookie was found, we do _not_ want to pass through the bypassToken to the redirect query. this
-  // is because Vercel will not "process" (and remove) the query parameter when a _vercel_jwt cookie is present.
-  const bypassTokenForRedirect = vercelJwtCookie
-    ? undefined
-    : bypassTokenFromQuery;
-
   const redirectUrl = buildRedirectUrl({
     path,
     base,
-    bypassTokenFromQuery: bypassTokenForRedirect,
+    bypassTokenFromQuery,
   });
   redirect(redirectUrl);
 }

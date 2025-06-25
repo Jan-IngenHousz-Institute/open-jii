@@ -12,7 +12,7 @@ import { cn } from "@repo/ui/lib/utils";
 import type { PageBlogPostFieldsFragment } from "../../lib/__generated/sdk";
 import { FormatDate } from "../../shared/format-date";
 import { CtfImage } from "../contentful";
-import { ArticleAuthor } from "./ArticleAuthor";
+import { ArticleAuthor } from "./article-author";
 
 interface ArticleTileProps extends HTMLProps<HTMLDivElement> {
   article: PageBlogPostFieldsFragment;

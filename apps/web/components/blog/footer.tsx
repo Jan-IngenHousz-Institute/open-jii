@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { Container } from "@repo/cms/container";
 
-export const Footer = () => {
+const Footer = () => {
   const { t } = useTranslation();
 
   return (
@@ -16,15 +16,17 @@ export const Footer = () => {
         <div className="mt-8">
           {t("footer.poweredBy")}{" "}
           <Link
-            href="https://www.contentful.com"
+            href="https://www.jan-ingenhousz-institute.org/"
             rel="noopener noreferrer"
             target="_blank"
             className="text-blue-600 hover:underline"
           >
-            Contentful
+            Jan Ingenhousz Institute
           </Link>
         </div>
       </Container>
     </footer>
   );
 };
+
+export default Footer;

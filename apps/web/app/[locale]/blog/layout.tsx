@@ -1,4 +1,4 @@
-import { Footer } from "@/components/blog/footer";
+import Footer from "@/components/blog/footer";
 import { TranslationsProvider } from "@/components/translations-provider";
 import { UnifiedNavbar } from "@/components/unified-navbar";
 import type { Metadata, Viewport } from "next";

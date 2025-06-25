@@ -3,7 +3,7 @@ import type { HTMLProps } from "react";
 import { cn } from "@repo/ui/lib/utils";
 
 import type { PageBlogPostFieldsFragment } from "../../lib/__generated/sdk";
-import { ArticleTile } from "./ArticleTile";
+import { ArticleTile } from "./article-title";
 
 interface ArticleTileGridProps extends HTMLProps<HTMLDivElement> {
   articles?: (PageBlogPostFieldsFragment | null)[];
