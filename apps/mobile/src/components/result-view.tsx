@@ -10,9 +10,5 @@ export function ResultView({ isScanning, scanResult }) {
     return <JSONViewer data={scanResult} />;
   }
 
-  return (
-    <Text className="text-center text-gray-400">
-      Scan result will appear here
-    </Text>
-  );
+  return <Text className="text-center text-gray-400">Scan result will appear here</Text>;
 }

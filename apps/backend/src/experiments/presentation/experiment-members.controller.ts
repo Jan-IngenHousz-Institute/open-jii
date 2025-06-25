@@ -26,84 +26,72 @@ export class ExperimentMembersController {
 
   @TsRestHandler(contract.experiments.listExperimentMembers)
   listMembers(@CurrentUser() user: SessionUser) {
-    return tsRestHandler(
-      contract.experiments.listExperimentMembers,
-      async ({ params }) => {
-        const result = await this.listExperimentMembersUseCase.execute(
-          params.id,
-          user.id,
-        );
+    return tsRestHandler(contract.experiments.listExperimentMembers, async ({ params }) => {
+      const result = await this.listExperimentMembersUseCase.execute(params.id, user.id);
 
-        if (result.isSuccess()) {
-          // Format dates to strings for the API contract
-          const members = result.value;
-          const formattedMembers = formatDatesList(members);
+      if (result.isSuccess()) {
+        // Format dates to strings for the API contract
+        const members = result.value;
+        const formattedMembers = formatDatesList(members);
 
-          return {
-            status: StatusCodes.OK as const,
-            body: formattedMembers,
-          };
-        }
+        return {
+          status: StatusCodes.OK as const,
+          body: formattedMembers,
+        };
+      }
 
-        return handleFailure(result, this.logger);
-      },
-    );
+      return handleFailure(result, this.logger);
+    });
   }
 
   @TsRestHandler(contract.experiments.addExperimentMembers)
   addMembers(@CurrentUser() user: SessionUser) {
-    return tsRestHandler(
-      contract.experiments.addExperimentMembers,
-      async ({ params, body }) => {
-        const result = await this.addExperimentMembersUseCase.execute(
-          params.id,
-          body.members,
-          user.id,
+    return tsRestHandler(contract.experiments.addExperimentMembers, async ({ params, body }) => {
+      const result = await this.addExperimentMembersUseCase.execute(
+        params.id,
+        body.members,
+        user.id,
+      );
+
+      if (result.isSuccess()) {
+        const members = result.value;
+        const formattedMembers = formatDatesList(members);
+
+        this.logger.log(
+          `Members [${body.members.map((m) => m.userId).join(", ")}] added to experiment ${params.id} by user ${user.id}`,
         );
 
-        if (result.isSuccess()) {
-          const members = result.value;
-          const formattedMembers = formatDatesList(members);
+        return {
+          status: StatusCodes.CREATED,
+          body: formattedMembers,
+        };
+      }
 
-          this.logger.log(
-            `Members [${body.members.map((m) => m.userId).join(", ")}] added to experiment ${params.id} by user ${user.id}`,
-          );
-
-          return {
-            status: StatusCodes.CREATED,
-            body: formattedMembers,
-          };
-        }
-
-        return handleFailure(result, this.logger);
-      },
-    );
+      return handleFailure(result, this.logger);
+    });
   }
 
   @TsRestHandler(contract.experiments.removeExperimentMember)
   removeMember(@CurrentUser() user: SessionUser) {
-    return tsRestHandler(
-      contract.experiments.removeExperimentMember,
-      async ({ params }) => {
-        const result = await this.removeExperimentMemberUseCase.execute(
-          params.id,
-          params.memberId,
-          user.id,
+    return tsRestHandler(contract.experiments.removeExperimentMember, async ({ params }) => {
+      const result = await this.removeExperimentMemberUseCase.execute(
+        params.id,
+        params.memberId,
+        user.id,
+      );
+
+      if (result.isSuccess()) {
+        this.logger.log(
+          `Member ${params.memberId} removed from experiment ${params.id} by user ${user.id}`,
         );
 
-        if (result.isSuccess()) {
-          this.logger.log(
-            `Member ${params.memberId} removed from experiment ${params.id} by user ${user.id}`,
-          );
+        return {
+          status: StatusCodes.NO_CONTENT,
+          body: null,
+        };
+      }
 
-          return {
-            status: StatusCodes.NO_CONTENT,
-            body: null,
-          };
-        }
-
-        return handleFailure(result, this.logger);
-      },
-    );
+      return handleFailure(result, this.logger);
+    });
   }
 }

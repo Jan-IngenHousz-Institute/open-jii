@@ -4,12 +4,7 @@ import { ExperimentDataQuery } from "@repo/api";
 
 import { DatabricksService } from "../../../../common/services/databricks/databricks.service";
 import { SchemaData } from "../../../../common/services/databricks/databricks.types";
-import {
-  Result,
-  success,
-  failure,
-  AppError,
-} from "../../../../common/utils/fp-utils";
+import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
@@ -53,10 +48,7 @@ export class GetExperimentDataUseCase {
     );
 
     // Check if experiment exists and user has access
-    const accessResult = await this.experimentRepository.checkAccess(
-      experimentId,
-      userId,
-    );
+    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
 
     return accessResult.chain(
       async ({
@@ -68,17 +60,13 @@ export class GetExperimentDataUseCase {
       }) => {
         if (!experiment) {
           this.logger.warn(`Experiment with ID ${experimentId} not found`);
-          return failure(
-            AppError.notFound(`Experiment with ID ${experimentId} not found`),
-          );
+          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
         if (!hasAccess && experiment.visibility !== "public") {
           this.logger.warn(
             `User ${userId} attempted to access data of experiment ${experimentId} without proper permissions`,
           );
-          return failure(
-            AppError.forbidden("You do not have access to this experiment"),
-          );
+          return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
         // Initialize pagination variables
@@ -107,30 +95,20 @@ export class GetExperimentDataUseCase {
 
             if (countResult.isFailure()) {
               return failure(
-                AppError.internal(
-                  `Failed to get row count: ${countResult.error.message}`,
-                ),
+                AppError.internal(`Failed to get row count: ${countResult.error.message}`),
               );
             }
 
             // Extract count from result
-            const totalRows = parseInt(
-              countResult.value.rows[0]?.[0] ?? "0",
-              10,
-            );
+            const totalRows = parseInt(countResult.value.rows[0]?.[0] ?? "0", 10);
             const totalPages = Math.ceil(totalRows / pageSize);
 
             // Execute the actual data query
-            const dataResult = await this.databricksService.executeSqlQuery(
-              schemaName,
-              sqlQuery,
-            );
+            const dataResult = await this.databricksService.executeSqlQuery(schemaName, sqlQuery);
 
             if (dataResult.isFailure()) {
               return failure(
-                AppError.internal(
-                  `Failed to get table data: ${dataResult.error.message}`,
-                ),
+                AppError.internal(`Failed to get table data: ${dataResult.error.message}`),
               );
             }
 
@@ -152,9 +130,7 @@ export class GetExperimentDataUseCase {
           }
           // Otherwise, list all tables in the schema with their data
           else {
-            this.logger.debug(
-              `Listing all tables for experiment ${experimentId}`,
-            );
+            this.logger.debug(`Listing all tables for experiment ${experimentId}`);
 
             const tablesResult = await this.databricksService.listTables(
               experiment.name,
@@ -163,9 +139,7 @@ export class GetExperimentDataUseCase {
 
             if (tablesResult.isFailure()) {
               return failure(
-                AppError.internal(
-                  `Failed to list tables: ${tablesResult.error.message}`,
-                ),
+                AppError.internal(`Failed to list tables: ${tablesResult.error.message}`),
               );
             }
 
@@ -176,10 +150,7 @@ export class GetExperimentDataUseCase {
             for (const table of tablesResult.value.tables) {
               // Get sample data
               const sqlQuery = `SELECT * FROM ${table.name} LIMIT ${pageSize}`;
-              const dataResult = await this.databricksService.executeSqlQuery(
-                schemaName,
-                sqlQuery,
-              );
+              const dataResult = await this.databricksService.executeSqlQuery(schemaName, sqlQuery);
 
               const tableInfo: TableDataDto = {
                 name: table.name,
@@ -188,9 +159,7 @@ export class GetExperimentDataUseCase {
                 page,
                 pageSize,
                 totalPages: 1, // Sample data is just 1 page
-                totalRows: dataResult.isSuccess()
-                  ? dataResult.value.totalRows
-                  : 0,
+                totalRows: dataResult.isSuccess() ? dataResult.value.totalRows : 0,
               };
 
               if (dataResult.isSuccess()) {

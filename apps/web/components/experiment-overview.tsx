@@ -39,15 +39,11 @@ export function ExperimentOverview({ experimentId }: ExperimentOverviewProps) {
             <h4 className="text-muted-foreground text-sm font-medium">
               {t("experimentSettings.description")}
             </h4>
-            <p className="text-sm">
-              {experiment.description ?? t("experiments.noDescription")}
-            </p>
+            <p className="text-sm">{experiment.description ?? t("experiments.noDescription")}</p>
           </div>
 
           <div>
-            <h4 className="text-muted-foreground text-sm font-medium">
-              {t("experiments.status")}
-            </h4>
+            <h4 className="text-muted-foreground text-sm font-medium">{t("experiments.status")}</h4>
             <p className="text-sm capitalize">{experiment.status}</p>
           </div>
         </div>
@@ -89,9 +85,7 @@ export function ExperimentOverview({ experimentId }: ExperimentOverviewProps) {
         <h4 className="text-muted-foreground mb-2 text-sm font-medium">
           {t("experiments.experimentId")}
         </h4>
-        <p className="bg-muted rounded p-2 font-mono text-sm">
-          {experiment.id}
-        </p>
+        <p className="bg-muted rounded p-2 font-mono text-sm">{experiment.id}</p>
       </div>
     </div>
   );

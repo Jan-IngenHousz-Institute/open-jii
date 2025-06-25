@@ -38,13 +38,7 @@ export interface ExecuteStatementRequest {
 export interface StatementResponse {
   statement_id: string;
   status: {
-    state:
-      | "PENDING"
-      | "RUNNING"
-      | "SUCCEEDED"
-      | "FAILED"
-      | "CANCELED"
-      | "CLOSED";
+    state: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCELED" | "CLOSED";
     error?: {
       message?: string;
       error_code?: string;

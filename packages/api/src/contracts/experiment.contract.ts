@@ -40,8 +40,7 @@ export const experimentContract = c.router({
       400: zErrorResponse,
     },
     summary: "List experiments",
-    description:
-      "Returns a list of experiments based on the specified filter criteria",
+    description: "Returns a list of experiments based on the specified filter criteria",
   },
 
   getExperiment: {
@@ -91,8 +90,7 @@ export const experimentContract = c.router({
       403: zErrorResponse,
     },
     summary: "List experiment members",
-    description:
-      "Returns a list of all users who are members of the specified experiment",
+    description: "Returns a list of all users who are members of the specified experiment",
   },
 
   addExperimentMembers: {
@@ -134,7 +132,6 @@ export const experimentContract = c.router({
       400: zErrorResponse,
     },
     summary: "Get experiment data",
-    description:
-      "Retrieves data tables from the experiment with pagination support",
+    description: "Retrieves data tables from the experiment with pagination support",
   },
 });

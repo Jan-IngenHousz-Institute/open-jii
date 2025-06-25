@@ -26,26 +26,14 @@ interface UserListProps {
 }
 
 // Display a list of user items with add buttons
-function UserList({
-  users,
-  onAddUser,
-  isAddingUser,
-  setOpen,
-  onSearchChange,
-}: UserListProps) {
+function UserList({ users, onAddUser, isAddingUser, setOpen, onSearchChange }: UserListProps) {
   return (
     <>
       {users.map((user) => (
-        <CommandItem
-          key={user.id}
-          value={user.id}
-          className="flex items-center justify-between"
-        >
+        <CommandItem key={user.id} value={user.id} className="flex items-center justify-between">
           <div className="flex-1 overflow-hidden">
             <div className="flex flex-col">
-              <span className="overflow-hidden text-ellipsis whitespace-nowrap">
-                {user.name}
-              </span>
+              <span className="overflow-hidden text-ellipsis whitespace-nowrap">{user.name}</span>
               <span className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
                 {user.email}
               </span>
@@ -79,28 +67,17 @@ interface SearchStatusProps {
 }
 
 // Display appropriate message based on search status
-function SearchStatus({
-  loading,
-  hasUsers,
-  hasSearchQuery,
-  searchValue,
-}: SearchStatusProps) {
+function SearchStatus({ loading, hasUsers, hasSearchQuery, searchValue }: SearchStatusProps) {
   const { t } = useTranslation(undefined, "common");
 
   if (loading) {
     return (
-      <div className="text-muted-foreground p-4 text-center text-sm">
-        {t("common.loading")}
-      </div>
+      <div className="text-muted-foreground p-4 text-center text-sm">{t("common.loading")}</div>
     );
   }
 
   if (!hasUsers && hasSearchQuery) {
-    return (
-      <CommandEmpty>
-        {t("common.noUsersFound", { search: searchValue })}
-      </CommandEmpty>
-    );
+    return <CommandEmpty>{t("common.noUsersFound", { search: searchValue })}</CommandEmpty>;
   }
 
   if (!hasUsers && !hasSearchQuery) {
@@ -121,11 +98,7 @@ interface SearchFieldProps {
   isAddingUser: boolean;
 }
 
-function SearchField({
-  searchValue,
-  onSearchChange,
-  isAddingUser,
-}: SearchFieldProps) {
+function SearchField({ searchValue, onSearchChange, isAddingUser }: SearchFieldProps) {
   const { t } = useTranslation(undefined, "common");
 
   return (

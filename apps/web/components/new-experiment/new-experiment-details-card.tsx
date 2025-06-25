@@ -21,17 +21,13 @@ interface NewExperimentDetailsCardProps {
   form: UseFormReturn<CreateExperimentBody>;
 }
 
-export function NewExperimentDetailsCard({
-  form,
-}: NewExperimentDetailsCardProps) {
+export function NewExperimentDetailsCard({ form }: NewExperimentDetailsCardProps) {
   const { t } = useTranslation(undefined, "common");
   return (
     <Card>
       <CardHeader>
         <CardTitle>{t("newExperiment.detailsTitle")}</CardTitle>
-        <CardDescription>
-          {t("newExperiment.detailsDescription")}
-        </CardDescription>
+        <CardDescription>{t("newExperiment.detailsDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
         <FormField

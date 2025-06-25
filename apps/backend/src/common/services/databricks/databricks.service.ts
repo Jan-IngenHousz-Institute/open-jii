@@ -4,14 +4,7 @@ import { ConfigService } from "@nestjs/config";
 import { AxiosError, AxiosResponse, isAxiosError } from "axios";
 import z from "zod";
 
-import {
-  Result,
-  AppError,
-  tryCatch,
-  apiErrorMapper,
-  success,
-  failure,
-} from "../../utils/fp-utils";
+import { Result, AppError, tryCatch, apiErrorMapper, success, failure } from "../../utils/fp-utils";
 import { DatabricksConfig, PerformanceTarget } from "./databricks.types";
 import type {
   DatabricksHealthCheck,
@@ -54,16 +47,10 @@ export class DatabricksService {
     return {
       host: this.configService.getOrThrow<string>("databricks.host"),
       clientId: this.configService.getOrThrow<string>("databricks.clientId"),
-      clientSecret: this.configService.getOrThrow<string>(
-        "databricks.clientSecret",
-      ),
+      clientSecret: this.configService.getOrThrow<string>("databricks.clientSecret"),
       jobId: this.configService.getOrThrow<string>("databricks.jobId"),
-      warehouseId: this.configService.getOrThrow<string>(
-        "databricks.warehouseId",
-      ),
-      catalogName: this.configService.getOrThrow<string>(
-        "databricks.catalogName",
-      ),
+      warehouseId: this.configService.getOrThrow<string>("databricks.warehouseId"),
+      catalogName: this.configService.getOrThrow<string>("databricks.catalogName"),
     };
   }
 
@@ -85,32 +72,20 @@ export class DatabricksService {
     try {
       databricksConfigSchema.parse(this.config);
     } catch {
-      throw new Error(
-        "Invalid Databricks configuration: all fields must be non-empty strings",
-      );
+      throw new Error("Invalid Databricks configuration: all fields must be non-empty strings");
     }
   }
 
   private getErrorMessage(error: unknown): string {
-    if (
-      isAxiosError<
-        { message?: string; error_description?: string } | undefined
-      >(error)
-    ) {
+    if (isAxiosError<{ message?: string; error_description?: string } | undefined>(error)) {
       const message = this.extractAxiosErrorMessage(error);
-      return error.response?.status
-        ? `HTTP ${error.response.status}: ${message}`
-        : message;
+      return error.response?.status ? `HTTP ${error.response.status}: ${message}` : message;
     }
-    return (error as any) instanceof Error
-      ? (error as Error).message
-      : String(error);
+    return (error as any) instanceof Error ? (error as Error).message : String(error);
   }
 
   private extractAxiosErrorMessage(
-    axiosError: AxiosError<
-      { message?: string; error_description?: string } | undefined
-    >,
+    axiosError: AxiosError<{ message?: string; error_description?: string } | undefined>,
   ): string {
     return (
       axiosError.response?.data?.message ??
@@ -164,21 +139,20 @@ export class DatabricksService {
 
     return await tryCatch(
       async () => {
-        const response: AxiosResponse<TokenResponse> =
-          await this.httpService.axiosRef.post(
-            tokenUrl,
-            "grant_type=client_credentials&scope=all-apis",
-            {
-              auth: {
-                username: this.config.clientId,
-                password: this.config.clientSecret,
-              },
-              headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-              },
-              timeout: DatabricksService.DEFAULT_REQUEST_TIMEOUT,
+        const response: AxiosResponse<TokenResponse> = await this.httpService.axiosRef.post(
+          tokenUrl,
+          "grant_type=client_credentials&scope=all-apis",
+          {
+            auth: {
+              username: this.config.clientId,
+              password: this.config.clientSecret,
             },
-          );
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            timeout: DatabricksService.DEFAULT_REQUEST_TIMEOUT,
+          },
+        );
 
         const { access_token, token_type, expires_in } = response.data;
         this.validateTokenResponse(access_token, expires_in);
@@ -186,9 +160,7 @@ export class DatabricksService {
         return { access_token, token_type, expires_in };
       },
       (error) => {
-        this.logger.error(
-          `Failed to obtain access token: ${this.getErrorMessage(error)}`,
-        );
+        this.logger.error(`Failed to obtain access token: ${this.getErrorMessage(error)}`);
         return apiErrorMapper(error, "Databricks token request");
       },
     );
@@ -208,9 +180,7 @@ export class DatabricksService {
     this.tokenExpiresAt = Date.now() + tokenData.expires_in * 1000;
   }
 
-  async triggerJob(
-    params: DatabricksJobTriggerParams,
-  ): Promise<Result<DatabricksJobRunResponse>> {
+  async triggerJob(params: DatabricksJobTriggerParams): Promise<Result<DatabricksJobRunResponse>> {
     return await tryCatch(
       async () => {
         const tokenResult = await this.getAccessToken();
@@ -227,9 +197,7 @@ export class DatabricksService {
         return result.value;
       },
       (error) => {
-        this.logger.error(
-          `Failed to trigger Databricks job: ${this.getErrorMessage(error)}`,
-        );
+        this.logger.error(`Failed to trigger Databricks job: ${this.getErrorMessage(error)}`);
         return apiErrorMapper(error, "Databricks job trigger");
       },
     );
@@ -268,17 +236,13 @@ export class DatabricksService {
         return jobRunResponse;
       },
       (error) => {
-        this.logger.error(
-          `Error executing job trigger: ${this.getErrorMessage(error)}`,
-        );
+        this.logger.error(`Error executing job trigger: ${this.getErrorMessage(error)}`);
         return apiErrorMapper(error, "Databricks job execution");
       },
     );
   }
 
-  private buildJobTriggerRequest(
-    params: DatabricksJobTriggerParams,
-  ): DatabricksRunNowRequest {
+  private buildJobTriggerRequest(params: DatabricksJobTriggerParams): DatabricksRunNowRequest {
     return {
       job_id: parseInt(this.config.jobId, 10),
       job_parameters: {
@@ -295,9 +259,7 @@ export class DatabricksService {
 
   private validateJobRunResponse(response: DatabricksJobRunResponse): void {
     if (!response.run_id) {
-      throw AppError.internal(
-        "Invalid response from Databricks API: missing run_id",
-      );
+      throw AppError.internal("Invalid response from Databricks API: missing run_id");
     }
   }
 
@@ -312,25 +274,23 @@ export class DatabricksService {
       const getUrl = `${this.config.host}${DatabricksService.SQL_STATEMENTS_ENDPOINT}/${statementId}`;
 
       try {
-        const response: AxiosResponse<StatementResponse> =
-          await this.httpService.axiosRef.get(getUrl, {
+        const response: AxiosResponse<StatementResponse> = await this.httpService.axiosRef.get(
+          getUrl,
+          {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
             timeout: DatabricksService.DEFAULT_REQUEST_TIMEOUT,
-          });
+          },
+        );
 
         const statementResponse = response.data;
 
         // Check if the statement finished
         if (statementResponse.status.state === "SUCCEEDED") {
           return success(statementResponse);
-        } else if (
-          ["FAILED", "CANCELED", "CLOSED"].includes(
-            statementResponse.status.state,
-          )
-        ) {
+        } else if (["FAILED", "CANCELED", "CLOSED"].includes(statementResponse.status.state)) {
           if (statementResponse.status.error) {
             return failure(
               AppError.internal(
@@ -348,32 +308,22 @@ export class DatabricksService {
         // Still running or pending, wait and retry
         await new Promise((resolve) => setTimeout(resolve, pollingIntervalMs));
       } catch (error) {
-        this.logger.error(
-          `Error polling SQL statement execution: ${this.getErrorMessage(error)}`,
-        );
+        this.logger.error(`Error polling SQL statement execution: ${this.getErrorMessage(error)}`);
         return failure(
-          AppError.internal(
-            `Databricks SQL polling failed: ${this.getErrorMessage(error)}`,
-          ),
+          AppError.internal(`Databricks SQL polling failed: ${this.getErrorMessage(error)}`),
         );
       }
     }
 
     // If we've exhausted our polling attempts, return a timeout error
     return failure(
-      AppError.internal(
-        "SQL statement execution timed out after multiple polling attempts",
-      ),
+      AppError.internal("SQL statement execution timed out after multiple polling attempts"),
     );
   }
 
-  private formatExperimentDataResponse(
-    response: StatementResponse,
-  ): SchemaData {
+  private formatExperimentDataResponse(response: StatementResponse): SchemaData {
     if (!response.manifest || !response.result) {
-      throw AppError.internal(
-        "Invalid SQL statement response: missing manifest or result data",
-      );
+      throw AppError.internal("Invalid SQL statement response: missing manifest or result data");
     }
 
     const columns = response.manifest.schema.columns.map((column) => ({
@@ -408,30 +358,23 @@ export class DatabricksService {
           expand_tasks: false,
         };
 
-        const response =
-          await this.httpService.axiosRef.get<DatabricksJobsListResponse>(
-            apiUrl,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-              params: requestParams,
-              timeout: DatabricksService.DEFAULT_REQUEST_TIMEOUT,
-            },
-          );
+        const response = await this.httpService.axiosRef.get<DatabricksJobsListResponse>(apiUrl, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          params: requestParams,
+          timeout: DatabricksService.DEFAULT_REQUEST_TIMEOUT,
+        });
 
         const jobsListResponse = response.data;
 
         return {
-          healthy:
-            response.status === 200 && Array.isArray(jobsListResponse.jobs),
+          healthy: response.status === 200 && Array.isArray(jobsListResponse.jobs),
           service: "databricks",
         };
       },
       (error) => {
-        this.logger.error(
-          `Databricks health check failed: ${this.getErrorMessage(error)}`,
-        );
+        this.logger.error(`Databricks health check failed: ${this.getErrorMessage(error)}`);
         return apiErrorMapper(error, "Databricks service unavailable");
       },
     );
@@ -454,17 +397,16 @@ export class DatabricksService {
 
         this.logger.debug(`Listing tables for schema ${schemaName}`);
 
-        const response =
-          await this.httpService.axiosRef.get<ListTablesResponse>(apiUrl, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            params: {
-              catalog_name: this.config.catalogName,
-              schema_name: schemaName,
-            },
-            timeout: DatabricksService.DEFAULT_REQUEST_TIMEOUT,
-          });
+        const response = await this.httpService.axiosRef.get<ListTablesResponse>(apiUrl, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          params: {
+            catalog_name: this.config.catalogName,
+            schema_name: schemaName,
+          },
+          timeout: DatabricksService.DEFAULT_REQUEST_TIMEOUT,
+        });
 
         return {
           next_page_token: response.data.next_page_token,
@@ -479,18 +421,13 @@ export class DatabricksService {
         };
       },
       (error) => {
-        this.logger.error(
-          `Failed to list tables: ${this.getErrorMessage(error)}`,
-        );
+        this.logger.error(`Failed to list tables: ${this.getErrorMessage(error)}`);
         return apiErrorMapper(error, "Failed to list Databricks tables");
       },
     );
   }
 
-  async executeSqlQuery(
-    schemaName: string,
-    sqlStatement: string,
-  ): Promise<Result<SchemaData>> {
+  async executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {
     return await tryCatch(
       async () => {
         const tokenResult = await this.getAccessToken();
@@ -499,9 +436,7 @@ export class DatabricksService {
         }
 
         const token = tokenResult.value;
-        this.logger.debug(
-          `Executing SQL query in schema ${schemaName}: ${sqlStatement}`,
-        );
+        this.logger.debug(`Executing SQL query in schema ${schemaName}: ${sqlStatement}`);
 
         const statementUrl = `${this.config.host}${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`;
         const requestBody: ExecuteStatementRequest = {
@@ -515,25 +450,24 @@ export class DatabricksService {
         };
 
         try {
-          const response: AxiosResponse<StatementResponse> =
-            await this.httpService.axiosRef.post(statementUrl, requestBody, {
+          const response: AxiosResponse<StatementResponse> = await this.httpService.axiosRef.post(
+            statementUrl,
+            requestBody,
+            {
               headers: {
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "application/json",
               },
               timeout: 60000, // Longer timeout for SQL queries
-            });
+            },
+          );
 
           const statementResponse = response.data;
 
           // Check if the statement is in a terminal state
           if (statementResponse.status.state === "SUCCEEDED") {
             return this.formatExperimentDataResponse(statementResponse);
-          } else if (
-            ["FAILED", "CANCELED", "CLOSED"].includes(
-              statementResponse.status.state,
-            )
-          ) {
+          } else if (["FAILED", "CANCELED", "CLOSED"].includes(statementResponse.status.state)) {
             if (statementResponse.status.error) {
               throw AppError.internal(
                 `SQL statement execution failed: ${statementResponse.status.error.message ?? "Unknown error"}`,
@@ -556,9 +490,7 @@ export class DatabricksService {
 
           return this.formatExperimentDataResponse(pollResult.value);
         } catch (error) {
-          this.logger.error(
-            `Error executing SQL query: ${this.getErrorMessage(error)}`,
-          );
+          this.logger.error(`Error executing SQL query: ${this.getErrorMessage(error)}`);
           throw error instanceof AppError
             ? error
             : AppError.internal(
@@ -567,9 +499,7 @@ export class DatabricksService {
         }
       },
       (error) => {
-        this.logger.error(
-          `Failed to execute SQL query: ${this.getErrorMessage(error)}`,
-        );
+        this.logger.error(`Failed to execute SQL query: ${this.getErrorMessage(error)}`);
         return apiErrorMapper(error, "Databricks SQL query execution");
       },
     );

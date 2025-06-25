@@ -22,11 +22,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
 
 @Module({
   imports: [DatabricksModule],
-  controllers: [
-    ExperimentController,
-    ExperimentMembersController,
-    ExperimentDataController,
-  ],
+  controllers: [ExperimentController, ExperimentMembersController, ExperimentDataController],
   providers: [
     // Repositories
     ExperimentRepository,

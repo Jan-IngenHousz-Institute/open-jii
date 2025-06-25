@@ -10,10 +10,7 @@ export default function ApiIndexPage(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
 
   return (
-    <Layout
-      title="API Documentation"
-      description="OpenJII API Documentation Hub"
-    >
+    <Layout title="API Documentation" description="OpenJII API Documentation Hub">
       <Head>
         <meta name="description" content="OpenJII API Documentation Hub" />
       </Head>
@@ -26,9 +23,7 @@ export default function ApiIndexPage(): JSX.Element {
         <div className={styles.apiCardContainer}>
           <div className={styles.apiCard}>
             <h2>REST API</h2>
-            <p>
-              Browse and test our RESTful API endpoints using OpenAPI/Swagger UI
-            </p>
+            <p>Browse and test our RESTful API endpoints using OpenAPI/Swagger UI</p>
             <Link to="/api/rest" className={styles.apiCardButton}>
               View REST API Docs
             </Link>
@@ -36,10 +31,7 @@ export default function ApiIndexPage(): JSX.Element {
 
           <div className={styles.apiCard}>
             <h2>MQTT API</h2>
-            <p>
-              Explore our MQTT API for real-time communication and device
-              management
-            </p>
+            <p>Explore our MQTT API for real-time communication and device management</p>
             <Link to="/api/mqtt" className={styles.apiCardButton}>
               View MQTT API Docs
             </Link>

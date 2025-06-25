@@ -7,10 +7,7 @@ import styles from "./api.module.css";
 
 export default function RestApiPage(): JSX.Element {
   return (
-    <Layout
-      title="REST API Documentation"
-      description="OpenJII REST API Documentation"
-    >
+    <Layout title="REST API Documentation" description="OpenJII REST API Documentation">
       <Head>
         <meta name="description" content="OpenJII REST API Documentation" />
       </Head>

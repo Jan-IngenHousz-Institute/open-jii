@@ -11,8 +11,7 @@ const config = {
   session: { strategy: "jwt" },
 } satisfies ExpressAuthConfig;
 
-export const getSession = (request: e.Request) =>
-  getExpressSession(request, config);
+export const getSession = (request: e.Request) => getExpressSession(request, config);
 
 // import {
 //   Auth,

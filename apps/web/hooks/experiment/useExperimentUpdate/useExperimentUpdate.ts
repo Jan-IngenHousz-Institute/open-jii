@@ -54,10 +54,7 @@ export const useExperimentUpdate = () => {
     onError: (error, variables, context) => {
       // Revert updates on error
       if (context?.previousExperiment) {
-        queryClient.setQueryData(
-          ["experiment", variables.params.id],
-          context.previousExperiment,
-        );
+        queryClient.setQueryData(["experiment", variables.params.id], context.previousExperiment);
       }
 
       if (context?.previousExperiments) {

@@ -48,12 +48,9 @@ describe("ExperimentMembersController", () => {
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
       // Get the list path
-      const path = testApp.resolvePath(
-        contract.experiments.listExperimentMembers.path,
-        {
-          id: experiment.id,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+        id: experiment.id,
+      });
 
       // Request the members list
       const response: SuperTestResponse<ExperimentMemberList> = await testApp
@@ -82,12 +79,9 @@ describe("ExperimentMembersController", () => {
     });
     it("should return 404 if experiment doesn't exist", async () => {
       const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(
-        contract.experiments.listExperimentMembers.path,
-        {
-          id: nonExistentId,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+        id: nonExistentId,
+      });
 
       await testApp
         .get(path)
@@ -100,17 +94,11 @@ describe("ExperimentMembersController", () => {
 
     it("should return 400 for invalid experiment UUID", async () => {
       const invalidId = "not-a-uuid";
-      const path = testApp.resolvePath(
-        contract.experiments.listExperimentMembers.path,
-        {
-          id: invalidId,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+        id: invalidId,
+      });
 
-      await testApp
-        .get(path)
-        .withAuth(testUserId)
-        .expect(StatusCodes.BAD_REQUEST);
+      await testApp.get(path).withAuth(testUserId).expect(StatusCodes.BAD_REQUEST);
     });
 
     it("should return 401 if not authenticated", async () => {
@@ -119,12 +107,9 @@ describe("ExperimentMembersController", () => {
         userId: testUserId,
       });
 
-      const path = testApp.resolvePath(
-        contract.experiments.listExperimentMembers.path,
-        {
-          id: experiment.id,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+        id: experiment.id,
+      });
 
       await testApp.get(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
     });
@@ -144,12 +129,9 @@ describe("ExperimentMembersController", () => {
       });
 
       // Construct the path
-      const path = testApp.resolvePath(
-        contract.experiments.addExperimentMembers.path,
-        {
-          id: experiment.id,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.addExperimentMembers.path, {
+        id: experiment.id,
+      });
 
       // Create the member data
       const memberData = { members: [{ userId: newMemberId, role: "member" }] };
@@ -171,17 +153,11 @@ describe("ExperimentMembersController", () => {
       });
 
       // Verify with a list request
-      const listPath = testApp.resolvePath(
-        contract.experiments.listExperimentMembers.path,
-        {
-          id: experiment.id,
-        },
-      );
+      const listPath = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+        id: experiment.id,
+      });
 
-      const listResponse = await testApp
-        .get(listPath)
-        .withAuth(testUserId)
-        .expect(StatusCodes.OK);
+      const listResponse = await testApp.get(listPath).withAuth(testUserId).expect(StatusCodes.OK);
 
       expect(listResponse.body).toHaveLength(2);
       expect(listResponse.body).toEqual(
@@ -208,12 +184,9 @@ describe("ExperimentMembersController", () => {
         email: "member@example.com",
       });
 
-      const path = testApp.resolvePath(
-        contract.experiments.addExperimentMembers.path,
-        {
-          id: nonExistentId,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.addExperimentMembers.path, {
+        id: nonExistentId,
+      });
 
       await testApp
         .post(path)
@@ -232,12 +205,9 @@ describe("ExperimentMembersController", () => {
         userId: testUserId,
       });
 
-      const path = testApp.resolvePath(
-        contract.experiments.addExperimentMembers.path,
-        {
-          id: experiment.id,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.addExperimentMembers.path, {
+        id: experiment.id,
+      });
 
       // Missing userId
       await testApp
@@ -270,12 +240,9 @@ describe("ExperimentMembersController", () => {
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
       // Try to add the same member again
-      const path = testApp.resolvePath(
-        contract.experiments.addExperimentMembers.path,
-        {
-          id: experiment.id,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.addExperimentMembers.path, {
+        id: experiment.id,
+      });
 
       await testApp
         .post(path)
@@ -292,12 +259,9 @@ describe("ExperimentMembersController", () => {
       });
 
       // Try to add self again
-      const path = testApp.resolvePath(
-        contract.experiments.addExperimentMembers.path,
-        {
-          id: experiment.id,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.addExperimentMembers.path, {
+        id: experiment.id,
+      });
 
       await testApp
         .post(path)
@@ -316,20 +280,13 @@ describe("ExperimentMembersController", () => {
         email: "new-member@example.com",
       });
 
-      const path = testApp.resolvePath(
-        contract.experiments.addExperimentMembers.path,
-        {
-          id: experiment.id,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.addExperimentMembers.path, {
+        id: experiment.id,
+      });
 
       const memberData = { userId: newMemberId, role: "member" };
 
-      await testApp
-        .post(path)
-        .withoutAuth()
-        .send(memberData)
-        .expect(StatusCodes.UNAUTHORIZED);
+      await testApp.post(path).withoutAuth().send(memberData).expect(StatusCodes.UNAUTHORIZED);
     });
   });
 
@@ -348,10 +305,9 @@ describe("ExperimentMembersController", () => {
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
       // Verify there are 2 members
-      const listPath = testApp.resolvePath(
-        contract.experiments.listExperimentMembers.path,
-        { id: experiment.id },
-      );
+      const listPath = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+        id: experiment.id,
+      });
       let listResponse: SuperTestResponse<ExperimentMemberList> = await testApp
         .get(listPath)
         .withAuth(testUserId);
@@ -359,18 +315,12 @@ describe("ExperimentMembersController", () => {
       expect(listResponse.body).toHaveLength(2);
 
       // Remove the member
-      const removePath = testApp.resolvePath(
-        contract.experiments.removeExperimentMember.path,
-        {
-          id: experiment.id,
-          memberId: memberId,
-        },
-      );
+      const removePath = testApp.resolvePath(contract.experiments.removeExperimentMember.path, {
+        id: experiment.id,
+        memberId: memberId,
+      });
 
-      await testApp
-        .delete(removePath)
-        .withAuth(testUserId)
-        .expect(StatusCodes.NO_CONTENT);
+      await testApp.delete(removePath).withAuth(testUserId).expect(StatusCodes.NO_CONTENT);
 
       // Verify the member was removed
       listResponse = await testApp.get(listPath).withAuth(testUserId);
@@ -384,13 +334,10 @@ describe("ExperimentMembersController", () => {
         email: "member@example.com",
       });
 
-      const path = testApp.resolvePath(
-        contract.experiments.removeExperimentMember.path,
-        {
-          id: nonExistentId,
-          memberId: memberId,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.removeExperimentMember.path, {
+        id: nonExistentId,
+        memberId: memberId,
+      });
 
       await testApp
         .delete(path)
@@ -411,13 +358,10 @@ describe("ExperimentMembersController", () => {
       // Use a non-existent member ID
       const nonExistentMemberId = faker.string.uuid();
 
-      const path = testApp.resolvePath(
-        contract.experiments.removeExperimentMember.path,
-        {
-          id: experiment.id,
-          memberId: nonExistentMemberId,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.removeExperimentMember.path, {
+        id: experiment.id,
+        memberId: nonExistentMemberId,
+      });
 
       await testApp
         .delete(path)
@@ -430,18 +374,12 @@ describe("ExperimentMembersController", () => {
 
     it("should return 400 for invalid UUIDs", async () => {
       const invalidId = "not-a-uuid";
-      const path = testApp.resolvePath(
-        contract.experiments.removeExperimentMember.path,
-        {
-          id: invalidId,
-          memberId: "also-not-a-uuid",
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.removeExperimentMember.path, {
+        id: invalidId,
+        memberId: "also-not-a-uuid",
+      });
 
-      await testApp
-        .delete(path)
-        .withAuth(testUserId)
-        .expect(StatusCodes.BAD_REQUEST);
+      await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.BAD_REQUEST);
 
       // Invalid member ID
       const { experiment } = await testApp.createExperiment({
@@ -471,13 +409,10 @@ describe("ExperimentMembersController", () => {
       });
 
       // Attempt to remove self (the only admin)
-      const path = testApp.resolvePath(
-        contract.experiments.removeExperimentMember.path,
-        {
-          id: experiment.id,
-          memberId: testUserId,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.removeExperimentMember.path, {
+        id: experiment.id,
+        memberId: testUserId,
+      });
 
       await testApp
         .delete(path)
@@ -499,18 +434,12 @@ describe("ExperimentMembersController", () => {
       });
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
-      const removePath = testApp.resolvePath(
-        contract.experiments.removeExperimentMember.path,
-        {
-          id: experiment.id,
-          memberId: memberId,
-        },
-      );
+      const removePath = testApp.resolvePath(contract.experiments.removeExperimentMember.path, {
+        id: experiment.id,
+        memberId: memberId,
+      });
 
-      await testApp
-        .delete(removePath)
-        .withoutAuth()
-        .expect(StatusCodes.UNAUTHORIZED);
+      await testApp.delete(removePath).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
     });
   });
 });

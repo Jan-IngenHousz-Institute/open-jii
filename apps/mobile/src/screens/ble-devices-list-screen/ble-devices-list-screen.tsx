@@ -14,16 +14,13 @@ import { updateList } from "./utils/update-list";
 
 export function BleDevicesListScreen() {
   const [devices, setDevices] = useState<BluetoothDevice[]>([]);
-  const navigation =
-    useNavigation<NativeStackNavigationProp<BleStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<BleStackParamList>>();
 
   const { error } = useAsync(async () => {
     const emitter = await startDeviceScan();
 
     emitter.on("bluetoothDeviceFound", (newDevice) => {
-      setDevices((devices) =>
-        orderDevices(updateList(devices, serializeDevice(newDevice))),
-      );
+      setDevices((devices) => orderDevices(updateList(devices, serializeDevice(newDevice))));
     });
 
     emitter.on("bluetoothError", (e) => alert(e.message));

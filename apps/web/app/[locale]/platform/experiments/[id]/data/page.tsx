@@ -10,9 +10,7 @@ interface ExperimentDataPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function ExperimentDataPage({
-  params,
-}: ExperimentDataPageProps) {
+export default function ExperimentDataPage({ params }: ExperimentDataPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useExperiment(id);
   const { t } = useTranslation(undefined, "experiments");
@@ -33,45 +31,31 @@ export default function ExperimentDataPage({
     <div className="space-y-8">
       <div>
         <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
-        <p className="text-muted-foreground text-sm">
-          {t("experimentData.description")}
-        </p>
+        <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
       </div>
 
       <div className="space-y-6">
         <div className="rounded-lg border p-6">
-          <h5 className="mb-4 text-base font-medium">
-            {t("experimentData.dataSources.title")}
-          </h5>
+          <h5 className="mb-4 text-base font-medium">{t("experimentData.dataSources.title")}</h5>
           <div className="text-muted-foreground text-sm">
             <p>{t("experimentData.dataSources.noSources")}</p>
-            <p className="mt-2">
-              {t("experimentData.dataSources.description")}
-            </p>
+            <p className="mt-2">{t("experimentData.dataSources.description")}</p>
           </div>
         </div>
 
         <div className="rounded-lg border p-6">
-          <h5 className="mb-4 text-base font-medium">
-            {t("experimentData.dataCollection.title")}
-          </h5>
+          <h5 className="mb-4 text-base font-medium">{t("experimentData.dataCollection.title")}</h5>
           <div className="text-muted-foreground text-sm">
             <p>{t("experimentData.dataCollection.status")}</p>
-            <p className="mt-2">
-              {t("experimentData.dataCollection.description")}
-            </p>
+            <p className="mt-2">{t("experimentData.dataCollection.description")}</p>
           </div>
         </div>
 
         <div className="rounded-lg border p-6">
-          <h5 className="mb-4 text-base font-medium">
-            {t("experimentData.dataAnalysis.title")}
-          </h5>
+          <h5 className="mb-4 text-base font-medium">{t("experimentData.dataAnalysis.title")}</h5>
           <div className="text-muted-foreground text-sm">
             <p>{t("experimentData.dataAnalysis.noResults")}</p>
-            <p className="mt-2">
-              {t("experimentData.dataAnalysis.description")}
-            </p>
+            <p className="mt-2">{t("experimentData.dataAnalysis.description")}</p>
           </div>
         </div>
       </div>

@@ -21,22 +21,14 @@ export class ListExperimentsUseCase {
       `Listing experiments for user ${userId}${filter ? ` with filter "${filter}"` : ""}${status ? ` and status "${status}"` : ""}`,
     );
 
-    const result = await this.experimentRepository.findAll(
-      userId,
-      filter,
-      status,
-    );
+    const result = await this.experimentRepository.findAll(userId, filter, status);
 
     result.fold(
       (experiments: ExperimentDto[]) => {
-        this.logger.debug(
-          `Found ${experiments.length} experiments for user ${userId}`,
-        );
+        this.logger.debug(`Found ${experiments.length} experiments for user ${userId}`);
       },
       (error: AppError) => {
-        this.logger.error(
-          `Failed to list experiments for user ${userId}: ${error.message}`,
-        );
+        this.logger.error(`Failed to list experiments for user ${userId}: ${error.message}`);
       },
     );
 

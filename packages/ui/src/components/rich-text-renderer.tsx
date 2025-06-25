@@ -21,10 +21,7 @@ export function RichTextRenderer({ content }: RichTextRendererProps) {
 
   return (
     <>
-      <div
-        className="ql-editor rich-text-renderer"
-        dangerouslySetInnerHTML={{ __html: content }}
-      />
+      <div className="ql-editor rich-text-renderer" dangerouslySetInnerHTML={{ __html: content }} />
       <style
         dangerouslySetInnerHTML={{
           __html: `

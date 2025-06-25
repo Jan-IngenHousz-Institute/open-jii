@@ -9,8 +9,7 @@ export const sampleDevices: BluetoothDevice[] = [
     mtu: 23,
     name: null,
     overflowServiceUUIDs: null,
-    rawScanRecord:
-      "eyJpZCI6IkRldmljZTEiLCJyc3NpIjotODAsInR4UG93ZXJMZXZlbCI6MTB9",
+    rawScanRecord: "eyJpZCI6IkRldmljZTEiLCJyc3NpIjotODAsInR4UG93ZXJMZXZlbCI6MTB9",
     rssi: -80,
     serviceData: null,
     serviceUUIDs: null,
@@ -25,8 +24,7 @@ export const sampleDevices: BluetoothDevice[] = [
     mtu: 25,
     name: null,
     overflowServiceUUIDs: null,
-    rawScanRecord:
-      "eyJpZCI6IkRldmljZTIiLCJyc3NpIjotODIsInR4UG93ZXJMZXZlbCI6MTJ9",
+    rawScanRecord: "eyJpZCI6IkRldmljZTIiLCJyc3NpIjotODIsInR4UG93ZXJMZXZlbCI6MTJ9",
     rssi: -82,
     serviceData: null,
     serviceUUIDs: null,
@@ -41,8 +39,7 @@ export const sampleDevices: BluetoothDevice[] = [
     mtu: 26,
     name: null,
     overflowServiceUUIDs: null,
-    rawScanRecord:
-      "eyJpZCI6IkRldmljZTMiLCJyc3NpIjotNzgsInR4UG93ZXJMZXZlbCI6MTV9",
+    rawScanRecord: "eyJpZCI6IkRldmljZTMiLCJyc3NpIjotNzgsInR4UG93ZXJMZXZlbCI6MTV9",
     rssi: -78,
     serviceData: null,
     serviceUUIDs: null,
@@ -57,8 +54,7 @@ export const sampleDevices: BluetoothDevice[] = [
     mtu: 24,
     name: null,
     overflowServiceUUIDs: null,
-    rawScanRecord:
-      "eyJpZCI6IkRldmljZTQiLCJyc3NpIjotODUsInR4UG93ZXJMZXZlbCI6MTN9",
+    rawScanRecord: "eyJpZCI6IkRldmljZTQiLCJyc3NpIjotODUsInR4UG93ZXJMZXZlbCI6MTN9",
     rssi: -85,
     serviceData: null,
     serviceUUIDs: null,
@@ -73,8 +69,7 @@ export const sampleDevices: BluetoothDevice[] = [
     mtu: 27,
     name: null,
     overflowServiceUUIDs: null,
-    rawScanRecord:
-      "eyJpZCI6IkRldmljZTU5IiwicnNzaSI6LTc1LCJ0eFBvd2VyTGV2ZWwiOjE4fQ==",
+    rawScanRecord: "eyJpZCI6IkRldmljZTU5IiwicnNzaSI6LTc1LCJ0eFBvd2VyTGV2ZWwiOjE4fQ==",
     rssi: -75,
     serviceData: null,
     serviceUUIDs: null,

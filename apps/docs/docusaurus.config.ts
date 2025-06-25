@@ -44,8 +44,7 @@ const config: Config = {
           sidebarPath: "./sidebars.ts",
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
-          editUrl:
-            "https://github.com/Jan-IngenHousz-Institute/open-jii/tree/main/apps",
+          editUrl: "https://github.com/Jan-IngenHousz-Institute/open-jii/tree/main/apps",
         },
         theme: {
           customCss: "./src/css/custom.css",

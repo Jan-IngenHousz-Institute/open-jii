@@ -26,9 +26,7 @@ export function isSuccess<T, E>(result: Result<T, E>): result is Success<T> {
  * Assertion function to use in tests - throws if the result is not a Failure
  * This allows direct access to error properties in tests without type issues
  */
-export function assertFailure<T, E>(
-  result: Result<T, E>,
-): asserts result is Failure<E> {
+export function assertFailure<T, E>(result: Result<T, E>): asserts result is Failure<E> {
   if (!isFailure(result)) {
     throw new Error(
       `Expected result to be a failure, but got success with value: ${JSON.stringify(
@@ -42,9 +40,7 @@ export function assertFailure<T, E>(
  * Assertion function to use in tests - throws if the result is not a Success
  * This allows direct access to value property in tests without type issues
  */
-export function assertSuccess<T, E>(
-  result: Result<T, E>,
-): asserts result is Success<T> {
+export function assertSuccess<T, E>(result: Result<T, E>): asserts result is Success<T> {
   if (!isSuccess(result)) {
     throw new Error(
       `Expected result to be a success, but got failure with error: ${JSON.stringify(
@@ -133,8 +129,7 @@ export class Failure<E> {
  */
 export const success = <T, _>(value: T): Result<T> => new Success(value);
 
-export const failure = <E extends AppError>(error: E): Result<never, E> =>
-  new Failure(error);
+export const failure = <E extends AppError>(error: E): Result<never, E> => new Failure(error);
 
 /**
  * Base application error type
@@ -149,11 +144,7 @@ export class AppError extends Error {
     super();
   }
 
-  static notFound(
-    message = "Resource not found",
-    code = "NOT_FOUND",
-    details?: unknown,
-  ): AppError {
+  static notFound(message = "Resource not found", code = "NOT_FOUND", details?: unknown): AppError {
     return new AppError(message, code, StatusCodes.NOT_FOUND, details);
   }
 
@@ -165,11 +156,7 @@ export class AppError extends Error {
     return new AppError(message, code, StatusCodes.BAD_REQUEST, details);
   }
 
-  static forbidden(
-    message = "Access forbidden",
-    code = "FORBIDDEN",
-    details?: unknown,
-  ): AppError {
+  static forbidden(message = "Access forbidden", code = "FORBIDDEN", details?: unknown): AppError {
     return new AppError(message, code, StatusCodes.FORBIDDEN, details);
   }
 
@@ -186,12 +173,7 @@ export class AppError extends Error {
     code = "INTERNAL_ERROR",
     details?: unknown,
   ): AppError {
-    return new AppError(
-      message,
-      code,
-      StatusCodes.INTERNAL_SERVER_ERROR,
-      details,
-    );
+    return new AppError(message, code, StatusCodes.INTERNAL_SERVER_ERROR, details);
   }
 
   static repositoryError(
@@ -199,12 +181,7 @@ export class AppError extends Error {
     code = "REPOSITORY_ERROR",
     details?: unknown,
   ): AppError {
-    return new AppError(
-      message,
-      code,
-      StatusCodes.INTERNAL_SERVER_ERROR,
-      details,
-    );
+    return new AppError(message, code, StatusCodes.INTERNAL_SERVER_ERROR, details);
   }
 
   static validationError(
@@ -238,9 +215,7 @@ export function handleFailure(failure: Failure<AppError>, logger: Logger) {
     body: {
       message: error.message,
       code: error.code,
-      ...(process.env.NODE_ENV !== "production" && error.details
-        ? { details: error.details }
-        : {}),
+      ...(process.env.NODE_ENV !== "production" && error.details ? { details: error.details } : {}),
     },
   };
 }
@@ -314,11 +289,7 @@ export function apiErrorMapper(error: unknown, context?: string): AppError {
   if (typeof error === "object" && error !== null) {
     const err = error;
 
-    if (
-      isAxiosError<
-        { message?: string; error_description?: string } | undefined
-      >(err)
-    ) {
+    if (isAxiosError<{ message?: string; error_description?: string } | undefined>(err)) {
       const status = err.response?.status;
       const message =
         err.response?.data?.message ??
@@ -367,11 +338,7 @@ export function validate<T>(schema: z.ZodType<T>, data: unknown): Result<T> {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return failure(
-        AppError.validationError(
-          "Validation failed",
-          "VALIDATION_ERROR",
-          error.format(),
-        ),
+        AppError.validationError("Validation failed", "VALIDATION_ERROR", error.format()),
       );
     }
     return failure(AppError.badRequest("Invalid input"));

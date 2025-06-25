@@ -1,11 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import {
-  Result,
-  success,
-  failure,
-  AppError,
-} from "../../../../common/utils/fp-utils";
+import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { UserDto } from "../../../core/models/user.model";
 import { UserRepository } from "../../../core/repositories/user.repository";
 

@@ -27,9 +27,7 @@ export function MainRouter() {
                 Serial: "terminal",
                 "Bluetooth Low Energy": "bluetooth",
               };
-              return (
-                <Ionicons name={icons[route.name]} size={size} color={color} />
-              );
+              return <Ionicons name={icons[route.name]} size={size} color={color} />;
             },
           })}
         >

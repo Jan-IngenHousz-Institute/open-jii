@@ -15,19 +15,11 @@ export class ListExperimentMembersUseCase {
     private readonly experimentMemberRepository: ExperimentMemberRepository,
   ) {}
 
-  async execute(
-    experimentId: string,
-    userId: string,
-  ): Promise<Result<ExperimentMemberDto[]>> {
-    this.logger.log(
-      `Listing members of experiment ${experimentId} for user ${userId}`,
-    );
+  async execute(experimentId: string, userId: string): Promise<Result<ExperimentMemberDto[]>> {
+    this.logger.log(`Listing members of experiment ${experimentId} for user ${userId}`);
 
     // Check if experiment exists and if user has access
-    const accessResult = await this.experimentRepository.checkAccess(
-      experimentId,
-      userId,
-    );
+    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
 
     return accessResult.chain(
       async ({
@@ -42,18 +34,14 @@ export class ListExperimentMembersUseCase {
           this.logger.warn(
             `Attempt to list members of non-existent experiment with ID ${experimentId}`,
           );
-          return failure(
-            AppError.notFound(`Experiment with ID ${experimentId} not found`),
-          );
+          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
         if (!hasAccess && experiment.visibility !== "public") {
           this.logger.warn(
             `User ${userId} attempted to access members of experiment ${experimentId} without proper permissions`,
           );
-          return failure(
-            AppError.forbidden("You do not have access to this experiment"),
-          );
+          return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
         this.logger.debug(

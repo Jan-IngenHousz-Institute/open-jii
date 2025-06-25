@@ -14,9 +14,7 @@ interface BluetoothDeviceDetailsScreenProps {
   };
 }
 
-export function BluetoothDeviceDetailsScreen({
-  route,
-}: BluetoothDeviceDetailsScreenProps) {
+export function BluetoothDeviceDetailsScreen({ route }: BluetoothDeviceDetailsScreenProps) {
   const { deviceId } = route.params;
 
   return (
@@ -35,9 +33,7 @@ export function BluetoothDeviceDetailsScreen({
       }}
       establishDeviceConnection={async () => {
         const device = await connectWithBluetoothDevice(deviceId);
-        return new MultispeqCommandExecutor(
-          bluetoothDeviceToMultispeqStream(device),
-        );
+        return new MultispeqCommandExecutor(bluetoothDeviceToMultispeqStream(device));
       }}
     />
   );

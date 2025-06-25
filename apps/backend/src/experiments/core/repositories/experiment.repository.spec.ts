@@ -1,9 +1,4 @@
-import {
-  experiments as experimentsTable,
-  experimentMembers,
-  eq,
-  and,
-} from "@repo/database";
+import { experiments as experimentsTable, experimentMembers, eq, and } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -196,11 +191,7 @@ describe("ExperimentRepository", () => {
       });
 
       // Add main user as a member of the other experiment
-      await testApp.addExperimentMember(
-        memberExperiment.id,
-        mainUserId,
-        "member",
-      );
+      await testApp.addExperimentMember(memberExperiment.id, mainUserId, "member");
 
       // Create an unrelated experiment
       await testApp.createExperiment({
@@ -340,9 +331,7 @@ describe("ExperimentRepository", () => {
 
     it("should return null if experiment not found", async () => {
       // Act
-      const result = await repository.findOne(
-        "00000000-0000-0000-0000-000000000000",
-      );
+      const result = await repository.findOne("00000000-0000-0000-0000-000000000000");
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -499,10 +488,7 @@ describe("ExperimentRepository", () => {
         .select()
         .from(experimentsTable)
         .where(
-          and(
-            eq(experimentsTable.id, experiment.id),
-            eq(experimentsTable.createdBy, testUserId),
-          ),
+          and(eq(experimentsTable.id, experiment.id), eq(experimentsTable.createdBy, testUserId)),
         );
       expect(dbExperiment.length).toBe(1);
     });
