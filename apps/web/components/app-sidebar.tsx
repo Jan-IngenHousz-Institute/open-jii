@@ -46,7 +46,6 @@ interface NavigationItem {
 }
 
 interface NavigationData {
-  navMain: NavigationItem[];
   navExperiments: NavigationItem[];
   navHardware: NavigationItem[];
 }
@@ -55,7 +54,7 @@ interface Translations {
   openJII: string;
   logoAlt: string;
   signIn: string;
-  mainTitle: string;
+
   experimentsTitle: string;
   hardwareTitle: string;
 }
@@ -84,11 +83,6 @@ export function AppSidebar({
   translations: Translations;
 }) {
   // Convert string-based icons to actual icon components
-  const processedNavMain = navigationData.navMain.map((item) => ({
-    ...item,
-    icon: iconMap[item.icon as keyof typeof iconMap],
-  }));
-
   const processedNavExperiments = navigationData.navExperiments.map((item) => ({
     ...item,
     icon: iconMap[item.icon as keyof typeof iconMap],
@@ -124,7 +118,6 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavItems items={processedNavMain} title={translations.mainTitle} />
         <NavItems
           items={processedNavExperiments}
           title={translations.experimentsTitle}
