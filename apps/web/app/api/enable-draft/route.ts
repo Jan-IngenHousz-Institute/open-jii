@@ -17,8 +17,7 @@ const parseRequestUrl = (requestUrl: string | undefined): ParsedRequestUrl => {
 
   const rawPath = searchParams.get("path") ?? "";
   const bypassToken = searchParams.get("x-vercel-protection-bypass") ?? "";
-  const contentfulPreviewSecret =
-    searchParams.get("x-contentful-preview-secret") ?? "";
+  const contentfulPreviewSecret = searchParams.get("x-contentful-preview-secret") ?? "";
 
   // to allow query parameters to be passed through to the redirected URL, the original `path` should already be
   // URI encoded, and thus must be decoded here
@@ -41,10 +40,7 @@ const buildRedirectUrl = ({
   // if the bypass token is provided in the query, we assume Vercel has _not_ already set the actual
   // token that bypasses authentication. thus we provided it here, on the redirect
   if (bypassTokenFromQuery) {
-    redirectUrl.searchParams.set(
-      "x-vercel-protection-bypass",
-      bypassTokenFromQuery,
-    );
+    redirectUrl.searchParams.set("x-vercel-protection-bypass", bypassTokenFromQuery);
     redirectUrl.searchParams.set("x-vercel-set-bypass-cookie", "samesitenone");
   }
 
@@ -70,11 +66,7 @@ async function enableDraftMode() {
 }
 
 export async function GET(request: NextRequest): Promise<Response | void> {
-  const {
-    origin: base,
-    path,
-    bypassToken: bypassTokenFromQuery,
-  } = parseRequestUrl(request.url);
+  const { origin: base, path, bypassToken: bypassTokenFromQuery } = parseRequestUrl(request.url);
   // if we're in development, we don't need to check, we can just enable draft mode
   if (env.NODE_ENV === "development") {
     await enableDraftMode();
