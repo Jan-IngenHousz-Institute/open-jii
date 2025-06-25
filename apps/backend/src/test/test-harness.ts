@@ -12,13 +12,7 @@ import type { App } from "supertest/types";
 
 import * as authExpress from "@repo/auth/express";
 import type { DatabaseInstance } from "@repo/database";
-import {
-  experimentMembers,
-  experiments,
-  users,
-  auditLogs,
-  profiles,
-} from "@repo/database";
+import { experimentMembers, experiments, users, auditLogs, profiles } from "@repo/database";
 
 import { AppModule } from "../app.module";
 
@@ -128,39 +122,38 @@ export class TestHarness {
   /**
    * Create helper functions for making HTTP requests with authentication support
    */
-  private request =
-    (method: "get" | "post" | "patch" | "delete") => (url: string) => {
-      if (!this._request) {
-        throw new Error("Call setup() before making requests.");
-      }
+  private request = (method: "get" | "post" | "patch" | "delete") => (url: string) => {
+    if (!this._request) {
+      throw new Error("Call setup() before making requests.");
+    }
 
-      const req = this._request[method](url);
+    const req = this._request[method](url);
 
-      // Return a function that accepts an optional userId and mock session
-      const extendedReq = Object.assign(req, {
-        // Used for adding auth headers
-        withAuth: (userId: string) => {
-          // Add mock session to request
-          req.set("Authorization", `Bearer test-token-for-${userId}`);
-          // Mock the getSession function to return a session with the user
-          this.mockUserSession(userId);
-          return req;
-        },
-        withoutAuth: () => {
-          // Ensure no auth headers
-          req.unset("Authorization");
-          // Mock getSession to return null (unauthorized)
-          this.mockNoSession();
-          return req;
-        },
-        // Used for typing response body type
-        withResponseType: <T, _>() => {
-          return req as request.Test & { body: T };
-        },
-      });
+    // Return a function that accepts an optional userId and mock session
+    const extendedReq = Object.assign(req, {
+      // Used for adding auth headers
+      withAuth: (userId: string) => {
+        // Add mock session to request
+        req.set("Authorization", `Bearer test-token-for-${userId}`);
+        // Mock the getSession function to return a session with the user
+        this.mockUserSession(userId);
+        return req;
+      },
+      withoutAuth: () => {
+        // Ensure no auth headers
+        req.unset("Authorization");
+        // Mock getSession to return null (unauthorized)
+        this.mockNoSession();
+        return req;
+      },
+      // Used for typing response body type
+      withResponseType: <T, _>() => {
+        return req as request.Test & { body: T };
+      },
+    });
 
-      return extendedReq;
-    };
+    return extendedReq;
+  };
 
   // Mock the auth session for testing
   private mockUserSession(userId: string) {
@@ -213,13 +206,7 @@ export class TestHarness {
     name: string;
     userId: string;
     description?: string;
-    status?:
-      | "provisioning"
-      | "provisioning_failed"
-      | "active"
-      | "stale"
-      | "archived"
-      | "published";
+    status?: "provisioning" | "provisioning_failed" | "active" | "stale" | "archived" | "published";
     visibility?: "private" | "public";
     embargoIntervalDays?: number;
   }) {
@@ -235,11 +222,7 @@ export class TestHarness {
       })
       .returning();
 
-    const experimentAdmin = await this.addExperimentMember(
-      experiment.id,
-      data.userId,
-      "admin",
-    );
+    const experimentAdmin = await this.addExperimentMember(experiment.id, data.userId, "admin");
 
     return { experiment, experimentAdmin };
   }
@@ -268,9 +251,6 @@ export class TestHarness {
    * Helper to resolve path parameters
    */
   public resolvePath(path: string, params: Record<string, string>): string {
-    return Object.entries(params).reduce(
-      (p, [key, value]) => p.replace(`:${key}`, value),
-      path,
-    );
+    return Object.entries(params).reduce((p, [key, value]) => p.replace(`:${key}`, value), path);
   }
 }

@@ -78,11 +78,7 @@ describe("RemoveExperimentMemberUseCase", () => {
     await testApp.addExperimentMember(experiment.id, memberId, "member");
 
     // Try to remove a member as a non-admin user
-    const result = await useCase.execute(
-      experiment.id,
-      memberId,
-      regularUserId,
-    );
+    const result = await useCase.execute(experiment.id, memberId, regularUserId);
 
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
@@ -99,11 +95,7 @@ describe("RemoveExperimentMemberUseCase", () => {
     // Try to remove a non-existent member
     const nonExistentMemberId = "00000000-0000-0000-0000-000000000000";
 
-    const result = await useCase.execute(
-      experiment.id,
-      nonExistentMemberId,
-      testUserId,
-    );
+    const result = await useCase.execute(experiment.id, nonExistentMemberId, testUserId);
 
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);

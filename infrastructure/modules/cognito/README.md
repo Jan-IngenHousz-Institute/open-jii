@@ -52,10 +52,7 @@ In your IoT device code, use the Cognito Identity Pool ID to obtain AWS credenti
 ```javascript
 // Example device code using AWS SDK v3 (JavaScript)
 import { CognitoIdentityClient } from "@aws-sdk/client-cognito-identity";
-import {
-  IoTDataPlaneClient,
-  PublishCommand,
-} from "@aws-sdk/client-iot-data-plane";
+import { IoTDataPlaneClient, PublishCommand } from "@aws-sdk/client-iot-data-plane";
 import { fromCognitoIdentityPool } from "@aws-sdk/credential-provider-cognito-identity";
 
 // Initialize the credential provider with your Identity Pool
@@ -72,8 +69,7 @@ const iotClient = new IoTDataPlaneClient({
 
 // Publish a message to an allowed topic
 const publishParams = {
-  topic:
-    "experiment/data_ingest/v1/device123/project456/protocol789/run101/measurement",
+  topic: "experiment/data_ingest/v1/device123/project456/protocol789/run101/measurement",
   payload: JSON.stringify({ sensorValue: 42 }),
 };
 

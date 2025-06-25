@@ -43,9 +43,7 @@ export type DateStringify<T> = T extends Date
  * // }
  * ```
  */
-export const formatDates = <T extends Record<string, any>>(
-  entity?: T,
-): DateStringify<T> => {
+export const formatDates = <T extends Record<string, any>>(entity?: T): DateStringify<T> => {
   if (!entity || typeof entity !== "object" || entity instanceof Date) {
     return formatValue(entity) as DateStringify<T>;
   }

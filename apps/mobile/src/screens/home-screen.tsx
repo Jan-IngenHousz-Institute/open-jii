@@ -30,9 +30,7 @@ export function HomeScreen() {
       >
         <View className="items-center">
           <Ionicons name="bluetooth" size={100} color="#3b82f6" />
-          <Text className="mt-2 text-xl font-semibold text-blue-600">
-            Bluetooth Mode
-          </Text>
+          <Text className="mt-2 text-xl font-semibold text-blue-600">Bluetooth Mode</Text>
         </View>
       </TouchableOpacity>
 
@@ -47,9 +45,7 @@ export function HomeScreen() {
       >
         <View className="items-center">
           <Ionicons name="terminal" size={100} color="#10b981" />
-          <Text className="mt-2 text-xl font-semibold text-green-600">
-            Serial Port Mode
-          </Text>
+          <Text className="mt-2 text-xl font-semibold text-green-600">Serial Port Mode</Text>
         </View>
       </TouchableOpacity>
     </View>

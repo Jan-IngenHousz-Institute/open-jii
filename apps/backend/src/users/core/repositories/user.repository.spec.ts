@@ -57,10 +57,7 @@ describe("UserRepository", () => {
       });
 
       // Verify directly in database
-      const dbResult = await testApp.database
-        .select()
-        .from(users)
-        .where(eq(users.id, user.id));
+      const dbResult = await testApp.database.select().from(users).where(eq(users.id, user.id));
 
       expect(dbResult.length).toBe(1);
       expect(dbResult[0]).toMatchObject({
@@ -304,10 +301,7 @@ describe("UserRepository", () => {
       });
 
       // Verify in database
-      const dbResult = await testApp.database
-        .select()
-        .from(users)
-        .where(eq(users.id, testUserId));
+      const dbResult = await testApp.database.select().from(users).where(eq(users.id, testUserId));
 
       expect(dbResult[0]).toMatchObject(updateData);
     });

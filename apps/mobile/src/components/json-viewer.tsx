@@ -5,11 +5,7 @@ import { ScrollView, Text, View } from "react-native";
 export function JSONViewer({ data, indent = 0 }) {
   const renderValue = (value: any, level: number) => {
     if (typeof value !== "object" || value === null) {
-      return (
-        <Text className="w-full break-words text-sm text-gray-600">
-          {String(value)}
-        </Text>
-      );
+      return <Text className="w-full break-words text-sm text-gray-600">{String(value)}</Text>;
     }
 
     if (Array.isArray(value)) {

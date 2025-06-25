@@ -36,14 +36,11 @@ export function ExperimentDetailsCard({
   initialName,
   initialDescription,
 }: ExperimentDetailsCardProps) {
-  const { mutateAsync: updateExperiment, isPending: isUpdating } =
-    useExperimentUpdate();
+  const { mutateAsync: updateExperiment, isPending: isUpdating } = useExperimentUpdate();
   const { t } = useTranslation(undefined, "common");
 
   const form = useForm<{ name: string; description?: string }>({
-    resolver: zodResolver(
-      editExperimentFormSchema.pick({ name: true, description: true }),
-    ),
+    resolver: zodResolver(editExperimentFormSchema.pick({ name: true, description: true })),
     defaultValues: {
       name: initialName,
       description: initialDescription,
@@ -62,9 +59,7 @@ export function ExperimentDetailsCard({
     <Card>
       <CardHeader>
         <CardTitle>{t("experimentSettings.generalSettings")}</CardTitle>
-        <CardDescription>
-          {t("experimentSettings.generalDescription")}
-        </CardDescription>
+        <CardDescription>{t("experimentSettings.generalDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -76,10 +71,7 @@ export function ExperimentDetailsCard({
                 <FormItem>
                   <FormLabel>{t("experimentSettings.name")}</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      placeholder={t("experimentSettings.name")}
-                    />
+                    <Input {...field} placeholder={t("experimentSettings.name")} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -104,9 +96,7 @@ export function ExperimentDetailsCard({
             />
             <div className="flex justify-end">
               <Button type="submit" disabled={isUpdating}>
-                {isUpdating
-                  ? t("experimentSettings.saving")
-                  : t("experimentSettings.save")}
+                {isUpdating ? t("experimentSettings.saving") : t("experimentSettings.save")}
               </Button>
             </div>
           </form>

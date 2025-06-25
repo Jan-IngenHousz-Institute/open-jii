@@ -32,10 +32,7 @@ interface ExperimentInfoCardProps {
   experiment: Experiment;
 }
 
-export function ExperimentInfoCard({
-  experimentId,
-  experiment,
-}: ExperimentInfoCardProps) {
+export function ExperimentInfoCard({ experimentId, experiment }: ExperimentInfoCardProps) {
   // Fetch experiment members to get admin info
   const { data: membersData } = useExperimentMembers(experimentId);
 
@@ -50,14 +47,10 @@ export function ExperimentInfoCard({
 
   // Helper to get name/email from admin member
   const adminName =
-    (adminMember?.user.name ??
-      adminMember?.user.email ??
-      experiment.createdBy) ||
-    "Unknown";
+    (adminMember?.user.name ?? adminMember?.user.email ?? experiment.createdBy) || "Unknown";
   const adminEmail = adminMember?.user.email;
 
-  const { mutateAsync: deleteExperiment, isPending: isDeleting } =
-    useExperimentDelete();
+  const { mutateAsync: deleteExperiment, isPending: isDeleting } = useExperimentDelete();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const router = useRouter();
 
@@ -75,34 +68,23 @@ export function ExperimentInfoCard({
     <Card>
       <CardHeader>
         <CardTitle>{t("experimentSettings.generalSettings")}</CardTitle>
-        <CardDescription>
-          {t("experimentSettings.generalDescription")}
-        </CardDescription>
+        <CardDescription>{t("experimentSettings.generalDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-x-2">
-            <span className="font-medium">
-              {t("experimentSettings.created")} by:
-            </span>{" "}
-            {adminName}
+            <span className="font-medium">{t("experimentSettings.created")} by:</span> {adminName}
             <span className="text-muted-foreground flex items-center gap-x-1">
               <Mail className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate text-xs md:max-w-[200px] md:text-sm">
-                {adminEmail}
-              </span>
+              <span className="truncate text-xs md:max-w-[200px] md:text-sm">{adminEmail}</span>
             </span>
           </div>
           <div>
-            <span className="font-medium">
-              {t("experimentSettings.created")}:
-            </span>{" "}
+            <span className="font-medium">{t("experimentSettings.created")}:</span>{" "}
             {formatDate(experiment.createdAt)}
           </div>
           <div>
-            <span className="font-medium">
-              {t("experimentSettings.updated")}:
-            </span>{" "}
+            <span className="font-medium">{t("experimentSettings.updated")}:</span>{" "}
             {formatDate(experiment.updatedAt)}
           </div>
         </div>
@@ -115,14 +97,9 @@ export function ExperimentInfoCard({
             {t("experimentSettings.deleteWarning")}
           </p>
 
-          <Dialog
-            open={isDeleteDialogOpen}
-            onOpenChange={setIsDeleteDialogOpen}
-          >
+          <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="destructive">
-                {t("experimentSettings.deleteExperiment")}
-              </Button>
+              <Button variant="destructive">{t("experimentSettings.deleteExperiment")}</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -135,10 +112,7 @@ export function ExperimentInfoCard({
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter className="mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsDeleteDialogOpen(false)}
-                >
+                <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
                   {t("experimentSettings.cancel")}
                 </Button>
                 <Button
@@ -146,9 +120,7 @@ export function ExperimentInfoCard({
                   onClick={handleDeleteExperiment}
                   disabled={isDeleting}
                 >
-                  {isDeleting
-                    ? t("experimentSettings.saving")
-                    : t("experimentSettings.delete")}
+                  {isDeleting ? t("experimentSettings.saving") : t("experimentSettings.delete")}
                 </Button>
               </DialogFooter>
             </DialogContent>

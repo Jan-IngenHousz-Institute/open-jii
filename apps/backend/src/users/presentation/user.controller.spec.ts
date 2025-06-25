@@ -126,9 +126,7 @@ describe("UserController", () => {
         .expect(StatusCodes.OK);
 
       expect(response.body).toHaveLength(2);
-      expect(
-        response.body.every((u) => u.name?.includes("Alice") ?? false),
-      ).toBe(true);
+      expect(response.body.every((u) => u.name?.includes("Alice") ?? false)).toBe(true);
     });
 
     it("should apply limit and offset for pagination", async () => {
@@ -215,10 +213,7 @@ describe("UserController", () => {
         id: invalidId,
       });
 
-      await testApp
-        .get(path)
-        .withAuth(testUserId)
-        .expect(StatusCodes.BAD_REQUEST);
+      await testApp.get(path).withAuth(testUserId).expect(StatusCodes.BAD_REQUEST);
     });
 
     it("should return 401 if not authenticated", async () => {

@@ -20,9 +20,7 @@ interface ExperimentOverviewPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function ExperimentOverviewPage({
-  params,
-}: ExperimentOverviewPageProps) {
+export default function ExperimentOverviewPage({ params }: ExperimentOverviewPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useExperiment(id);
   const { t } = useTranslation(undefined, "common");
@@ -31,9 +29,7 @@ export default function ExperimentOverviewPage({
   }
 
   if (error) {
-    return (
-      <ErrorDisplay error={error} title={t("errors.failedToLoadExperiment")} />
-    );
+    return <ErrorDisplay error={error} title={t("errors.failedToLoadExperiment")} />;
   }
 
   if (!data) {
@@ -45,25 +41,15 @@ export default function ExperimentOverviewPage({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return (
-          <Badge className="bg-secondary">
-            {t("experiments.status.active")}
-          </Badge>
-        );
+        return <Badge className="bg-secondary">{t("experiments.status.active")}</Badge>;
       case "provisioning":
         return (
-          <Badge className="bg-highlight text-black">
-            {t("experiments.status.provisioning")}
-          </Badge>
+          <Badge className="bg-highlight text-black">{t("experiments.status.provisioning")}</Badge>
         );
       case "archived":
-        return (
-          <Badge className="bg-muted">{t("experiments.status.archived")}</Badge>
-        );
+        return <Badge className="bg-muted">{t("experiments.status.archived")}</Badge>;
       case "stale":
-        return (
-          <Badge className="bg-tertiary">{t("experiments.status.stale")}</Badge>
-        );
+        return <Badge className="bg-tertiary">{t("experiments.status.stale")}</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -91,10 +77,7 @@ export default function ExperimentOverviewPage({
                 {t("experimentSettings.created")}
               </h4>
               <p className="flex items-center gap-1">
-                <CalendarIcon
-                  className="text-muted-foreground h-4 w-4"
-                  aria-hidden="true"
-                />
+                <CalendarIcon className="text-muted-foreground h-4 w-4" aria-hidden="true" />
                 {formatDate(experiment.createdAt)}
               </p>
             </div>

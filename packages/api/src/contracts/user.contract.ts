@@ -1,12 +1,7 @@
 import { initContract } from "@ts-rest/core";
 
 import { zErrorResponse } from "../schemas/experiment.schema";
-import {
-  zUser,
-  zUserList,
-  zSearchUsersQuery,
-  zUserIdPathParam,
-} from "../schemas/user.schema";
+import { zUser, zUserList, zSearchUsersQuery, zUserIdPathParam } from "../schemas/user.schema";
 
 const c = initContract();
 

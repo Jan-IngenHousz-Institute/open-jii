@@ -22,8 +22,7 @@ export function NewExperimentForm() {
   const locale = useLocale();
 
   const { mutate: createExperiment, isPending } = useExperimentCreate({
-    onSuccess: (id: string) =>
-      router.push(`/${locale}/platform/experiments/${id}`),
+    onSuccess: (id: string) => router.push(`/${locale}/platform/experiments/${id}`),
   });
 
   const form = useForm<CreateExperimentBody>({
@@ -63,9 +62,7 @@ export function NewExperimentForm() {
             {t("newExperiment.cancel")}
           </Button>
           <Button type="submit" disabled={isPending}>
-            {isPending
-              ? t("newExperiment.creating")
-              : t("newExperiment.finalizeSetup")}
+            {isPending ? t("newExperiment.creating") : t("newExperiment.finalizeSetup")}
           </Button>
         </div>
       </form>

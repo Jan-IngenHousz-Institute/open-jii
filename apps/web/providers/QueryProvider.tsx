@@ -1,11 +1,7 @@
 "use client";
 
 import { parseApiError } from "@/util/apiError";
-import {
-  QueryClient,
-  QueryClientProvider,
-  MutationCache,
-} from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, MutationCache } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 import { toast } from "@repo/ui/hooks";

@@ -1,11 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import {
-  Result,
-  success,
-  failure,
-  AppError,
-} from "../../../../common/utils/fp-utils";
+import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import {
   ExperimentMemberDto,
   ExperimentMemberRole,
@@ -39,51 +34,34 @@ export class AddExperimentMembersUseCase {
     );
 
     return accessCheckResult.chain(
-      async ({
-        experiment,
-        isAdmin,
-      }: {
-        experiment: ExperimentDto | null;
-        isAdmin: boolean;
-      }) => {
+      async ({ experiment, isAdmin }: { experiment: ExperimentDto | null; isAdmin: boolean }) => {
         if (!experiment) {
           this.logger.warn(
             `Attempt to add members to non-existent experiment with ID ${experimentId}`,
           );
-          return failure(
-            AppError.notFound(`Experiment with ID ${experimentId} not found`),
-          );
+          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
         if (!isAdmin) {
-          this.logger.warn(
-            `User ${currentUserId} is not admin for experiment ${experimentId}`,
-          );
-          return failure(
-            AppError.forbidden("Only admins can add experiment members"),
-          );
+          this.logger.warn(`User ${currentUserId} is not admin for experiment ${experimentId}`);
+          return failure(AppError.forbidden("Only admins can add experiment members"));
         }
 
         // Add the members
-        const addMembersResult =
-          await this.experimentMemberRepository.addMembers(
-            experimentId,
-            members,
-          );
+        const addMembersResult = await this.experimentMemberRepository.addMembers(
+          experimentId,
+          members,
+        );
 
         if (addMembersResult.isFailure()) {
-          this.logger.error(
-            `Failed to add members to experiment ${experimentId}`,
-          );
+          this.logger.error(`Failed to add members to experiment ${experimentId}`);
           return failure(AppError.internal("Failed to add experiment members"));
         }
 
         this.logger.log(
           `Successfully added members [${members
             .map((m) => m.userId)
-            .join(
-              ", ",
-            )}] to experiment "${experiment.name}" (ID: ${experimentId})`,
+            .join(", ")}] to experiment "${experiment.name}" (ID: ${experimentId})`,
         );
         return success(addMembersResult.value);
       },

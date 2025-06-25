@@ -41,9 +41,7 @@ export default middleware((request) => {
 
   // Handle login page redirects - if user is logged in and trying to access login page
   if (request.nextUrl.pathname.includes("/login") && request.auth) {
-    return NextResponse.redirect(
-      new URL(`/${defaultLocale}/platform`, request.nextUrl.origin),
-    );
+    return NextResponse.redirect(new URL(`/${defaultLocale}/platform`, request.nextUrl.origin));
   }
 
   // Handle protected routes
@@ -51,10 +49,7 @@ export default middleware((request) => {
     const callbackUrl = encodeURIComponent(
       `${request.nextUrl.origin}${request.nextUrl.pathname}${request.nextUrl.search}`,
     );
-    const newUrl = new URL(
-      `/api/auth/signin?=${callbackUrl}`,
-      request.nextUrl.origin,
-    );
+    const newUrl = new URL(`/api/auth/signin?=${callbackUrl}`, request.nextUrl.origin);
     return Response.redirect(newUrl);
   }
 

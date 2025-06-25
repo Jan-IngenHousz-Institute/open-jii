@@ -264,10 +264,7 @@ describe("DatabricksService", () => {
         });
 
       // Execute SQL query
-      const result = await databricksService.executeSqlQuery(
-        schemaName,
-        sqlStatement,
-      );
+      const result = await databricksService.executeSqlQuery(schemaName, sqlStatement);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -349,10 +346,7 @@ describe("DatabricksService", () => {
         });
 
       // Execute SQL query
-      const result = await databricksService.executeSqlQuery(
-        schemaName,
-        sqlStatement,
-      );
+      const result = await databricksService.executeSqlQuery(schemaName, sqlStatement);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -391,10 +385,7 @@ describe("DatabricksService", () => {
         });
 
       // Execute SQL query
-      const result = await databricksService.executeSqlQuery(
-        schemaName,
-        sqlStatement,
-      );
+      const result = await databricksService.executeSqlQuery(schemaName, sqlStatement);
 
       // Assert result is failure
       expect(result.isSuccess()).toBe(false);
@@ -417,10 +408,7 @@ describe("DatabricksService", () => {
         .reply(500, { message: "Internal server error" });
 
       // Execute SQL query
-      const result = await databricksService.executeSqlQuery(
-        schemaName,
-        sqlStatement,
-      );
+      const result = await databricksService.executeSqlQuery(schemaName, sqlStatement);
 
       // Assert result is failure
       expect(result.isSuccess()).toBe(false);
@@ -473,10 +461,7 @@ describe("DatabricksService", () => {
         .reply(200, mockTablesResponse);
 
       // Execute list tables
-      const result = await databricksService.listTables(
-        experimentName,
-        experimentId,
-      );
+      const result = await databricksService.listTables(experimentName, experimentId);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -499,17 +484,12 @@ describe("DatabricksService", () => {
         .reply(404, { message: "Schema not found" });
 
       // Execute list tables
-      const result = await databricksService.listTables(
-        experimentName,
-        experimentId,
-      );
+      const result = await databricksService.listTables(experimentName, experimentId);
 
       // Assert result is failure
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toContain(
-        "Failed to list Databricks tables",
-      );
+      expect(result.error.message).toContain("Failed to list Databricks tables");
       // The error message includes the error content but not necessarily the HTTP status
       expect(result.error.message).toContain("Schema not found");
     });
@@ -521,17 +501,12 @@ describe("DatabricksService", () => {
         .reply(401, { error_description: "Invalid client credentials" });
 
       // Execute list tables
-      const result = await databricksService.listTables(
-        experimentName,
-        experimentId,
-      );
+      const result = await databricksService.listTables(experimentName, experimentId);
 
       // Assert result is failure
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toContain(
-        "Failed to list Databricks tables",
-      );
+      expect(result.error.message).toContain("Failed to list Databricks tables");
     });
   });
 
@@ -568,13 +543,11 @@ describe("DatabricksService", () => {
         });
 
       // Second token request should NOT be made - capturing to ensure it's not called
-      const tokenNock2 = nock(DATABRICKS_HOST)
-        .post(DatabricksService.TOKEN_ENDPOINT)
-        .reply(200, {
-          access_token: "new-token",
-          expires_in: MOCK_EXPIRES_IN,
-          token_type: "Bearer",
-        });
+      const tokenNock2 = nock(DATABRICKS_HOST).post(DatabricksService.TOKEN_ENDPOINT).reply(200, {
+        access_token: "new-token",
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
 
       // Execute second health check - should use cached token
       const result2 = await databricksService.healthCheck();

@@ -3,12 +3,8 @@ import {
   MultispeqCommandExecutor,
 } from "~/services/multispeq-communication/multispeq-command-executor";
 
-export class DisposableMultispeqCommandExecutor
-  implements IMultispeqCommandExecutor
-{
-  constructor(
-    private readonly createCommandExecutor: () => Promise<MultispeqCommandExecutor>,
-  ) {}
+export class DisposableMultispeqCommandExecutor implements IMultispeqCommandExecutor {
+  constructor(private readonly createCommandExecutor: () => Promise<MultispeqCommandExecutor>) {}
 
   async execute(command: string | object): Promise<string | object> {
     const commandExecutor = await this.createCommandExecutor();
