@@ -26,18 +26,14 @@ interface NewExperimentVisibilityCardProps {
   form: UseFormReturn<CreateExperimentBody>;
 }
 
-export function NewExperimentVisibilityCard({
-  form,
-}: NewExperimentVisibilityCardProps) {
+export function NewExperimentVisibilityCard({ form }: NewExperimentVisibilityCardProps) {
   const { t } = useTranslation(undefined, "common");
   const visibility = form.watch("visibility");
   return (
     <Card className="min-w-0 flex-1">
       <CardHeader>
         <CardTitle>{t("newExperiment.visibilityTitle")}</CardTitle>
-        <CardDescription>
-          {t("newExperiment.visibilityDescription")}
-        </CardDescription>
+        <CardDescription>{t("newExperiment.visibilityDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
         <FormField
@@ -49,9 +45,7 @@ export function NewExperimentVisibilityCard({
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue
-                      placeholder={t("newExperiment.visibilityPlaceholder")}
-                    />
+                    <SelectValue placeholder={t("newExperiment.visibilityPlaceholder")} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>

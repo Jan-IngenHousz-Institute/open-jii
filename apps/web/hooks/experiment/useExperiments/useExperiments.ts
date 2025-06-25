@@ -15,9 +15,7 @@ export const useExperiments = ({
 }) => {
   const [filter, setFilter] = useState<ExperimentFilter>(initialFilter);
   // status only holds actual status or undefined (all)
-  const [status, setStatus] = useState<ExperimentStatus | undefined>(
-    initialStatus,
-  );
+  const [status, setStatus] = useState<ExperimentStatus | undefined>(initialStatus);
 
   // When filter is "all", we don't pass any filter to the API
 

@@ -112,9 +112,7 @@ describe("SearchUsersUseCase", () => {
     assertSuccess(result);
     const foundUsers = result.value;
     expect(foundUsers.length).toBe(2);
-    expect(foundUsers.every((u) => u.name?.includes("Alice") ?? false)).toBe(
-      true,
-    );
+    expect(foundUsers.every((u) => u.name?.includes("Alice") ?? false)).toBe(true);
   });
 
   it("should apply limit and offset for pagination", async () => {

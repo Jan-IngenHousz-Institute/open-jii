@@ -6,9 +6,7 @@ import type { SessionUser } from "@repo/auth/config";
 
 export const CurrentUser = createParamDecorator(
   (_: unknown, ctx: ExecutionContext): SessionUser => {
-    const request = ctx
-      .switchToHttp()
-      .getRequest<Request & { user: SessionUser }>();
+    const request = ctx.switchToHttp().getRequest<Request & { user: SessionUser }>();
     return request.user;
   },
 );

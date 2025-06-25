@@ -1,12 +1,5 @@
 import { cva } from "class-variance-authority";
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useRef,
-  useCallback,
-  ReactNode,
-} from "react";
+import React, { createContext, useContext, useState, useRef, useCallback, ReactNode } from "react";
 import { Animated, Text } from "react-native";
 
 const toastContainer = cva(
@@ -70,9 +63,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
           style={{ transform: [{ translateY: slideAnim }] }}
           className={toastContainer({ type })}
         >
-          <Text className="text-center text-base font-semibold text-white">
-            {message}
-          </Text>
+          <Text className="text-center text-base font-semibold text-white">{message}</Text>
         </Animated.View>
       )}
     </ToastContext.Provider>

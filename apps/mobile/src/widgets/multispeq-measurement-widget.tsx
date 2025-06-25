@@ -23,10 +23,7 @@ interface Props {
   renderError?: (error: Error) => ReactNode;
 }
 
-export function MultispeqMeasurementWidget({
-  establishDeviceConnection,
-  renderError,
-}: Props) {
+export function MultispeqMeasurementWidget({ establishDeviceConnection, renderError }: Props) {
   const { showToast } = useToast();
 
   const {
@@ -70,10 +67,7 @@ export function MultispeqMeasurementWidget({
       showToast("Measurement uploaded!", "success");
     } catch (e: any) {
       console.log("Upload failed", e);
-      showToast(
-        "Please check your internet connection and try again.",
-        "error",
-      );
+      showToast("Please check your internet connection and try again.", "error");
     }
   });
 

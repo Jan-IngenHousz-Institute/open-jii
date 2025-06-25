@@ -21,17 +21,13 @@ export default async function OpenJIIHome({ params }: PlatformPageProps) {
 
   return (
     <>
-      <h1 className="text-jii-dark-green mb-6 text-4xl font-bold">
-        {t("jii.institute")}
-      </h1>
+      <h1 className="text-jii-dark-green mb-6 text-4xl font-bold">{t("jii.institute")}</h1>
       <div className="flex items-center gap-2 py-12">
         <Button>{t("common.noVariant")}</Button>
       </div>
       <p className="mb-4 text-lg">{t("jii.aboutDescription")}</p>
       <div className="bg-jii-light-blue/30 mt-8 h-64 rounded-lg p-6">
-        <h2 className="text-jii-dark-green mb-4 text-2xl font-semibold">
-          {t("jii.mission")}
-        </h2>
+        <h2 className="text-jii-dark-green mb-4 text-2xl font-semibold">{t("jii.mission")}</h2>
         <p>{t("jii.missionDescription")}</p>
       </div>
     </>

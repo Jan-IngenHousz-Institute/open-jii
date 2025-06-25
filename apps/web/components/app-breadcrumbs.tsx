@@ -25,29 +25,19 @@ const BREADCRUMB_TRANSLATIONS: Record<string, string> = {
   view: "breadcrumbs.view",
 };
 
-function getTitle(
-  title: string,
-  overrideTitle?: string,
-  t?: (key: string) => string,
-): string {
+function getTitle(title: string, overrideTitle?: string, t?: (key: string) => string): string {
   if (overrideTitle) return overrideTitle;
 
   const translationKey = BREADCRUMB_TRANSLATIONS[title];
   if (translationKey && t) {
-    return translationKey.startsWith("breadcrumbs.")
-      ? t(translationKey)
-      : translationKey;
+    return translationKey.startsWith("breadcrumbs.") ? t(translationKey) : translationKey;
   }
 
   // Fallback to capitalize first letter
   return title.charAt(0).toUpperCase() + title.slice(1);
 }
 
-export async function Breadcrumbs({
-  pathname,
-  pageTitle,
-  locale,
-}: BreadcrumbsProps) {
+export async function Breadcrumbs({ pathname, pageTitle, locale }: BreadcrumbsProps) {
   const { t } = await initTranslations({
     locale,
     namespaces: ["common"],
@@ -61,9 +51,7 @@ export async function Breadcrumbs({
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem>
-          <BreadcrumbLink href={`/${locale}/platform`}>
-            {t("breadcrumbs.home")}
-          </BreadcrumbLink>
+          <BreadcrumbLink href={`/${locale}/platform`}>{t("breadcrumbs.home")}</BreadcrumbLink>
         </BreadcrumbItem>
         {pathNamesWithoutLocale.map((link, index) => {
           const href = `/${locale}/${pathNamesWithoutLocale.slice(0, index + 1).join("/")}`;

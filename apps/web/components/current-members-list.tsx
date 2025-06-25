@@ -127,10 +127,7 @@ export function MemberList({
                 variant="ghost"
                 size="sm"
                 onClick={() => onRemoveMember(member.user.id)}
-                disabled={
-                  (isRemovingMember && removingMemberId === member.user.id) ||
-                  isLastAdmin
-                }
+                disabled={(isRemovingMember && removingMemberId === member.user.id) || isLastAdmin}
                 title={
                   isLastAdmin
                     ? t("experimentSettings.cannotRemoveLastAdmin")

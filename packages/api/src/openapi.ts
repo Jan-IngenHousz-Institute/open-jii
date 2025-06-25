@@ -35,11 +35,6 @@ if (!fs.existsSync(outputDir)) {
 }
 
 // Write the OpenAPI document to a file
-fs.writeFileSync(
-  path.join(outputDir, "openapi.json"),
-  JSON.stringify(openApiDocument, null, 2),
-);
+fs.writeFileSync(path.join(outputDir, "openapi.json"), JSON.stringify(openApiDocument, null, 2));
 
-console.log(
-  `OpenAPI document generated at ${path.join(outputDir, "openapi.json")}`,
-);
+console.log(`OpenAPI document generated at ${path.join(outputDir, "openapi.json")}`);

@@ -1,10 +1,7 @@
 type Handler<T> = T extends void
   ? () => void | Promise<void>
   : (payload: T) => void | Promise<void>;
-type ErrorHandler = (
-  error: unknown,
-  context: { event: string; payload: any },
-) => void;
+type ErrorHandler = (error: unknown, context: { event: string; payload: any }) => void;
 
 export class Emitter<Events extends Record<string, any>> {
   private handlers = new Map<keyof Events, Set<Handler<any>>>();
@@ -59,9 +56,7 @@ export class Emitter<Events extends Record<string, any>> {
       try {
         const result = (handler as any)(payload);
         if (result instanceof Promise) {
-          result.catch((err: unknown) =>
-            this.errorHandler(err, { event: String(event), payload }),
-          );
+          result.catch((err: unknown) => this.errorHandler(err, { event: String(event), payload }));
         }
       } catch (err) {
         this.errorHandler(err, { event: String(event), payload });

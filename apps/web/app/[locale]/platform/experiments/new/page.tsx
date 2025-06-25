@@ -12,9 +12,7 @@ interface NewExperimentPageProps {
   params: Promise<{ locale: Locale }>;
 }
 
-export default async function NewExperimentPage({
-  params,
-}: NewExperimentPageProps) {
+export default async function NewExperimentPage({ params }: NewExperimentPageProps) {
   const { locale } = await params;
   const { t } = await initTranslations({
     locale,
@@ -24,12 +22,8 @@ export default async function NewExperimentPage({
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium">
-          {t("experiments.newExperiment")}
-        </h3>
-        <p className="text-muted-foreground text-sm">
-          {t("newExperiment.description")}
-        </p>
+        <h3 className="text-lg font-medium">{t("experiments.newExperiment")}</h3>
+        <p className="text-muted-foreground text-sm">{t("newExperiment.description")}</p>
       </div>
       <NewExperimentForm />
     </div>

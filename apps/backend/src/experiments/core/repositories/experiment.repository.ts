@@ -60,10 +60,7 @@ export class ExperimentRepository {
       if (filter === "my") {
         if (status) {
           return query.where(
-            and(
-              eq(experiments.createdBy, userId),
-              eq(experiments.status, status),
-            ),
+            and(eq(experiments.createdBy, userId), eq(experiments.status, status)),
           );
         }
         return query.where(eq(experiments.createdBy, userId));
@@ -77,10 +74,7 @@ export class ExperimentRepository {
 
         if (status) {
           return joinedQuery.where(
-            and(
-              eq(experimentMembers.userId, userId),
-              eq(experiments.status, status),
-            ),
+            and(eq(experimentMembers.userId, userId), eq(experiments.status, status)),
           );
         }
         return joinedQuery.where(eq(experimentMembers.userId, userId));
@@ -95,19 +89,13 @@ export class ExperimentRepository {
         if (status) {
           return joinedQuery.where(
             and(
-              or(
-                eq(experiments.createdBy, userId),
-                eq(experimentMembers.userId, userId),
-              ),
+              or(eq(experiments.createdBy, userId), eq(experimentMembers.userId, userId)),
               eq(experiments.status, status),
             ),
           );
         }
         return joinedQuery.where(
-          or(
-            eq(experiments.createdBy, userId),
-            eq(experimentMembers.userId, userId),
-          ),
+          or(eq(experiments.createdBy, userId), eq(experimentMembers.userId, userId)),
         );
       }
 
@@ -168,9 +156,7 @@ export class ExperimentRepository {
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
       // First delete experiment members to maintain referential integrity
-      await this.database
-        .delete(experimentMembers)
-        .where(eq(experimentMembers.experimentId, id));
+      await this.database.delete(experimentMembers).where(eq(experimentMembers.experimentId, id));
 
       // Then delete the experiment
       await this.database.delete(experiments).where(eq(experiments.id, id));

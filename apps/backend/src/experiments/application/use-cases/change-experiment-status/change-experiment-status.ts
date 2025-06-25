@@ -2,16 +2,8 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { experimentStatusEnum } from "@repo/database";
 
-import {
-  Result,
-  success,
-  failure,
-  AppError,
-} from "../../../../common/utils/fp-utils";
-import {
-  ExperimentDto,
-  ExperimentStatus,
-} from "../../../core/models/experiment.model";
+import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
+import { ExperimentDto, ExperimentStatus } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 @Injectable()
@@ -20,17 +12,12 @@ export class ChangeExperimentStatusUseCase {
 
   constructor(private readonly experimentRepository: ExperimentRepository) {}
 
-  async execute(
-    id: string,
-    status: ExperimentStatus,
-  ): Promise<Result<ExperimentDto>> {
+  async execute(id: string, status: ExperimentStatus): Promise<Result<ExperimentDto>> {
     this.logger.log(`Changing status of experiment ${id} to "${status}"`);
 
     // Validate status
     if (!experimentStatusEnum.enumValues.includes(status)) {
-      this.logger.warn(
-        `Invalid status attempted: "${status}" for experiment ${id}`,
-      );
+      this.logger.warn(`Invalid status attempted: "${status}" for experiment ${id}`);
       return failure(AppError.badRequest(`Invalid status: ${status}`));
     }
 
@@ -39,9 +26,7 @@ export class ChangeExperimentStatusUseCase {
 
     return experimentResult.chain(async (experiment: ExperimentDto | null) => {
       if (!experiment) {
-        this.logger.warn(
-          `Attempt to change status of non-existent experiment with ID ${id}`,
-        );
+        this.logger.warn(`Attempt to change status of non-existent experiment with ID ${id}`);
         return failure(AppError.notFound(`Experiment with ID ${id} not found`));
       }
 
@@ -56,9 +41,7 @@ export class ChangeExperimentStatusUseCase {
       return updateResult.chain((updatedExperiments: ExperimentDto[]) => {
         if (updatedExperiments.length === 0) {
           this.logger.error(`Failed to update status for experiment ${id}`);
-          return failure(
-            AppError.internal(`Failed to update status for experiment ${id}`),
-          );
+          return failure(AppError.internal(`Failed to update status for experiment ${id}`));
         }
 
         const updatedExperiment = updatedExperiments[0];

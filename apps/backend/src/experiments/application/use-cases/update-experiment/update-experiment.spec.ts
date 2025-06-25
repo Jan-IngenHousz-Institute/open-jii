@@ -1,7 +1,4 @@
-import {
-  assertFailure,
-  assertSuccess,
-} from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { UpdateExperimentUseCase } from "./update-experiment";
 
@@ -109,8 +106,6 @@ describe("UpdateExperimentUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
-    expect(result.error.message).toContain(
-      `Experiment with ID ${nonExistentId} not found`,
-    );
+    expect(result.error.message).toContain(`Experiment with ID ${nonExistentId} not found`);
   });
 });

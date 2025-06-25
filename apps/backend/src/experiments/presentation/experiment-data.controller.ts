@@ -15,47 +15,34 @@ import { GetExperimentDataUseCase } from "../application/use-cases/experiment-da
 export class ExperimentDataController {
   private readonly logger = new Logger(ExperimentDataController.name);
 
-  constructor(
-    private readonly getExperimentDataUseCase: GetExperimentDataUseCase,
-  ) {}
+  constructor(private readonly getExperimentDataUseCase: GetExperimentDataUseCase) {}
 
   @TsRestHandler(contract.experiments.getExperimentData)
   getExperimentData(@CurrentUser() user: SessionUser) {
-    return tsRestHandler(
-      contract.experiments.getExperimentData,
-      async ({ params, query }) => {
-        const { id: experimentId } = params;
-        const { page, pageSize, tableName } = query;
+    return tsRestHandler(contract.experiments.getExperimentData, async ({ params, query }) => {
+      const { id: experimentId } = params;
+      const { page, pageSize, tableName } = query;
 
-        this.logger.log(
-          `Processing data request for experiment ${experimentId} by user ${user.id}`,
-        );
+      this.logger.log(`Processing data request for experiment ${experimentId} by user ${user.id}`);
 
-        const result = await this.getExperimentDataUseCase.execute(
-          experimentId,
-          user.id,
-          {
-            page,
-            pageSize,
-            tableName,
-          },
-        );
+      const result = await this.getExperimentDataUseCase.execute(experimentId, user.id, {
+        page,
+        pageSize,
+        tableName,
+      });
 
-        if (result.isSuccess()) {
-          const data = result.value;
+      if (result.isSuccess()) {
+        const data = result.value;
 
-          this.logger.log(
-            `Successfully retrieved data for experiment ${experimentId}`,
-          );
+        this.logger.log(`Successfully retrieved data for experiment ${experimentId}`);
 
-          return {
-            status: StatusCodes.OK,
-            body: data,
-          };
-        }
+        return {
+          status: StatusCodes.OK,
+          body: data,
+        };
+      }
 
-        return handleFailure(result, this.logger);
-      },
-    );
+      return handleFailure(result, this.logger);
+    });
   }
 }

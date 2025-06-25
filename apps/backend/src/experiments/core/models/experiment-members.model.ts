@@ -32,5 +32,4 @@ export type AddExperimentMemberDto = typeof addExperimentMemberSchema._type;
 export type ExperimentMemberDto = typeof experimentMemberSchema._type;
 
 // Define the role type based on the database enum
-export type ExperimentMemberRole =
-  (typeof experimentMembersEnum.enumValues)[number];
+export type ExperimentMemberRole = (typeof experimentMembersEnum.enumValues)[number];

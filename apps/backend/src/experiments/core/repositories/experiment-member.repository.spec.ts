@@ -209,9 +209,7 @@ describe("ExperimentMemberRepository", () => {
       const membersResult = await repository.getMembers(experiment.id);
       assertSuccess(membersResult);
       const members = membersResult.value;
-      const membershipCount = members.filter(
-        (m) => m.user.id === memberId,
-      ).length;
+      const membershipCount = members.filter((m) => m.user.id === memberId).length;
       expect(membershipCount).toBe(1);
     });
 
@@ -322,9 +320,7 @@ describe("ExperimentMemberRepository", () => {
       });
 
       // Add the member without specifying role
-      const result = await repository.addMembers(experiment.id, [
-        { userId: memberId },
-      ]);
+      const result = await repository.addMembers(experiment.id, [{ userId: memberId }]);
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       const members = result.value;
@@ -352,9 +348,7 @@ describe("ExperimentMemberRepository", () => {
       });
 
       // Add the member
-      await repository.addMembers(experiment.id, [
-        { userId: memberId, role: "member" },
-      ]);
+      await repository.addMembers(experiment.id, [{ userId: memberId, role: "member" }]);
 
       // Verify member was added
       let membersResult = await repository.getMembers(experiment.id);
@@ -363,10 +357,7 @@ describe("ExperimentMemberRepository", () => {
       expect(members.some((m) => m.user.id === memberId)).toBe(true);
 
       // Act: Remove the member
-      const removeResult = await repository.removeMember(
-        experiment.id,
-        memberId,
-      );
+      const removeResult = await repository.removeMember(experiment.id, memberId);
       expect(removeResult.isSuccess()).toBe(true);
 
       // Verify member was removed
@@ -387,10 +378,7 @@ describe("ExperimentMemberRepository", () => {
       const nonExistentId = "00000000-0000-0000-0000-000000000000";
 
       // Act & Assert: Should not throw error
-      const result = await repository.removeMember(
-        experiment.id,
-        nonExistentId,
-      );
+      const result = await repository.removeMember(experiment.id, nonExistentId);
       expect(result.isSuccess()).toBe(true);
     });
   });
@@ -418,10 +406,7 @@ describe("ExperimentMemberRepository", () => {
       ]);
 
       // Act & Assert
-      const adminRoleResult = await repository.getMemberRole(
-        experiment.id,
-        adminId,
-      );
+      const adminRoleResult = await repository.getMemberRole(experiment.id, adminId);
       expect(adminRoleResult.isSuccess()).toBe(true);
 
       // Use assertSuccess to directly access the value
@@ -429,10 +414,7 @@ describe("ExperimentMemberRepository", () => {
       const adminRole = adminRoleResult.value;
       expect(adminRole).toBe("admin");
 
-      const memberRoleResult = await repository.getMemberRole(
-        experiment.id,
-        memberId,
-      );
+      const memberRoleResult = await repository.getMemberRole(experiment.id, memberId);
       expect(memberRoleResult.isSuccess()).toBe(true);
 
       // Use assertSuccess to directly access the value
@@ -441,10 +423,7 @@ describe("ExperimentMemberRepository", () => {
       expect(memberRole).toBe("member");
 
       // Also verify the creator's role
-      const creatorRoleResult = await repository.getMemberRole(
-        experiment.id,
-        testUserId,
-      );
+      const creatorRoleResult = await repository.getMemberRole(experiment.id, testUserId);
       expect(creatorRoleResult.isSuccess()).toBe(true);
 
       // Use assertSuccess to directly access the value
@@ -466,10 +445,7 @@ describe("ExperimentMemberRepository", () => {
       });
 
       // Act
-      const roleResult = await repository.getMemberRole(
-        experiment.id,
-        nonMemberId,
-      );
+      const roleResult = await repository.getMemberRole(experiment.id, nonMemberId);
       expect(roleResult.isSuccess()).toBe(true);
 
       // Use assertSuccess to directly access the value
@@ -484,10 +460,7 @@ describe("ExperimentMemberRepository", () => {
       const nonExistentId = "00000000-0000-0000-0000-000000000000";
 
       // Act
-      const roleResult = await repository.getMemberRole(
-        nonExistentId,
-        testUserId,
-      );
+      const roleResult = await repository.getMemberRole(nonExistentId, testUserId);
       expect(roleResult.isSuccess()).toBe(true);
 
       // Use assertSuccess to directly access the value
@@ -577,9 +550,7 @@ describe("ExperimentMemberRepository", () => {
       const membersResult = await repository.getMembers(experiment.id);
       assertSuccess(membersResult);
       const members = membersResult.value;
-      const membershipCount = members.filter(
-        (m) => m.user.id === memberId,
-      ).length;
+      const membershipCount = members.filter((m) => m.user.id === memberId).length;
       expect(membershipCount).toBe(1);
     });
 
