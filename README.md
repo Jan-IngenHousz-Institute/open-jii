@@ -75,6 +75,17 @@ Visit our [Documentation Hub](https://docs.openjii.org) or browse the `apps/docs
 - Developer guides and API references
 - Research methodology documentation
 
+## Contentful Live Preview
+
+To enable live preview of content on the Contentful website for your deployed development site, you need to update the preview URL in Contentful:
+
+1. Go to your Contentful space.
+2. Navigate to **Settings** → **Content preview**.
+3. Edit the **blog** preview entry.
+4. Set the preview URL to match your deployed dev website.
+
+This ensures that when using Contentful's preview feature, it will display your latest deployed development site.
+
 ## Contributing
 
 We welcome contributions! Please check our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md).
