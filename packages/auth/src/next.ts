@@ -26,9 +26,9 @@ export function initAuth({
     secret: authSecrets.AUTH_SECRET || process.env.AUTH_SECRET,
     providers: [
       GitHub({
-        clientId: authSecrets.GITHUB_CLIENT_ID || process.env.GITHUB_CLIENT_ID,
+        clientId: authSecrets.AUTH_GITHUB_ID || process.env.AUTH_GITHUB_ID,
         clientSecret:
-          authSecrets.GITHUB_CLIENT_SECRET || process.env.GITHUB_CLIENT_SECRET,
+          authSecrets.AUTH_GITHUB_SECRET || process.env.AUTH_GITHUB_SECRET,
       }),
     ],
     adapter: isLambda ? lambdaAdapter(dbSecrets) : adapter,

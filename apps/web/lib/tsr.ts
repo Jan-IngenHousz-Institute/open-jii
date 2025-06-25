@@ -16,7 +16,8 @@ const customApiFetcher = async (args: ApiFetcherArgs) => {
 };
 
 export const tsr = initTsrReactQuery(contract, {
-  baseUrl: "http://localhost:3020",
+  // eslint-disable-next-line no-restricted-properties, turbo/no-undeclared-env-vars
+  baseUrl: "https://api.dev.openjii.org",
   baseHeaders: {
     "x-app-source": "ts-rest",
   },

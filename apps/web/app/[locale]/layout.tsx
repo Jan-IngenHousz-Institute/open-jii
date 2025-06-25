@@ -56,6 +56,9 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
 
   return (
     <html>
+      <head>
+        <meta name="robots" content="noindex, nofollow" />
+      </head>
       <body
         className={cn(
           "bg-background font-overpass min-h-screen antialiased",

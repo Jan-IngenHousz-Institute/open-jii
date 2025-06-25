@@ -420,10 +420,11 @@ module "opennext" {
   oauth_secret_arn          = module.auth_secrets.secret_arn
 
   server_environment_variables = {
-    DB_HOST             = module.aurora_db.cluster_endpoint
-    DB_PORT             = module.aurora_db.cluster_port
-    DB_NAME             = module.aurora_db.database_name
-    NEXT_PUBLIC_API_URL = "https://${module.route53.api_domain}"
+    COOKIE_DOMAIN = ".${var.environment}.${var.domain_name}"
+    DB_HOST       = module.aurora_db.cluster_endpoint
+    DB_PORT       = module.aurora_db.cluster_port
+    DB_NAME       = module.aurora_db.database_name
+    NODE_ENV      = var.environment
   }
 
   # Performance configuration
@@ -716,6 +717,18 @@ module "backend_ecs" {
     {
       name  = "LOG_LEVEL"
       value = "debug"
+    },
+    {
+      name  = "CORS_ENABLED"
+      value = "true"
+    },
+    {
+      name  = "CORS_ORIGINS"
+      value = "https://${module.route53.environment_domain}"
+    },
+    {
+      name  = "COOKIE_DOMAIN"
+      value = ".${var.environment}.${var.domain_name}"
     }
   ]
 
@@ -841,4 +854,3 @@ module "route53" {
     ManagedBy   = "Terraform"
   }
 }
-

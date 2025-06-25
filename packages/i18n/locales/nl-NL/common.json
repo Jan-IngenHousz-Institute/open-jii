@@ -140,6 +140,11 @@
     "continueWith": "Doorgaan met",
     "loginWith": "Inloggen met {{provider}}"
   },
+  "signout": {
+    "title": "Uitloggen",
+    "description": "Weet je zeker dat je wilt uitloggen van je account?",
+    "confirm": "Ja, uitloggen"
+  },
   "forms": {
     "required": "Dit veld is verplicht",
     "invalidEmail": "Voer een geldig e-mailadres in",

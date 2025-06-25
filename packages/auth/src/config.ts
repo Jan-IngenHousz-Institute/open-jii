@@ -1,3 +1,4 @@
+/* eslint-disable turbo/no-undeclared-env-vars */
 import type { JWT } from "@auth/core/jwt";
 import GitHub from "@auth/core/providers/github";
 import type { ExpressAuthConfig } from "@auth/express";
@@ -26,11 +27,45 @@ declare module "next-auth" {
 
 export type { Session, SessionUser, DefaultSession, User } from "next-auth";
 
+const useSecureCookies = process.env.NODE_ENV === "production";
+const cookiePrefix = useSecureCookies ? "__Secure-" : "";
+
 // Auth config used across the application
 export const baseAuthConfig = {
   secret: process.env.AUTH_SECRET,
   providers: [GitHub],
   trustHost: true,
+  cookies: {
+    sessionToken: {
+      name: `${cookiePrefix}authjs.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: useSecureCookies,
+        domain: process.env.COOKIE_DOMAIN ?? undefined,
+      },
+    },
+    callbackUrl: {
+      name: `${cookiePrefix}authjs.callback-url`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: useSecureCookies,
+        domain: process.env.COOKIE_DOMAIN ?? undefined,
+      },
+    },
+    csrfToken: {
+      name: `${useSecureCookies ? "__Host-" : ""}authjs.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: useSecureCookies,
+      },
+    },
+  },
   callbacks: {
     jwt({ token, user }: { token: JWT; user?: User }) {
       if (user) {

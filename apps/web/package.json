@@ -7,7 +7,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "build:opennext": "pnpm dlx @opennextjs/aws@latest build",
-    "clean": "git clean -xdf .cache .next .turbo node_modules",
+    "clean": "git clean -xdf .cache .next .turbo node_modules .open-next",
     "start": "next start",
     "lint": "next lint --max-warnings 0",
     "check-types": "tsc --noEmit"

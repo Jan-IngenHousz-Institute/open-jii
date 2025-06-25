@@ -203,7 +203,7 @@ resource "aws_ecs_task_definition" "app_task" {
       environment = concat([
         {
           name  = "NODE_ENV"
-          value = var.environment
+          value = "production"
         }
         ],
         var.container_port != null ? [{
@@ -246,6 +246,10 @@ resource "aws_ecs_service" "app_service" {
 
   # Use launch_type only when not using capacity provider strategies
   launch_type = length(var.capacity_provider_strategy) > 0 || var.enable_mixed_capacity ? null : "FARGATE"
+
+  lifecycle {
+    ignore_changes = [task_definition]
+  }
 
   # Configure mixed capacity provider strategy at service level when enabled
   # This overrides the default_capacity_provider_strategy defined at cluster level

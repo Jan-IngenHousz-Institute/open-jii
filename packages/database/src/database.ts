@@ -23,8 +23,9 @@ const getDatabaseUrl = (secrets?: Record<string, unknown>) => {
   }
 
   const encodedpass = encodeURIComponent(credentials.pass);
-  return `postgres://${credentials.user}:${encodedpass}@${host}:${port}/${name}?sslmode=require`;
+  return `postgres://${credentials.user}:${encodedpass}@${host ?? "host"}:${port ?? 5432}/${name ?? "db_name"}?sslmode=require`;
 };
+
 const getCredentials = (
   dbCredentials?: Record<string, unknown>,
 ): {
@@ -33,8 +34,8 @@ const getCredentials = (
 } => {
   if (dbCredentials) {
     return {
-      user: dbCredentials.user as string,
-      pass: dbCredentials.pass as string,
+      user: dbCredentials.username as string,
+      pass: dbCredentials.password as string,
     };
   }
 
@@ -43,10 +44,19 @@ const getCredentials = (
   }
 
   try {
-    return JSON.parse(process.env.DB_CREDENTIALS) as {
-      user: string;
-      pass: string;
-    };
+    const credentials = JSON.parse(process.env.DB_CREDENTIALS) as Record<
+      string,
+      string
+    >;
+
+    if (credentials.username && credentials.password) {
+      return {
+        user: credentials.username,
+        pass: credentials.password,
+      };
+    }
+
+    return { user: "", pass: "" };
   } catch {
     return { user: "", pass: "" };
   }

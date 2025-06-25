@@ -70,28 +70,6 @@ export async function fetchSecret(secretArn: string): Promise<SecretMap> {
 }
 
 /**
- * Loads OAuth-related secrets directly from AWS Secrets Manager.
- * In Lambda, the secrets will be available with the same keys as environment variables.
- * This makes it easier to integrate with existing code that uses process.env.
- */
-export async function loadOAuthSecrets(): Promise<Record<string, string>> {
-  // If not in Lambda or no secret ARN provided, return empty object
-  if (!isLambdaEnvironment() || !process.env.OAUTH_SECRET_ARN) {
-    return {};
-  }
-
-  try {
-    // Just return the raw secrets - they should be stored with the same keys as env vars
-    return await fetchSecret(process.env.OAUTH_SECRET_ARN);
-  } catch {
-    return {};
-  }
-}
-
-// Cache for environment values to avoid repeated secret loads
-const secretsCache: Record<string, string | undefined> = {};
-
-/**
  * Gets a secret value from AWS Secrets Manager by ARN.
  * In non-Lambda environments, it returns an empty object or undefined value.
  */
@@ -106,33 +84,15 @@ export async function getSecret(
     return key ? undefined : {};
   }
 
-  // Check cache for this secret ARN
-  const cacheKey = secretArn;
-  if (!(cacheKey in secretsCache)) {
-    try {
-      // Fetch the secret data
-      const secretData = await fetchSecret(secretArn);
+  try {
+    const secretData = await fetchSecret(secretArn);
 
-      // Cache all values from this secret
-      for (const [k, v] of Object.entries(secretData)) {
-        secretsCache[`${secretArn}:${k}`] = v;
-      }
-
-      // If a specific key was requested, return that value
-      if (key) {
-        return secretData[key];
-      }
-
-      // Otherwise return the entire secret map
-      return secretData;
-    } catch {
-      return key ? undefined : {};
+    if (key) {
+      return secretData[key];
     }
-  } else if (key) {
-    // Return the specific key from cache
-    return secretsCache[`${secretArn}:${key}`];
-  }
 
-  // This should not happen with proper usage
-  return {};
+    return secretData;
+  } catch {
+    return key ? undefined : {};
+  }
 }

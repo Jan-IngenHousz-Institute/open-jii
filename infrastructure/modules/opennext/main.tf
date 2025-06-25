@@ -1,3 +1,6 @@
+# Get the current AWS region
+data "aws_region" "current" {}
+
 # Local values for resource naming
 locals {
   # Base naming convention
@@ -181,12 +184,21 @@ module "server_function" {
   }
 
   environment_variables = merge({
-    ASSETS_BUCKET_NAME     = aws_s3_bucket.assets.bucket
-    CACHE_BUCKET_NAME      = aws_s3_bucket.cache.bucket
-    REVALIDATION_QUEUE_URL = module.sqs.queue_url
-    CACHE_DYNAMO_TABLE     = module.dynamodb.table_name
-    DB_SECRET_ARN          = var.db_credentials_secret_arn
-    OAUTH_SECRET_ARN       = var.oauth_secret_arn
+    # Cache bucket configuration
+    CACHE_BUCKET_REGION = data.aws_region.current.name
+    CACHE_BUCKET_NAME   = aws_s3_bucket.cache.bucket
+
+    # DynamoDB configuration
+    CACHE_BUCKET_REGION = data.aws_region.current.name
+    CACHE_DYNAMO_TABLE  = module.dynamodb.table_name
+
+    # Revalidation queue configuration
+    REVALIDATION_QUEUE_REGION = data.aws_region.current.name
+    REVALIDATION_QUEUE_URL    = module.sqs.queue_url
+
+    # Credentials and secrets
+    DB_SECRET_ARN    = var.db_credentials_secret_arn
+    OAUTH_SECRET_ARN = var.oauth_secret_arn
   }, var.server_environment_variables)
 
   tags = local.common_tags
@@ -210,7 +222,7 @@ module "image_function" {
   s3_bucket_arns = [aws_s3_bucket.assets.arn]
 
   environment_variables = {
-    ASSETS_BUCKET_NAME = aws_s3_bucket.assets.bucket
+    BUCKET_NAME = aws_s3_bucket.assets.bucket
   }
 
   tags = local.common_tags
@@ -233,12 +245,6 @@ module "revalidate_function" {
   s3_bucket_arns       = [aws_s3_bucket.assets.arn, aws_s3_bucket.cache.arn]
   dynamodb_permissions = true
   dynamodb_table_arns  = [module.dynamodb.table_arn]
-
-  environment_variables = {
-    ASSETS_BUCKET_NAME = aws_s3_bucket.assets.bucket
-    CACHE_BUCKET_NAME  = aws_s3_bucket.cache.bucket
-    CACHE_DYNAMO_TABLE = module.dynamodb.table_name
-  }
 
   tags = local.common_tags
 
