@@ -184,6 +184,7 @@ export const experimentMembers = pgTable(
   },
   (table) => [primaryKey({ columns: [table.experimentId, table.userId] })],
 );
+
 // Audit Log Table
 export const auditLogs = pgTable("audit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -193,4 +194,20 @@ export const auditLogs = pgTable("audit_logs", {
   action: text("action").notNull(),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   details: jsonb("details"),
+});
+
+// Protocols Table
+export const protocols = pgTable("protocols", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull().unique(),
+  description: text("description"),
+  code: jsonb("code").notNull(),
+  createdBy: uuid("created_by")
+    .references(() => users.id)
+    .notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 });
