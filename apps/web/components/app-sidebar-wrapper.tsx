@@ -30,20 +30,6 @@ export async function AppSidebarWrapper({
 
   // Prepare navigation data server-side
   const navigationData = {
-    navMain: [
-      {
-        title: tNavigation("sidebar.home"),
-        url: `/${locale}`,
-        icon: "Home",
-        items: [],
-      },
-      {
-        title: tNavigation("sidebar.blog"),
-        url: `/${locale}/blog`,
-        icon: "BookOpen",
-        items: [],
-      },
-    ],
     navExperiments: [
       {
         title: tNavigation("sidebar.experiments"),
@@ -118,7 +104,6 @@ export async function AppSidebarWrapper({
     openJII: tNavigation("navigation.openJII"),
     logoAlt: tCommon("common.logo"),
     signIn: tCommon("signIn"),
-    mainTitle: tNavigation("sidebar.main"),
     experimentsTitle: tNavigation("sidebar.experiments"),
     hardwareTitle: tNavigation("sidebar.hardware"),
   };
