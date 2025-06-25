@@ -24,9 +24,9 @@ export const ArticleTileGrid = ({
       )}
       {...props}
     >
-      {articles.map((article, index) => {
+      {articles.map((article) => {
         return article ? (
-          <ArticleTile key={index} article={article} locale={locale} />
+          <ArticleTile key={article.sys.id} article={article} locale={locale} />
         ) : null;
       })}
     </div>
