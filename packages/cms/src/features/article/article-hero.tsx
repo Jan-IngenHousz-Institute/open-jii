@@ -36,9 +36,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
       shortDescription?: string;
       publishedDate?: string;
     };
-  const safePublishedDate: Date | undefined = publishedDate
-    ? new Date(publishedDate)
-    : undefined;
+  const safePublishedDate: Date | undefined = publishedDate ? new Date(publishedDate) : undefined;
 
   return (
     <div
@@ -47,10 +45,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
         isReversedLayout ? "lg:flex-row-reverse" : "lg:flex-row",
       )}
     >
-      <div
-        className="flex-1 basis-1/2"
-        {...inspectorProps({ fieldId: "featuredImage" })}
-      >
+      <div className="flex-1 basis-1/2" {...inspectorProps({ fieldId: "featuredImage" })}>
         {article.featuredImage && (
           <CtfImage
             nextImageProps={{
@@ -70,9 +65,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
             <ArticleLabel
               className={cn(
                 "ml-auto pl-2 lg:absolute lg:top-8 xl:top-12",
-                isReversedLayout
-                  ? "lg:left-6 xl:left-12"
-                  : "lg:right-6 xl:right-12",
+                isReversedLayout ? "lg:left-6 xl:left-12" : "lg:right-6 xl:right-12",
               )}
             >
               {t("article.featured")}
@@ -95,18 +88,12 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
           {title}
         </h1>
         {shortDescription && (
-          <p
-            className="mt-2"
-            {...inspectorProps({ fieldId: "shortDescription" })}
-          >
+          <p className="mt-2" {...inspectorProps({ fieldId: "shortDescription" })}>
             {shortDescription}
           </p>
         )}
         <div
-          className={cn(
-            "text-gray600 mt-2 text-xs",
-            isReversedLayout ? "lg:hidden" : "",
-          )}
+          className={cn("text-gray600 mt-2 text-xs", isReversedLayout ? "lg:hidden" : "")}
           {...inspectorProps({ fieldId: "publishedDate" })}
         >
           <FormatDate date={safePublishedDate} />

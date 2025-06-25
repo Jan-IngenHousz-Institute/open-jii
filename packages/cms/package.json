@@ -45,8 +45,8 @@
       "types": "./src/features/article/index.ts"
     },
     "./container": {
-      "import": "./src/shared/container/index.ts",
-      "types": "./src/shared/container/index.ts"
+      "import": "./src/shared/index.ts",
+      "types": "./src/shared/index.ts"
     },
     "./contentful": {
       "import": "./src/features/contentful/index.ts",

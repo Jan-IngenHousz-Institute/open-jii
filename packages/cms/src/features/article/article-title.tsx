@@ -19,21 +19,14 @@ interface ArticleTileProps extends HTMLProps<HTMLDivElement> {
   locale: string;
 }
 
-export const ArticleTile = ({
-  article,
-  className,
-  locale,
-}: ArticleTileProps) => {
-  const { featuredImage, publishedDate, slug, title } =
-    useContentfulLiveUpdates(article) as {
-      featuredImage?: PageBlogPostFieldsFragment["featuredImage"];
-      publishedDate?: string;
-      slug?: string;
-      title?: string;
-    };
-  const safePublishedDate: Date | undefined = publishedDate
-    ? new Date(publishedDate)
-    : undefined;
+export const ArticleTile = ({ article, className, locale }: ArticleTileProps) => {
+  const { featuredImage, publishedDate, slug, title } = useContentfulLiveUpdates(article) as {
+    featuredImage?: PageBlogPostFieldsFragment["featuredImage"];
+    publishedDate?: string;
+    slug?: string;
+    title?: string;
+  };
+  const safePublishedDate: Date | undefined = publishedDate ? new Date(publishedDate) : undefined;
   const inspectorProps = useContentfulInspectorMode({
     entryId: article.sys.id,
   });
