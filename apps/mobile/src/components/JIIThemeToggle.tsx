@@ -1,7 +1,7 @@
 import { Sun, Moon, Smartphone } from "lucide-react-native";
 import React from "react";
 import { View, TouchableOpacity, StyleSheet, Text } from "react-native";
-import { useTheme } from "~/hooks/useTheme";
+import { useTheme } from "~/hooks/use-theme";
 
 interface ThemeToggleProps {
   style?: any;

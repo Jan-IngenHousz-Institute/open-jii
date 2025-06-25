@@ -9,7 +9,7 @@ import {
   ViewStyle,
   TouchableOpacity,
 } from "react-native";
-import { useTheme } from "~/hooks/useTheme";
+import { useTheme } from "~/hooks/use-theme";
 
 interface InputProps extends TextInputProps {
   label?: string;

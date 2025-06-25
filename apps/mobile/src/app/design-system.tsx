@@ -6,7 +6,7 @@ import { JIICard } from "~/components/JIICard";
 import { JIIInput } from "~/components/JIIInput";
 import { JIIText } from "~/components/JIIText";
 import { JIIThemeToggle } from "~/components/JIIThemeToggle";
-import { useTheme } from "~/hooks/useTheme";
+import { useTheme } from "~/hooks/use-theme";
 
 export default function DesignSystemScreen() {
   const theme = useTheme();

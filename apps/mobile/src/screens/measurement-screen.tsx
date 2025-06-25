@@ -1,7 +1,7 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AlertTriangle, ArrowLeft, Bluetooth, Radio, Usb } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   FlatList,
   Platform,
@@ -11,15 +11,16 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useExperimentsDropdownOptions } from "~/api/hooks/use-experiments-dropdown-options";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
 import { Dropdown } from "~/components/Dropdown";
 import { MeasurementResult } from "~/components/MeasurementResult";
 import { Toast } from "~/components/Toast";
 import { colors } from "~/constants/colors";
-import { useTheme } from "~/hooks/useTheme";
-import { mockDevices } from "~/mocks/mock-devices";
+import { useDeviceConnection } from "~/hooks/use-device-connection";
+import { Device, useDevices } from "~/hooks/use-devices";
+import { useExperimentsDropdownOptions } from "~/hooks/use-experiments-dropdown-options";
+import { useTheme } from "~/hooks/use-theme";
 import { mockProtocols } from "~/mocks/mock-protocols";
 
 const { height } = Dimensions.get("window");
@@ -28,21 +29,20 @@ export function MeasurementScreen() {
   const theme = useTheme();
   const { colors } = theme;
   const { options } = useExperimentsDropdownOptions();
+  const { isLoading: loadingDevices, startScan, devices } = useDevices("bluetooth-classic");
+  const { connectToDevice, connectingDeviceId } = useDeviceConnection();
 
-  // Track which step we're on (1: Setup, 2: Measurement)
   const [currentStep, setCurrentStep] = useState(1);
 
   const [isOnline] = useState(true);
   const [bluetoothConnected, setBluetoothConnected] = useState(false);
   const [usbConnected, setUsbConnected] = useState(false);
   const [, setDeviceName] = useState<string | undefined>(undefined);
-  const [, setConnectionType] = useState<"bluetooth" | "ble" | "usb" | null>(null);
+
   const [selectedProtocol, setSelectedProtocol] = useState<string | undefined>(undefined);
-  const [isScanning, setIsScanning] = useState(false);
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [measurementData, setMeasurementData] = useState<any>(null);
-  const [discoveredDevices, setDiscoveredDevices] = useState<any[]>([]);
   const [showDeviceList, setShowDeviceList] = useState(false);
   const [selectedConnectionType, setSelectedConnectionType] = useState<
     "bluetooth" | "ble" | "usb" | null
@@ -54,42 +54,12 @@ export function MeasurementScreen() {
     type: "info" as "success" | "error" | "info" | "warning",
   });
 
-  // Load the selected experiment from storage
-  useEffect(() => {
-    const loadSelectedExperiment = async () => {
-      try {
-        const storedExperiment = await AsyncStorage.getItem("selected_experiment");
-        if (storedExperiment) {
-          setSelectedExperiment(storedExperiment);
-        }
-      } catch (error) {
-        console.error("Error loading selected experiment:", error);
-      }
-    };
-
-    loadSelectedExperiment();
-  }, []);
-
   const handleSelectConnectionType = (type: "bluetooth" | "ble" | "usb") => {
     setSelectedConnectionType(type);
-
-    // Reset device list
-    setDiscoveredDevices([]);
     setShowDeviceList(false);
   };
 
-  const handleSelectExperiment = async (value: string) => {
-    setSelectedExperiment(value);
-
-    // Store the selected experiment in AsyncStorage
-    try {
-      await AsyncStorage.setItem("selected_experiment", value);
-    } catch (error) {
-      console.error("Error storing selected experiment:", error);
-    }
-  };
-
-  const handleScanForDevices = async () => {
+  const handleScanForDevices = () => {
     if (!selectedConnectionType) {
       setToast({
         visible: true,
@@ -99,58 +69,36 @@ export function MeasurementScreen() {
       return;
     }
 
-    setIsScanning(true);
     setShowDeviceList(true);
-
-    try {
-      // Simulate device scanning
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Filter mock devices based on selected connection type
-      const filteredDevices = mockDevices.filter(
-        (device) => device.type === selectedConnectionType,
-      );
-
-      setDiscoveredDevices(filteredDevices);
-
-      if (filteredDevices.length > 0) {
+    startScan()
+      .then((devices) =>
         setToast({
-          visible: true,
-          message: `Found ${filteredDevices.length} devices`,
-          type: "success",
-        });
-      } else {
-        setToast({
-          visible: true,
+          visible: !devices.length,
           message: "No devices found",
           type: "info",
-        });
-      }
-    } catch {
-      setToast({
-        visible: true,
-        message: "Failed to scan for devices",
-        type: "error",
-      });
-    } finally {
-      setIsScanning(false);
-    }
+        }),
+      )
+      .catch(() =>
+        setToast({
+          visible: true,
+          message: "Failed to scan for devices",
+          type: "error",
+        }),
+      );
   };
 
-  const handleConnectToDevice = async (device: any) => {
+  const handleConnectToDevice = async (device: Device) => {
     try {
-      // Simulate connection
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      console.log("handleConnectToDevice", device);
+      await connectToDevice(device);
 
       // Update connection state based on device type
-      if (device.type === "bluetooth" || device.type === "ble") {
+      if (device.type === "bluetooth-classic" || device.type === "ble") {
         setBluetoothConnected(true);
         setUsbConnected(false);
-        setConnectionType(device.type);
       } else if (device.type === "usb") {
         setUsbConnected(true);
         setBluetoothConnected(false);
-        setConnectionType("usb");
       }
 
       setDeviceName(device.name);
@@ -165,6 +113,7 @@ export function MeasurementScreen() {
       // Move to step 2 after successful connection
       setCurrentStep(2);
     } catch {
+      console.log("connect error");
       setToast({
         visible: true,
         message: "Connection failed",
@@ -181,7 +130,7 @@ export function MeasurementScreen() {
       setBluetoothConnected(false);
       setUsbConnected(false);
       setDeviceName(undefined);
-      setConnectionType(null);
+
       setMeasurementData(null);
 
       setToast({
@@ -354,7 +303,7 @@ export function MeasurementScreen() {
     ? options.find((e) => e.value === selectedExperiment)?.label
     : "No experiment selected";
 
-  const renderDeviceItem = ({ item }: { item: any }) => (
+  const renderDeviceItem = ({ item }: { item: Device }) => (
     <TouchableOpacity
       style={[
         styles.deviceItem,
@@ -389,14 +338,24 @@ export function MeasurementScreen() {
         )}
       </View>
       <View style={styles.deviceTypeContainer}>
-        {item.type === "bluetooth" && <Bluetooth size={16} color={colors.primary.dark} />}
-        {item.type === "ble" && <Radio size={16} color={colors.primary.dark} />}
-        {item.type === "usb" && <Usb size={16} color={colors.primary.dark} />}
+        {item.id === connectingDeviceId ? (
+          <ActivityIndicator
+            size="small"
+            color={theme.isDark ? colors.light.onPrimary : colors.dark.onPrimary}
+          />
+        ) : (
+          <>
+            {item.type === "bluetooth-classic" && (
+              <Bluetooth size={16} color={colors.primary.dark} />
+            )}
+            {item.type === "ble" && <Radio size={16} color={colors.primary.dark} />}
+            {item.type === "usb" && <Usb size={16} color={colors.primary.dark} />}
+          </>
+        )}
       </View>
     </TouchableOpacity>
   );
 
-  // STEP 1: Setup - Select experiment and connect to device
   const renderSetupStep = () => (
     <ScrollView contentContainerStyle={styles.setupScrollContent}>
       <View style={styles.experimentSection}>
@@ -413,7 +372,7 @@ export function MeasurementScreen() {
         <Dropdown
           options={options}
           selectedValue={selectedExperiment ?? undefined}
-          onSelect={handleSelectExperiment}
+          onSelect={(value) => setSelectedExperiment(value)}
           placeholder="Choose an experiment"
         />
       </View>
@@ -626,8 +585,8 @@ export function MeasurementScreen() {
             <Button
               title="Scan for Devices"
               onPress={handleScanForDevices}
-              isLoading={isScanning}
-              isDisabled={!selectedConnectionType}
+              isLoading={loadingDevices}
+              isDisabled={!selectedConnectionType || !!connectingDeviceId}
               style={styles.actionButton}
             />
           </View>
@@ -642,10 +601,10 @@ export function MeasurementScreen() {
                   },
                 ]}
               >
-                {isScanning ? "Scanning for devices..." : "Available Devices"}
+                {loadingDevices ? "Scanning for devices..." : "Available Devices"}
               </Text>
 
-              {!isScanning && discoveredDevices.length === 0 && (
+              {!loadingDevices && !devices?.length && (
                 <Text
                   style={[
                     styles.emptyDeviceList,
@@ -659,7 +618,7 @@ export function MeasurementScreen() {
               )}
 
               <FlatList
-                data={discoveredDevices}
+                data={devices ?? []}
                 renderItem={renderDeviceItem}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.deviceList}
@@ -671,7 +630,6 @@ export function MeasurementScreen() {
     </ScrollView>
   );
 
-  // STEP 2: Measurement - Simplified layout with focus on measurement result
   const renderMeasurementStep = () => (
     <View style={styles.measurementStepContainer}>
       {/* Compact header with experiment name and back button */}
@@ -696,7 +654,6 @@ export function MeasurementScreen() {
         </View>
       </View>
 
-      {/* Protocol selection and start measurement button */}
       <View style={styles.protocolContainer}>
         <Dropdown
           label="Protocol"

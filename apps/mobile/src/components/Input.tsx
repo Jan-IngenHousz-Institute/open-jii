@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { colors } from "~/constants/colors";
-import { useTheme } from "~/hooks/useTheme";
+import { useTheme } from "~/hooks/use-theme";
 
 interface InputProps extends TextInputProps {
   label?: string;

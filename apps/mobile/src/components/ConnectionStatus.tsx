@@ -1,7 +1,7 @@
 import { Wifi, WifiOff, Bluetooth, BluetoothOff, Usb } from "lucide-react-native";
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { useTheme } from "~/hooks/useTheme";
+import { useTheme } from "~/hooks/use-theme";
 
 interface ConnectionStatusProps {
   isOnline: boolean;

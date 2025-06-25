@@ -7,7 +7,7 @@ import { Card } from "~/components/Card";
 import { Toast } from "~/components/Toast";
 import { colors } from "~/constants/colors";
 import { useSessionStore } from "~/hooks/use-session-store";
-import { useTheme } from "~/hooks/useTheme";
+import { useTheme } from "~/hooks/use-theme";
 import { formatIsoDateString } from "~/utils/format-iso-date-string";
 
 import packageJson from "../../../package.json";

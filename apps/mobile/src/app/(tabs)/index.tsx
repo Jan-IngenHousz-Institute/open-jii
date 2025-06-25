@@ -5,7 +5,7 @@ import { Button } from "~/components/Button";
 import { OfflineBanner } from "~/components/OfflineBanner";
 import { Toast } from "~/components/Toast";
 import { UnsyncedScanItem } from "~/components/UnsyncedScanItem";
-import { useTheme } from "~/hooks/useTheme";
+import { useTheme } from "~/hooks/use-theme";
 
 // Mock data - replace with actual data from your state management
 const mockUnsyncedScans = [

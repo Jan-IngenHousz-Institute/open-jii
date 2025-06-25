@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ThemeProvider } from "~/context/ThemeContext";
-import { useTheme } from "~/hooks/useTheme";
+import { useTheme } from "~/hooks/use-theme";
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
