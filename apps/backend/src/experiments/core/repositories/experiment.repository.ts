@@ -4,7 +4,12 @@ import { ExperimentFilter, ExperimentStatus } from "@repo/api";
 import { eq, or, and, experiments, experimentMembers } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
-import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import {
+  Result,
+  tryCatch,
+  defaultRepositoryErrorMapper,
+} from "../../../common/utils/fp-utils";
+import { ExperimentMemberRole } from "../models/experiment-members.model";
 import {
   CreateExperimentDto,
   UpdateExperimentDto,
@@ -22,14 +27,17 @@ export class ExperimentRepository {
     createExperimentDto: CreateExperimentDto,
     userId: string,
   ): Promise<Result<ExperimentDto[]>> {
-    return tryCatch(() =>
-      this.database
-        .insert(experiments)
-        .values({
-          ...createExperimentDto,
-          createdBy: userId,
-        })
-        .returning(),
+    return tryCatch(
+      () =>
+        this.database
+          .insert(experiments)
+          .values({
+            ...createExperimentDto,
+            createdBy: userId,
+          })
+          .returning(),
+      defaultRepositoryErrorMapper,
+      "ExperimentRepository.create",
     );
   }
 
@@ -52,72 +60,76 @@ export class ExperimentRepository {
       updatedAt: experiments.updatedAt,
     };
 
-    return tryCatch(() => {
-      // Start with a base query builder
-      const query = this.database.select(experimentFields).from(experiments);
+    return tryCatch(
+      () => {
+        // Start with a base query builder
+        const query = this.database.select(experimentFields).from(experiments);
 
-      // Apply filter and status conditions without nested conditionals
-      if (filter === "my") {
-        if (status) {
-          return query.where(
-            and(
-              eq(experiments.createdBy, userId),
-              eq(experiments.status, status),
-            ),
-          );
-        }
-        return query.where(eq(experiments.createdBy, userId));
-      }
-
-      if (filter === "member") {
-        const joinedQuery = query.innerJoin(
-          experimentMembers,
-          eq(experiments.id, experimentMembers.experimentId),
-        );
-
-        if (status) {
-          return joinedQuery.where(
-            and(
-              eq(experimentMembers.userId, userId),
-              eq(experiments.status, status),
-            ),
-          );
-        }
-        return joinedQuery.where(eq(experimentMembers.userId, userId));
-      }
-
-      if (filter === "related") {
-        const joinedQuery = query.leftJoin(
-          experimentMembers,
-          eq(experiments.id, experimentMembers.experimentId),
-        );
-
-        if (status) {
-          return joinedQuery.where(
-            and(
-              or(
+        // Apply filter and status conditions without nested conditionals
+        if (filter === "my") {
+          if (status) {
+            return query.where(
+              and(
                 eq(experiments.createdBy, userId),
-                eq(experimentMembers.userId, userId),
+                eq(experiments.status, status),
               ),
-              eq(experiments.status, status),
+            );
+          }
+          return query.where(eq(experiments.createdBy, userId));
+        }
+
+        if (filter === "member") {
+          const joinedQuery = query.innerJoin(
+            experimentMembers,
+            eq(experiments.id, experimentMembers.experimentId),
+          );
+
+          if (status) {
+            return joinedQuery.where(
+              and(
+                eq(experimentMembers.userId, userId),
+                eq(experiments.status, status),
+              ),
+            );
+          }
+          return joinedQuery.where(eq(experimentMembers.userId, userId));
+        }
+
+        if (filter === "related") {
+          const joinedQuery = query.leftJoin(
+            experimentMembers,
+            eq(experiments.id, experimentMembers.experimentId),
+          );
+
+          if (status) {
+            return joinedQuery.where(
+              and(
+                or(
+                  eq(experiments.createdBy, userId),
+                  eq(experimentMembers.userId, userId),
+                ),
+                eq(experiments.status, status),
+              ),
+            );
+          }
+          return joinedQuery.where(
+            or(
+              eq(experiments.createdBy, userId),
+              eq(experimentMembers.userId, userId),
             ),
           );
         }
-        return joinedQuery.where(
-          or(
-            eq(experiments.createdBy, userId),
-            eq(experimentMembers.userId, userId),
-          ),
-        );
-      }
 
-      // Default cases (no filter or unrecognized filter)
-      if (status) {
-        return query.where(eq(experiments.status, status));
-      }
+        // Default cases (no filter or unrecognized filter)
+        if (status) {
+          return query.where(eq(experiments.status, status));
+        }
 
-      return query;
-    });
+        return query;
+      },
+      defaultRepositoryErrorMapper,
+      "ExperimentRepository.findAll",
+    );
   }
 
   async findOne(id: string): Promise<Result<ExperimentDto | null>> {
@@ -226,5 +238,50 @@ export class ExperimentRepository {
 
       return { experiment, hasAccess: isMember, isAdmin };
     });
+  }
+
+  async createWithMembers(
+    createExperimentDto: CreateExperimentDto,
+    userId: string,
+    members?: { userId: string; role?: ExperimentMemberRole }[],
+  ): Promise<Result<ExperimentDto>> {
+    return tryCatch(
+      () => {
+        return this.database.transaction(async (tx) => {
+          // Create the experiment
+          const [experiment] = await tx
+            .insert(experiments)
+            .values({
+              ...createExperimentDto,
+              createdBy: userId,
+            })
+            .returning();
+
+          // Filter out any member with the same userId as the admin
+          const filteredMembers = (
+            Array.isArray(members) ? members : []
+          ).filter((member) => member.userId !== userId);
+
+          // Add the user as an admin member + the rest of the members if provided
+          const allMembers = [
+            { userId, role: "admin" as const },
+            ...filteredMembers,
+          ];
+
+          // Insert all members in a single operation (we always have at least the admin)
+          await tx.insert(experimentMembers).values(
+            allMembers.map((member) => ({
+              experimentId: experiment.id,
+              userId: member.userId,
+              role: member.role,
+            })),
+          );
+
+          return experiment;
+        });
+      },
+      defaultRepositoryErrorMapper,
+      "ExperimentRepository.createWithMembers",
+    );
   }
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "experiments" ADD CONSTRAINT "name_not_empty" CHECK (length(trim("experiments"."name")) > 0);

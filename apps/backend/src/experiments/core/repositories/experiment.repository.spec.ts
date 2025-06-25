@@ -311,6 +311,54 @@ describe("ExperimentRepository", () => {
       // This experiment should be filtered out because it's by another user
       expect(experiments.some((e) => e.id === otherActive.id)).toBe(false);
     });
+
+    it("should return all experiments when filter is unrecognized", async () => {
+      // Arrange
+      const { experiment: experiment1 } = await testApp.createExperiment({
+        name: "Experiment 1",
+        userId: testUserId,
+      });
+
+      const { experiment: experiment2 } = await testApp.createExperiment({
+        name: "Experiment 2",
+        userId: testUserId,
+      });
+
+      // Act - use an unrecognized filter
+      const result = await repository.findAll(testUserId, "invalid" as any);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+      expect(experiments.length).toBeGreaterThanOrEqual(2);
+      expect(experiments.some((e) => e.id === experiment1.id)).toBe(true);
+      expect(experiments.some((e) => e.id === experiment2.id)).toBe(true);
+    });
+
+    it("should return all experiments when no filter is provided", async () => {
+      // Arrange
+      const { experiment: experiment1 } = await testApp.createExperiment({
+        name: "No Filter Experiment 1",
+        userId: testUserId,
+      });
+
+      const { experiment: experiment2 } = await testApp.createExperiment({
+        name: "No Filter Experiment 2",
+        userId: testUserId,
+      });
+
+      // Act - no filter provided
+      const result = await repository.findAll(testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+      expect(experiments.length).toBeGreaterThanOrEqual(2);
+      expect(experiments.some((e) => e.id === experiment1.id)).toBe(true);
+      expect(experiments.some((e) => e.id === experiment2.id)).toBe(true);
+    });
   });
 
   describe("findOne", () => {
@@ -347,6 +395,36 @@ describe("ExperimentRepository", () => {
       // Assert
       expect(result.isSuccess()).toBe(true);
 
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+  });
+
+  describe("findByName", () => {
+    it("should find an experiment by name", async () => {
+      // Arrange
+      const { experiment } = await testApp.createExperiment({
+        name: "Unique Experiment Name",
+        userId: testUserId,
+      });
+
+      // Act
+      const result = await repository.findByName("Unique Experiment Name");
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).not.toBeNull();
+      expect(result.value?.id).toBe(experiment.id);
+      expect(result.value?.name).toBe("Unique Experiment Name");
+    });
+
+    it("should return null if experiment with name not found", async () => {
+      // Act
+      const result = await repository.findByName("Non-existent Experiment");
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toBeNull();
     });
@@ -646,4 +724,363 @@ describe("ExperimentRepository", () => {
       expect(experimentCheck.length).toBe(0);
     });
   });
-});
+
+  describe("createWithMembers", () => {
+    it("should create an experiment with the creator as admin", async () => {
+      // Arrange
+      const createExperimentDto = {
+        name: "Test Experiment with Admin",
+        description: "Test Description",
+        status: "provisioning" as const,
+        visibility: "private" as const,
+        embargoIntervalDays: 90,
+      };
+
+      // Act
+      const result = await repository.createWithMembers(
+        createExperimentDto,
+        testUserId,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiment = result.value;
+
+      expect(experiment).toMatchObject({
+        id: expect.any(String) as string,
+        name: createExperimentDto.name,
+        description: createExperimentDto.description,
+        status: createExperimentDto.status,
+        visibility: createExperimentDto.visibility,
+        embargoIntervalDays: createExperimentDto.embargoIntervalDays,
+        createdBy: testUserId,
+      });
+
+      // Verify the creator is added as admin member
+      const members = await testApp.database
+        .select()
+        .from(experimentMembers)
+        .where(eq(experimentMembers.experimentId, experiment.id));
+
+      expect(members.length).toBe(1);
+      expect(members[0]).toMatchObject({
+        experimentId: experiment.id,
+        userId: testUserId,
+        role: "admin",
+      });
+    });
+
+    it("should create an experiment with additional members", async () => {
+      // Arrange
+      const member1Id = await testApp.createTestUser({
+        email: "member1@example.com",
+      });
+      const member2Id = await testApp.createTestUser({
+        email: "member2@example.com",
+      });
+
+      const createExperimentDto = {
+        name: "Test Experiment with Members",
+        description: "Test Description",
+        status: "provisioning" as const,
+        visibility: "private" as const,
+        embargoIntervalDays: 90,
+      };
+
+      const members = [
+        { userId: member1Id, role: "member" as const },
+        { userId: member2Id, role: "admin" as const },
+      ];
+
+      // Act
+      const result = await repository.createWithMembers(
+        createExperimentDto,
+        testUserId,
+        members,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiment = result.value;
+
+      expect(experiment).toMatchObject({
+        name: createExperimentDto.name,
+        createdBy: testUserId,
+      });
+
+      // Verify all members are added correctly
+      const dbMembers = await testApp.database
+        .select()
+        .from(experimentMembers)
+        .where(eq(experimentMembers.experimentId, experiment.id));
+
+      expect(dbMembers.length).toBe(3); // creator + 2 members
+
+      // Check creator is admin
+      const creatorMember = dbMembers.find((m) => m.userId === testUserId);
+      expect(creatorMember).toMatchObject({
+        userId: testUserId,
+        role: "admin",
+      });
+
+      // Check member1
+      const member1 = dbMembers.find((m) => m.userId === member1Id);
+      expect(member1).toMatchObject({
+        userId: member1Id,
+        role: "member",
+      });
+
+      // Check member2
+      const member2 = dbMembers.find((m) => m.userId === member2Id);
+      expect(member2).toMatchObject({
+        userId: member2Id,
+        role: "admin",
+      });
+    });
+
+    it("should filter out duplicate creator from members list", async () => {
+      // Arrange
+      const member1Id = await testApp.createTestUser({
+        email: "member1@example.com",
+      });
+
+      const createExperimentDto = {
+        name: "Test Duplicate Creator Filter",
+        description: "Test Description",
+        status: "provisioning" as const,
+        visibility: "private" as const,
+        embargoIntervalDays: 90,
+      };
+
+      // Try to add the creator as a member too (should be filtered out)
+      const members = [
+        { userId: testUserId, role: "member" as const }, // This should be filtered out
+        { userId: member1Id, role: "member" as const },
+      ];
+
+      // Act
+      const result = await repository.createWithMembers(
+        createExperimentDto,
+        testUserId,
+        members,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiment = result.value;
+
+      // Verify only 2 members: creator as admin + member1
+      const dbMembers = await testApp.database
+        .select()
+        .from(experimentMembers)
+        .where(eq(experimentMembers.experimentId, experiment.id));
+
+      expect(dbMembers.length).toBe(2);
+
+      // Creator should still be admin, not member
+      const creatorMember = dbMembers.find((m) => m.userId === testUserId);
+      expect(creatorMember).toMatchObject({
+        userId: testUserId,
+        role: "admin",
+      });
+
+      // Member1 should be member
+      const member1 = dbMembers.find((m) => m.userId === member1Id);
+      expect(member1).toMatchObject({
+        userId: member1Id,
+        role: "member",
+      });
+    });
+
+    it("should handle empty members array", async () => {
+      // Arrange
+      const createExperimentDto = {
+        name: "Test Empty Members",
+        description: "Test Description",
+        status: "provisioning" as const,
+        visibility: "private" as const,
+        embargoIntervalDays: 90,
+      };
+
+      // Act
+      const result = await repository.createWithMembers(
+        createExperimentDto,
+        testUserId,
+        [],
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiment = result.value;
+
+      // Verify only the creator is added as admin
+      const dbMembers = await testApp.database
+        .select()
+        .from(experimentMembers)
+        .where(eq(experimentMembers.experimentId, experiment.id));
+
+      expect(dbMembers.length).toBe(1);
+      expect(dbMembers[0]).toMatchObject({
+        userId: testUserId,
+        role: "admin",
+      });
+    });
+
+    it("should return error for duplicate experiment name", async () => {
+      // Arrange
+      const experimentName = "Duplicate Name Test";
+
+      // Create first experiment
+      await testApp.createExperiment({
+        name: experimentName,
+        userId: testUserId,
+      });
+
+      const createExperimentDto = {
+        name: experimentName, // Same name
+        description: "Should fail due to duplicate name",
+        status: "provisioning" as const,
+        visibility: "private" as const,
+        embargoIntervalDays: 90,
+      };
+
+      // Act
+      const result = await repository.createWithMembers(
+        createExperimentDto,
+        testUserId,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      expect(result._tag).toBe("failure");
+
+      if (result._tag === "failure") {
+        expect(result.error.code).toBe("REPOSITORY_DUPLICATE");
+        expect(result.error.message).toContain("already exists");
+      }
+    });
+
+    it("should return error for empty experiment name", async () => {
+      // Arrange
+      const createExperimentDto = {
+        name: "", // Empty name
+        description: "Should fail due to empty name",
+        status: "provisioning" as const,
+        visibility: "private" as const,
+        embargoIntervalDays: 90,
+      };
+
+      // Act
+      const result = await repository.createWithMembers(
+        createExperimentDto,
+        testUserId,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      expect(result._tag).toBe("failure");
+
+      if (result._tag === "failure") {
+        expect(result.error.code).toBe("REPOSITORY_ERROR");
+        expect(result.error.message).toContain("Name cannot be empty");
+      }
+    });
+
+    it("should return error for whitespace-only experiment name", async () => {
+      // Arrange
+      const createExperimentDto = {
+        name: "   ", // Whitespace only
+        description: "Should fail due to whitespace-only name",
+        status: "provisioning" as const,
+        visibility: "private" as const,
+        embargoIntervalDays: 90,
+      };
+
+      // Act
+      const result = await repository.createWithMembers(
+        createExperimentDto,
+        testUserId,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      expect(result._tag).toBe("failure");
+
+      if (result._tag === "failure") {
+        expect(result.error.code).toBe("REPOSITORY_ERROR");
+        expect(result.error.message).toContain("Name cannot be empty");
+      }
+    });
+
+    it("should return error for invalid user ID in members", async () => {
+      // Arrange
+      const createExperimentDto = {
+        name: "Test Invalid Member",
+        description: "Should fail due to invalid member user ID",
+        status: "provisioning" as const,
+        visibility: "private" as const,
+        embargoIntervalDays: 90,
+      };
+
+      const members = [
+        {
+          userId: "00000000-0000-0000-0000-000000000000",
+          role: "member" as const,
+        }, // Non-existent user
+      ];
+
+      // Act
+      const result = await repository.createWithMembers(
+        createExperimentDto,
+        testUserId,
+        members,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      expect(result._tag).toBe("failure");
+
+      if (result._tag === "failure") {
+        expect(result.error.code).toBe("REPOSITORY_ERROR");
+        expect(result.error.message).toContain("user IDs do not exist");
+      }
+    });
+
+    it("should rollback transaction if member insertion fails", async () => {
+      // Arrange
+      const createExperimentDto = {
+        name: "Test Transaction Rollback",
+        description: "Should rollback if member insertion fails",
+        status: "provisioning" as const,
+        visibility: "private" as const,
+        embargoIntervalDays: 90,
+      };
+
+      const members = [
+        { userId: "invalid-user-id", role: "member" as const }, // Invalid UUID format
+      ];
+
+      // Act
+      const result = await repository.createWithMembers(
+        createExperimentDto,
+        testUserId,
+        members,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+
+      // Verify no experiment was created (transaction rolled back)
+      const experiments = await testApp.database
+        .select()
+        .from(experimentsTable)
+        .where(eq(experimentsTable.name, createExperimentDto.name));
+
+      expect(experiments.length).toBe(0);
+    });
+  });
+}); // End of describe("ExperimentRepository")

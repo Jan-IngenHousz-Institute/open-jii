@@ -598,12 +598,16 @@ describe("ExperimentController", () => {
         .send({ members: [{ userId: newMemberId, role: "member" }] })
         .expect(StatusCodes.CREATED)
         .expect(({ body }) => {
-          expect(body).toMatchObject({
-            role: "member",
-            user: expect.objectContaining({
-              id: newMemberId,
-            }) as Partial<UserDto>,
-          });
+          expect(body).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({
+                role: "member",
+                user: expect.objectContaining({
+                  id: newMemberId,
+                }) as Partial<UserDto>,
+              }),
+            ]),
+          );
         });
 
       // Verify member was added

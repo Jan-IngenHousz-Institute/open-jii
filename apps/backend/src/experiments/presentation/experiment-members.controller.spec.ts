@@ -162,13 +162,17 @@ describe("ExperimentMembersController", () => {
         .expect(StatusCodes.CREATED);
 
       // Assert the response
-      expect(response.body).toMatchObject({
-        role: "member",
-        experimentId: experiment.id,
-        user: expect.objectContaining({
-          id: newMemberId,
-        }) as Partial<UserDto>,
-      });
+      expect(response.body).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            role: "member",
+            experimentId: experiment.id,
+            user: expect.objectContaining({
+              id: newMemberId,
+            }) as Partial<UserDto>,
+          }),
+        ]),
+      );
 
       // Verify with a list request
       const listPath = testApp.resolvePath(

@@ -37,7 +37,7 @@ describe("ChangeExperimentStatusUseCase", () => {
     });
 
     // Change the status to 'active'
-    const result = await useCase.execute(experiment.id, "active");
+    const result = await useCase.execute(experiment.id, "active", testUserId);
 
     expect(result.isSuccess()).toBe(true);
 
@@ -56,7 +56,7 @@ describe("ChangeExperimentStatusUseCase", () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
 
     // Try to update a non-existent experiment
-    const result = await useCase.execute(nonExistentId, "active");
+    const result = await useCase.execute(nonExistentId, "active", testUserId);
 
     expect(result.isSuccess()).toBe(false);
     expect(result._tag).toBe("failure");
@@ -73,8 +73,12 @@ describe("ChangeExperimentStatusUseCase", () => {
       userId: testUserId,
     });
 
-    // @ts-expect-error - Testing invalid status
-    const result = await useCase.execute(experiment.id, "invalid_status");
+    const result = await useCase.execute(
+      experiment.id,
+      // @ts-expect-error - Testing invalid status
+      "invalid_status",
+      testUserId,
+    );
 
     expect(result.isSuccess()).toBe(false);
     expect(result._tag).toBe("failure");
@@ -93,31 +97,90 @@ describe("ChangeExperimentStatusUseCase", () => {
     });
 
     // Change to active
-    let result = await useCase.execute(experiment.id, "active");
+    let result = await useCase.execute(experiment.id, "active", testUserId);
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     let updatedExperiment = result.value;
     expect(updatedExperiment.status).toBe("active");
 
     // Change to archived
-    result = await useCase.execute(experiment.id, "archived");
+    result = await useCase.execute(experiment.id, "archived", testUserId);
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     updatedExperiment = result.value;
     expect(updatedExperiment.status).toBe("archived");
 
     // Change back to active
-    result = await useCase.execute(experiment.id, "active");
+    result = await useCase.execute(experiment.id, "active", testUserId);
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     updatedExperiment = result.value;
     expect(updatedExperiment.status).toBe("active");
 
     // Change back to provisioning
-    result = await useCase.execute(experiment.id, "provisioning");
+    result = await useCase.execute(experiment.id, "provisioning", testUserId);
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     updatedExperiment = result.value;
     expect(updatedExperiment.status).toBe("provisioning");
+  });
+
+  it("should return FORBIDDEN error when user is not admin", async () => {
+    // Create an experiment with the test user as owner
+    const { experiment } = await testApp.createExperiment({
+      name: "Admin Only Test",
+      userId: testUserId,
+    });
+
+    // Create another user who is not an admin
+    const nonAdminUserId = await testApp.createTestUser({});
+
+    // Try to change status as non-admin user
+    const result = await useCase.execute(
+      experiment.id,
+      "active",
+      nonAdminUserId,
+    );
+
+    expect(result.isSuccess()).toBe(false);
+    expect(result._tag).toBe("failure");
+
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+    expect(result.error.message).toBe(
+      "Only admins can change experiment status",
+    );
+  });
+
+  it("should return INTERNAL_ERROR when repository update fails", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Update Failure Test",
+      userId: testUserId,
+    });
+
+    // Create a spy on the use case's repository dependency
+    const repositoryUpdateSpy = jest
+      .spyOn(useCase["experimentRepository"], "update")
+      .mockResolvedValueOnce({
+        isSuccess: () => true,
+        chain: (fn: any) => fn([]), // Return empty array to simulate failure
+      } as any);
+
+    try {
+      const result = await useCase.execute(experiment.id, "active", testUserId);
+
+      expect(result.isSuccess()).toBe(false);
+      expect(result._tag).toBe("failure");
+
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toBe(
+        `Failed to update status for experiment ${experiment.id}`,
+      );
+    } finally {
+      // Restore original method
+      repositoryUpdateSpy.mockRestore();
+    }
   });
 });

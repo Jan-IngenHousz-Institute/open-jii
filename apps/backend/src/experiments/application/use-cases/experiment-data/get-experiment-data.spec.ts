@@ -661,4 +661,74 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.error.code).toBe("INTERNAL_ERROR");
     expect(result.error.message).toContain("Failed to list tables");
   });
+
+  it("should handle generic errors in catch block", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      userId: testUserId,
+    });
+
+    // Mock the databricks service to throw a generic error
+    const originalListTables = useCase["databricksService"].listTables;
+    jest
+      .spyOn(useCase["databricksService"], "listTables")
+      .mockImplementation(() => {
+        throw new Error("Generic error");
+      });
+
+    try {
+      // Act
+      const result = await useCase.execute(experiment.id, testUserId, {
+        page: 1,
+        pageSize: 20,
+      });
+
+      // Assert result is failure
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toContain(
+        "Failed to fetch experiment data: Generic error",
+      );
+    } finally {
+      // Restore original method
+      useCase["databricksService"].listTables = originalListTables;
+    }
+  });
+
+  it("should handle non-Error objects in catch block", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      userId: testUserId,
+    });
+
+    // Mock the databricks service to throw a non-Error object
+    const originalListTables = useCase["databricksService"].listTables;
+    jest
+      .spyOn(useCase["databricksService"], "listTables")
+      .mockImplementation(() => {
+        throw "String error";
+      });
+
+    try {
+      // Act
+      const result = await useCase.execute(experiment.id, testUserId, {
+        page: 1,
+        pageSize: 20,
+      });
+
+      // Assert result is failure
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toContain(
+        "Failed to fetch experiment data: Unknown error",
+      );
+    } finally {
+      // Restore original method
+      useCase["databricksService"].listTables = originalListTables;
+    }
+  });
 });

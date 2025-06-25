@@ -3,7 +3,11 @@ import { Injectable, Inject } from "@nestjs/common";
 import { and, eq, experimentMembers, inArray, users } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
-import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import {
+  Result,
+  tryCatch,
+  defaultRepositoryErrorMapper,
+} from "../../../common/utils/fp-utils";
 import {
   ExperimentMemberRole,
   ExperimentMemberDto,
@@ -19,105 +23,121 @@ export class ExperimentMemberRepository {
   async getMembers(
     experimentId: string,
   ): Promise<Result<ExperimentMemberDto[]>> {
-    return tryCatch(async () => {
-      return this.database
-        .select({
-          experimentId: experimentMembers.experimentId,
-          role: experimentMembers.role,
-          joinedAt: experimentMembers.joinedAt,
-          user: {
-            id: users.id,
-            name: users.name,
-            email: users.email,
-          },
-        })
-        .from(experimentMembers)
-        .innerJoin(users, eq(experimentMembers.userId, users.id))
-        .where(eq(experimentMembers.experimentId, experimentId));
-    });
+    return tryCatch(
+      async () => {
+        return this.database
+          .select({
+            experimentId: experimentMembers.experimentId,
+            role: experimentMembers.role,
+            joinedAt: experimentMembers.joinedAt,
+            user: {
+              id: users.id,
+              name: users.name,
+              email: users.email,
+            },
+          })
+          .from(experimentMembers)
+          .innerJoin(users, eq(experimentMembers.userId, users.id))
+          .where(eq(experimentMembers.experimentId, experimentId));
+      },
+      defaultRepositoryErrorMapper,
+      "Getting experiment members",
+    );
   }
 
   async addMembers(
     experimentId: string,
     members: { userId: string; role?: ExperimentMemberRole }[],
   ): Promise<Result<ExperimentMemberDto[]>> {
-    return tryCatch(async () => {
-      if (!members.length) return [];
+    return tryCatch(
+      async () => {
+        if (!members.length) return [];
 
-      await this.database.insert(experimentMembers).values(
-        members.map((m) => ({
-          experimentId,
-          userId: m.userId,
-          role: m.role,
-        })),
-      );
-
-      const userIds = members.map((m) => m.userId);
-
-      const result = await this.database
-        .select({
-          experimentId: experimentMembers.experimentId,
-          role: experimentMembers.role,
-          joinedAt: experimentMembers.joinedAt,
-          user: {
-            id: users.id,
-            name: users.name,
-            email: users.email,
-          },
-        })
-        .from(experimentMembers)
-        .innerJoin(users, eq(experimentMembers.userId, users.id))
-        .where(
-          and(
-            eq(experimentMembers.experimentId, experimentId),
-            inArray(experimentMembers.userId, userIds),
-          ),
+        await this.database.insert(experimentMembers).values(
+          members.map((m) => ({
+            experimentId,
+            userId: m.userId,
+            role: m.role,
+          })),
         );
 
-      return result;
-    });
+        const userIds = members.map((m) => m.userId);
+
+        const result = await this.database
+          .select({
+            experimentId: experimentMembers.experimentId,
+            role: experimentMembers.role,
+            joinedAt: experimentMembers.joinedAt,
+            user: {
+              id: users.id,
+              name: users.name,
+              email: users.email,
+            },
+          })
+          .from(experimentMembers)
+          .innerJoin(users, eq(experimentMembers.userId, users.id))
+          .where(
+            and(
+              eq(experimentMembers.experimentId, experimentId),
+              inArray(experimentMembers.userId, userIds),
+            ),
+          );
+
+        return result;
+      },
+      defaultRepositoryErrorMapper,
+      "Adding experiment members",
+    );
   }
 
   async removeMember(
     experimentId: string,
     userId: string,
   ): Promise<Result<void>> {
-    return tryCatch(async () => {
-      await this.database
-        .delete(experimentMembers)
-        .where(
-          and(
-            eq(experimentMembers.experimentId, experimentId),
-            eq(experimentMembers.userId, userId),
-          ),
-        );
+    return tryCatch(
+      async () => {
+        await this.database
+          .delete(experimentMembers)
+          .where(
+            and(
+              eq(experimentMembers.experimentId, experimentId),
+              eq(experimentMembers.userId, userId),
+            ),
+          );
 
-      // Explicitly return void
-      return undefined;
-    });
+        // Explicitly return void
+        return undefined;
+      },
+      defaultRepositoryErrorMapper,
+      "Removing experiment member",
+    );
   }
 
   async getMemberRole(
     experimentId: string,
     userId: string,
   ): Promise<Result<ExperimentMemberRole | null>> {
-    return tryCatch(async () => {
-      const membership = await this.database
-        .select()
-        .from(experimentMembers)
-        .where(
-          and(
-            eq(experimentMembers.experimentId, experimentId),
-            eq(experimentMembers.userId, userId),
-          ),
-        )
-        .limit(1);
+    return tryCatch(
+      async () => {
+        const membership = await this.database
+          .select()
+          .from(experimentMembers)
+          .where(
+            and(
+              eq(experimentMembers.experimentId, experimentId),
+              eq(experimentMembers.userId, userId),
+            ),
+          )
+          .limit(1);
 
-      if (membership.length === 0) {
-        return null;
-      }
+        if (membership.length === 0) {
+          return null;
+        }
 
-      return membership[0].role;
-    });
+        return membership[0].role;
+      },
+      defaultRepositoryErrorMapper,
+      "Getting member role",
+    );
   }
 }

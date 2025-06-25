@@ -89,3 +89,5 @@ pids
 volumes
 
 .cache
+
+.zed
