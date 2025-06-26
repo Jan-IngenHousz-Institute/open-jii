@@ -15,7 +15,6 @@ import {
 import { handleLogout } from "../app/actions/auth";
 
 interface SignOutDialogProps {
-  backUrl: string;
   translations: {
     title: string;
     description: string;
@@ -24,11 +23,11 @@ interface SignOutDialogProps {
   };
 }
 
-export function SignOutDialog({ backUrl, translations }: SignOutDialogProps) {
+export function SignOutDialog({ translations }: SignOutDialogProps) {
   const router = useRouter();
 
   const handleCancel = () => {
-    router.push(backUrl);
+    router.back();
   };
 
   return (
@@ -36,7 +35,7 @@ export function SignOutDialog({ backUrl, translations }: SignOutDialogProps) {
       open
       onOpenChange={(open) => {
         if (!open) {
-          router.push(backUrl);
+          handleCancel();
         }
       }}
     >
@@ -49,7 +48,7 @@ export function SignOutDialog({ backUrl, translations }: SignOutDialogProps) {
           <Button onClick={handleCancel} variant="ghost">
             {translations.cancel}
           </Button>
-          <form action={handleLogout} className="inline-flex">
+          <form action={() => handleLogout()} className="inline-flex">
             <Button type="submit" variant="default">
               {translations.confirm}
             </Button>

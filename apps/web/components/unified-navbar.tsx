@@ -100,14 +100,14 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
               <User className="h-4 w-4" />
             )}
             <span className="hidden sm:inline">
-              {session.user?.name ?? t("auth.account", "Account")}
+              {session.user.name ?? t("auth.account", "Account")}
             </span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem disabled>
             <div className="flex items-center gap-2">
-              {session.user?.image && (
+              {session.user.image && (
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={session.user.image} alt={session.user.name ?? "User"} />
                   <AvatarFallback>
@@ -116,8 +116,8 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
                 </Avatar>
               )}
               <div className="flex flex-col">
-                <span className="font-medium">{session.user?.name}</span>
-                <span className="text-muted-foreground text-xs">{session.user?.email}</span>
+                <span className="font-medium">{session.user.name}</span>
+                <span className="text-muted-foreground text-xs">{session.user.email}</span>
               </div>
             </div>
           </DropdownMenuItem>

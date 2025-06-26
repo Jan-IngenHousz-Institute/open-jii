@@ -28,7 +28,6 @@ export default async function AppLayout({
   const typedLocale = locale as Locale;
   const session = await auth();
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!session?.user) {
     // Get the current path from the 'x-current-path' header.
     // This logic mirrors how `pathname` is fetched later in the provided code.

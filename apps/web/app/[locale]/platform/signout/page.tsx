@@ -5,14 +5,10 @@ import type { Locale } from "@repo/i18n";
 
 interface SignOutPageProps {
   params: Promise<{ locale: Locale }>;
-  searchParams: Promise<{
-    backUrl?: string;
-  }>;
 }
 
-export default async function SignOutPage({ params, searchParams }: SignOutPageProps) {
+export default async function SignOutPage({ params }: SignOutPageProps) {
   const { locale } = await params;
-  const { backUrl } = await searchParams;
   const { t } = await initTranslations({
     locale,
     namespaces: ["common"],
@@ -25,5 +21,5 @@ export default async function SignOutPage({ params, searchParams }: SignOutPageP
     confirm: t("signout.confirm"),
   };
 
-  return <SignOutDialog backUrl={backUrl ?? `/${locale}/platform`} translations={translations} />;
+  return <SignOutDialog translations={translations} />;
 }

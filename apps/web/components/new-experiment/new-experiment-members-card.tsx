@@ -25,7 +25,7 @@ interface NewExperimentMembersCardProps {
 export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps) {
   const { t } = useTranslation(undefined, "common");
   const { data: session } = useSession();
-  const currentUserId = session?.user?.id ?? "";
+  const currentUserId = session?.user.id ?? "";
 
   // Member management state
   const [userSearch, setUserSearch] = useState("");
