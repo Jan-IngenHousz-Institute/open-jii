@@ -1,11 +1,12 @@
-import { parse } from "expo-linking/build/Linking.server";
+import { parse } from "expo-linking";
 import { openAuthSessionAsync } from "expo-web-browser";
 import { getLoginArgs } from "~/api/get-login-args";
-import { assertEnvVariables } from "~/utils/assert";
 
 export async function login() {
   const { expectedRedirectUrl, loginUrl } = getLoginArgs();
 
+  console.log("expectedRedirectUrl", expectedRedirectUrl);
+  console.log("loginUrl", loginUrl);
   const result = await openAuthSessionAsync(loginUrl, expectedRedirectUrl);
 
   if (result.type !== "success") {

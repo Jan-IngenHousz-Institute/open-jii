@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
@@ -61,6 +62,7 @@ function RootLayoutNav() {
   return (
     <Stack
       screenOptions={{
+        headerShown: false,
         headerStyle: {
           backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
         },
@@ -77,6 +79,12 @@ function RootLayoutNav() {
     >
       <Stack.Screen
         name="(auth)/login"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="callback"
         options={{
           headerShown: false,
         }}

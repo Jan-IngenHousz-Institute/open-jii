@@ -24,9 +24,9 @@ export default function ProfileScreen() {
     type: "info" as "success" | "error" | "info" | "warning",
   });
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     clearSession();
-    router.replace("(auth)/login");
+    router.replace("/callback");
   };
 
   const handleOpenWebProfile = async () => {

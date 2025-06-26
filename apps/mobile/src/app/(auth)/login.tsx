@@ -1,5 +1,7 @@
-import { useRouter } from "expo-router";
+import { CommonActions, useNavigation } from "@react-navigation/native";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
+import { useAsync } from "react-async-hook";
 import {
   View,
   Text,
@@ -10,6 +12,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+import { getSessionData } from "~/api/get-session-data";
 import { Button } from "~/components/Button";
 import { Toast } from "~/components/Toast";
 import { useLoginFlow } from "~/hooks/use-login";
@@ -29,7 +32,26 @@ export default function LoginScreen() {
   const router = useRouter();
   const { startLoginFlow } = useLoginFlow();
   const { setSession } = useSessionStore();
+  const { session_token: token } = useLocalSearchParams();
 
+  const navigation = useNavigation();
+
+  // this one is for Android
+  useAsync(async () => {
+    if (typeof token !== "string") {
+      return;
+    }
+    const data = await getSessionData(token);
+    setSession({ data, token });
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: "(tabs)" }],
+      }),
+    );
+  }, [token]);
+
+  // this one is for iPhone
   async function handleLogin() {
     const session = await startLoginFlow();
     if (!session) {
@@ -38,7 +60,6 @@ export default function LoginScreen() {
     setSession(session);
     router.replace("(tabs)");
   }
-
   return (
     <SafeAreaView
       style={[
