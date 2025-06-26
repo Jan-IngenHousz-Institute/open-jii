@@ -11,6 +11,14 @@ const nextConfig = {
 
   output: "standalone",
   outputFileTracingRoot: join(__dirname, "../../"),
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.ctfassets.net",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

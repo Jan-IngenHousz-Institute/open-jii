@@ -1,7 +1,11 @@
 "use server";
 
-import { signOut } from "@repo/auth/next";
+import { signIn, signOut } from "@repo/auth/next";
+
+export async function handleLogin() {
+  await signIn();
+}
 
 export async function handleLogout() {
-  await signOut({ redirectTo: "/", redirect: true });
+  await signOut({ redirectTo: "/", redirect: false });
 }

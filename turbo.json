@@ -31,6 +31,10 @@
       "cache": false,
       "persistent": true
     },
+    "db:setup": {
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", ".env*"]
+    },
     "test": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],

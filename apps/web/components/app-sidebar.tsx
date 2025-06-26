@@ -1,6 +1,14 @@
 "use client";
 
-import { Archive, FileSliders, Microscope, RadioReceiver, Webcam } from "lucide-react";
+import {
+  Archive,
+  BookOpen,
+  FileSliders,
+  Home,
+  Microscope,
+  RadioReceiver,
+  Webcam,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
@@ -46,12 +54,15 @@ interface Translations {
   openJII: string;
   logoAlt: string;
   signIn: string;
+
   experimentsTitle: string;
   hardwareTitle: string;
 }
 
 // Icon mapping for string-based icons
 const iconMap = {
+  Home,
+  BookOpen,
   Microscope,
   Archive,
   Webcam,

@@ -1,0 +1,56 @@
+{
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "dev": "tsc --project tsconfig.json --watch"
+  },
+  "name": "@repo/cms",
+  "version": "1.0.0",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "@contentful/live-preview": "^4.6.22",
+    "@contentful/rich-text-react-renderer": "16.0.2",
+    "@contentful/rich-text-types": "17.0.0",
+    "@repo/i18n": "workspace:*",
+    "@repo/ui": "workspace:*",
+    "@ts-rest/core": "^3.52.1",
+    "@ts-rest/react-query": "^3.52.1",
+    "contentful": "^10.5.0",
+    "graphql-request": "^6.1.0",
+    "graphql-tag": "^2.12.6",
+    "react-dom": "catalog:react19"
+  },
+  "peerDependencies": {
+    "next": "^14.0.0 || ^15.0.0",
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@contentful/f36-icons": "4.29.0",
+    "@contentful/f36-tokens": "4.2.0",
+    "@graphql-codegen/cli": "^4.0.1",
+    "@graphql-codegen/typescript": "^4.1.6",
+    "@graphql-codegen/typescript-graphql-request": "^4.5.9",
+    "@graphql-codegen/typescript-operations": "^4.6.1",
+    "@types/react": "catalog:react19",
+    "@types/react-dom": "catalog:react19"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./article": {
+      "import": "./src/features/article/index.ts",
+      "types": "./src/features/article/index.ts"
+    },
+    "./container": {
+      "import": "./src/shared/index.ts",
+      "types": "./src/shared/index.ts"
+    },
+    "./contentful": {
+      "import": "./src/features/contentful/index.ts",
+      "types": "./src/features/contentful/index.ts"
+    }
+  }
+}

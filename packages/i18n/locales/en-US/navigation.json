@@ -7,9 +7,14 @@
     "settings": "Settings",
     "dashboard": "Dashboard",
     "profile": "Profile",
-    "home": "Home"
+    "home": "Home",
+    "blog": "Blog",
+    "platform": "Platform"
   },
   "sidebar": {
+    "main": "Main",
+    "home": "Home",
+    "blog": "Blog",
     "newExperiment": "New experiment",
     "overview": "Overview",
     "archivedData": "Archived Data",

@@ -142,7 +142,8 @@
     "signInWithGithub": "Sign in with GitHub",
     "noAccount": "No account?",
     "createAccount": "Create an account",
-    "errorMessage": "An error occurred during login. Please try again."
+    "errorMessage": "An error occurred during login. Please try again.",
+    "account": "Account"
   },
   "forms": {
     "required": "This field is required",
@@ -169,14 +170,15 @@
   "footer": {
     "aboutUs": "About Us",
     "description": "The Jan IngenHousz Institute specializes in the development of advanced technologies for improving photosynthesis and agricultural efficiency. We use cutting-edge techniques and algorithms to create intelligent systems that can help researchers automate tasks, improve efficiency, and drive innovation.",
-    "poweredBy": "Powered by"
+    "learnMoreAt": "Learn more at"
   },
   "jii": {
     "institute": "Jan IngenHousz Institute",
     "mission": "Our Mission",
     "missionDescription": "Improving photosynthesis is a big challenge: different processes in the plant limit photosynthesis under different conditions, and each of these processes is regulated by different sets of genes. The Jan IngenHousz Institute was founded specifically to meet these major challenges.",
     "aboutDescription": "The world's population is growing, while the area of suitable agricultural land is shrinking and harvests are declining due to climate change. A breakthrough is urgently needed. To this end, JII-researchers are working to understand and improve the green engine of agriculture: photosynthesis.",
-    "goToPlatform": "Go to the openJII platform"
+    "goToPlatform": "Go to the openJII platform",
+    "goToBlog": "Go to Blog"
   },
   "breadcrumbs": {
     "home": "Home",
@@ -197,5 +199,12 @@
     "dataAnalysis": {
       "title": "Data Analysis"
     }
+  },
+  "landingPage": {
+    "latestArticles": "Latest articles"
+  },
+  "article": {
+    "featured": "Featured",
+    "relatedArticles": "Related articles"
   }
 }

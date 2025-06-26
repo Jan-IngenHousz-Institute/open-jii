@@ -40,7 +40,7 @@ export function createTranslationKey<T extends string>(key: T): T {
 
 // Middleware helper for Next.js
 export { i18nRouter } from "next-i18n-router";
-
+export { useCurrentLocale } from "next-i18n-router/client";
 // Export commonly used types from i18next
 export type {
   TFunction,
