@@ -24,13 +24,13 @@ export const zProtocolIdPathParam = z.object({
 });
 
 // Request body schemas
-export const zCreateProtocolRequest = z.object({
+export const zCreateProtocolRequestBody = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   code: z.record(z.unknown()).array(),
 });
 
-export const zUpdateProtocolRequest = z.object({
+export const zUpdateProtocolRequestBody = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
   code: z.record(z.unknown()).array().optional(),
@@ -48,6 +48,6 @@ export type ProtocolList = z.infer<typeof zProtocolList>;
 export type ProtocolFilterQuery = z.infer<typeof zProtocolFilterQuery>;
 export type ProtocolFilter = ProtocolFilterQuery["search"];
 export type ProtocolIdPathParam = z.infer<typeof zProtocolIdPathParam>;
-export type CreateProtocolRequest = z.infer<typeof zCreateProtocolRequest>;
-export type UpdateProtocolRequest = z.infer<typeof zUpdateProtocolRequest>;
+export type CreateProtocolRequestBody = z.infer<typeof zCreateProtocolRequestBody>;
+export type UpdateProtocolRequestBody = z.infer<typeof zUpdateProtocolRequestBody>;
 export type ProtocolErrorResponse = z.infer<typeof zProtocolErrorResponse>;

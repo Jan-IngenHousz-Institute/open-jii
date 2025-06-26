@@ -8,7 +8,7 @@ import type { SessionUser } from "@repo/auth/config";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
-import { handleFailure, AppError } from "../../common/utils/fp-utils";
+import { handleFailure } from "../../common/utils/fp-utils";
 import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
 import { DeleteProtocolUseCase } from "../application/use-cases/delete-protocol/delete-protocol";
 import { GetProtocolUseCase } from "../application/use-cases/get-protocol/get-protocol";
@@ -33,7 +33,7 @@ function parseProtocolCode(code: unknown, logger: Logger): Record<string, unknow
 
   if (typeof code === "string") {
     try {
-      return JSON.parse(code);
+      return JSON.parse(code) as Record<string, unknown>[];
     } catch (error) {
       logger.error("Error parsing protocol code:", error);
       return [{}];
@@ -65,7 +65,7 @@ export class ProtocolController {
         // Transform the code field to ensure it's a proper Record<string, unknown>
         const protocols = result.value.map((protocol) => ({
           ...protocol,
-          code: parseProtocolCode(protocol.code),
+          code: parseProtocolCode(protocol.code, this.logger),
         }));
 
         return {
@@ -87,7 +87,7 @@ export class ProtocolController {
         // Transform the code field to ensure it's a proper Record<string, unknown>
         const protocol = {
           ...result.value,
-          code: parseProtocolCode(result.value.code),
+          code: parseProtocolCode(result.value.code, this.logger),
         };
 
         return {
@@ -115,7 +115,7 @@ export class ProtocolController {
       if (result.isSuccess()) {
         const protocol = {
           ...result.value,
-          code: parseProtocolCode(result.value.code),
+          code: parseProtocolCode(result.value.code, this.logger),
         };
 
         this.logger.log(`Protocol created: ${protocol.id} by user ${user.id}`);
@@ -144,7 +144,7 @@ export class ProtocolController {
       if (result.isSuccess()) {
         const protocol = {
           ...result.value,
-          code: parseProtocolCode(result.value.code),
+          code: parseProtocolCode(result.value.code, this.logger),
         };
 
         this.logger.log(`Protocol updated: ${protocol.id}`);

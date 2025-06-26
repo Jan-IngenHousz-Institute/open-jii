@@ -6,8 +6,8 @@ import {
   zProtocolErrorResponse,
   zProtocolFilterQuery,
   zProtocolIdPathParam,
-  zCreateProtocolRequest,
-  zUpdateProtocolRequest,
+  zCreateProtocolRequestBody,
+  zUpdateProtocolRequestBody,
 } from "../schemas/protocol.schema";
 
 const c = initContract();
@@ -40,7 +40,7 @@ export const protocolContract = c.router({
   createProtocol: {
     method: "POST",
     path: "/api/v1/protocols",
-    body: zCreateProtocolRequest,
+    body: zCreateProtocolRequestBody,
     responses: {
       201: zProtocol,
       400: zProtocolErrorResponse,
@@ -53,7 +53,7 @@ export const protocolContract = c.router({
     method: "PATCH",
     path: "/api/v1/protocols/:id",
     pathParams: zProtocolIdPathParam,
-    body: zUpdateProtocolRequest,
+    body: zUpdateProtocolRequestBody,
     responses: {
       200: zProtocol,
       400: zProtocolErrorResponse,
