@@ -18,12 +18,7 @@ function sha256(msg: string) {
   return SHA256(msg).toString(enc.Hex);
 }
 
-function getSignatureKey(
-  key: string,
-  dateStamp: string,
-  region: string,
-  service: string,
-) {
+function getSignatureKey(key: string, dateStamp: string, region: string, service: string) {
   const kDate = HmacSHA256(dateStamp, `AWS4${key}`);
   const kRegion = HmacSHA256(region, kDate);
   const kService = HmacSHA256(service, kRegion);
@@ -60,8 +55,7 @@ export function createSignedUrl(params: {
   query += `&X-Amz-SignedHeaders=host`;
 
   const canonicalHeaders = `host:${params.endpoint}\n`;
-  const payloadHash =
-    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+  const payloadHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
   const canonicalRequest = [
     method,
@@ -79,12 +73,7 @@ export function createSignedUrl(params: {
     sha256(canonicalRequest),
   ].join("\n");
 
-  const signingKey = getSignatureKey(
-    params.secretAccessKey,
-    dateStamp,
-    params.region,
-    service,
-  );
+  const signingKey = getSignatureKey(params.secretAccessKey, dateStamp, params.region, service);
   const signature = sign(signingKey, stringToSign);
 
   query += `&X-Amz-Signature=${signature}`;
@@ -141,13 +130,12 @@ function connectToMqtt(url: string, clientId: string) {
   });
 }
 
-const { CLIENT_ID, REGION, IOT_ENDPOINT, IDENTITY_POOL_ID } =
-  assertEnvVariables({
-    REGION: process.env.REGION,
-    IDENTITY_POOL_ID: process.env.IDENTITY_POOL_ID,
-    IOT_ENDPOINT: process.env.IOT_ENDPOINT,
-    CLIENT_ID: process.env.CLIENT_ID,
-  });
+const { CLIENT_ID, REGION, IOT_ENDPOINT, IDENTITY_POOL_ID } = assertEnvVariables({
+  REGION: process.env.REGION,
+  IDENTITY_POOL_ID: process.env.IDENTITY_POOL_ID,
+  IOT_ENDPOINT: process.env.IOT_ENDPOINT,
+  CLIENT_ID: process.env.CLIENT_ID,
+});
 
 const clientId = CLIENT_ID + " - " + generateRandomString();
 
@@ -192,9 +180,7 @@ export async function createMqttConnection() {
   };
 
   client.onConnectionLost = (err) => {
-    emitter
-      .emit("connectionLost", err)
-      .catch((e) => console.log("connectionLost error", e));
+    emitter.emit("connectionLost", err).catch((e) => console.log("connectionLost error", e));
   };
 
   emitter.on("sendMessage", ({ payload, topic }) => {

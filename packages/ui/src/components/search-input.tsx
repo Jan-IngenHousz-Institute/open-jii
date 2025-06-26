@@ -7,8 +7,7 @@ import { cn } from "../lib/utils";
 import { Button } from "./button";
 import { Input, type InputProps } from "./input";
 
-export interface SearchInputProps
-  extends Omit<InputProps, "onChange" | "onSubmit"> {
+export interface SearchInputProps extends Omit<InputProps, "onChange" | "onSubmit"> {
   value: string;
   onChange: (value: string) => void;
   onSearch?: (value: string) => void;
@@ -42,10 +41,7 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
     };
 
     return (
-      <form
-        onSubmit={handleSubmit}
-        className={cn("relative w-full", className)}
-      >
+      <form onSubmit={handleSubmit} className={cn("relative w-full", className)}>
         <Search className="text-muted-foreground absolute left-2 top-2.5 h-4 w-4" />
         <Input
           ref={ref}

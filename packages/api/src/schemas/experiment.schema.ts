@@ -75,22 +75,10 @@ export type ErrorResponse = z.infer<typeof zErrorResponse>;
 // Define request and response types
 export const zCreateExperimentBody = z.object({
   name: z.string().min(1).max(255).describe("The name of the experiment"),
-  description: z
-    .string()
-    .optional()
-    .describe("Optional description of the experiment"),
-  status: zExperimentStatus
-    .optional()
-    .describe("Initial status of the experiment"),
-  visibility: zExperimentVisibility
-    .optional()
-    .describe("Experiment visibility setting"),
-  embargoIntervalDays: z
-    .number()
-    .int()
-    .positive()
-    .optional()
-    .describe("Embargo period in days"),
+  description: z.string().optional().describe("Optional description of the experiment"),
+  status: zExperimentStatus.optional().describe("Initial status of the experiment"),
+  visibility: zExperimentVisibility.optional().describe("Experiment visibility setting"),
+  embargoIntervalDays: z.number().int().positive().optional().describe("Embargo period in days"),
   members: z
     .array(
       z.object({
@@ -103,22 +91,11 @@ export const zCreateExperimentBody = z.object({
 });
 
 export const zUpdateExperimentBody = z.object({
-  name: z
-    .string()
-    .min(1)
-    .max(255)
-    .optional()
-    .describe("Updated experiment name"),
+  name: z.string().min(1).max(255).optional().describe("Updated experiment name"),
   description: z.string().optional().describe("Updated experiment description"),
   status: zExperimentStatus.optional().describe("Updated experiment status"),
-  visibility: zExperimentVisibility
-    .optional()
-    .describe("Updated visibility setting"),
-  embargoIntervalDays: z
-    .number()
-    .int()
-    .optional()
-    .describe("Updated embargo period in days"),
+  visibility: zExperimentVisibility.optional().describe("Updated visibility setting"),
+  embargoIntervalDays: z.number().int().optional().describe("Updated embargo period in days"),
 });
 
 export const zAddExperimentMembersBody = z.object({
@@ -138,19 +115,11 @@ export const zExperimentFilterQuery = z.object({
     .enum(["my", "member", "related"])
     .optional()
     .describe("Filter experiments by relationship to the user"),
-  status: zExperimentStatus
-    .optional()
-    .describe("Filter experiments by their status"),
+  status: zExperimentStatus.optional().describe("Filter experiments by their status"),
 });
 
 export const zExperimentDataQuery = z.object({
-  page: z.coerce
-    .number()
-    .int()
-    .min(1)
-    .optional()
-    .default(1)
-    .describe("Page number for pagination"),
+  page: z.coerce.number().int().min(1).optional().default(1).describe("Page number for pagination"),
   pageSize: z.coerce
     .number()
     .int()
@@ -186,14 +155,10 @@ export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
 // Infer request and response types
 export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;
 export type UpdateExperimentBody = z.infer<typeof zUpdateExperimentBody>;
-export type AddExperimentMembersBody = z.infer<
-  typeof zAddExperimentMembersBody
->;
+export type AddExperimentMembersBody = z.infer<typeof zAddExperimentMembersBody>;
 export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;
 export type ExperimentFilter = ExperimentFilterQuery["filter"];
-export type CreateExperimentResponse = z.infer<
-  typeof zCreateExperimentResponse
->;
+export type CreateExperimentResponse = z.infer<typeof zCreateExperimentResponse>;
 export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
 export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
 
@@ -206,6 +171,4 @@ export const zExperimentMemberPathParam = z.object({
 });
 
 export type IdPathParam = z.infer<typeof zIdPathParam>;
-export type ExperimentMemberPathParam = z.infer<
-  typeof zExperimentMemberPathParam
->;
+export type ExperimentMemberPathParam = z.infer<typeof zExperimentMemberPathParam>;

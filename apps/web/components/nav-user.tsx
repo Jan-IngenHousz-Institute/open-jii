@@ -65,9 +65,7 @@ export function NavUser({
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user.avatar} alt={user.name} />
                   <AvatarFallback className="rounded-lg">
-                    {user.name
-                      ? user.name.substring(0, 2).toUpperCase()
-                      : "JII"}
+                    {user.name ? user.name.substring(0, 2).toUpperCase() : "JII"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
@@ -79,10 +77,7 @@ export function NavUser({
             <DropdownMenuSeparator />
             <form action={handleLogout}>
               <DropdownMenuItem asChild>
-                <button
-                  type="submit"
-                  className="flex w-full cursor-default items-center"
-                >
+                <button type="submit" className="flex w-full cursor-default items-center">
                   <LogOut className="mr-2 h-4 w-4" />
                   {t("logout")}
                 </button>

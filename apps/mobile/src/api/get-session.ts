@@ -24,15 +24,12 @@ const axiosInstance = axios.create({
 });
 
 export async function getSession(sessionToken: string) {
-  const { data } = await axiosInstance.get<UserSessionData>(
-    "/api/auth/session",
-    {
-      headers: {
-        Accept: "*/*",
-        Cookie: `authjs.session-token=${sessionToken}`,
-      },
+  const { data } = await axiosInstance.get<UserSessionData>("/api/auth/session", {
+    headers: {
+      Accept: "*/*",
+      Cookie: `authjs.session-token=${sessionToken}`,
     },
-  );
+  });
 
   return data;
 }

@@ -37,10 +37,7 @@ export const ArticleAuthor: FC<ArticleAuthorProps> = ({ article }) => {
           />
         )}
       </div>
-      <span
-        className="text-gray600 text-xs leading-none"
-        {...inspectorProps({ fieldId: "name" })}
-      >
+      <span className="text-gray600 text-xs leading-none" {...inspectorProps({ fieldId: "name" })}>
         {author?.name}
       </span>
     </div>

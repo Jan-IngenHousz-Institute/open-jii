@@ -69,16 +69,9 @@ export function UnifiedNavbar({ locale }: UnifiedNavbarProps) {
     if (!isAuthenticated) {
       return (
         <form>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-2"
-            formAction={handleLogin}
-          >
+          <Button variant="ghost" size="sm" className="gap-2" formAction={handleLogin}>
             <LogIn className="h-4 w-4" />
-            <span className="hidden sm:inline">
-              {t("auth.signIn", "Sign In")}
-            </span>
+            <span className="hidden sm:inline">{t("auth.signIn", "Sign In")}</span>
           </Button>
         </form>
       );
@@ -111,10 +104,7 @@ export function UnifiedNavbar({ locale }: UnifiedNavbarProps) {
           <Button variant="ghost" size="sm" className="gap-2">
             {session.user.image ? (
               <Avatar className="h-6 w-6">
-                <AvatarImage
-                  src={session.user.image}
-                  alt={session.user.name ?? "User"}
-                />
+                <AvatarImage src={session.user.image} alt={session.user.name ?? "User"} />
                 <AvatarFallback>
                   <User className="h-4 w-4" />
                 </AvatarFallback>
@@ -132,10 +122,7 @@ export function UnifiedNavbar({ locale }: UnifiedNavbarProps) {
             <div className="flex items-center gap-2">
               {session.user.image && (
                 <Avatar className="h-8 w-8">
-                  <AvatarImage
-                    src={session.user.image}
-                    alt={session.user.name ?? "User"}
-                  />
+                  <AvatarImage src={session.user.image} alt={session.user.name ?? "User"} />
                   <AvatarFallback>
                     <User className="h-4 w-4" />
                   </AvatarFallback>
@@ -143,9 +130,7 @@ export function UnifiedNavbar({ locale }: UnifiedNavbarProps) {
               )}
               <div className="flex flex-col">
                 <span className="font-medium">{session.user.name}</span>
-                <span className="text-muted-foreground text-xs">
-                  {session.user.email}
-                </span>
+                <span className="text-muted-foreground text-xs">{session.user.email}</span>
               </div>
             </div>
           </DropdownMenuItem>
@@ -162,10 +147,7 @@ export function UnifiedNavbar({ locale }: UnifiedNavbarProps) {
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
       <nav className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo/Brand */}
-        <Link
-          href={`/${locale}`}
-          className="flex items-center space-x-2 text-xl font-bold"
-        >
+        <Link href={`/${locale}`} className="flex items-center space-x-2 text-xl font-bold">
           <span className="text-primary">openJII</span>
         </Link>
 

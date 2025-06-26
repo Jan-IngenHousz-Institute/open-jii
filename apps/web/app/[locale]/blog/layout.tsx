@@ -31,10 +31,7 @@ export function generateStaticParams(): LayoutProps["params"][] {
 
 const urbanist = Urbanist({ subsets: ["latin"], variable: "--font-urbanist" });
 
-const allowedOriginList = [
-  "https://app.contentful.com",
-  "https://app.eu.contentful.com",
-];
+const allowedOriginList = ["https://app.contentful.com", "https://app.eu.contentful.com"];
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -55,11 +52,7 @@ export default async function PageLayout({
   return (
     <html lang={locale} dir={dir(locale)} className="h-full">
       <head>
-        <link
-          rel="mask-icon"
-          href="/favicons/safari-pinned-tab.svg"
-          color="#5bbad5"
-        />
+        <link rel="mask-icon" href="/favicons/safari-pinned-tab.svg" color="#5bbad5" />
       </head>
 
       <body className="flex min-h-screen flex-col">

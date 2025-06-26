@@ -43,9 +43,7 @@ describe("Functional Programming Utilities", () => {
       });
 
       it("should chain operations correctly", () => {
-        const chained = successResult.chain((val: string) =>
-          success(val.toUpperCase()),
-        );
+        const chained = successResult.chain((val: string) => success(val.toUpperCase()));
         expect((chained as Success<string>).isSuccess()).toBe(true);
         expect((chained as Success<string>).value).toBe("TEST VALUE");
       });
@@ -87,9 +85,7 @@ describe("Functional Programming Utilities", () => {
       });
 
       it("should pass through the error when chained", async () => {
-        const chained = await failureResult.chain((val: string) =>
-          success(val.toUpperCase()),
-        );
+        const chained = await failureResult.chain((val: string) => success(val.toUpperCase()));
         expect(chained.isFailure()).toBe(true);
         expect((chained as Failure<AppError>).error).toBe(error);
       });
@@ -222,10 +218,9 @@ describe("Functional Programming Utilities", () => {
         },
       });
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        "SERVER_ERROR: Server error",
-        { detail: "test" },
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith("SERVER_ERROR: Server error", {
+        detail: "test",
+      });
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });
@@ -276,10 +271,9 @@ describe("Functional Programming Utilities", () => {
       handleFailure(failureResult, mockLogger);
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        "CRITICAL_ERROR: Critical error",
-        { service: "external" },
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith("CRITICAL_ERROR: Critical error", {
+        service: "external",
+      });
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });
@@ -292,10 +286,9 @@ describe("Functional Programming Utilities", () => {
       handleFailure(failureResult, mockLogger);
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        "UNAUTHORIZED: Access denied",
-        { userId: "123" },
-      );
+      expect(mockLogger.warn).toHaveBeenCalledWith("UNAUTHORIZED: Access denied", {
+        userId: "123",
+      });
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.error).not.toHaveBeenCalled();
     });
@@ -313,10 +306,7 @@ describe("Functional Programming Utilities", () => {
         },
       });
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        "NOT_FOUND: Resource not found",
-        undefined,
-      );
+      expect(mockLogger.warn).toHaveBeenCalledWith("NOT_FOUND: Resource not found", undefined);
     });
 
     it("should return proper status codes for different error types", () => {
@@ -373,9 +363,7 @@ describe("Functional Programming Utilities", () => {
     it("should use custom error mapper when provided", async () => {
       const error = new Error("Test error");
       const fn = jest.fn().mockRejectedValue(error);
-      const customMapper = jest
-        .fn()
-        .mockReturnValue(AppError.badRequest("Custom error"));
+      const customMapper = jest.fn().mockReturnValue(AppError.badRequest("Custom error"));
 
       const result = await tryCatch(fn, customMapper);
 
@@ -486,9 +474,7 @@ describe("Functional Programming Utilities", () => {
       const result = validate(schema, data);
 
       expect(result.isSuccess()).toBe(true);
-      expect((result as Success<{ name: string; age: number }>).value).toEqual(
-        data,
-      );
+      expect((result as Success<{ name: string; age: number }>).value).toEqual(data);
     });
 
     it("should return failure for invalid data", () => {
@@ -497,9 +483,7 @@ describe("Functional Programming Utilities", () => {
 
       expect(result.isFailure()).toBe(true);
       expect((result as Failure<AppError>).error.code).toBe("VALIDATION_ERROR");
-      expect((result as Failure<AppError>).error.statusCode).toBe(
-        StatusCodes.BAD_REQUEST,
-      );
+      expect((result as Failure<AppError>).error.statusCode).toBe(StatusCodes.BAD_REQUEST);
     });
 
     it("should include validation details in the error", () => {

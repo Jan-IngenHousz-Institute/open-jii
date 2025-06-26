@@ -72,12 +72,9 @@ describe("ExperimentDataController", () => {
         .mockResolvedValueOnce(success(mockTableData)); // Second call for actual data
 
       // Get the path
-      const path = testApp.resolvePath(
-        contract.experiments.getExperimentData.path,
-        {
-          id: experiment.id,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
+        id: experiment.id,
+      });
 
       // Add query parameters
       const queryParams = {
@@ -175,9 +172,7 @@ describe("ExperimentDataController", () => {
       };
 
       // Setup mocks
-      jest
-        .spyOn(databricksService, "listTables")
-        .mockResolvedValue(success(mockTablesResponse));
+      jest.spyOn(databricksService, "listTables").mockResolvedValue(success(mockTablesResponse));
 
       jest
         .spyOn(databricksService, "executeSqlQuery")
@@ -185,12 +180,9 @@ describe("ExperimentDataController", () => {
         .mockResolvedValueOnce(success(mockSilverTableData));
 
       // Get the path
-      const path = testApp.resolvePath(
-        contract.experiments.getExperimentData.path,
-        {
-          id: experiment.id,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
+        id: experiment.id,
+      });
 
       // Make the request without tableName parameter
       const response: SuperTestResponse<ExperimentDataResponse> = await testApp
@@ -228,10 +220,7 @@ describe("ExperimentDataController", () => {
 
       // Verify the DatabricksService was called correctly
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.listTables).toHaveBeenCalledWith(
-        experiment.name,
-        experiment.id,
-      );
+      expect(databricksService.listTables).toHaveBeenCalledWith(experiment.name, experiment.id);
 
       // Verify SQL queries were executed for each table
       // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -253,12 +242,9 @@ describe("ExperimentDataController", () => {
     it("should return 404 if experiment doesn't exist", async () => {
       const nonExistentId = faker.string.uuid();
 
-      const path = testApp.resolvePath(
-        contract.experiments.getExperimentData.path,
-        {
-          id: nonExistentId,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
+        id: nonExistentId,
+      });
 
       await testApp
         .get(path)
@@ -280,12 +266,9 @@ describe("ExperimentDataController", () => {
         visibility: "private",
       });
 
-      const path = testApp.resolvePath(
-        contract.experiments.getExperimentData.path,
-        {
-          id: experiment.id,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
+        id: experiment.id,
+      });
 
       await testApp
         .get(path)
@@ -298,17 +281,11 @@ describe("ExperimentDataController", () => {
 
     it("should return 400 for invalid experiment UUID", async () => {
       const invalidId = "not-a-uuid";
-      const path = testApp.resolvePath(
-        contract.experiments.getExperimentData.path,
-        {
-          id: invalidId,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
+        id: invalidId,
+      });
 
-      await testApp
-        .get(path)
-        .withAuth(testUserId)
-        .expect(StatusCodes.BAD_REQUEST);
+      await testApp.get(path).withAuth(testUserId).expect(StatusCodes.BAD_REQUEST);
     });
 
     it("should return 401 if not authenticated", async () => {
@@ -317,12 +294,9 @@ describe("ExperimentDataController", () => {
         userId: testUserId,
       });
 
-      const path = testApp.resolvePath(
-        contract.experiments.getExperimentData.path,
-        {
-          id: experiment.id,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
+        id: experiment.id,
+      });
 
       await testApp.get(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
     });
@@ -337,16 +311,11 @@ describe("ExperimentDataController", () => {
       // Mock the DatabricksService to return an error
       jest
         .spyOn(databricksService, "listTables")
-        .mockResolvedValue(
-          failure(AppError.internal("Error retrieving data from Databricks")),
-        );
+        .mockResolvedValue(failure(AppError.internal("Error retrieving data from Databricks")));
 
-      const path = testApp.resolvePath(
-        contract.experiments.getExperimentData.path,
-        {
-          id: experiment.id,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
+        id: experiment.id,
+      });
 
       await testApp
         .get(path)
@@ -367,16 +336,11 @@ describe("ExperimentDataController", () => {
       // Mock the DatabricksService to fail on SQL execution
       jest
         .spyOn(databricksService, "executeSqlQuery")
-        .mockResolvedValue(
-          failure(AppError.internal("SQL execution failed: table not found")),
-        );
+        .mockResolvedValue(failure(AppError.internal("SQL execution failed: table not found")));
 
-      const path = testApp.resolvePath(
-        contract.experiments.getExperimentData.path,
-        {
-          id: experiment.id,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
+        id: experiment.id,
+      });
 
       await testApp
         .get(path)
@@ -426,12 +390,9 @@ describe("ExperimentDataController", () => {
         .mockResolvedValueOnce(success(mockTableData)); // Second call for actual data
 
       // Get the path
-      const path = testApp.resolvePath(
-        contract.experiments.getExperimentData.path,
-        {
-          id: experiment.id,
-        },
-      );
+      const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
+        id: experiment.id,
+      });
 
       // Make the request with pagination parameters
       const response: SuperTestResponse<ExperimentDataResponse> = await testApp

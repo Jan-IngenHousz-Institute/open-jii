@@ -18,9 +18,7 @@ interface LandingPageProps {
   }>;
 }
 
-export async function generateMetadata({
-  params,
-}: LandingPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: LandingPageProps): Promise<Metadata> {
   const { locale } = await params;
   const { isEnabled: preview } = await draftMode();
   const gqlClient = preview ? previewClient : client;
@@ -31,10 +29,7 @@ export async function generateMetadata({
   const page = landingPageData.pageLandingCollection?.items[0];
 
   const languages = Object.fromEntries(
-    locales.map((locale) => [
-      locale,
-      locale === defaultLocale ? "/" : `/${locale}`,
-    ]),
+    locales.map((locale) => [locale, locale === defaultLocale ? "/" : `/${locale}`]),
   );
   const metadata: Metadata = {
     alternates: {

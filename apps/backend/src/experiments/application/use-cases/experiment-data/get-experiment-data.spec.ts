@@ -1,10 +1,7 @@
 import nock from "nock";
 
 import { DatabricksService } from "../../../../common/services/databricks/databricks.service";
-import {
-  assertFailure,
-  assertSuccess,
-} from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { GetExperimentDataUseCase } from "./get-experiment-data";
 
@@ -241,10 +238,7 @@ describe("GetExperimentDataUseCase", () => {
     });
 
     // Mock listTables API call
-    nock(DATABRICKS_HOST)
-      .get(DatabricksService.TABLES_ENDPOINT)
-      .query(true)
-      .reply(200, mockTables);
+    nock(DATABRICKS_HOST).get(DatabricksService.TABLES_ENDPOINT).query(true).reply(200, mockTables);
 
     // Mock SQL query for sample data - first table ("table1")
     nock(DATABRICKS_HOST)
@@ -364,9 +358,7 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
-    expect(result.error.message).toContain(
-      `Experiment with ID ${nonExistentId} not found`,
-    );
+    expect(result.error.message).toContain(`Experiment with ID ${nonExistentId} not found`);
   });
 
   it("should return forbidden error when user does not have access to private experiment", async () => {
@@ -393,9 +385,7 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toContain(
-      "You do not have access to this experiment",
-    );
+    expect(result.error.message).toContain("You do not have access to this experiment");
   });
 
   it("should allow access to public experiment even if user is not a member", async () => {
@@ -445,10 +435,7 @@ describe("GetExperimentDataUseCase", () => {
     });
 
     // Mock listTables API call
-    nock(DATABRICKS_HOST)
-      .get(DatabricksService.TABLES_ENDPOINT)
-      .query(true)
-      .reply(200, mockTables);
+    nock(DATABRICKS_HOST).get(DatabricksService.TABLES_ENDPOINT).query(true).reply(200, mockTables);
 
     // Mock SQL query for sample data ("public_table")
     nock(DATABRICKS_HOST)
@@ -499,9 +486,7 @@ describe("GetExperimentDataUseCase", () => {
 
     // Verify the table data
     expect(result.value[0].name).toBe(mockTables.tables[0].name);
-    expect(result.value[0].catalog_name).toBe(
-      mockTables.tables[0].catalog_name,
-    );
+    expect(result.value[0].catalog_name).toBe(mockTables.tables[0].catalog_name);
     expect(result.value[0].schema_name).toBe(mockTables.tables[0].schema_name);
   });
 

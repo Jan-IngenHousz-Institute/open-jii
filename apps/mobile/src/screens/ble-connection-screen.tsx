@@ -26,14 +26,9 @@ export function BleConnectionScreen({ route }: BleConnectionScreenProps) {
           return new MultispeqCommandExecutor(emitter);
         };
 
-        const executor = new DisposableMultispeqCommandExecutor(
-          createNewExecutor,
-        );
+        const executor = new DisposableMultispeqCommandExecutor(createNewExecutor);
         const response = await executor.execute("hello");
-        if (
-          typeof response !== "string" ||
-          !response.toLowerCase().includes("ready")
-        ) {
+        if (typeof response !== "string" || !response.toLowerCase().includes("ready")) {
           throw new Error("Could not connect to Multispeq");
         }
 

@@ -19,9 +19,7 @@ export class SearchUsersUseCase {
 
     result.fold(
       (users: UserDto[]) => {
-        this.logger.debug(
-          `Found ${users.length} users matching search criteria`,
-        );
+        this.logger.debug(`Found ${users.length} users matching search criteria`);
       },
       (error: AppError) => {
         this.logger.error(`Failed to search users: ${error.message}`);

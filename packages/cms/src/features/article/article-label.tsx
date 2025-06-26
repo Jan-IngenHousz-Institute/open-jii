@@ -6,11 +6,7 @@ interface ArticleLabelProps extends HTMLProps<HTMLSpanElement> {
   children: ReactNode;
 }
 
-export const ArticleLabel = ({
-  children,
-  className,
-  ...props
-}: ArticleLabelProps) => {
+export const ArticleLabel = ({ children, className, ...props }: ArticleLabelProps) => {
   return (
     <span
       className={cn(

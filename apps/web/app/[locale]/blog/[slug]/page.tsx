@@ -3,11 +3,7 @@ import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { notFound } from "next/navigation";
 
-import {
-  ArticleContent,
-  ArticleHero,
-  ArticleTileGrid,
-} from "@repo/cms/article";
+import { ArticleContent, ArticleHero, ArticleTileGrid } from "@repo/cms/article";
 import { Container } from "@repo/cms/container";
 import type { Locale } from "@repo/i18n/config";
 import { defaultLocale, locales } from "@repo/i18n/config";
@@ -20,9 +16,7 @@ interface BlogPageProps {
   }>;
 }
 
-export async function generateMetadata({
-  params,
-}: BlogPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: BlogPageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   const { isEnabled: preview } = await draftMode();
   const gqlClient = preview ? previewClient : client;
@@ -35,10 +29,7 @@ export async function generateMetadata({
   const blogPost = pageBlogPostCollection?.items[0];
 
   const languages = Object.fromEntries(
-    locales.map((locale) => [
-      locale,
-      locale === defaultLocale ? `/${slug}` : `/${locale}/${slug}`,
-    ]),
+    locales.map((locale) => [locale, locale === defaultLocale ? `/${slug}` : `/${locale}/${slug}`]),
   );
   const metadata: Metadata = {
     alternates: {
@@ -76,9 +67,7 @@ export async function generateStaticParams({
   }
 
   return pageBlogPostCollection.items
-    .filter((blogPost): blogPost is NonNullable<typeof blogPost> =>
-      Boolean(blogPost?.slug),
-    )
+    .filter((blogPost): blogPost is NonNullable<typeof blogPost> => Boolean(blogPost?.slug))
     .map((blogPost) => {
       return {
         locale,
@@ -115,11 +104,7 @@ export default async function Page({ params }: BlogPageProps) {
   return (
     <>
       <Container>
-        <ArticleHero
-          article={blogPost}
-          isFeatured={isFeatured}
-          isReversedLayout={true}
-        />
+        <ArticleHero article={blogPost} isFeatured={isFeatured} isReversedLayout={true} />
       </Container>
       <Container className="mt-8 max-w-4xl">
         <ArticleContent article={blogPost} />
@@ -129,11 +114,7 @@ export default async function Page({ params }: BlogPageProps) {
           <h2 className="mb-4 text-2xl font-medium md:mb-6 md:text-3xl">
             {t("article.relatedArticles")}
           </h2>
-          <ArticleTileGrid
-            className="md:grid-cols-2"
-            articles={relatedPosts}
-            locale={locale}
-          />
+          <ArticleTileGrid className="md:grid-cols-2" articles={relatedPosts} locale={locale} />
         </Container>
       )}
     </>

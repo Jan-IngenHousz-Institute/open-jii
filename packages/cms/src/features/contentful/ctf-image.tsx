@@ -9,13 +9,7 @@ interface ImageProps extends Omit<ImageFieldsFragment, "__typename"> {
   nextImageProps?: Omit<NextImageProps, "src" | "alt">;
 }
 
-export const CtfImage = ({
-  url,
-  width,
-  height,
-  title,
-  nextImageProps,
-}: ImageProps) => {
+export const CtfImage = ({ url, width, height, title, nextImageProps }: ImageProps) => {
   if (!url || !width || !height) return null;
 
   const blurURL = new URL(url);

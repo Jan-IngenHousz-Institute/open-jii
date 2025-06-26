@@ -27,11 +27,7 @@ export const config: CodegenConfig = {
     },
     "src/lib/__generated/sdk.ts": {
       documents: ["src/lib/graphql/**/*.graphql"],
-      plugins: [
-        "typescript",
-        "typescript-operations",
-        "typescript-graphql-request",
-      ],
+      plugins: ["typescript", "typescript-operations", "typescript-graphql-request"],
       config: {
         rawRequest: false,
         inlineFragmentTypes: "combine",

@@ -1,7 +1,4 @@
-import {
-  assertFailure,
-  assertSuccess,
-} from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { AddExperimentMembersUseCase } from "./add-experiment-members";
 

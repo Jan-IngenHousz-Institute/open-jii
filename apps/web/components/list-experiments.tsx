@@ -31,9 +31,7 @@ export function ListExperiments({ userId }: ListExperimentProps) {
         <Select
           defaultValue="my"
           value={filter}
-          onValueChange={(value: "my" | "member" | "related" | "all") =>
-            setFilter(value)
-          }
+          onValueChange={(value: "my" | "member" | "related" | "all") => setFilter(value)}
         >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter experiments" />
@@ -48,9 +46,7 @@ export function ListExperiments({ userId }: ListExperimentProps) {
 
         <Select
           value={status ?? "all"}
-          onValueChange={(v) =>
-            setStatus(v === "all" ? undefined : (v as ExperimentStatus))
-          }
+          onValueChange={(v) => setStatus(v === "all" ? undefined : (v as ExperimentStatus))}
         >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter status" />

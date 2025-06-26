@@ -215,9 +215,7 @@ const sidebars: SidebarsConfig = {
               type: "category",
               label: "Proposals",
               link: { type: "generated-index" },
-              items: [
-                "for-developers/developers-guide/design-decisions/proposals/mqtt-proposal",
-              ],
+              items: ["for-developers/developers-guide/design-decisions/proposals/mqtt-proposal"],
             },
             {
               type: "category",

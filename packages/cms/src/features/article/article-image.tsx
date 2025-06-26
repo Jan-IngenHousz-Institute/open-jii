@@ -12,16 +12,11 @@ interface ArticleImageProps {
   image: ComponentRichImage;
 }
 
-export const ArticleImage = ({
-  image,
-}: ArticleImageProps): ReactElement | null => {
+export const ArticleImage = ({ image }: ArticleImageProps): ReactElement | null => {
   const inspectorProps = useContentfulInspectorMode({ entryId: image.sys.id });
   return image.image ? (
     <figure>
-      <div
-        className="flex justify-center"
-        {...inspectorProps({ fieldId: "image" })}
-      >
+      <div className="flex justify-center" {...inspectorProps({ fieldId: "image" })}>
         <CtfImage
           nextImageProps={{
             className: cn(
@@ -35,10 +30,7 @@ export const ArticleImage = ({
         />
       </div>
       {image.caption && (
-        <figcaption
-          className="mt-4"
-          {...inspectorProps({ fieldId: "caption" })}
-        >
+        <figcaption className="mt-4" {...inspectorProps({ fieldId: "caption" })}>
           {image.caption}
         </figcaption>
       )}

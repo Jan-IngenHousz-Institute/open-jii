@@ -39,12 +39,7 @@ export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-2"
-          aria-label="Switch language"
-        >
+        <Button variant="ghost" size="sm" className="gap-2" aria-label="Switch language">
           <Languages className="h-4 w-4" />
           <span className="hidden sm:inline">{currentLocale.flag}</span>
           <span className="hidden md:inline">{currentLocale.name}</span>
@@ -55,9 +50,7 @@ export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
           <DropdownMenuItem key={loc.code} asChild>
             <Link
               href={getLanguageSwitchUrl(loc.code)}
-              className={`w-full cursor-pointer ${
-                loc.code === locale ? "bg-accent" : ""
-              }`}
+              className={`w-full cursor-pointer ${loc.code === locale ? "bg-accent" : ""}`}
             >
               <span className="mr-2">{loc.flag}</span>
               {loc.name}

@@ -8,13 +8,7 @@ import type { UseFormReturn } from "react-hook-form";
 import type { User, CreateExperimentBody } from "@repo/api";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@repo/ui/components";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components";
 
 import { MemberList } from "../current-members-list";
 import { UserSearchWithDropdown } from "../user-search-with-dropdown";
@@ -28,9 +22,7 @@ interface NewExperimentMembersCardProps {
   form: UseFormReturn<CreateExperimentBody>;
 }
 
-export function NewExperimentMembersCard({
-  form,
-}: NewExperimentMembersCardProps) {
+export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps) {
   const { t } = useTranslation(undefined, "common");
   const { data: session } = useSession();
   const currentUserId = session?.user.id ?? "";
@@ -38,26 +30,20 @@ export function NewExperimentMembersCard({
   // Member management state
   const [userSearch, setUserSearch] = useState("");
   const [debouncedSearch, isDebounced] = useDebounce(userSearch, 300);
-  const { data: userSearchData, isLoading: isFetchingUsers } =
-    useUserSearch(debouncedSearch);
+  const { data: userSearchData, isLoading: isFetchingUsers } = useUserSearch(debouncedSearch);
   const [selectedUserId, setSelectedUserId] = useState("");
   // Track added users for display - we collect users as we add them
   const [addedUsers, setAddedUsers] = useState<User[]>([]);
 
   // Use form for members instead of useState
   const watchedMembers = form.watch("members");
-  const members: Member[] = useMemo(
-    () => watchedMembers ?? [],
-    [watchedMembers],
-  );
+  const members: Member[] = useMemo(() => watchedMembers ?? [], [watchedMembers]);
 
   // Filter available users (exclude already added and current user)
   const availableUsers = useMemo(
     () =>
       userSearchData?.body.filter(
-        (user: User) =>
-          !members.some((m) => m.userId === user.id) &&
-          user.id !== currentUserId,
+        (user: User) => !members.some((m) => m.userId === user.id) && user.id !== currentUserId,
       ) ?? [],
     [userSearchData, members, currentUserId],
   );
@@ -67,9 +53,7 @@ export function NewExperimentMembersCard({
     const user = availableUsers.find((u) => u.id === userId);
     if (!user) return;
     form.setValue("members", [...members, { userId: user.id, role: "member" }]);
-    setAddedUsers((prev) =>
-      prev.some((u) => u.id === user.id) ? prev : [...prev, user],
-    );
+    setAddedUsers((prev) => (prev.some((u) => u.id === user.id) ? prev : [...prev, user]));
     setSelectedUserId("");
     setUserSearch("");
   };
@@ -108,9 +92,7 @@ export function NewExperimentMembersCard({
     <Card className="min-w-0 flex-1">
       <CardHeader>
         <CardTitle>{t("newExperiment.addMembersTitle")}</CardTitle>
-        <CardDescription>
-          {t("newExperiment.addMembersDescription")}
-        </CardDescription>
+        <CardDescription>{t("newExperiment.addMembersDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="mb-2">

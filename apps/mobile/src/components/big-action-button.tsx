@@ -1,17 +1,14 @@
 import { cva } from "class-variance-authority";
 import { Text, TouchableOpacity, ActivityIndicator, View } from "react-native";
 
-const bigActionButton = cva(
-  "mt-6 w-full items-center justify-center rounded-full py-6 shadow-lg",
-  {
-    variants: {
-      disabled: {
-        true: "bg-gray-400",
-        false: "bg-blue-600 active:opacity-80",
-      },
+const bigActionButton = cva("mt-6 w-full items-center justify-center rounded-full py-6 shadow-lg", {
+  variants: {
+    disabled: {
+      true: "bg-gray-400",
+      false: "bg-blue-600 active:opacity-80",
     },
   },
-);
+});
 
 const buttonText = cva("text-2xl font-bold", {
   variants: {
@@ -22,12 +19,7 @@ const buttonText = cva("text-2xl font-bold", {
   },
 });
 
-export function BigActionButton({
-  onPress,
-  text,
-  disabled = false,
-  loading = false,
-}) {
+export function BigActionButton({ onPress, text, disabled = false, loading = false }) {
   const isDisabled = disabled || loading;
 
   return (

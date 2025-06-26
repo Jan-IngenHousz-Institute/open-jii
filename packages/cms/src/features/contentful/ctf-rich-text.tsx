@@ -1,7 +1,4 @@
-import {
-  documentToReactComponents,
-  Options,
-} from "@contentful/rich-text-react-renderer";
+import { documentToReactComponents, Options } from "@contentful/rich-text-react-renderer";
 import { BLOCKS, Document } from "@contentful/rich-text-types";
 
 import type { ComponentRichImage } from "../../lib/__generated/sdk";
@@ -27,9 +24,7 @@ export const EmbeddedEntry = (entry: EmbeddedEntryType) => {
   }
 };
 
-export const contentfulBaseRichTextOptions = ({
-  links,
-}: ContentfulRichTextInterface): Options => ({
+export const contentfulBaseRichTextOptions = ({ links }: ContentfulRichTextInterface): Options => ({
   renderNode: {
     [BLOCKS.EMBEDDED_ENTRY]: (node) => {
       const entry = links?.entries.block.find(

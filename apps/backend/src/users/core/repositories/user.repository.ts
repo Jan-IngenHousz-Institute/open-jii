@@ -4,12 +4,7 @@ import { eq, ilike, or, users } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import {
-  CreateUserDto,
-  UpdateUserDto,
-  UserDto,
-  SearchUsersParams,
-} from "../models/user.model";
+import { CreateUserDto, UpdateUserDto, UserDto, SearchUsersParams } from "../models/user.model";
 
 @Injectable()
 export class UserRepository {
@@ -19,18 +14,12 @@ export class UserRepository {
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<Result<UserDto[]>> {
-    return tryCatch(() =>
-      this.database.insert(users).values(createUserDto).returning(),
-    );
+    return tryCatch(() => this.database.insert(users).values(createUserDto).returning());
   }
 
   async findOne(id: string): Promise<Result<UserDto | null>> {
     return tryCatch(async () => {
-      const result = await this.database
-        .select()
-        .from(users)
-        .where(eq(users.id, id))
-        .limit(1);
+      const result = await this.database.select().from(users).where(eq(users.id, id)).limit(1);
 
       return result.length > 0 ? result[0] : null;
     });
@@ -57,10 +46,7 @@ export class UserRepository {
       // If search query is provided, search in name and email fields
       if (params.query) {
         query = query.where(
-          or(
-            ilike(users.name, `%${params.query}%`),
-            ilike(users.email, `%${params.query}%`),
-          ),
+          or(ilike(users.name, `%${params.query}%`), ilike(users.email, `%${params.query}%`)),
         );
       }
 
@@ -80,16 +66,9 @@ export class UserRepository {
     });
   }
 
-  async update(
-    id: string,
-    updateUserDto: UpdateUserDto,
-  ): Promise<Result<UserDto[]>> {
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<Result<UserDto[]>> {
     return tryCatch(() =>
-      this.database
-        .update(users)
-        .set(updateUserDto)
-        .where(eq(users.id, id))
-        .returning(),
+      this.database.update(users).set(updateUserDto).where(eq(users.id, id)).returning(),
     );
   }
 

@@ -3,9 +3,7 @@ import { stringifyIfObject } from "../../../utils/stringify-if-object";
 import type { MultispeqStreamEvents } from "../multispeq-stream-events";
 import type { SerialPortEvents } from "./serial-port-events";
 
-export function serialPortToMultispeqStream(
-  inputEmitter: Emitter<SerialPortEvents>,
-) {
+export function serialPortToMultispeqStream(inputEmitter: Emitter<SerialPortEvents>) {
   const outputEmitter = new Emitter<MultispeqStreamEvents>();
   let bufferedData: string[] = [];
 
@@ -35,10 +33,7 @@ export function serialPortToMultispeqStream(
   });
 
   outputEmitter.on("sendCommandToDevice", async (command: object | string) => {
-    await inputEmitter.emit(
-      "sendDataToDevice",
-      stringifyIfObject(command) + "\r\n",
-    );
+    await inputEmitter.emit("sendDataToDevice", stringifyIfObject(command) + "\r\n");
   });
 
   outputEmitter.on("destroy", () => inputEmitter.emit("destroy"));

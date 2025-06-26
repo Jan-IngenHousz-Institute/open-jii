@@ -16,8 +16,7 @@ const Trans = TransComponent as React.ComponentType<{
 
 export default async function NotFound() {
   const headersList = headers();
-  const locale =
-    (await headersList).get("x-next-i18n-router-locale") ?? defaultLocale;
+  const locale = (await headersList).get("x-next-i18n-router-locale") ?? defaultLocale;
   const { t } = await initTranslations({ locale: locale as Locale });
 
   return (

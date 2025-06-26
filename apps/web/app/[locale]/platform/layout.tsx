@@ -50,28 +50,16 @@ export default async function AppLayout({
           <div className="flex w-full items-center justify-between gap-2 px-4">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="-ml-1" />
-              <Separator
-                orientation="vertical"
-                className="mr-2 data-[orientation=vertical]:h-4"
-              />
-              <Breadcrumbs
-                pathname={pathname}
-                pageTitle={pageTitle}
-                locale={typedLocale}
-              />
+              <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
+              <Breadcrumbs pathname={pathname} pageTitle={pageTitle} locale={typedLocale} />
             </div>
             <div className="flex items-center gap-2">
-              <Separator
-                orientation="vertical"
-                className="mr-2 data-[orientation=vertical]:h-4"
-              />
+              <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
               <LanguageSwitcher locale={typedLocale} />
             </div>
           </div>
         </header>
-        <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col p-4">
-          {children}
-        </main>
+        <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col p-4">{children}</main>
         <Toaster />
       </SidebarInset>
     </SidebarProvider>

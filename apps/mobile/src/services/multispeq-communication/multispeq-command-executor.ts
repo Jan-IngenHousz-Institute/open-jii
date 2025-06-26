@@ -15,10 +15,7 @@ export class MultispeqCommandExecutor implements IMultispeqCommandExecutor {
     await this.emitter.emit("sendCommandToDevice", command);
 
     const executePromise = new Promise<object | string>((resolve) => {
-      const handler = (payload: {
-        data: object | string;
-        checksum: string;
-      }) => {
+      const handler = (payload: { data: object | string; checksum: string }) => {
         resolve(payload.data);
         this.emitter.off("receivedReplyFromDevice", handler);
       };

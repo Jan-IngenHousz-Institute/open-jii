@@ -314,9 +314,7 @@ export interface ComponentAuthorLinkingCollectionsEntryCollectionArgs {
 export interface ComponentAuthorLinkingCollectionsPageBlogPostCollectionArgs {
   limit?: InputMaybe<Scalars["Int"]>;
   locale?: InputMaybe<Scalars["String"]>;
-  order?: InputMaybe<
-    InputMaybe<ComponentAuthorLinkingCollectionsPageBlogPostCollectionOrder>[]
-  >;
+  order?: InputMaybe<InputMaybe<ComponentAuthorLinkingCollectionsPageBlogPostCollectionOrder>[]>;
   preview?: InputMaybe<Scalars["Boolean"]>;
   skip?: InputMaybe<Scalars["Int"]>;
 }
@@ -584,9 +582,7 @@ export interface ComponentSeoLinkingCollectionsEntryCollectionArgs {
 export interface ComponentSeoLinkingCollectionsPageBlogPostCollectionArgs {
   limit?: InputMaybe<Scalars["Int"]>;
   locale?: InputMaybe<Scalars["String"]>;
-  order?: InputMaybe<
-    InputMaybe<ComponentSeoLinkingCollectionsPageBlogPostCollectionOrder>[]
-  >;
+  order?: InputMaybe<InputMaybe<ComponentSeoLinkingCollectionsPageBlogPostCollectionOrder>[]>;
   preview?: InputMaybe<Scalars["Boolean"]>;
   skip?: InputMaybe<Scalars["Int"]>;
 }
@@ -594,9 +590,7 @@ export interface ComponentSeoLinkingCollectionsPageBlogPostCollectionArgs {
 export interface ComponentSeoLinkingCollectionsPageLandingCollectionArgs {
   limit?: InputMaybe<Scalars["Int"]>;
   locale?: InputMaybe<Scalars["String"]>;
-  order?: InputMaybe<
-    InputMaybe<ComponentSeoLinkingCollectionsPageLandingCollectionOrder>[]
-  >;
+  order?: InputMaybe<InputMaybe<ComponentSeoLinkingCollectionsPageLandingCollectionOrder>[]>;
   preview?: InputMaybe<Scalars["Boolean"]>;
   skip?: InputMaybe<Scalars["Int"]>;
 }
@@ -1018,9 +1012,7 @@ export interface PageBlogPostLinkingCollectionsEntryCollectionArgs {
 export interface PageBlogPostLinkingCollectionsPageBlogPostCollectionArgs {
   limit?: InputMaybe<Scalars["Int"]>;
   locale?: InputMaybe<Scalars["String"]>;
-  order?: InputMaybe<
-    InputMaybe<PageBlogPostLinkingCollectionsPageBlogPostCollectionOrder>[]
-  >;
+  order?: InputMaybe<InputMaybe<PageBlogPostLinkingCollectionsPageBlogPostCollectionOrder>[]>;
   preview?: InputMaybe<Scalars["Boolean"]>;
   skip?: InputMaybe<Scalars["Int"]>;
 }
@@ -1028,9 +1020,7 @@ export interface PageBlogPostLinkingCollectionsPageBlogPostCollectionArgs {
 export interface PageBlogPostLinkingCollectionsPageLandingCollectionArgs {
   limit?: InputMaybe<Scalars["Int"]>;
   locale?: InputMaybe<Scalars["String"]>;
-  order?: InputMaybe<
-    InputMaybe<PageBlogPostLinkingCollectionsPageLandingCollectionOrder>[]
-  >;
+  order?: InputMaybe<InputMaybe<PageBlogPostLinkingCollectionsPageLandingCollectionOrder>[]>;
   preview?: InputMaybe<Scalars["Boolean"]>;
   skip?: InputMaybe<Scalars["Int"]>;
 }
@@ -1562,10 +1552,7 @@ export interface PageBlogPostFieldsFragment {
   } | null;
   relatedBlogPostsCollection?: {
     __typename?: "PageBlogPostRelatedBlogPostsCollection";
-    items: (
-      | ({ __typename?: "PageBlogPost" } & ReferencePageBlogPostFieldsFragment)
-      | null
-    )[];
+    items: (({ __typename?: "PageBlogPost" } & ReferencePageBlogPostFieldsFragment) | null)[];
   } | null;
 }
 
@@ -1579,10 +1566,7 @@ export interface PageBlogPostQuery {
   __typename?: "Query";
   pageBlogPostCollection?: {
     __typename?: "PageBlogPostCollection";
-    items: (
-      | ({ __typename?: "PageBlogPost" } & PageBlogPostFieldsFragment)
-      | null
-    )[];
+    items: (({ __typename?: "PageBlogPost" } & PageBlogPostFieldsFragment) | null)[];
   } | null;
 }
 
@@ -1590,9 +1574,7 @@ export type PageBlogPostCollectionQueryVariables = Exact<{
   locale?: InputMaybe<Scalars["String"]>;
   preview?: InputMaybe<Scalars["Boolean"]>;
   limit?: InputMaybe<Scalars["Int"]>;
-  order?: InputMaybe<
-    InputMaybe<PageBlogPostOrder>[] | InputMaybe<PageBlogPostOrder>
-  >;
+  order?: InputMaybe<InputMaybe<PageBlogPostOrder>[] | InputMaybe<PageBlogPostOrder>>;
   where?: InputMaybe<PageBlogPostFilter>;
 }>;
 
@@ -1600,10 +1582,7 @@ export interface PageBlogPostCollectionQuery {
   __typename?: "Query";
   pageBlogPostCollection?: {
     __typename?: "PageBlogPostCollection";
-    items: (
-      | ({ __typename?: "PageBlogPost" } & PageBlogPostFieldsFragment)
-      | null
-    )[];
+    items: (({ __typename?: "PageBlogPost" } & PageBlogPostFieldsFragment) | null)[];
   } | null;
 }
 
@@ -1612,9 +1591,7 @@ export interface PageLandingFieldsFragment {
   internalName?: string | null;
   sys: { __typename?: "Sys"; id: string; spaceId: string };
   seoFields?: ({ __typename?: "ComponentSeo" } & SeoFieldsFragment) | null;
-  featuredBlogPost?:
-    | ({ __typename?: "PageBlogPost" } & ReferencePageBlogPostFieldsFragment)
-    | null;
+  featuredBlogPost?: ({ __typename?: "PageBlogPost" } & ReferencePageBlogPostFieldsFragment) | null;
 }
 
 export type PageLandingQueryVariables = Exact<{
@@ -1626,10 +1603,7 @@ export interface PageLandingQuery {
   __typename?: "Query";
   pageLandingCollection?: {
     __typename?: "PageLandingCollection";
-    items: (
-      | ({ __typename?: "PageLanding" } & PageLandingFieldsFragment)
-      | null
-    )[];
+    items: (({ __typename?: "PageLanding" } & PageLandingFieldsFragment) | null)[];
   } | null;
 }
 
@@ -1642,10 +1616,7 @@ export interface PageLandingCollectionQuery {
   __typename?: "Query";
   pageLandingCollection?: {
     __typename?: "PageLandingCollection";
-    items: (
-      | ({ __typename?: "PageLanding" } & PageLandingFieldsFragment)
-      | null
-    )[];
+    items: (({ __typename?: "PageLanding" } & PageLandingFieldsFragment) | null)[];
   } | null;
 }
 
@@ -1753,26 +1724,25 @@ export const RichImageFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     fullWidth
   }
 `;
-export const ReferencePageBlogPostFieldsFragmentDoc: ReturnType<typeof gql> =
-  gql`
-    fragment ReferencePageBlogPostFields on PageBlogPost {
-      __typename
-      sys {
-        id
-        spaceId
-      }
-      slug
-      author {
-        ...AuthorFields
-      }
-      publishedDate
-      title
-      shortDescription
-      featuredImage {
-        ...ImageFields
-      }
+export const ReferencePageBlogPostFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+  fragment ReferencePageBlogPostFields on PageBlogPost {
+    __typename
+    sys {
+      id
+      spaceId
     }
-  `;
+    slug
+    author {
+      ...AuthorFields
+    }
+    publishedDate
+    title
+    shortDescription
+    featuredImage {
+      ...ImageFields
+    }
+  }
+`;
 export const PageBlogPostFieldsFragmentDoc: ReturnType<typeof gql> = gql`
   fragment PageBlogPostFields on PageBlogPost {
     __typename
@@ -1848,12 +1818,7 @@ export const SitemapPagesFieldsFragmentDoc: ReturnType<typeof gql> = gql`
 `;
 export const PageBlogPostDocument: ReturnType<typeof gql> = gql`
   query pageBlogPost($slug: String!, $locale: String, $preview: Boolean) {
-    pageBlogPostCollection(
-      limit: 1
-      where: { slug: $slug }
-      locale: $locale
-      preview: $preview
-    ) {
+    pageBlogPostCollection(limit: 1, where: { slug: $slug }, locale: $locale, preview: $preview) {
       items {
         ...PageBlogPostFields
       }
@@ -1935,17 +1900,10 @@ export type SdkFunctionWrapper = <T>(
   variables?: unknown,
 ) => Promise<T>;
 
-const defaultWrapper: SdkFunctionWrapper = (
-  action,
-  _operationName,
-  _operationType,
-  _variables,
-) => action();
+const defaultWrapper: SdkFunctionWrapper = (action, _operationName, _operationType, _variables) =>
+  action();
 
-export function getSdk(
-  client: GraphQLClient,
-  withWrapper: SdkFunctionWrapper = defaultWrapper,
-) {
+export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = defaultWrapper) {
   return {
     pageBlogPost(
       variables: PageBlogPostQueryVariables,
@@ -1968,11 +1926,10 @@ export function getSdk(
     ): Promise<PageBlogPostCollectionQuery> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<PageBlogPostCollectionQuery>(
-            PageBlogPostCollectionDocument,
-            variables,
-            { ...requestHeaders, ...wrappedRequestHeaders },
-          ),
+          client.request<PageBlogPostCollectionQuery>(PageBlogPostCollectionDocument, variables, {
+            ...requestHeaders,
+            ...wrappedRequestHeaders,
+          }),
         "pageBlogPostCollection",
         "query",
         variables,
@@ -1999,11 +1956,10 @@ export function getSdk(
     ): Promise<PageLandingCollectionQuery> {
       return withWrapper(
         (wrappedRequestHeaders) =>
-          client.request<PageLandingCollectionQuery>(
-            PageLandingCollectionDocument,
-            variables,
-            { ...requestHeaders, ...wrappedRequestHeaders },
-          ),
+          client.request<PageLandingCollectionQuery>(PageLandingCollectionDocument, variables, {
+            ...requestHeaders,
+            ...wrappedRequestHeaders,
+          }),
         "pageLandingCollection",
         "query",
         variables,

@@ -98,34 +98,18 @@ export function AppSidebar({
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
-            >
+            <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
               <Link href={`/platform/`} locale={locale}>
-                <Image
-                  src="/logo.png"
-                  alt={translations.logoAlt}
-                  width={50}
-                  height={50}
-                />
-                <span className="text-base font-semibold">
-                  {translations.openJII}
-                </span>
+                <Image src="/logo.png" alt={translations.logoAlt} width={50} height={50} />
+                <span className="text-base font-semibold">{translations.openJII}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavItems
-          items={processedNavExperiments}
-          title={translations.experimentsTitle}
-        />
-        <NavItems
-          items={processedNavHardware}
-          title={translations.hardwareTitle}
-        />
+        <NavItems items={processedNavExperiments} title={translations.experimentsTitle} />
+        <NavItems items={processedNavHardware} title={translations.hardwareTitle} />
       </SidebarContent>
       <SidebarFooter>
         {user ? (
@@ -139,14 +123,9 @@ export function AppSidebar({
         ) : (
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                className="data-[slot=sidebar-menu-button]:!p-1.5"
-              >
+              <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
                 <Link href="/" locale={locale}>
-                  <span className="text-base font-semibold">
-                    {translations.signIn}
-                  </span>
+                  <span className="text-base font-semibold">{translations.signIn}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

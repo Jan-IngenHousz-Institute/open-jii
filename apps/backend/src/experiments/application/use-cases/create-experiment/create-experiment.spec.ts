@@ -1,10 +1,5 @@
 import { DatabricksService } from "../../../../common/services/databricks/databricks.service";
-import {
-  assertFailure,
-  assertSuccess,
-  failure,
-  success,
-} from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentMemberRepository } from "../../../../experiments/core/repositories/experiment-member.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import type { UserDto } from "../../../../users/core/models/user.model";
@@ -92,9 +87,7 @@ describe("CreateExperimentUseCase", () => {
     assertSuccess(experimentResult);
     const createdExperiment = experimentResult.value;
 
-    const membersResult = await experimentMemberRepository.getMembers(
-      createdExperiment.id,
-    );
+    const membersResult = await experimentMemberRepository.getMembers(createdExperiment.id);
 
     expect(membersResult.isSuccess()).toBe(true);
     assertSuccess(membersResult);

@@ -7,10 +7,7 @@ import type { SessionUser } from "@repo/auth/config";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
-import {
-  formatDates,
-  formatDatesList,
-} from "../../common/utils/date-formatter";
+import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { GetUserUseCase } from "../application/use-cases/get-user/get-user";
 import { SearchUsersUseCase } from "../application/use-cases/search-users/search-users";
@@ -40,11 +37,7 @@ export class UserController {
         // Format dates to strings for the API contract
         const formattedUsers = formatDatesList(users);
 
-        this.logger.log(
-          `Searched users for user ${user.id} with query: ${JSON.stringify(
-            query,
-          )}`,
-        );
+        this.logger.log(`Searched users for user ${user.id} with query: ${JSON.stringify(query)}`);
         return {
           status: StatusCodes.OK,
           body: formattedUsers,

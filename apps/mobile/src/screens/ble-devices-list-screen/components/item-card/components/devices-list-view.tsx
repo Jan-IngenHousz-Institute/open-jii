@@ -25,9 +25,7 @@ export function DevicesListView({
       <FlatList
         data={items}
         keyExtractor={getKey}
-        renderItem={({ item }) => (
-          <ItemCard item={item} onPress={() => onPress?.(item.id)} />
-        )}
+        renderItem={({ item }) => <ItemCard item={item} onPress={() => onPress?.(item.id)} />}
         contentContainerClassName="p-4"
         onRefresh={onRefresh}
         refreshing={false}

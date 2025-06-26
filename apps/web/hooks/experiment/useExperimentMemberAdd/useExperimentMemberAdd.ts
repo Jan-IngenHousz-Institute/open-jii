@@ -22,8 +22,8 @@ export const useExperimentMemberAdd = () => {
       }>(["experiment-members", variables.params.id]);
 
       // Create optimistic new member entries
-      const optimisticMembers: Partial<ExperimentMember>[] =
-        variables.body.members.map((member) => ({
+      const optimisticMembers: Partial<ExperimentMember>[] = variables.body.members.map(
+        (member) => ({
           user: {
             id: member.userId,
             name: null,
@@ -32,7 +32,8 @@ export const useExperimentMemberAdd = () => {
           role: member.role ?? "member",
           // Use current timestamp as an estimate
           joinedAt: new Date().toISOString(),
-        }));
+        }),
+      );
 
       // Optimistically add the new members to the cache
       if (previousMembers?.body) {
