@@ -143,6 +143,11 @@
     "errorMessage": "Beim Anmelden ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
     "account": "Konto"
   },
+  "signout": {
+    "title": "Abmelden",
+    "description": "Sind Sie sicher, dass Sie sich von Ihrem Konto abmelden möchten?",
+    "confirm": "Ja, abmelden"
+  },
   "forms": {
     "required": "Dieses Feld ist erforderlich",
     "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein",

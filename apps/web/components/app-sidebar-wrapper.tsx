@@ -1,4 +1,3 @@
-import { auth } from "@/lib/auth";
 import * as React from "react";
 
 import type { Locale } from "@repo/i18n";
@@ -8,15 +7,11 @@ import { AppSidebar } from "./app-sidebar";
 
 export async function AppSidebarWrapper({
   locale,
+  user,
   ...props
-}: Omit<
-  React.ComponentProps<typeof AppSidebar>,
-  "user" | "locale" | "navigationData" | "translations"
-> & {
+}: Omit<React.ComponentProps<typeof AppSidebar>, "locale" | "navigationData" | "translations"> & {
   locale: Locale;
 }) {
-  const session = await auth();
-
   // Get translations server-side
   const { t: tNavigation } = await initTranslations({
     locale,
@@ -101,7 +96,7 @@ export async function AppSidebarWrapper({
   };
 
   const translations = {
-    openJII: tNavigation("navigation.openJII"),
+    openJII: tCommon("navigation.openJII"),
     logoAlt: tCommon("common.logo"),
     signIn: tCommon("signIn"),
     experimentsTitle: tNavigation("sidebar.experiments"),
@@ -110,7 +105,7 @@ export async function AppSidebarWrapper({
 
   return (
     <AppSidebar
-      user={session?.user}
+      user={user}
       locale={locale}
       navigationData={navigationData}
       translations={translations}

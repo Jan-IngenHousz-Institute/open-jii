@@ -157,6 +157,12 @@ variable "warmer_timeout" {
   default     = 30
 }
 
+variable "function_url_authorization_type" {
+  description = "The authorization type for the function URL. Can be NONE or AWS_IAM."
+  type        = string
+  default     = "NONE"
+}
+
 variable "enable_lambda_warming" {
   description = "Enable Lambda warming with EventBridge"
   type        = bool
@@ -311,5 +317,5 @@ variable "secrets_extension_layer_arn" {
   type        = string
   # Example for eu-central-1, replace if deploying to other regions
   # You can find the latest ARNs here: https://docs.aws.amazon.com/systems-manager/latest/userguide/ps-integration-lambda-extensions.html#ps-integration-lambda-extensions-add
-  default = "arn:aws:lambda:eu-central-1:187925254637:layer:AWS-Parameters-and-Secrets-Lambda-Extension:17"
+  default = "arn:aws:lambda:eu-central-1:187925254637:layer:AWS-Parameters-and-Secrets-Lambda-Extension-Arm64:17"
 }

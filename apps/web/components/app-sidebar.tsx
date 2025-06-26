@@ -114,6 +114,7 @@ export function AppSidebar({
       <SidebarFooter>
         {user ? (
           <NavUser
+            locale={locale}
             user={{
               name: user.name ?? "User",
               email: user.email ?? "",

@@ -1,6 +1,7 @@
 import Footer from "@/components/blog/footer";
 import { TranslationsProvider } from "@/components/translations-provider";
 import { UnifiedNavbar } from "@/components/unified-navbar";
+import { auth } from "@/lib/auth";
 import type { Metadata, Viewport } from "next";
 import { Urbanist } from "next/font/google";
 import { draftMode } from "next/headers";
@@ -44,6 +45,7 @@ export default async function PageLayout({
 }: LayoutProps & { params: Promise<{ locale: string }> }) {
   const { isEnabled: preview } = await draftMode();
   const { locale } = await params;
+  const session = await auth();
   const typedLocale = locale as Locale;
   const { resources } = await initTranslations({
     locale: typedLocale,
@@ -63,7 +65,7 @@ export default async function PageLayout({
             enableLiveUpdates={preview}
             targetOrigin={allowedOriginList}
           >
-            <UnifiedNavbar locale={typedLocale} />
+            <UnifiedNavbar locale={typedLocale} session={session} />
             <div
               className={`${urbanist.variable} mx-auto flex w-full max-w-7xl flex-1 flex-col font-sans`}
             >

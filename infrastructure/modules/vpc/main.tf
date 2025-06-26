@@ -69,10 +69,10 @@ resource "aws_security_group" "alb_sg" {
 
   # Allow HTTPS (443) from CloudFront IP ranges only
   ingress {
-    description = "Allow HTTPS from CloudFront IP ranges only"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
+    description     = "Allow HTTPS from CloudFront IP ranges only"
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
     prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront_global.id]
   }
 

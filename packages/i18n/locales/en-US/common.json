@@ -145,6 +145,11 @@
     "errorMessage": "An error occurred during login. Please try again.",
     "account": "Account"
   },
+  "signout": {
+    "title": "Sign Out",
+    "description": "Are you sure you want to sign out of your account?",
+    "confirm": "Yes, sign out"
+  },
   "forms": {
     "required": "This field is required",
     "invalidEmail": "Please enter a valid email address",

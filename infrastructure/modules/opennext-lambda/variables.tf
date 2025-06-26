@@ -54,6 +54,12 @@ variable "environment_variables" {
   default     = {}
 }
 
+variable "function_url_authorization_type" {
+  description = "The authorization type for the function URL. Can be NONE or AWS_IAM."
+  type        = string
+  default     = "NONE"
+}
+
 variable "create_function_url" {
   description = "Whether to create a Lambda function URL"
   type        = bool

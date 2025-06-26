@@ -1,7 +1,10 @@
 "use client";
 
 import { ChevronsUpDown, LogOut } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
+import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n";
 import {
   Avatar,
@@ -19,19 +22,21 @@ import {
   useSidebar,
 } from "@repo/ui/components";
 
-import { handleLogout } from "../app/actions/auth";
-
 export function NavUser({
   user,
+  locale,
 }: {
   user: {
     name: string;
     email: string;
     avatar: string;
   };
+  locale: Locale;
 }) {
   const { isMobile } = useSidebar();
   const { t } = useTranslation(undefined, "common");
+  const pathname = usePathname();
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -75,14 +80,15 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <form action={handleLogout}>
-              <DropdownMenuItem asChild>
-                <button type="submit" className="flex w-full cursor-default items-center">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  {t("logout")}
-                </button>
-              </DropdownMenuItem>
-            </form>
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/${locale}/platform/signout`}
+                className="flex w-full cursor-default items-center"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                {t("navigation.logout")}
+              </Link>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
