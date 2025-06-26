@@ -1,10 +1,10 @@
-import { client, previewClient } from "@/lib/client";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { ArticleContent, ArticleHero, ArticleTileGrid } from "@repo/cms/article";
 import { Container } from "@repo/cms/container";
+import { client, previewClient } from "@repo/cms/lib/client";
 import type { Locale } from "@repo/i18n/config";
 import { defaultLocale, locales } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";

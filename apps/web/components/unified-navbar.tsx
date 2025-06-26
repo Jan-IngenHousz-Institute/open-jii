@@ -1,12 +1,14 @@
 "use client";
 
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { User, LogIn, Home, BookOpen, Settings } from "lucide-react";
+import { User, LogIn, Home, BookOpen, Settings, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
 import { useSession } from "@repo/auth/client";
+import type { Session } from "@repo/auth/config";
 import type { Locale } from "@repo/i18n";
 import {
   Avatar,
@@ -20,19 +22,20 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui/components";
 
-import { handleLogin, handleLogout } from "../app/actions/auth";
+import { handleLogout } from "../app/actions/auth";
 
 interface UnifiedNavbarProps {
   locale: Locale;
+  session: Session | null;
 }
 
-export function UnifiedNavbar({ locale }: UnifiedNavbarProps) {
+export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
   const { t } = useTranslation();
-  const { data: session, status } = useSession();
+  // const { data: session, status } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
 
-  const isLoading = status === "loading";
-  const isAuthenticated = !!session;
+  const isAuthenticated = !!session?.user;
 
   // Navigation items
   const navItems = [
@@ -58,44 +61,32 @@ export function UnifiedNavbar({ locale }: UnifiedNavbarProps) {
   ];
 
   const UserMenu = () => {
-    if (isLoading) {
+    if (!session?.user) {
       return (
-        <Button variant="ghost" size="sm" disabled>
-          <User className="h-4 w-4" />
-        </Button>
-      );
-    }
-
-    if (!isAuthenticated) {
-      return (
-        <form>
-          <Button variant="ghost" size="sm" className="gap-2" formAction={handleLogin}>
-            <LogIn className="h-4 w-4" />
-            <span className="hidden sm:inline">{t("auth.signIn", "Sign In")}</span>
-          </Button>
-        </form>
+        <Link className="flex flex-row gap-2" href={`/login?callbackUrl=/${locale}`}>
+          <LogIn className="h-4 w-4" />
+          <div className="sm:inline">{t("auth.signIn", "Sign In")}</div>
+        </Link>
       );
     }
 
     const handleSignOut = async () => {
-      try {
-        await handleLogout();
-        // Only redirect if user is on platform pages
-        if (pathname.includes("/platform")) {
-          window.location.href = `/${locale}`;
-        } else {
-          // For blog and home pages, just refresh to update the session state
-          window.location.reload();
-        }
-      } catch (error) {
-        console.error("Logout failed:", error);
-        // Fallback: redirect only if on platform, otherwise refresh
-        if (pathname.includes("/platform")) {
-          window.location.href = `/${locale}`;
-        } else {
-          window.location.reload();
-        }
-      }
+      await handleLogout({});
+      //   // Only redirect if user is on platform pages
+      //   if (pathname.includes("/platform")) {
+      //     window.location.href = `/${locale}`;
+      //   } else {
+      //     // For blog and home pages, just refresh to update the session state
+      //     window.location.reload();
+      //   }
+      // } catch (error) {
+      //   console.error("Logout failed:", error);
+      //   // Fallback: redirect only if on platform, otherwise refresh
+      //   if (pathname.includes("/platform")) {
+      //     window.location.href = `/${locale}`;
+      //   } else {
+      //     window.location.reload();
+      //   }
     };
 
     return (
@@ -113,14 +104,14 @@ export function UnifiedNavbar({ locale }: UnifiedNavbarProps) {
               <User className="h-4 w-4" />
             )}
             <span className="hidden sm:inline">
-              {session.user.name ?? t("auth.account", "Account")}
+              {session.user?.name ?? t("auth.account", "Account")}
             </span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem disabled>
             <div className="flex items-center gap-2">
-              {session.user.image && (
+              {session.user?.image && (
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={session.user.image} alt={session.user.name ?? "User"} />
                   <AvatarFallback>
@@ -129,14 +120,19 @@ export function UnifiedNavbar({ locale }: UnifiedNavbarProps) {
                 </Avatar>
               )}
               <div className="flex flex-col">
-                <span className="font-medium">{session.user.name}</span>
-                <span className="text-muted-foreground text-xs">{session.user.email}</span>
+                <span className="font-medium">{session.user?.name}</span>
+                <span className="text-muted-foreground text-xs">{session.user?.email}</span>
               </div>
             </div>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
-            {t("auth.signOut", "Sign Out")}
+          <DropdownMenuItem className="cursor-pointer">
+            <form action={handleSignOut}>
+              <button type="submit" className="flex w-full cursor-default items-center">
+                <LogOut className="mr-2 h-4 w-4" />
+                {t("auth.signOut", "Sign Out")}
+              </button>
+            </form>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

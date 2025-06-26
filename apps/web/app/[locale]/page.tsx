@@ -1,4 +1,5 @@
 import { UnifiedNavbar } from "@/components/unified-navbar";
+import { auth } from "@/lib/auth";
 
 import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
@@ -9,6 +10,7 @@ interface HomePageProps {
 
 export default async function Home({ params }: HomePageProps) {
   const { locale } = await params;
+  const session = await auth();
   const { t } = await initTranslations({
     locale,
     namespaces: ["common"],
@@ -16,7 +18,7 @@ export default async function Home({ params }: HomePageProps) {
 
   return (
     <>
-      <UnifiedNavbar locale={locale} />
+      <UnifiedNavbar locale={locale} session={session} />
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-jii-dark-green mb-6 text-4xl font-bold">{t("jii.institute")}</h1>
 

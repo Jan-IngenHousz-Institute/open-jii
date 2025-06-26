@@ -1,4 +1,4 @@
-import { tsr } from "../../../lib/tsr";
+import { tsr } from "@/lib/tsr";
 
 /**
  * Hook to fetch a single experiment by ID

@@ -1,6 +1,4 @@
 import { TranslationsProvider } from "@/components/translations-provider";
-import { PageBlogPostOrder } from "@/lib/__generated/sdk";
-import { client, previewClient } from "@/lib/client";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import Link from "next/link";
@@ -8,6 +6,8 @@ import { notFound } from "next/navigation";
 
 import { ArticleHero, ArticleTileGrid } from "@repo/cms/article";
 import { Container } from "@repo/cms/container";
+import { PageBlogPostOrder } from "@repo/cms/lib/__generated/sdk";
+import { client, previewClient } from "@repo/cms/lib/client";
 import type { Locale } from "@repo/i18n/config";
 import { defaultLocale, locales } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";

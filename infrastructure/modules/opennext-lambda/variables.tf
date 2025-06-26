@@ -138,3 +138,15 @@ variable "security_group_ids" {
   type        = list(string)
   default     = []
 }
+
+variable "lambda_layers" {
+  description = "List of Lambda Layer ARNs to attach to the function."
+  type        = list(string)
+  default     = []
+}
+
+variable "additional_iam_policies" {
+  description = "A map of additional IAM policies to attach to the Lambda role. Keys are policy names, values are JSON policy documents."
+  type        = map(string)
+  default     = {}
+}

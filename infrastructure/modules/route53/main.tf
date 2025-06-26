@@ -2,6 +2,10 @@ locals {
   zone_id = aws_route53_zone.main.zone_id
 }
 
+locals {
+  zone_id = aws_route53_zone.main.zone_id
+}
+
 # Route53 Hosted Zone - DNS management for the domain
 resource "aws_route53_zone" "main" {
   name = var.domain_name

@@ -1,11 +1,11 @@
 import { Breadcrumbs } from "@/components/app-breadcrumbs";
 import { AppSidebarWrapper } from "@/components/app-sidebar-wrapper";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
 
-import { auth } from "@repo/auth/next";
 import type { Locale } from "@repo/i18n";
 import {
   Separator,

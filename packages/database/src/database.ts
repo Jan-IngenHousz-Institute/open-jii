@@ -10,44 +10,54 @@ if (!process.env.NEXT_RUNTIME) {
   require("dotenv/config");
 }
 
-const getDatabaseUrl = () => {
-  const url = process.env.DATABASE_URL;
-
-  if (url) return url;
-
-  const host = process.env.DB_HOST;
-  const port = process.env.DB_PORT;
-  const name = process.env.DB_NAME;
-
-  // Handle DB_CREDENTIALS as a JSON string if available
-  let username = "";
-  let password = "";
-
-  if (process.env.DB_CREDENTIALS) {
-    try {
-      // Parse DB_CREDENTIALS as JSON (coming from AWS Secrets Manager)
-      const credentials = JSON.parse(process.env.DB_CREDENTIALS);
-      username = credentials.username;
-      password = encodeURIComponent(credentials.password);
-    } catch {
-      throw new Error(
-        "Invalid DB_CREDENTIALS format. Please provide valid JSON with username and password fields.",
-      );
-    }
-  } else {
-    throw new Error("DB_CREDENTIALS environment variable is required.");
+const getDatabaseUrl = (secrets?: Record<string, unknown>) => {
+  if (process.env.DATABASE_URL) {
+    return process.env.DATABASE_URL;
   }
 
-  if (!host || !username || !password || !name || !port) {
-    throw new Error(
-      "Either DATABASE_URL or all required database configuration (host, credentials, name, port) must be set in the environment variables.",
-    );
+  const { DB_HOST: host, DB_PORT: port, DB_NAME: name } = process.env;
+  const credentials = getCredentials(secrets);
+
+  if (!host || !port || !name || !credentials.user || !credentials.pass) {
+    console.warn("Database configuration incomplete");
   }
 
-  return `postgres://${username}:${password}@${host}:${port}/${name}?sslmode=require`;
+  const encodedpass = encodeURIComponent(credentials.pass);
+  return `postgres://${credentials.user}:${encodedpass}@${host}:${port}/${name}?sslmode=require`;
+};
+const getCredentials = (
+  dbCredentials?: Record<string, unknown>,
+): {
+  user: string;
+  pass: string;
+} => {
+  if (dbCredentials) {
+    return {
+      user: dbCredentials.user as string,
+      pass: dbCredentials.pass as string,
+    };
+  }
+
+  if (!process.env.DB_CREDENTIALS) {
+    return { user: "", pass: "" };
+  }
+
+  try {
+    return JSON.parse(process.env.DB_CREDENTIALS) as {
+      user: string;
+      pass: string;
+    };
+  } catch {
+    return { user: "", pass: "" };
+  }
 };
 
-export const client = postgres(getDatabaseUrl(), { max: 1 });
+export const getClient = (secrets?: Record<string, unknown>) =>
+  postgres(getDatabaseUrl(secrets), { max: 1 });
 
-export const db = drizzle({ client, schema });
+export const db = drizzle({ client: getClient(), schema });
+
+export const lambdaDb = (secrets: Record<string, unknown>) =>
+  drizzle({ client: getClient(secrets), schema });
+
 export type DatabaseInstance = typeof db;

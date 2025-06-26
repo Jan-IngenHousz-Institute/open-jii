@@ -149,6 +149,7 @@ resource "aws_lambda_function" "function" {
   memory_size   = var.memory_size
   timeout       = var.timeout
   tags          = var.tags
+  layers        = var.lambda_layers
 
   filename         = var.lambda_package_path != null ? var.lambda_package_path : data.archive_file.empty_package[0].output_path
   source_code_hash = var.lambda_package_path != null ? filebase64sha256(var.lambda_package_path) : data.archive_file.empty_package[0].output_base64sha256
@@ -174,6 +175,13 @@ resource "aws_lambda_function" "function" {
       source_code_hash
     ]
   }
+}
+
+resource "aws_iam_role_policy" "additional_policies" {
+  for_each = var.additional_iam_policies
+  name     = "${var.function_name}-${each.key}"
+  role     = aws_iam_role.lambda_role.id
+  policy   = each.value
 }
 
 # Lambda function URL (conditional)
