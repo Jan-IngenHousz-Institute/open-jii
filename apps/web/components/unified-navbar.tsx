@@ -4,10 +4,8 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { User, LogIn, Home, BookOpen, Settings, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
-import { useSession } from "@repo/auth/client";
 import type { Session } from "@repo/auth/config";
 import type { Locale } from "@repo/i18n";
 import {
@@ -31,9 +29,7 @@ interface UnifiedNavbarProps {
 
 export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
   const { t } = useTranslation();
-  // const { data: session, status } = useSession();
   const pathname = usePathname();
-  const router = useRouter();
 
   const isAuthenticated = !!session?.user;
 
