@@ -96,10 +96,7 @@ const secretsCache: Record<string, string | undefined> = {};
  * In non-Lambda environments, it returns an empty object or undefined value.
  */
 export async function getSecret(secretArn: string): Promise<SecretMap>;
-export async function getSecret(
-  secretArn: string,
-  key: string,
-): Promise<string | undefined>;
+export async function getSecret(secretArn: string, key: string): Promise<string | undefined>;
 export async function getSecret(
   secretArn: string,
   key?: string,

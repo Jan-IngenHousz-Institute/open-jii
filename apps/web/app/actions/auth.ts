@@ -6,6 +6,6 @@ export async function handleLogin() {
   await signIn();
 }
 
-export async function handleLogout() {
-  await signOut({ redirectTo: "/", redirect: false });
+export async function handleLogout({ redirectTo = "/", redirect = true } = {}) {
+  await signOut({ redirectTo, redirect });
 }
