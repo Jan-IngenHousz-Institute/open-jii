@@ -21,6 +21,7 @@
     "@repo/i18n": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tanstack/react-query": "^5.75.4",
+    "@tanstack/react-table": "^8.21.3",
     "@ts-rest/core": "^3.52.1",
     "@ts-rest/react-query": "^3.52.1",
     "lucide-react": "^0.507.0",
