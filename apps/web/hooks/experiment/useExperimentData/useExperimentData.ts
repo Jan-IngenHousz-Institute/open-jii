@@ -14,6 +14,6 @@ export const useExperimentData = (experimentId: string, queryData?: ExperimentDa
       params: { id: experimentId },
       query: { ...queryData },
     },
-    queryKey: ["experiment", experimentId, "page", queryData?.page],
+    queryKey: ["experiment", experimentId, queryData?.page, queryData?.pageSize],
   });
 };

@@ -126,10 +126,6 @@ export function ExperimentDataTable({
     [pagination],
   );
 
-  // const [columns, setColumns] = React.useState<AccessorKeyColumnDef<DataRow, DataValue>[]>([]);
-  // if (columns.length === 0) {
-  //   setColumns(getReactTableColumns(data?.body[0].data));
-  // }
   const columns: AccessorKeyColumnDef<DataRow, DataValue>[] = getReactTableColumns(
     data?.body[0].data,
   );
@@ -225,14 +221,16 @@ export function ExperimentDataTable({
 
 export function ExperimentDataSampleTables({
   experimentId,
+  sampleSize = 10,
   locale,
 }: {
   experimentId: string;
+  sampleSize: number;
   locale: Locale;
 }) {
   const { data, isLoading } = useExperimentData(experimentId, {
     page: 1,
-    pageSize: 10,
+    pageSize: sampleSize,
   });
 
   const { t } = useTranslation(undefined, "common");
@@ -256,22 +254,14 @@ export function ExperimentDataSampleTables({
   return <div>No data returned</div>;
 }
 
-export function InternalSampleExperimentDataTable({
-  tableData,
-}: {
-  tableData: ExperimentDataTableInfo;
-}) {
+function InternalSampleExperimentDataTable({ tableData }: { tableData: ExperimentDataTableInfo }) {
   if (!tableData.data) return <div>No table data returned for table {tableData.name}</div>;
   const columns = getReactTableColumns(tableData.data);
   const newData = getReactTableData(tableData.data);
   return (
     <div className="container mx-auto py-10">
       <div className="mb-2 text-center">Table: {tableData.name}</div>
-      <SampleDataTable columns={columns} data={newData} totalRows={tableData.totalRows} />
-      <div className="text-xs">
-        Total rows {tableData.totalRows} | Page {tableData.page} | Total pages{" "}
-        {tableData.totalPages} | {tableData.data.truncated ? "Truncated" : "Not truncated"}
-      </div>
+      <SampleDataTable columns={columns} data={newData} />
     </div>
   );
 }
@@ -279,18 +269,13 @@ export function InternalSampleExperimentDataTable({
 interface SampleDataTableProps {
   columns: ColumnDef<DataRow, DataValue>[];
   data: DataRow[];
-  enablePagination?: boolean;
-  serverSidePagination?: boolean;
-  pageSize?: number;
-  totalRows?: number;
 }
 
-function SampleDataTable({ columns, data, totalRows }: SampleDataTableProps) {
+function SampleDataTable({ columns, data }: SampleDataTableProps) {
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    rowCount: totalRows,
   });
 
   return (

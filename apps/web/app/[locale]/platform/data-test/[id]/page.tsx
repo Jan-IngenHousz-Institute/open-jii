@@ -10,5 +10,5 @@ interface DataExampleProps {
 export default function DataExample({ params }: DataExampleProps) {
   const { id, locale } = use(params);
 
-  return <ExperimentDataSampleTables experimentId={id} locale={locale} />;
+  return <ExperimentDataSampleTables experimentId={id} locale={locale} sampleSize={5} />;
 }
