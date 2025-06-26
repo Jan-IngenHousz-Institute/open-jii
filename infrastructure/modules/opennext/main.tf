@@ -35,7 +35,7 @@ locals {
       {
         Effect   = "Allow",
         Action   = "secretsmanager:GetSecretValue",
-        Resource = compact([var.db_credentials_secret_arn, var.oauth_secret_arn])
+        Resource = compact([var.db_credentials_secret_arn, var.oauth_secret_arn, var.contentful_secret_arn])
       }
     ]
   })
