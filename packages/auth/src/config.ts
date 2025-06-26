@@ -74,13 +74,7 @@ export const baseAuthConfig = {
       return token;
     },
 
-    session({
-      session,
-      token,
-    }: {
-      session: DefaultSession;
-      token: JWT & { id?: string };
-    }) {
+    session({ session, token }: { session: DefaultSession; token: JWT & { id?: string } }) {
       if (token.id && session.user) {
         session.user.id = token.id;
       }

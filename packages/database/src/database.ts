@@ -44,10 +44,7 @@ const getCredentials = (
   }
 
   try {
-    const credentials = JSON.parse(process.env.DB_CREDENTIALS) as Record<
-      string,
-      string
-    >;
+    const credentials = JSON.parse(process.env.DB_CREDENTIALS) as Record<string, string>;
 
     if (credentials.username && credentials.password) {
       return {

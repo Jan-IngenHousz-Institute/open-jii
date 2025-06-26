@@ -16,19 +16,14 @@ export type NextAuth = NextAuthResult & {
   providerMap: { id: string; name: string }[];
 };
 
-export function initAuth({
-  authSecrets,
-  dbSecrets,
-  isLambda,
-}: InitAuthParams): NextAuth {
+export function initAuth({ authSecrets, dbSecrets, isLambda }: InitAuthParams): NextAuth {
   const authConfig: NextAuthConfig = {
     ...baseAuthConfig,
     secret: authSecrets.AUTH_SECRET || process.env.AUTH_SECRET,
     providers: [
       GitHub({
         clientId: authSecrets.AUTH_GITHUB_ID || process.env.AUTH_GITHUB_ID,
-        clientSecret:
-          authSecrets.AUTH_GITHUB_SECRET || process.env.AUTH_GITHUB_SECRET,
+        clientSecret: authSecrets.AUTH_GITHUB_SECRET || process.env.AUTH_GITHUB_SECRET,
       }),
     ],
     adapter: isLambda ? lambdaAdapter(dbSecrets) : adapter,

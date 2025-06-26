@@ -10,10 +10,7 @@ interface SignOutPageProps {
   }>;
 }
 
-export default async function SignOutPage({
-  params,
-  searchParams,
-}: SignOutPageProps) {
+export default async function SignOutPage({ params, searchParams }: SignOutPageProps) {
   const { locale } = await params;
   const { backUrl } = await searchParams;
   const { t } = await initTranslations({
@@ -28,10 +25,5 @@ export default async function SignOutPage({
     confirm: t("signout.confirm"),
   };
 
-  return (
-    <SignOutDialog
-      backUrl={backUrl ?? `/${locale}/platform`}
-      translations={translations}
-    />
-  );
+  return <SignOutDialog backUrl={backUrl ?? `/${locale}/platform`} translations={translations} />;
 }

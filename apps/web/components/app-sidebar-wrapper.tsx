@@ -9,10 +9,7 @@ export async function AppSidebarWrapper({
   locale,
   user,
   ...props
-}: Omit<
-  React.ComponentProps<typeof AppSidebar>,
-  "locale" | "navigationData" | "translations"
-> & {
+}: Omit<React.ComponentProps<typeof AppSidebar>, "locale" | "navigationData" | "translations"> & {
   locale: Locale;
 }) {
   // Get translations server-side
