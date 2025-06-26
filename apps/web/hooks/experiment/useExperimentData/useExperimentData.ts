@@ -15,5 +15,6 @@ export const useExperimentData = (experimentId: string, queryData?: ExperimentDa
       query: { ...queryData },
     },
     queryKey: ["experiment", experimentId, queryData?.page, queryData?.pageSize],
+    staleTime: 2 * 60 * 1000,
   });
 };
