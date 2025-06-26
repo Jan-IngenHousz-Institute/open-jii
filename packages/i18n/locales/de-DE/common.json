@@ -141,7 +141,9 @@
     "noAccount": "Kein Konto?",
     "createAccount": "Konto erstellen",
     "errorMessage": "Beim Anmelden ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
-    "account": "Konto"
+    "account": "Konto",
+    "userMenu": "Benutzermenü",
+    "signingOut": "Abmelden..."
   },
   "signout": {
     "title": "Abmelden",

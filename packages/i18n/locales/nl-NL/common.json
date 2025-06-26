@@ -138,7 +138,10 @@
     "loggedInAs": "Ingelogd als {{name}}",
     "loginToAccount": "Log in op je account",
     "continueWith": "Doorgaan met",
-    "loginWith": "Inloggen met {{provider}}"
+    "loginWith": "Inloggen met {{provider}}",
+    "account": "Account",
+    "userMenu": "Gebruikersmenu",
+    "signingOut": "Uitloggen..."
   },
   "signout": {
     "title": "Uitloggen",

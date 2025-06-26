@@ -143,7 +143,9 @@
     "noAccount": "No account?",
     "createAccount": "Create an account",
     "errorMessage": "An error occurred during login. Please try again.",
-    "account": "Account"
+    "account": "Account",
+    "userMenu": "User menu",
+    "signingOut": "Signing out..."
   },
   "signout": {
     "title": "Sign Out",
