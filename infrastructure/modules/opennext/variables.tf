@@ -312,6 +312,12 @@ variable "oauth_secret_arn" {
   default     = "" # Or a specific default ARN if applicable
 }
 
+variable "contentful_secret_arn" {
+  description = "ARN of the Contentful access token secret in AWS Secrets Manager."
+  type        = string
+  default     = "" # Or a specific default ARN if applicable
+}
+
 variable "secrets_extension_layer_arn" {
   description = "ARN of the AWS-Parameters-and-Secrets-Lambda-Extension layer. Ensure this is correct for your deployment region."
   type        = string

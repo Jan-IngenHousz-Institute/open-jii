@@ -371,6 +371,30 @@ module "databricks_secrets" {
   }
 }
 
+# Contentful secrets
+module "contentful_secrets" {
+  source = "../../modules/secrets-manager"
+
+  name        = "openjii-contentful-secrets-dev"
+  description = "Contentful API secrets for the OpenJII services"
+
+  # Store secrets as JSON using variables
+  secret_string = jsonencode({
+    CONTENTFUL_SPACE_ID             = var.contentful_space_id
+    CONTENTFUL_ACCESS_TOKEN         = var.contentful_access_token
+    CONTENTFUL_PREVIEW_ACCESS_TOKEN = var.contentful_preview_access_token
+    CONTENTFUL_PREVIEW_SECRET       = var.contentful_preview_secret
+  })
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "web"
+    SecretType  = "contentful"
+  }
+}
+
 # WAF for OpenNext Web Application
 module "opennext_waf" {
   source = "../../modules/waf"
@@ -418,6 +442,7 @@ module "opennext" {
   # Secrets Manager Integration
   db_credentials_secret_arn = module.aurora_db.master_user_secret_arn
   oauth_secret_arn          = module.auth_secrets.secret_arn
+  contentful_secret_arn     = module.contentful_secrets.secret_arn
 
   server_environment_variables = {
     COOKIE_DOMAIN = ".${var.environment}.${var.domain_name}"
