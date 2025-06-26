@@ -40,9 +40,7 @@ export default function ExperimentsScreen() {
   const [selectedExperiment, setSelectedExperiment] = useState<string>();
   const [refreshing] = useState(false);
 
-  const { options, error, isLoading } = useExperimentsDropdownOptions();
-
-  console.log({ options, error, isLoading });
+  const { options } = useExperimentsDropdownOptions();
 
   const onRefresh = async () => {};
 
