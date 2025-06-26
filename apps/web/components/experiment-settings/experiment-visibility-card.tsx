@@ -1,5 +1,6 @@
 "use client";
 
+import { useExperimentUpdate } from "@/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 import { editExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -27,8 +28,6 @@ import {
   SelectValue,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
-
-import { useExperimentUpdate } from "../../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 
 interface ExperimentVisibilityCardProps {
   experimentId: string;
@@ -132,7 +131,11 @@ export function ExperimentVisibilityCard({
                       <Input
                         type="number"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        onChange={(e) => {
+                          const value = Number(e.target.value);
+                          if (value < 0) return field.onChange(0);
+                          return field.onChange(value);
+                        }}
                         value={field.value}
                       />
                     </FormControl>

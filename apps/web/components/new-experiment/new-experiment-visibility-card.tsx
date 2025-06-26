@@ -73,7 +73,11 @@ export function NewExperimentVisibilityCard({ form }: NewExperimentVisibilityCar
                   <Input
                     type="number"
                     {...field}
-                    onChange={(event) => field.onChange(+event.target.value)}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      if (value < 0) return field.onChange(0);
+                      return field.onChange(value);
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
