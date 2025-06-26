@@ -13,7 +13,6 @@ export function getContentfulEndpoint(config: ContentfulConfig): string {
   return `${baseEndpoint}/${config.spaceId}/environments/${config.environment || "master"}`;
 }
 
-// Legacy endpoint for backward compatibility
 export const endpoint = getContentfulEndpoint({
   spaceId: process.env.CONTENTFUL_SPACE_ID ?? "",
   accessToken: process.env.CONTENTFUL_ACCESS_TOKEN ?? "",
