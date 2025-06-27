@@ -2,6 +2,7 @@ import { initContract } from "@ts-rest/core";
 
 import { experimentContract } from "./contracts/experiment.contract";
 import { userContract } from "./contracts/user.contract";
+import { webhookContract } from "./contracts/webhook.contract";
 
 // Initialize the main contract
 const c = initContract();
@@ -10,4 +11,5 @@ const c = initContract();
 export const contract = c.router({
   experiments: experimentContract,
   users: userContract,
+  webhooks: webhookContract,
 });
