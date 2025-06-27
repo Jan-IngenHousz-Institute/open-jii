@@ -7,4 +7,5 @@ export default registerAs("databricks", () => ({
   jobId: process.env.DATABRICKS_JOB_ID,
   warehouseId: process.env.DATABRICKS_WAREHOUSE_ID,
   catalogName: process.env.DATABRICKS_CATALOG_NAME,
+  webhookApiKey: process.env.DATABRICKS_WEBHOOK_API_KEY,
 }));
