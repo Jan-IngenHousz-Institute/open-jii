@@ -250,9 +250,7 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link
-                        href={`/api/logout?backUrl=${encodeURIComponent(
-                          pathname.includes("/platform") ? `/${locale}` : pathname,
-                        )}`}
+                        href={`/api/logout?backUrl=${encodeURIComponent(backUrl)}`}
                         className="flex w-full items-center space-x-3"
                       >
                         <LogOut className="h-4 w-4" />
