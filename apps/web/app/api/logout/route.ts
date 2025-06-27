@@ -3,7 +3,16 @@ import { NextResponse } from "next/server";
 
 export function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const backUrl = searchParams.get("backUrl") ?? "/";
+  let backUrl = searchParams.get("backUrl") ?? "/";
+  // Validate backUrl to prevent open redirect vulnerabilities
+  if (
+    typeof backUrl !== "string" ||
+    !backUrl.startsWith("/") ||
+    backUrl.startsWith("//") ||
+    backUrl.includes("://")
+  ) {
+    backUrl = "/";
+  }
 
   // Redirect to NextAuth's signout endpoint with callbackUrl
   // This will show the confirmation page and then redirect back

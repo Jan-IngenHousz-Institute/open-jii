@@ -81,7 +81,7 @@ export function NavUser({
             <DropdownMenuItem asChild>
               <Link
                 href={`/api/logout?backUrl=${encodeURIComponent(`/${locale}`)}`}
-                className="flex w-full cursor-default items-center"
+                className="flex w-full cursor-pointer items-center"
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 {t("navigation.logout")}
