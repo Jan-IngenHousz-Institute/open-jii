@@ -223,7 +223,9 @@ module "image_function" {
   s3_bucket_arns = [aws_s3_bucket.assets.arn]
 
   environment_variables = {
-    BUCKET_NAME = aws_s3_bucket.assets.bucket
+    BUCKET_NAME          = aws_s3_bucket.assets.bucket
+    OPENNEXT_STATIC_ETAG = "true"
+    NODE_ENV             = "production"
   }
 
   tags = local.common_tags

@@ -186,7 +186,7 @@ resource "aws_cloudfront_distribution" "distribution" {
 
   # Cache behavior for Next.js static assets (hashed files)
   ordered_cache_behavior {
-    path_pattern           = "_next/static/**"
+    path_pattern           = "/_next/static/*"
     target_origin_id       = "S3Assets"
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["GET", "HEAD"]
@@ -198,14 +198,14 @@ resource "aws_cloudfront_distribution" "distribution" {
 
   # Cache behavior for image optimization
   ordered_cache_behavior {
-    path_pattern           = "_next/image*"
+    path_pattern           = "/_next/image"
     target_origin_id       = "ImageLambda"
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
     compress               = true
 
-    cache_policy_id          = "658327ea-f89d-4fab-a63d-7e88639e58f6" # Managed-CachingOptimized
+    cache_policy_id          = "b2884449-e4de-46a7-ac36-70bc7f1ddd6d" # Managed-CachingOptimized
     origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
   }
 

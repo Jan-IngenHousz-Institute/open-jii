@@ -449,7 +449,7 @@ module "opennext" {
     DB_HOST       = module.aurora_db.cluster_endpoint
     DB_PORT       = module.aurora_db.cluster_port
     DB_NAME       = module.aurora_db.database_name
-    NODE_ENV      = var.environment
+    NODE_ENV      = "production"
   }
 
   # Performance configuration
