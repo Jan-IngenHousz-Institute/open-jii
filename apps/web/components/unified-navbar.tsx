@@ -24,6 +24,7 @@ import {
 interface UnifiedNavbarProps {
   locale: Locale;
   session: Session | null;
+  backUrl?: string; // Optional backUrl for logout
 }
 
 // Extract UserMenu as a separate component to prevent re-renders
@@ -49,7 +50,7 @@ function UserMenu({
     );
   }
 
-  const backUrl = pathname.includes("/platform") ? `/${locale}` : pathname;
+  const backUrl = (pathname.includes("/platform") ? `/${locale}` : pathname) || "/";
 
   return (
     <DropdownMenu>
@@ -107,7 +108,7 @@ function UserMenu({
   );
 }
 
-export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
+export function UnifiedNavbar({ locale, session, backUrl = "/" }: UnifiedNavbarProps) {
   const { t } = useTranslation();
   const pathname = usePathname();
 
