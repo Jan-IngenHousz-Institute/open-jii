@@ -213,7 +213,7 @@ class WebhookClient:
             "x-api-key": self.api_key
         }
         
-        logger.info(f"Sending webhook request to {self.webhook_url}")
+        logger.info("Sending webhook request to webhook URL")
         logger.info(f"Payload: {json.dumps(payload, indent=2)}")
         
         try:
