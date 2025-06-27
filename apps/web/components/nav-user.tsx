@@ -80,7 +80,7 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link
-                href={`/${locale}/platform/signout`}
+                href={`/api/logout?backUrl=${encodeURIComponent(`/${locale}`)}`}
                 className="flex w-full cursor-default items-center"
               >
                 <LogOut className="mr-2 h-4 w-4" />
