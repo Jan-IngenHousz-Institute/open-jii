@@ -1,31 +1,40 @@
-import { useAsyncCallback } from "react-async-hook";
+import { useQuery } from "@tanstack/react-query";
 import { getBluetoothClassicDevices } from "~/services/multispeq-communication/android-bluetooth-connection/get-bluetooth-classic-devices";
 
+export type DeviceType = "bluetooth-classic" | "ble" | "usb";
+
 export interface Device {
-  type: "bluetooth-classic" | "ble" | "usb";
+  type: DeviceType;
   name: string;
   id: string;
   rssi?: number;
 }
 
-export function useDevices(type: "bluetooth-classic" | "ble" | "usb") {
-  const {
-    error,
-    loading: isLoading,
-    result: devices,
-    execute: startScan,
-  } = useAsyncCallback(async () => {
+async function getDevices(type: DeviceType) {
+  if (type === "bluetooth-classic") {
     const devices = await getBluetoothClassicDevices();
+    return devices.map((device) => ({
+      id: device.id,
+      name: device.name,
+      type: "bluetooth-classic",
+      rssi: device.rssi?.valueOf(),
+    })) satisfies Device[];
+  }
 
-    return devices.map((device) => {
-      return {
-        id: device.id,
-        name: device.name,
-        type: "bluetooth-classic",
-        rssi: device.rssi?.valueOf(),
-      } satisfies Device;
-    });
+  return [];
+}
+
+export function useDevices(type: DeviceType | undefined) {
+  const {
+    data: devices,
+    isFetching: isLoading,
+    error,
+    refetch: startScan,
+  } = useQuery({
+    queryKey: ["getDevices", type],
+    queryFn: () => type && getDevices(type),
+    enabled: false,
   });
 
-  return { devices, isLoading, startScan, error };
+  return { devices: isLoading ? undefined : devices, isLoading, startScan, error };
 }

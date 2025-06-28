@@ -18,7 +18,7 @@ import { MeasurementResult } from "~/components/MeasurementResult";
 import { colors } from "~/constants/colors";
 import { useToast } from "~/context/toast-context";
 import { useDeviceConnection } from "~/hooks/use-device-connection";
-import { Device, useDevices } from "~/hooks/use-devices";
+import { Device, DeviceType, useDevices } from "~/hooks/use-devices";
 import { useExperimentsDropdownOptions } from "~/hooks/use-experiments-dropdown-options";
 import { useTheme } from "~/hooks/use-theme";
 import { mockProtocols } from "~/mocks/mock-protocols";
@@ -29,7 +29,10 @@ export function MeasurementScreen() {
   const theme = useTheme();
   const { colors } = theme;
   const { options } = useExperimentsDropdownOptions();
-  const { isLoading: loadingDevices, startScan, devices } = useDevices("bluetooth-classic");
+
+  const [selectedConnectionType, setSelectedConnectionType] = useState<DeviceType>();
+
+  const { isLoading: loadingDevices, startScan, devices } = useDevices(selectedConnectionType);
   const { connectToDevice, connectingDeviceId } = useDeviceConnection();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -37,33 +40,29 @@ export function MeasurementScreen() {
   const [isOnline] = useState(true);
   const [bluetoothConnected, setBluetoothConnected] = useState(false);
   const [usbConnected, setUsbConnected] = useState(false);
-  const [, setDeviceName] = useState<string | undefined>(undefined);
 
   const [selectedProtocol, setSelectedProtocol] = useState<string | undefined>(undefined);
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [measurementData, setMeasurementData] = useState<any>(null);
-  const [showDeviceList, setShowDeviceList] = useState(false);
-  const [selectedConnectionType, setSelectedConnectionType] = useState<
-    "bluetooth" | "ble" | "usb" | null
-  >(null);
+
   const [selectedExperiment, setSelectedExperiment] = useState<string | null>(null);
   const { showToast } = useToast();
 
-  const handleSelectConnectionType = (type: "bluetooth" | "ble" | "usb") => {
-    setSelectedConnectionType(type);
-    setShowDeviceList(false);
-  };
-
-  const handleScanForDevices = () => {
+  const handleScanForDevices = async () => {
     if (!selectedConnectionType) {
       return showToast("Please select a connection type first", "warning");
     }
 
-    setShowDeviceList(true);
-    startScan()
-      .then((devices) => !devices.length && showToast("No devices found", "info"))
-      .catch(() => showToast("Failed to scan for devices", "error"));
+    const scanResult = await startScan();
+
+    if (scanResult.isError) {
+      return showToast("Failed to scan for devices", "error");
+    }
+
+    if (scanResult.data?.length === 0) {
+      showToast("No devices found", "info");
+    }
   };
 
   const handleConnectToDevice = async (device: Device) => {
@@ -79,9 +78,6 @@ export function MeasurementScreen() {
         setUsbConnected(true);
         setBluetoothConnected(false);
       }
-
-      setDeviceName(device.name);
-      setShowDeviceList(false);
 
       showToast(`Connected to ${device.name}`, "success");
 
@@ -100,7 +96,6 @@ export function MeasurementScreen() {
 
       setBluetoothConnected(false);
       setUsbConnected(false);
-      setDeviceName(undefined);
 
       setMeasurementData(null);
 
@@ -230,6 +225,8 @@ export function MeasurementScreen() {
     ? options.find((e) => e.value === selectedExperiment)?.label
     : "No experiment selected";
 
+  const showDeviceList = loadingDevices || !!devices;
+
   const renderDeviceItem = ({ item }: { item: Device }) => (
     <TouchableOpacity
       style={[
@@ -341,7 +338,7 @@ export function MeasurementScreen() {
                 {
                   backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
                 },
-                selectedConnectionType === "bluetooth" && [
+                selectedConnectionType === "bluetooth-classic" && [
                   styles.selectedConnectionType,
                   {
                     borderColor: colors.primary.dark,
@@ -349,13 +346,13 @@ export function MeasurementScreen() {
                   },
                 ],
               ]}
-              onPress={() => handleSelectConnectionType("bluetooth")}
+              onPress={() => setSelectedConnectionType("bluetooth-classic")}
               disabled={Platform.OS === "ios"}
             >
               <Bluetooth
                 size={24}
                 color={
-                  selectedConnectionType === "bluetooth"
+                  selectedConnectionType === "bluetooth-classic"
                     ? colors.primary.dark
                     : Platform.OS === "ios"
                       ? theme.isDark
@@ -372,7 +369,7 @@ export function MeasurementScreen() {
                   {
                     color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
                   },
-                  selectedConnectionType === "bluetooth" && [
+                  selectedConnectionType === "bluetooth-classic" && [
                     styles.selectedConnectionTypeText,
                     { color: colors.primary.dark },
                   ],
@@ -414,7 +411,7 @@ export function MeasurementScreen() {
                   },
                 ],
               ]}
-              onPress={() => handleSelectConnectionType("ble")}
+              onPress={() => setSelectedConnectionType("ble")}
             >
               <Radio
                 size={24}
@@ -456,7 +453,7 @@ export function MeasurementScreen() {
                   },
                 ],
               ]}
-              onPress={() => handleSelectConnectionType("usb")}
+              onPress={() => setSelectedConnectionType("usb")}
               disabled={Platform.OS === "ios"}
             >
               <Usb
