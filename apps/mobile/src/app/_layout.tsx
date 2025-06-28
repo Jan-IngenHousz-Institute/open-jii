@@ -8,6 +8,7 @@ import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ConfiguredQueryClientProvider } from "~/components/configured-query-client-provider";
 import { ThemeProvider } from "~/context/ThemeContext";
+import { ToastProvider } from "~/context/toast-context";
 import { useTheme } from "~/hooks/use-theme";
 
 function RootLayoutNav() {
@@ -87,12 +88,14 @@ function RootLayoutContent() {
 
   return (
     <View style={{ flex: 1 }}>
-      <ConfiguredQueryClientProvider>
-        <SafeAreaProvider>
-          <StatusBar style={theme.isDark ? "light" : "dark"} />
-          <RootLayoutNav />
-        </SafeAreaProvider>
-      </ConfiguredQueryClientProvider>
+      <ToastProvider>
+        <ConfiguredQueryClientProvider>
+          <SafeAreaProvider>
+            <StatusBar style={theme.isDark ? "light" : "dark"} />
+            <RootLayoutNav />
+          </SafeAreaProvider>
+        </ConfiguredQueryClientProvider>
+      </ToastProvider>
     </View>
   );
 }

@@ -15,8 +15,8 @@ import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
 import { Dropdown } from "~/components/Dropdown";
 import { MeasurementResult } from "~/components/MeasurementResult";
-import { Toast } from "~/components/Toast";
 import { colors } from "~/constants/colors";
+import { useToast } from "~/context/toast-context";
 import { useDeviceConnection } from "~/hooks/use-device-connection";
 import { Device, useDevices } from "~/hooks/use-devices";
 import { useExperimentsDropdownOptions } from "~/hooks/use-experiments-dropdown-options";
@@ -48,11 +48,7 @@ export function MeasurementScreen() {
     "bluetooth" | "ble" | "usb" | null
   >(null);
   const [selectedExperiment, setSelectedExperiment] = useState<string | null>(null);
-  const [toast, setToast] = useState({
-    visible: false,
-    message: "",
-    type: "info" as "success" | "error" | "info" | "warning",
-  });
+  const { showToast } = useToast();
 
   const handleSelectConnectionType = (type: "bluetooth" | "ble" | "usb") => {
     setSelectedConnectionType(type);
@@ -61,30 +57,13 @@ export function MeasurementScreen() {
 
   const handleScanForDevices = () => {
     if (!selectedConnectionType) {
-      setToast({
-        visible: true,
-        message: "Please select a connection type first",
-        type: "warning",
-      });
-      return;
+      return showToast("Please select a connection type first", "warning");
     }
 
     setShowDeviceList(true);
     startScan()
-      .then((devices) =>
-        setToast({
-          visible: !devices.length,
-          message: "No devices found",
-          type: "info",
-        }),
-      )
-      .catch(() =>
-        setToast({
-          visible: true,
-          message: "Failed to scan for devices",
-          type: "error",
-        }),
-      );
+      .then((devices) => !devices.length && showToast("No devices found", "info"))
+      .catch(() => showToast("Failed to scan for devices", "error"));
   };
 
   const handleConnectToDevice = async (device: Device) => {
@@ -104,21 +83,13 @@ export function MeasurementScreen() {
       setDeviceName(device.name);
       setShowDeviceList(false);
 
-      setToast({
-        visible: true,
-        message: `Connected to ${device.name}`,
-        type: "success",
-      });
+      showToast(`Connected to ${device.name}`, "success");
 
       // Move to step 2 after successful connection
       setCurrentStep(2);
     } catch {
       console.log("connect error");
-      setToast({
-        visible: true,
-        message: "Connection failed",
-        type: "error",
-      });
+      showToast("Connection failed", "error");
     }
   };
 
@@ -133,40 +104,21 @@ export function MeasurementScreen() {
 
       setMeasurementData(null);
 
-      setToast({
-        visible: true,
-        message: "Disconnected successfully",
-        type: "info",
-      });
-
+      showToast("Disconnected successfully", "info");
       // Go back to step 1
       setCurrentStep(1);
     } catch {
-      setToast({
-        visible: true,
-        message: "Failed to disconnect",
-        type: "error",
-      });
+      showToast("Failed to disconnect", "error");
     }
   };
 
   const handleStartMeasurement = async () => {
     if (!selectedExperiment) {
-      setToast({
-        visible: true,
-        message: "Please select an experiment before starting a measurement",
-        type: "warning",
-      });
-      return;
+      return showToast("Please select an experiment before starting a measurement", "warning");
     }
 
     if (!selectedProtocol) {
-      setToast({
-        visible: true,
-        message: "Please select a measurement protocol",
-        type: "warning",
-      });
-      return;
+      return showToast("Please select a measurement protocol", "warning");
     }
 
     setIsMeasuring(true);
@@ -238,17 +190,9 @@ export function MeasurementScreen() {
 
       setMeasurementData(mockData);
 
-      setToast({
-        visible: true,
-        message: "Measurement completed",
-        type: "success",
-      });
+      showToast("Measurement completed", "success");
     } catch {
-      setToast({
-        visible: true,
-        message: "Measurement failed",
-        type: "error",
-      });
+      showToast("Measurement failed", "error");
     } finally {
       setIsMeasuring(false);
     }
@@ -256,12 +200,7 @@ export function MeasurementScreen() {
 
   const handleUploadMeasurement = async () => {
     if (!measurementData) {
-      setToast({
-        visible: true,
-        message: "No measurement data to upload",
-        type: "warning",
-      });
-      return;
+      return showToast("No measurement data to upload", "warning");
     }
 
     setIsUploading(true);
@@ -272,27 +211,15 @@ export function MeasurementScreen() {
 
       // Check if online
       if (isOnline) {
-        setToast({
-          visible: true,
-          message: "Measurement uploaded successfully",
-          type: "success",
-        });
+        showToast("Measurement uploaded successfully", "success");
 
         // Clear measurement data after successful upload
         setMeasurementData(null);
       } else {
-        setToast({
-          visible: true,
-          message: "Upload failed: You are offline. Measurement saved locally.",
-          type: "warning",
-        });
+        showToast("Upload failed: You are offline. Measurement saved locally.", "warning");
       }
     } catch {
-      setToast({
-        visible: true,
-        message: "Upload failed",
-        type: "error",
-      });
+      showToast("Upload failed", "error");
     } finally {
       setIsUploading(false);
     }
@@ -740,13 +667,6 @@ export function MeasurementScreen() {
       ]}
     >
       {currentStep === 1 ? renderSetupStep() : renderMeasurementStep()}
-
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        type={toast.type}
-        onDismiss={() => setToast({ ...toast, visible: false })}
-      />
     </View>
   );
 }

@@ -6,20 +6,38 @@ settings:
 
 catalogs:
   default:
+    '@types/node':
+      specifier: ^22.15.3
+      version: 22.15.30
     eslint:
       specifier: ^9.25.1
       version: 9.26.0
+    prettier:
+      specifier: ^3.5.3
+      version: 3.5.3
+    react-hook-form:
+      specifier: ^7.56.2
+      version: 7.56.3
     tailwindcss:
       specifier: ^3.4.15
       version: 3.4.17
     typescript:
       specifier: ^5.8.3
       version: 5.8.3
+    zod:
+      specifier: ^3.24.3
+      version: 3.24.4
   react19:
     '@types/react':
       specifier: ^19.0.12
       version: 19.1.4
+    '@types/react-dom':
+      specifier: ^19.0.4
+      version: 19.1.5
     react:
+      specifier: 19.0.0
+      version: 19.0.0
+    react-dom:
       specifier: 19.0.0
       version: 19.0.0
 
@@ -316,6 +334,9 @@ importers:
       expo-web-browser:
         specifier: ~14.1.6
         version: 14.1.6(expo@53.0.9(@babel/core@7.27.1)(@expo/metro-runtime@5.0.4(react-native@0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0)))(graphql@16.8.1)(react-native@0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0))(react@19.0.0))(react-native@0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0))
+      htmlparser2:
+        specifier: ^10.0.0
+        version: 10.0.0
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
@@ -3089,7 +3110,7 @@ packages:
 
   '@expo/bunyan@4.0.1':
     resolution: {integrity: sha512-+Lla7nYSiHZirgK+U/uYzsLv/X+HaJienbD5AKX1UQZHYfWaP+9uuQluRB4GrEVWF0GZ7vEVp/jzaOT9k/SQlg==}
-    engines: {'0': node >=0.10.0}
+    engines: {node: '>=0.10.0'}
 
   '@expo/cli@0.24.13':
     resolution: {integrity: sha512-2LSdbvYs+WmUljnplQXMCUyNzyX4H+F4l8uExfA1hud25Bl5kyaGrx1jjtgNxMTXmfmMjvgBdK798R50imEhkA==}
@@ -10201,6 +10222,9 @@ packages:
         optional: true
       webpack:
         optional: true
+
+  htmlparser2@10.0.0:
+    resolution: {integrity: sha512-TwAZM+zE5Tq3lrEHvOlvwgj1XLWQCtaaibSN11Q+gGBAS7Y1uZSWwXXRe4iF6OXnaq1riyQAPFOBtYc77Mxq0g==}
 
   htmlparser2@6.1.0:
     resolution: {integrity: sha512-gyyPk6rgonLFEDGoeRgQNaEUvdJ4ktTmmUh/h2t7s+M8oPpIPxgNACWa+6ESR57kXstwqPiCut0V8NRpcwgU7A==}
@@ -29962,6 +29986,13 @@ snapshots:
       tapable: 2.2.1
     optionalDependencies:
       webpack: 5.99.8(@swc/core@1.11.24)
+
+  htmlparser2@10.0.0:
+    dependencies:
+      domelementtype: 2.3.0
+      domhandler: 5.0.3
+      domutils: 3.2.2
+      entities: 6.0.0
 
   htmlparser2@6.1.0:
     dependencies:
