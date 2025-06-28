@@ -23,6 +23,8 @@ import { useExperimentsDropdownOptions } from "~/hooks/use-experiments-dropdown-
 import { useTheme } from "~/hooks/use-theme";
 import { mockProtocols } from "~/mocks/mock-protocols";
 
+const protocol = [{ spad: [1] }];
+
 const { height } = Dimensions.get("window");
 
 export function MeasurementScreen() {
@@ -33,18 +35,25 @@ export function MeasurementScreen() {
   const [selectedConnectionType, setSelectedConnectionType] = useState<DeviceType>();
 
   const { isLoading: loadingDevices, startScan, devices } = useDevices(selectedConnectionType);
-  const { connectToDevice, connectingDeviceId } = useDeviceConnection();
+  const {
+    connect,
+    connectingDeviceId,
+    performMeasurement,
+    measurementData,
+    isScanning,
+    clearResult,
+    disconnect,
+    measurementTimestamp,
+  } = useDeviceConnection();
 
   const [currentStep, setCurrentStep] = useState(1);
 
-  const [isOnline] = useState(true);
   const [bluetoothConnected, setBluetoothConnected] = useState(false);
   const [usbConnected, setUsbConnected] = useState(false);
 
   const [selectedProtocol, setSelectedProtocol] = useState<string | undefined>(undefined);
-  const [isMeasuring, setIsMeasuring] = useState(false);
+
   const [isUploading, setIsUploading] = useState(false);
-  const [measurementData, setMeasurementData] = useState<any>(null);
 
   const [selectedExperiment, setSelectedExperiment] = useState<string | null>(null);
   const { showToast } = useToast();
@@ -68,7 +77,7 @@ export function MeasurementScreen() {
   const handleConnectToDevice = async (device: Device) => {
     try {
       console.log("handleConnectToDevice", device);
-      await connectToDevice(device);
+      await connect(device);
 
       // Update connection state based on device type
       if (device.type === "bluetooth-classic" || device.type === "ble") {
@@ -91,13 +100,10 @@ export function MeasurementScreen() {
 
   const handleDisconnect = async () => {
     try {
-      // Simulate disconnection
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await disconnect();
 
       setBluetoothConnected(false);
       setUsbConnected(false);
-
-      setMeasurementData(null);
 
       showToast("Disconnected successfully", "info");
       // Go back to step 1
@@ -107,117 +113,17 @@ export function MeasurementScreen() {
     }
   };
 
-  const handleStartMeasurement = async () => {
-    if (!selectedExperiment) {
-      return showToast("Please select an experiment before starting a measurement", "warning");
-    }
-
-    if (!selectedProtocol) {
-      return showToast("Please select a measurement protocol", "warning");
-    }
-
-    setIsMeasuring(true);
-
-    try {
-      // Simulate measurement
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
-      // Generate mock measurement data based on protocol
-      let mockData;
-
-      switch (selectedProtocol) {
-        case "standard":
-          mockData = {
-            protocol: "standard",
-            experiment: options.find((e) => e.value === selectedExperiment)?.label,
-            timestamp: new Date().toISOString(),
-            readings: {
-              absorbance: [0.12, 0.15, 0.18, 0.22, 0.25],
-              wavelengths: [450, 500, 550, 600, 650],
-            },
-            metadata: {
-              device_id: "MS2-1234",
-              firmware_version: "2.1.0",
-              battery_level: 85,
-            },
-          };
-          break;
-        case "extended":
-          mockData = {
-            protocol: "extended",
-            experiment: options.find((e) => e.value === selectedExperiment)?.label,
-            timestamp: new Date().toISOString(),
-            readings: {
-              absorbance: [0.12, 0.15, 0.18, 0.22, 0.25, 0.28, 0.3],
-              wavelengths: [400, 450, 500, 550, 600, 650, 700],
-              fluorescence: {
-                f0: 300,
-                fm: 1200,
-                fv_fm: 0.75,
-              },
-              temperature: 24.5,
-              humidity: 65,
-            },
-            metadata: {
-              device_id: "MS2-1234",
-              firmware_version: "2.1.0",
-              battery_level: 82,
-              measurement_duration: 2.5,
-            },
-          };
-          break;
-        case "quick":
-          mockData = {
-            protocol: "quick",
-            experiment: options.find((e) => e.value === selectedExperiment)?.label,
-            timestamp: new Date().toISOString(),
-            readings: {
-              absorbance_avg: 0.18,
-              temperature: 24.5,
-            },
-            metadata: {
-              device_id: "MS2-1234",
-              firmware_version: "2.1.0",
-            },
-          };
-          break;
-      }
-
-      setMeasurementData(mockData);
-
-      showToast("Measurement completed", "success");
-    } catch {
-      showToast("Measurement failed", "error");
-    } finally {
-      setIsMeasuring(false);
-    }
-  };
-
   const handleUploadMeasurement = async () => {
     if (!measurementData) {
       return showToast("No measurement data to upload", "warning");
     }
 
     setIsUploading(true);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    try {
-      // Simulate upload
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Check if online
-      if (isOnline) {
-        showToast("Measurement uploaded successfully", "success");
-
-        // Clear measurement data after successful upload
-        setMeasurementData(null);
-      } else {
-        showToast("Upload failed: You are offline. Measurement saved locally.", "warning");
-      }
-    } catch {
-      showToast("Upload failed", "error");
-    } finally {
-      setIsUploading(false);
-    }
+    setIsUploading(false);
+    showToast("Measurement uploaded successfully", "success");
+    clearResult();
   };
 
   const isConnected = bluetoothConnected || usbConnected;
@@ -589,8 +495,8 @@ export function MeasurementScreen() {
 
         <Button
           title="Start Measurement"
-          onPress={handleStartMeasurement}
-          isLoading={isMeasuring}
+          onPress={() => performMeasurement(protocol)}
+          isLoading={isScanning}
           isDisabled={!isConnected || !selectedProtocol}
           style={styles.startButton}
         />
@@ -613,8 +519,8 @@ export function MeasurementScreen() {
             <View style={styles.resultDataContainer}>
               <MeasurementResult
                 data={measurementData}
-                timestamp={measurementData.timestamp}
-                experimentName={measurementData.experiment}
+                timestamp={measurementTimestamp}
+                experimentName={experimentName}
               />
             </View>
           </View>

@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
+import { formatIsoDateString } from "~/utils/format-iso-date-string";
 
 interface MeasurementResultProps {
   data: any;
@@ -33,7 +34,7 @@ export function MeasurementResult({ data, timestamp }: MeasurementResultProps) {
               },
             ]}
           >
-            {timestamp}
+            {formatIsoDateString(timestamp)}
           </Text>
         )}
       </View>
