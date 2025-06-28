@@ -36,6 +36,7 @@
     "expo-status-bar": "~2.2.3",
     "expo-symbols": "~0.4.5",
     "expo-web-browser": "~14.1.6",
+    "htmlparser2": "^10.0.0",
     "lodash": "^4.17.21",
     "lucide-react-native": "^0.513.0",
     "nativewind": "^4.1.23",
