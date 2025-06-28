@@ -1,66 +1,44 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, FlatList, RefreshControl } from "react-native";
-import { tsr } from "~/api/tsr";
-import { Dropdown, DropdownOption } from "~/components/Dropdown";
+import { Dropdown } from "~/components/Dropdown";
+import { useExperimentsData } from "~/hooks/use-experiments-data";
 import { useExperimentsDropdownOptions } from "~/hooks/use-experiments-dropdown-options";
 import { useTheme } from "~/hooks/use-theme";
+import { formatShortDate } from "~/utils/format-short-date";
+import { MeasurementRecord } from "~/utils/map-rows-to-measurements";
 
-const mockMeasurements = [
-  {
-    id: "lp1",
-    timestamp: "2025-06-06 14:30:22",
-    protocol: "LPX-2025-A1",
-  },
-  {
-    id: "lp2",
-    timestamp: "2025-06-05 11:15:43",
-    protocol: "LPX-2025-B7",
-  },
-  {
-    id: "cf1",
-    timestamp: "2025-06-06 09:45:11",
-    protocol: "CF-PROT-77",
-  },
-  {
-    id: "as1",
-    timestamp: "2025-06-04 16:20:10",
-    protocol: "ABS-RANGE-14",
-  },
-  {
-    id: "as2",
-    timestamp: "2025-06-03 10:10:00",
-    protocol: "ABS-RANGE-15",
-  },
-];
-
-export default function ExperimentsScreen() {
+export function ExperimentsScreen() {
   const theme = useTheme();
   const { colors } = theme;
 
-  const [selectedExperiment, setSelectedExperiment] = useState<string>();
-  const [refreshing] = useState(false);
+  const [selectedExperimentId, setSelectedExperimentId] = useState<string>();
+
+  const { measurements, isFetching, refetch } = useExperimentsData(
+    selectedExperimentId,
+    "bronze_data_exp",
+  );
 
   const { options } = useExperimentsDropdownOptions();
 
-  const onRefresh = async () => {};
-
-  const handleSelectExperiment = (value: string) => {
-    setSelectedExperiment(value);
-  };
-
   const renderTableHeader = () => (
     <View style={styles.tableRow}>
-      <Text style={[styles.headerCell, styles.flex2]}>ID</Text>
+      <Text style={[styles.headerCell, styles.flex2]}>Type</Text>
       <Text style={[styles.headerCell, styles.flex3]}>Protocol</Text>
       <Text style={[styles.headerCell, styles.flex3]}>Timestamp</Text>
     </View>
   );
 
-  const renderTableRow = ({ item }: { item: any }) => (
+  const renderTableRow = ({ item }: { item: MeasurementRecord }) => (
     <View style={styles.tableRow}>
-      <Text style={[styles.cell, styles.flex2]}>{item.id}</Text>
-      <Text style={[styles.cell, styles.flex3]}>{item.protocol}</Text>
-      <Text style={[styles.cell, styles.flex3]}>{item.timestamp}</Text>
+      <Text style={[styles.cell, styles.flex2]} numberOfLines={1} ellipsizeMode="tail">
+        {item.measurement_type}
+      </Text>
+      <Text style={[styles.cell, styles.flex3]} numberOfLines={1} ellipsizeMode="tail">
+        {item.plant_name}
+      </Text>
+      <Text style={[styles.cell, styles.flex3]} numberOfLines={1} ellipsizeMode="tail">
+        {formatShortDate(item.timestamp)}
+      </Text>
     </View>
   );
 
@@ -77,13 +55,13 @@ export default function ExperimentsScreen() {
         <Dropdown
           label="Select Experiment"
           options={options}
-          selectedValue={selectedExperiment ?? undefined}
-          onSelect={handleSelectExperiment}
+          selectedValue={selectedExperimentId ?? undefined}
+          onSelect={(experimentId) => setSelectedExperimentId(experimentId)}
           placeholder="Choose an experiment"
         />
       </View>
 
-      {selectedExperiment ? (
+      {selectedExperimentId ? (
         <View style={styles.measurementsContainer}>
           <Text
             style={[
@@ -97,30 +75,32 @@ export default function ExperimentsScreen() {
           </Text>
 
           <FlatList
-            data={mockMeasurements}
+            data={measurements}
             keyExtractor={(item) => item.id}
             ListHeaderComponent={renderTableHeader}
             renderItem={renderTableRow}
             contentContainerStyle={styles.measurementsList}
             refreshControl={
               <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
+                refreshing={isFetching}
+                onRefresh={refetch}
                 tintColor={colors.primary.dark}
                 colors={[colors.primary.dark]}
               />
             }
             ListEmptyComponent={
-              <Text
-                style={[
-                  styles.emptyText,
-                  {
-                    color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-                  },
-                ]}
-              >
-                No measurements found for this experiment
-              </Text>
+              isFetching ? null : (
+                <Text
+                  style={[
+                    styles.emptyText,
+                    {
+                      color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
+                    },
+                  ]}
+                >
+                  No measurements found for this experiment
+                </Text>
+              )
             }
           />
         </View>
@@ -186,6 +166,7 @@ const styles = StyleSheet.create({
   },
   cell: {
     fontSize: 13,
+    overflow: "hidden",
   },
   flex2: {
     flex: 2,
