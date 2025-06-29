@@ -5,7 +5,6 @@ import {
   Dimensions,
   FlatList,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -165,7 +164,7 @@ export function MeasurementScreen() {
   );
 
   const renderSetupStep = () => (
-    <ScrollView contentContainerStyle={styles.setupScrollContent}>
+    <View style={styles.setupScrollContent}>
       <View style={styles.experimentSection}>
         <Text
           style={[
@@ -435,7 +434,7 @@ export function MeasurementScreen() {
           )}
         </>
       )}
-    </ScrollView>
+    </View>
   );
 
   const renderMeasurementStep = () => (

@@ -53,7 +53,6 @@ export function ExperimentsScreen() {
     >
       <View style={styles.dropdownContainer}>
         <Dropdown
-          label="Select Experiment"
           options={options}
           selectedValue={selectedExperimentId ?? undefined}
           onSelect={(experimentId) => setSelectedExperimentId(experimentId)}
