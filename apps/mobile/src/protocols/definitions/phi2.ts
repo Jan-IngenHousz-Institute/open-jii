@@ -52,3 +52,28 @@ export function analyze(data: RawData): Record<string, number> {
 }
 
 export const label = "Photosystem II efficiency (Phi2)";
+
+export const example = {
+  device_name: "MultispeQ-Dummy",
+  device_version: "2",
+  device_id: "11:16:70:12",
+  device_battery: 92,
+  device_firmware: 2.345,
+  sample: [
+    {
+      protocol_id: "",
+      light_intensity: 0,
+      r: 0,
+      g: 0,
+      b: 0,
+      w: 0,
+      data_raw: [
+        173, 169, 166, 172, 166, 172, 168, 166, 172, 170, 168, 170, 168, 174, 171, 170, 168, 168,
+        165, 164, 114, 115, 109, 116, 113, 111, 112, 113, 110, 112, 111, 108, 111, 111, 109, 112,
+        108, 114, 107, 112, 111, 112, 106, 110, 114, 108, 110, 108, 112, 106, 112, 112, 111, 109,
+        112, 108, 111, 114, 106, 110, 111, 106, 112, 106, 108, 110, 111, 107, 113, 108, 91, 96, 93,
+        95, 95, 90, 95, 96, 87, 91, 92, 96, 91, 91, 98, 98, 93, 94, 95, 94,
+      ],
+    },
+  ],
+};

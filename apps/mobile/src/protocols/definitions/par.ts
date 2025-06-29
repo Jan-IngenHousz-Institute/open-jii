@@ -27,3 +27,14 @@ export function analyze(data: SensorData): Record<string, number> {
 }
 
 export const label = "Photosynthetically Active Radiation (PAR)";
+
+export const example = {
+  device_name: "MultispeQ-Dummy",
+  device_version: "2",
+  device_id: "11:16:70:12",
+  device_battery: 92,
+  device_firmware: 2.345,
+  sample: [
+    { protocol_id: "", light_intensity: 0.012, r: 0.8, g: 0.4, b: 0.8, w: 0.8, data_raw: [] },
+  ],
+};

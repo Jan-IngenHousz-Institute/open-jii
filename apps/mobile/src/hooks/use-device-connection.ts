@@ -7,7 +7,11 @@ import { bluetoothDeviceToMultispeqStream } from "~/services/multispeq-communica
 import { connectWithBluetoothDevice } from "~/services/multispeq-communication/android-bluetooth-connection/connect-with-bluetooth-device";
 import { openSerialPortConnection } from "~/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
 import { serialPortToMultispeqStream } from "~/services/multispeq-communication/android-serial-port-connection/serial-port-to-multispeq-stream";
-import { MultispeqCommandExecutor } from "~/services/multispeq-communication/multispeq-command-executor";
+import { MockCommandExecutor } from "~/services/multispeq-communication/mock-device/mock-command-executor";
+import {
+  IMultispeqCommandExecutor,
+  MultispeqCommandExecutor,
+} from "~/services/multispeq-communication/multispeq-command-executor";
 
 async function connectToDevice(device: Device) {
   if (device.type === "bluetooth-classic") {
@@ -20,12 +24,16 @@ async function connectToDevice(device: Device) {
     return new MultispeqCommandExecutor(serialPortToMultispeqStream(serialPortDevice));
   }
 
+  if (device.type === "mock-device") {
+    return new MockCommandExecutor();
+  }
+
   return undefined;
 }
 
 export function useDeviceConnection() {
   const [connectingDeviceId, setconnectingDeviceId] = useState<string>();
-  const [multispeqExecutor, setMultispeqExecutor] = useState<MultispeqCommandExecutor>();
+  const [multispeqExecutor, setMultispeqExecutor] = useState<IMultispeqCommandExecutor>();
   const [measurementTimestamp, setMeasurementTimestamp] = useState<string>();
   const { showToast } = useToast();
 
@@ -52,8 +60,6 @@ export function useDeviceConnection() {
     result: measurementData,
   } = useAsyncCallback(async ({ analyze, protocol }) => {
     const result = await multispeqExecutor?.execute(protocol);
-
-    console.log("result", result);
 
     if (typeof result !== "object") {
       console.log("not object");
@@ -92,6 +98,7 @@ export function useDeviceConnection() {
       return;
     }
 
+    console.log("protocolName", protocolName);
     return executeScan(protocolDefinition);
   }
 

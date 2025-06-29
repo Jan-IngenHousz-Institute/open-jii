@@ -4,7 +4,6 @@ import {
   ActivityIndicator,
   Dimensions,
   FlatList,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -221,15 +220,22 @@ export function MeasurementScreen() {
               selected={selectedConnectionType === "bluetooth-classic"}
               onSelect={() => setSelectedConnectionType("bluetooth-classic")}
             />
-            <ConnectionTypeSelector
-              type="ble"
-              selected={selectedConnectionType === "ble"}
-              onSelect={() => setSelectedConnectionType("ble")}
-            />
+            {process.env.ENABLE_BLE && (
+              <ConnectionTypeSelector
+                type="ble"
+                selected={selectedConnectionType === "ble"}
+                onSelect={() => setSelectedConnectionType("ble")}
+              />
+            )}
             <ConnectionTypeSelector
               type="usb"
               selected={selectedConnectionType === "usb"}
               onSelect={() => setSelectedConnectionType("usb")}
+            />
+            <ConnectionTypeSelector
+              type="mock-device"
+              selected={selectedConnectionType === "mock-device"}
+              onSelect={() => setSelectedConnectionType("mock-device")}
             />
           </View>
 
