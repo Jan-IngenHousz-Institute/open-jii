@@ -24,7 +24,7 @@ export class MultispeqCommandExecutor implements IMultispeqCommandExecutor {
       this.emitter.on("receivedReplyFromDevice", handler);
     });
 
-    return promiseWithTimeout(executePromise, 50 * seconds);
+    return promiseWithTimeout(executePromise, 120 * seconds);
   }
 
   destroy() {
