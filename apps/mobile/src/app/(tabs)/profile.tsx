@@ -30,7 +30,7 @@ export default function ProfileScreen() {
   };
 
   const handleOpenWebProfile = async () => {
-    const url = "https://your-website.com/profile";
+    const url = "https://dev.openjii.org/en-US/platform/experiments";
     const canOpen = await Linking.canOpenURL(url);
 
     if (canOpen) {
