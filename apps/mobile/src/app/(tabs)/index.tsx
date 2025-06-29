@@ -8,7 +8,7 @@ import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { useTheme } from "~/hooks/use-theme";
 
 export default function HomeScreen() {
-  const { uploads, uploadAll, isUploading } = useFailedUploads();
+  const { uploads, uploadAll, isUploading, removeFailedUpload, uploadOne } = useFailedUploads();
   const theme = useTheme();
   const { colors } = theme;
 
@@ -19,7 +19,7 @@ export default function HomeScreen() {
       await uploadAll();
       showToast("All measurements synced successfully", "success");
     } catch {
-      showToast("Sync failed. Please try again.", "error");
+      showToast("Sync failed. Please try again.", "warning");
     }
   };
 
@@ -94,6 +94,8 @@ export default function HomeScreen() {
                 id={measurement.key}
                 timestamp={measurement.data.metadata.timestamp ?? "N/A"}
                 experimentName={measurement.data.metadata.experimentName ?? "N/A"}
+                onDelete={() => removeFailedUpload(measurement.key)}
+                onSync={() => uploadOne(measurement.key)}
               />
             ))
           ) : (
