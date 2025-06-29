@@ -20,6 +20,7 @@ import { useToast } from "~/context/toast-context";
 import { useDeviceConnection } from "~/hooks/use-device-connection";
 import { Device, DeviceType, useDevices } from "~/hooks/use-devices";
 import { useExperimentsDropdownOptions } from "~/hooks/use-experiments-dropdown-options";
+import { useMeasurementUpload } from "~/hooks/use-measurement-upload";
 import { useTheme } from "~/hooks/use-theme";
 import { ProtocolName } from "~/protocols/definitions";
 
@@ -45,17 +46,18 @@ export function MeasurementScreen() {
     disconnect,
     measurementTimestamp,
   } = useDeviceConnection();
+  const [selectedProtocolName, setSelectedProtocolName] = useState<ProtocolName>();
+  const [selectedExperimentId, setSelectedExperimentId] = useState<string>();
+  const { isUploading, uploadMeasurement } = useMeasurementUpload({
+    protocolName: selectedProtocolName,
+    experimentId: selectedExperimentId,
+  });
 
   const [currentStep, setCurrentStep] = useState(1);
 
   const [bluetoothConnected, setBluetoothConnected] = useState(false);
   const [usbConnected, setUsbConnected] = useState(false);
 
-  const [selectedProtocolName, setSelectedProtocolName] = useState<ProtocolName>();
-
-  const [isUploading, setIsUploading] = useState(false);
-
-  const [selectedExperiment, setSelectedExperiment] = useState<string | null>(null);
   const { showToast } = useToast();
 
   const handleScanForDevices = async () => {
@@ -113,22 +115,17 @@ export function MeasurementScreen() {
     }
   };
 
-  const handleUploadMeasurement = async () => {
-    if (!measurementData) {
-      return showToast("No measurement data to upload", "warning");
+  async function handleUpload() {
+    if (typeof measurementData !== "object") {
+      return showToast("Invalid data, upload failed", "error");
     }
-
-    setIsUploading(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    setIsUploading(false);
-    showToast("Measurement uploaded successfully", "success");
+    await uploadMeasurement(measurementData);
     clearResult();
-  };
+  }
 
   const isConnected = bluetoothConnected || usbConnected;
-  const experimentName = selectedExperiment
-    ? options.find((e) => e.value === selectedExperiment)?.label
+  const experimentName = selectedExperimentId
+    ? options.find((e) => e.value === selectedExperimentId)?.label
     : "No experiment selected";
 
   const showDeviceList = loadingDevices || !!devices;
@@ -201,13 +198,13 @@ export function MeasurementScreen() {
         </Text>
         <Dropdown
           options={options}
-          selectedValue={selectedExperiment ?? undefined}
-          onSelect={(value) => setSelectedExperiment(value)}
+          selectedValue={selectedExperimentId}
+          onSelect={(value) => setSelectedExperimentId(value)}
           placeholder="Choose an experiment"
         />
       </View>
 
-      {!selectedExperiment && (
+      {!selectedExperimentId && (
         <Card style={styles.warningCard}>
           <View style={styles.warningContent}>
             <AlertTriangle size={20} color={colors.semantic.warning} />
@@ -225,7 +222,7 @@ export function MeasurementScreen() {
         </Card>
       )}
 
-      {selectedExperiment && (
+      {selectedExperimentId && (
         <>
           <Text
             style={[
@@ -551,7 +548,7 @@ export function MeasurementScreen() {
       <View style={styles.uploadContainer}>
         <Button
           title="Upload Measurement"
-          onPress={handleUploadMeasurement}
+          onPress={handleUpload}
           isLoading={isUploading}
           isDisabled={!measurementData}
           style={styles.uploadButton}
