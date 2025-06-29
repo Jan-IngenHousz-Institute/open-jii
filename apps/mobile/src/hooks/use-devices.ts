@@ -11,6 +11,14 @@ export interface Device {
   rssi?: number;
 }
 
+function getSerialDeviceName({ vendorId, productId }: { vendorId: number; productId: number }) {
+  if (vendorId === 5824 && productId == 1155) {
+    return "MultispeQ";
+  }
+
+  return vendorId.toString() + ":" + productId.toString();
+}
+
 async function getDevices(type: DeviceType) {
   if (type === "bluetooth-classic") {
     const devices = await getBluetoothClassicDevices();
@@ -28,7 +36,7 @@ async function getDevices(type: DeviceType) {
     return devices.map((device) => ({
       id: device.deviceId.toString(),
       type: "usb",
-      name: device.productId.toString(),
+      name: getSerialDeviceName(device),
     })) satisfies Device[];
   }
 

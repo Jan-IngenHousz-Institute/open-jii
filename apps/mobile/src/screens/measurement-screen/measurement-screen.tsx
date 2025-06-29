@@ -23,6 +23,7 @@ import { useMeasurementUpload } from "~/hooks/use-measurement-upload";
 import { useTheme } from "~/hooks/use-theme";
 import { ProtocolName } from "~/protocols/definitions";
 
+import { ConnectionTypeSelector } from "./components/connection-type-selector";
 import { getProtocolsDropdownOptions } from "./utils/get-protocols-dropdown-options";
 
 const { height } = Dimensions.get("window");
@@ -215,177 +216,21 @@ export function MeasurementScreen() {
             Connection Type
           </Text>
           <View style={styles.connectionTypeContainer}>
-            <TouchableOpacity
-              style={[
-                styles.connectionTypeButton,
-                {
-                  backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
-                },
-                selectedConnectionType === "bluetooth-classic" && [
-                  styles.selectedConnectionType,
-                  {
-                    borderColor: colors.primary.dark,
-                    backgroundColor: colors.primary.dark + "10",
-                  },
-                ],
-              ]}
-              onPress={() => setSelectedConnectionType("bluetooth-classic")}
-              disabled={Platform.OS === "ios"}
-            >
-              <Bluetooth
-                size={24}
-                color={
-                  selectedConnectionType === "bluetooth-classic"
-                    ? colors.primary.dark
-                    : Platform.OS === "ios"
-                      ? theme.isDark
-                        ? colors.dark.inactive
-                        : colors.light.inactive
-                      : theme.isDark
-                        ? colors.dark.onSurface
-                        : colors.light.onSurface
-                }
-              />
-              <Text
-                style={[
-                  styles.connectionTypeText,
-                  {
-                    color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-                  },
-                  selectedConnectionType === "bluetooth-classic" && [
-                    styles.selectedConnectionTypeText,
-                    { color: colors.primary.dark },
-                  ],
-                  Platform.OS === "ios" && [
-                    styles.disabledText,
-                    {
-                      color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-                    },
-                  ],
-                ]}
-              >
-                Bluetooth Classic
-              </Text>
-              {Platform.OS === "ios" && (
-                <Text
-                  style={[
-                    styles.platformNote,
-                    {
-                      color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-                    },
-                  ]}
-                >
-                  Android only
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.connectionTypeButton,
-                {
-                  backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
-                },
-                selectedConnectionType === "ble" && [
-                  styles.selectedConnectionType,
-                  {
-                    borderColor: colors.primary.dark,
-                    backgroundColor: colors.primary.dark + "10",
-                  },
-                ],
-              ]}
-              onPress={() => setSelectedConnectionType("ble")}
-            >
-              <Radio
-                size={24}
-                color={
-                  selectedConnectionType === "ble"
-                    ? colors.primary.dark
-                    : theme.isDark
-                      ? colors.dark.onSurface
-                      : colors.light.onSurface
-                }
-              />
-              <Text
-                style={[
-                  styles.connectionTypeText,
-                  {
-                    color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-                  },
-                  selectedConnectionType === "ble" && [
-                    styles.selectedConnectionTypeText,
-                    { color: colors.primary.dark },
-                  ],
-                ]}
-              >
-                Bluetooth LE
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.connectionTypeButton,
-                {
-                  backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
-                },
-                selectedConnectionType === "usb" && [
-                  styles.selectedConnectionType,
-                  {
-                    borderColor: colors.primary.dark,
-                    backgroundColor: colors.primary.dark + "10",
-                  },
-                ],
-              ]}
-              onPress={() => setSelectedConnectionType("usb")}
-              disabled={Platform.OS === "ios"}
-            >
-              <Usb
-                size={24}
-                color={
-                  selectedConnectionType === "usb"
-                    ? colors.primary.dark
-                    : Platform.OS === "ios"
-                      ? theme.isDark
-                        ? colors.dark.inactive
-                        : colors.light.inactive
-                      : theme.isDark
-                        ? colors.dark.onSurface
-                        : colors.light.onSurface
-                }
-              />
-              <Text
-                style={[
-                  styles.connectionTypeText,
-                  {
-                    color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-                  },
-                  selectedConnectionType === "usb" && [
-                    styles.selectedConnectionTypeText,
-                    { color: colors.primary.dark },
-                  ],
-                  Platform.OS === "ios" && [
-                    styles.disabledText,
-                    {
-                      color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-                    },
-                  ],
-                ]}
-              >
-                USB Serial
-              </Text>
-              {Platform.OS === "ios" && (
-                <Text
-                  style={[
-                    styles.platformNote,
-                    {
-                      color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-                    },
-                  ]}
-                >
-                  Android only
-                </Text>
-              )}
-            </TouchableOpacity>
+            <ConnectionTypeSelector
+              type="bluetooth-classic"
+              selected={selectedConnectionType === "bluetooth-classic"}
+              onSelect={() => setSelectedConnectionType("bluetooth-classic")}
+            />
+            <ConnectionTypeSelector
+              type="ble"
+              selected={selectedConnectionType === "ble"}
+              onSelect={() => setSelectedConnectionType("ble")}
+            />
+            <ConnectionTypeSelector
+              type="usb"
+              selected={selectedConnectionType === "usb"}
+              onSelect={() => setSelectedConnectionType("usb")}
+            />
           </View>
 
           <View style={styles.actionsContainer}>
