@@ -25,7 +25,7 @@ async function getDevices(type: DeviceType) {
     const devices = await getBluetoothClassicDevices();
     return devices.map((device) => ({
       id: device.id,
-      name: device.name,
+      name: device.name + " (" + device.id.slice(-11) + ")",
       type: "bluetooth-classic",
       rssi: device.rssi?.valueOf(),
     })) satisfies Device[];
