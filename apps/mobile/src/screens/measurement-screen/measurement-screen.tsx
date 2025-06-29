@@ -49,9 +49,15 @@ export function MeasurementScreen() {
 
   const [selectedProtocolName, setSelectedProtocolName] = useState<ProtocolName>();
   const [selectedExperimentId, setSelectedExperimentId] = useState<string>();
+
+  const experimentName = selectedExperimentId
+    ? options.find((e) => e.value === selectedExperimentId)?.label
+    : "No experiment selected";
+
   const { isUploading, uploadMeasurement } = useMeasurementUpload({
     protocolName: selectedProtocolName,
     experimentId: selectedExperimentId,
+    experimentName,
   });
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -103,10 +109,6 @@ export function MeasurementScreen() {
     await uploadMeasurement(measurementData);
     clearResult();
   }
-
-  const experimentName = selectedExperimentId
-    ? options.find((e) => e.value === selectedExperimentId)?.label
-    : "No experiment selected";
 
   const showDeviceList = loadingDevices || !!devices;
 

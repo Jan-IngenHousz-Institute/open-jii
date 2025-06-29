@@ -54,9 +54,11 @@
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.10.0",
     "react-native-svg": "15.11.2",
+    "react-native-swipe-list-view": "^3.2.9",
     "react-native-usb-serialport-for-android": "^0.5.0",
     "react-native-vector-icons": "^10.2.0",
     "tailwindcss": "catalog:",
+    "uuid": "^11.1.0",
     "with-rn-bluetooth-classic": "^1.0.5",
     "zustand": "^5.0.5"
   },

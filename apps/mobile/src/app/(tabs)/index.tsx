@@ -1,90 +1,25 @@
 import { UploadCloud } from "lucide-react-native";
-import React, { useState } from "react";
+import React from "react";
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from "react-native";
 import { Button } from "~/components/Button";
-import { OfflineBanner } from "~/components/OfflineBanner";
-import { Toast } from "~/components/Toast";
 import { UnsyncedScanItem } from "~/components/UnsyncedScanItem";
+import { useToast } from "~/context/toast-context";
+import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { useTheme } from "~/hooks/use-theme";
 
-// Mock data - replace with actual data from your state management
-const mockUnsyncedScans = [
-  {
-    id: "1",
-    timestamp: "2025-06-06 14:30:22",
-    experimentName: "Leaf Photosynthesis",
-  },
-  {
-    id: "2",
-    timestamp: "2025-06-06 15:45:10",
-    experimentName: "Chlorophyll Fluorescence",
-  },
-];
-
 export default function HomeScreen() {
+  const { uploads, uploadAll, isUploading } = useFailedUploads();
   const theme = useTheme();
   const { colors } = theme;
 
-  const [isOffline, setIsOffline] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [isSyncingAll, setIsSyncingAll] = useState(false);
-  const [toast, setToast] = useState({
-    visible: false,
-    message: "",
-    type: "info" as "success" | "error" | "info" | "warning",
-  });
+  const { showToast } = useToast();
 
-  // Simulate refresh
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setRefreshing(false);
-
-    // Simulate network check
-    const randomOffline = Math.random() > 0.7;
-    setIsOffline(randomOffline);
-
-    if (!randomOffline) {
-      setToast({
-        visible: true,
-        message: "Connected to network",
-        type: "success",
-      });
-    }
-  };
-
-  // Simulate retry sync all
   const handleSyncAll = async () => {
-    setIsSyncingAll(true);
-
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
-      // Check if we're "online"
-      if (!isOffline) {
-        setToast({
-          visible: true,
-          message: "All measurements synced successfully",
-          type: "success",
-        });
-
-        // In a real app, you would remove these items from your store
-      } else {
-        setToast({
-          visible: true,
-          message: "Sync failed: You are offline",
-          type: "error",
-        });
-      }
+      await uploadAll();
+      showToast("All measurements synced successfully", "success");
     } catch {
-      setToast({
-        visible: true,
-        message: "Sync failed. Please try again.",
-        type: "error",
-      });
-    } finally {
-      setIsSyncingAll(false);
+      showToast("Sync failed. Please try again.", "error");
     }
   };
 
@@ -101,8 +36,7 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
+            refreshing={isUploading}
             tintColor={colors.primary.dark}
             colors={[colors.primary.dark]}
           />
@@ -129,8 +63,6 @@ export default function HomeScreen() {
           Collect and analyze sensor data with ease
         </Text>
 
-        <OfflineBanner visible={isOffline} />
-
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text
@@ -143,25 +75,25 @@ export default function HomeScreen() {
             >
               Unsynced Measurements
             </Text>
-            {mockUnsyncedScans.length > 0 && (
+            {uploads.length > 0 && (
               <Button
                 title="Sync All"
                 variant="outline"
                 size="sm"
                 onPress={handleSyncAll}
-                isLoading={isSyncingAll}
+                isLoading={isUploading}
                 icon={<UploadCloud size={16} color={colors.primary.dark} />}
               />
             )}
           </View>
 
-          {mockUnsyncedScans.length > 0 ? (
-            mockUnsyncedScans.map((scan) => (
+          {uploads.length > 0 ? (
+            uploads.map((measurement) => (
               <UnsyncedScanItem
-                key={scan.id}
-                id={scan.id}
-                timestamp={scan.timestamp}
-                experimentName={scan.experimentName}
+                key={measurement.key}
+                id={measurement.key}
+                timestamp={measurement.data.metadata.timestamp ?? "N/A"}
+                experimentName={measurement.data.metadata.experimentName ?? "N/A"}
               />
             ))
           ) : (
@@ -201,13 +133,6 @@ export default function HomeScreen() {
           </Text>
         </View>
       </ScrollView>
-
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        type={toast.type}
-        onDismiss={() => setToast({ ...toast, visible: false })}
-      />
     </View>
   );
 }

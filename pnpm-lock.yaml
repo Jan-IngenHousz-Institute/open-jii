@@ -388,6 +388,9 @@ importers:
       react-native-svg:
         specifier: 15.11.2
         version: 15.11.2(react-native@0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0))(react@19.0.0)
+      react-native-swipe-list-view:
+        specifier: ^3.2.9
+        version: 3.2.9(prop-types@15.8.1)(react-native@0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0))(react@19.0.0)
       react-native-usb-serialport-for-android:
         specifier: ^0.5.0
         version: 0.5.0(patch_hash=9e2d330f192bae950cb28995b520bfa3da427c7736afa4d77e62aa2b2d77fd2b)(react-native@0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0))(react@19.0.0)
@@ -397,6 +400,9 @@ importers:
       tailwindcss:
         specifier: 'catalog:'
         version: 3.4.17(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.30)(typescript@5.8.3))
+      uuid:
+        specifier: ^11.1.0
+        version: 11.1.0
       with-rn-bluetooth-classic:
         specifier: ^1.0.5
         version: 1.0.5
@@ -14025,6 +14031,13 @@ packages:
     peerDependencies:
       react: '*'
       react-native: '*'
+
+  react-native-swipe-list-view@3.2.9:
+    resolution: {integrity: sha512-SjAEuHc/D6ovp+RjDUhfNmw6NYOntdT7+GFhfMGfP/BSLMuMWynpzJy9GKQeyB8sI78T6Lzip21TVbongOg1Mw==}
+    peerDependencies:
+      prop-types: '>=15.5.0'
+      react: '>=0.14.8'
+      react-native: '>=0.23.1'
 
   react-native-usb-serialport-for-android@0.5.0:
     resolution: {integrity: sha512-J+pQZBxcmlFbPGzBr/sUJkWRxNiJCzIIAbcDF4LySH6u/WY0/qe7Vdi/SCHTw+ukV9tfnanPAa/JxWR0JQwUOA==}
@@ -34542,6 +34555,12 @@ snapshots:
       react: 19.0.0
       react-native: 0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0)
       warn-once: 0.1.1
+
+  react-native-swipe-list-view@3.2.9(prop-types@15.8.1)(react-native@0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0))(react@19.0.0):
+    dependencies:
+      prop-types: 15.8.1
+      react: 19.0.0
+      react-native: 0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0)
 
   react-native-usb-serialport-for-android@0.5.0(patch_hash=9e2d330f192bae950cb28995b520bfa3da427c7736afa4d77e62aa2b2d77fd2b)(react-native@0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0))(react@19.0.0):
     dependencies:

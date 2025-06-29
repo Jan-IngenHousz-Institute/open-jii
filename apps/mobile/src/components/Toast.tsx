@@ -11,7 +11,7 @@ interface ToastProps {
   onDismiss: () => void;
 }
 
-export function Toast({ visible, message, type = "info", duration = 3000, onDismiss }: ToastProps) {
+export function Toast({ visible, message, type = "info", duration = 8000, onDismiss }: ToastProps) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-20)).current;
 

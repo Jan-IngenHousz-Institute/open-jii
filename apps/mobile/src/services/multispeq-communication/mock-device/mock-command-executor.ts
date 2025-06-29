@@ -15,7 +15,7 @@ export class MockCommandExecutor implements IMultispeqCommandExecutor {
       (p) => JSON.stringify(p.protocol) === stringifiedCommand,
     );
 
-    await delay(2500);
+    await delay(300);
 
     if (!requestedProtocol) {
       throw new Error("Unsupported protocol");

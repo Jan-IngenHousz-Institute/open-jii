@@ -5,6 +5,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ConfiguredQueryClientProvider } from "~/components/configured-query-client-provider";
 import { ThemeProvider } from "~/context/ThemeContext";
@@ -87,7 +88,7 @@ function RootLayoutContent() {
   const theme = useTheme();
 
   return (
-    <View style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <ToastProvider>
         <ConfiguredQueryClientProvider>
           <SafeAreaProvider>
@@ -96,6 +97,6 @@ function RootLayoutContent() {
           </SafeAreaProvider>
         </ConfiguredQueryClientProvider>
       </ToastProvider>
-    </View>
+    </GestureHandlerRootView>
   );
 }

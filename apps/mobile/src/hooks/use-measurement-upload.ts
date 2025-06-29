@@ -1,22 +1,35 @@
 import { useAsyncCallback } from "react-async-hook";
 import { useToast } from "~/context/toast-context";
+import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
 import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
 
-export function useMeasurementUpload({ experimentId, protocolName }) {
+export function useMeasurementUpload({ experimentName, experimentId, protocolName }) {
   const { showToast } = useToast();
+  const { saveFailedUpload } = useFailedUploads();
 
   const { loading: isUploading, execute: uploadMeasurement } = useAsyncCallback(
-    async (measurementResult: object) => {
+    async (measurementResult: any) => {
       if (typeof measurementResult !== "object") return;
-
+      const topic = getMultispeqMqttTopic({ experimentId, protocolName });
       try {
-        const topic = getMultispeqMqttTopic({ experimentId, protocolName });
         await sendMqttEvent(topic, measurementResult);
         showToast("Measurement uploaded!", "success");
       } catch (e: any) {
         console.log("Upload failed", e);
-        showToast("Please check your internet connection and try again.", "error");
+        showToast(
+          "Measurement cannot be uploaded right now. Upload it later from Home screen",
+          "info",
+        );
+        await saveFailedUpload({
+          topic,
+          measurementResult,
+          metadata: {
+            experimentName,
+            protocolName,
+            timestamp: measurementResult.timestamp,
+          },
+        });
       }
     },
   );
