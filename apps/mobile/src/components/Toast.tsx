@@ -69,14 +69,12 @@ export function Toast({ visible, message, type = "info", duration = 3000, onDism
     }
   };
 
-  if (!visible) return null;
-
   return (
     <Animated.View
       style={[
         styles.container,
         {
-          opacity: fadeAnim,
+          opacity: visible ? fadeAnim : 0,
           transform: [{ translateY }],
           backgroundColor: getBackgroundColor(),
         },

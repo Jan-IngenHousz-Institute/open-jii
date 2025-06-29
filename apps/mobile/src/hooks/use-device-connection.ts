@@ -108,7 +108,7 @@ export function useDeviceConnection() {
     connectingDeviceId,
     connectError,
     connect,
-    canScan: !!multispeqExecutor,
+    isConnected: !!multispeqExecutor,
     isScanning,
     measurementData,
     performMeasurement,

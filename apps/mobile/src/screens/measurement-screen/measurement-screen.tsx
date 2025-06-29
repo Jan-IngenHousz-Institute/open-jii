@@ -45,7 +45,9 @@ export function MeasurementScreen() {
     clearResult,
     disconnect,
     measurementTimestamp,
+    isConnected,
   } = useDeviceConnection();
+
   const [selectedProtocolName, setSelectedProtocolName] = useState<ProtocolName>();
   const [selectedExperimentId, setSelectedExperimentId] = useState<string>();
   const { isUploading, uploadMeasurement } = useMeasurementUpload({
@@ -54,9 +56,6 @@ export function MeasurementScreen() {
   });
 
   const [currentStep, setCurrentStep] = useState(1);
-
-  const [bluetoothConnected, setBluetoothConnected] = useState(false);
-  const [usbConnected, setUsbConnected] = useState(false);
 
   const { showToast } = useToast();
 
@@ -80,19 +79,7 @@ export function MeasurementScreen() {
     try {
       console.log("handleConnectToDevice", device);
       await connect(device);
-
-      // Update connection state based on device type
-      if (device.type === "bluetooth-classic" || device.type === "ble") {
-        setBluetoothConnected(true);
-        setUsbConnected(false);
-      } else if (device.type === "usb") {
-        setUsbConnected(true);
-        setBluetoothConnected(false);
-      }
-
       showToast(`Connected to ${device.name}`, "success");
-
-      // Move to step 2 after successful connection
       setCurrentStep(2);
     } catch {
       console.log("connect error");
@@ -103,12 +90,7 @@ export function MeasurementScreen() {
   const handleDisconnect = async () => {
     try {
       await disconnect();
-
-      setBluetoothConnected(false);
-      setUsbConnected(false);
-
       showToast("Disconnected successfully", "info");
-      // Go back to step 1
       setCurrentStep(1);
     } catch {
       showToast("Failed to disconnect", "error");
@@ -123,7 +105,6 @@ export function MeasurementScreen() {
     clearResult();
   }
 
-  const isConnected = bluetoothConnected || usbConnected;
   const experimentName = selectedExperimentId
     ? options.find((e) => e.value === selectedExperimentId)?.label
     : "No experiment selected";
@@ -486,7 +467,10 @@ export function MeasurementScreen() {
           label="Protocol"
           options={getProtocolsDropdownOptions()}
           selectedValue={selectedProtocolName}
-          onSelect={(name) => setSelectedProtocolName(name as ProtocolName)}
+          onSelect={(name) => {
+            setSelectedProtocolName(name as ProtocolName);
+            clearResult();
+          }}
           placeholder="Select protocol"
         />
 
