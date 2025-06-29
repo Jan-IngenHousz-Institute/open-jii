@@ -112,28 +112,28 @@ export default function HomeScreen() {
           )}
         </View>
 
-        <View style={styles.section}>
-          <Text
-            style={[
-              styles.sectionTitle,
-              {
-                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-              },
-            ]}
-          >
-            Recent Activity
-          </Text>
-          <Text
-            style={[
-              styles.emptyText,
-              {
-                color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-              },
-            ]}
-          >
-            No recent activity
-          </Text>
-        </View>
+        {/*<View style={styles.section}>*/}
+        {/*  <Text*/}
+        {/*    style={[*/}
+        {/*      styles.sectionTitle,*/}
+        {/*      {*/}
+        {/*        color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,*/}
+        {/*      },*/}
+        {/*    ]}*/}
+        {/*  >*/}
+        {/*    Recent Activity*/}
+        {/*  </Text>*/}
+        {/*  <Text*/}
+        {/*    style={[*/}
+        {/*      styles.emptyText,*/}
+        {/*      {*/}
+        {/*        color: theme.isDark ? colors.dark.inactive : colors.light.inactive,*/}
+        {/*      },*/}
+        {/*    ]}*/}
+        {/*  >*/}
+        {/*    No recent activity*/}
+        {/*  </Text>*/}
+        {/*</View>*/}
       </ScrollView>
     </View>
   );

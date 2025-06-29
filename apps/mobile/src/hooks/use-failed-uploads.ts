@@ -34,7 +34,9 @@ export function useFailedUploads() {
     }
 
     await queryClient.invalidateQueries({ queryKey: ["failedUploads"] });
-    throw lastError;
+    if (lastError) {
+      throw lastError;
+    }
   });
 
   const uploadOne = async (key: string) => {
