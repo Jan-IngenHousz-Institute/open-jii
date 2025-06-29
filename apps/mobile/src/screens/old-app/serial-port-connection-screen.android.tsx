@@ -24,7 +24,7 @@ export function SerialPortConnectionScreen() {
         );
       }}
       establishDeviceConnection={async () => {
-        const serialPortEventsEmitter = await openSerialPortConnection();
+        const serialPortEventsEmitter = await openSerialPortConnection(123);
         return new MultispeqCommandExecutor(serialPortToMultispeqStream(serialPortEventsEmitter));
       }}
     />

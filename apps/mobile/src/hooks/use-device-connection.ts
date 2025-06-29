@@ -5,12 +5,19 @@ import { Device } from "~/hooks/use-devices";
 import { getProtocolDefinition, ProtocolName } from "~/protocols/definitions";
 import { bluetoothDeviceToMultispeqStream } from "~/services/multispeq-communication/android-bluetooth-connection/bluetooth-device-to-multispeq-stream";
 import { connectWithBluetoothDevice } from "~/services/multispeq-communication/android-bluetooth-connection/connect-with-bluetooth-device";
+import { openSerialPortConnection } from "~/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
+import { serialPortToMultispeqStream } from "~/services/multispeq-communication/android-serial-port-connection/serial-port-to-multispeq-stream";
 import { MultispeqCommandExecutor } from "~/services/multispeq-communication/multispeq-command-executor";
 
 async function connectToDevice(device: Device) {
   if (device.type === "bluetooth-classic") {
     const bluetoothDevice = await connectWithBluetoothDevice(device.id);
     return new MultispeqCommandExecutor(bluetoothDeviceToMultispeqStream(bluetoothDevice));
+  }
+
+  if (device.type === "usb") {
+    const serialPortDevice = await openSerialPortConnection(parseInt(device.id));
+    return new MultispeqCommandExecutor(serialPortToMultispeqStream(serialPortDevice));
   }
 
   return undefined;

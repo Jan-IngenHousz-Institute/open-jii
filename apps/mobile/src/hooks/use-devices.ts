@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getBluetoothClassicDevices } from "~/services/multispeq-communication/android-bluetooth-connection/get-bluetooth-classic-devices";
+import { listSerialPortDevices } from "~/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
 
 export type DeviceType = "bluetooth-classic" | "ble" | "usb";
 
@@ -18,6 +19,16 @@ async function getDevices(type: DeviceType) {
       name: device.name,
       type: "bluetooth-classic",
       rssi: device.rssi?.valueOf(),
+    })) satisfies Device[];
+  }
+
+  if (type === "usb") {
+    const devices = await listSerialPortDevices();
+    console.log("devices", devices);
+    return devices.map((device) => ({
+      id: device.deviceId.toString(),
+      type: "usb",
+      name: device.productId.toString(),
     })) satisfies Device[];
   }
 
