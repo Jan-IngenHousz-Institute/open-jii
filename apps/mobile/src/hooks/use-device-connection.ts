@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useAsyncCallback } from "react-async-hook";
+import { useToast } from "~/context/toast-context";
 import { Device } from "~/hooks/use-devices";
+import { getProtocolDefinition, ProtocolName } from "~/protocols/definitions";
 import { bluetoothDeviceToMultispeqStream } from "~/services/multispeq-communication/android-bluetooth-connection/bluetooth-device-to-multispeq-stream";
 import { connectWithBluetoothDevice } from "~/services/multispeq-communication/android-bluetooth-connection/connect-with-bluetooth-device";
 import { MultispeqCommandExecutor } from "~/services/multispeq-communication/multispeq-command-executor";
@@ -17,7 +19,8 @@ async function connectToDevice(device: Device) {
 export function useDeviceConnection() {
   const [connectingDeviceId, setconnectingDeviceId] = useState<string>();
   const [multispeqExecutor, setMultispeqExecutor] = useState<MultispeqCommandExecutor>();
-  const [scanTimestamp, setScanTimestamp] = useState<string>();
+  const [measurementTimestamp, setMeasurementTimestamp] = useState<string>();
+  const { showToast } = useToast();
 
   const { error: connectError, execute: connect } = useAsyncCallback(async (device: Device) => {
     setconnectingDeviceId(device.id);
@@ -39,14 +42,50 @@ export function useDeviceConnection() {
     execute: executeScan,
     reset,
     loading: isScanning,
-    result: scanResult,
-  } = useAsyncCallback((command: string | object) => multispeqExecutor?.execute(command));
+    result: measurementData,
+  } = useAsyncCallback(async ({ analyze, protocol }) => {
+    const result = await multispeqExecutor?.execute(protocol);
 
-  async function scan(command: string | object) {
+    console.log("result", result);
+
+    if (typeof result !== "object") {
+      console.log("not object");
+      return result;
+    }
+
+    if (!("sample" in result)) {
+      console.log("no sample key");
+      return result;
+    }
+
+    const { sample } = result;
+
+    if (!sample) {
+      console.log("on sample value");
+      return result;
+    }
+
+    const samples = Array.isArray(sample) ? sample : [sample];
+
+    try {
+      const output = samples.map(analyze);
+      const timestamp = new Date().toISOString();
+      setMeasurementTimestamp(timestamp);
+      return { ...result, timestamp, output };
+    } catch (error: any) {
+      showToast("Could not process measurement information " + error.message, "warning");
+      return result;
+    }
+  });
+
+  function performMeasurement(protocolName: ProtocolName | undefined) {
     reset();
-    const result = await executeScan(command);
-    setScanTimestamp(new Date().toISOString());
-    return result;
+    const protocolDefinition = protocolName && getProtocolDefinition(protocolName);
+    if (!protocolDefinition) {
+      return;
+    }
+
+    return executeScan(protocolDefinition);
   }
 
   useEffect(() => {
@@ -71,10 +110,10 @@ export function useDeviceConnection() {
     connect,
     canScan: !!multispeqExecutor,
     isScanning,
-    measurementData: scanResult,
-    performMeasurement: scan,
+    measurementData,
+    performMeasurement,
     disconnect,
     clearResult: reset,
-    measurementTimestamp: scanTimestamp,
+    measurementTimestamp,
   };
 }

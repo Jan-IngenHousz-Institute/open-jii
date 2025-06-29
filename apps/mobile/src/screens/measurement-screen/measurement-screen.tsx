@@ -21,9 +21,9 @@ import { useDeviceConnection } from "~/hooks/use-device-connection";
 import { Device, DeviceType, useDevices } from "~/hooks/use-devices";
 import { useExperimentsDropdownOptions } from "~/hooks/use-experiments-dropdown-options";
 import { useTheme } from "~/hooks/use-theme";
-import { mockProtocols } from "~/mocks/mock-protocols";
+import { ProtocolName } from "~/protocols/definitions";
 
-const protocol = [{ spad: [1] }];
+import { getProtocolsDropdownOptions } from "./utils/get-protocols-dropdown-options";
 
 const { height } = Dimensions.get("window");
 
@@ -51,7 +51,7 @@ export function MeasurementScreen() {
   const [bluetoothConnected, setBluetoothConnected] = useState(false);
   const [usbConnected, setUsbConnected] = useState(false);
 
-  const [selectedProtocol, setSelectedProtocol] = useState<string | undefined>(undefined);
+  const [selectedProtocolName, setSelectedProtocolName] = useState<ProtocolName>();
 
   const [isUploading, setIsUploading] = useState(false);
 
@@ -487,17 +487,17 @@ export function MeasurementScreen() {
       <View style={styles.protocolContainer}>
         <Dropdown
           label="Protocol"
-          options={mockProtocols}
-          selectedValue={selectedProtocol}
-          onSelect={setSelectedProtocol}
+          options={getProtocolsDropdownOptions()}
+          selectedValue={selectedProtocolName}
+          onSelect={(name) => setSelectedProtocolName(name as ProtocolName)}
           placeholder="Select protocol"
         />
 
         <Button
           title="Start Measurement"
-          onPress={() => performMeasurement(protocol)}
+          onPress={() => performMeasurement(selectedProtocolName)}
           isLoading={isScanning}
-          isDisabled={!isConnected || !selectedProtocol}
+          isDisabled={!isConnected || !selectedProtocolName}
           style={styles.startButton}
         />
       </View>
