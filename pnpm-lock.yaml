@@ -615,6 +615,9 @@ importers:
       graphql-tag:
         specifier: ^2.12.6
         version: 2.12.6(graphql@16.11.0)
+      lucide-react:
+        specifier: ^0.507.0
+        version: 0.507.0(react@19.0.0)
       next:
         specifier: ^14.0.0 || ^15.0.0
         version: 15.3.3(@babel/core@7.27.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)

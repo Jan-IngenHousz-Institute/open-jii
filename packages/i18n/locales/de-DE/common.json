@@ -179,11 +179,48 @@
   },
   "jii": {
     "institute": "Jan IngenHousz Institut",
+    "aboutDescription": "Die Weltbevölkerung wächst, während die Fläche geeigneter landwirtschaftlicher Flächen schrumpft und die Ernten aufgrund des Klimawandels zurückgehen. Ein Durchbruch ist dringend erforderlich. Zu diesem Zweck arbeiten JII-Forscher daran, den grünen Motor der Landwirtschaft zu verstehen und zu verbessern: die Photosynthese.",
     "mission": "Unsere Mission",
     "missionDescription": "Die Verbesserung der Photosynthese ist eine große Herausforderung: verschiedene Prozesse in der Pflanze begrenzen die Photosynthese unter verschiedenen Bedingungen, und jeder dieser Prozesse wird durch verschiedene Gensätze reguliert. Das Jan IngenHousz Institut wurde speziell gegründet, um diesen großen Herausforderungen zu begegnen.",
-    "aboutDescription": "Die Weltbevölkerung wächst, während die Fläche geeigneter landwirtschaftlicher Flächen schrumpft und die Ernten aufgrund des Klimawandels zurückgehen. Ein Durchbruch ist dringend erforderlich. Zu diesem Zweck arbeiten JII-Forscher daran, den grünen Motor der Landwirtschaft zu verstehen und zu verbessern: die Photosynthese.",
     "goToPlatform": "Zur openJII-Plattform gehen",
-    "goToBlog": "Zum Blog gehen"
+    "about": "Über",
+    "faq": "FAQ",
+    "privacyAndUsage": "Datenschutz & Nutzung",
+    "heroTitle": "OpenJII: Offene Wissenschaft für Photosynthese",
+    "heroSubtitle": "Gemeinnützig. Open-Source. Ermöglicht globale Zusammenarbeit in Pflanzenwissenschaft und Photosynthese-Forschung.",
+    "platformCta": "OpenJII-Plattform",
+    "action2": "Aktion 2",
+    "missionShort": "Unsere Mission: Entdeckungen beschleunigen, offene Zusammenarbeit fördern und wissenschaftliche Daten für alle zugänglich machen.",
+    "featureExperimentManagement": "Experimentverwaltung & Zusammenarbeit",
+    "featureExperimentManagementDesc": "Organisieren, teilen und arbeiten Sie in Echtzeit mit globalen Teams an Experimenten.",
+    "featureDeviceOnboarding": "Geräteanbindung",
+    "featureDeviceOnboardingDesc": "Verbinden und verwalten Sie wissenschaftliche Geräte nahtlos für automatisierte Datenerfassung.",
+    "featureOpenCollab": "Offene Zusammenarbeit",
+    "featureOpenCollabDesc": "Arbeiten Sie offen oder legen Sie individuelle Embargofristen für sensible Daten vor der Veröffentlichung fest.",
+    "featureCustomAccess": "Anpassbare Zugriffsrechte",
+    "featureCustomAccessDesc": "Steuern Sie, wer Ihre Projekte und Datensätze ansehen, bearbeiten oder beitragen kann.",
+    "partnersTitle": "Unsere Partner",
+    "partnerLogo1": "Logo 1",
+    "partnerLogo2": "Logo 2",
+    "partnerLogo3": "Logo 3",
+    "partnerDesc1": "Beschreibung für Partner 1.",
+    "partnerDesc2": "Beschreibung für Partner 2.",
+    "partnerDesc3": "Beschreibung für Partner 3.",
+    "heroVisualAlt": "Open Science Visualisierung",
+    "footerNonProfit": "Gemeinnützig. Open-Source. Alle Rechte vorbehalten.",
+    "badge": "Gemeinnützig • Open Source • Gemeinschaftsbasiert",
+    "keyFeaturesTitle": "Leistungsstarke Forschungstools",
+    "keyFeaturesDesc": "Alles, was Sie brauchen, um Experimente zu verwalten, global zusammenzuarbeiten und Entdeckungen zu beschleunigen.",
+    "partnersDesc": "Werden Sie Teil eines wachsenden Netzwerks führender Institutionen, die gemeinsam die Wissenschaft voranbringen.",
+    "footerBrand": "OpenJII",
+    "footerBrandDesc": "Beschleunigung wissenschaftlicher Entdeckungen durch offene Zusammenarbeit und innovative Forschungstools.",
+    "footerMenu": "Menü",
+    "footerPlatform": "Plattform",
+    "footerBlog": "Blog",
+    "footerAbout": "Über uns",
+    "footerSupport": "Support",
+    "footerFaq": "FAQ",
+    "footerPrivacy": "Datenschutz & Nutzungsrichtlinien"
   },
   "breadcrumbs": {
     "home": "Startseite",
@@ -211,5 +248,27 @@
   "article": {
     "featured": "vorgestellt",
     "relatedArticles": "Verwandte artikel"
+  },
+  "about": {
+    "title": "Über OpenJII",
+    "description": "OpenJII setzt sich für die Förderung der offenen Wissenschaft und die globale Zusammenarbeit durch innovative Forschungsplattformen ein. Wir glauben an die Demokratisierung des Zugangs zu wissenschaftlichem Wissen und den Abbau von Barrieren zwischen Forschern, Institutionen und Gemeinschaften weltweit."
+  },
+  "faq": {
+    "title": "Häufig gestellte Fragen",
+    "intro": "Finden Sie Antworten auf häufig gestellte Fragen zu OpenJII und wie Sie loslegen können.",
+    "question1": "Was ist OpenJII?",
+    "answer1": "OpenJII ist eine gemeinnützige, Open-Source-Plattform für kollaborative Pflanzenwissenschaft und Photosynthese-Forschung.",
+    "question2": "Wie kann ich der Plattform beitreten?",
+    "answer2": "Sie können sich für ein Konto anmelden oder eine Einladung von einem bestehenden Mitglied anfordern.",
+    "question3": "Sind meine Daten privat?",
+    "answer3": "Sie kontrollieren die Sichtbarkeit Ihrer Projekte und Daten. Sie können sie privat halten, mit Mitarbeitern teilen oder öffentlich machen.",
+    "question4": "Welche Sprachen werden unterstützt?",
+    "answer4": "OpenJII unterstützt mehrere Sprachen. Sie können Ihre bevorzugte Sprache in den Kontoeinstellungen ändern.",
+    "stillHaveQuestions": "Noch Fragen?",
+    "contactUs": "Kontaktieren Sie uns"
+  },
+  "policies": {
+    "title": "Datenschutz- & Nutzungsrichtlinien",
+    "content": "Dies ist ein Platzhalter für die OpenJII Datenschutz- und Nutzungsrichtlinien. Bitte aktualisieren Sie diese Seite mit Ihrer tatsächlichen Datenschutzrichtlinie und den Nutzungsbedingungen."
   }
 }

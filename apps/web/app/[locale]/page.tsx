@@ -1,6 +1,8 @@
 import { UnifiedNavbar } from "@/components/unified-navbar";
 import { auth } from "@/lib/auth";
+import { ChevronDown } from "lucide-react";
 
+import { HomeHero, HomeAboutMission, HomeKeyFeatures, HomePartners, HomeFooter } from "@repo/cms";
 import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
@@ -19,16 +21,36 @@ export default async function Home({ params }: HomePageProps) {
   return (
     <>
       <UnifiedNavbar locale={locale} session={session} />
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-jii-dark-green mb-6 text-4xl font-bold">{t("jii.institute")}</h1>
-
-        <p className="mb-8 text-lg">{t("jii.aboutDescription")}</p>
-
-        <div className="bg-jii-light-blue/30 mt-8 rounded-lg p-6">
-          <h2 className="text-jii-dark-green mb-4 text-2xl font-semibold">{t("jii.mission")}</h2>
-          <p>{t("jii.missionDescription")}</p>
+      <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-slate-50 via-white to-blue-50">
+        {/* Animated Background Elements */}
+        <div className="pointer-events-none fixed inset-0 overflow-hidden opacity-30">
+          <div className="absolute left-1/4 top-1/4 h-64 w-64 animate-pulse rounded-full bg-gradient-to-r from-emerald-400/20 to-blue-400/20 blur-3xl"></div>
+          <div
+            className="absolute bottom-1/4 right-1/4 h-80 w-80 animate-pulse rounded-full bg-gradient-to-r from-purple-400/20 to-pink-400/20 blur-3xl"
+            style={{ animationDelay: "2s" }}
+          ></div>
         </div>
-      </div>
+
+        {/* Hero Section */}
+        <HomeHero t={t} />
+
+        {/* Scroll Indicator */}
+        <div className="animate-bounce">
+          <ChevronDown className="mx-auto h-8 w-8 text-emerald-500" />
+        </div>
+
+        {/* About & Mission Section */}
+        <HomeAboutMission t={t} />
+
+        {/* Enhanced Key Features */}
+        <HomeKeyFeatures t={t} />
+
+        {/* Enhanced Partner Highlights & Visual Media */}
+        <HomePartners t={t} />
+
+        {/* Enhanced Footer */}
+        <HomeFooter t={t} locale={locale} />
+      </main>
     </>
   );
 }
