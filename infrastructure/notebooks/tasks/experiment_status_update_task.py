@@ -29,13 +29,13 @@ Parameters:
 # This is a Databricks notebook, so `dbutils` and `spark` are globally available
 # Adding type-ignores to prevent local linting errors
 # type: ignore
-import os
 import json
 import logging
 import requests
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Any, Optional
+from typing import Dict, Any
+from pyspark.dbutils import DBUtils
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -73,7 +73,7 @@ logger = logging.getLogger("experiment_status_updater")
 
 # DBTITLE 1,Parameter Extraction
 
-def extract_parameters() -> Dict[str, Any]:
+def extract_parameters(dbutils, spark) -> Dict[str, Any]:
     """Extract parameters from Databricks widgets with fallbacks to environment/spark configs."""
     
     # Always get webhook URL from spark configuration
@@ -90,15 +90,15 @@ def extract_parameters() -> Dict[str, Any]:
     if not experiment_id:
         raise ValueError("Experiment ID is required")
     
-    # Get job run ID (required)
-    job_run_id = dbutils.widgets.get("job_run_id")
+    # Get job_run_id and task_run_id from Databricks job context
+    job_context = dbutils.notebook.entry_point.getDbutils().notebook().getContext().toJson()
+    job_context_dict = json.loads(job_context)
+    job_run_id = job_context_dict.get("jobRunId")
+    task_run_id = job_context_dict.get("currentTaskRunId")
     if not job_run_id:
-        raise ValueError("job_run_id is required")
-    
-    # Get task run ID (required)
-    task_run_id = dbutils.widgets.get("task_run_id")
+        raise ValueError("Could not determine current job_run_id from Databricks job context.")
     if not task_run_id:
-        raise ValueError("task_run_id is required")
+        raise ValueError("Could not determine current task_run_id from Databricks job context.")
     
     # Get status - with auto-detection of prior task's status if not explicitly set
     status = dbutils.widgets.get("status")
@@ -110,17 +110,17 @@ def extract_parameters() -> Dict[str, Any]:
             logger.info("Auto-detecting status from job context")
             
             # Get the job context from Databricks runtime
-            job_context = json.loads(dbutils.notebook.entry_point.getDbutils().notebook().getContext().toJson())
+            # job_context already loaded above
             
             # Default to SUCCESS unless we find evidence of failure
             status = ProvisioningStatus.SUCCESS.value
             
             # Check if we're in a job context
-            if job_context.get("currentRunId") and job_context.get("jobId"):
-                logger.info(f"Running in job context: jobId={job_context.get('jobId')}, runId={job_context.get('currentRunId')}")
+            if job_context_dict.get("currentRunId") and job_context_dict.get("jobId"):
+                logger.info(f"Running in job context: jobId={job_context_dict.get('jobId')}, runId={job_context_dict.get('currentRunId')}")
                 
                 # Look for parent task error in tags (set by Databricks job machinery)
-                tags = job_context.get("tags", {})
+                tags = job_context_dict.get("tags", {})
                 
                 # Check for parent task failure indicators in tags
                 parent_failure_indicators = [
@@ -183,7 +183,7 @@ def extract_parameters() -> Dict[str, Any]:
 class WebhookClient:
     """Client for sending status updates to the OpenJII backend webhook."""
     
-    def __init__(self, webhook_url: str, api_key_scope: str, api_key_secret: str):
+    def __init__(self, webhook_url: str, api_key_scope: str, api_key_secret: str, dbutils):
         self.webhook_url = webhook_url
         self.api_key = dbutils.secrets.get(scope=api_key_scope, key=api_key_secret)
         self.session = self._create_session()
@@ -275,14 +275,17 @@ def create_status_payload(
 def main() -> None:
     """Main execution function with error handling."""
     try:
-        # Extract parameters
-        params = extract_parameters()
+        # Ensure spark is available (Databricks provides it as a global)
+        global spark
+        dbutils = DBUtils(spark)
+        params = extract_parameters(dbutils, spark)
         
-        # Create webhook client
+        # Create webhook client, pass dbutils
         client = WebhookClient(
             webhook_url=params["webhook_url"],
             api_key_scope=params["api_key_scope"],
-            api_key_secret=params["api_key_secret"]
+            api_key_secret=params["api_key_secret"],
+            dbutils=dbutils
         )
         
         # Create payload
