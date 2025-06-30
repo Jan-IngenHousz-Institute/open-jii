@@ -256,3 +256,28 @@ variable "api_cloudfront_header_value" {
   type        = string
   sensitive   = true
 }
+
+# Contentful configuration variables
+variable "contentful_space_id" {
+  description = "Contentful space ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "contentful_access_token" {
+  description = "Contentful access token"
+  type        = string
+  sensitive   = true
+}
+
+variable "contentful_preview_access_token" {
+  description = "Contentful preview access token"
+  type        = string
+  sensitive   = true
+}
+
+variable "contentful_preview_secret" {
+  description = "Contentful preview secret"
+  type        = string
+  sensitive   = true
+}

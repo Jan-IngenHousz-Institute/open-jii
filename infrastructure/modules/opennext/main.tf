@@ -35,7 +35,7 @@ locals {
       {
         Effect   = "Allow",
         Action   = "secretsmanager:GetSecretValue",
-        Resource = compact([var.db_credentials_secret_arn, var.oauth_secret_arn])
+        Resource = compact([var.db_credentials_secret_arn, var.oauth_secret_arn, var.contentful_secret_arn])
       }
     ]
   })
@@ -197,8 +197,9 @@ module "server_function" {
     REVALIDATION_QUEUE_URL    = module.sqs.queue_url
 
     # Credentials and secrets
-    DB_SECRET_ARN    = var.db_credentials_secret_arn
-    OAUTH_SECRET_ARN = var.oauth_secret_arn
+    DB_SECRET_ARN         = var.db_credentials_secret_arn
+    OAUTH_SECRET_ARN      = var.oauth_secret_arn
+    CONTENTFUL_SECRET_ARN = var.contentful_secret_arn
   }, var.server_environment_variables)
 
   tags = local.common_tags
@@ -222,7 +223,9 @@ module "image_function" {
   s3_bucket_arns = [aws_s3_bucket.assets.arn]
 
   environment_variables = {
-    BUCKET_NAME = aws_s3_bucket.assets.bucket
+    BUCKET_NAME          = aws_s3_bucket.assets.bucket
+    OPENNEXT_STATIC_ETAG = "true"
+    NODE_ENV             = "production"
   }
 
   tags = local.common_tags

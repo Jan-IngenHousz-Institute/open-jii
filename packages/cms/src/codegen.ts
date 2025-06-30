@@ -1,10 +1,25 @@
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
+import type { ContentfulConfig } from "./lib/types";
+
 const endpointOverride = process.env.CONTENTFUL_GRAPHQL_ENDPOINT;
 const productionEndpoint = "https://graphql.contentful.com/content/v1/spaces";
-export const endpoint = `${endpointOverride ?? productionEndpoint}/${
-  process.env.CONTENTFUL_SPACE_ID
-}/environments/${process.env.CONTENTFUL_SPACE_ENVIRONMENT || "master"}`;
+
+/**
+ * Generate a Contentful GraphQL endpoint URL from configuration
+ */
+export function getContentfulEndpoint(config: ContentfulConfig): string {
+  const baseEndpoint = endpointOverride ?? productionEndpoint;
+  return `${baseEndpoint}/${config.spaceId}/environments/${config.environment || "master"}`;
+}
+
+export const endpoint = getContentfulEndpoint({
+  spaceId: process.env.CONTENTFUL_SPACE_ID ?? "",
+  accessToken: process.env.CONTENTFUL_ACCESS_TOKEN ?? "",
+  previewAccessToken: process.env.CONTENTFUL_PREVIEW_ACCESS_TOKEN ?? "",
+  previewSecret: process.env.CONTENTFUL_PREVIEW_SECRET ?? "",
+  environment: process.env.CONTENTFUL_SPACE_ENVIRONMENT || "master",
+});
 
 export const config: CodegenConfig = {
   overwrite: true,
