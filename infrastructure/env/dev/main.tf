@@ -194,10 +194,7 @@ module "centrum_pipeline" {
 
   continuous_mode  = true
   development_mode = true
-  autoscale        = true
-  min_workers      = 1
-  max_workers      = 2
-  node_type_id     = "m5d.large"
+  serverless       = true
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -210,20 +207,6 @@ module "kinesis_ingest_cluster" {
   source = "../../modules/databricks/cluster"
 
   name             = "Kinesis-Ingest-Cluster"
-  single_node      = true
-  single_user      = true
-  single_user_name = var.databricks_client_id
-  spark_version    = "16.2.x-scala2.12"
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-}
-
-module "experiment_orchestrator_cluster" {
-  source = "../../modules/databricks/cluster"
-
-  name             = "Experiment-Orchestrator-Cluster"
   single_node      = true
   single_user      = true
   single_user_name = var.databricks_client_id
@@ -267,41 +250,100 @@ module "kinesis_ingest_job" {
   }
 }
 
-module "experiment_orchestrator_job" {
+module "experiment_service_principal" {
+  source = "../../modules/databricks/service_principal"
+
+  display_name = "Experiment Job Service Principal"
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
+module "expeirment_provisioning_job" {
   source = "../../modules/databricks/job"
 
-  name        = "Experiment-Pipeline-Orchestrator-Job-DEV"
-  description = "Orchestrates the experiment pipelines (if neccessary) and monitors the experiment state"
+  name        = "Experiment-Provisioning-Job-DEV"
+  description = "Creates Delta Live Tables pipelines for experiments and reports status to backend webhook"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "PERFORMANCE_OPTIMIZED"
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 3
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  # Global Spark configurations that apply to all tasks
+  # These are environment variables for the webhook
+  global_spark_conf = {
+    "spark.env.webhookUrl"                            = var.experiment_webhook_url
+    "spark.env.apiKeyScope"                           = module.experiment_secret_scope.scope_name
+    "spark.databricks.delta.schema.autoMerge.enabled" = "true"
+  }
 
   tasks = [
     {
-      key           = "experiment_pipeline_orchestrator"
+      key           = "experiment_pipeline_create"
       task_type     = "notebook"
-      compute_type  = "existing_cluster"
-      cluster_id    = module.experiment_orchestrator_cluster.cluster_id
-      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_orchestrator_task"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipeline_create_task"
+
+      spark_conf = {
+        # Delta Lake optimizations
+        "spark.databricks.delta.optimizeWrite.enabled" = "true"
+        "spark.databricks.delta.autoCompact.enabled"   = "true"
+
+        # Adaptive query execution for better performance
+        "spark.databricks.adaptive.enabled"                     = "true"
+        "spark.databricks.adaptive.autoOptimizeShuffle.enabled" = "true"
+
+        # Cost optimization settings for orchestration tasks
+        "spark.databricks.io.cache.enabled"    = "true" # Cache data to reduce I/O costs
+        "spark.dynamicAllocation.enabled"      = "true" # Dynamic allocation
+        "spark.dynamicAllocation.minExecutors" = "1"    # Start with minimum executors
+        "spark.dynamicAllocation.maxExecutors" = "2"    # Cap maximum executors
+
+        # Reduce driver and executor sizes for this lightweight job
+        "spark.driver.memory"   = "4g" # 4GB is sufficient for API operations
+        "spark.executor.memory" = "4g" # Smaller executors are more cost-effective
+
+        # Auto termination for minimum idle costs
+        "spark.databricks.cluster.autotermination.minutes" = "10" # Terminate after 10 minutes idle
+      }
+
       parameters = {
-        "catalog_name"             = module.databricks_catalog.catalog_name
-        "central_schema"           = "centrum"
-        "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
+        "experiment_id"   = "{{experiment_id}}"
+        "experiment_name" = "{{experiment_name}}"
+        "catalog_name"    = module.databricks_catalog.catalog_name
+        "central_schema"  = "centrum"
       }
     },
     {
-      key           = "experiment_pipeline_monitor"
+      key           = "experiment_status_update"
       task_type     = "notebook"
-      compute_type  = "existing_cluster"
-      cluster_id    = module.experiment_orchestrator_cluster.cluster_id
-      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_monitor_task"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_status_update_task"
+
       parameters = {
-        "catalog_name"   = module.databricks_catalog.catalog_name
-        "central_schema" = "centrum"
+        "experiment_id" = "{{experiment_id}}"
+        "job_run_id"     = "{{tasks.experiment_pipeline_create.run_id}}"
       }
 
-      depends_on = "experiment_pipeline_orchestrator"
+      depends_on = "experiment_pipeline_create"
     },
   ]
 
-  depends_on = [module.experiment_orchestrator_cluster]
+  permissions = [
+    {
+      principal_application_id = module.experiment_service_principal.service_principal_application_id
+      principal_can_manage     = true
+    }
+  ]
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -355,10 +397,10 @@ module "databricks_secrets" {
 
   # Store secrets as JSON using variables
   secret_string = jsonencode({
-    DATABRICKS_HOST          = var.databricks_host
-    DATABRICKS_CLIENT_ID     = var.backend_databricks_client_id
-    DATABRICKS_CLIENT_SECRET = var.backend_databricks_client_secret
-    DATABRICKS_JOB_ID        = var.backend_databricks_job_id
+    DATABRICKS_HOST          = module.databricks_workspace.workspace_url
+    DATABRICKS_CLIENT_ID     = module.experiment_service_principal.service_principal_application_id
+    DATABRICKS_CLIENT_SECRET = module.experiment_service_principal.service_principal_secret_value
+    DATABRICKS_JOB_ID        = module.expeirment_provisioning_job.job_id
     DATABRICKS_WAREHOUSE_ID  = var.backend_databricks_warehouse_id
   })
 
