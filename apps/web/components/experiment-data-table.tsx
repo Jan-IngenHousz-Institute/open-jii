@@ -27,31 +27,22 @@ export type DataValue = string | number | boolean | null;
 export type DataRow = Record<string, DataValue>;
 export type MetaType = "number" | "text";
 
-export function getColumnMetaType(type_name: string) {
+function getFormattedValue(row: Row<DataRow>, columnName: string, type_name: string) {
+  const value = row.getValue(columnName);
   switch (type_name) {
     case "DOUBLE":
     case "INT":
     case "LONG":
     case "BIGINT":
-      return "number";
-    case "BOOLEAN":
-    case "TIMESTAMP":
-    case "DATE":
-    default:
-      return "text";
-  }
-}
-
-function getFormattedValue(row: Row<DataRow>, columnName: string, metaType: MetaType) {
-  const value = row.getValue(columnName);
-  switch (metaType) {
-    case "number": {
       return (
         <div className="text-right font-medium">
           <i>{value as number}</i>
         </div>
       );
-    }
+    case "TIMESTAMP":
+      return (
+        <div className="font-medium">{(value as string).substring(0, 19).replace("T", " ")}</div>
+      );
     default: {
       return <div className="font-medium">{value as string}</div>;
     }
@@ -63,15 +54,11 @@ export function getReactTableColumns(data: ExperimentData | undefined) {
   const columns: AccessorKeyColumnDef<DataRow, DataValue>[] = [];
   if (!data) return columns;
   data.columns.forEach((dataColumn) => {
-    const metaType = getColumnMetaType(dataColumn.type_name);
     columns.push(
       columnHelper.accessor(dataColumn.name, {
         header: dataColumn.name,
-        meta: {
-          type: metaType,
-        },
         cell: ({ row }) => {
-          return getFormattedValue(row, dataColumn.name, metaType);
+          return getFormattedValue(row, dataColumn.name, dataColumn.type_name);
         },
       }),
     );
