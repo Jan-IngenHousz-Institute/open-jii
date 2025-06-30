@@ -13,13 +13,11 @@ Workflow:
    - FAILED → provisioning_failed
    - CANCELED → provisioning_canceled
 
-Configuration (all provided via Spark config at infrastructure-as-code level):
-- webhook_url: MUST be provided via Spark configuration as 'spark.env.webhookUrl'
+Parameters (all provided via Databricks widgets):
+- webhook_url: MUST be provided as a parameter (Databricks widget)
                MUST use HTTPS protocol for security reasons
-- api_key_scope: MUST be provided via Spark configuration as 'spark.env.apiKeyScope'
-- api_key_secret: MUST be provided via Spark configuration as 'spark.env.apiKeySecret'
-
-Parameters:
+- key_scope: MUST be provided as a parameter (Databricks widget)
+- key_name: MUST be provided as a parameter (Databricks widget)
 - experiment_id: Required UUID of the experiment
 - job_run_id: Required ID of the job run
 - task_run_id: Required ID of the task run
@@ -73,22 +71,22 @@ logger = logging.getLogger("experiment_status_updater")
 
 # DBTITLE 1,Parameter Extraction
 def extract_parameters(dbutils, spark) -> Dict[str, Any]:
-    """Extract parameters from Databricks widgets with fallbacks to environment/spark configs."""
-    
-    # Always get webhook URL from spark configuration
-    webhook_url = spark.conf.get("spark.env.webhookUrl")
+    """Extract parameters from Databricks widgets."""
+
+    # Always get webhook URL from widget
+    webhook_url = dbutils.widgets.get("webhook_url")
     if not webhook_url:
-        raise ValueError("Webhook URL not configured. Please provide it in spark.conf as 'spark.env.webhookUrl'.")
-    
+        raise ValueError("Webhook URL not provided. Please provide it as a widget parameter 'webhook_url'.")
+
     # Validate that the webhook URL uses HTTPS
     if webhook_url and not webhook_url.lower().startswith("https://"):
         raise ValueError("Webhook URL must use HTTPS protocol.")
-    
+
     # Get experiment ID
     experiment_id = dbutils.widgets.get("experiment_id")
     if not experiment_id:
         raise ValueError("Experiment ID is required")
-    
+
     # Get job_run_id and task_run_id from Databricks job context
     job_context = dbutils.notebook.entry_point.getDbutils().notebook().getContext().toJson()
     job_context_dict = json.loads(job_context)
@@ -98,7 +96,7 @@ def extract_parameters(dbutils, spark) -> Dict[str, Any]:
         raise ValueError("Could not determine current job_run_id from Databricks job context.")
     if not task_run_id:
         raise ValueError("Could not determine current task_run_id from Databricks job context.")
-    
+
     # Get status - with auto-detection of prior task's status if not explicitly set
     status = dbutils.widgets.get("status")
     if not status or status == "":
@@ -157,27 +155,27 @@ def extract_parameters(dbutils, spark) -> Dict[str, Any]:
             status = ProvisioningStatus.SUCCESS.value
     else:
         logger.info(f"Using manually specified status: {status}")
-    
+
     if status not in [s.value for s in ProvisioningStatus]:
         raise ValueError(f"Invalid status: {status}. Must be one of: {', '.join([s.value for s in ProvisioningStatus])}")
-    
-    # Get API key secret information from Spark configuration
-    api_key_scope = spark.conf.get("spark.env.apiKeyScope")
-    if not api_key_scope:
-        raise ValueError("API key scope not configured. Please provide it in spark.conf as 'spark.env.apiKeyScope'.")
-        
-    api_key_secret = spark.conf.get("spark.env.apiKeySecret")
-    if not api_key_secret:
-        raise ValueError("API key secret not configured. Please provide it in spark.conf as 'spark.env.apiKeySecret'.")
-    
+
+    # Get API key secret information from widgets
+    key_scope = dbutils.widgets.get("key_scope")
+    if not key_scope:
+        raise ValueError("API key scope not provided. Please provide it as a widget parameter 'key_scope'.")
+
+    key_name = dbutils.widgets.get("key_name")
+    if not key_name:
+        raise ValueError("API key secret not provided. Please provide it as a widget parameter 'key_name'.")
+
     return {
         "webhook_url": webhook_url,
         "experiment_id": experiment_id,
         "job_run_id": job_run_id,
         "task_run_id": task_run_id,
         "status": status,
-        "api_key_scope": api_key_scope,
-        "api_key_secret": api_key_secret
+        "key_scope": key_scope,
+        "key_name": key_name
     }
 
 # COMMAND ----------
@@ -187,9 +185,9 @@ def extract_parameters(dbutils, spark) -> Dict[str, Any]:
 class WebhookClient:
     """Client for sending status updates to the OpenJII backend webhook."""
     
-    def __init__(self, webhook_url: str, api_key_scope: str, api_key_secret: str, dbutils):
+    def __init__(self, webhook_url: str, key_scope: str, key_name: str, dbutils):
         self.webhook_url = webhook_url
-        self.api_key = dbutils.secrets.get(scope=api_key_scope, key=api_key_secret)
+        self.api_key = dbutils.secrets.get(scope=key_scope, key=key_name)
         self.session = self._create_session()
     
     def _create_session(self) -> requests.Session:
@@ -287,8 +285,8 @@ def main() -> None:
         # Create webhook client, pass dbutils
         client = WebhookClient(
             webhook_url=params["webhook_url"],
-            api_key_scope=params["api_key_scope"],
-            api_key_secret=params["api_key_secret"],
+            key_scope=params["key_scope"],
+            key_name=params["key_name"],
             dbutils=dbutils
         )
         
