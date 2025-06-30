@@ -19,7 +19,6 @@ resource "databricks_pipeline" "this" {
 
   catalog = var.catalog_name
 
-
   # Support for notebook libraries
   dynamic "library" {
     for_each = var.notebook_paths
@@ -31,24 +30,30 @@ resource "databricks_pipeline" "this" {
   }
 
   # Enhanced compute configuration with min/max workers if autoscale enabled
-  cluster {
-    label = "default"
+  dynamic "cluster" {
+    for_each = var.serverless ? [] : [1]
+    content {
+      label = "default"
 
-    # Use smallest available instance or specified type
-    node_type_id = var.node_type_id != null ? var.node_type_id : data.databricks_node_type.smallest.id
+      # Use smallest available instance or specified type
+      node_type_id = var.node_type_id != null ? var.node_type_id : data.databricks_node_type.smallest.id
 
-    # Support for autoscaling
-    dynamic "autoscale" {
-      for_each = var.autoscale ? [1] : []
-      content {
-        min_workers = var.min_workers
-        max_workers = var.max_workers
+      # Support for autoscaling
+      dynamic "autoscale" {
+        for_each = var.autoscale ? [1] : []
+        content {
+          min_workers = var.min_workers
+          max_workers = var.max_workers
+        }
       }
-    }
 
-    # Fixed worker count if autoscaling is disabled
-    num_workers = var.autoscale ? null : var.num_workers
+      # Fixed worker count if autoscaling is disabled
+      num_workers = var.autoscale ? null : var.num_workers
+    }
   }
+
+  # Serverless compute block
+  serverless = var.serverless
 
   # Support continuous or triggered execution
   continuous = var.continuous_mode
