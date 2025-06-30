@@ -202,7 +202,8 @@ export function ExperimentDataTable({
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
         <div>
-          {t("experimentDataTable.page")} {pagination.pageIndex + 1} of {table.getPageCount()}
+          {t("experimentDataTable.page")} {pagination.pageIndex + 1}{" "}
+          {t("experimentDataTable.pageOf")} {table.getPageCount()}
         </div>
         <Button
           variant="outline"
