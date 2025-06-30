@@ -34,8 +34,7 @@ export async function getContentfulConfig(): Promise<ContentfulConfig> {
     spaceId: (contentfulSecrets.CONTENTFUL_SPACE_ID || env.CONTENTFUL_SPACE_ID) ?? "",
     accessToken: (contentfulSecrets.CONTENTFUL_ACCESS_TOKEN || env.CONTENTFUL_ACCESS_TOKEN) ?? "",
     previewAccessToken:
-      (contentfulSecrets.CONTENTFUL_PREVIEW_ACCESS_TOKEN ||
-        process.env.CONTENTFUL_PREVIEW_ACCESS_TOKEN) ??
+      (contentfulSecrets.CONTENTFUL_PREVIEW_ACCESS_TOKEN || env.CONTENTFUL_PREVIEW_ACCESS_TOKEN) ??
       "",
     previewSecret:
       (contentfulSecrets.CONTENTFUL_PREVIEW_SECRET || env.CONTENTFUL_PREVIEW_SECRET) ?? "",

@@ -6,19 +6,19 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
     "./article": {
-      "types": "./src/features/article/index.ts",
+      "types": "./dist/features/article/index.d.ts",
       "default": "./dist/features/article/index.js"
     },
     "./container": {
-      "types": "./src/shared/container.ts",
+      "types": "./dist/shared/container.d.ts",
       "default": "./dist/shared/container.js"
     },
     "./contentful": {
-      "types": "./src/features/contentful/index.ts",
+      "types": "./dist/features/contentful/index.d.ts",
       "default": "./dist/features/contentful/index.js"
     }
   },
