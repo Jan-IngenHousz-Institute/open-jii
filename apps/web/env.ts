@@ -4,7 +4,11 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production"]).default("development"),
   NEXT_PUBLIC_BASE_URL: z.string().url().optional().default("http://localhost:3000"),
   VERCEL_AUTOMATION_BYPASS_SECRET: z.string().optional(),
+  CONTENTFUL_SPACE_ID: z.string().optional(),
+  CONTENTFUL_ACCESS_TOKEN: z.string().optional(),
+  CONTENTFUL_PREVIEW_ACCESS_TOKEN: z.string().optional(),
   CONTENTFUL_PREVIEW_SECRET: z.string().optional(),
+  CONTENTFUL_SPACE_ENVIRONMENT: z.string().optional().default("master"),
 });
 
 const parseEnv = () => {

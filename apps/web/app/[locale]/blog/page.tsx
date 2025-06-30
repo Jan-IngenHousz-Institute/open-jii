@@ -3,11 +3,11 @@ import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getContentfulClients } from "~/lib/contentful";
 
 import { ArticleHero, ArticleTileGrid } from "@repo/cms/article";
 import { Container } from "@repo/cms/container";
 import { PageBlogPostOrder } from "@repo/cms/lib/__generated/sdk";
-import { client, previewClient } from "@repo/cms/lib/client";
 import type { Locale } from "@repo/i18n/config";
 import { defaultLocale, locales } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";
@@ -21,6 +21,7 @@ interface LandingPageProps {
 export async function generateMetadata({ params }: LandingPageProps): Promise<Metadata> {
   const { locale } = await params;
   const { isEnabled: preview } = await draftMode();
+  const { previewClient, client } = await getContentfulClients();
   const gqlClient = preview ? previewClient : client;
   const landingPageData = await gqlClient.pageLanding({
     locale,
@@ -53,6 +54,7 @@ export default async function Page({ params }: LandingPageProps) {
   const { locale } = await params;
   const { isEnabled: preview } = await draftMode();
   const { t, resources } = await initTranslations({ locale: locale as Locale });
+  const { previewClient, client } = await getContentfulClients();
   const gqlClient = preview ? previewClient : client;
 
   const landingPageData = await gqlClient.pageLanding({ locale, preview });
