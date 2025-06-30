@@ -79,7 +79,6 @@ export class UpdateProvisioningStatusUseCase {
   /**
    * Maps Databricks workflow status to experiment status.
    * Returns success with the mapped status, or failure for non-terminal statuses.
-   * Optimized for performance by using object lookup.
    */
   private mapDatabricksStatus(status: DatabricksTaskRunStatus): Result<ExperimentStatus> {
     switch (status) {
