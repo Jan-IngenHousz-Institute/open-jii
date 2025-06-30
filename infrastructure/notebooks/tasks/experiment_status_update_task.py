@@ -214,7 +214,6 @@ class WebhookClient:
         }
         
         logger.info("Sending webhook request to webhook URL")
-        logger.info(f"Payload: {json.dumps(payload, indent=2)}")
         
         try:
             response = self.session.post(
