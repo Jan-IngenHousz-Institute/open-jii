@@ -21,8 +21,8 @@ Configuration (all provided via Spark config at infrastructure-as-code level):
 
 Parameters:
 - experiment_id: Required UUID of the experiment
-- pipeline_id: Optional ID of the created pipeline
-- update_id: Optional ID of the pipeline update/run
+- job_run_id: Required ID of the job run
+- task_run_id: Required ID of the task run
 - status: Optional manual override of the status (auto-detected if not provided)
 """
 
@@ -90,11 +90,15 @@ def extract_parameters() -> Dict[str, Any]:
     if not experiment_id:
         raise ValueError("Experiment ID is required")
     
-    # Get pipeline ID
-    pipeline_id = dbutils.widgets.get("pipeline_id")
+    # Get job run ID (required)
+    job_run_id = dbutils.widgets.get("job_run_id")
+    if not job_run_id:
+        raise ValueError("job_run_id is required")
     
-    # Get update ID
-    update_id = dbutils.widgets.get("update_id")
+    # Get task run ID (required)
+    task_run_id = dbutils.widgets.get("task_run_id")
+    if not task_run_id:
+        raise ValueError("task_run_id is required")
     
     # Get status - with auto-detection of prior task's status if not explicitly set
     status = dbutils.widgets.get("status")
@@ -165,8 +169,8 @@ def extract_parameters() -> Dict[str, Any]:
     return {
         "webhook_url": webhook_url,
         "experiment_id": experiment_id,
-        "pipeline_id": pipeline_id,
-        "update_id": update_id,
+        "job_run_id": job_run_id,
+        "task_run_id": task_run_id,
         "status": status,
         "api_key_scope": api_key_scope,
         "api_key_secret": api_key_secret
@@ -238,8 +242,8 @@ class WebhookClient:
 def create_status_payload(
     experiment_id: str,
     status: str,
-    pipeline_id: Optional[str] = None,
-    update_id: Optional[str] = None
+    job_run_id: str,
+    task_run_id: str
 ) -> Dict[str, Any]:
     """
     Create payload for status update webhook.
@@ -247,30 +251,21 @@ def create_status_payload(
     Args:
         experiment_id: Experiment identifier
         status: Provisioning status
-        pipeline_id: Optional DLT pipeline ID
-        update_id: Optional DLT update ID
+        job_run_id: Job run ID
+        task_run_id: Task run ID
         
     Returns:
         Webhook payload
     """
     timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-    
+
     payload = {
         "experimentId": experiment_id,
         "status": status,
-        "timestamp": timestamp
+        "timestamp": timestamp,
+        "jobRunId": str(job_run_id),
+        "taskRunId": str(task_run_id)
     }
-    
-    # Add job and run IDs based on pipeline info if available
-    if pipeline_id:
-        payload["jobId"] = int(pipeline_id.split(":")[-1]) if ":" in pipeline_id else 0
-    
-    if update_id:
-        payload["runId"] = int(update_id) if update_id.isdigit() else 0
-        
-    # Add workflow name
-    payload["workflowName"] = "OpenJII Experiment Pipeline"
-    
     return payload
 
 # COMMAND ----------
@@ -294,8 +289,8 @@ def main() -> None:
         payload = create_status_payload(
             experiment_id=params["experiment_id"],
             status=params["status"],
-            pipeline_id=params["pipeline_id"],
-            update_id=params["update_id"]
+            job_run_id=params["job_run_id"],
+            task_run_id=params["task_run_id"]
         )
         
         # Send update
