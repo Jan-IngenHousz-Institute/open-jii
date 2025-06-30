@@ -1,7 +1,13 @@
 "use client";
 
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
-import type { AccessorKeyColumnDef, PaginationState, Row, Updater } from "@tanstack/react-table";
+import type {
+  AccessorKeyColumnDef,
+  PaginationState,
+  Row,
+  RowData,
+  Updater,
+} from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import {
   flexRender,
@@ -17,6 +23,7 @@ import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n";
 import {
   Button,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -29,7 +36,6 @@ const staleTime = 2 * 60 * 1000;
 
 export type DataValue = string | number | boolean | null;
 export type DataRow = Record<string, DataValue>;
-export type MetaType = "number" | "text";
 
 function getFormattedValue(row: Row<DataRow>, columnName: string, type_name: string) {
   const value = row.getValue(columnName);
@@ -53,7 +59,7 @@ function getFormattedValue(row: Row<DataRow>, columnName: string, type_name: str
   }
 }
 
-function getReactTableColumns(
+export function getReactTableColumns(
   data: ExperimentData | undefined,
   persistedColumns?: AccessorKeyColumnDef<DataRow, DataValue>[],
 ) {
@@ -109,6 +115,7 @@ export function ExperimentDataTable({
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
   const [persistedColumns, setPersistedColumns] =
     useState<AccessorKeyColumnDef<DataRow, DataValue>[]>();
+  const [totalPages, setTotalPages] = useState<number>();
 
   // Use traditional pagination with improved column persistence
   const { data, isLoading, error } = useExperimentData(
@@ -153,6 +160,7 @@ export function ExperimentDataTable({
       const newColumns = getReactTableColumns(tableData.data);
       if (newColumns.length > 0) {
         setPersistedColumns(newColumns);
+        setTotalPages(tableData.totalPages);
       }
     }
   }, [data?.body]);
@@ -214,7 +222,7 @@ export function ExperimentDataTable({
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="h-2">
                 {headerGroup.headers.map((header) => {
                   return (
                     <TableHead key={header.id}>
@@ -228,19 +236,19 @@ export function ExperimentDataTable({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
+            {isLoading && persistedColumns && (
+              <LoadingRows
+                columnCount={persistedColumns.length}
+                pageSize={pagination.pageSize}
+                locale={locale}
+              />
+            )}
+            {!isLoading && table.getRowModel().rows.length && (
+              <ExperimentDataRows rows={table.getRowModel().rows} />
+            )}
+            {!isLoading && table.getRowModel().rows.length == 0 && (
               <TableRow>
-                <TableCell colSpan={columnCount} className="h-24 text-center">
+                <TableCell colSpan={columnCount} className="h-4 text-center">
                   {t("experimentDataTable.noResults")}
                 </TableCell>
               </TableRow>
@@ -253,7 +261,7 @@ export function ExperimentDataTable({
       <div className="flex items-center justify-end space-x-2 py-4">
         <div>
           {t("experimentDataTable.page")} {pagination.pageIndex + 1}{" "}
-          {t("experimentDataTable.pageOf")} {table.getPageCount()}
+          {t("experimentDataTable.pageOf")} {totalPages}
         </div>
         <Button
           variant="outline"
@@ -280,5 +288,47 @@ export function ExperimentDataTable({
         </div>
       )}
     </div>
+  );
+}
+
+function ExperimentDataRows({ rows }: { rows: Row<RowData>[] }) {
+  return rows.map((row) => (
+    <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+      {row.getVisibleCells().map((cell) => (
+        <TableCell key={cell.id}>
+          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+        </TableCell>
+      ))}
+    </TableRow>
+  ));
+}
+
+function LoadingRows({
+  columnCount,
+  pageSize,
+  locale,
+}: {
+  columnCount: number;
+  pageSize: number;
+  locale: Locale;
+}) {
+  const { t } = useTranslation(locale, "common");
+  return (
+    <>
+      <TableRow>
+        <TableCell colSpan={columnCount} className="h-4">
+          {t("experimentDataTable.loading")} {pageSize}
+        </TableCell>
+      </TableRow>
+      {Array.from({ length: pageSize }).map((_, index) => (
+        <TableRow key={`skeleton-${index}`}>
+          {Array.from({ length: columnCount }).map((_, colIndex) => (
+            <TableCell key={colIndex}>
+              <Skeleton className="h-4" key={`skeleton-col-${colIndex}`} />
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
   );
 }
