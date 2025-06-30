@@ -3,9 +3,13 @@
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import type { AccessorKeyColumnDef, PaginationState, Row, Updater } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
-import { getPaginationRowModel } from "@tanstack/react-table";
-import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import React from "react";
+import {
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type z from "zod";
 
 import type { ExperimentData, zExperimentDataTableInfo } from "@repo/api";
@@ -49,10 +53,20 @@ function getFormattedValue(row: Row<DataRow>, columnName: string, type_name: str
   }
 }
 
-export function getReactTableColumns(data: ExperimentData | undefined) {
+function getReactTableColumns(
+  data: ExperimentData | undefined,
+  persistedColumns?: AccessorKeyColumnDef<DataRow, DataValue>[],
+) {
   const columnHelper = createColumnHelper<DataRow>();
+
+  // Return persisted columns if data is loading and we have them
+  if (!data && persistedColumns) {
+    return persistedColumns;
+  }
+
   const columns: AccessorKeyColumnDef<DataRow, DataValue>[] = [];
   if (!data) return columns;
+
   data.columns.forEach((dataColumn) => {
     columns.push(
       columnHelper.accessor(dataColumn.name, {
@@ -92,8 +106,12 @@ export function ExperimentDataTable({
   pageSize: number;
   locale: Locale;
 }) {
-  const [pagination, setPagination] = React.useState<PaginationState>({ pageIndex: 0, pageSize });
-  const { data, isLoading } = useExperimentData(
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
+  const [persistedColumns, setPersistedColumns] =
+    useState<AccessorKeyColumnDef<DataRow, DataValue>[]>();
+
+  // Use traditional pagination with improved column persistence
+  const { data, isLoading, error } = useExperimentData(
     experimentId,
     {
       page: pagination.pageIndex + 1,
@@ -103,8 +121,22 @@ export function ExperimentDataTable({
     staleTime,
   );
 
+  // Debug logging
+  useEffect(() => {
+    console.log("ExperimentDataTable pagination debug:", {
+      experimentId,
+      tableName,
+      pagination,
+      isLoading,
+      error,
+      hasData: !!data,
+      dataBody: data?.body,
+    });
+  }, [experimentId, tableName, pagination, isLoading, error, data]);
+
   const { t } = useTranslation(locale, "common");
-  const onPaginationChange = React.useCallback(
+
+  const onPaginationChange = useCallback(
     (updaterOrValue: Updater<PaginationState>) => {
       if (typeof updaterOrValue === "function") {
         const newPagination = updaterOrValue(pagination);
@@ -114,14 +146,36 @@ export function ExperimentDataTable({
     [pagination],
   );
 
-  const columns: AccessorKeyColumnDef<DataRow, DataValue>[] = getReactTableColumns(
-    data?.body[0].data,
-  );
-  const rows: DataRow[] = getReactTableData(data?.body[0].data);
+  // Update persisted columns when we get new data
+  useEffect(() => {
+    const tableData = data?.body[0];
+    if (tableData?.data) {
+      const newColumns = getReactTableColumns(tableData.data);
+      if (newColumns.length > 0) {
+        setPersistedColumns(newColumns);
+      }
+    }
+  }, [data?.body]);
+
+  // Use either current columns or persisted columns
+  const currentColumns = useMemo(() => {
+    const tableData = data?.body[0];
+    if (tableData?.data) {
+      return getReactTableColumns(tableData.data);
+    }
+    return persistedColumns ?? [];
+  }, [data?.body, persistedColumns]);
+
+  const rows: DataRow[] = useMemo(() => {
+    const tableData = data?.body[0];
+    return getReactTableData(tableData?.data);
+  }, [data?.body]);
+
+  const tableData = data?.body[0];
 
   const table = useReactTable({
     data: rows,
-    columns,
+    columns: currentColumns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     manualPagination: true,
@@ -129,18 +183,32 @@ export function ExperimentDataTable({
     state: {
       pagination,
     },
-    rowCount: data?.body[0].totalRows ?? 0,
+    rowCount: tableData?.totalRows ?? 0,
   });
 
-  if (isLoading) return <div>{t("experimentDataTable.loading")}</div>;
-  if (!data?.body) return <div>{t("experimentDataTable.noData")}</div>;
-  const tableData: ExperimentDataTableInfo = data.body[0];
-  if (!tableData.data) return <div>{t("experimentDataTable.noData")}</div>;
+  if (isLoading && !persistedColumns) {
+    return <div>{t("experimentDataTable.loading")}</div>;
+  }
+
+  if (error) {
+    return <div>Error loading data</div>;
+  }
+
+  if (!data?.body && !isLoading) {
+    return <div>{t("experimentDataTable.noData")}</div>;
+  }
+
+  if (!tableData?.data && !isLoading && !persistedColumns) {
+    return <div>{t("experimentDataTable.noData")}</div>;
+  }
+
+  // Calculate column count for empty state
+  const columnCount = currentColumns.length || (tableData?.data?.columns.length ?? 1);
 
   return (
     <div className="container mx-auto py-10">
       <div className="mb-2 text-center">
-        {t("experimentDataTable.table")}: {tableData.name}
+        {t("experimentDataTable.table")}: {tableData?.name ?? tableName}
       </div>
       <div className="rounded-md border">
         <Table>
@@ -172,7 +240,7 @@ export function ExperimentDataTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={tableData.data.columns.length} className="h-24 text-center">
+                <TableCell colSpan={columnCount} className="h-24 text-center">
                   {t("experimentDataTable.noResults")}
                 </TableCell>
               </TableRow>
@@ -180,6 +248,8 @@ export function ExperimentDataTable({
           </TableBody>
         </Table>
       </div>
+
+      {/* Traditional pagination controls */}
       <div className="flex items-center justify-end space-x-2 py-4">
         <div>
           {t("experimentDataTable.page")} {pagination.pageIndex + 1}{" "}
@@ -202,10 +272,13 @@ export function ExperimentDataTable({
           {t("experimentDataTable.next")}
         </Button>
       </div>
-      <div className="text-xs">
-        Debug info: Total rows {tableData.totalRows} | Page {tableData.page} | Total pages{" "}
-        {tableData.totalPages} | {tableData.data.truncated ? "Truncated" : "Not truncated"}
-      </div>
+
+      {tableData && (
+        <div className="text-xs">
+          Debug info: Total rows {tableData.totalRows} | Page {tableData.page} | Total pages{" "}
+          {tableData.totalPages} | {tableData.data?.truncated ? "Truncated" : "Not truncated"}
+        </div>
+      )}
     </div>
   );
 }
