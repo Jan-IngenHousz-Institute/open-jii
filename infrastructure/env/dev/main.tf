@@ -253,7 +253,7 @@ module "kinesis_ingest_job" {
 module "experiment_service_principal" {
   source = "../../modules/databricks/service_principal"
 
-  display_name = "Experiment Job Service Principal"
+  display_name = "node-service-prinicipal-${var.environment}"
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -278,14 +278,6 @@ module "expeirment_provisioning_job" {
     retry_on_timeout          = true
   }
 
-  # Global Spark configurations that apply to all tasks
-  # These are environment variables for the webhook
-  global_spark_conf = {
-    "spark.env.webhookUrl"                            = var.experiment_webhook_url
-    "spark.env.apiKeyScope"                           = module.experiment_secret_scope.scope_name
-    "spark.databricks.delta.schema.autoMerge.enabled" = "true"
-  }
-
   tasks = [
     {
       key           = "experiment_pipeline_create"
@@ -308,6 +300,9 @@ module "expeirment_provisioning_job" {
 
       parameters = {
         "experiment_id" = "{{experiment_id}}"
+        "webhook_url"   = "https://${module.route53.api_domain}${var.backend_status_update_webhook_path}"
+        "key_scope"     = module.experiment_secret_scope.scope_name
+        "key_name"      = module.experiment_secret_scope.secret_name
       }
 
       depends_on = "experiment_pipeline_create"
