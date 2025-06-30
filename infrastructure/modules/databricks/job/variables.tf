@@ -85,8 +85,8 @@ variable "task_retry_config" {
   default = {}
 }
 
-variable "global_spark_conf" {
-  description = "Global Spark configurations to apply to all tasks"
+variable "spark_conf" {
+  description = "Global Spark configurations to apply to all tasks (Only applicable if not using serverless compute)."
   type        = map(string)
   default     = {}
 }

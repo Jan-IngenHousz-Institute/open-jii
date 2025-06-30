@@ -61,10 +61,7 @@ resource "databricks_job" "this" {
               "spark.databricks.cluster.profile" = "singleNode"
               "spark.master"                     = "local[*]"
             } : {},
-            # Global spark configurations
-            var.global_spark_conf,
-            # Task-specific spark configurations
-            task.value.spark_conf
+            var.spark_conf,
           )
         }
       }
@@ -78,18 +75,6 @@ resource "databricks_job" "this" {
         content {
           notebook_path   = task.value.notebook_path
           base_parameters = task.value.parameters
-        }
-      }
-
-      # Add Spark configurations for serverless tasks
-      dynamic "spark_conf" {
-        for_each = var.use_serverless ? [1] : []
-        content {
-          # Merge global spark configs with task-specific configs
-          conf = merge(
-            var.global_spark_conf,
-            task.value.spark_conf
-          )
         }
       }
 
