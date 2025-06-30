@@ -1,4 +1,4 @@
-import { ExperimentDataSampleTables } from "@/components/experiment-data-table";
+import { ExperimentDataSampleTables } from "@/components/experiment-data-sample-tables";
 import { use } from "react";
 
 import type { Locale } from "@repo/i18n";

@@ -11,6 +11,6 @@ export default function DataExample({ params }: DataExampleProps) {
   const { id, tableName, locale } = use(params);
 
   return (
-    <ExperimentDataTable experimentId={id} tableName={tableName} pageSize={15} locale={locale} />
+    <ExperimentDataTable experimentId={id} tableName={tableName} pageSize={10} locale={locale} />
   );
 }
