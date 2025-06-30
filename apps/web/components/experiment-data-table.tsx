@@ -30,8 +30,9 @@ import {
 
 type DataValue = string | number | boolean | null;
 type DataRow = Record<string, DataValue>;
-
 type MetaType = "number" | "text";
+
+const staleTime = 2 * 60 * 1000;
 
 function getColumnMetaType(type_name: string) {
   switch (type_name) {
@@ -104,18 +105,25 @@ export function ExperimentDataTable({
   experimentId,
   tableName,
   pageSize = 15,
+  locale,
 }: {
   experimentId: string;
   tableName: string;
   pageSize: number;
+  locale: Locale;
 }) {
   const [pagination, setPagination] = React.useState<PaginationState>({ pageIndex: 0, pageSize });
-  const { data, isLoading } = useExperimentData(experimentId, {
-    page: pagination.pageIndex + 1,
-    pageSize: pagination.pageSize,
-    tableName,
-  });
+  const { data, isLoading } = useExperimentData(
+    experimentId,
+    {
+      page: pagination.pageIndex + 1,
+      pageSize: pagination.pageSize,
+      tableName,
+    },
+    staleTime,
+  );
 
+  const { t } = useTranslation(locale, "common");
   const onPaginationChange = React.useCallback(
     (updaterOrValue: Updater<PaginationState>) => {
       if (typeof updaterOrValue === "function") {
@@ -144,14 +152,16 @@ export function ExperimentDataTable({
     rowCount: data?.body[0].totalRows ?? 0,
   });
 
-  if (isLoading) return <div>Data loading... Please wait. It can take several minutes.</div>;
-  if (!data?.body) return <div>No data returned for table {tableName}</div>;
+  if (isLoading) return <div>{t("experimentDataTable.loading")}</div>;
+  if (!data?.body) return <div>{t("experimentDataTable.noData")}</div>;
   const tableData: ExperimentDataTableInfo = data.body[0];
-  if (!tableData.data) return <div>No table data returned for table {tableName}</div>;
+  if (!tableData.data) return <div>{t("experimentDataTable.noData")}</div>;
 
   return (
     <div className="container mx-auto py-10">
-      <div className="mb-2 text-center">Table: {tableData.name}</div>
+      <div className="mb-2 text-center">
+        {t("experimentDataTable.table")}: {tableData.name}
+      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -183,7 +193,7 @@ export function ExperimentDataTable({
             ) : (
               <TableRow>
                 <TableCell colSpan={tableData.data.columns.length} className="h-24 text-center">
-                  No results.
+                  {t("experimentDataTable.noResults")}
                 </TableCell>
               </TableRow>
             )}
@@ -192,7 +202,7 @@ export function ExperimentDataTable({
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
         <div>
-          Page {pagination.pageIndex + 1} of {table.getPageCount()}
+          {t("experimentDataTable.page")} {pagination.pageIndex + 1} of {table.getPageCount()}
         </div>
         <Button
           variant="outline"
@@ -200,7 +210,7 @@ export function ExperimentDataTable({
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
         >
-          Previous
+          {t("experimentDataTable.previous")}
         </Button>
         <Button
           variant="outline"
@@ -208,11 +218,11 @@ export function ExperimentDataTable({
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
         >
-          Next
+          {t("experimentDataTable.next")}
         </Button>
       </div>
       <div className="text-xs">
-        Total rows {tableData.totalRows} | Page {tableData.page} | Total pages{" "}
+        Debug info: Total rows {tableData.totalRows} | Page {tableData.page} | Total pages{" "}
         {tableData.totalPages} | {tableData.data.truncated ? "Truncated" : "Not truncated"}
       </div>
     </div>
@@ -228,22 +238,26 @@ export function ExperimentDataSampleTables({
   sampleSize: number;
   locale: Locale;
 }) {
-  const { data, isLoading } = useExperimentData(experimentId, {
-    page: 1,
-    pageSize: sampleSize,
-  });
+  const { data, isLoading } = useExperimentData(
+    experimentId,
+    {
+      page: 1,
+      pageSize: sampleSize,
+    },
+    staleTime,
+  );
 
-  const { t } = useTranslation(undefined, "common");
-  if (isLoading) return <div>Data loading... Please wait. It can take several minutes.</div>;
+  const { t } = useTranslation(locale, "common");
+  if (isLoading) return <div>{t("experimentDataTable.loading")}</div>;
   if (data?.body) {
     return (
       <>
         {data.body.map((table) => (
           <div key={table.name}>
-            <InternalSampleExperimentDataTable tableData={table} />
+            <InternalSampleExperimentDataTable tableData={table} locale={locale} />
             <div className="ml-4">
               <Link href={`/platform/data-test/${experimentId}/${table.name}`} locale={locale}>
-                <Button>{t("experimentTable.details")}</Button>
+                <Button>{t("experimentDataTable.details")}</Button>
               </Link>
             </div>
           </div>
@@ -251,17 +265,26 @@ export function ExperimentDataSampleTables({
       </>
     );
   }
-  return <div>No data returned</div>;
+  return <div>{t("experimentDataTable.noData")}</div>;
 }
 
-function InternalSampleExperimentDataTable({ tableData }: { tableData: ExperimentDataTableInfo }) {
-  if (!tableData.data) return <div>No table data returned for table {tableData.name}</div>;
+function InternalSampleExperimentDataTable({
+  tableData,
+  locale,
+}: {
+  tableData: ExperimentDataTableInfo;
+  locale: Locale;
+}) {
+  const { t } = useTranslation(locale, "common");
+  if (!tableData.data) return <div>{t("experimentDataTable.noData")}</div>;
   const columns = getReactTableColumns(tableData.data);
   const newData = getReactTableData(tableData.data);
   return (
     <div className="container mx-auto py-10">
-      <div className="mb-2 text-center">Table: {tableData.name}</div>
-      <SampleDataTable columns={columns} data={newData} />
+      <div className="mb-2 text-center">
+        {t("experimentDataTable.table")}: {tableData.name}
+      </div>
+      <SampleDataTable columns={columns} data={newData} locale={locale} />
     </div>
   );
 }
@@ -269,15 +292,17 @@ function InternalSampleExperimentDataTable({ tableData }: { tableData: Experimen
 interface SampleDataTableProps {
   columns: ColumnDef<DataRow, DataValue>[];
   data: DataRow[];
+  locale: Locale;
 }
 
-function SampleDataTable({ columns, data }: SampleDataTableProps) {
+function SampleDataTable({ columns, data, locale }: SampleDataTableProps) {
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
 
+  const { t } = useTranslation(locale, "common");
   return (
     <div>
       <div className="rounded-md border">
@@ -311,7 +336,7 @@ function SampleDataTable({ columns, data }: SampleDataTableProps) {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
+                  {t("experimentDataTable.noResults")}
                 </TableCell>
               </TableRow>
             )}
