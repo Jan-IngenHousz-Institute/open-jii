@@ -72,7 +72,6 @@ logger = logging.getLogger("experiment_status_updater")
 # COMMAND ----------
 
 # DBTITLE 1,Parameter Extraction
-
 def extract_parameters(dbutils, spark) -> Dict[str, Any]:
     """Extract parameters from Databricks widgets with fallbacks to environment/spark configs."""
     
@@ -105,12 +104,7 @@ def extract_parameters(dbutils, spark) -> Dict[str, Any]:
     if not status or status == "":
         # Auto-detect status from job context
         try:
-            # If we're in a job and have a parent task that failed, report failure
-            # Otherwise assume success
             logger.info("Auto-detecting status from job context")
-            
-            # Get the job context from Databricks runtime
-            # job_context already loaded above
             
             # Default to SUCCESS unless we find evidence of failure
             status = ProvisioningStatus.SUCCESS.value
@@ -119,31 +113,41 @@ def extract_parameters(dbutils, spark) -> Dict[str, Any]:
             if job_context_dict.get("currentRunId") and job_context_dict.get("jobId"):
                 logger.info(f"Running in job context: jobId={job_context_dict.get('jobId')}, runId={job_context_dict.get('currentRunId')}")
                 
-                # Look for parent task error in tags (set by Databricks job machinery)
-                tags = job_context_dict.get("tags", {})
-                
-                # Check for parent task failure indicators in tags
-                parent_failure_indicators = [
-                    "jobTaskParentFailed",
-                    "taskFailed",
-                    "jobParentTaskFailed"
-                ]
-                
-                # Look for any failure indicators in the tags
-                for indicator in parent_failure_indicators:
-                    if any(tag.lower().startswith(indicator.lower()) for tag in tags):
-                        logger.info(f"Detected failure indicator '{indicator}' in job tags")
+                # Look for task status in job context
+                task_status = job_context_dict.get("currentTaskStatus")
+                if task_status:
+                    if task_status.lower() == "failed":
                         status = ProvisioningStatus.FAILED.value
-                        break
-                
-                # Also check for terminated status which could indicate cancellation
-                if any(tag.lower().startswith("terminated") for tag in tags):
-                    logger.info("Detected termination indicator in job tags")
-                    status = ProvisioningStatus.CANCELED.value
-                
-                # If no failure indicators were found
-                if status == ProvisioningStatus.SUCCESS.value:
-                    logger.info("No failure indicators found in job context, reporting SUCCESS")
+                    elif task_status.lower() == "canceled":
+                        status = ProvisioningStatus.CANCELED.value
+                    else:
+                        status = ProvisioningStatus.SUCCESS.value
+                else:
+                    # Look for parent task error in tags (set by Databricks job machinery)
+                    tags = job_context_dict.get("tags", {})
+                    
+                    # Check for parent task failure indicators in tags
+                    parent_failure_indicators = [
+                        "jobTaskParentFailed",
+                        "taskFailed",
+                        "jobParentTaskFailed"
+                    ]
+                    
+                    # Look for any failure indicators in the tags
+                    for indicator in parent_failure_indicators:
+                        if any(tag.lower().startswith(indicator.lower()) for tag in tags):
+                            logger.info(f"Detected failure indicator '{indicator}' in job tags")
+                            status = ProvisioningStatus.FAILED.value
+                            break
+                    
+                    # Also check for terminated status which could indicate cancellation
+                    if any(tag.lower().startswith("terminated") for tag in tags):
+                        logger.info("Detected termination indicator in job tags")
+                        status = ProvisioningStatus.CANCELED.value
+                    
+                    # If no failure indicators were found
+                    if status == ProvisioningStatus.SUCCESS.value:
+                        logger.info("No failure indicators found in job context, reporting SUCCESS")
             else:
                 # Not in a job context, default to SUCCESS
                 logger.info("Not running in job context, defaulting to SUCCESS")
