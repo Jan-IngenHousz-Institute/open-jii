@@ -293,29 +293,6 @@ module "expeirment_provisioning_job" {
       compute_type  = "serverless"
       notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipeline_create_task"
 
-      spark_conf = {
-        # Delta Lake optimizations
-        "spark.databricks.delta.optimizeWrite.enabled" = "true"
-        "spark.databricks.delta.autoCompact.enabled"   = "true"
-
-        # Adaptive query execution for better performance
-        "spark.databricks.adaptive.enabled"                     = "true"
-        "spark.databricks.adaptive.autoOptimizeShuffle.enabled" = "true"
-
-        # Cost optimization settings for orchestration tasks
-        "spark.databricks.io.cache.enabled"    = "true" # Cache data to reduce I/O costs
-        "spark.dynamicAllocation.enabled"      = "true" # Dynamic allocation
-        "spark.dynamicAllocation.minExecutors" = "1"    # Start with minimum executors
-        "spark.dynamicAllocation.maxExecutors" = "2"    # Cap maximum executors
-
-        # Reduce driver and executor sizes for this lightweight job
-        "spark.driver.memory"   = "4g" # 4GB is sufficient for API operations
-        "spark.executor.memory" = "4g" # Smaller executors are more cost-effective
-
-        # Auto termination for minimum idle costs
-        "spark.databricks.cluster.autotermination.minutes" = "10" # Terminate after 10 minutes idle
-      }
-
       parameters = {
         "experiment_id"   = "{{experiment_id}}"
         "experiment_name" = "{{experiment_name}}"
