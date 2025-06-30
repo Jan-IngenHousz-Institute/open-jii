@@ -22,13 +22,6 @@
       "when": 1749728396630,
       "tag": "0002_simple_warbound",
       "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1750870452450,
-      "tag": "0003_nasty_quicksilver",
-      "breakpoints": true
     }
   ]
 }

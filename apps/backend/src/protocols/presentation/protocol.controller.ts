@@ -108,6 +108,7 @@ export class ProtocolController {
         name: body.name,
         description: body.description,
         code: JSON.stringify(body.code),
+        family: body.family,
       };
 
       const result = await this.createProtocolUseCase.execute(createDto, user.id);
@@ -137,6 +138,7 @@ export class ProtocolController {
         name: body.name,
         description: body.description,
         code: body.code ? JSON.stringify(body.code) : undefined,
+        family: body.family,
       };
 
       const result = await this.updateProtocolUseCase.execute(params.id, updateDto);

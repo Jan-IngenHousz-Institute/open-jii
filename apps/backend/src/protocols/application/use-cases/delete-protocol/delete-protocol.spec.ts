@@ -37,6 +37,7 @@ describe("DeleteProtocolUseCase", () => {
       name: "Protocol to Delete",
       description: "This protocol will be deleted",
       code: JSON.stringify({ steps: [{ name: "Step 1", action: "test" }] }),
+      family: "multispeq" as const,
     };
 
     // Create a protocol to delete

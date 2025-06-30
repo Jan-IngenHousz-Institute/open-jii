@@ -37,6 +37,7 @@ describe("GetProtocolUseCase", () => {
       name: "Test Protocol",
       description: "A test protocol description",
       code: { steps: [{ name: "Step 1", action: "test" }] },
+      family: "multispeq" as const,
     };
 
     // Create a protocol to retrieve

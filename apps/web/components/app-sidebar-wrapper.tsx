@@ -28,7 +28,7 @@ export async function AppSidebarWrapper({
     navExperiments: [
       {
         title: tNavigation("sidebar.experiments"),
-        url: "#",
+        url: `/${locale}/platform/experiments`,
         icon: "Microscope",
         isActive: true,
         items: [
@@ -42,53 +42,20 @@ export async function AppSidebarWrapper({
           },
         ],
       },
-      {
-        title: tNavigation("sidebar.archive"),
-        url: "#",
-        icon: "Archive",
-        items: [
-          {
-            title: tNavigation("sidebar.public"),
-            url: "#",
-          },
-          {
-            title: tNavigation("sidebar.private"),
-            url: "#",
-          },
-        ],
-      },
     ],
     navHardware: [
       {
-        title: tNavigation("sidebar.sensors"),
-        url: "#",
-        icon: "Webcam",
-        items: [
-          {
-            title: tNavigation("sidebar.multispeq"),
-            url: "#",
-          },
-        ],
-      },
-      {
         title: tNavigation("sidebar.protocols"),
-        url: "#",
+        url: `/${locale}/platform/protocols`,
         icon: "FileSliders",
         items: [
           {
-            title: tNavigation("sidebar.protocol1"),
-            url: "#",
+            title: tNavigation("sidebar.overview"),
+            url: `/${locale}/platform/protocols`,
           },
-        ],
-      },
-      {
-        title: tNavigation("sidebar.otherDevices"),
-        url: "#",
-        icon: "RadioReceiver",
-        items: [
           {
-            title: tNavigation("sidebar.otherDevice1"),
-            url: "#",
+            title: tNavigation("sidebar.newProtocol"),
+            url: `/${locale}/platform/protocols/new`,
           },
         ],
       },

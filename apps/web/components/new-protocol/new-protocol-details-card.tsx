@@ -14,7 +14,12 @@ import {
   FormControl,
   Input,
   FormMessage,
-  Textarea,
+  RichTextarea,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@repo/ui/components";
 
 interface NewProtocolDetailsCardProps {
@@ -51,12 +56,35 @@ export function NewProtocolDetailsCard({ form }: NewProtocolDetailsCardProps) {
             <FormItem>
               <FormLabel>{t("newProtocol.description_field")}</FormLabel>
               <FormControl>
-                <Textarea
+                <RichTextarea
                   value={field.value ?? ""}
                   onChange={field.onChange}
                   placeholder={t("newProtocol.description_field")}
                 />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="family"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("newProtocol.family")}</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("newProtocol.selectFamily")} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="multispeq">MultispeQ</SelectItem>
+                  <SelectItem value="ambit" disabled>
+                    Ambit (Coming Soon)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

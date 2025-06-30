@@ -1,16 +1,18 @@
 import { z } from "zod";
 
+export const zSensorFamily = z.enum(["multispeq", "ambit"]);
+
 // Define Zod schemas for protocol models
 export const zProtocol = z.object({
   id: z.string().uuid(),
   name: z.string(),
   description: z.string().nullable(),
   code: z.record(z.unknown()).array(),
+  family: zSensorFamily,
   createdBy: z.string().uuid(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
-
 export const zProtocolList = z.array(zProtocol);
 
 // Query parameters
@@ -28,12 +30,14 @@ export const zCreateProtocolRequestBody = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   code: z.record(z.unknown()).array(),
+  family: zSensorFamily,
 });
 
 export const zUpdateProtocolRequestBody = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
   code: z.record(z.unknown()).array().optional(),
+  family: zSensorFamily,
 });
 
 // Error response
@@ -43,6 +47,7 @@ export const zProtocolErrorResponse = z.object({
 });
 
 // Infer types from Zod schemas
+export type SensorFamily = z.infer<typeof zSensorFamily>;
 export type Protocol = z.infer<typeof zProtocol>;
 export type ProtocolList = z.infer<typeof zProtocolList>;
 export type ProtocolFilterQuery = z.infer<typeof zProtocolFilterQuery>;

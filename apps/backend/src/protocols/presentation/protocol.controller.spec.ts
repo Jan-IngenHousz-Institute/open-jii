@@ -372,6 +372,7 @@ describe("ProtocolController", () => {
         name: "Protocol with Stringified Code",
         description: "Testing code parsing",
         code: JSON.stringify({ steps: [{ name: "Step 1", action: "test" }] }),
+        family: "multispeq" as const,
         createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -397,6 +398,7 @@ describe("ProtocolController", () => {
         name: "Protocol with Invalid Code",
         description: "Testing invalid code parsing",
         code: "{ invalid json", // This is not valid JSON
+        family: "multispeq" as const,
         createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),

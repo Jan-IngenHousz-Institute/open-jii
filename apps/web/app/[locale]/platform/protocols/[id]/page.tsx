@@ -1,6 +1,7 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { JsonCodeViewer } from "@/components/json-code-viewer";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { formatDate } from "@/util/date";
 import { CalendarIcon, CodeIcon } from "lucide-react";
@@ -42,7 +43,7 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <div>
               <h4 className="text-muted-foreground text-sm font-medium">{t("common.created")}</h4>
               <p className="flex items-center gap-1">
@@ -55,6 +56,12 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
               <p className="flex items-center gap-1">
                 <CalendarIcon className="text-muted-foreground h-4 w-4" aria-hidden="true" />
                 {formatDate(protocol.updatedAt)}
+              </p>
+            </div>
+            <div>
+              <h4 className="text-muted-foreground text-sm font-medium">{t("protocols.family")}</h4>
+              <p className="capitalize">
+                {protocol.family === "multispeq" ? "MultispeQ" : "Ambit"}
               </p>
             </div>
             <div>
@@ -84,9 +91,7 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
           </div>
         </CardHeader>
         <CardContent>
-          <pre className="bg-muted overflow-auto rounded-md p-4">
-            <code>{JSON.stringify(protocol.code, null, 2)}</code>
-          </pre>
+          <JsonCodeViewer value={protocol.code} height="300px" />
         </CardContent>
       </Card>
     </div>

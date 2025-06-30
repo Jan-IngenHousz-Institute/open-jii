@@ -36,6 +36,7 @@ describe("ProtocolRepository", () => {
         name: "Test Protocol",
         description: "Test Description",
         code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
       };
 
       // Act
@@ -78,11 +79,13 @@ describe("ProtocolRepository", () => {
         name: "Protocol 1",
         description: "Description 1",
         code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
       };
       const protocol2 = {
         name: "Protocol 2",
         description: "Description 2",
         code: JSON.stringify({ steps: [{ name: "Step 2", action: "test" }] }),
+        family: "multispeq" as const,
       };
 
       await repository.create(protocol1, testUserId);
@@ -108,11 +111,13 @@ describe("ProtocolRepository", () => {
         name: `${uniquePrefix} Protocol 1`,
         description: "Description 1",
         code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
       };
       const protocol2 = {
         name: "Different Protocol 2",
         description: "Description 2",
         code: JSON.stringify({ steps: [{ name: "Step 2", action: "test" }] }),
+        family: "multispeq" as const,
       };
 
       await repository.create(protocol1, testUserId);
@@ -139,6 +144,7 @@ describe("ProtocolRepository", () => {
         name: "Find One Protocol",
         description: "Test Description",
         code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
       };
 
       const createResult = await repository.create(createProtocolDto, testUserId);
@@ -181,6 +187,7 @@ describe("ProtocolRepository", () => {
         name: "Unique Name Protocol",
         description: "Test Description",
         code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
       };
 
       await repository.create(createProtocolDto, testUserId);
@@ -220,6 +227,7 @@ describe("ProtocolRepository", () => {
         name: "Update Protocol",
         description: "Original Description",
         code: [{ steps: [{ name: "Original Step", action: "test" }] }],
+        family: "multispeq" as const,
       };
 
       const createResult = await repository.create(createProtocolDto, testUserId);
@@ -269,6 +277,7 @@ describe("ProtocolRepository", () => {
         name: "Partial Update Protocol",
         description: "Original Description",
         code: [{ steps: [{ name: "Original Step", action: "test" }] }],
+        family: "multispeq" as const,
       };
 
       const createResult = await repository.create(createProtocolDto, testUserId);
@@ -307,6 +316,7 @@ describe("ProtocolRepository", () => {
         name: "Delete Protocol",
         description: "Test Description",
         code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
       };
 
       const createResult = await repository.create(createProtocolDto, testUserId);

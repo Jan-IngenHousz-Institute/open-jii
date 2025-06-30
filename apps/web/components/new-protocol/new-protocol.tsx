@@ -29,6 +29,7 @@ export function NewProtocolForm() {
       name: "",
       description: "",
       code: [{}],
+      family: "multispeq",
     },
   });
 
@@ -42,6 +43,7 @@ export function NewProtocolForm() {
         name: data.name,
         description: data.description,
         code: data.code,
+        family: data.family,
       },
     });
   }
