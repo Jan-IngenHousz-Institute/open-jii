@@ -312,7 +312,7 @@ module "expeirment_provisioning_job" {
   permissions = [
     {
       principal_application_id = module.experiment_service_principal.service_principal_application_id
-      principal_can_manage     = true
+      permission_level         = "CAN_MANAGE_RUN"
     }
   ]
 
