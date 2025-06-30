@@ -331,7 +331,6 @@ module "expeirment_provisioning_job" {
 
       parameters = {
         "experiment_id" = "{{experiment_id}}"
-        "job_run_id"     = "{{tasks.experiment_pipeline_create.run_id}}"
       }
 
       depends_on = "experiment_pipeline_create"
