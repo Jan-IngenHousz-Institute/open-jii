@@ -110,25 +110,17 @@ resource "databricks_job" "this" {
   }
 }
 
-# Grant job run permissions to principals if provided
+# Grant job permissions to principals if provided
 resource "databricks_permissions" "job" {
   count    = length(var.permissions)
   provider = databricks.workspace
   job_id   = databricks_job.this.id
 
   dynamic "access_control" {
-    for_each = var.permissions[count.index].principal_can_manage ? [1] : []
+    for_each = [var.permissions[count.index]]
     content {
-      service_principal_name = var.permissions[count.index].principal_application_id
-      permission_level       = "CAN_MANAGE"
-    }
-  }
-
-  dynamic "access_control" {
-    for_each = var.permissions[count.index].principal_can_manage ? [] : [1]
-    content {
-      service_principal_name = var.permissions[count.index].principal_application_id
-      permission_level       = "CAN_VIEW_METADATA"
+      service_principal_name = access_control.value.principal_application_id
+      permission_level       = access_control.value.permission_level
     }
   }
 }

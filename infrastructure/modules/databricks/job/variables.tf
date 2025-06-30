@@ -92,10 +92,16 @@ variable "spark_conf" {
 }
 
 variable "permissions" {
-  description = "List of permissions to grant on the job. Each object should have principal_application_id and principal_can_manage."
+  description = "List of permissions to grant on the job. Each object should have principal_application_id and permission_level."
   type = list(object({
     principal_application_id = string
-    principal_can_manage     = bool
+    permission_level         = string
   }))
   default = []
+  validation {
+    condition = alltrue([
+      for p in var.permissions : contains(["CAN_VIEW", "CAN_MANAGE_RUN", "IS_OWNER", "CAN_MANAGE"], p.permission_level)
+    ])
+    error_message = "permission_level must be one of: CAN_VIEW, CAN_MANAGE_RUN, IS_OWNER, CAN_MANAGE"
+  }
 }
