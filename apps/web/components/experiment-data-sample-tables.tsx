@@ -96,6 +96,9 @@ function SampleDataTable({ columns, data, locale }: SampleDataTableProps) {
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    defaultColumn: {
+      size: 180,
+    },
   });
 
   const { t } = useTranslation(locale, "common");
@@ -108,7 +111,12 @@ function SampleDataTable({ columns, data, locale }: SampleDataTableProps) {
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead
+                      key={header.id}
+                      style={{
+                        minWidth: header.column.columnDef.size,
+                      }}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
@@ -123,7 +131,12 @@ function SampleDataTable({ columns, data, locale }: SampleDataTableProps) {
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell
+                      key={cell.id}
+                      style={{
+                        minWidth: cell.column.columnDef.size,
+                      }}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}

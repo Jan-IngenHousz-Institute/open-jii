@@ -50,11 +50,9 @@ function getFormattedValue(row: Row<DataRow>, columnName: string, type_name: str
         </div>
       );
     case "TIMESTAMP":
-      return (
-        <div className="font-medium">{(value as string).substring(0, 19).replace("T", " ")}</div>
-      );
+      return (value as string).substring(0, 19).replace("T", " ");
     default: {
-      return <div className="font-medium">{value as string}</div>;
+      return value as string;
     }
   }
 }
@@ -192,6 +190,9 @@ export function ExperimentDataTable({
       pagination,
     },
     rowCount: tableData?.totalRows ?? 0,
+    defaultColumn: {
+      size: 180,
+    },
   });
 
   if (isLoading && !persistedColumns) {
@@ -225,7 +226,12 @@ export function ExperimentDataTable({
               <TableRow key={headerGroup.id} className="h-2">
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead
+                      key={header.id}
+                      style={{
+                        minWidth: header.column.columnDef.size,
+                      }}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
@@ -295,7 +301,12 @@ function ExperimentDataRows({ rows }: { rows: Row<RowData>[] }) {
   return rows.map((row) => (
     <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
       {row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id}>
+        <TableCell
+          key={cell.id}
+          style={{
+            minWidth: cell.column.columnDef.size,
+          }}
+        >
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
         </TableCell>
       ))}
