@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { notFound } from "next/navigation";
+import { getContentfulClients } from "~/lib/contentful";
 
 import { ArticleContent, ArticleHero, ArticleTileGrid } from "@repo/cms/article";
 import { Container } from "@repo/cms/container";
-import { client, previewClient } from "@repo/cms/lib/client";
 import type { Locale } from "@repo/i18n/config";
 import { defaultLocale, locales } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";
@@ -19,6 +19,7 @@ interface BlogPageProps {
 export async function generateMetadata({ params }: BlogPageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   const { isEnabled: preview } = await draftMode();
+  const { previewClient, client } = await getContentfulClients();
   const gqlClient = preview ? previewClient : client;
 
   const { pageBlogPostCollection } = await gqlClient.pageBlogPost({
@@ -50,35 +51,10 @@ export async function generateMetadata({ params }: BlogPageProps): Promise<Metad
   return metadata;
 }
 
-export async function generateStaticParams({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}): Promise<{ locale: string; slug: string }[]> {
-  const { locale } = await params;
-  const gqlClient = client;
-  const { pageBlogPostCollection } = await gqlClient.pageBlogPostCollection({
-    locale,
-    limit: 100,
-  });
-
-  if (!pageBlogPostCollection?.items) {
-    throw new Error("No blog posts found");
-  }
-
-  return pageBlogPostCollection.items
-    .filter((blogPost): blogPost is NonNullable<typeof blogPost> => Boolean(blogPost?.slug))
-    .map((blogPost) => {
-      return {
-        locale,
-        slug: blogPost.slug ?? "",
-      };
-    });
-}
-
 export default async function Page({ params }: BlogPageProps) {
   const { locale, slug } = await params;
   const { isEnabled: preview } = await draftMode();
+  const { previewClient, client } = await getContentfulClients();
   const gqlClient = preview ? previewClient : client;
   const { t } = await initTranslations({ locale: locale as Locale });
   const { pageBlogPostCollection } = await gqlClient.pageBlogPost({
@@ -114,7 +90,10 @@ export default async function Page({ params }: BlogPageProps) {
           <h2 className="mb-4 text-2xl font-medium md:mb-6 md:text-3xl">
             {t("article.relatedArticles")}
           </h2>
-          <ArticleTileGrid className="md:grid-cols-2" articles={relatedPosts} locale={locale} />
+          <ArticleTileGrid
+            articles={relatedPosts.filter((post): post is NonNullable<typeof post> => !!post?.slug)}
+            locale={locale}
+          />
         </Container>
       )}
     </>

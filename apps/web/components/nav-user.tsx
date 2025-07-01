@@ -2,7 +2,6 @@
 
 import { ChevronsUpDown, LogOut } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n";
@@ -35,7 +34,6 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar();
   const { t } = useTranslation(undefined, "common");
-  const pathname = usePathname();
 
   return (
     <SidebarMenu>

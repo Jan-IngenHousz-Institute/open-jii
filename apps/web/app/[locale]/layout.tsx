@@ -1,9 +1,10 @@
 import { TranslationsProvider } from "@/components/translations-provider";
 import type { Metadata } from "next";
 import { Poppins, Overpass } from "next/font/google";
-import type React from "react";
+import type { ReactNode } from "react";
 
 import { SessionProvider } from "@repo/auth/client";
+import { dir } from "@repo/i18n";
 import type { Locale, Namespace } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { cn } from "@repo/ui/lib/utils";
@@ -26,7 +27,7 @@ const overpass = Overpass({
 const i18nNamespaces: Namespace[] = ["common", "navigation", "experiments", "dashboard"];
 
 interface LocaleLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
   params: Promise<{ locale: Locale }>;
 }
 
@@ -55,13 +56,13 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   });
 
   return (
-    <html>
+    <html lang={locale} dir={dir(locale)} className="h-full">
       <head>
         <meta name="robots" content="noindex, nofollow" />
       </head>
       <body
         className={cn(
-          "bg-background font-overpass min-h-screen antialiased",
+          "bg-background font-overpass flex min-h-screen flex-col antialiased",
           poppins.variable,
           overpass.variable,
         )}

@@ -1,6 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
+    /** Base Options */
     "esModuleInterop": true,
     "skipLibCheck": true,
     "target": "ES2022",
@@ -10,24 +11,25 @@
     "resolveJsonModule": true,
     "moduleDetection": "force",
     "isolatedModules": true,
+
+    /** Keep TSC performant in monorepos */
     "incremental": true,
     "disableSourceOfProjectReferenceRedirect": true,
     "tsBuildInfoFile": "${configDir}/.cache/tsbuildinfo.json",
+
+    /** Strictness */
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitReturns": true,
+
+    /** React */
     "jsx": "react-jsx",
+
+    /** Output */
     "outDir": "dist",
-    "rootDir": "../../packages",
+    "rootDir": "src",
     "declaration": true,
-    "declarationMap": true,
-    "baseUrl": "../../packages",
-    "paths": {
-      "@repo/i18n": ["i18n/src/index.ts"],
-      "@repo/i18n/*": ["i18n/src/*"],
-      "@repo/api": ["api/src/index.ts"],
-      "@repo/api/*": ["api/src/*"]
-    }
+    "declarationMap": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

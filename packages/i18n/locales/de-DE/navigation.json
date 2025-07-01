@@ -9,7 +9,8 @@
     "profile": "Profil",
     "home": "Startseite",
     "blog": "Blog",
-    "platform": "Plattform"
+    "platform": "Plattform",
+    "menu": "Navigationsmenü"
   },
   "sidebar": {
     "main": "Hauptmenü",

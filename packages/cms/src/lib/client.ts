@@ -1,21 +1,43 @@
 import { GraphQLClient } from "graphql-request";
 
-import { endpoint } from "../codegen";
+import { getContentfulEndpoint } from "../codegen";
 import { getSdk } from "../lib/__generated/sdk";
+import type { ContentfulConfig } from "./types";
+import { defaultConfig } from "./types";
 
-const graphQlClient = new GraphQLClient(endpoint, {
-  headers: {
-    Authorization: `Bearer ${process.env.CONTENTFUL_ACCESS_TOKEN}`,
-  },
-});
+type ContentfulSdk = ReturnType<typeof getSdk>;
 
-const previewGraphQlClient = new GraphQLClient(endpoint, {
-  headers: {
-    Authorization: `Bearer ${process.env.CONTENTFUL_PREVIEW_ACCESS_TOKEN}`,
-  },
-});
+export interface ContentfulClients {
+  client: ContentfulSdk;
+  previewClient: ContentfulSdk;
+}
 
-type Sdk = ReturnType<typeof getSdk>;
+export function createContentfulClient(
+  config: ContentfulConfig = defaultConfig,
+): ContentfulClients {
+  const customEndpoint = getContentfulEndpoint(config);
 
-export const client: Sdk = getSdk(graphQlClient);
-export const previewClient: Sdk = getSdk(previewGraphQlClient);
+  const graphQlClient = new GraphQLClient(customEndpoint, {
+    headers: {
+      Authorization: `Bearer ${config.accessToken}`,
+    },
+  });
+
+  const previewGraphQlClient = new GraphQLClient(customEndpoint, {
+    headers: {
+      Authorization: `Bearer ${config.previewAccessToken}`,
+    },
+  });
+
+  return {
+    client: getSdk(graphQlClient),
+    previewClient: getSdk(previewGraphQlClient),
+  };
+}
+
+// Default clients using environment variables
+const defaultClients: ContentfulClients = createContentfulClient();
+const client: ContentfulSdk = defaultClients.client;
+const previewClient: ContentfulSdk = defaultClients.previewClient;
+
+export { client, previewClient };
