@@ -1,7 +1,8 @@
-import { UnifiedNavbar } from "@/components/unified-navbar";
-import { auth } from "@/lib/auth";
+import { draftMode } from "next/headers";
+import { getContentfulClients } from "~/lib/contentful";
 
-import { HomeFooter, FaqContent } from "@repo/cms";
+import { FaqContent } from "@repo/cms";
+import type { PageFaqFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
@@ -11,21 +12,30 @@ interface FaqPageProps {
 
 export default async function FaqPage({ params }: FaqPageProps) {
   const { locale } = await params;
-  const session = await auth();
   const { t } = await initTranslations({
     locale,
     namespaces: ["common"],
   });
 
+  const { isEnabled: preview } = await draftMode();
+  const { previewClient, client } = await getContentfulClients();
+  const gqlClient = preview ? previewClient : client;
+  const faqQuery = await gqlClient.pageFaq({ locale, preview });
+  const faq = faqQuery.pageFaqCollection?.items[0] as PageFaqFieldsFragment;
+
   return (
-    <>
-      <UnifiedNavbar locale={locale} session={session} />
-      <main className="min-h-screen bg-gray-50 py-12">
-        <div className="mx-auto max-w-4xl px-4">
-          <FaqContent t={t} />
-        </div>
-      </main>
-      <HomeFooter t={t} locale={locale} />
-    </>
+    <main className="min-h-screen py-12">
+      <div className="mx-auto max-w-4xl px-4">
+        <FaqContent
+          translations={{
+            title: t("faq.title"),
+            intro: t("faq.intro"),
+          }}
+          faq={faq}
+          locale={locale}
+          preview={preview}
+        />
+      </div>
+    </main>
   );
 }

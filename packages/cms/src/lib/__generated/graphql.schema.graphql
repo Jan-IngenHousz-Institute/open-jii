@@ -205,6 +205,109 @@ enum ComponentAuthorOrder {
 }
 
 """
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentFaqQuestion)
+"""
+type ComponentFaqQuestion implements Entry & _Node {
+  _id: ID!
+  answer(locale: String): ComponentFaqQuestionAnswer
+  contentfulMetadata: ContentfulMetadata!
+  internalName(locale: String): String
+  linkedFrom(allowedLocales: [String]): ComponentFaqQuestionLinkingCollections
+  question(locale: String): String
+  sys: Sys!
+}
+
+type ComponentFaqQuestionAnswer {
+  json: JSON!
+  links: ComponentFaqQuestionAnswerLinks!
+}
+
+type ComponentFaqQuestionAnswerAssets {
+  block: [Asset]!
+  hyperlink: [Asset]!
+}
+
+type ComponentFaqQuestionAnswerEntries {
+  block: [Entry]!
+  hyperlink: [Entry]!
+  inline: [Entry]!
+}
+
+type ComponentFaqQuestionAnswerLinks {
+  assets: ComponentFaqQuestionAnswerAssets!
+  entries: ComponentFaqQuestionAnswerEntries!
+  resources: ComponentFaqQuestionAnswerResources!
+}
+
+type ComponentFaqQuestionAnswerResources {
+  block: [ComponentFaqQuestionAnswerResourcesBlock!]!
+  hyperlink: [ComponentFaqQuestionAnswerResourcesHyperlink!]!
+  inline: [ComponentFaqQuestionAnswerResourcesInline!]!
+}
+
+type ComponentFaqQuestionAnswerResourcesBlock implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type ComponentFaqQuestionAnswerResourcesHyperlink implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type ComponentFaqQuestionAnswerResourcesInline implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type ComponentFaqQuestionCollection {
+  items: [ComponentFaqQuestion]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+input ComponentFaqQuestionFilter {
+  AND: [ComponentFaqQuestionFilter]
+  OR: [ComponentFaqQuestionFilter]
+  answer_contains: String
+  answer_exists: Boolean
+  answer_not_contains: String
+  contentfulMetadata: ContentfulMetadataFilter
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  question: String
+  question_contains: String
+  question_exists: Boolean
+  question_in: [String]
+  question_not: String
+  question_not_contains: String
+  question_not_in: [String]
+  sys: SysFilter
+}
+
+type ComponentFaqQuestionLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+}
+
+enum ComponentFaqQuestionOrder {
+  internalName_ASC
+  internalName_DESC
+  question_ASC
+  question_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+}
+
+"""
 To describe an image used in rich text fields [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentRichImage)
 """
 type ComponentRichImage implements Entry & _Node {
@@ -926,6 +1029,84 @@ enum PageBlogPostRelatedBlogPostsCollectionOrder {
 }
 
 """
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageFaq)
+"""
+type PageFaq implements Entry & _Node {
+  _id: ID!
+  contentfulMetadata: ContentfulMetadata!
+  internalName(locale: String): String
+  intro(locale: String): String
+  linkedFrom(allowedLocales: [String]): PageFaqLinkingCollections
+  questionsCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): PageFaqQuestionsCollection
+  sys: Sys!
+  title(locale: String): String
+}
+
+type PageFaqCollection {
+  items: [PageFaq]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+input PageFaqFilter {
+  AND: [PageFaqFilter]
+  OR: [PageFaqFilter]
+  contentfulMetadata: ContentfulMetadataFilter
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  intro: String
+  intro_contains: String
+  intro_exists: Boolean
+  intro_in: [String]
+  intro_not: String
+  intro_not_contains: String
+  intro_not_in: [String]
+  questionsCollection_exists: Boolean
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
+}
+
+type PageFaqLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+}
+
+enum PageFaqOrder {
+  internalName_ASC
+  internalName_DESC
+  intro_ASC
+  intro_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+type PageFaqQuestionsCollection {
+  items: [Entry]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+"""
 To have an entry point for the app (e.g. Homepage) [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageLanding)
 """
 type PageLanding implements Entry & _Node {
@@ -1095,6 +1276,8 @@ type Query {
   assetCollection(limit: Int = 100, locale: String, order: [AssetOrder], preview: Boolean, skip: Int = 0, where: AssetFilter): AssetCollection
   componentAuthor(id: String!, locale: String, preview: Boolean): ComponentAuthor
   componentAuthorCollection(limit: Int = 100, locale: String, order: [ComponentAuthorOrder], preview: Boolean, skip: Int = 0, where: ComponentAuthorFilter): ComponentAuthorCollection
+  componentFaqQuestion(id: String!, locale: String, preview: Boolean): ComponentFaqQuestion
+  componentFaqQuestionCollection(limit: Int = 100, locale: String, order: [ComponentFaqQuestionOrder], preview: Boolean, skip: Int = 0, where: ComponentFaqQuestionFilter): ComponentFaqQuestionCollection
   componentRichImage(id: String!, locale: String, preview: Boolean): ComponentRichImage
   componentRichImageCollection(limit: Int = 100, locale: String, order: [ComponentRichImageOrder], preview: Boolean, skip: Int = 0, where: ComponentRichImageFilter): ComponentRichImageCollection
   componentSeo(id: String!, locale: String, preview: Boolean): ComponentSeo
@@ -1104,6 +1287,8 @@ type Query {
   pageAboutCollection(limit: Int = 100, locale: String, order: [PageAboutOrder], preview: Boolean, skip: Int = 0, where: PageAboutFilter): PageAboutCollection
   pageBlogPost(id: String!, locale: String, preview: Boolean): PageBlogPost
   pageBlogPostCollection(limit: Int = 100, locale: String, order: [PageBlogPostOrder], preview: Boolean, skip: Int = 0, where: PageBlogPostFilter): PageBlogPostCollection
+  pageFaq(id: String!, locale: String, preview: Boolean): PageFaq
+  pageFaqCollection(limit: Int = 100, locale: String, order: [PageFaqOrder], preview: Boolean, skip: Int = 0, where: PageFaqFilter): PageFaqCollection
   pageLanding(id: String!, locale: String, preview: Boolean): PageLanding
   pageLandingCollection(limit: Int = 100, locale: String, order: [PageLandingOrder], preview: Boolean, skip: Int = 0, where: PageLandingFilter): PageLandingCollection
   pagePolicies(id: String!, locale: String, preview: Boolean): PagePolicies

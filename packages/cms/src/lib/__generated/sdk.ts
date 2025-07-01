@@ -362,6 +362,146 @@ export enum ComponentAuthorOrder {
   SysPublishedVersionDesc = "sys_publishedVersion_DESC",
 }
 
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentFaqQuestion) */
+export type ComponentFaqQuestion = Entry &
+  _Node & {
+    __typename?: "ComponentFaqQuestion";
+    _id: Scalars["ID"]["output"];
+    answer?: Maybe<ComponentFaqQuestionAnswer>;
+    contentfulMetadata: ContentfulMetadata;
+    internalName?: Maybe<Scalars["String"]["output"]>;
+    linkedFrom?: Maybe<ComponentFaqQuestionLinkingCollections>;
+    question?: Maybe<Scalars["String"]["output"]>;
+    sys: Sys;
+  };
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentFaqQuestion) */
+export type ComponentFaqQuestionAnswerArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentFaqQuestion) */
+export type ComponentFaqQuestionInternalNameArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentFaqQuestion) */
+export type ComponentFaqQuestionLinkedFromArgs = {
+  allowedLocales?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentFaqQuestion) */
+export type ComponentFaqQuestionQuestionArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type ComponentFaqQuestionAnswer = {
+  __typename?: "ComponentFaqQuestionAnswer";
+  json: Scalars["JSON"]["output"];
+  links: ComponentFaqQuestionAnswerLinks;
+};
+
+export type ComponentFaqQuestionAnswerAssets = {
+  __typename?: "ComponentFaqQuestionAnswerAssets";
+  block: Array<Maybe<Asset>>;
+  hyperlink: Array<Maybe<Asset>>;
+};
+
+export type ComponentFaqQuestionAnswerEntries = {
+  __typename?: "ComponentFaqQuestionAnswerEntries";
+  block: Array<Maybe<Entry>>;
+  hyperlink: Array<Maybe<Entry>>;
+  inline: Array<Maybe<Entry>>;
+};
+
+export type ComponentFaqQuestionAnswerLinks = {
+  __typename?: "ComponentFaqQuestionAnswerLinks";
+  assets: ComponentFaqQuestionAnswerAssets;
+  entries: ComponentFaqQuestionAnswerEntries;
+  resources: ComponentFaqQuestionAnswerResources;
+};
+
+export type ComponentFaqQuestionAnswerResources = {
+  __typename?: "ComponentFaqQuestionAnswerResources";
+  block: Array<ComponentFaqQuestionAnswerResourcesBlock>;
+  hyperlink: Array<ComponentFaqQuestionAnswerResourcesHyperlink>;
+  inline: Array<ComponentFaqQuestionAnswerResourcesInline>;
+};
+
+export type ComponentFaqQuestionAnswerResourcesBlock = ResourceLink & {
+  __typename?: "ComponentFaqQuestionAnswerResourcesBlock";
+  sys: ResourceSys;
+};
+
+export type ComponentFaqQuestionAnswerResourcesHyperlink = ResourceLink & {
+  __typename?: "ComponentFaqQuestionAnswerResourcesHyperlink";
+  sys: ResourceSys;
+};
+
+export type ComponentFaqQuestionAnswerResourcesInline = ResourceLink & {
+  __typename?: "ComponentFaqQuestionAnswerResourcesInline";
+  sys: ResourceSys;
+};
+
+export type ComponentFaqQuestionCollection = {
+  __typename?: "ComponentFaqQuestionCollection";
+  items: Array<Maybe<ComponentFaqQuestion>>;
+  limit: Scalars["Int"]["output"];
+  skip: Scalars["Int"]["output"];
+  total: Scalars["Int"]["output"];
+};
+
+export type ComponentFaqQuestionFilter = {
+  AND?: InputMaybe<Array<InputMaybe<ComponentFaqQuestionFilter>>>;
+  OR?: InputMaybe<Array<InputMaybe<ComponentFaqQuestionFilter>>>;
+  answer_contains?: InputMaybe<Scalars["String"]["input"]>;
+  answer_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  answer_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  internalName?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  internalName_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  internalName_not?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  question?: InputMaybe<Scalars["String"]["input"]>;
+  question_contains?: InputMaybe<Scalars["String"]["input"]>;
+  question_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  question_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  question_not?: InputMaybe<Scalars["String"]["input"]>;
+  question_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  question_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  sys?: InputMaybe<SysFilter>;
+};
+
+export type ComponentFaqQuestionLinkingCollections = {
+  __typename?: "ComponentFaqQuestionLinkingCollections";
+  entryCollection?: Maybe<EntryCollection>;
+};
+
+export type ComponentFaqQuestionLinkingCollectionsEntryCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+};
+
+export enum ComponentFaqQuestionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  QuestionAsc = "question_ASC",
+  QuestionDesc = "question_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+}
+
 /** To describe an image used in rich text fields [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentRichImage) */
 export type ComponentRichImage = Entry &
   _Node & {
@@ -1277,6 +1417,122 @@ export enum PageBlogPostRelatedBlogPostsCollectionOrder {
   TitleDesc = "title_DESC",
 }
 
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageFaq) */
+export type PageFaq = Entry &
+  _Node & {
+    __typename?: "PageFaq";
+    _id: Scalars["ID"]["output"];
+    contentfulMetadata: ContentfulMetadata;
+    internalName?: Maybe<Scalars["String"]["output"]>;
+    intro?: Maybe<Scalars["String"]["output"]>;
+    linkedFrom?: Maybe<PageFaqLinkingCollections>;
+    questionsCollection?: Maybe<PageFaqQuestionsCollection>;
+    sys: Sys;
+    title?: Maybe<Scalars["String"]["output"]>;
+  };
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageFaq) */
+export type PageFaqInternalNameArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageFaq) */
+export type PageFaqIntroArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageFaq) */
+export type PageFaqLinkedFromArgs = {
+  allowedLocales?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageFaq) */
+export type PageFaqQuestionsCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageFaq) */
+export type PageFaqTitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type PageFaqCollection = {
+  __typename?: "PageFaqCollection";
+  items: Array<Maybe<PageFaq>>;
+  limit: Scalars["Int"]["output"];
+  skip: Scalars["Int"]["output"];
+  total: Scalars["Int"]["output"];
+};
+
+export type PageFaqFilter = {
+  AND?: InputMaybe<Array<InputMaybe<PageFaqFilter>>>;
+  OR?: InputMaybe<Array<InputMaybe<PageFaqFilter>>>;
+  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  internalName?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  internalName_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  internalName_not?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  intro?: InputMaybe<Scalars["String"]["input"]>;
+  intro_contains?: InputMaybe<Scalars["String"]["input"]>;
+  intro_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  intro_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  intro_not?: InputMaybe<Scalars["String"]["input"]>;
+  intro_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  intro_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  questionsCollection_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  sys?: InputMaybe<SysFilter>;
+  title?: InputMaybe<Scalars["String"]["input"]>;
+  title_contains?: InputMaybe<Scalars["String"]["input"]>;
+  title_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  title_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  title_not?: InputMaybe<Scalars["String"]["input"]>;
+  title_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  title_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+export type PageFaqLinkingCollections = {
+  __typename?: "PageFaqLinkingCollections";
+  entryCollection?: Maybe<EntryCollection>;
+};
+
+export type PageFaqLinkingCollectionsEntryCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+};
+
+export enum PageFaqOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  IntroAsc = "intro_ASC",
+  IntroDesc = "intro_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
+export type PageFaqQuestionsCollection = {
+  __typename?: "PageFaqQuestionsCollection";
+  items: Array<Maybe<Entry>>;
+  limit: Scalars["Int"]["output"];
+  skip: Scalars["Int"]["output"];
+  total: Scalars["Int"]["output"];
+};
+
 /** To have an entry point for the app (e.g. Homepage) [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageLanding) */
 export type PageLanding = Entry &
   _Node & {
@@ -1513,6 +1769,8 @@ export type Query = {
   assetCollection?: Maybe<AssetCollection>;
   componentAuthor?: Maybe<ComponentAuthor>;
   componentAuthorCollection?: Maybe<ComponentAuthorCollection>;
+  componentFaqQuestion?: Maybe<ComponentFaqQuestion>;
+  componentFaqQuestionCollection?: Maybe<ComponentFaqQuestionCollection>;
   componentRichImage?: Maybe<ComponentRichImage>;
   componentRichImageCollection?: Maybe<ComponentRichImageCollection>;
   componentSeo?: Maybe<ComponentSeo>;
@@ -1522,6 +1780,8 @@ export type Query = {
   pageAboutCollection?: Maybe<PageAboutCollection>;
   pageBlogPost?: Maybe<PageBlogPost>;
   pageBlogPostCollection?: Maybe<PageBlogPostCollection>;
+  pageFaq?: Maybe<PageFaq>;
+  pageFaqCollection?: Maybe<PageFaqCollection>;
   pageLanding?: Maybe<PageLanding>;
   pageLandingCollection?: Maybe<PageLandingCollection>;
   pagePolicies?: Maybe<PagePolicies>;
@@ -1568,6 +1828,21 @@ export type QueryComponentAuthorCollectionArgs = {
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
   where?: InputMaybe<ComponentAuthorFilter>;
+};
+
+export type QueryComponentFaqQuestionArgs = {
+  id: Scalars["String"]["input"];
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type QueryComponentFaqQuestionCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<ComponentFaqQuestionOrder>>>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  where?: InputMaybe<ComponentFaqQuestionFilter>;
 };
 
 export type QueryComponentRichImageArgs = {
@@ -1637,6 +1912,21 @@ export type QueryPageBlogPostCollectionArgs = {
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
   where?: InputMaybe<PageBlogPostFilter>;
+};
+
+export type QueryPageFaqArgs = {
+  id: Scalars["String"]["input"];
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type QueryPageFaqCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageFaqOrder>>>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  where?: InputMaybe<PageFaqFilter>;
 };
 
 export type QueryPageLandingArgs = {
@@ -1932,10 +2222,12 @@ export type PageBlogPostFieldsFragment = {
         __typename?: "PageBlogPostContentEntries";
         block: Array<
           | { __typename?: "ComponentAuthor" }
+          | { __typename?: "ComponentFaqQuestion" }
           | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
           | { __typename?: "ComponentSeo" }
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
+          | { __typename?: "PageFaq" }
           | { __typename?: "PageLanding" }
           | { __typename?: "PagePolicies" }
           | null
@@ -1976,6 +2268,49 @@ export type PageBlogPostCollectionQuery = {
   pageBlogPostCollection?: {
     __typename?: "PageBlogPostCollection";
     items: Array<({ __typename?: "PageBlogPost" } & PageBlogPostFieldsFragment) | null>;
+  } | null;
+};
+
+export type FaqQuestionFieldsFragment = {
+  __typename: "ComponentFaqQuestion";
+  question?: string | null;
+  sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
+  answer?: { __typename?: "ComponentFaqQuestionAnswer"; json: any } | null;
+};
+
+export type PageFaqFieldsFragment = {
+  __typename: "PageFaq";
+  internalName?: string | null;
+  title?: string | null;
+  intro?: string | null;
+  sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
+  questionsCollection?: {
+    __typename?: "PageFaqQuestionsCollection";
+    items: Array<
+      | { __typename?: "ComponentAuthor" }
+      | ({ __typename?: "ComponentFaqQuestion" } & FaqQuestionFieldsFragment)
+      | { __typename?: "ComponentRichImage" }
+      | { __typename?: "ComponentSeo" }
+      | { __typename?: "PageAbout" }
+      | { __typename?: "PageBlogPost" }
+      | { __typename?: "PageFaq" }
+      | { __typename?: "PageLanding" }
+      | { __typename?: "PagePolicies" }
+      | null
+    >;
+  } | null;
+};
+
+export type PageFaqQueryVariables = Exact<{
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+}>;
+
+export type PageFaqQuery = {
+  __typename?: "Query";
+  pageFaqCollection?: {
+    __typename?: "PageFaqCollection";
+    items: Array<({ __typename?: "PageFaq" } & PageFaqFieldsFragment) | null>;
   } | null;
 };
 
@@ -2217,6 +2552,38 @@ export const PageBlogPostFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
+export const FaqQuestionFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+  fragment FaqQuestionFields on ComponentFaqQuestion {
+    __typename
+    sys {
+      id
+      publishedAt
+      environmentId
+    }
+    question
+    answer {
+      json
+    }
+  }
+`;
+export const PageFaqFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+  fragment PageFaqFields on PageFaq {
+    __typename
+    sys {
+      id
+      publishedAt
+      environmentId
+    }
+    internalName
+    title
+    intro
+    questionsCollection {
+      items {
+        ...FaqQuestionFields
+      }
+    }
+  }
+`;
 export const PageLandingFieldsFragmentDoc: ReturnType<typeof gql> = gql`
   fragment PageLandingFields on PageLanding {
     __typename
@@ -2318,6 +2685,17 @@ export const PageBlogPostCollectionDocument: ReturnType<typeof gql> = gql`
   ${AuthorFieldsFragmentDoc}
   ${RichImageFieldsFragmentDoc}
   ${ReferencePageBlogPostFieldsFragmentDoc}
+`;
+export const PageFaqDocument: ReturnType<typeof gql> = gql`
+  query pageFaq($locale: String, $preview: Boolean) {
+    pageFaqCollection(limit: 1, locale: $locale, preview: $preview) {
+      items {
+        ...PageFaqFields
+      }
+    }
+  }
+  ${PageFaqFieldsFragmentDoc}
+  ${FaqQuestionFieldsFragmentDoc}
 `;
 export const PageLandingDocument: ReturnType<typeof gql> = gql`
   query pageLanding($locale: String, $preview: Boolean) {
@@ -2426,6 +2804,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "pageBlogPostCollection",
+        "query",
+        variables,
+      );
+    },
+    pageFaq(
+      variables?: PageFaqQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<PageFaqQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<PageFaqQuery>({
+            document: PageFaqDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "pageFaq",
         "query",
         variables,
       );
