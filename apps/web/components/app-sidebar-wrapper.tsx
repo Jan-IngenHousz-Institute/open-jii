@@ -48,14 +48,15 @@ export async function AppSidebarWrapper({
         title: tNavigation("sidebar.protocols"),
         url: `/${locale}/platform/protocols`,
         icon: "FileSliders",
+        isActive: true,
         items: [
-          {
-            title: tNavigation("sidebar.overview"),
-            url: `/${locale}/platform/protocols`,
-          },
           {
             title: tNavigation("sidebar.newProtocol"),
             url: `/${locale}/platform/protocols/new`,
+          },
+          {
+            title: tNavigation("sidebar.overview"),
+            url: `/${locale}/platform/protocols`,
           },
         ],
       },

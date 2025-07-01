@@ -131,8 +131,25 @@ export class ProtocolController {
   }
 
   @TsRestHandler(contract.protocols.updateProtocol)
-  updateProtocol() {
+  updateProtocol(@CurrentUser() user: SessionUser) {
     return tsRestHandler(contract.protocols.updateProtocol, async ({ params, body }) => {
+      // First check if protocol exists and user is the creator
+      const protocolResult = await this.getProtocolUseCase.execute(params.id);
+
+      if (protocolResult.isFailure()) {
+        return handleFailure(protocolResult, this.logger);
+      }
+
+      if (protocolResult.value.createdBy !== user.id) {
+        this.logger.warn(
+          `User ${user.id} attempted to update protocol ${params.id} without permission`,
+        );
+        return {
+          status: StatusCodes.FORBIDDEN,
+          body: { message: "Only the protocol creator can update this protocol" },
+        };
+      }
+
       // Convert API contract body to DTO with proper JSON handling
       const updateDto = {
         name: body.name,
@@ -149,7 +166,7 @@ export class ProtocolController {
           code: parseProtocolCode(result.value.code, this.logger),
         };
 
-        this.logger.log(`Protocol updated: ${protocol.id}`);
+        this.logger.log(`Protocol updated: ${protocol.id} by user ${user.id}`);
         return {
           status: StatusCodes.OK,
           body: formatDates(protocol),
@@ -161,12 +178,29 @@ export class ProtocolController {
   }
 
   @TsRestHandler(contract.protocols.deleteProtocol)
-  deleteProtocol() {
+  deleteProtocol(@CurrentUser() user: SessionUser) {
     return tsRestHandler(contract.protocols.deleteProtocol, async ({ params }) => {
+      // First check if protocol exists and user is the creator
+      const protocolResult = await this.getProtocolUseCase.execute(params.id);
+
+      if (protocolResult.isFailure()) {
+        return handleFailure(protocolResult, this.logger);
+      }
+
+      if (protocolResult.value.createdBy !== user.id) {
+        this.logger.warn(
+          `User ${user.id} attempted to delete protocol ${params.id} without permission`,
+        );
+        return {
+          status: StatusCodes.FORBIDDEN,
+          body: { message: "Only the protocol creator can delete this protocol" },
+        };
+      }
+
       const result = await this.deleteProtocolUseCase.execute(params.id);
 
       if (result.isSuccess()) {
-        this.logger.log(`Protocol deleted: ${params.id}`);
+        this.logger.log(`Protocol deleted: ${params.id} by user ${user.id}`);
         return {
           status: StatusCodes.NO_CONTENT,
           body: null,

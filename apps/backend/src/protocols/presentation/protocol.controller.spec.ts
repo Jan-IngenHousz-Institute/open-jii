@@ -55,6 +55,7 @@ describe("ProtocolController", () => {
         name: "Test Protocol",
         description: "Test Description",
         code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
       };
 
       // Act
@@ -80,6 +81,7 @@ describe("ProtocolController", () => {
         // Missing required name field
         description: "Test Description",
         code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
       };
 
       // Act & Assert
@@ -99,6 +101,7 @@ describe("ProtocolController", () => {
         name: "Protocol to Retrieve",
         description: "Test Description",
         code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
       };
 
       const createResponse = await testApp
@@ -125,6 +128,43 @@ describe("ProtocolController", () => {
       });
     });
 
+    it("should allow any authenticated user to view any protocol", async () => {
+      // Arrange
+      // Create a protocol with the first user
+      const createData = {
+        name: "Protocol to View",
+        description: "Test Description",
+        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
+      };
+
+      const createResponse = await testApp
+        .post(contract.protocols.createProtocol.path)
+        .withAuth(testUserId)
+        .send(createData)
+        .expect(StatusCodes.CREATED);
+
+      const createdProtocol = createResponse.body as Protocol;
+
+      // Create a different user
+      const otherUserId = await testApp.createTestUser({});
+
+      // Act - other user should be able to view the protocol
+      const path = testApp.resolvePath(contract.protocols.getProtocol.path, {
+        id: createdProtocol.id,
+      });
+      const response = await testApp.get(path).withAuth(otherUserId).expect(StatusCodes.OK);
+
+      // Assert
+      expect(response.body).toMatchObject({
+        id: createdProtocol.id,
+        name: createData.name,
+        description: createData.description,
+        code: createData.code,
+        createdBy: testUserId, // Should show original creator
+      });
+    });
+
     it("should return 404 for non-existent protocol", async () => {
       // Act & Assert
       const path = testApp.resolvePath(contract.protocols.getProtocol.path, {
@@ -142,12 +182,14 @@ describe("ProtocolController", () => {
         name: "Protocol 1 for List",
         description: "Description 1",
         code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
       };
 
       const protocol2 = {
         name: "Protocol 2 for List",
         description: "Description 2",
         code: [{ steps: [{ name: "Step 2", action: "test" }] }],
+        family: "multispeq" as const,
       };
 
       await testApp
@@ -173,6 +215,56 @@ describe("ProtocolController", () => {
       expect(protocols.some((p) => p.name === protocol2.name)).toBe(true);
     });
 
+    it("should allow any authenticated user to list all protocols", async () => {
+      // Arrange
+      // Create some protocols with different users
+      const protocol1 = {
+        name: "Protocol 1 for Public List",
+        description: "Description 1",
+        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
+      };
+
+      const otherUserId = await testApp.createTestUser({});
+      const protocol2 = {
+        name: "Protocol 2 for Public List",
+        description: "Description 2",
+        code: [{ steps: [{ name: "Step 2", action: "test" }] }],
+        family: "multispeq" as const,
+      };
+
+      await testApp
+        .post(contract.protocols.createProtocol.path)
+        .withAuth(testUserId)
+        .send(protocol1);
+
+      await testApp
+        .post(contract.protocols.createProtocol.path)
+        .withAuth(otherUserId)
+        .send(protocol2);
+
+      // Act - first user should see both protocols
+      const response1 = await testApp
+        .get(contract.protocols.listProtocols.path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      // Act - second user should also see both protocols
+      const response2 = await testApp
+        .get(contract.protocols.listProtocols.path)
+        .withAuth(otherUserId)
+        .expect(StatusCodes.OK);
+
+      // Assert
+      const protocols1 = response1.body as ProtocolList;
+      const protocols2 = response2.body as ProtocolList;
+
+      expect(protocols1.some((p) => p.name === protocol1.name)).toBe(true);
+      expect(protocols1.some((p) => p.name === protocol2.name)).toBe(true);
+      expect(protocols2.some((p) => p.name === protocol1.name)).toBe(true);
+      expect(protocols2.some((p) => p.name === protocol2.name)).toBe(true);
+    });
+
     it("should filter protocols by search term", async () => {
       // Arrange
       const uniquePrefix = "UniqueListTest";
@@ -180,12 +272,14 @@ describe("ProtocolController", () => {
         name: `${uniquePrefix} Protocol`,
         description: "Description 1",
         code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
       };
 
       const protocol2 = {
         name: "Different Protocol",
         description: "Description 2",
-        code: { steps: [{ name: "Step 2", action: "test" }] },
+        code: [{ steps: [{ name: "Step 2", action: "test" }] }],
+        family: "multispeq" as const,
       };
 
       await testApp
@@ -212,13 +306,14 @@ describe("ProtocolController", () => {
   });
 
   describe("updateProtocol", () => {
-    it("should update a protocol", async () => {
+    it("should update a protocol when user is the creator", async () => {
       // Arrange
       // Create a protocol to update
       const createData = {
         name: "Protocol to Update",
         description: "Original Description",
         code: [{ steps: [{ name: "Original Step", action: "test" }] }],
+        family: "multispeq" as const,
       };
 
       const createResponse = await testApp
@@ -267,6 +362,64 @@ describe("ProtocolController", () => {
       });
     });
 
+    it("should return 403 when user is not the creator", async () => {
+      // Arrange
+      // Create a protocol with the first user
+      const createData = {
+        name: "Protocol to Update",
+        description: "Original Description",
+        code: [{ steps: [{ name: "Original Step", action: "test" }] }],
+        family: "multispeq" as const,
+      };
+
+      const createResponse = await testApp
+        .post(contract.protocols.createProtocol.path)
+        .withAuth(testUserId)
+        .send(createData)
+        .expect(StatusCodes.CREATED);
+
+      const createdProtocol = createResponse.body as Protocol;
+
+      // Create a different user
+      const otherUserId = await testApp.createTestUser({});
+
+      const updateData = {
+        name: "Updated Protocol",
+      };
+
+      // Act & Assert
+      const path = testApp.resolvePath(contract.protocols.updateProtocol.path, {
+        id: createdProtocol.id,
+      });
+      await testApp
+        .patch(path)
+        .withAuth(otherUserId)
+        .send(updateData)
+        .expect(StatusCodes.FORBIDDEN);
+
+      // Verify the error message
+      const errorResponse = await testApp
+        .patch(path)
+        .withAuth(otherUserId)
+        .send(updateData)
+        .expect(StatusCodes.FORBIDDEN);
+
+      expect(errorResponse.body).toMatchObject({
+        message: "Only the protocol creator can update this protocol",
+      });
+
+      // Verify the protocol was not updated
+      const getPath = testApp.resolvePath(contract.protocols.getProtocol.path, {
+        id: createdProtocol.id,
+      });
+      const getResponse = await testApp.get(getPath).withAuth(testUserId).expect(StatusCodes.OK);
+
+      expect(getResponse.body).toMatchObject({
+        name: createData.name, // Should still have original name
+        description: createData.description,
+      });
+    });
+
     it("should update a protocol with partial data", async () => {
       // Arrange
       // Create a protocol to update
@@ -274,6 +427,7 @@ describe("ProtocolController", () => {
         name: "Protocol for Partial Update",
         description: "Original Description",
         code: [{ steps: [{ name: "Original Step", action: "test" }] }],
+        family: "multispeq" as const,
       };
 
       const createResponse = await testApp
@@ -324,13 +478,14 @@ describe("ProtocolController", () => {
   });
 
   describe("deleteProtocol", () => {
-    it("should delete a protocol", async () => {
+    it("should delete a protocol when user is the creator", async () => {
       // Arrange
       // Create a protocol to delete
       const createData = {
         name: "Protocol to Delete",
         description: "Will be deleted",
         code: [{ steps: [{ name: "Delete me", action: "test" }] }],
+        family: "multispeq" as const,
       };
 
       const createResponse = await testApp
@@ -354,12 +509,83 @@ describe("ProtocolController", () => {
       await testApp.get(getPath).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
     });
 
+    it("should return 403 when user is not the creator", async () => {
+      // Arrange
+      // Create a protocol with the first user
+      const createData = {
+        name: "Protocol to Delete",
+        description: "Will be deleted",
+        code: [{ steps: [{ name: "Delete me", action: "test" }] }],
+        family: "multispeq" as const,
+      };
+
+      const createResponse = await testApp
+        .post(contract.protocols.createProtocol.path)
+        .withAuth(testUserId)
+        .send(createData)
+        .expect(StatusCodes.CREATED);
+
+      const createdProtocol = createResponse.body as Protocol;
+
+      // Create a different user
+      const otherUserId = await testApp.createTestUser({});
+
+      // Act & Assert
+      const deletePath = testApp.resolvePath(contract.protocols.deleteProtocol.path, {
+        id: createdProtocol.id,
+      });
+      await testApp.delete(deletePath).withAuth(otherUserId).expect(StatusCodes.FORBIDDEN);
+
+      // Verify the error message
+      const errorResponse = await testApp
+        .delete(deletePath)
+        .withAuth(otherUserId)
+        .expect(StatusCodes.FORBIDDEN);
+
+      expect(errorResponse.body).toMatchObject({
+        message: "Only the protocol creator can delete this protocol",
+      });
+
+      // Verify the protocol still exists
+      const getPath = testApp.resolvePath(contract.protocols.getProtocol.path, {
+        id: createdProtocol.id,
+      });
+      await testApp.get(getPath).withAuth(testUserId).expect(StatusCodes.OK);
+    });
+
     it("should return 404 for non-existent protocol", async () => {
       // Act & Assert
       const path = testApp.resolvePath(contract.protocols.deleteProtocol.path, {
         id: faker.string.uuid(),
       });
       await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+    });
+
+    it("should handle authorization check for non-existent protocol in update", async () => {
+      // Arrange
+      const otherUserId = await testApp.createTestUser({});
+      const updateData = { name: "Updated Protocol" };
+
+      // Act & Assert - should return 404 before authorization check
+      const path = testApp.resolvePath(contract.protocols.updateProtocol.path, {
+        id: faker.string.uuid(),
+      });
+      await testApp
+        .patch(path)
+        .withAuth(otherUserId)
+        .send(updateData)
+        .expect(StatusCodes.NOT_FOUND);
+    });
+
+    it("should handle authorization check for non-existent protocol in delete", async () => {
+      // Arrange
+      const otherUserId = await testApp.createTestUser({});
+
+      // Act & Assert - should return 404 before authorization check
+      const path = testApp.resolvePath(contract.protocols.deleteProtocol.path, {
+        id: faker.string.uuid(),
+      });
+      await testApp.delete(path).withAuth(otherUserId).expect(StatusCodes.NOT_FOUND);
     });
   });
 
@@ -406,14 +632,14 @@ describe("ProtocolController", () => {
 
       jest.spyOn(getProtocolUseCase, "execute").mockResolvedValue(success(mockProtocol));
 
-      // Act & Assert
+      // Act
       const path = testApp.resolvePath(contract.protocols.getProtocol.path, {
         id: mockProtocol.id,
       });
-      const response = await testApp
-        .get(path)
-        .withAuth(testUserId)
-        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+      const response = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
+
+      // Assert - the code should fallback to empty object for invalid JSON
+      expect(response.body.code).toEqual([{}]);
     });
   });
 });

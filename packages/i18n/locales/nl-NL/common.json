@@ -171,7 +171,8 @@
     "validationError": "Validatiefout",
     "unauthorized": "Ongeautoriseerde toegang",
     "forbidden": "Toegang verboden",
-    "failedToLoadProtocol": "Protocol kon niet worden geladen"
+    "failedToLoadProtocol": "Protocol kon niet worden geladen",
+    "loginRequired": "Log in om toegang te krijgen tot deze pagina"
   },
   "footer": {
     "aboutUs": "Over ons",
@@ -229,7 +230,9 @@
     "descriptionTitle": "Beschrijving",
     "codeTitle": "Protocol code",
     "notFound": "Protocol niet gevonden",
-    "family": "Sensor familie"
+    "notFoundDescription": "Het gevraagde protocol kon niet worden gevonden",
+    "family": "Sensorfamilie",
+    "onlyCreatorCanEdit": "Alleen de protocolmaker kan de instellingen benaderen"
   },
   "newProtocol": {
     "description": "Stel een nieuw protocol in.",

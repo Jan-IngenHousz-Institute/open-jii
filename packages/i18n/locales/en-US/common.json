@@ -175,7 +175,8 @@
     "validationError": "Validation error",
     "unauthorized": "Unauthorized access",
     "forbidden": "Access forbidden",
-    "failedToLoadProtocol": "Failed to load protocol"
+    "failedToLoadProtocol": "Failed to load protocol",
+    "loginRequired": "Please log in to access this page"
   },
   "footer": {
     "aboutUs": "About Us",
@@ -241,7 +242,9 @@
     "descriptionTitle": "Description",
     "codeTitle": "Protocol Code",
     "notFound": "Protocol not found",
-    "family": "Sensor Family"
+    "notFoundDescription": "The requested protocol could not be found",
+    "family": "Sensor Family",
+    "onlyCreatorCanEdit": "Only the protocol creator can access settings"
   },
   "newProtocol": {
     "description": "Set up a new protocol.",

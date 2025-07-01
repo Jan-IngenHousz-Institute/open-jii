@@ -37,7 +37,7 @@ export const zUpdateProtocolRequestBody = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
   code: z.record(z.unknown()).array().optional(),
-  family: zSensorFamily,
+  family: zSensorFamily.optional(),
 });
 
 // Error response

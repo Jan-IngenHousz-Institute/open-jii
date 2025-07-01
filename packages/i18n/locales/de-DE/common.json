@@ -173,7 +173,8 @@
     "validationError": "Validierungsfehler",
     "unauthorized": "Unbefugter Zugriff",
     "forbidden": "Zugriff verboten",
-    "failedToLoadProtocol": "Protokoll konnte nicht geladen werden"
+    "failedToLoadProtocol": "Protokoll konnte nicht geladen werden",
+    "loginRequired": "Bitte melden Sie sich an, um auf diese Seite zuzugreifen"
   },
   "footer": {
     "aboutUs": "Über uns",
@@ -239,7 +240,9 @@
     "descriptionTitle": "Beschreibung",
     "codeTitle": "Protokollcode",
     "notFound": "Protokoll nicht gefunden",
-    "family": "Sensor-Familie"
+    "notFoundDescription": "Das angeforderte Protokoll konnte nicht gefunden werden",
+    "family": "Sensorfamilie",
+    "onlyCreatorCanEdit": "Nur der Protokollersteller kann auf die Einstellungen zugreifen"
   },
   "newProtocol": {
     "description": "Richten Sie ein neues Protokoll ein.",
