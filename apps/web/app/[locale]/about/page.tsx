@@ -1,8 +1,8 @@
-import { UnifiedNavbar } from "@/components/unified-navbar";
-import { auth } from "@/lib/auth";
+import { draftMode } from "next/headers";
+import { getContentfulClients } from "~/lib/contentful";
 
-import { HomeFooter } from "@repo/cms";
 import { AboutContent } from "@repo/cms";
+import type { PageAboutFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
@@ -12,19 +12,28 @@ interface AboutPageProps {
 
 export default async function AboutPage({ params }: AboutPageProps) {
   const { locale } = await params;
-  const session = await auth();
   const { t } = await initTranslations({
     locale,
     namespaces: ["common"],
   });
 
+  const { isEnabled: preview } = await draftMode();
+  const { previewClient, client } = await getContentfulClients();
+  const gqlClient = preview ? previewClient : client;
+  const aboutQuery = await gqlClient.pageAbout({ locale, preview });
+  const about = aboutQuery.pageAboutCollection?.items[0] as PageAboutFieldsFragment;
+
   return (
-    <>
-      <UnifiedNavbar locale={locale} session={session} />
-      <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 px-4 pb-24 pt-8">
-        <AboutContent t={t} />
-      </main>
-      <HomeFooter t={t} locale={locale} />
-    </>
+    <main className="flex min-h-screen flex-col items-center justify-center px-4 pb-24 pt-8">
+      <AboutContent
+        translations={{
+          title: t("about.title"),
+          description: t("about.description"),
+        }}
+        about={about}
+        locale={locale}
+        preview={preview}
+      />
+    </main>
   );
 }

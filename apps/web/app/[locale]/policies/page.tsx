@@ -1,7 +1,8 @@
-import { UnifiedNavbar } from "@/components/unified-navbar";
-import { auth } from "@/lib/auth";
+import { draftMode } from "next/headers";
+import { getContentfulClients } from "~/lib/contentful";
 
-import { HomeFooter, PoliciesContent } from "@repo/cms";
+import { PoliciesContent } from "@repo/cms";
+import type { PagePoliciesFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
@@ -11,21 +12,28 @@ interface PoliciesPageProps {
 
 export default async function PoliciesPage({ params }: PoliciesPageProps) {
   const { locale } = await params;
-  const session = await auth();
   const { t } = await initTranslations({
     locale,
     namespaces: ["common"],
   });
 
+  const { isEnabled: preview } = await draftMode();
+  const { previewClient, client } = await getContentfulClients();
+  const gqlClient = preview ? previewClient : client;
+  const policiesQuery = await gqlClient.pagePolicies({ locale, preview });
+  const policies = policiesQuery.pagePoliciesCollection?.items[0] as PagePoliciesFieldsFragment;
+
   return (
-    <>
-      <UnifiedNavbar locale={locale} session={session} />
-      <main className="min-h-screen bg-gray-50 py-12">
-        <div className="mx-auto max-w-4xl px-4">
-          <PoliciesContent t={t} />
-        </div>
-      </main>
-      <HomeFooter t={t} locale={locale} />
-    </>
+    <main className="flex min-h-screen flex-col items-start px-4 pb-24 pt-8">
+      <PoliciesContent
+        translations={{
+          title: t("policies.title"),
+          content: t("policies.content"),
+        }}
+        policies={policies}
+        locale={locale}
+        preview={preview}
+      />
+    </main>
   );
 }

@@ -33,17 +33,17 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ t, locale }) => (
             </h4>
             <ul className="space-y-3 text-center text-sm text-white md:text-left">
               <li>
-                <Link href="/platform" className="hover:text-jii-medium-green transition-colors">
+                <Link href={`/${locale}/platform`} className="hover:text-jii-medium-green transition-colors">
                   {t("jii.footerPlatform")}
                 </Link>
               </li>
               <li>
-                <Link href="/blog" className="hover:text-jii-medium-green transition-colors">
+                <Link href={`/${locale}/blog`} className="hover:text-jii-medium-green transition-colors">
                   {t("jii.footerBlog")}
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="hover:text-jii-medium-green transition-colors">
+                <Link href={`/${locale}/about`} className="hover:text-jii-medium-green transition-colors">
                   {t("jii.footerAbout")}
                 </Link>
               </li>

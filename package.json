@@ -52,7 +52,8 @@
   "pnpm": {
     "overrides": {
       "react": "catalog:react19",
-      "react-dom": "catalog:react19"
+      "react-dom": "catalog:react19",
+      "graphql": "^16.0.0"
     }
   }
 }
