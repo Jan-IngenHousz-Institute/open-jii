@@ -94,12 +94,14 @@ input AssetFilter {
 type AssetLinkingCollections {
   componentAuthorCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): ComponentAuthorCollection
   componentFeatureCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): ComponentFeatureCollection
+  componentPartnerCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): ComponentPartnerCollection
   componentRichImageCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): ComponentRichImageCollection
   componentSeoCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): ComponentSeoCollection
   entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
   pageAboutCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): PageAboutCollection
   pageBlogPostCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): PageBlogPostCollection
   pageHomeMissionCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): PageHomeMissionCollection
+  pageHomePartnersCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): PageHomePartnersCollection
 }
 
 enum AssetOrder {
@@ -256,6 +258,26 @@ input ComponentButtonFilter {
 
 type ComponentButtonLinkingCollections {
   entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+  pageHomeHeroCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsPageHomeHeroCollectionOrder], preview: Boolean, skip: Int = 0): PageHomeHeroCollection
+}
+
+enum ComponentButtonLinkingCollectionsPageHomeHeroCollectionOrder {
+  badge_ASC
+  badge_DESC
+  internalName_ASC
+  internalName_DESC
+  subtitle_ASC
+  subtitle_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
 }
 
 enum ComponentButtonOrder {
@@ -361,6 +383,24 @@ input ComponentFaqQuestionFilter {
 
 type ComponentFaqQuestionLinkingCollections {
   entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+  pageFaqCollection(limit: Int = 100, locale: String, order: [ComponentFaqQuestionLinkingCollectionsPageFaqCollectionOrder], preview: Boolean, skip: Int = 0): PageFaqCollection
+}
+
+enum ComponentFaqQuestionLinkingCollectionsPageFaqCollectionOrder {
+  internalName_ASC
+  internalName_DESC
+  intro_ASC
+  intro_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
 }
 
 enum ComponentFaqQuestionOrder {
@@ -430,6 +470,24 @@ input ComponentFeatureFilter {
 
 type ComponentFeatureLinkingCollections {
   entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+  pageHomeFeaturesCollection(limit: Int = 100, locale: String, order: [ComponentFeatureLinkingCollectionsPageHomeFeaturesCollectionOrder], preview: Boolean, skip: Int = 0): PageHomeFeaturesCollection
+}
+
+enum ComponentFeatureLinkingCollectionsPageHomeFeaturesCollectionOrder {
+  internalName_ASC
+  internalName_DESC
+  subtitle_ASC
+  subtitle_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
 }
 
 enum ComponentFeatureOrder {
@@ -447,6 +505,67 @@ enum ComponentFeatureOrder {
   sys_publishedVersion_DESC
   title_ASC
   title_DESC
+}
+
+"""
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentPartner)
+"""
+type ComponentPartner implements Entry & _Node {
+  _id: ID!
+  contentfulMetadata: ContentfulMetadata!
+  internalName(locale: String): String
+  linkedFrom(allowedLocales: [String]): ComponentPartnerLinkingCollections
+  logo(locale: String, preview: Boolean): Asset
+  subtitle(locale: String): String
+  sys: Sys!
+}
+
+type ComponentPartnerCollection {
+  items: [ComponentPartner]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+input ComponentPartnerFilter {
+  AND: [ComponentPartnerFilter]
+  OR: [ComponentPartnerFilter]
+  contentfulMetadata: ContentfulMetadataFilter
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  logo_exists: Boolean
+  subtitle: String
+  subtitle_contains: String
+  subtitle_exists: Boolean
+  subtitle_in: [String]
+  subtitle_not: String
+  subtitle_not_contains: String
+  subtitle_not_in: [String]
+  sys: SysFilter
+}
+
+type ComponentPartnerLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+}
+
+enum ComponentPartnerOrder {
+  internalName_ASC
+  internalName_DESC
+  subtitle_ASC
+  subtitle_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
 }
 
 """
@@ -1179,7 +1298,7 @@ type PageFaq implements Entry & _Node {
   internalName(locale: String): String
   intro(locale: String): String
   linkedFrom(allowedLocales: [String]): PageFaqLinkingCollections
-  questionsCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): PageFaqQuestionsCollection
+  questionsCollection(limit: Int = 100, locale: String, order: [PageFaqQuestionsCollectionOrder], preview: Boolean, skip: Int = 0, where: ComponentFaqQuestionFilter): PageFaqQuestionsCollection
   sys: Sys!
   title(locale: String): String
 }
@@ -1209,6 +1328,7 @@ input PageFaqFilter {
   intro_not: String
   intro_not_contains: String
   intro_not_in: [String]
+  questions: cfComponentFaqQuestionNestedFilter
   questionsCollection_exists: Boolean
   sys: SysFilter
   title: String
@@ -1242,10 +1362,25 @@ enum PageFaqOrder {
 }
 
 type PageFaqQuestionsCollection {
-  items: [Entry]!
+  items: [ComponentFaqQuestion]!
   limit: Int!
   skip: Int!
   total: Int!
+}
+
+enum PageFaqQuestionsCollectionOrder {
+  internalName_ASC
+  internalName_DESC
+  question_ASC
+  question_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
 }
 
 """
@@ -1254,7 +1389,7 @@ type PageFaqQuestionsCollection {
 type PageHomeFeatures implements Entry & _Node {
   _id: ID!
   contentfulMetadata: ContentfulMetadata!
-  featuresCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): PageHomeFeaturesFeaturesCollection
+  featuresCollection(limit: Int = 100, locale: String, order: [PageHomeFeaturesFeaturesCollectionOrder], preview: Boolean, skip: Int = 0, where: ComponentFeatureFilter): PageHomeFeaturesFeaturesCollection
   internalName(locale: String): String
   linkedFrom(allowedLocales: [String]): PageHomeFeaturesLinkingCollections
   subtitle(locale: String): String
@@ -1270,16 +1405,34 @@ type PageHomeFeaturesCollection {
 }
 
 type PageHomeFeaturesFeaturesCollection {
-  items: [Entry]!
+  items: [ComponentFeature]!
   limit: Int!
   skip: Int!
   total: Int!
+}
+
+enum PageHomeFeaturesFeaturesCollectionOrder {
+  internalName_ASC
+  internalName_DESC
+  subtitle_ASC
+  subtitle_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
 }
 
 input PageHomeFeaturesFilter {
   AND: [PageHomeFeaturesFilter]
   OR: [PageHomeFeaturesFilter]
   contentfulMetadata: ContentfulMetadataFilter
+  features: cfComponentFeatureNestedFilter
   featuresCollection_exists: Boolean
   internalName: String
   internalName_contains: String
@@ -1332,7 +1485,7 @@ enum PageHomeFeaturesOrder {
 type PageHomeHero implements Entry & _Node {
   _id: ID!
   badge(locale: String): String
-  buttonsCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): PageHomeHeroButtonsCollection
+  buttonsCollection(limit: Int = 100, locale: String, order: [PageHomeHeroButtonsCollectionOrder], preview: Boolean, skip: Int = 0, where: ComponentButtonFilter): PageHomeHeroButtonsCollection
   contentfulMetadata: ContentfulMetadata!
   internalName(locale: String): String
   linkedFrom(allowedLocales: [String]): PageHomeHeroLinkingCollections
@@ -1342,10 +1495,27 @@ type PageHomeHero implements Entry & _Node {
 }
 
 type PageHomeHeroButtonsCollection {
-  items: [Entry]!
+  items: [ComponentButton]!
   limit: Int!
   skip: Int!
   total: Int!
+}
+
+enum PageHomeHeroButtonsCollectionOrder {
+  internalName_ASC
+  internalName_DESC
+  label_ASC
+  label_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  url_ASC
+  url_DESC
 }
 
 type PageHomeHeroCollection {
@@ -1365,6 +1535,7 @@ input PageHomeHeroFilter {
   badge_not: String
   badge_not_contains: String
   badge_not_in: [String]
+  buttons: cfComponentButtonNestedFilter
   buttonsCollection_exists: Boolean
   contentfulMetadata: ContentfulMetadataFilter
   internalName: String
@@ -1574,6 +1745,86 @@ enum PageHomeMissionOrder {
 }
 
 """
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomePartners)
+"""
+type PageHomePartners implements Entry & _Node {
+  _id: ID!
+  contentfulMetadata: ContentfulMetadata!
+  imagesCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): AssetCollection
+  internalName(locale: String): String
+  linkedFrom(allowedLocales: [String]): PageHomePartnersLinkingCollections
+  partnersCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): PageHomePartnersPartnersCollection
+  subtitle(locale: String): String
+  sys: Sys!
+  title(locale: String): String
+}
+
+type PageHomePartnersCollection {
+  items: [PageHomePartners]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+input PageHomePartnersFilter {
+  AND: [PageHomePartnersFilter]
+  OR: [PageHomePartnersFilter]
+  contentfulMetadata: ContentfulMetadataFilter
+  imagesCollection_exists: Boolean
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  partnersCollection_exists: Boolean
+  subtitle: String
+  subtitle_contains: String
+  subtitle_exists: Boolean
+  subtitle_in: [String]
+  subtitle_not: String
+  subtitle_not_contains: String
+  subtitle_not_in: [String]
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
+}
+
+type PageHomePartnersLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+}
+
+enum PageHomePartnersOrder {
+  internalName_ASC
+  internalName_DESC
+  subtitle_ASC
+  subtitle_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+type PageHomePartnersPartnersCollection {
+  items: [Entry]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+"""
 To have an entry point for the app (e.g. Homepage) [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageLanding)
 """
 type PageLanding implements Entry & _Node {
@@ -1749,6 +2000,8 @@ type Query {
   componentFaqQuestionCollection(limit: Int = 100, locale: String, order: [ComponentFaqQuestionOrder], preview: Boolean, skip: Int = 0, where: ComponentFaqQuestionFilter): ComponentFaqQuestionCollection
   componentFeature(id: String!, locale: String, preview: Boolean): ComponentFeature
   componentFeatureCollection(limit: Int = 100, locale: String, order: [ComponentFeatureOrder], preview: Boolean, skip: Int = 0, where: ComponentFeatureFilter): ComponentFeatureCollection
+  componentPartner(id: String!, locale: String, preview: Boolean): ComponentPartner
+  componentPartnerCollection(limit: Int = 100, locale: String, order: [ComponentPartnerOrder], preview: Boolean, skip: Int = 0, where: ComponentPartnerFilter): ComponentPartnerCollection
   componentRichImage(id: String!, locale: String, preview: Boolean): ComponentRichImage
   componentRichImageCollection(limit: Int = 100, locale: String, order: [ComponentRichImageOrder], preview: Boolean, skip: Int = 0, where: ComponentRichImageFilter): ComponentRichImageCollection
   componentSeo(id: String!, locale: String, preview: Boolean): ComponentSeo
@@ -1766,6 +2019,8 @@ type Query {
   pageHomeHeroCollection(limit: Int = 100, locale: String, order: [PageHomeHeroOrder], preview: Boolean, skip: Int = 0, where: PageHomeHeroFilter): PageHomeHeroCollection
   pageHomeMission(id: String!, locale: String, preview: Boolean): PageHomeMission
   pageHomeMissionCollection(limit: Int = 100, locale: String, order: [PageHomeMissionOrder], preview: Boolean, skip: Int = 0, where: PageHomeMissionFilter): PageHomeMissionCollection
+  pageHomePartners(id: String!, locale: String, preview: Boolean): PageHomePartners
+  pageHomePartnersCollection(limit: Int = 100, locale: String, order: [PageHomePartnersOrder], preview: Boolean, skip: Int = 0, where: PageHomePartnersFilter): PageHomePartnersCollection
   pageLanding(id: String!, locale: String, preview: Boolean): PageLanding
   pageLandingCollection(limit: Int = 100, locale: String, order: [PageLandingOrder], preview: Boolean, skip: Int = 0, where: PageLandingFilter): PageLandingCollection
   pagePolicies(id: String!, locale: String, preview: Boolean): PagePolicies
@@ -1862,6 +2117,87 @@ input cfComponentAuthorNestedFilter {
   name_not_contains: String
   name_not_in: [String]
   sys: SysFilter
+}
+
+input cfComponentButtonNestedFilter {
+  AND: [cfComponentButtonNestedFilter]
+  OR: [cfComponentButtonNestedFilter]
+  contentfulMetadata: ContentfulMetadataFilter
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  label: String
+  label_contains: String
+  label_exists: Boolean
+  label_in: [String]
+  label_not: String
+  label_not_contains: String
+  label_not_in: [String]
+  sys: SysFilter
+  url: String
+  url_contains: String
+  url_exists: Boolean
+  url_in: [String]
+  url_not: String
+  url_not_contains: String
+  url_not_in: [String]
+}
+
+input cfComponentFaqQuestionNestedFilter {
+  AND: [cfComponentFaqQuestionNestedFilter]
+  OR: [cfComponentFaqQuestionNestedFilter]
+  answer_contains: String
+  answer_exists: Boolean
+  answer_not_contains: String
+  contentfulMetadata: ContentfulMetadataFilter
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  question: String
+  question_contains: String
+  question_exists: Boolean
+  question_in: [String]
+  question_not: String
+  question_not_contains: String
+  question_not_in: [String]
+  sys: SysFilter
+}
+
+input cfComponentFeatureNestedFilter {
+  AND: [cfComponentFeatureNestedFilter]
+  OR: [cfComponentFeatureNestedFilter]
+  contentfulMetadata: ContentfulMetadataFilter
+  icon_exists: Boolean
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  subtitle: String
+  subtitle_contains: String
+  subtitle_exists: Boolean
+  subtitle_in: [String]
+  subtitle_not: String
+  subtitle_not_contains: String
+  subtitle_not_in: [String]
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
 }
 
 input cfComponentSeoNestedFilter {
