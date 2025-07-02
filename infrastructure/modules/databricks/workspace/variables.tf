@@ -38,3 +38,9 @@ variable "kinesis_role_arn" {
   description = "ARN of the IAM role for Kinesis access"
   type        = string
 }
+
+variable "principal_ids" {
+  description = "List of principal IDs to grant workspace access to"
+  type        = list(string)
+  default     = []
+}

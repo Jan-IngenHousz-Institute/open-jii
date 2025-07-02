@@ -1,5 +1,5 @@
 variable "display_name" {
-  description = "Display name for the service principal"
+  description = "Display name of the service principal"
   type        = string
 }
 
