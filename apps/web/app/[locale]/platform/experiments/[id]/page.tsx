@@ -87,14 +87,15 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
               </h4>
               <p>{formatDate(experiment.updatedAt)}</p>
             </div>
-            <div>
-              <h4 className="text-muted-foreground text-sm font-medium">
-                {t("experimentSettings.embargoIntervalDays")}
-              </h4>
-              <p>
-                {experiment.embargoIntervalDays} {t("common.days")}
-              </p>
-            </div>
+            {/* TODO: Temporary removed as the implementation is pending on the backend */}
+            {/*<div>*/}
+            {/*  <h4 className="text-muted-foreground text-sm font-medium">*/}
+            {/*    {t("experimentSettings.embargoIntervalDays")}*/}
+            {/*  </h4>*/}
+            {/*  <p>*/}
+            {/*    {experiment.embargoIntervalDays} {t("common.days")}*/}
+            {/*  </p>*/}
+            {/*</div>*/}
             <div>
               <h4 className="text-muted-foreground text-sm font-medium">
                 {t("experiments.experimentId")}

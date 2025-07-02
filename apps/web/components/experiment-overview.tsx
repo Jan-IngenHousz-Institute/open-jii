@@ -56,14 +56,15 @@ export function ExperimentOverview({ experimentId }: ExperimentOverviewProps) {
             <p className="text-sm capitalize">{experiment.visibility}</p>
           </div>
 
-          <div>
-            <h4 className="text-muted-foreground text-sm font-medium">
-              {t("experimentSettings.embargoIntervalDays")}
-            </h4>
-            <p className="text-sm">
-              {experiment.embargoIntervalDays} {t("common.days")}
-            </p>
-          </div>
+          {/* TODO: Temporary removed as the implementation is pending on the backend */}
+          {/*<div>*/}
+          {/*  <h4 className="text-muted-foreground text-sm font-medium">*/}
+          {/*    {t("experimentSettings.embargoIntervalDays")}*/}
+          {/*  </h4>*/}
+          {/*  <p className="text-sm">*/}
+          {/*    {experiment.embargoIntervalDays} {t("common.days")}*/}
+          {/*  </p>*/}
+          {/*</div>*/}
 
           <div>
             <h4 className="text-muted-foreground text-sm font-medium">

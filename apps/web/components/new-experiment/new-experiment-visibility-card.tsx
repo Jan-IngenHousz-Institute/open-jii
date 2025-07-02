@@ -13,7 +13,6 @@ import {
   FormItem,
   FormLabel,
   FormControl,
-  Input,
   FormMessage,
   Select,
   SelectTrigger,
@@ -28,7 +27,8 @@ interface NewExperimentVisibilityCardProps {
 
 export function NewExperimentVisibilityCard({ form }: NewExperimentVisibilityCardProps) {
   const { t } = useTranslation(undefined, "common");
-  const visibility = form.watch("visibility");
+  // Temporary removed:
+  // const visibility = form.watch("visibility");
   return (
     <Card className="min-w-0 flex-1">
       <CardHeader>
@@ -62,25 +62,30 @@ export function NewExperimentVisibilityCard({ form }: NewExperimentVisibilityCar
             </FormItem>
           )}
         />
-        {visibility !== zExperimentVisibility.enum.public && (
-          <FormField
-            control={form.control}
-            name="embargoIntervalDays"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("newExperiment.embargoIntervalDays")}</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    {...field}
-                    onChange={(event) => field.onChange(+event.target.value)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
+        {/* TODO: Temporary removed as the implementation is pending on the backend */}
+        {/*{visibility !== zExperimentVisibility.enum.public && (*/}
+        {/*  <FormField*/}
+        {/*    control={form.control}*/}
+        {/*    name="embargoIntervalDays"*/}
+        {/*    render={({ field }) => (*/}
+        {/*      <FormItem>*/}
+        {/*        <FormLabel>{t("newExperiment.embargoIntervalDays")}</FormLabel>*/}
+        {/*        <FormControl>*/}
+        {/*          <Input*/}
+        {/*            type="number"*/}
+        {/*            {...field}*/}
+        {/*            onChange={(e) => {*/}
+        {/*              const value = Number(e.target.value);*/}
+        {/*              if (value < 0) return field.onChange(0);*/}
+        {/*              return field.onChange(value);*/}
+        {/*            }}*/}
+        {/*          />*/}
+        {/*        </FormControl>*/}
+        {/*        <FormMessage />*/}
+        {/*      </FormItem>*/}
+        {/*    )}*/}
+        {/*  />*/}
+        {/*)}*/}
       </CardContent>
     </Card>
   );
