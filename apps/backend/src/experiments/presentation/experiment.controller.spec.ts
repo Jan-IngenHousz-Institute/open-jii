@@ -1,6 +1,5 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
-import { join } from "path";
 
 import type { ErrorResponse, Experiment, ExperimentMemberList } from "@repo/api";
 import type { ExperimentList } from "@repo/api";
