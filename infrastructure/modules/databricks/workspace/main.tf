@@ -70,3 +70,13 @@ resource "databricks_credential" "kinesis" {
   purpose = "SERVICE"
   comment = "Kinesis access credential managed by Terraform"
 }
+
+resource "databricks_mws_permission_assignment" "workspace_access" {
+  provider     = databricks.mws
+  count        = length(var.principal_ids)
+  workspace_id = databricks_mws_workspaces.this.workspace_id
+  principal_id = var.principal_ids[count.index]
+  permissions  = ["USER"]
+
+  depends_on = [databricks_mws_workspaces.this]
+}

@@ -15,3 +15,12 @@ variable "external_bucket_id" {
   type        = string
   default     = null
 }
+
+variable "grants" {
+  description = "Map of principals to their permissions on the catalog"
+  type = map(object({
+    principal  = string
+    privileges = list(string)
+  }))
+  default = {}
+}

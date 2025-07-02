@@ -129,10 +129,14 @@ module "databricks_workspace" {
   kinesis_role_arn  = module.kinesis.role_arn
   kinesis_role_name = module.kinesis.role_name
 
+  principal_ids = [module.experiment_service_principal.service_principal_application_id]
+
   providers = {
     databricks.mws       = databricks.mws
     databricks.workspace = databricks.workspace
   }
+
+  depends_on = [module.experiment_service_principal]
 }
 
 module "databricks_metastore" {
@@ -149,16 +153,62 @@ module "databricks_metastore" {
   depends_on = [module.databricks_workspace]
 }
 
+module "experiment_service_principal" {
+  source = "../../modules/databricks/service_principal"
+
+  display_name  = "node-service-prinicipal-${var.environment}"
+  create_secret = true
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
+module "experiment_secret_scope" {
+  source = "../../modules/databricks/secret_scope"
+
+  scope_name = "node-integration-scope-${var.environment}"
+  secrets = {
+    webhook_api_key = "test-1234"
+  }
+
+  acl_principals  = [module.experiment_service_principal.service_principal_application_id]
+  acl_permissions = ["READ"]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
 module "databricks_catalog" {
   source             = "../../modules/databricks/catalog"
   catalog_name       = var.databricks_catalog_name
   external_bucket_id = module.metastore_s3.bucket_name
 
+  grants = {
+    experiment_service_principal = {
+      principal = module.experiment_service_principal.service_principal_display_name
+      privileges = [
+        "BROWSE",
+        "CREATE_FUNCTION",
+        "CREATE_MATERIALIZED_VIEW",
+        "CREATE_MODEL",
+        "CREATE_MODEL_VERSION",
+        "CREATE_SCHEMA",
+        "CREATE_TABLE",
+        "CREATE_VOLUME",
+        "SELECT",
+        "USE_CATALOG",
+        "USE_SCHEMA"
+      ]
+    }
+  }
+
   providers = {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.databricks_metastore]
+  depends_on = [module.databricks_metastore, module.experiment_service_principal]
 }
 
 module "central_schema" {
@@ -250,16 +300,6 @@ module "kinesis_ingest_job" {
   }
 }
 
-module "experiment_service_principal" {
-  source = "../../modules/databricks/service_principal"
-
-  display_name = "node-service-prinicipal-${var.environment}"
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-}
-
 module "expeirment_provisioning_job" {
   source = "../../modules/databricks/job"
 
@@ -302,7 +342,7 @@ module "expeirment_provisioning_job" {
         "experiment_id" = "{{experiment_id}}"
         "webhook_url"   = "https://${module.route53.api_domain}${var.backend_status_update_webhook_path}"
         "key_scope"     = module.experiment_secret_scope.scope_name
-        "key_name"      = module.experiment_secret_scope.secret_name
+        "key_name"      = module.experiment_secret_scope.secret_keys["webhook_api_key"]
       }
 
       depends_on = "experiment_pipeline_create"
