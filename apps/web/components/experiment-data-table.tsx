@@ -44,11 +44,7 @@ function getFormattedValue(row: Row<DataRow>, columnName: string, type_name: str
     case "INT":
     case "LONG":
     case "BIGINT":
-      return (
-        <div className="text-right font-medium">
-          <i>{value as number}</i>
-        </div>
-      );
+      return <div className="text-right italic">{value as number}</div>;
     case "TIMESTAMP":
       return (value as string).substring(0, 19).replace("T", " ");
     default: {
@@ -207,9 +203,7 @@ export function ExperimentDataTable({
 
   return (
     <div className="container mx-auto py-10">
-      <div className="mb-2 text-center">
-        {t("experimentDataTable.table")}: {tableData?.name ?? tableName}
-      </div>
+      <div className="mb-4 text-center">{tableData?.name ?? tableName}</div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -256,7 +250,7 @@ export function ExperimentDataTable({
 
       {/* Traditional pagination controls */}
       <div className="flex items-center justify-end space-x-2 py-4">
-        <div>
+        <div className="mr-2 text-sm">
           {t("experimentDataTable.page")} {pagination.pageIndex + 1}{" "}
           {t("experimentDataTable.pageOf")} {totalPages}
         </div>

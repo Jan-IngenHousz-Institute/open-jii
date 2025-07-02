@@ -77,9 +77,7 @@ function InternalSampleExperimentDataTable({
   const newData = getReactTableData(tableData.data);
   return (
     <div className="container mx-auto py-10">
-      <div className="mb-2 text-center">
-        {t("experimentDataTable.table")}: {tableData.name}
-      </div>
+      <div className="mb-4 text-center">{tableData.name}</div>
       <SampleDataTable columns={columns} data={newData} locale={locale} />
     </div>
   );
