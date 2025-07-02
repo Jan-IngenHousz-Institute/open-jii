@@ -47,6 +47,24 @@
                     "minimum": 0,
                     "exclusiveMinimum": 0,
                     "description": "Embargo period in days"
+                  },
+                  "members": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "userId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": ["admin", "member"]
+                        }
+                      },
+                      "required": ["userId"]
+                    },
+                    "description": "Optional array of member objects with userId and role"
                   }
                 },
                 "required": ["name"]
@@ -716,10 +734,12 @@
             }
           }
         }
-      },
+      }
+    },
+    "/api/v1/experiments/{id}/members/batch": {
       "post": {
-        "description": "Adds a new member to the experiment with the specified role",
-        "summary": "Add experiment member",
+        "description": "Adds multiple members to the experiment with specified roles",
+        "summary": "Add multiple experiment members",
         "tags": ["experiments"],
         "parameters": [
           {
@@ -733,7 +753,7 @@
             "description": "ID of the experiment"
           }
         ],
-        "operationId": "experiments.addExperimentMember",
+        "operationId": "experiments.addExperimentMembers",
         "requestBody": {
           "description": "Body",
           "content": {
@@ -741,19 +761,28 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "userId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "ID of the user to add as a member"
-                  },
-                  "role": {
-                    "default": "member",
-                    "type": "string",
-                    "enum": ["admin", "member"],
-                    "description": "Role to assign to the new member"
+                  "members": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "userId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of the user to add as a member"
+                        },
+                        "role": {
+                          "default": "member",
+                          "type": "string",
+                          "enum": ["admin", "member"],
+                          "description": "Role to assign to the new member"
+                        }
+                      },
+                      "required": ["userId"]
+                    }
                   }
                 },
-                "required": ["userId"]
+                "required": ["members"]
               }
             }
           }
@@ -764,37 +793,40 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "user": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "user": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "email": {
+                            "type": "string",
+                            "format": "email",
+                            "nullable": true
+                          }
                         },
-                        "name": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "email": {
-                          "type": "string",
-                          "format": "email",
-                          "nullable": true
-                        }
+                        "required": ["id", "name", "email"]
                       },
-                      "required": ["id", "name", "email"]
+                      "role": {
+                        "type": "string",
+                        "enum": ["admin", "member"]
+                      },
+                      "joinedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
                     },
-                    "role": {
-                      "type": "string",
-                      "enum": ["admin", "member"]
-                    },
-                    "joinedAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    }
-                  },
-                  "required": ["user", "role", "joinedAt"]
+                    "required": ["user", "role", "joinedAt"]
+                  }
                 }
               }
             }
@@ -1282,6 +1314,138 @@
                     }
                   },
                   "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/experiment/provisioning-status": {
+      "post": {
+        "description": "Receives status updates from Databricks workflows and updates the corresponding experiment status",
+        "summary": "Handle experiment provisioning status updates",
+        "tags": ["webhooks"],
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "operationId": "webhooks.updateProvisioningStatus",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "experimentId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "SUCCESS",
+                      "FAILURE",
+                      "CANCELED",
+                      "TIMEOUT",
+                      "FAILED",
+                      "RUNNING",
+                      "PENDING",
+                      "SKIPPED",
+                      "DEPLOYING",
+                      "DEPLOYED",
+                      "COMPLETED",
+                      "QUEUED",
+                      "TERMINATED",
+                      "WAITING",
+                      "INITIALIZING",
+                      "IDLE",
+                      "SETTING_UP",
+                      "RESETTING"
+                    ]
+                  },
+                  "jobRunId": {
+                    "type": "string"
+                  },
+                  "taskRunId": {
+                    "type": "string"
+                  },
+                  "timestamp": {
+                    "type": "string"
+                  }
+                },
+                "required": ["experimentId", "status", "jobRunId", "taskRunId", "timestamp"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["error", "message", "statusCode"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["error", "message", "statusCode"]
                 }
               }
             }
