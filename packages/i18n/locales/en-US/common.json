@@ -216,7 +216,8 @@
     "pageOf": "of",
     "previous": "Previous",
     "next": "Next",
-    "details": "Details"
+    "table": "Table",
+    "details": "Show table details"
   },
   "landingPage": {
     "latestArticles": "Latest articles"

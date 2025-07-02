@@ -202,8 +202,10 @@ export function ExperimentDataTable({
     pagination.pageIndex + 1 == totalPages ? totalRows % pagination.pageSize : pagination.pageSize;
 
   return (
-    <div className="container mx-auto py-10">
-      <div className="mb-4 text-center">{tableData?.name ?? tableName}</div>
+    <div>
+      <h5 className="mb-4 text-base font-medium">
+        {t("experimentDataTable.table")} {tableName}
+      </h5>
       <div className="rounded-md border">
         <Table>
           <TableHeader>

@@ -2,6 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { TableIcon } from "lucide-react";
 import Link from "next/link";
 import type {
   DataRow,
@@ -50,10 +51,12 @@ export function ExperimentDataSampleTables({
       <>
         {data.body.map((table) => (
           <div key={table.name}>
-            <InternalSampleExperimentDataTable tableData={table} locale={locale} />
-            <div className="ml-4">
-              <Link href={`/platform/data-test/${experimentId}/${table.name}`} locale={locale}>
-                <Button>{t("experimentDataTable.details")}</Button>
+            <ExperimentDataSampleTable tableData={table} locale={locale} />
+            <div className="text-muted-foreground ml-4 mt-4">
+              <Link href={`/${locale}/platform/experiments/${experimentId}/data/${table.name}`}>
+                <Button variant="outline" size="sm">
+                  <TableIcon /> {t("experimentDataTable.details")}
+                </Button>
               </Link>
             </div>
           </div>
@@ -64,7 +67,7 @@ export function ExperimentDataSampleTables({
   return <div>{t("experimentDataTable.noData")}</div>;
 }
 
-function InternalSampleExperimentDataTable({
+function ExperimentDataSampleTable({
   tableData,
   locale,
 }: {
@@ -76,8 +79,10 @@ function InternalSampleExperimentDataTable({
   const columns = getReactTableColumns(tableData.data);
   const newData = getReactTableData(tableData.data);
   return (
-    <div className="container mx-auto py-10">
-      <div className="mb-4 text-center">{tableData.name}</div>
+    <div className="">
+      <h5 className="mb-4 text-base font-medium">
+        {t("experimentDataTable.table")} {tableData.name}
+      </h5>
       <SampleDataTable columns={columns} data={newData} locale={locale} />
     </div>
   );
@@ -102,7 +107,7 @@ function SampleDataTable({ columns, data, locale }: SampleDataTableProps) {
   const { t } = useTranslation(locale, "common");
   return (
     <div>
-      <div className="rounded-md border">
+      <div className="text-muted-foreground rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
