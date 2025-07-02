@@ -47,6 +47,24 @@
                     "minimum": 0,
                     "exclusiveMinimum": 0,
                     "description": "Embargo period in days"
+                  },
+                  "members": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "userId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": ["admin", "member"]
+                        }
+                      },
+                      "required": ["userId"]
+                    },
+                    "description": "Optional array of member objects with userId and role"
                   }
                 },
                 "required": ["name"]
@@ -716,10 +734,12 @@
             }
           }
         }
-      },
+      }
+    },
+    "/api/v1/experiments/{id}/members/batch": {
       "post": {
-        "description": "Adds a new member to the experiment with the specified role",
-        "summary": "Add experiment member",
+        "description": "Adds multiple members to the experiment with specified roles",
+        "summary": "Add multiple experiment members",
         "tags": ["experiments"],
         "parameters": [
           {
@@ -733,7 +753,7 @@
             "description": "ID of the experiment"
           }
         ],
-        "operationId": "experiments.addExperimentMember",
+        "operationId": "experiments.addExperimentMembers",
         "requestBody": {
           "description": "Body",
           "content": {
@@ -741,19 +761,28 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "userId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "ID of the user to add as a member"
-                  },
-                  "role": {
-                    "default": "member",
-                    "type": "string",
-                    "enum": ["admin", "member"],
-                    "description": "Role to assign to the new member"
+                  "members": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "userId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of the user to add as a member"
+                        },
+                        "role": {
+                          "default": "member",
+                          "type": "string",
+                          "enum": ["admin", "member"],
+                          "description": "Role to assign to the new member"
+                        }
+                      },
+                      "required": ["userId"]
+                    }
                   }
                 },
-                "required": ["userId"]
+                "required": ["members"]
               }
             }
           }
@@ -764,37 +793,40 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "user": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "user": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "email": {
+                            "type": "string",
+                            "format": "email",
+                            "nullable": true
+                          }
                         },
-                        "name": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "email": {
-                          "type": "string",
-                          "format": "email",
-                          "nullable": true
-                        }
+                        "required": ["id", "name", "email"]
                       },
-                      "required": ["id", "name", "email"]
+                      "role": {
+                        "type": "string",
+                        "enum": ["admin", "member"]
+                      },
+                      "joinedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
                     },
-                    "role": {
-                      "type": "string",
-                      "enum": ["admin", "member"]
-                    },
-                    "joinedAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    }
-                  },
-                  "required": ["user", "role", "joinedAt"]
+                    "required": ["user", "role", "joinedAt"]
+                  }
                 }
               }
             }
@@ -1093,6 +1125,473 @@
                     }
                   },
                   "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/protocols": {
+      "get": {
+        "description": "Returns a list of protocols based on the specified filter criteria",
+        "summary": "List protocols",
+        "tags": ["protocols"],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "operationId": "protocols.listProtocols",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "code": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        }
+                      },
+                      "createdBy": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "description",
+                      "code",
+                      "createdBy",
+                      "createdAt",
+                      "updatedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Creates a new protocol with the given properties",
+        "summary": "Create a new protocol",
+        "tags": ["protocols"],
+        "parameters": [],
+        "operationId": "protocols.createProtocol",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "code": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  }
+                },
+                "required": ["name", "code"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "code": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "description",
+                    "code",
+                    "createdBy",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/protocols/{id}": {
+      "get": {
+        "description": "Returns a protocol by its ID",
+        "summary": "Get protocol by ID",
+        "tags": ["protocols"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "operationId": "protocols.getProtocol",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "code": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "description",
+                    "code",
+                    "createdBy",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "description": "Updates a protocol with the given properties",
+        "summary": "Update a protocol",
+        "tags": ["protocols"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "operationId": "protocols.updateProtocol",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "code": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "code": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "description",
+                    "code",
+                    "createdBy",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Deletes a protocol by its ID",
+        "summary": "Delete a protocol",
+        "tags": ["protocols"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "operationId": "protocols.deleteProtocol",
+        "responses": {
+          "204": {
+            "description": "204"
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["message", "statusCode"]
                 }
               }
             }

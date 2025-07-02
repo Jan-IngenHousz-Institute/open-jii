@@ -144,7 +144,8 @@ describe("ExperimentMembersController", () => {
         .expect(StatusCodes.CREATED);
 
       // Assert the response
-      expect(response.body).toMatchObject({
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0]).toMatchObject({
         role: "member",
         experimentId: experiment.id,
         user: expect.objectContaining({
