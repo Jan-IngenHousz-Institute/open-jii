@@ -114,6 +114,7 @@ export function ExperimentDataTable({
   const [persistedColumns, setPersistedColumns] =
     useState<AccessorKeyColumnDef<DataRow, DataValue>[]>();
   const [totalPages, setTotalPages] = useState<number>();
+  const [totalRows, setTotalRows] = useState<number>(0);
 
   // Use traditional pagination with improved column persistence
   const { data, isLoading, error } = useExperimentData(
@@ -125,19 +126,6 @@ export function ExperimentDataTable({
     },
     staleTime,
   );
-
-  // Debug logging
-  useEffect(() => {
-    console.log("ExperimentDataTable pagination debug:", {
-      experimentId,
-      tableName,
-      pagination,
-      isLoading,
-      error,
-      hasData: !!data,
-      dataBody: data?.body,
-    });
-  }, [experimentId, tableName, pagination, isLoading, error, data]);
 
   const { t } = useTranslation(locale, "common");
 
@@ -159,6 +147,7 @@ export function ExperimentDataTable({
       if (newColumns.length > 0) {
         setPersistedColumns(newColumns);
         setTotalPages(tableData.totalPages);
+        setTotalRows(tableData.totalRows);
       }
     }
   }, [data?.body]);
@@ -200,7 +189,7 @@ export function ExperimentDataTable({
   }
 
   if (error) {
-    return <div>Error loading data</div>;
+    return <div>{t("experimentDataTable.error")}</div>;
   }
 
   if (!data?.body && !isLoading) {
@@ -213,6 +202,8 @@ export function ExperimentDataTable({
 
   // Calculate column count for empty state
   const columnCount = currentColumns.length || (tableData?.data?.columns.length ?? 1);
+  const loadingRowCount =
+    pagination.pageIndex + 1 == totalPages ? totalRows % pagination.pageSize : pagination.pageSize;
 
   return (
     <div className="container mx-auto py-10">
@@ -245,7 +236,7 @@ export function ExperimentDataTable({
             {isLoading && persistedColumns && (
               <LoadingRows
                 columnCount={persistedColumns.length}
-                pageSize={pagination.pageSize}
+                rowCount={loadingRowCount}
                 locale={locale}
               />
             )}
@@ -286,13 +277,6 @@ export function ExperimentDataTable({
           {t("experimentDataTable.next")}
         </Button>
       </div>
-
-      {tableData && (
-        <div className="text-xs">
-          Debug info: Total rows {tableData.totalRows} | Page {tableData.page} | Total pages{" "}
-          {tableData.totalPages} | {tableData.data?.truncated ? "Truncated" : "Not truncated"}
-        </div>
-      )}
     </div>
   );
 }
@@ -315,12 +299,12 @@ function ExperimentDataRows({ rows }: { rows: Row<RowData>[] }) {
 }
 
 function LoadingRows({
+  rowCount,
   columnCount,
-  pageSize,
   locale,
 }: {
+  rowCount: number;
   columnCount: number;
-  pageSize: number;
   locale: Locale;
 }) {
   const { t } = useTranslation(locale, "common");
@@ -328,10 +312,10 @@ function LoadingRows({
     <>
       <TableRow>
         <TableCell colSpan={columnCount} className="h-4">
-          {t("experimentDataTable.loading")} {pageSize}
+          {t("experimentDataTable.loading")}
         </TableCell>
       </TableRow>
-      {Array.from({ length: pageSize }).map((_, index) => (
+      {Array.from({ length: rowCount - 1 }).map((_, index) => (
         <TableRow key={`skeleton-${index}`}>
           {Array.from({ length: columnCount }).map((_, colIndex) => (
             <TableCell key={colIndex}>
