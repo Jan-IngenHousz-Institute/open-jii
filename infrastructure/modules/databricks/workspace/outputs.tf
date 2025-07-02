@@ -1,7 +1,7 @@
 output "workspace_id" {
   description = "Databricks Workspace ID"
   value       = databricks_mws_workspaces.this.workspace_id
-  sensitive   = true
+  # sensitive   = true
 }
 
 output "workspace_url" {

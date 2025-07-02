@@ -16,22 +16,22 @@ resource "databricks_secret_scope" "this" {
   backend_type = "DATABRICKS"
 }
 
-# Add secrets to the scope
-resource "databricks_secret" "secrets" {
-  for_each = var.secrets
+# Add secrets to the scope - using dynamic blocks instead of for_each
+resource "databricks_secret" "secret" {
+  count = length(keys(var.secrets))
 
   provider     = databricks.workspace
-  key          = each.key
-  string_value = each.value
+  key          = keys(var.secrets)[count.index]
+  string_value = values(var.secrets)[count.index]
   scope        = databricks_secret_scope.this.name
 }
 
 # Create ACL permissions for the scope (users, groups, and service principals)
 resource "databricks_secret_acl" "acls" {
-  for_each = var.acls
+  count = length(var.acl_principals)
 
   provider   = databricks.workspace
-  principal  = each.key
-  permission = each.value
+  principal  = var.acl_principals[count.index]
+  permission = var.acl_permissions[count.index]
   scope      = databricks_secret_scope.this.name
 }
