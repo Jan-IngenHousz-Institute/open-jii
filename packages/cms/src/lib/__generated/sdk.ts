@@ -169,6 +169,7 @@ export type AssetFilter = {
 export type AssetLinkingCollections = {
   __typename?: "AssetLinkingCollections";
   componentAuthorCollection?: Maybe<ComponentAuthorCollection>;
+  componentFeatureCollection?: Maybe<ComponentFeatureCollection>;
   componentRichImageCollection?: Maybe<ComponentRichImageCollection>;
   componentSeoCollection?: Maybe<ComponentSeoCollection>;
   entryCollection?: Maybe<EntryCollection>;
@@ -178,6 +179,13 @@ export type AssetLinkingCollections = {
 };
 
 export type AssetLinkingCollectionsComponentAuthorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+};
+
+export type AssetLinkingCollectionsComponentFeatureCollectionArgs = {
   limit?: InputMaybe<Scalars["Int"]["input"]>;
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
@@ -606,6 +614,112 @@ export enum ComponentFaqQuestionOrder {
   SysPublishedAtDesc = "sys_publishedAt_DESC",
   SysPublishedVersionAsc = "sys_publishedVersion_ASC",
   SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+}
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentFeature) */
+export type ComponentFeature = Entry &
+  _Node & {
+    __typename?: "ComponentFeature";
+    _id: Scalars["ID"]["output"];
+    contentfulMetadata: ContentfulMetadata;
+    icon?: Maybe<Asset>;
+    internalName?: Maybe<Scalars["String"]["output"]>;
+    linkedFrom?: Maybe<ComponentFeatureLinkingCollections>;
+    subtitle?: Maybe<Scalars["String"]["output"]>;
+    sys: Sys;
+    title?: Maybe<Scalars["String"]["output"]>;
+  };
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentFeature) */
+export type ComponentFeatureIconArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentFeature) */
+export type ComponentFeatureInternalNameArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentFeature) */
+export type ComponentFeatureLinkedFromArgs = {
+  allowedLocales?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentFeature) */
+export type ComponentFeatureSubtitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentFeature) */
+export type ComponentFeatureTitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type ComponentFeatureCollection = {
+  __typename?: "ComponentFeatureCollection";
+  items: Array<Maybe<ComponentFeature>>;
+  limit: Scalars["Int"]["output"];
+  skip: Scalars["Int"]["output"];
+  total: Scalars["Int"]["output"];
+};
+
+export type ComponentFeatureFilter = {
+  AND?: InputMaybe<Array<InputMaybe<ComponentFeatureFilter>>>;
+  OR?: InputMaybe<Array<InputMaybe<ComponentFeatureFilter>>>;
+  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  icon_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  internalName?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  internalName_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  internalName_not?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  subtitle?: InputMaybe<Scalars["String"]["input"]>;
+  subtitle_contains?: InputMaybe<Scalars["String"]["input"]>;
+  subtitle_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  subtitle_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  subtitle_not?: InputMaybe<Scalars["String"]["input"]>;
+  subtitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  subtitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  sys?: InputMaybe<SysFilter>;
+  title?: InputMaybe<Scalars["String"]["input"]>;
+  title_contains?: InputMaybe<Scalars["String"]["input"]>;
+  title_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  title_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  title_not?: InputMaybe<Scalars["String"]["input"]>;
+  title_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  title_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+export type ComponentFeatureLinkingCollections = {
+  __typename?: "ComponentFeatureLinkingCollections";
+  entryCollection?: Maybe<EntryCollection>;
+};
+
+export type ComponentFeatureLinkingCollectionsEntryCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+};
+
+export enum ComponentFeatureOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  SubtitleAsc = "subtitle_ASC",
+  SubtitleDesc = "subtitle_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
 }
 
 /** To describe an image used in rich text fields [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentRichImage) */
@@ -1639,6 +1753,122 @@ export type PageFaqQuestionsCollection = {
   total: Scalars["Int"]["output"];
 };
 
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomeFeatures) */
+export type PageHomeFeatures = Entry &
+  _Node & {
+    __typename?: "PageHomeFeatures";
+    _id: Scalars["ID"]["output"];
+    contentfulMetadata: ContentfulMetadata;
+    featuresCollection?: Maybe<PageHomeFeaturesFeaturesCollection>;
+    internalName?: Maybe<Scalars["String"]["output"]>;
+    linkedFrom?: Maybe<PageHomeFeaturesLinkingCollections>;
+    subtitle?: Maybe<Scalars["String"]["output"]>;
+    sys: Sys;
+    title?: Maybe<Scalars["String"]["output"]>;
+  };
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomeFeatures) */
+export type PageHomeFeaturesFeaturesCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomeFeatures) */
+export type PageHomeFeaturesInternalNameArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomeFeatures) */
+export type PageHomeFeaturesLinkedFromArgs = {
+  allowedLocales?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomeFeatures) */
+export type PageHomeFeaturesSubtitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomeFeatures) */
+export type PageHomeFeaturesTitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type PageHomeFeaturesCollection = {
+  __typename?: "PageHomeFeaturesCollection";
+  items: Array<Maybe<PageHomeFeatures>>;
+  limit: Scalars["Int"]["output"];
+  skip: Scalars["Int"]["output"];
+  total: Scalars["Int"]["output"];
+};
+
+export type PageHomeFeaturesFeaturesCollection = {
+  __typename?: "PageHomeFeaturesFeaturesCollection";
+  items: Array<Maybe<Entry>>;
+  limit: Scalars["Int"]["output"];
+  skip: Scalars["Int"]["output"];
+  total: Scalars["Int"]["output"];
+};
+
+export type PageHomeFeaturesFilter = {
+  AND?: InputMaybe<Array<InputMaybe<PageHomeFeaturesFilter>>>;
+  OR?: InputMaybe<Array<InputMaybe<PageHomeFeaturesFilter>>>;
+  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  featuresCollection_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  internalName?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  internalName_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  internalName_not?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  subtitle?: InputMaybe<Scalars["String"]["input"]>;
+  subtitle_contains?: InputMaybe<Scalars["String"]["input"]>;
+  subtitle_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  subtitle_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  subtitle_not?: InputMaybe<Scalars["String"]["input"]>;
+  subtitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  subtitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  sys?: InputMaybe<SysFilter>;
+  title?: InputMaybe<Scalars["String"]["input"]>;
+  title_contains?: InputMaybe<Scalars["String"]["input"]>;
+  title_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  title_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  title_not?: InputMaybe<Scalars["String"]["input"]>;
+  title_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  title_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+export type PageHomeFeaturesLinkingCollections = {
+  __typename?: "PageHomeFeaturesLinkingCollections";
+  entryCollection?: Maybe<EntryCollection>;
+};
+
+export type PageHomeFeaturesLinkingCollectionsEntryCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+};
+
+export enum PageHomeFeaturesOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  SubtitleAsc = "subtitle_ASC",
+  SubtitleDesc = "subtitle_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomeHero) */
 export type PageHomeHero = Entry &
   _Node & {
@@ -2230,6 +2460,8 @@ export type Query = {
   componentButtonCollection?: Maybe<ComponentButtonCollection>;
   componentFaqQuestion?: Maybe<ComponentFaqQuestion>;
   componentFaqQuestionCollection?: Maybe<ComponentFaqQuestionCollection>;
+  componentFeature?: Maybe<ComponentFeature>;
+  componentFeatureCollection?: Maybe<ComponentFeatureCollection>;
   componentRichImage?: Maybe<ComponentRichImage>;
   componentRichImageCollection?: Maybe<ComponentRichImageCollection>;
   componentSeo?: Maybe<ComponentSeo>;
@@ -2241,6 +2473,8 @@ export type Query = {
   pageBlogPostCollection?: Maybe<PageBlogPostCollection>;
   pageFaq?: Maybe<PageFaq>;
   pageFaqCollection?: Maybe<PageFaqCollection>;
+  pageHomeFeatures?: Maybe<PageHomeFeatures>;
+  pageHomeFeaturesCollection?: Maybe<PageHomeFeaturesCollection>;
   pageHomeHero?: Maybe<PageHomeHero>;
   pageHomeHeroCollection?: Maybe<PageHomeHeroCollection>;
   pageHomeMission?: Maybe<PageHomeMission>;
@@ -2321,6 +2555,21 @@ export type QueryComponentFaqQuestionCollectionArgs = {
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
   where?: InputMaybe<ComponentFaqQuestionFilter>;
+};
+
+export type QueryComponentFeatureArgs = {
+  id: Scalars["String"]["input"];
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type QueryComponentFeatureCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<ComponentFeatureOrder>>>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  where?: InputMaybe<ComponentFeatureFilter>;
 };
 
 export type QueryComponentRichImageArgs = {
@@ -2405,6 +2654,21 @@ export type QueryPageFaqCollectionArgs = {
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
   where?: InputMaybe<PageFaqFilter>;
+};
+
+export type QueryPageHomeFeaturesArgs = {
+  id: Scalars["String"]["input"];
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type QueryPageHomeFeaturesCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageHomeFeaturesOrder>>>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  where?: InputMaybe<PageHomeFeaturesFilter>;
 };
 
 export type QueryPageHomeHeroArgs = {
@@ -2732,11 +2996,13 @@ export type PageBlogPostFieldsFragment = {
           | { __typename?: "ComponentAuthor" }
           | { __typename?: "ComponentButton" }
           | { __typename?: "ComponentFaqQuestion" }
+          | { __typename?: "ComponentFeature" }
           | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
           | { __typename?: "ComponentSeo" }
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
           | { __typename?: "PageFaq" }
+          | { __typename?: "PageHomeFeatures" }
           | { __typename?: "PageHomeHero" }
           | { __typename?: "PageHomeMission" }
           | { __typename?: "PageLanding" }
@@ -2801,11 +3067,13 @@ export type PageFaqFieldsFragment = {
       | { __typename?: "ComponentAuthor" }
       | { __typename?: "ComponentButton" }
       | ({ __typename?: "ComponentFaqQuestion" } & FaqQuestionFieldsFragment)
+      | { __typename?: "ComponentFeature" }
       | { __typename?: "ComponentRichImage" }
       | { __typename?: "ComponentSeo" }
       | { __typename?: "PageAbout" }
       | { __typename?: "PageBlogPost" }
       | { __typename?: "PageFaq" }
+      | { __typename?: "PageHomeFeatures" }
       | { __typename?: "PageHomeHero" }
       | { __typename?: "PageHomeMission" }
       | { __typename?: "PageLanding" }
@@ -2828,6 +3096,60 @@ export type PageFaqQuery = {
   } | null;
 };
 
+export type PageHomeFeaturesFieldsFragment = {
+  __typename: "PageHomeFeatures";
+  internalName?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
+  sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
+  featuresCollection?: {
+    __typename?: "PageHomeFeaturesFeaturesCollection";
+    items: Array<
+      | { __typename?: "ComponentAuthor" }
+      | { __typename?: "ComponentButton" }
+      | { __typename?: "ComponentFaqQuestion" }
+      | ({ __typename?: "ComponentFeature" } & FeatureFieldsFragment)
+      | { __typename?: "ComponentRichImage" }
+      | { __typename?: "ComponentSeo" }
+      | { __typename?: "PageAbout" }
+      | { __typename?: "PageBlogPost" }
+      | { __typename?: "PageFaq" }
+      | { __typename?: "PageHomeFeatures" }
+      | { __typename?: "PageHomeHero" }
+      | { __typename?: "PageHomeMission" }
+      | { __typename?: "PageLanding" }
+      | { __typename?: "PagePolicies" }
+      | null
+    >;
+  } | null;
+};
+
+export type FeatureFieldsFragment = {
+  __typename: "ComponentFeature";
+  title?: string | null;
+  subtitle?: string | null;
+  sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
+  icon?: {
+    __typename?: "Asset";
+    url?: string | null;
+    title?: string | null;
+    sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
+  } | null;
+};
+
+export type PageHomeFeaturesQueryVariables = Exact<{
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+}>;
+
+export type PageHomeFeaturesQuery = {
+  __typename?: "Query";
+  pageHomeFeaturesCollection?: {
+    __typename?: "PageHomeFeaturesCollection";
+    items: Array<({ __typename?: "PageHomeFeatures" } & PageHomeFeaturesFieldsFragment) | null>;
+  } | null;
+};
+
 export type PageHomeHeroFieldsFragment = {
   __typename: "PageHomeHero";
   internalName?: string | null;
@@ -2841,11 +3163,13 @@ export type PageHomeHeroFieldsFragment = {
       | { __typename?: "ComponentAuthor" }
       | ({ __typename?: "ComponentButton" } & ButtonFieldsFragment)
       | { __typename?: "ComponentFaqQuestion" }
+      | { __typename?: "ComponentFeature" }
       | { __typename?: "ComponentRichImage" }
       | { __typename?: "ComponentSeo" }
       | { __typename?: "PageAbout" }
       | { __typename?: "PageBlogPost" }
       | { __typename?: "PageFaq" }
+      | { __typename?: "PageHomeFeatures" }
       | { __typename?: "PageHomeHero" }
       | { __typename?: "PageHomeMission" }
       | { __typename?: "PageLanding" }
@@ -3173,6 +3497,45 @@ export const PageFaqFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
+export const FeatureFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+  fragment FeatureFields on ComponentFeature {
+    __typename
+    sys {
+      id
+      publishedAt
+      environmentId
+    }
+    title
+    subtitle
+    icon {
+      url
+      title
+      sys {
+        id
+        publishedAt
+        environmentId
+      }
+    }
+  }
+`;
+export const PageHomeFeaturesFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+  fragment PageHomeFeaturesFields on PageHomeFeatures {
+    __typename
+    sys {
+      id
+      publishedAt
+      environmentId
+    }
+    internalName
+    title
+    subtitle
+    featuresCollection {
+      items {
+        ...FeatureFields
+      }
+    }
+  }
+`;
 export const ButtonFieldsFragmentDoc: ReturnType<typeof gql> = gql`
   fragment ButtonFields on ComponentButton {
     label
@@ -3339,6 +3702,17 @@ export const PageFaqDocument: ReturnType<typeof gql> = gql`
   ${PageFaqFieldsFragmentDoc}
   ${FaqQuestionFieldsFragmentDoc}
 `;
+export const PageHomeFeaturesDocument: ReturnType<typeof gql> = gql`
+  query pageHomeFeatures($locale: String, $preview: Boolean) {
+    pageHomeFeaturesCollection(limit: 1, locale: $locale, preview: $preview) {
+      items {
+        ...PageHomeFeaturesFields
+      }
+    }
+  }
+  ${PageHomeFeaturesFieldsFragmentDoc}
+  ${FeatureFieldsFragmentDoc}
+`;
 export const PageHomeHeroDocument: ReturnType<typeof gql> = gql`
   query pageHomeHero($locale: String, $preview: Boolean) {
     pageHomeHeroCollection(limit: 1, locale: $locale, preview: $preview) {
@@ -3485,6 +3859,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "pageFaq",
+        "query",
+        variables,
+      );
+    },
+    pageHomeFeatures(
+      variables?: PageHomeFeaturesQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<PageHomeFeaturesQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<PageHomeFeaturesQuery>({
+            document: PageHomeFeaturesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "pageHomeFeatures",
         "query",
         variables,
       );

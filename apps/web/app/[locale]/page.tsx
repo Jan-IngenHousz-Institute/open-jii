@@ -14,6 +14,7 @@ import {
 import type {
   PageHomeMissionFieldsFragment,
   PageHomeHeroFieldsFragment,
+  PageHomeFeaturesFieldsFragment,
 } from "@repo/cms/lib/__generated/sdk";
 import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
@@ -34,14 +35,17 @@ export default async function Home({ params }: HomePageProps) {
   const { previewClient, client } = await getContentfulClients();
   const gqlClient = preview ? previewClient : client;
 
-  // Fetch hero and mission data from Contentful
-  const [homeHeroQuery, homeMissionQuery] = await Promise.all([
+  // Fetch hero, mission, and features data froßm Contentful
+  const [homeHeroQuery, homeMissionQuery, homeFeaturesQuery] = await Promise.all([
     gqlClient.pageHomeHero({ locale, preview }),
     gqlClient.pageHomeMission({ locale, preview }),
+    gqlClient.pageHomeFeatures({ locale, preview }),
   ]);
   const homeHero = homeHeroQuery.pageHomeHeroCollection?.items[0] as PageHomeHeroFieldsFragment;
   const homeMission = homeMissionQuery.pageHomeMissionCollection
     ?.items[0] as PageHomeMissionFieldsFragment;
+  const homeFeatures = homeFeaturesQuery.pageHomeFeaturesCollection
+    ?.items[0] as PageHomeFeaturesFieldsFragment;
 
   // Prepare translations for client component
   const translations = {
@@ -76,7 +80,7 @@ export default async function Home({ params }: HomePageProps) {
         <HomeAboutMission translations={translations} missionData={homeMission} preview={preview} />
 
         {/* Enhanced Key Features */}
-        <HomeKeyFeatures t={t} />
+        <HomeKeyFeatures featuresData={homeFeatures} preview={preview} />
 
         {/* Enhanced Partner Highlights & Visual Media */}
         <HomePartners t={t} />

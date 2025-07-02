@@ -93,6 +93,7 @@ input AssetFilter {
 
 type AssetLinkingCollections {
   componentAuthorCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): ComponentAuthorCollection
+  componentFeatureCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): ComponentFeatureCollection
   componentRichImageCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): ComponentRichImageCollection
   componentSeoCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): ComponentSeoCollection
   entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
@@ -375,6 +376,77 @@ enum ComponentFaqQuestionOrder {
   sys_publishedAt_DESC
   sys_publishedVersion_ASC
   sys_publishedVersion_DESC
+}
+
+"""
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentFeature)
+"""
+type ComponentFeature implements Entry & _Node {
+  _id: ID!
+  contentfulMetadata: ContentfulMetadata!
+  icon(locale: String, preview: Boolean): Asset
+  internalName(locale: String): String
+  linkedFrom(allowedLocales: [String]): ComponentFeatureLinkingCollections
+  subtitle(locale: String): String
+  sys: Sys!
+  title(locale: String): String
+}
+
+type ComponentFeatureCollection {
+  items: [ComponentFeature]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+input ComponentFeatureFilter {
+  AND: [ComponentFeatureFilter]
+  OR: [ComponentFeatureFilter]
+  contentfulMetadata: ContentfulMetadataFilter
+  icon_exists: Boolean
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  subtitle: String
+  subtitle_contains: String
+  subtitle_exists: Boolean
+  subtitle_in: [String]
+  subtitle_not: String
+  subtitle_not_contains: String
+  subtitle_not_in: [String]
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
+}
+
+type ComponentFeatureLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+}
+
+enum ComponentFeatureOrder {
+  internalName_ASC
+  internalName_DESC
+  subtitle_ASC
+  subtitle_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
 }
 
 """
@@ -1177,6 +1249,84 @@ type PageFaqQuestionsCollection {
 }
 
 """
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomeFeatures)
+"""
+type PageHomeFeatures implements Entry & _Node {
+  _id: ID!
+  contentfulMetadata: ContentfulMetadata!
+  featuresCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): PageHomeFeaturesFeaturesCollection
+  internalName(locale: String): String
+  linkedFrom(allowedLocales: [String]): PageHomeFeaturesLinkingCollections
+  subtitle(locale: String): String
+  sys: Sys!
+  title(locale: String): String
+}
+
+type PageHomeFeaturesCollection {
+  items: [PageHomeFeatures]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+type PageHomeFeaturesFeaturesCollection {
+  items: [Entry]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+input PageHomeFeaturesFilter {
+  AND: [PageHomeFeaturesFilter]
+  OR: [PageHomeFeaturesFilter]
+  contentfulMetadata: ContentfulMetadataFilter
+  featuresCollection_exists: Boolean
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  subtitle: String
+  subtitle_contains: String
+  subtitle_exists: Boolean
+  subtitle_in: [String]
+  subtitle_not: String
+  subtitle_not_contains: String
+  subtitle_not_in: [String]
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
+}
+
+type PageHomeFeaturesLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+}
+
+enum PageHomeFeaturesOrder {
+  internalName_ASC
+  internalName_DESC
+  subtitle_ASC
+  subtitle_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+"""
 [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomeHero)
 """
 type PageHomeHero implements Entry & _Node {
@@ -1597,6 +1747,8 @@ type Query {
   componentButtonCollection(limit: Int = 100, locale: String, order: [ComponentButtonOrder], preview: Boolean, skip: Int = 0, where: ComponentButtonFilter): ComponentButtonCollection
   componentFaqQuestion(id: String!, locale: String, preview: Boolean): ComponentFaqQuestion
   componentFaqQuestionCollection(limit: Int = 100, locale: String, order: [ComponentFaqQuestionOrder], preview: Boolean, skip: Int = 0, where: ComponentFaqQuestionFilter): ComponentFaqQuestionCollection
+  componentFeature(id: String!, locale: String, preview: Boolean): ComponentFeature
+  componentFeatureCollection(limit: Int = 100, locale: String, order: [ComponentFeatureOrder], preview: Boolean, skip: Int = 0, where: ComponentFeatureFilter): ComponentFeatureCollection
   componentRichImage(id: String!, locale: String, preview: Boolean): ComponentRichImage
   componentRichImageCollection(limit: Int = 100, locale: String, order: [ComponentRichImageOrder], preview: Boolean, skip: Int = 0, where: ComponentRichImageFilter): ComponentRichImageCollection
   componentSeo(id: String!, locale: String, preview: Boolean): ComponentSeo
@@ -1608,6 +1760,8 @@ type Query {
   pageBlogPostCollection(limit: Int = 100, locale: String, order: [PageBlogPostOrder], preview: Boolean, skip: Int = 0, where: PageBlogPostFilter): PageBlogPostCollection
   pageFaq(id: String!, locale: String, preview: Boolean): PageFaq
   pageFaqCollection(limit: Int = 100, locale: String, order: [PageFaqOrder], preview: Boolean, skip: Int = 0, where: PageFaqFilter): PageFaqCollection
+  pageHomeFeatures(id: String!, locale: String, preview: Boolean): PageHomeFeatures
+  pageHomeFeaturesCollection(limit: Int = 100, locale: String, order: [PageHomeFeaturesOrder], preview: Boolean, skip: Int = 0, where: PageHomeFeaturesFilter): PageHomeFeaturesCollection
   pageHomeHero(id: String!, locale: String, preview: Boolean): PageHomeHero
   pageHomeHeroCollection(limit: Int = 100, locale: String, order: [PageHomeHeroOrder], preview: Boolean, skip: Int = 0, where: PageHomeHeroFilter): PageHomeHeroCollection
   pageHomeMission(id: String!, locale: String, preview: Boolean): PageHomeMission
