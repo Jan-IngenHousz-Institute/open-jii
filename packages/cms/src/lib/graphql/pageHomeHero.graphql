@@ -1,0 +1,30 @@
+fragment PageHomeHeroFields on PageHomeHero {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+  internalName
+  badge
+  title
+  subtitle
+  buttonsCollection {
+    items {
+      ...ButtonFields
+    }
+  }
+}
+
+fragment ButtonFields on ComponentButton {
+  label
+  url
+}
+
+query pageHomeHero($locale: String, $preview: Boolean) {
+  pageHomeHeroCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...PageHomeHeroFields
+    }
+  }
+}

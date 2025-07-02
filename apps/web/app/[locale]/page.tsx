@@ -1,8 +1,20 @@
 import { UnifiedNavbar } from "@/components/unified-navbar";
 import { auth } from "@/lib/auth";
 import { ChevronDown } from "lucide-react";
+import { draftMode } from "next/headers";
+import { getContentfulClients } from "~/lib/contentful";
 
-import { HomeHero, HomeAboutMission, HomeKeyFeatures, HomePartners, HomeFooter } from "@repo/cms";
+import {
+  HomeHero as HomeHeroComponent,
+  HomeAboutMission,
+  HomeKeyFeatures,
+  HomePartners,
+  HomeFooter,
+} from "@repo/cms";
+import type {
+  PageHomeMissionFieldsFragment,
+  PageHomeHeroFieldsFragment,
+} from "@repo/cms/lib/__generated/sdk";
 import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
@@ -18,6 +30,27 @@ export default async function Home({ params }: HomePageProps) {
     namespaces: ["common"],
   });
 
+  const { isEnabled: preview } = await draftMode();
+  const { previewClient, client } = await getContentfulClients();
+  const gqlClient = preview ? previewClient : client;
+
+  // Fetch hero and mission data from Contentful
+  const [homeHeroQuery, homeMissionQuery] = await Promise.all([
+    gqlClient.pageHomeHero({ locale, preview }),
+    gqlClient.pageHomeMission({ locale, preview }),
+  ]);
+  const homeHero = homeHeroQuery.pageHomeHeroCollection?.items[0] as PageHomeHeroFieldsFragment;
+  const homeMission = homeMissionQuery.pageHomeMissionCollection
+    ?.items[0] as PageHomeMissionFieldsFragment;
+
+  // Prepare translations for client component
+  const translations = {
+    institute: t("jii.institute"),
+    aboutDescription: t("jii.aboutDescription"),
+    mission: t("jii.mission"),
+    missionDescription: t("jii.missionDescription"),
+  };
+
   return (
     <>
       <UnifiedNavbar locale={locale} session={session} />
@@ -31,16 +64,16 @@ export default async function Home({ params }: HomePageProps) {
           ></div>
         </div>
 
-        {/* Hero Section */}
-        <HomeHero t={t} />
+        {/* Hero Section - now uses Contentful data */}
+        <HomeHeroComponent heroData={homeHero} preview={preview} />
 
         {/* Scroll Indicator */}
         <div className="animate-bounce">
           <ChevronDown className="mx-auto h-8 w-8 text-emerald-500" />
         </div>
 
-        {/* About & Mission Section */}
-        <HomeAboutMission t={t} />
+        {/* About & Mission Section - now uses Contentful data */}
+        <HomeAboutMission translations={translations} missionData={homeMission} preview={preview} />
 
         {/* Enhanced Key Features */}
         <HomeKeyFeatures t={t} />

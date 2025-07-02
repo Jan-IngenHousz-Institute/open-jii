@@ -70,6 +70,7 @@ export const FaqContent: React.FC<FaqContentProps> = ({
               <div
                 key={q.sys.id}
                 className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+                {...(preview ? inspectorProps({ fieldId: `questionsCollection.items[${idx}]` }) : {})}
               >
                 <h3 className="mb-3 text-xl font-semibold text-gray-900">{q.question}</h3>
                 {q.answer?.json && (

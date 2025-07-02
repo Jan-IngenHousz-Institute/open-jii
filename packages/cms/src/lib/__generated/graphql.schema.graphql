@@ -98,6 +98,7 @@ type AssetLinkingCollections {
   entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
   pageAboutCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): PageAboutCollection
   pageBlogPostCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): PageBlogPostCollection
+  pageHomeMissionCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): PageHomeMissionCollection
 }
 
 enum AssetOrder {
@@ -202,6 +203,75 @@ enum ComponentAuthorOrder {
   sys_publishedAt_DESC
   sys_publishedVersion_ASC
   sys_publishedVersion_DESC
+}
+
+"""
+CTA button for Hero section [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentButton)
+"""
+type ComponentButton implements Entry & _Node {
+  _id: ID!
+  contentfulMetadata: ContentfulMetadata!
+  internalName(locale: String): String
+  label(locale: String): String
+  linkedFrom(allowedLocales: [String]): ComponentButtonLinkingCollections
+  sys: Sys!
+  url(locale: String): String
+}
+
+type ComponentButtonCollection {
+  items: [ComponentButton]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+input ComponentButtonFilter {
+  AND: [ComponentButtonFilter]
+  OR: [ComponentButtonFilter]
+  contentfulMetadata: ContentfulMetadataFilter
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  label: String
+  label_contains: String
+  label_exists: Boolean
+  label_in: [String]
+  label_not: String
+  label_not_contains: String
+  label_not_in: [String]
+  sys: SysFilter
+  url: String
+  url_contains: String
+  url_exists: Boolean
+  url_in: [String]
+  url_not: String
+  url_not_contains: String
+  url_not_in: [String]
+}
+
+type ComponentButtonLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+}
+
+enum ComponentButtonOrder {
+  internalName_ASC
+  internalName_DESC
+  label_ASC
+  label_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  url_ASC
+  url_DESC
 }
 
 """
@@ -1107,6 +1177,253 @@ type PageFaqQuestionsCollection {
 }
 
 """
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomeHero)
+"""
+type PageHomeHero implements Entry & _Node {
+  _id: ID!
+  badge(locale: String): String
+  buttonsCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): PageHomeHeroButtonsCollection
+  contentfulMetadata: ContentfulMetadata!
+  internalName(locale: String): String
+  linkedFrom(allowedLocales: [String]): PageHomeHeroLinkingCollections
+  subtitle(locale: String): String
+  sys: Sys!
+  title(locale: String): String
+}
+
+type PageHomeHeroButtonsCollection {
+  items: [Entry]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+type PageHomeHeroCollection {
+  items: [PageHomeHero]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+input PageHomeHeroFilter {
+  AND: [PageHomeHeroFilter]
+  OR: [PageHomeHeroFilter]
+  badge: String
+  badge_contains: String
+  badge_exists: Boolean
+  badge_in: [String]
+  badge_not: String
+  badge_not_contains: String
+  badge_not_in: [String]
+  buttonsCollection_exists: Boolean
+  contentfulMetadata: ContentfulMetadataFilter
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  subtitle: String
+  subtitle_contains: String
+  subtitle_exists: Boolean
+  subtitle_in: [String]
+  subtitle_not: String
+  subtitle_not_contains: String
+  subtitle_not_in: [String]
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
+}
+
+type PageHomeHeroLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+}
+
+enum PageHomeHeroOrder {
+  badge_ASC
+  badge_DESC
+  internalName_ASC
+  internalName_DESC
+  subtitle_ASC
+  subtitle_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+"""
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomeMission)
+"""
+type PageHomeMission implements Entry & _Node {
+  _id: ID!
+  about(locale: String): PageHomeMissionAbout
+  contentfulMetadata: ContentfulMetadata!
+  image(locale: String, preview: Boolean): Asset
+  internalName(locale: String): String
+  linkedFrom(allowedLocales: [String]): PageHomeMissionLinkingCollections
+  mission(locale: String): PageHomeMissionMission
+  subtitle(locale: String): String
+  sys: Sys!
+  title(locale: String): String
+}
+
+type PageHomeMissionAbout {
+  json: JSON!
+  links: PageHomeMissionAboutLinks!
+}
+
+type PageHomeMissionAboutAssets {
+  block: [Asset]!
+  hyperlink: [Asset]!
+}
+
+type PageHomeMissionAboutEntries {
+  block: [Entry]!
+  hyperlink: [Entry]!
+  inline: [Entry]!
+}
+
+type PageHomeMissionAboutLinks {
+  assets: PageHomeMissionAboutAssets!
+  entries: PageHomeMissionAboutEntries!
+  resources: PageHomeMissionAboutResources!
+}
+
+type PageHomeMissionAboutResources {
+  block: [PageHomeMissionAboutResourcesBlock!]!
+  hyperlink: [PageHomeMissionAboutResourcesHyperlink!]!
+  inline: [PageHomeMissionAboutResourcesInline!]!
+}
+
+type PageHomeMissionAboutResourcesBlock implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type PageHomeMissionAboutResourcesHyperlink implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type PageHomeMissionAboutResourcesInline implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type PageHomeMissionCollection {
+  items: [PageHomeMission]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+input PageHomeMissionFilter {
+  AND: [PageHomeMissionFilter]
+  OR: [PageHomeMissionFilter]
+  about_contains: String
+  about_exists: Boolean
+  about_not_contains: String
+  contentfulMetadata: ContentfulMetadataFilter
+  image_exists: Boolean
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  mission_contains: String
+  mission_exists: Boolean
+  mission_not_contains: String
+  subtitle: String
+  subtitle_contains: String
+  subtitle_exists: Boolean
+  subtitle_in: [String]
+  subtitle_not: String
+  subtitle_not_contains: String
+  subtitle_not_in: [String]
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
+}
+
+type PageHomeMissionLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+}
+
+type PageHomeMissionMission {
+  json: JSON!
+  links: PageHomeMissionMissionLinks!
+}
+
+type PageHomeMissionMissionAssets {
+  block: [Asset]!
+  hyperlink: [Asset]!
+}
+
+type PageHomeMissionMissionEntries {
+  block: [Entry]!
+  hyperlink: [Entry]!
+  inline: [Entry]!
+}
+
+type PageHomeMissionMissionLinks {
+  assets: PageHomeMissionMissionAssets!
+  entries: PageHomeMissionMissionEntries!
+  resources: PageHomeMissionMissionResources!
+}
+
+type PageHomeMissionMissionResources {
+  block: [PageHomeMissionMissionResourcesBlock!]!
+  hyperlink: [PageHomeMissionMissionResourcesHyperlink!]!
+  inline: [PageHomeMissionMissionResourcesInline!]!
+}
+
+type PageHomeMissionMissionResourcesBlock implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type PageHomeMissionMissionResourcesHyperlink implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type PageHomeMissionMissionResourcesInline implements ResourceLink {
+  sys: ResourceSys!
+}
+
+enum PageHomeMissionOrder {
+  internalName_ASC
+  internalName_DESC
+  subtitle_ASC
+  subtitle_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+"""
 To have an entry point for the app (e.g. Homepage) [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageLanding)
 """
 type PageLanding implements Entry & _Node {
@@ -1276,6 +1593,8 @@ type Query {
   assetCollection(limit: Int = 100, locale: String, order: [AssetOrder], preview: Boolean, skip: Int = 0, where: AssetFilter): AssetCollection
   componentAuthor(id: String!, locale: String, preview: Boolean): ComponentAuthor
   componentAuthorCollection(limit: Int = 100, locale: String, order: [ComponentAuthorOrder], preview: Boolean, skip: Int = 0, where: ComponentAuthorFilter): ComponentAuthorCollection
+  componentButton(id: String!, locale: String, preview: Boolean): ComponentButton
+  componentButtonCollection(limit: Int = 100, locale: String, order: [ComponentButtonOrder], preview: Boolean, skip: Int = 0, where: ComponentButtonFilter): ComponentButtonCollection
   componentFaqQuestion(id: String!, locale: String, preview: Boolean): ComponentFaqQuestion
   componentFaqQuestionCollection(limit: Int = 100, locale: String, order: [ComponentFaqQuestionOrder], preview: Boolean, skip: Int = 0, where: ComponentFaqQuestionFilter): ComponentFaqQuestionCollection
   componentRichImage(id: String!, locale: String, preview: Boolean): ComponentRichImage
@@ -1289,6 +1608,10 @@ type Query {
   pageBlogPostCollection(limit: Int = 100, locale: String, order: [PageBlogPostOrder], preview: Boolean, skip: Int = 0, where: PageBlogPostFilter): PageBlogPostCollection
   pageFaq(id: String!, locale: String, preview: Boolean): PageFaq
   pageFaqCollection(limit: Int = 100, locale: String, order: [PageFaqOrder], preview: Boolean, skip: Int = 0, where: PageFaqFilter): PageFaqCollection
+  pageHomeHero(id: String!, locale: String, preview: Boolean): PageHomeHero
+  pageHomeHeroCollection(limit: Int = 100, locale: String, order: [PageHomeHeroOrder], preview: Boolean, skip: Int = 0, where: PageHomeHeroFilter): PageHomeHeroCollection
+  pageHomeMission(id: String!, locale: String, preview: Boolean): PageHomeMission
+  pageHomeMissionCollection(limit: Int = 100, locale: String, order: [PageHomeMissionOrder], preview: Boolean, skip: Int = 0, where: PageHomeMissionFilter): PageHomeMissionCollection
   pageLanding(id: String!, locale: String, preview: Boolean): PageLanding
   pageLandingCollection(limit: Int = 100, locale: String, order: [PageLandingOrder], preview: Boolean, skip: Int = 0, where: PageLandingFilter): PageLandingCollection
   pagePolicies(id: String!, locale: String, preview: Boolean): PagePolicies
