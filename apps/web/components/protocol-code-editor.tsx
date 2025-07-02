@@ -69,7 +69,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
       } else {
         onChange(newValue);
       }
-    } catch (error) {
+    } catch {
       setIsValidJson(false);
       onChange(newValue); // Keep the invalid JSON for editing
     }
