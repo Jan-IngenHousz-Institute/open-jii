@@ -7,8 +7,9 @@ terraform {
   }
 }
 
-# Get smallest available instance type
+# Get smallest available instance type, only when not using serverless
 data "databricks_node_type" "smallest" {
+  count     = var.serverless ? 0 : 1
   local_disk = true
 }
 
@@ -36,7 +37,7 @@ resource "databricks_pipeline" "this" {
       label = "default"
 
       # Use smallest available instance or specified type
-      node_type_id = var.node_type_id != null ? var.node_type_id : data.databricks_node_type.smallest.id
+      node_type_id = var.node_type_id != null ? var.node_type_id : data.databricks_node_type.smallest[0].id
 
       # Support for autoscaling
       dynamic "autoscale" {

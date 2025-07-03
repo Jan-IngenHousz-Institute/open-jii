@@ -40,7 +40,7 @@ variable "kinesis_role_arn" {
 }
 
 variable "principal_ids" {
-  description = "List of principal IDs to grant workspace access to"
-  type        = list(string)
+  description = "List of principal IDs (numeric internal Databricks IDs) to grant workspace access to"
+  type        = list(number)
   default     = []
 }
