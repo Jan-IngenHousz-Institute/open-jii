@@ -129,14 +129,12 @@ module "databricks_workspace" {
   kinesis_role_arn  = module.kinesis.role_arn
   kinesis_role_name = module.kinesis.role_name
 
-  principal_ids = [module.experiment_service_principal.service_principal_application_id]
+  principal_ids = [module.node_service_principal.service_principal_id]
 
   providers = {
     databricks.mws       = databricks.mws
     databricks.workspace = databricks.workspace
   }
-
-  depends_on = [module.experiment_service_principal]
 }
 
 module "databricks_metastore" {
@@ -153,32 +151,32 @@ module "databricks_metastore" {
   depends_on = [module.databricks_workspace]
 }
 
-module "experiment_service_principal" {
+module "node_service_principal" {
   source = "../../modules/databricks/service_principal"
 
-  display_name  = "node-service-prinicipal-${var.environment}"
+  display_name  = "node-service-principal-${var.environment}"
   create_secret = true
 
   providers = {
-    databricks.workspace = databricks.workspace
+    databricks.mws = databricks.mws
   }
 }
 
-module "experiment_secret_scope" {
-  source = "../../modules/databricks/secret_scope"
+# module "experiment_secret_scope" {
+#   source = "../../modules/databricks/secret_scope"
 
-  scope_name = "node-integration-scope-${var.environment}"
-  secrets = {
-    webhook_api_key = "test-1234"
-  }
+#   scope_name = "node-integration-scope-${var.environment}"
+#   secrets = {
+#     webhook_api_key = "test-1234"
+#   }
 
-  acl_principals  = [module.experiment_service_principal.service_principal_application_id]
-  acl_permissions = ["READ"]
+#   acl_principals  = [module.node_service_principal.service_principal_display_name]
+#   acl_permissions = ["READ"]
 
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-}
+#   providers = {
+#     databricks.workspace = databricks.workspace
+#   }
+# }
 
 module "databricks_catalog" {
   source             = "../../modules/databricks/catalog"
@@ -186,8 +184,8 @@ module "databricks_catalog" {
   external_bucket_id = module.metastore_s3.bucket_name
 
   grants = {
-    experiment_service_principal = {
-      principal = module.experiment_service_principal.service_principal_display_name
+    node_service_principal = {
+      principal = module.node_service_principal.service_principal_application_id
       privileges = [
         "BROWSE",
         "CREATE_FUNCTION",
@@ -208,7 +206,7 @@ module "databricks_catalog" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.databricks_metastore, module.experiment_service_principal]
+  depends_on = [module.databricks_metastore, module.node_service_principal]
 }
 
 module "central_schema" {
@@ -309,7 +307,7 @@ module "expeirment_provisioning_job" {
   max_concurrent_runs           = 1
   use_serverless                = true
   continuous                    = false
-  serverless_performance_target = "PERFORMANCE_OPTIMIZED"
+  serverless_performance_target = "STANDARD"
 
   # Configure task retries
   task_retry_config = {
@@ -341,8 +339,8 @@ module "expeirment_provisioning_job" {
       parameters = {
         "experiment_id" = "{{experiment_id}}"
         "webhook_url"   = "https://${module.route53.api_domain}${var.backend_status_update_webhook_path}"
-        "key_scope"     = module.experiment_secret_scope.scope_name
-        "key_name"      = module.experiment_secret_scope.secret_keys["webhook_api_key"]
+        # "key_scope"     = module.experiment_secret_scope.scope_name
+        # "key_name"      = module.experiment_secret_scope.secret_keys["webhook_api_key"]
       }
 
       depends_on = "experiment_pipeline_create"
@@ -351,7 +349,7 @@ module "expeirment_provisioning_job" {
 
   permissions = [
     {
-      principal_application_id = module.experiment_service_principal.service_principal_application_id
+      principal_application_id = module.node_service_principal.service_principal_application_id
       permission_level         = "CAN_MANAGE_RUN"
     }
   ]
@@ -408,10 +406,10 @@ module "databricks_secrets" {
 
   # Store secrets as JSON using variables
   secret_string = jsonencode({
-    DATABRICKS_HOST          = module.databricks_workspace.workspace_url
-    DATABRICKS_CLIENT_ID     = module.experiment_service_principal.service_principal_application_id
-    DATABRICKS_CLIENT_SECRET = module.experiment_service_principal.service_principal_secret_value
-    DATABRICKS_JOB_ID        = module.expeirment_provisioning_job.job_id
+    DATABRICKS_HOST          = var.databricks_host
+    DATABRICKS_CLIENT_ID     = var.backend_databricks_client_id
+    DATABRICKS_CLIENT_SECRET = var.backend_databricks_client_secret
+    DATABRICKS_JOB_ID        = var.backend_databricks_job_id
     DATABRICKS_WAREHOUSE_ID  = var.backend_databricks_warehouse_id
   })
 
