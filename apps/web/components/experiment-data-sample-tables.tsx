@@ -9,7 +9,7 @@ import type {
   DataValue,
   ExperimentDataTableInfo,
 } from "~/components/experiment-data-table";
-import { getReactTableColumns, getReactTableData } from "~/components/experiment-data-table";
+import { getReactTableColumns } from "~/components/experiment-data-table";
 import { useExperimentData } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import type { Locale } from "@repo/i18n";
@@ -77,13 +77,12 @@ function ExperimentDataSampleTable({
   const { t } = useTranslation(locale, "common");
   if (!tableData.data) return <div>{t("experimentDataTable.noData")}</div>;
   const columns = getReactTableColumns(tableData.data);
-  const newData = getReactTableData(tableData.data);
   return (
     <div className="">
       <h5 className="mb-4 text-base font-medium">
         {t("experimentDataTable.table")} {tableData.name}
       </h5>
-      <SampleDataTable columns={columns} data={newData} locale={locale} />
+      <SampleDataTable columns={columns} data={tableData.data.rows} locale={locale} />
     </div>
   );
 }

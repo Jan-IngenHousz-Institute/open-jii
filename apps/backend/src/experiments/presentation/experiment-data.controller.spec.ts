@@ -66,6 +66,19 @@ describe("ExperimentDataController", () => {
         truncated: false,
       };
 
+      const resultTableData = {
+        columns: [
+          { name: "column1", type_name: "string", type_text: "string" },
+          { name: "column2", type_name: "number", type_text: "number" },
+        ],
+        rows: [
+          { column1: "value1", column2: "1" },
+          { column1: "value2", column2: "2" },
+        ],
+        totalRows: 2,
+        truncated: false,
+      };
+
       jest
         .spyOn(databricksService, "executeSqlQuery")
         .mockResolvedValueOnce(success(mockCountData)) // First call for count
@@ -97,7 +110,7 @@ describe("ExperimentDataController", () => {
         name: "test_table",
         catalog_name: experiment.name,
         schema_name: `exp_${experiment.name}_${experiment.id}`,
-        data: mockTableData,
+        data: resultTableData,
         page: 1,
         pageSize: 5,
         totalPages: 20, // 100 / 5

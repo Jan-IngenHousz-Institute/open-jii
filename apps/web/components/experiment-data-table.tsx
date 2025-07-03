@@ -34,7 +34,7 @@ import {
 
 const staleTime = 2 * 60 * 1000;
 
-export type DataValue = string | number | boolean | null;
+export type DataValue = string | null;
 export type DataRow = Record<string, DataValue>;
 
 function getFormattedValue(row: Row<DataRow>, columnName: string, type_name: string) {
@@ -78,19 +78,6 @@ export function getReactTableColumns(
     );
   });
   return columns;
-}
-
-export function getReactTableData(data: ExperimentData | undefined) {
-  const newData: DataRow[] = [];
-  if (!data) return newData;
-  data.rows.forEach((row) => {
-    const dataRow: DataRow = {};
-    row.forEach((dataColumn, index) => {
-      dataRow[data.columns[index].name] = dataColumn;
-    });
-    newData.push(dataRow);
-  });
-  return newData;
 }
 
 export type ExperimentDataTableInfo = z.infer<typeof zExperimentDataTableInfo>;
@@ -157,15 +144,10 @@ export function ExperimentDataTable({
     return persistedColumns ?? [];
   }, [data?.body, persistedColumns]);
 
-  const rows: DataRow[] = useMemo(() => {
-    const tableData = data?.body[0];
-    return getReactTableData(tableData?.data);
-  }, [data?.body]);
-
   const tableData = data?.body[0];
 
   const table = useReactTable({
-    data: rows,
+    data: data?.body[0].data?.rows ?? [],
     columns: currentColumns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
