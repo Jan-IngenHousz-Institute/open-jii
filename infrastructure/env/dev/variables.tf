@@ -201,9 +201,15 @@ variable "backend_cpu_threshold" {
 }
 
 variable "backend_health_check_path" {
-  description = "Path for ALB health checks on the backend service"
+  description = "Path for health checks on the backend service"
   type        = string
   default     = "/health"
+}
+
+variable "backend_status_update_webhook_path" {
+  description = "Path for status update webhooks on the backend service"
+  type        = string
+  default     = "/api/v1/webhooks/experiment/provisioning-status"
 }
 
 # Backend authentication secrets
