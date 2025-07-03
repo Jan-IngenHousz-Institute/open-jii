@@ -21,22 +21,21 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui/components";
 
-import { handleLogout } from "../app/actions/auth";
-
 interface UnifiedNavbarProps {
   locale: Locale;
   session: Session | null;
+  backUrl?: string; // Optional backUrl for logout
 }
 
 // Extract UserMenu as a separate component to prevent re-renders
 function UserMenu({
   locale,
   session,
-  onSignOut,
+  pathname,
 }: {
   locale: Locale;
   session: Session | null;
-  onSignOut: () => void;
+  pathname: string;
 }) {
   const { t } = useTranslation("common");
 
@@ -50,6 +49,8 @@ function UserMenu({
       </Button>
     );
   }
+
+  const backUrl = (pathname.includes("/platform") ? `/${locale}` : pathname) || "/";
 
   return (
     <DropdownMenu>
@@ -94,29 +95,24 @@ function UserMenu({
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <form action={onSignOut} className="w-full">
-            <button type="submit" className="flex w-full cursor-pointer items-center">
-              <LogOut className="mr-2 h-4 w-4" />
-              {t("auth.signOut", "Sign Out")}
-            </button>
-          </form>
+          <Link
+            href={`/api/logout?backUrl=${encodeURIComponent(backUrl)}`}
+            className="flex w-full cursor-pointer items-center"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            {t("auth.signOut", "Sign Out")}
+          </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
-export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
+export function UnifiedNavbar({ locale, session, backUrl = "/" }: UnifiedNavbarProps) {
   const { t } = useTranslation();
   const pathname = usePathname();
 
   const isAuthenticated = !!session?.user;
-
-  const handleSignOut = () => {
-    return handleLogout({
-      redirectTo: pathname.includes("/platform") ? `/${locale}` : pathname,
-    });
-  };
 
   // Navigation items (memoised)
   const navItems = useMemo(
@@ -186,7 +182,7 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
           <LanguageSwitcher locale={locale} />
 
           {/* Desktop User Menu */}
-          <UserMenu locale={locale} session={session} onSignOut={handleSignOut} />
+          <UserMenu locale={locale} session={session} pathname={pathname} />
 
           {/* Mobile Navigation Menu */}
           <div className="md:hidden">
@@ -254,12 +250,13 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
                       </div>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <form action={handleSignOut} className="w-full">
-                        <button type="submit" className="flex w-full items-center space-x-3">
-                          <LogOut className="h-4 w-4" />
-                          <span>{t("auth.signOut", "Sign Out")}</span>
-                        </button>
-                      </form>
+                      <Link
+                        href={`/api/logout?backUrl=${encodeURIComponent(backUrl)}`}
+                        className="flex w-full items-center space-x-3"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>{t("auth.signOut", "Sign Out")}</span>
+                      </Link>
                     </DropdownMenuItem>
                   </>
                 )}

@@ -2,6 +2,7 @@
 
 import { ChevronsUpDown, LogOut } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n";
@@ -34,6 +35,10 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar();
   const { t } = useTranslation(undefined, "common");
+  const pathname = usePathname();
+
+  // Determine the appropriate backUrl based on current location
+  const backUrl = (pathname.includes("/platform") ? `/${locale}` : pathname) || "/";
 
   return (
     <SidebarMenu>
@@ -80,8 +85,8 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link
-                href={`/${locale}/platform/signout`}
-                className="flex w-full cursor-default items-center"
+                href={`/api/logout?backUrl=${encodeURIComponent(backUrl)}`}
+                className="flex w-full cursor-pointer items-center"
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 {t("navigation.logout")}
