@@ -18,7 +18,6 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   const locale = useLocale();
 
   // Determine active tab from URL
-  console.log("pathname", pathname);
   const getActiveTab = () => {
     if (pathname.endsWith("/settings")) return "settings";
     if (pathname.startsWith(`/${locale}/platform/experiments/${id}/data`)) return "data";
