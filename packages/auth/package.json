@@ -39,6 +39,7 @@
     "@repo/database": "workspace:*",
     "next": "^15.3.3",
     "next-auth": "5.0.0-beta.29",
+    "nodemailer": "^7.0.4",
     "react": "catalog:react19",
     "react-dom": "catalog:react19"
   },

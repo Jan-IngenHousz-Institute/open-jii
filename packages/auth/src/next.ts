@@ -1,4 +1,6 @@
+import type { Provider } from "@auth/core/providers";
 import GitHub from "@auth/core/providers/github";
+import Nodemailer from "@auth/core/providers/nodemailer";
 import type { NextAuthConfig, NextAuthResult } from "next-auth";
 import NextAuth from "next-auth";
 import { AuthError } from "next-auth";
@@ -17,15 +19,24 @@ export type NextAuth = NextAuthResult & {
 };
 
 export function initAuth({ authSecrets, dbSecrets, isLambda }: InitAuthParams): NextAuth {
+  const providers: Provider[] = [
+    GitHub({
+      clientId: authSecrets.AUTH_GITHUB_ID || process.env.AUTH_GITHUB_ID,
+      clientSecret: authSecrets.AUTH_GITHUB_SECRET || process.env.AUTH_GITHUB_SECRET,
+    }),
+  ];
+  if (authSecrets.AUTH_EMAIL_SERVER || process.env.AUTH_EMAIL_SERVER) {
+    providers.push(
+      Nodemailer({
+        server: authSecrets.AUTH_EMAIL_SERVER || process.env.AUTH_EMAIL_SERVER,
+        from: authSecrets.AUTH_EMAIL_FROM || process.env.AUTH_EMAIL_FROM,
+      }),
+    );
+  }
   const authConfig: NextAuthConfig = {
     ...baseAuthConfig,
     secret: authSecrets.AUTH_SECRET || process.env.AUTH_SECRET,
-    providers: [
-      GitHub({
-        clientId: authSecrets.AUTH_GITHUB_ID || process.env.AUTH_GITHUB_ID,
-        clientSecret: authSecrets.AUTH_GITHUB_SECRET || process.env.AUTH_GITHUB_SECRET,
-      }),
-    ],
+    providers,
     adapter: isLambda ? lambdaAdapter(dbSecrets) : adapter,
     session: { strategy: "jwt" },
     pages: { signIn: "/login" },

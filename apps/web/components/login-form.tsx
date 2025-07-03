@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { AuthError } from "@repo/auth/next";
 import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
-import { Button } from "@repo/ui/components";
+import { Button, Input, Label } from "@repo/ui/components";
 
 const SIGNIN_ERROR_URL = "/error";
 
@@ -30,36 +30,61 @@ export async function LoginForm({
             {t("auth.continueWith")}
           </span>
         </div>
-        {providerMap.map((provider) => (
-          <form
-            key={provider.id}
-            action={async () => {
-              "use server";
-              try {
-                await signIn(provider.id, {
-                  redirectTo: callbackUrl,
-                });
-              } catch (error) {
-                // Signin can fail for a number of reasons, such as the user
-                // not existing, or the user not having the correct role.
-                // In some cases, you may want to redirect to a custom error
-                if (error instanceof AuthError) {
-                  return redirect(`${SIGNIN_ERROR_URL}?error=${error.type}`);
-                }
+        {providerMap.map((provider, index) => (
+          <div key={provider.id}>
+            {index > 0 && (
+              <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
+                <span className="bg-background text-muted-foreground relative z-10 px-2">
+                  {t("auth.orContinueWith")}
+                </span>
+              </div>
+            )}
+            <form
+              action={async (formData) => {
+                "use server";
+                try {
+                  const email = formData.get("email") as string | null;
+                  if (provider.id === "nodemailer" && !email) {
+                    throw new Error("Email is required");
+                  }
+                  await signIn(provider.id, {
+                    redirectTo: callbackUrl,
+                    ...(provider.id === "nodemailer" ? { email } : {}),
+                  });
+                } catch (error) {
+                  // Signin can fail for a number of reasons, such as the user
+                  // not existing, or the user not having the correct role.
+                  // In some cases, you may want to redirect to a custom error
+                  if (error instanceof AuthError) {
+                    return redirect(`${SIGNIN_ERROR_URL}?error=${error.type}`);
+                  }
 
-                // Otherwise if a redirects happens Next.js can handle it
-                // so you can just re-thrown the error and let Next.js handle it.
-                // Docs:
-                // https://nextjs.org/docs/app/api-reference/functions/redirect#server-component
-                throw error;
-              }
-            }}
-          >
-            <Button variant="outline" className="w-full" type="submit">
-              <ProviderImage id={provider.id} />
-              {t("auth.loginWith", { provider: provider.name })}
-            </Button>
-          </form>
+                  // Otherwise if a redirects happens Next.js can handle it
+                  // so you can just re-thrown the error and let Next.js handle it.
+                  // Docs:
+                  // https://nextjs.org/docs/app/api-reference/functions/redirect#server-component
+                  throw error;
+                }
+              }}
+            >
+              {provider.id === "nodemailer" && (
+                <div className="mb-4 mt-4 grid gap-3">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="m@example.com"
+                    required
+                  />
+                </div>
+              )}
+              <Button variant="outline" className="w-full" type="submit">
+                <ProviderImage id={provider.id} />
+                {t(`auth.loginWith-${provider.id}`)}
+              </Button>
+            </form>
+          </div>
         ))}
       </div>
     </div>
