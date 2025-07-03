@@ -40,7 +40,6 @@ export function ListProtocols({ userId }: ListProtocolsProps) {
         <TableHeader>
           <TableRow>
             <TableHead>Protocol name</TableHead>
-            <TableHead>Description</TableHead>
             <TableHead>Created</TableHead>
             <TableHead>Updated</TableHead>
             <TableHead className="text-center">Actions</TableHead>
@@ -70,9 +69,6 @@ function ProtocolRow({ protocol, userId }: { protocol: Protocol; userId: string 
       <TableCell className="flex items-center gap-2">
         <CodeIcon size={16} className="text-muted-foreground" />
         {protocol.name}
-      </TableCell>
-      <TableCell className="max-w-[300px] truncate">
-        {protocol.description ?? "No description"}
       </TableCell>
       <TableCell>{formatDate(protocol.createdAt)}</TableCell>
       <TableCell>{formatDate(protocol.updatedAt)}</TableCell>
