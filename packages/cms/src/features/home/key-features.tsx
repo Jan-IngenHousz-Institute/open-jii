@@ -65,9 +65,8 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
           return (
             <div
               key={idx}
-              className="border-jii-light-blue group relative transform overflow-hidden rounded-3xl border bg-white/90 p-8 shadow-xl backdrop-blur-sm transition-all duration-300 hover:shadow-2xl"
+              className="border-jii-light-blue hover:border-jii-dark-green hover:bg-jii-light-green/40 before:bg-gradient-radial before:from-jii-light-blue/40 group relative overflow-hidden rounded-3xl border bg-white/90 p-8 shadow-xl backdrop-blur-sm transition-colors duration-200 before:pointer-events-none before:absolute before:inset-0 before:rounded-3xl before:to-transparent before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-gray-50/40 to-slate-50/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
               <div className="relative z-10">
                 <div className="mb-4 flex items-center gap-4">
                   <div

@@ -10,7 +10,9 @@ import React from "react";
 import type {
   PageHomePartnersFieldsFragment,
   PartnerFieldsFragment,
+  ImageFieldsFragment,
 } from "../../lib/__generated/sdk";
+import { VisualMedia } from "./visual-media";
 
 interface HomePartnersProps {
   partnersData: PageHomePartnersFieldsFragment;
@@ -32,11 +34,18 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
     locale,
   });
 
-  // Type guard for ComponentPartner using generated type
-  const isComponentPartner = (partner: any): partner is PartnerFieldsFragment =>
-    typeof partner === "object" && partner !== null && partner.__typename === "ComponentPartner";
-  const rawItems = currentPartners.partnersCollection?.items || [];
-  const items = rawItems.filter(isComponentPartner);
+  // Type guard
+  const rawItems = currentPartners.partnersCollection?.items ?? [];
+  const items = rawItems.filter(
+    (partner): partner is PartnerFieldsFragment =>
+      !!partner && partner.__typename === "ComponentPartner",
+  );
+
+  // Visual media images
+  const images =
+    currentPartners.imagesCollection?.items?.filter(
+      (img): img is ImageFieldsFragment => !!img && img.__typename === "Asset",
+    ) ?? [];
 
   return (
     <section className="mx-auto w-full max-w-7xl px-4 py-20">
@@ -71,23 +80,27 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
           return (
             <div
               key={idx}
-              className="flex w-full max-w-xs flex-col items-center rounded-xl border bg-white p-6 transition hover:shadow-md"
+              className="flex w-full max-w-xs flex-col items-center rounded-2xl border border-gray-200 bg-gray-50 p-8 shadow-sm transition-colors duration-200 hover:bg-white hover:shadow-md"
             >
+              {/* Removed gradient overlay and backdrop-blur for performance */}
               {partner.logo && partner.logo.url ? (
-                <div {...partnerInspectorProps({ fieldId: "logo" })}>
+                <div
+                  className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-white shadow-inner"
+                  {...partnerInspectorProps({ fieldId: "logo" })}
+                >
                   <Image
                     src={partner.logo.url}
                     alt={partner.logo.title || "Partner logo"}
                     width={80}
                     height={80}
-                    className="mb-2 h-20 w-20 object-contain"
+                    className="h-20 w-20 object-contain"
                   />
                 </div>
               ) : (
-                <span className="mb-2 h-20 w-20" />
+                <span className="mb-4 h-24 w-24 rounded-full bg-gray-100" />
               )}
               <span
-                className="w-full break-words text-center text-sm text-gray-500"
+                className="mb-1 w-full break-words text-center text-base font-medium text-gray-700"
                 {...partnerInspectorProps({ fieldId: "subtitle" })}
               >
                 {partner.subtitle}
@@ -96,30 +109,8 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
           );
         })}
       </div>
-      {/* Keep the visual media carousel as is, or make it dynamic if needed */}
-      <div className="mx-auto flex w-full max-w-7xl flex-col items-center">
-        <div className="relative w-full">
-          <div
-            className="scrollbar-hide flex gap-4 overflow-x-auto px-1 py-2"
-            style={{ scrollSnapType: "x mandatory" }}
-            {...inspectorProps({ fieldId: `images` })}
-          >
-            {currentPartners.imagesCollection?.items?.map((img, idx) =>
-              img?.url ? (
-                <Image
-                  key={img.sys?.id || idx}
-                  src={img.url}
-                  alt={img.title || "Partner visual"}
-                  width={900}
-                  height={500}
-                  className="w-full min-w-[600px] max-w-2xl snap-center rounded-2xl object-cover shadow-sm"
-                  priority={idx === 0}
-                />
-              ) : null,
-            )}
-          </div>
-        </div>
-      </div>
+      {/* Visual media carousel section */}
+      <VisualMedia images={images} inspectorProps={inspectorProps} />
     </section>
   );
 };
