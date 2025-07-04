@@ -60,12 +60,12 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
             <span>{currentMission.subtitle}</span>
           </h3>
           {currentMission.mission?.json ? (
-            <p
+            <div
               className="font-medium leading-relaxed text-gray-700"
               {...inspectorProps({ fieldId: "mission" })}
             >
               {documentToReactComponents(currentMission.mission.json)}
-            </p>
+            </div>
           ) : null}
         </div>
       </div>
