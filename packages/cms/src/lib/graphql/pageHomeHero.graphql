@@ -17,6 +17,12 @@ fragment PageHomeHeroFields on PageHomeHero {
 }
 
 fragment ButtonFields on ComponentButton {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
   label
   url
 }

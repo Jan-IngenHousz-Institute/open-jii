@@ -29,13 +29,13 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
   // Use fallback to original data
   const currentFaq = liveFaq || faq;
 
+  if (!currentFaq) return <div>No content found.</div>;
+
   // Inspector mode tagging
   const inspectorProps = useContentfulInspectorMode({
     entryId: faq?.sys?.id,
     locale,
   });
-
-  if (!currentFaq) return <div>No content found.</div>;
 
   return (
     <>
@@ -58,21 +58,34 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
       <div className="space-y-6" {...inspectorProps({ fieldId: `questions` })}>
         {(currentFaq.questionsCollection?.items || [])
           .filter((q): q is FaqQuestionFieldsFragment => q?.__typename === "ComponentFaqQuestion")
-          .map((q) =>
-            q ? (
+          .map((q) => {
+            if (!q) return null;
+            const questionInspectorProps = useContentfulInspectorMode({
+              entryId: q.sys.id,
+              locale,
+            });
+            return (
               <div
                 key={q.sys.id}
                 className="rounded-lg border border-gray-200 bg-gradient-to-br from-gray-50 via-white to-gray-100 p-6 shadow-sm transition-shadow hover:shadow-md"
               >
-                <h3 className="mb-3 text-xl font-semibold text-gray-900">{q.question}</h3>
+                <h3
+                  className="mb-3 text-xl font-semibold text-gray-900"
+                  {...questionInspectorProps({ fieldId: "question" })}
+                >
+                  {q.question}
+                </h3>
                 {q.answer?.json && (
-                  <div className="leading-relaxed text-gray-700">
+                  <div
+                    className="leading-relaxed text-gray-700"
+                    {...questionInspectorProps({ fieldId: "answer" })}
+                  >
                     {documentToReactComponents(q.answer.json)}
                   </div>
                 )}
               </div>
-            ) : null,
-          )}
+            );
+          })}
       </div>
     </>
   );

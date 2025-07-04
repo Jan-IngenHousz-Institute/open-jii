@@ -26,13 +26,13 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
   // Use fallback to original data
   const currentAbout = liveAbout || about;
 
+  if (!currentAbout) return <div>No content found.</div>;
+
   // Inspector mode tagging
   const inspectorProps = useContentfulInspectorMode({
     entryId: about?.sys?.id,
     locale,
   });
-
-  if (!currentAbout) return <div>No content found.</div>;
 
   return (
     <div

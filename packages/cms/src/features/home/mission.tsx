@@ -29,11 +29,12 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
   });
   const currentMission = liveMission || missionData;
 
+  if (!currentMission) return null;
+
   const inspectorProps = useContentfulInspectorMode({
     entryId: currentMission?.sys?.id,
     locale,
   });
-  if (!currentMission) return null;
   return (
     <section className="mx-auto mt-16 flex w-full max-w-7xl flex-col items-center gap-12 rounded-3xl border border-white/20 bg-white/60 p-12 shadow-2xl backdrop-blur-sm md:flex-row md:items-stretch md:gap-16">
       <div className="flex-1 text-center md:text-left">

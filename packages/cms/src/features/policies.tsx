@@ -25,13 +25,13 @@ export const PoliciesContent: React.FC<PoliciesContentProps> = ({ policies, loca
   // Use fallback to original data
   const currentPolicies = livePolicies || policies;
 
+  if (!currentPolicies) return <div>No content found.</div>;
+
   // Inspector mode tagging
   const inspectorProps = useContentfulInspectorMode({
     entryId: policies?.sys?.id,
     locale,
   });
-
-  if (!currentPolicies) return <div>No content found.</div>;
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col items-center">

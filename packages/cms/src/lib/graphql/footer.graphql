@@ -25,6 +25,12 @@ fragment FooterFields on Footer {
 }
 
 fragment ButtonFields on ComponentButton {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
   label
   url
 }

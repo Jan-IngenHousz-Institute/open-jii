@@ -7,7 +7,7 @@ import {
 import Link from "next/link";
 import React from "react";
 
-import type { FooterFieldsFragment } from "../lib/__generated/sdk";
+import type { FooterFieldsFragment, ButtonFieldsFragment } from "../lib/__generated/sdk";
 
 interface HomeFooterProps {
   footerData: FooterFieldsFragment;
@@ -20,17 +20,49 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview, loc
     skip: !preview,
     locale,
   });
+
   const currentFooter = liveFooter || footerData;
-  const inspectorProps = useContentfulInspectorMode({
-    entryId: currentFooter?.sys?.id,
-    locale,
-  });
+
+  // Early return if no footer data
   if (!currentFooter) return null;
 
-  // Type guard for ComponentButton
-  function isComponentButton(button: any): button is { label: string; url: string } {
-    return button && typeof button.label === "string" && typeof button.url === "string";
-  }
+  const inspectorProps = useContentfulInspectorMode({
+    entryId: currentFooter.sys.id,
+    locale,
+  });
+
+  const menuButtons = currentFooter.menuButtonsCollection?.items ?? [];
+  const supportButtons = currentFooter.supportButtonsCollection?.items ?? [];
+
+  // Helper function to build href with locale
+  const buildHref = (url: string): string => {
+    if (url.startsWith("http")) return url;
+    return locale ? `/${locale}${url}` : url;
+  };
+
+  // Render button list helper
+  const renderButtonList = (buttons: (ButtonFieldsFragment | null)[]) => (
+    <ul className="space-y-3 text-center text-sm text-white md:text-left">
+      {buttons.map((button, idx) => {
+        if (!button || !button.label || !button.url) return null;
+        const buttonInspectorProps = useContentfulInspectorMode({
+          entryId: button.sys?.id,
+          locale,
+        });
+
+        return (
+          <li key={`${button.url}-${idx}`} {...buttonInspectorProps({ fieldId: "label" })}>
+            <Link
+              href={buildHref(button.url)}
+              className="hover:text-jii-medium-green transition-colors"
+            >
+              {button.label}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
 
   return (
     <footer className="bg-jii-dark-green w-full py-12 text-white">
@@ -58,6 +90,7 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview, loc
               </span>
             </div>
           </div>
+
           {/* Centered Menu and Support aligned right */}
           <div className="flex flex-col items-center gap-8 md:flex-row md:items-start md:gap-24">
             <div>
@@ -67,28 +100,9 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview, loc
               >
                 {currentFooter.menuTitle}
               </h4>
-              <ul
-                className="space-y-3 text-center text-sm text-white md:text-left"
-                {...inspectorProps({ fieldId: `menuButtons` })}
-              >
-                {currentFooter.menuButtonsCollection?.items
-                  ?.filter(isComponentButton)
-                  .map((button, idx) => {
-                    const href = button.url.startsWith("http")
-                      ? button.url
-                      : locale
-                        ? `/${locale}${button.url}`
-                        : button.url;
-                    return (
-                      <li key={button.url + idx}>
-                        <Link href={href} className="hover:text-jii-medium-green transition-colors">
-                          {button.label}
-                        </Link>
-                      </li>
-                    );
-                  })}
-              </ul>
+              {renderButtonList(menuButtons)}
             </div>
+
             <div>
               <h4
                 className="text-jii-bright-green mb-2 text-center font-bold md:text-left"
@@ -96,30 +110,11 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview, loc
               >
                 {currentFooter.supportTitle}
               </h4>
-              <ul
-                className="space-y-3 text-center text-sm text-white md:text-left"
-                {...inspectorProps({ fieldId: `supportButtons` })}
-              >
-                {currentFooter.supportButtonsCollection?.items
-                  ?.filter(isComponentButton)
-                  .map((button, idx) => {
-                    const href = button.url.startsWith("http")
-                      ? button.url
-                      : locale
-                        ? `/${locale}${button.url}`
-                        : button.url;
-                    return (
-                      <li key={button.url + idx}>
-                        <Link href={href} className="hover:text-jii-medium-green transition-colors">
-                          {button.label}
-                        </Link>
-                      </li>
-                    );
-                  })}
-              </ul>
+              {renderButtonList(supportButtons)}
             </div>
           </div>
         </div>
+
         <div className="w-full border-t border-gray-800 pt-8 text-center">
           <p className="text-sm text-white" {...inspectorProps({ fieldId: "copyright" })}>
             {currentFooter.copyright}

@@ -25,12 +25,13 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
     locale,
   });
   const currentFeatures = liveFeatures || featuresData;
+
+  if (!currentFeatures) return null;
+
   const inspectorProps = useContentfulInspectorMode({
     entryId: currentFeatures?.sys?.id,
     locale,
   });
-
-  if (!currentFeatures) return null;
 
   return (
     <section className="w-full max-w-7xl px-4 py-20">
@@ -55,8 +56,13 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
         className="grid w-full grid-cols-1 gap-8 md:grid-cols-2"
         {...inspectorProps({ fieldId: `features` })}
       >
-        {currentFeatures.featuresCollection?.items?.map((feature, idx) =>
-          feature && feature.__typename === "ComponentFeature" ? (
+        {currentFeatures.featuresCollection?.items?.map((feature, idx) => {
+          if (!feature || feature.__typename !== "ComponentFeature") return null;
+          const featureInspectorProps = useContentfulInspectorMode({
+            entryId: feature.sys.id,
+            locale,
+          });
+          return (
             <div
               key={idx}
               className="border-jii-light-blue group relative transform overflow-hidden rounded-3xl border bg-white/90 p-8 shadow-xl backdrop-blur-sm transition-all duration-300 hover:shadow-2xl"
@@ -64,7 +70,10 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
               <div className="absolute inset-0 bg-gradient-to-r from-gray-50/40 to-slate-50/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
               <div className="relative z-10">
                 <div className="mb-4 flex items-center gap-4">
-                  <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+                  <div
+                    className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-700"
+                    {...featureInspectorProps({ fieldId: "icon" })}
+                  >
                     {feature.icon?.url ? (
                       <Image
                         src={feature.icon.url}
@@ -77,13 +86,23 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
                       <span className="h-8 w-8" />
                     )}
                   </div>
-                  <h2 className="m-0 text-2xl font-bold text-gray-800">{feature.title}</h2>
+                  <h2
+                    className="m-0 text-2xl font-bold text-gray-800"
+                    {...featureInspectorProps({ fieldId: "title" })}
+                  >
+                    {feature.title}
+                  </h2>
                 </div>
-                <p className="leading-relaxed text-gray-600">{feature.subtitle}</p>
+                <p
+                  className="leading-relaxed text-gray-600"
+                  {...featureInspectorProps({ fieldId: "subtitle" })}
+                >
+                  {feature.subtitle}
+                </p>
               </div>
             </div>
-          ) : null,
-        )}
+          );
+        })}
       </div>
     </section>
   );

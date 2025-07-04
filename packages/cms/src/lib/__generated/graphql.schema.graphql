@@ -1,5 +1,15 @@
 directive @contentSourceMaps on QUERY
 
+directive @delegatedResourceLink(contentTypeId: String, field: JSON) on FIELD_DEFINITION | OBJECT
+
+directive @enumMapper(value: JSON) on ENUM_VALUE
+
+directive @featureFlag(featureName: String) on FIELD
+
+directive @fieldResolver(data: JSON, kind: String) on FIELD_DEFINITION
+
+directive @typeIdentifier(contentTypeId: String) on OBJECT
+
 """Represents a binary file in a space. An asset can be any file type."""
 type Asset {
   contentType(locale: String): String
@@ -128,7 +138,7 @@ enum AssetOrder {
 }
 
 """
-To have author-related properties [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAuthor)
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAuthor)
 """
 type ComponentAuthor implements Entry & _Node {
   _id: ID!
@@ -209,7 +219,7 @@ enum ComponentAuthorOrder {
 }
 
 """
-CTA button for Hero section [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentButton)
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentButton)
 """
 type ComponentButton implements Entry & _Node {
   _id: ID!
@@ -258,7 +268,33 @@ input ComponentButtonFilter {
 
 type ComponentButtonLinkingCollections {
   entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+  footerCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsFooterCollectionOrder], preview: Boolean, skip: Int = 0): FooterCollection
   pageHomeHeroCollection(limit: Int = 100, locale: String, order: [ComponentButtonLinkingCollectionsPageHomeHeroCollectionOrder], preview: Boolean, skip: Int = 0): PageHomeHeroCollection
+}
+
+enum ComponentButtonLinkingCollectionsFooterCollectionOrder {
+  badge_ASC
+  badge_DESC
+  brand_ASC
+  brand_DESC
+  copyright_ASC
+  copyright_DESC
+  internalName_ASC
+  internalName_DESC
+  menuTitle_ASC
+  menuTitle_DESC
+  supportTitle_ASC
+  supportTitle_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
 }
 
 enum ComponentButtonLinkingCollectionsPageHomeHeroCollectionOrder {
@@ -587,7 +623,7 @@ enum ComponentPartnerOrder {
 }
 
 """
-To describe an image used in rich text fields [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentRichImage)
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentRichImage)
 """
 type ComponentRichImage implements Entry & _Node {
   _id: ID!
@@ -654,7 +690,7 @@ enum ComponentRichImageOrder {
 }
 
 """
-To have SEO-related properties to the pages we render [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentSeo)
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentSeo)
 """
 type ComponentSeo implements Entry & _Node {
   _id: ID!
@@ -872,9 +908,9 @@ type Footer implements Entry & _Node {
   copyright(locale: String): String
   internalName(locale: String): String
   linkedFrom(allowedLocales: [String]): FooterLinkingCollections
-  menuButtonsCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): FooterMenuButtonsCollection
+  menuButtonsCollection(limit: Int = 100, locale: String, order: [FooterMenuButtonsCollectionOrder], preview: Boolean, skip: Int = 0, where: ComponentButtonFilter): FooterMenuButtonsCollection
   menuTitle(locale: String): String
-  supportButtonsCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): FooterSupportButtonsCollection
+  supportButtonsCollection(limit: Int = 100, locale: String, order: [FooterSupportButtonsCollectionOrder], preview: Boolean, skip: Int = 0, where: ComponentButtonFilter): FooterSupportButtonsCollection
   supportTitle(locale: String): String
   sys: Sys!
   title(locale: String): String
@@ -919,6 +955,7 @@ input FooterFilter {
   internalName_not: String
   internalName_not_contains: String
   internalName_not_in: [String]
+  menuButtons: cfComponentButtonNestedFilter
   menuButtonsCollection_exists: Boolean
   menuTitle: String
   menuTitle_contains: String
@@ -927,6 +964,7 @@ input FooterFilter {
   menuTitle_not: String
   menuTitle_not_contains: String
   menuTitle_not_in: [String]
+  supportButtons: cfComponentButtonNestedFilter
   supportButtonsCollection_exists: Boolean
   supportTitle: String
   supportTitle_contains: String
@@ -950,10 +988,27 @@ type FooterLinkingCollections {
 }
 
 type FooterMenuButtonsCollection {
-  items: [Entry]!
+  items: [ComponentButton]!
   limit: Int!
   skip: Int!
   total: Int!
+}
+
+enum FooterMenuButtonsCollectionOrder {
+  internalName_ASC
+  internalName_DESC
+  label_ASC
+  label_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  url_ASC
+  url_DESC
 }
 
 enum FooterOrder {
@@ -982,10 +1037,27 @@ enum FooterOrder {
 }
 
 type FooterSupportButtonsCollection {
-  items: [Entry]!
+  items: [ComponentButton]!
   limit: Int!
   skip: Int!
   total: Int!
+}
+
+enum FooterSupportButtonsCollectionOrder {
+  internalName_ASC
+  internalName_DESC
+  label_ASC
+  label_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  url_ASC
+  url_DESC
 }
 
 """The 'HexColor' type represents color in `rgb:ffffff` string format."""
@@ -1231,7 +1303,7 @@ enum PageAboutOrder {
 }
 
 """
-To create individual blog posts [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageBlogPost)
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageBlogPost)
 """
 type PageBlogPost implements Entry & _Node {
   _id: ID!
@@ -1986,7 +2058,7 @@ enum PageHomePartnersPartnersCollectionOrder {
 }
 
 """
-To have an entry point for the app (e.g. Homepage) [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageLanding)
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageLanding)
 """
 type PageLanding implements Entry & _Node {
   _id: ID!

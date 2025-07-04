@@ -8,7 +8,7 @@ import { ArrowRight, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 
-import type { PageHomeHeroFieldsFragment } from "../../lib/__generated/sdk";
+import type { PageHomeHeroFieldsFragment, ButtonFieldsFragment } from "../../lib/__generated/sdk";
 
 interface HomeHeroProps {
   heroData: PageHomeHeroFieldsFragment;
@@ -17,23 +17,75 @@ interface HomeHeroProps {
 }
 
 export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale }) => {
-  // Enable live updates only in preview mode
   const liveHero = useContentfulLiveUpdates<PageHomeHeroFieldsFragment>(heroData, {
     skip: !preview,
     locale,
   });
+
   const currentHero = liveHero || heroData;
+
+  // Early return if no hero data
+  if (!currentHero) return null;
+
   const inspectorProps = useContentfulInspectorMode({
-    entryId: currentHero?.sys?.id,
+    entryId: currentHero.sys.id,
     locale,
   });
 
-  if (!currentHero) return null;
+  // Helper function to build href with locale
+  const buildHref = (url: string): string => {
+    if (url.startsWith("http")) return url;
+    return locale ? `/${locale}${url}` : url;
+  };
 
-  // Type guard for ComponentButton
-  function isComponentButton(button: any): button is { label: string; url: string } {
-    return button && typeof button.label === "string" && typeof button.url === "string";
-  }
+  // Helper function to determine if URL is external
+  const isExternalUrl = (url: string): boolean => url.startsWith("http");
+
+  // Button component for cleaner JSX
+  const renderButton = (button: ButtonFieldsFragment | null, index: number) => {
+    if (!button || !button.url) return null;
+
+    const isPrimary = index === 0;
+    const href = buildHref(button.url);
+    const isExternal = isExternalUrl(button.url);
+
+    const buttonInspectorProps = useContentfulInspectorMode({
+      entryId: button.sys.id,
+      locale,
+    });
+
+    // Remove linkProps and spread props directly in <Link>
+    return (
+      <Link
+        key={`${button.url}-${index}`}
+        href={href}
+        className="sm:h-14"
+        {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      >
+        {isPrimary ? (
+          <button
+            className="bg-jii-dark-green hover:bg-jii-medium-green hover:shadow-jii-bright-green/25 group relative flex h-14 w-full items-center justify-center overflow-hidden rounded-2xl px-7 py-3 text-lg font-bold text-white shadow-2xl transition-all duration-300 hover:scale-105"
+            {...buttonInspectorProps({ fieldId: "label" })}
+          >
+            <div className="relative flex items-center space-x-2">
+              <span>{button.label}</span>
+              <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+            </div>
+          </button>
+        ) : (
+          <div
+            className="border-jii-dark-green text-jii-dark-green hover:border-jii-medium-green hover:text-jii-medium-green group flex h-14 items-center justify-center rounded-2xl border-2 bg-white px-7 py-3 text-lg font-bold shadow-xl backdrop-blur-sm transition-all duration-300 hover:scale-105"
+            {...buttonInspectorProps({ fieldId: "label" })}
+          >
+            <div className="flex items-center space-x-2">
+              <span>{button.label}</span>
+              <ExternalLink className="h-5 w-5 transition-transform group-hover:scale-110" />
+            </div>
+          </div>
+        )}
+      </Link>
+    );
+  };
 
   return (
     <section className="relative w-full max-w-7xl px-4 py-20 text-center">
@@ -43,56 +95,26 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
       >
         <span className="text-sm font-medium text-gray-700">{currentHero.badge}</span>
       </div>
+
       <h1
         className="text-jii-dark-green mb-5 text-5xl font-extrabold leading-tight md:text-6xl"
         {...inspectorProps({ fieldId: "title" })}
       >
         {currentHero.title}
       </h1>
+
       <p
         className="mx-auto mb-7 max-w-3xl text-xl leading-relaxed text-gray-600 md:text-2xl"
         {...inspectorProps({ fieldId: "subtitle" })}
       >
         {currentHero.subtitle}
       </p>
+
       <div
         className="mb-10 mt-10 flex flex-col justify-center gap-5 sm:flex-row"
-        {...inspectorProps({ fieldId: `buttons` })}
+        {...inspectorProps({ fieldId: "buttons" })}
       >
-        {currentHero.buttonsCollection?.items?.filter(isComponentButton).map((button, idx) => {
-          // First button: filled, others: outlined
-          const isPrimary = idx === 0;
-          const href = button.url.startsWith("http")
-            ? button.url
-            : locale
-              ? `/${locale}${button.url}`
-              : button.url;
-          return (
-            <Link
-              key={button.url + idx}
-              href={href}
-              className={isPrimary ? "sm:h-14" : "sm:h-14"}
-              target={button.url.startsWith("http") ? "_blank" : undefined}
-              rel={button.url.startsWith("http") ? "noopener noreferrer" : undefined}
-            >
-              {isPrimary ? (
-                <button className="bg-jii-dark-green hover:bg-jii-medium-green hover:shadow-jii-bright-green/25 group relative flex h-14 w-full items-center justify-center overflow-hidden rounded-2xl px-7 py-3 text-lg font-bold text-white shadow-2xl transition-all duration-300 hover:scale-105">
-                  <div className="relative flex items-center space-x-2">
-                    <span>{button.label}</span>
-                    <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-                  </div>
-                </button>
-              ) : (
-                <div className="border-jii-dark-green text-jii-dark-green hover:border-jii-medium-green hover:text-jii-medium-green group flex h-14 items-center justify-center rounded-2xl border-2 bg-white px-7 py-3 text-lg font-bold shadow-xl backdrop-blur-sm transition-all duration-300 hover:scale-105">
-                  <div className="flex items-center space-x-2">
-                    <span>{button.label}</span>
-                    <ExternalLink className="h-5 w-5 transition-transform group-hover:scale-110" />
-                  </div>
-                </div>
-              )}
-            </Link>
-          );
-        })}
+        {currentHero.buttonsCollection?.items?.map(renderButton)}
       </div>
     </section>
   );

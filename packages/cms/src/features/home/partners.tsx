@@ -24,11 +24,13 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
     locale,
   });
   const currentPartners = livePartners || partnersData;
+
+  if (!currentPartners) return null;
+
   const inspectorProps = useContentfulInspectorMode({
     entryId: currentPartners?.sys?.id,
     locale,
   });
-  if (!currentPartners) return null;
 
   // Type guard for ComponentPartner using generated type
   const isComponentPartner = (partner: any): partner is PartnerFieldsFragment =>
@@ -61,27 +63,38 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
         className="mb-12 flex w-full flex-wrap justify-center gap-6"
         {...inspectorProps({ fieldId: `partners` })}
       >
-        {items.map((partner, idx) => (
-          <div
-            key={idx}
-            className="flex w-full max-w-xs flex-col items-center rounded-xl border bg-white p-6 transition hover:shadow-md"
-          >
-            {partner.logo && partner.logo.url ? (
-              <Image
-                src={partner.logo.url}
-                alt={partner.logo.title || "Partner logo"}
-                width={80}
-                height={80}
-                className="mb-2 h-20 w-20 object-contain"
-              />
-            ) : (
-              <span className="mb-2 h-20 w-20" />
-            )}
-            <span className="w-full break-words text-center text-sm text-gray-500">
-              {partner.subtitle}
-            </span>
-          </div>
-        ))}
+        {items.map((partner, idx) => {
+          const partnerInspectorProps = useContentfulInspectorMode({
+            entryId: partner.sys.id,
+            locale,
+          });
+          return (
+            <div
+              key={idx}
+              className="flex w-full max-w-xs flex-col items-center rounded-xl border bg-white p-6 transition hover:shadow-md"
+            >
+              {partner.logo && partner.logo.url ? (
+                <div {...partnerInspectorProps({ fieldId: "logo" })}>
+                  <Image
+                    src={partner.logo.url}
+                    alt={partner.logo.title || "Partner logo"}
+                    width={80}
+                    height={80}
+                    className="mb-2 h-20 w-20 object-contain"
+                  />
+                </div>
+              ) : (
+                <span className="mb-2 h-20 w-20" />
+              )}
+              <span
+                className="w-full break-words text-center text-sm text-gray-500"
+                {...partnerInspectorProps({ fieldId: "subtitle" })}
+              >
+                {partner.subtitle}
+              </span>
+            </div>
+          );
+        })}
       </div>
       {/* Keep the visual media carousel as is, or make it dynamic if needed */}
       <div className="mx-auto flex w-full max-w-7xl flex-col items-center">
