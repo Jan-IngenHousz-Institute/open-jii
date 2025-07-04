@@ -551,6 +551,24 @@ input ComponentPartnerFilter {
 
 type ComponentPartnerLinkingCollections {
   entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+  pageHomePartnersCollection(limit: Int = 100, locale: String, order: [ComponentPartnerLinkingCollectionsPageHomePartnersCollectionOrder], preview: Boolean, skip: Int = 0): PageHomePartnersCollection
+}
+
+enum ComponentPartnerLinkingCollectionsPageHomePartnersCollectionOrder {
+  internalName_ASC
+  internalName_DESC
+  subtitle_ASC
+  subtitle_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
 }
 
 enum ComponentPartnerOrder {
@@ -841,6 +859,133 @@ enum EntryOrder {
   sys_publishedAt_DESC
   sys_publishedVersion_ASC
   sys_publishedVersion_DESC
+}
+
+"""
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer)
+"""
+type Footer implements Entry & _Node {
+  _id: ID!
+  badge(locale: String): String
+  brand(locale: String): String
+  contentfulMetadata: ContentfulMetadata!
+  copyright(locale: String): String
+  internalName(locale: String): String
+  linkedFrom(allowedLocales: [String]): FooterLinkingCollections
+  menuButtonsCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): FooterMenuButtonsCollection
+  menuTitle(locale: String): String
+  supportButtonsCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): FooterSupportButtonsCollection
+  supportTitle(locale: String): String
+  sys: Sys!
+  title(locale: String): String
+}
+
+type FooterCollection {
+  items: [Footer]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+input FooterFilter {
+  AND: [FooterFilter]
+  OR: [FooterFilter]
+  badge: String
+  badge_contains: String
+  badge_exists: Boolean
+  badge_in: [String]
+  badge_not: String
+  badge_not_contains: String
+  badge_not_in: [String]
+  brand: String
+  brand_contains: String
+  brand_exists: Boolean
+  brand_in: [String]
+  brand_not: String
+  brand_not_contains: String
+  brand_not_in: [String]
+  contentfulMetadata: ContentfulMetadataFilter
+  copyright: String
+  copyright_contains: String
+  copyright_exists: Boolean
+  copyright_in: [String]
+  copyright_not: String
+  copyright_not_contains: String
+  copyright_not_in: [String]
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  menuButtonsCollection_exists: Boolean
+  menuTitle: String
+  menuTitle_contains: String
+  menuTitle_exists: Boolean
+  menuTitle_in: [String]
+  menuTitle_not: String
+  menuTitle_not_contains: String
+  menuTitle_not_in: [String]
+  supportButtonsCollection_exists: Boolean
+  supportTitle: String
+  supportTitle_contains: String
+  supportTitle_exists: Boolean
+  supportTitle_in: [String]
+  supportTitle_not: String
+  supportTitle_not_contains: String
+  supportTitle_not_in: [String]
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
+}
+
+type FooterLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+}
+
+type FooterMenuButtonsCollection {
+  items: [Entry]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+enum FooterOrder {
+  badge_ASC
+  badge_DESC
+  brand_ASC
+  brand_DESC
+  copyright_ASC
+  copyright_DESC
+  internalName_ASC
+  internalName_DESC
+  menuTitle_ASC
+  menuTitle_DESC
+  supportTitle_ASC
+  supportTitle_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+type FooterSupportButtonsCollection {
+  items: [Entry]!
+  limit: Int!
+  skip: Int!
+  total: Int!
 }
 
 """The 'HexColor' type represents color in `rgb:ffffff` string format."""
@@ -1753,7 +1898,7 @@ type PageHomePartners implements Entry & _Node {
   imagesCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): AssetCollection
   internalName(locale: String): String
   linkedFrom(allowedLocales: [String]): PageHomePartnersLinkingCollections
-  partnersCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): PageHomePartnersPartnersCollection
+  partnersCollection(limit: Int = 100, locale: String, order: [PageHomePartnersPartnersCollectionOrder], preview: Boolean, skip: Int = 0, where: ComponentPartnerFilter): PageHomePartnersPartnersCollection
   subtitle(locale: String): String
   sys: Sys!
   title(locale: String): String
@@ -1778,6 +1923,7 @@ input PageHomePartnersFilter {
   internalName_not: String
   internalName_not_contains: String
   internalName_not_in: [String]
+  partners: cfComponentPartnerNestedFilter
   partnersCollection_exists: Boolean
   subtitle: String
   subtitle_contains: String
@@ -1818,10 +1964,25 @@ enum PageHomePartnersOrder {
 }
 
 type PageHomePartnersPartnersCollection {
-  items: [Entry]!
+  items: [ComponentPartner]!
   limit: Int!
   skip: Int!
   total: Int!
+}
+
+enum PageHomePartnersPartnersCollectionOrder {
+  internalName_ASC
+  internalName_DESC
+  subtitle_ASC
+  subtitle_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
 }
 
 """
@@ -2007,6 +2168,8 @@ type Query {
   componentSeo(id: String!, locale: String, preview: Boolean): ComponentSeo
   componentSeoCollection(limit: Int = 100, locale: String, order: [ComponentSeoOrder], preview: Boolean, skip: Int = 0, where: ComponentSeoFilter): ComponentSeoCollection
   entryCollection(limit: Int = 100, locale: String, order: [EntryOrder], preview: Boolean, skip: Int = 0, where: EntryFilter): EntryCollection
+  footer(id: String!, locale: String, preview: Boolean): Footer
+  footerCollection(limit: Int = 100, locale: String, order: [FooterOrder], preview: Boolean, skip: Int = 0, where: FooterFilter): FooterCollection
   pageAbout(id: String!, locale: String, preview: Boolean): PageAbout
   pageAboutCollection(limit: Int = 100, locale: String, order: [PageAboutOrder], preview: Boolean, skip: Int = 0, where: PageAboutFilter): PageAboutCollection
   pageBlogPost(id: String!, locale: String, preview: Boolean): PageBlogPost
@@ -2198,6 +2361,28 @@ input cfComponentFeatureNestedFilter {
   title_not: String
   title_not_contains: String
   title_not_in: [String]
+}
+
+input cfComponentPartnerNestedFilter {
+  AND: [cfComponentPartnerNestedFilter]
+  OR: [cfComponentPartnerNestedFilter]
+  contentfulMetadata: ContentfulMetadataFilter
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  logo_exists: Boolean
+  subtitle: String
+  subtitle_contains: String
+  subtitle_exists: Boolean
+  subtitle_in: [String]
+  subtitle_not: String
+  subtitle_not_contains: String
+  subtitle_not_in: [String]
+  sys: SysFilter
 }
 
 input cfComponentSeoNestedFilter {

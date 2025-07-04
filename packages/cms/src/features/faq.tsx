@@ -10,17 +10,12 @@ import React from "react";
 import type { PageFaqFieldsFragment, FaqQuestionFieldsFragment } from "../lib/__generated/sdk";
 
 interface FaqContentProps {
-  translations: {
-    title: string;
-    intro: string;
-  };
   faq: PageFaqFieldsFragment;
   locale: string;
   preview?: boolean;
 }
 
-export const FaqContent: React.FC<FaqContentProps> = ({
-  translations,
+export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
   faq,
   locale,
   preview = false,
@@ -46,21 +41,19 @@ export const FaqContent: React.FC<FaqContentProps> = ({
     <>
       <div className="mb-12 text-left">
         <h1
-          className="mb-4 text-4xl font-bold text-gray-900 text-center"
+          className="mb-4 text-center text-4xl font-bold text-gray-900"
           {...(preview ? inspectorProps({ fieldId: "title" }) : {})}
         >
-          {currentFaq.title || translations.title}
+          {currentFaq.title}
         </h1>
         {typeof currentFaq.intro === "string" ? (
           <p
             className="mx-auto max-w-2xl text-lg text-gray-600"
             {...(preview ? inspectorProps({ fieldId: "intro" }) : {})}
           >
-            {currentFaq.intro || translations.intro}
+            {currentFaq.intro}
           </p>
-        ) : (
-          <p className="mx-auto max-w-2xl text-lg text-gray-600">{translations.intro}</p>
-        )}
+        ) : null}
       </div>
       <div className="space-y-6">
         {(currentFaq.questionsCollection?.items || [])
@@ -70,7 +63,9 @@ export const FaqContent: React.FC<FaqContentProps> = ({
               <div
                 key={q.sys.id}
                 className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
-                {...(preview ? inspectorProps({ fieldId: `questionsCollection.items[${idx}]` }) : {})}
+                {...(preview
+                  ? inspectorProps({ fieldId: `questionsCollection.items[${idx}]` })
+                  : {})}
               >
                 <h3 className="mb-3 text-xl font-semibold text-gray-900">{q.question}</h3>
                 {q.answer?.json && (

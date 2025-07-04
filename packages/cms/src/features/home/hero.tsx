@@ -13,17 +13,20 @@ import type { PageHomeHeroFieldsFragment } from "../../lib/__generated/sdk";
 interface HomeHeroProps {
   heroData: PageHomeHeroFieldsFragment | undefined;
   preview?: boolean;
+  locale?: string;
 }
 
-export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview = false }) => {
+export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview = false, locale }) => {
   if (!heroData) return null;
   // Enable live updates only in preview mode
   const liveHero = useContentfulLiveUpdates<PageHomeHeroFieldsFragment>(heroData, {
     skip: !preview,
+    ...(locale ? { locale } : {}),
   });
   const currentHero = liveHero || heroData;
   const inspectorProps = useContentfulInspectorMode({
     entryId: currentHero?.sys?.id,
+    ...(locale ? { locale } : {}),
   });
   if (!currentHero) return null;
   return (
@@ -60,10 +63,15 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview = false })
           .map((button, idx) => {
             // First button: filled, others: outlined
             const isPrimary = idx === 0;
+            const href = button.url.startsWith("http")
+              ? button.url
+              : locale
+                ? `/${locale}${button.url}`
+                : button.url;
             return (
               <Link
                 key={button.url + idx}
-                href={button.url}
+                href={href}
                 className={isPrimary ? "sm:h-14" : "sm:h-14"}
                 target={button.url.startsWith("http") ? "_blank" : undefined}
                 rel={button.url.startsWith("http") ? "noopener noreferrer" : undefined}

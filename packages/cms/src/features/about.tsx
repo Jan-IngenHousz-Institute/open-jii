@@ -11,21 +11,12 @@ import React from "react";
 import type { PageAboutFieldsFragment } from "../lib/__generated/sdk";
 
 interface AboutContentProps {
-  translations: {
-    title: string;
-    description: string;
-  };
   about: PageAboutFieldsFragment;
   locale: string;
   preview?: boolean;
 }
 
-export const AboutContent: React.FC<AboutContentProps> = ({
-  translations,
-  about,
-  locale,
-  preview = false,
-}) => {
+export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, preview = false }) => {
   // Enable live updates only in preview mode using the correct options signature
   const liveAbout = useContentfulLiveUpdates<PageAboutFieldsFragment>(about, {
     locale,
@@ -76,7 +67,7 @@ export const AboutContent: React.FC<AboutContentProps> = ({
           className="text-jii-dark-green mb-8 text-5xl font-bold tracking-tight"
           {...(preview ? inspectorProps({ fieldId: "title" }) : {})}
         >
-          {currentAbout.title || translations.title}
+          {currentAbout.title}
         </h1>
         {currentAbout.description?.json ? (
           <div
@@ -90,18 +81,7 @@ export const AboutContent: React.FC<AboutContentProps> = ({
           >
             {documentToReactComponents(currentAbout.description.json)}
           </div>
-        ) : (
-          <div
-            className={`max-w-3xl text-xl leading-relaxed text-gray-700 ${
-              currentAbout.image?.url ? "" : "mx-0"
-            }`}
-            style={
-              !currentAbout.image?.url ? { marginLeft: 0, marginRight: 0, textAlign: "left" } : {}
-            }
-          >
-            {translations.description}
-          </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

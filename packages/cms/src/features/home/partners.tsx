@@ -15,15 +15,18 @@ import type {
 interface HomePartnersProps {
   partnersData: PageHomePartnersFieldsFragment;
   preview?: boolean;
+  locale?: string;
 }
 
-export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, preview = false }) => {
+export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, preview = false, locale }) => {
   const livePartners = useContentfulLiveUpdates<PageHomePartnersFieldsFragment>(partnersData, {
     skip: !preview,
+    ...(locale ? { locale } : {}),
   });
   const currentPartners = livePartners || partnersData;
   const inspectorProps = useContentfulInspectorMode({
     entryId: currentPartners?.sys?.id,
+    ...(locale ? { locale } : {}),
   });
   if (!currentPartners) return null;
 
@@ -95,6 +98,9 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
                   height={500}
                   className="w-full min-w-[600px] max-w-2xl snap-center rounded-2xl object-cover shadow-sm"
                   priority={idx === 0}
+                  {...(preview
+                    ? inspectorProps({ fieldId: `imagesCollection.items[${idx}]` })
+                    : {})}
                 />
               ) : null,
             )}

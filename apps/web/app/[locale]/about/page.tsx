@@ -4,7 +4,6 @@ import { getContentfulClients } from "~/lib/contentful";
 import { AboutContent } from "@repo/cms";
 import type { PageAboutFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 import type { Locale } from "@repo/i18n";
-import initTranslations from "@repo/i18n/server";
 
 interface AboutPageProps {
   params: Promise<{ locale: Locale }>;
@@ -12,10 +11,6 @@ interface AboutPageProps {
 
 export default async function AboutPage({ params }: AboutPageProps) {
   const { locale } = await params;
-  const { t } = await initTranslations({
-    locale,
-    namespaces: ["common"],
-  });
 
   const { isEnabled: preview } = await draftMode();
   const { previewClient, client } = await getContentfulClients();
@@ -25,15 +20,7 @@ export default async function AboutPage({ params }: AboutPageProps) {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4 pb-24 pt-8">
-      <AboutContent
-        translations={{
-          title: t("about.title"),
-          description: t("about.description"),
-        }}
-        about={about}
-        locale={locale}
-        preview={preview}
-      />
+      <AboutContent about={about} locale={locale} preview={preview} />
     </main>
   );
 }

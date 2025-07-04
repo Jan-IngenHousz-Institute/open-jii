@@ -10,17 +10,12 @@ import React from "react";
 import type { PagePoliciesFieldsFragment } from "../lib/__generated/sdk";
 
 interface PoliciesContentProps {
-  translations: {
-    title: string;
-    content: string;
-  };
   policies: PagePoliciesFieldsFragment;
   locale: string;
   preview?: boolean;
 }
 
 export const PoliciesContent: React.FC<PoliciesContentProps> = ({
-  translations,
   policies,
   locale,
   preview = false,
@@ -48,7 +43,7 @@ export const PoliciesContent: React.FC<PoliciesContentProps> = ({
         className="text-jii-dark-green mb-8 w-full text-left text-3xl font-bold tracking-tight"
         {...(preview ? inspectorProps({ fieldId: "title" }) : {})}
       >
-        {currentPolicies.title || translations.title}
+        {currentPolicies.title}
       </h1>
       {currentPolicies.content?.json ? (
         <div
@@ -57,11 +52,7 @@ export const PoliciesContent: React.FC<PoliciesContentProps> = ({
         >
           {documentToReactComponents(currentPolicies.content.json)}
         </div>
-      ) : (
-        <div className="prose prose-lg w-full text-gray-700">
-          <p>{translations.content}</p>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 };

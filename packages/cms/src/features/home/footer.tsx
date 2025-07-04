@@ -1,84 +1,145 @@
-import { Shield } from "lucide-react";
+"use client";
+
+import {
+  useContentfulInspectorMode,
+  useContentfulLiveUpdates,
+} from "@contentful/live-preview/react";
 import Link from "next/link";
 import React from "react";
 
+import type { FooterFieldsFragment } from "../../lib/__generated/sdk";
+
 interface HomeFooterProps {
-  t: (key: string) => string;
+  footerData: FooterFieldsFragment | undefined;
+  preview?: boolean;
   locale: string;
 }
 
-export const HomeFooter: React.FC<HomeFooterProps> = ({ t, locale }) => (
-  <footer className="bg-jii-dark-green w-full py-12 text-white">
-    <div className="mx-auto w-full max-w-7xl px-4">
-      <div className="mb-8 flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
-        {/* OpenJII Brand/Description aligned left */}
-        <div className="flex flex-col items-start">
-          <div className="mb-6 flex items-center space-x-2">
-            <div className="from-jii-medium-green to-jii-dark-green flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r">
-              <span className="text-xl font-bold text-white">J</span>
+export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview = false, locale }) => {
+  if (!footerData) return null;
+  const liveFooter = useContentfulLiveUpdates<FooterFieldsFragment>(footerData, {
+    skip: !preview,
+    ...(locale ? { locale } : {}),
+  });
+  const currentFooter = liveFooter || footerData;
+  const inspectorProps = useContentfulInspectorMode({
+    entryId: currentFooter?.sys?.id,
+    ...(locale ? { locale } : {}),
+  });
+  if (!currentFooter) return null;
+
+  // Type guard for ComponentButton
+  function isComponentButton(button: any): button is { label: string; url: string } {
+    return button && typeof button.label === "string" && typeof button.url === "string";
+  }
+
+  return (
+    <footer className="bg-jii-dark-green w-full py-12 text-white">
+      <div className="mx-auto w-full max-w-7xl px-4">
+        <div className="mb-8 flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
+          {/* OpenJII Brand/Description aligned left */}
+          <div className="flex flex-col items-start">
+            <div className="mb-6 flex items-center space-x-2">
+              <div className="from-jii-medium-green to-jii-dark-green flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r">
+                <span className="text-xl font-bold text-white">J</span>
+              </div>
+              <span
+                className="text-2xl font-bold"
+                {...(preview ? inspectorProps({ fieldId: "brand" }) : {})}
+              >
+                {currentFooter.brand}
+              </span>
             </div>
-            <span className="text-2xl font-bold">{t("jii.footerBrand")}</span>
+            <p
+              className="mb-4 leading-relaxed text-white"
+              {...(preview ? inspectorProps({ fieldId: "title" }) : {})}
+            >
+              {currentFooter.title}
+            </p>
+            <div className="flex items-center space-x-2">
+              <span
+                className="text-sm text-white"
+                {...(preview ? inspectorProps({ fieldId: "badge" }) : {})}
+              >
+                {currentFooter.badge}
+              </span>
+            </div>
           </div>
-          <p className="mb-4 leading-relaxed text-white">{t("jii.footerBrandDesc")}</p>
-          <div className="flex items-center space-x-2">
-            <Shield className="h-4 w-4 text-emerald-400" />
-            <span className="text-sm text-white">{t("jii.badge")}</span>
+          {/* Centered Menu and Support aligned right */}
+          <div className="flex flex-col items-center gap-8 md:flex-row md:items-start md:gap-24">
+            <div>
+              <h4
+                className="text-jii-bright-green mb-2 text-center font-bold md:text-left"
+                {...(preview ? inspectorProps({ fieldId: "menuTitle" }) : {})}
+              >
+                {currentFooter.menuTitle}
+              </h4>
+              <ul className="space-y-3 text-center text-sm text-white md:text-left">
+                {currentFooter.menuButtonsCollection?.items
+                  ?.filter(isComponentButton)
+                  .map((button, idx) => {
+                    const href = button.url.startsWith("http")
+                      ? button.url
+                      : locale
+                        ? `/${locale}${button.url}`
+                        : button.url;
+                    return (
+                      <li
+                        key={button.url + idx}
+                        {...(preview
+                          ? inspectorProps({ fieldId: `menuButtonsCollection.items[${idx}]` })
+                          : {})}
+                      >
+                        <Link href={href} className="hover:text-jii-medium-green transition-colors">
+                          {button.label}
+                        </Link>
+                      </li>
+                    );
+                  })}
+              </ul>
+            </div>
+            <div>
+              <h4
+                className="text-jii-bright-green mb-2 text-center font-bold md:text-left"
+                {...(preview ? inspectorProps({ fieldId: "supportTitle" }) : {})}
+              >
+                {currentFooter.supportTitle}
+              </h4>
+              <ul className="space-y-3 text-center text-sm text-white md:text-left">
+                {currentFooter.supportButtonsCollection?.items
+                  ?.filter(isComponentButton)
+                  .map((button, idx) => {
+                    const href = button.url.startsWith("http")
+                      ? button.url
+                      : locale
+                        ? `/${locale}${button.url}`
+                        : button.url;
+                    return (
+                      <li
+                        key={button.url + idx}
+                        {...(preview
+                          ? inspectorProps({ fieldId: `supportButtonsCollection.items[${idx}]` })
+                          : {})}
+                      >
+                        <Link href={href} className="hover:text-jii-medium-green transition-colors">
+                          {button.label}
+                        </Link>
+                      </li>
+                    );
+                  })}
+              </ul>
+            </div>
           </div>
         </div>
-        {/* Centered Menu and Support aligned right */}
-        <div className="flex flex-col items-center gap-8 md:flex-row md:items-start md:gap-24">
-          <div>
-            <h4 className="text-jii-bright-green mb-2 text-center font-bold md:text-left">
-              {t("jii.footerMenu")}
-            </h4>
-            <ul className="space-y-3 text-center text-sm text-white md:text-left">
-              <li>
-                <Link href={`/${locale}/platform`} className="hover:text-jii-medium-green transition-colors">
-                  {t("jii.footerPlatform")}
-                </Link>
-              </li>
-              <li>
-                <Link href={`/${locale}/blog`} className="hover:text-jii-medium-green transition-colors">
-                  {t("jii.footerBlog")}
-                </Link>
-              </li>
-              <li>
-                <Link href={`/${locale}/about`} className="hover:text-jii-medium-green transition-colors">
-                  {t("jii.footerAbout")}
-                </Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-jii-bright-green mb-2 text-center font-bold md:text-left">
-              {t("jii.footerSupport")}
-            </h4>
-            <ul className="space-y-3 text-center text-sm text-white md:text-left">
-              <li>
-                <Link
-                  href={`/${locale}/faq`}
-                  className="hover:text-jii-medium-green transition-colors"
-                >
-                  {t("jii.footerFaq")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href={`/${locale}/policies`}
-                  className="hover:text-jii-medium-green transition-colors"
-                >
-                  {t("jii.footerPrivacy")}
-                </Link>
-              </li>
-            </ul>
-          </div>
+        <div className="w-full border-t border-gray-800 pt-8 text-center">
+          <p
+            className="text-sm text-white"
+            {...(preview ? inspectorProps({ fieldId: "copyright" }) : {})}
+          >
+            {currentFooter.copyright}
+          </p>
         </div>
       </div>
-      <div className="w-full border-t border-gray-800 pt-8 text-center">
-        <p className="text-sm text-white">
-          &copy; {new Date().getFullYear()} {t("jii.institute")}
-        </p>
-      </div>
-    </div>
-  </footer>
-);
+    </footer>
+  );
+};

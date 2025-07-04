@@ -16,9 +16,9 @@ import type {
   PageHomeHeroFieldsFragment,
   PageHomeFeaturesFieldsFragment,
   PageHomePartnersFieldsFragment,
+  FooterFieldsFragment,
 } from "@repo/cms/lib/__generated/sdk";
 import type { Locale } from "@repo/i18n";
-import initTranslations from "@repo/i18n/server";
 
 interface HomePageProps {
   params: Promise<{ locale: Locale }>;
@@ -27,24 +27,20 @@ interface HomePageProps {
 export default async function Home({ params }: HomePageProps) {
   const { locale } = await params;
   const session = await auth();
-  const { t } = await initTranslations({
-    locale,
-    namespaces: ["common"],
-  });
 
   const { isEnabled: preview } = await draftMode();
   const { previewClient, client } = await getContentfulClients();
   const gqlClient = preview ? previewClient : client;
 
-  // Fetch hero, mission, features, and partners data from Contentful
-  const [homeHeroQuery, homeMissionQuery, homeFeaturesQuery, homePartnersQuery] = await Promise.all(
-    [
+  // Fetch hero, mission, features, partners, and footer data from Contentful
+  const [homeHeroQuery, homeMissionQuery, homeFeaturesQuery, homePartnersQuery, footerQuery] =
+    await Promise.all([
       gqlClient.pageHomeHero({ locale, preview }),
       gqlClient.pageHomeMission({ locale, preview }),
       gqlClient.pageHomeFeatures({ locale, preview }),
       gqlClient.pageHomePartners({ locale, preview }),
-    ],
-  );
+      gqlClient.footer({ locale, preview }),
+    ]);
   const homeHero = homeHeroQuery.pageHomeHeroCollection?.items[0] as PageHomeHeroFieldsFragment;
   const homeMission = homeMissionQuery.pageHomeMissionCollection
     ?.items[0] as PageHomeMissionFieldsFragment;
@@ -52,14 +48,7 @@ export default async function Home({ params }: HomePageProps) {
     ?.items[0] as PageHomeFeaturesFieldsFragment;
   const homePartners = homePartnersQuery.pageHomePartnersCollection
     ?.items[0] as PageHomePartnersFieldsFragment;
-
-  // Prepare translations for client component
-  const translations = {
-    institute: t("jii.institute"),
-    aboutDescription: t("jii.aboutDescription"),
-    mission: t("jii.mission"),
-    missionDescription: t("jii.missionDescription"),
-  };
+  const footerData = footerQuery.footerCollection?.items[0] as FooterFieldsFragment;
 
   return (
     <>
@@ -75,7 +64,7 @@ export default async function Home({ params }: HomePageProps) {
         </div>
 
         {/* Hero Section - now uses Contentful data */}
-        <HomeHeroComponent heroData={homeHero} preview={preview} />
+        <HomeHeroComponent heroData={homeHero} preview={preview} locale={locale} />
 
         {/* Scroll Indicator */}
         <div className="animate-bounce">
@@ -83,16 +72,16 @@ export default async function Home({ params }: HomePageProps) {
         </div>
 
         {/* About & Mission Section - now uses Contentful data */}
-        <HomeAboutMission translations={translations} missionData={homeMission} preview={preview} />
+        <HomeAboutMission missionData={homeMission} preview={preview} locale={locale} />
 
         {/* Enhanced Key Features */}
-        <HomeKeyFeatures featuresData={homeFeatures} preview={preview} />
+        <HomeKeyFeatures featuresData={homeFeatures} preview={preview} locale={locale} />
 
         {/* Enhanced Partner Highlights & Visual Media */}
-        <HomePartners partnersData={homePartners} preview={preview} />
+        <HomePartners partnersData={homePartners} preview={preview} locale={locale} />
 
         {/* Enhanced Footer */}
-        <HomeFooter t={t} locale={locale} />
+        <HomeFooter locale={locale} footerData={footerData} preview={preview} />
       </main>
     </>
   );

@@ -12,18 +12,22 @@ import type { PageHomeFeaturesFieldsFragment } from "../../lib/__generated/sdk";
 interface HomeKeyFeaturesProps {
   featuresData: PageHomeFeaturesFieldsFragment;
   preview?: boolean;
+  locale?: string;
 }
 
 export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
   featuresData,
   preview = false,
+  locale,
 }) => {
   const liveFeatures = useContentfulLiveUpdates<PageHomeFeaturesFieldsFragment>(featuresData, {
     skip: !preview,
+    ...(locale ? { locale } : {}),
   });
   const currentFeatures = liveFeatures || featuresData;
   const inspectorProps = useContentfulInspectorMode({
     entryId: currentFeatures?.sys?.id,
+    ...(locale ? { locale } : {}),
   });
   if (!currentFeatures) return null;
 

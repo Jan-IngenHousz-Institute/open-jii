@@ -891,6 +891,7 @@ export type ComponentPartnerFilter = {
 export type ComponentPartnerLinkingCollections = {
   __typename?: "ComponentPartnerLinkingCollections";
   entryCollection?: Maybe<EntryCollection>;
+  pageHomePartnersCollection?: Maybe<PageHomePartnersCollection>;
 };
 
 export type ComponentPartnerLinkingCollectionsEntryCollectionArgs = {
@@ -899,6 +900,33 @@ export type ComponentPartnerLinkingCollectionsEntryCollectionArgs = {
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
 };
+
+export type ComponentPartnerLinkingCollectionsPageHomePartnersCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<
+    Array<InputMaybe<ComponentPartnerLinkingCollectionsPageHomePartnersCollectionOrder>>
+  >;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+};
+
+export enum ComponentPartnerLinkingCollectionsPageHomePartnersCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  SubtitleAsc = "subtitle_ASC",
+  SubtitleDesc = "subtitle_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
 
 export enum ComponentPartnerOrder {
   InternalNameAsc = "internalName_ASC",
@@ -1282,6 +1310,200 @@ export enum EntryOrder {
   SysPublishedVersionAsc = "sys_publishedVersion_ASC",
   SysPublishedVersionDesc = "sys_publishedVersion_DESC",
 }
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer) */
+export type Footer = Entry &
+  _Node & {
+    __typename?: "Footer";
+    _id: Scalars["ID"]["output"];
+    badge?: Maybe<Scalars["String"]["output"]>;
+    brand?: Maybe<Scalars["String"]["output"]>;
+    contentfulMetadata: ContentfulMetadata;
+    copyright?: Maybe<Scalars["String"]["output"]>;
+    internalName?: Maybe<Scalars["String"]["output"]>;
+    linkedFrom?: Maybe<FooterLinkingCollections>;
+    menuButtonsCollection?: Maybe<FooterMenuButtonsCollection>;
+    menuTitle?: Maybe<Scalars["String"]["output"]>;
+    supportButtonsCollection?: Maybe<FooterSupportButtonsCollection>;
+    supportTitle?: Maybe<Scalars["String"]["output"]>;
+    sys: Sys;
+    title?: Maybe<Scalars["String"]["output"]>;
+  };
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer) */
+export type FooterBadgeArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer) */
+export type FooterBrandArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer) */
+export type FooterCopyrightArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer) */
+export type FooterInternalNameArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer) */
+export type FooterLinkedFromArgs = {
+  allowedLocales?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer) */
+export type FooterMenuButtonsCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer) */
+export type FooterMenuTitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer) */
+export type FooterSupportButtonsCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer) */
+export type FooterSupportTitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer) */
+export type FooterTitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type FooterCollection = {
+  __typename?: "FooterCollection";
+  items: Array<Maybe<Footer>>;
+  limit: Scalars["Int"]["output"];
+  skip: Scalars["Int"]["output"];
+  total: Scalars["Int"]["output"];
+};
+
+export type FooterFilter = {
+  AND?: InputMaybe<Array<InputMaybe<FooterFilter>>>;
+  OR?: InputMaybe<Array<InputMaybe<FooterFilter>>>;
+  badge?: InputMaybe<Scalars["String"]["input"]>;
+  badge_contains?: InputMaybe<Scalars["String"]["input"]>;
+  badge_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  badge_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  badge_not?: InputMaybe<Scalars["String"]["input"]>;
+  badge_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  badge_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  brand?: InputMaybe<Scalars["String"]["input"]>;
+  brand_contains?: InputMaybe<Scalars["String"]["input"]>;
+  brand_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  brand_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  brand_not?: InputMaybe<Scalars["String"]["input"]>;
+  brand_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  brand_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  copyright?: InputMaybe<Scalars["String"]["input"]>;
+  copyright_contains?: InputMaybe<Scalars["String"]["input"]>;
+  copyright_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  copyright_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  copyright_not?: InputMaybe<Scalars["String"]["input"]>;
+  copyright_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  copyright_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  internalName?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  internalName_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  internalName_not?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  menuButtonsCollection_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  menuTitle?: InputMaybe<Scalars["String"]["input"]>;
+  menuTitle_contains?: InputMaybe<Scalars["String"]["input"]>;
+  menuTitle_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  menuTitle_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  menuTitle_not?: InputMaybe<Scalars["String"]["input"]>;
+  menuTitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  menuTitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  supportButtonsCollection_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  supportTitle?: InputMaybe<Scalars["String"]["input"]>;
+  supportTitle_contains?: InputMaybe<Scalars["String"]["input"]>;
+  supportTitle_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  supportTitle_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  supportTitle_not?: InputMaybe<Scalars["String"]["input"]>;
+  supportTitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  supportTitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  sys?: InputMaybe<SysFilter>;
+  title?: InputMaybe<Scalars["String"]["input"]>;
+  title_contains?: InputMaybe<Scalars["String"]["input"]>;
+  title_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  title_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  title_not?: InputMaybe<Scalars["String"]["input"]>;
+  title_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  title_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+export type FooterLinkingCollections = {
+  __typename?: "FooterLinkingCollections";
+  entryCollection?: Maybe<EntryCollection>;
+};
+
+export type FooterLinkingCollectionsEntryCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+};
+
+export type FooterMenuButtonsCollection = {
+  __typename?: "FooterMenuButtonsCollection";
+  items: Array<Maybe<Entry>>;
+  limit: Scalars["Int"]["output"];
+  skip: Scalars["Int"]["output"];
+  total: Scalars["Int"]["output"];
+};
+
+export enum FooterOrder {
+  BadgeAsc = "badge_ASC",
+  BadgeDesc = "badge_DESC",
+  BrandAsc = "brand_ASC",
+  BrandDesc = "brand_DESC",
+  CopyrightAsc = "copyright_ASC",
+  CopyrightDesc = "copyright_DESC",
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  MenuTitleAsc = "menuTitle_ASC",
+  MenuTitleDesc = "menuTitle_DESC",
+  SupportTitleAsc = "supportTitle_ASC",
+  SupportTitleDesc = "supportTitle_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  TitleAsc = "title_ASC",
+  TitleDesc = "title_DESC",
+}
+
+export type FooterSupportButtonsCollection = {
+  __typename?: "FooterSupportButtonsCollection";
+  items: Array<Maybe<Entry>>;
+  limit: Scalars["Int"]["output"];
+  skip: Scalars["Int"]["output"];
+  total: Scalars["Int"]["output"];
+};
 
 export enum ImageFormat {
   /** AVIF image format. */
@@ -2508,8 +2730,10 @@ export type PageHomePartnersLinkedFromArgs = {
 export type PageHomePartnersPartnersCollectionArgs = {
   limit?: InputMaybe<Scalars["Int"]["input"]>;
   locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<PageHomePartnersPartnersCollectionOrder>>>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
+  where?: InputMaybe<ComponentPartnerFilter>;
 };
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageHomePartners) */
@@ -2542,6 +2766,7 @@ export type PageHomePartnersFilter = {
   internalName_not?: InputMaybe<Scalars["String"]["input"]>;
   internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
   internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  partners?: InputMaybe<CfComponentPartnerNestedFilter>;
   partnersCollection_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
   subtitle?: InputMaybe<Scalars["String"]["input"]>;
   subtitle_contains?: InputMaybe<Scalars["String"]["input"]>;
@@ -2591,11 +2816,26 @@ export enum PageHomePartnersOrder {
 
 export type PageHomePartnersPartnersCollection = {
   __typename?: "PageHomePartnersPartnersCollection";
-  items: Array<Maybe<Entry>>;
+  items: Array<Maybe<ComponentPartner>>;
   limit: Scalars["Int"]["output"];
   skip: Scalars["Int"]["output"];
   total: Scalars["Int"]["output"];
 };
+
+export enum PageHomePartnersPartnersCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  SubtitleAsc = "subtitle_ASC",
+  SubtitleDesc = "subtitle_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+}
 
 /** To have an entry point for the app (e.g. Homepage) [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageLanding) */
 export type PageLanding = Entry &
@@ -2846,6 +3086,8 @@ export type Query = {
   componentSeo?: Maybe<ComponentSeo>;
   componentSeoCollection?: Maybe<ComponentSeoCollection>;
   entryCollection?: Maybe<EntryCollection>;
+  footer?: Maybe<Footer>;
+  footerCollection?: Maybe<FooterCollection>;
   pageAbout?: Maybe<PageAbout>;
   pageAboutCollection?: Maybe<PageAboutCollection>;
   pageBlogPost?: Maybe<PageBlogPost>;
@@ -3005,6 +3247,21 @@ export type QueryEntryCollectionArgs = {
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
   skip?: InputMaybe<Scalars["Int"]["input"]>;
   where?: InputMaybe<EntryFilter>;
+};
+
+export type QueryFooterArgs = {
+  id: Scalars["String"]["input"];
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+export type QueryFooterCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<FooterOrder>>>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  where?: InputMaybe<FooterFilter>;
 };
 
 export type QueryPageAboutArgs = {
@@ -3317,6 +3574,28 @@ export type CfComponentFeatureNestedFilter = {
   title_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
 };
 
+export type CfComponentPartnerNestedFilter = {
+  AND?: InputMaybe<Array<InputMaybe<CfComponentPartnerNestedFilter>>>;
+  OR?: InputMaybe<Array<InputMaybe<CfComponentPartnerNestedFilter>>>;
+  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  internalName?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  internalName_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  internalName_not?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  logo_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  subtitle?: InputMaybe<Scalars["String"]["input"]>;
+  subtitle_contains?: InputMaybe<Scalars["String"]["input"]>;
+  subtitle_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  subtitle_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  subtitle_not?: InputMaybe<Scalars["String"]["input"]>;
+  subtitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  subtitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  sys?: InputMaybe<SysFilter>;
+};
+
 export type CfComponentSeoNestedFilter = {
   AND?: InputMaybe<Array<InputMaybe<CfComponentSeoNestedFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<CfComponentSeoNestedFilter>>>;
@@ -3417,6 +3696,83 @@ export type AuthorFieldsFragment = {
   avatar?: ({ __typename?: "Asset" } & ImageFieldsFragment) | null;
 };
 
+export type FooterFieldsFragment = {
+  __typename: "Footer";
+  internalName?: string | null;
+  brand?: string | null;
+  title?: string | null;
+  badge?: string | null;
+  menuTitle?: string | null;
+  supportTitle?: string | null;
+  copyright?: string | null;
+  sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
+  menuButtonsCollection?: {
+    __typename?: "FooterMenuButtonsCollection";
+    items: Array<
+      | { __typename?: "ComponentAuthor" }
+      | ({ __typename?: "ComponentButton" } & ButtonFieldsFragment)
+      | { __typename?: "ComponentFaqQuestion" }
+      | { __typename?: "ComponentFeature" }
+      | { __typename?: "ComponentPartner" }
+      | { __typename?: "ComponentRichImage" }
+      | { __typename?: "ComponentSeo" }
+      | { __typename?: "Footer" }
+      | { __typename?: "PageAbout" }
+      | { __typename?: "PageBlogPost" }
+      | { __typename?: "PageFaq" }
+      | { __typename?: "PageHomeFeatures" }
+      | { __typename?: "PageHomeHero" }
+      | { __typename?: "PageHomeMission" }
+      | { __typename?: "PageHomePartners" }
+      | { __typename?: "PageLanding" }
+      | { __typename?: "PagePolicies" }
+      | null
+    >;
+  } | null;
+  supportButtonsCollection?: {
+    __typename?: "FooterSupportButtonsCollection";
+    items: Array<
+      | { __typename?: "ComponentAuthor" }
+      | ({ __typename?: "ComponentButton" } & ButtonFieldsFragment)
+      | { __typename?: "ComponentFaqQuestion" }
+      | { __typename?: "ComponentFeature" }
+      | { __typename?: "ComponentPartner" }
+      | { __typename?: "ComponentRichImage" }
+      | { __typename?: "ComponentSeo" }
+      | { __typename?: "Footer" }
+      | { __typename?: "PageAbout" }
+      | { __typename?: "PageBlogPost" }
+      | { __typename?: "PageFaq" }
+      | { __typename?: "PageHomeFeatures" }
+      | { __typename?: "PageHomeHero" }
+      | { __typename?: "PageHomeMission" }
+      | { __typename?: "PageHomePartners" }
+      | { __typename?: "PageLanding" }
+      | { __typename?: "PagePolicies" }
+      | null
+    >;
+  } | null;
+};
+
+export type ButtonFieldsFragment = {
+  __typename?: "ComponentButton";
+  label?: string | null;
+  url?: string | null;
+};
+
+export type FooterQueryVariables = Exact<{
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+}>;
+
+export type FooterQuery = {
+  __typename?: "Query";
+  footerCollection?: {
+    __typename?: "FooterCollection";
+    items: Array<({ __typename?: "Footer" } & FooterFieldsFragment) | null>;
+  } | null;
+};
+
 export type ImageFieldsFragment = {
   __typename: "Asset";
   title?: string | null;
@@ -3492,6 +3848,7 @@ export type PageBlogPostFieldsFragment = {
           | { __typename?: "ComponentPartner" }
           | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
           | { __typename?: "ComponentSeo" }
+          | { __typename?: "Footer" }
           | { __typename?: "PageAbout" }
           | { __typename?: "PageBlogPost" }
           | { __typename?: "PageFaq" }
@@ -3625,12 +3982,6 @@ export type PageHomeHeroFieldsFragment = {
   } | null;
 };
 
-export type ButtonFieldsFragment = {
-  __typename?: "ComponentButton";
-  label?: string | null;
-  url?: string | null;
-};
-
 export type PageHomeHeroQueryVariables = Exact<{
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
@@ -3680,25 +4031,7 @@ export type PageHomePartnersFieldsFragment = {
   sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
   partnersCollection?: {
     __typename?: "PageHomePartnersPartnersCollection";
-    items: Array<
-      | { __typename?: "ComponentAuthor" }
-      | { __typename?: "ComponentButton" }
-      | { __typename?: "ComponentFaqQuestion" }
-      | { __typename?: "ComponentFeature" }
-      | ({ __typename?: "ComponentPartner" } & PartnerFieldsFragment)
-      | { __typename?: "ComponentRichImage" }
-      | { __typename?: "ComponentSeo" }
-      | { __typename?: "PageAbout" }
-      | { __typename?: "PageBlogPost" }
-      | { __typename?: "PageFaq" }
-      | { __typename?: "PageHomeFeatures" }
-      | { __typename?: "PageHomeHero" }
-      | { __typename?: "PageHomeMission" }
-      | { __typename?: "PageHomePartners" }
-      | { __typename?: "PageLanding" }
-      | { __typename?: "PagePolicies" }
-      | null
-    >;
+    items: Array<({ __typename?: "ComponentPartner" } & PartnerFieldsFragment) | null>;
   } | null;
   imagesCollection?: {
     __typename?: "AssetCollection";
@@ -3833,6 +4166,39 @@ export type SitemapPagesQueryVariables = Exact<{
 
 export type SitemapPagesQuery = { __typename?: "Query" } & SitemapPagesFieldsFragment;
 
+export const ButtonFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+  fragment ButtonFields on ComponentButton {
+    label
+    url
+  }
+`;
+export const FooterFieldsFragmentDoc: ReturnType<typeof gql> = gql`
+  fragment FooterFields on Footer {
+    __typename
+    sys {
+      id
+      publishedAt
+      environmentId
+    }
+    internalName
+    brand
+    title
+    badge
+    menuTitle
+    supportTitle
+    copyright
+    menuButtonsCollection {
+      items {
+        ...ButtonFields
+      }
+    }
+    supportButtonsCollection {
+      items {
+        ...ButtonFields
+      }
+    }
+  }
+`;
 export const PageAboutFieldsFragmentDoc: ReturnType<typeof gql> = gql`
   fragment PageAboutFields on PageAbout {
     __typename
@@ -4040,12 +4406,6 @@ export const PageHomeFeaturesFieldsFragmentDoc: ReturnType<typeof gql> = gql`
     }
   }
 `;
-export const ButtonFieldsFragmentDoc: ReturnType<typeof gql> = gql`
-  fragment ButtonFields on ComponentButton {
-    label
-    url
-  }
-`;
 export const PageHomeHeroFieldsFragmentDoc: ReturnType<typeof gql> = gql`
   fragment PageHomeHeroFields on PageHomeHero {
     __typename
@@ -4184,6 +4544,17 @@ export const SitemapPagesFieldsFragmentDoc: ReturnType<typeof gql> = gql`
       }
     }
   }
+`;
+export const FooterDocument: ReturnType<typeof gql> = gql`
+  query footer($locale: String, $preview: Boolean) {
+    footerCollection(limit: 1, locale: $locale, preview: $preview) {
+      items {
+        ...FooterFields
+      }
+    }
+  }
+  ${FooterFieldsFragmentDoc}
+  ${ButtonFieldsFragmentDoc}
 `;
 export const PageAboutDocument: ReturnType<typeof gql> = gql`
   query pageAbout($locale: String, $preview: Boolean) {
@@ -4349,6 +4720,24 @@ const defaultWrapper: SdkFunctionWrapper = (action, _operationName, _operationTy
 
 export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = defaultWrapper) {
   return {
+    footer(
+      variables?: FooterQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<FooterQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<FooterQuery>({
+            document: FooterDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "footer",
+        "query",
+        variables,
+      );
+    },
     pageAbout(
       variables?: PageAboutQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
