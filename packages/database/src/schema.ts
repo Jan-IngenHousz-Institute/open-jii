@@ -102,6 +102,9 @@ export const organizationTypeEnum = pgEnum("organization_type", [
   "university",
 ]);
 
+// Sensor Family Enum
+export const sensorFamilyEnum = pgEnum("sensor_family", ["multispeq", "ambit"]);
+
 // Profiles Table
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -132,6 +135,7 @@ export const sensors = pgTable("sensors", {
   id: uuid("id").primaryKey().defaultRandom(),
   serialNumber: varchar("serial_number", { length: 100 }).unique().notNull(),
   name: text("name").notNull(),
+  family: sensorFamilyEnum("family").notNull(),
   location: text("location"),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -184,6 +188,7 @@ export const experimentMembers = pgTable(
   },
   (table) => [primaryKey({ columns: [table.experimentId, table.userId] })],
 );
+
 // Audit Log Table
 export const auditLogs = pgTable("audit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -193,4 +198,21 @@ export const auditLogs = pgTable("audit_logs", {
   action: text("action").notNull(),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   details: jsonb("details"),
+});
+
+// Protocols Table
+export const protocols = pgTable("protocols", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull().unique(),
+  description: text("description"),
+  code: jsonb("code").notNull(),
+  family: sensorFamilyEnum("family").notNull(),
+  createdBy: uuid("created_by")
+    .references(() => users.id)
+    .notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 });

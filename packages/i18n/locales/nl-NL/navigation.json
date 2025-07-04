@@ -14,6 +14,7 @@
   },
   "sidebar": {
     "newExperiment": "Nieuw experiment",
+    "newProtocol": "Nieuw protocol",
     "overview": "Overzicht",
     "archivedData": "Gearchiveerde gegevens",
     "recentMeasurements": "Recente metingen",

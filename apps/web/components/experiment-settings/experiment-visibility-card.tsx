@@ -19,7 +19,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  Input,
   Select,
   SelectContent,
   SelectItem,
@@ -62,8 +61,9 @@ export function ExperimentVisibilityCard({
     },
   });
 
+  // TODO: Temporary removed as the implementation is pending on the backend
   // Watch visibility to conditionally display the embargo field
-  const visibility = form.watch("visibility");
+  // const visibility = form.watch("visibility");
 
   async function onSubmit(data: VisibilityFormValues) {
     // Skip the update if visibility is undefined
@@ -120,27 +120,32 @@ export function ExperimentVisibilityCard({
               )}
             />
 
+            {/* TODO: Temporary removed as the implementation is pending on the backend */}
             {/* Only show embargo settings when visibility is private */}
-            {visibility === "private" && (
-              <FormField
-                control={form.control}
-                name="embargoIntervalDays"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("experimentSettings.embargoIntervalDays")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                        value={field.value}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+            {/*{visibility === "private" && (*/}
+            {/*  <FormField*/}
+            {/*    control={form.control}*/}
+            {/*    name="embargoIntervalDays"*/}
+            {/*    render={({ field }) => (*/}
+            {/*      <FormItem>*/}
+            {/*        <FormLabel>{t("experimentSettings.embargoIntervalDays")}</FormLabel>*/}
+            {/*        <FormControl>*/}
+            {/*          <Input*/}
+            {/*            type="number"*/}
+            {/*            {...field}*/}
+            {/*            onChange={(e) => {*/}
+            {/*              const value = Number(e.target.value);*/}
+            {/*              if (value < 0) return field.onChange(0);*/}
+            {/*              return field.onChange(value);*/}
+            {/*            }}*/}
+            {/*            value={field.value}*/}
+            {/*          />*/}
+            {/*        </FormControl>*/}
+            {/*        <FormMessage />*/}
+            {/*      </FormItem>*/}
+            {/*    )}*/}
+            {/*  />*/}
+            {/*)}*/}
 
             <div className="flex justify-end">
               <Button type="submit" disabled={isUpdating}>

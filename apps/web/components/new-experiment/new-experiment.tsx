@@ -11,6 +11,7 @@ import { zCreateExperimentBody } from "@repo/api";
 import { zExperimentVisibility } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Button, Form } from "@repo/ui/components";
+import { toast } from "@repo/ui/hooks";
 
 import { NewExperimentDetailsCard } from "./new-experiment-details-card";
 import { NewExperimentMembersCard } from "./new-experiment-members-card";
@@ -41,9 +42,10 @@ export function NewExperimentForm() {
   }
 
   function onSubmit(data: CreateExperimentBody) {
-    return createExperiment({
+    createExperiment({
       body: data,
     });
+    toast({ description: t("experiments.experimentCreated") });
   }
 
   return (

@@ -12,7 +12,14 @@ import type { App } from "supertest/types";
 
 import * as authExpress from "@repo/auth/express";
 import type { DatabaseInstance } from "@repo/database";
-import { experimentMembers, experiments, users, auditLogs, profiles } from "@repo/database";
+import {
+  experimentMembers,
+  experiments,
+  users,
+  auditLogs,
+  profiles,
+  protocols,
+} from "@repo/database";
 
 import { AppModule } from "../app.module";
 
@@ -115,6 +122,7 @@ export class TestHarness {
     await this.database.delete(auditLogs).execute();
     await this.database.delete(experimentMembers).execute();
     await this.database.delete(experiments).execute();
+    await this.database.delete(protocols).execute();
     await this.database.delete(profiles).execute();
     await this.database.delete(users).execute();
   }
