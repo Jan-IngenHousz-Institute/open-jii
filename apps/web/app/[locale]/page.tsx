@@ -63,7 +63,7 @@ export default async function Home({ params }: HomePageProps) {
           ></div>
         </div>
 
-        {/* Hero Section - now uses Contentful data */}
+        {/* Hero Section */}
         <HomeHeroComponent heroData={homeHero} preview={preview} locale={locale} />
 
         {/* Scroll Indicator */}
@@ -71,16 +71,16 @@ export default async function Home({ params }: HomePageProps) {
           <ChevronDown className="mx-auto h-8 w-8 text-emerald-500" />
         </div>
 
-        {/* About & Mission Section - now uses Contentful data */}
+        {/* About & Mission Section */}
         <HomeAboutMission missionData={homeMission} preview={preview} locale={locale} />
 
         {/* Enhanced Key Features */}
         <HomeKeyFeatures featuresData={homeFeatures} preview={preview} locale={locale} />
 
-        {/* Enhanced Partner Highlights & Visual Media */}
+        {/*Partner & Visual Media */}
         <HomePartners partnersData={homePartners} preview={preview} locale={locale} />
 
-        {/* Enhanced Footer */}
+        {/* Footer */}
         <HomeFooter locale={locale} footerData={footerData} preview={preview} />
       </main>
     </>

@@ -12,14 +12,10 @@ import type { PagePoliciesFieldsFragment } from "../lib/__generated/sdk";
 interface PoliciesContentProps {
   policies: PagePoliciesFieldsFragment;
   locale: string;
-  preview?: boolean;
+  preview: boolean;
 }
 
-export const PoliciesContent: React.FC<PoliciesContentProps> = ({
-  policies,
-  locale,
-  preview = false,
-}) => {
+export const PoliciesContent: React.FC<PoliciesContentProps> = ({ policies, locale, preview }) => {
   // Enable live updates only in preview mode using the correct options signature
   const livePolicies = useContentfulLiveUpdates<PagePoliciesFieldsFragment>(policies, {
     locale,
@@ -41,14 +37,14 @@ export const PoliciesContent: React.FC<PoliciesContentProps> = ({
     <div className="mx-auto flex w-full max-w-4xl flex-col items-center">
       <h1
         className="text-jii-dark-green mb-8 w-full text-left text-3xl font-bold tracking-tight"
-        {...(preview ? inspectorProps({ fieldId: "title" }) : {})}
+        {...inspectorProps({ fieldId: "title" })}
       >
         {currentPolicies.title}
       </h1>
       {currentPolicies.content?.json ? (
         <div
           className="prose prose-lg w-full text-gray-700"
-          {...(preview ? inspectorProps({ fieldId: "content" }) : {})}
+          {...inspectorProps({ fieldId: "content" })}
         >
           {documentToReactComponents(currentPolicies.content.json)}
         </div>

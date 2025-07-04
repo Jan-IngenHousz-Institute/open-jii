@@ -7,24 +7,23 @@ import {
 import Link from "next/link";
 import React from "react";
 
-import type { FooterFieldsFragment } from "../../lib/__generated/sdk";
+import type { FooterFieldsFragment } from "../lib/__generated/sdk";
 
 interface HomeFooterProps {
-  footerData: FooterFieldsFragment | undefined;
-  preview?: boolean;
+  footerData: FooterFieldsFragment;
+  preview: boolean;
   locale: string;
 }
 
-export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview = false, locale }) => {
-  if (!footerData) return null;
+export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview, locale }) => {
   const liveFooter = useContentfulLiveUpdates<FooterFieldsFragment>(footerData, {
     skip: !preview,
-    ...(locale ? { locale } : {}),
+    locale,
   });
   const currentFooter = liveFooter || footerData;
   const inspectorProps = useContentfulInspectorMode({
     entryId: currentFooter?.sys?.id,
-    ...(locale ? { locale } : {}),
+    locale,
   });
   if (!currentFooter) return null;
 
@@ -43,24 +42,18 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview = fa
               <div className="from-jii-medium-green to-jii-dark-green flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r">
                 <span className="text-xl font-bold text-white">J</span>
               </div>
-              <span
-                className="text-2xl font-bold"
-                {...(preview ? inspectorProps({ fieldId: "brand" }) : {})}
-              >
+              <span className="text-2xl font-bold" {...inspectorProps({ fieldId: "brand" })}>
                 {currentFooter.brand}
               </span>
             </div>
             <p
               className="mb-4 leading-relaxed text-white"
-              {...(preview ? inspectorProps({ fieldId: "title" }) : {})}
+              {...inspectorProps({ fieldId: "title" })}
             >
               {currentFooter.title}
             </p>
             <div className="flex items-center space-x-2">
-              <span
-                className="text-sm text-white"
-                {...(preview ? inspectorProps({ fieldId: "badge" }) : {})}
-              >
+              <span className="text-sm text-white" {...inspectorProps({ fieldId: "badge" })}>
                 {currentFooter.badge}
               </span>
             </div>
@@ -70,11 +63,14 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview = fa
             <div>
               <h4
                 className="text-jii-bright-green mb-2 text-center font-bold md:text-left"
-                {...(preview ? inspectorProps({ fieldId: "menuTitle" }) : {})}
+                {...inspectorProps({ fieldId: "menuTitle" })}
               >
                 {currentFooter.menuTitle}
               </h4>
-              <ul className="space-y-3 text-center text-sm text-white md:text-left">
+              <ul
+                className="space-y-3 text-center text-sm text-white md:text-left"
+                {...inspectorProps({ fieldId: `menuButtons` })}
+              >
                 {currentFooter.menuButtonsCollection?.items
                   ?.filter(isComponentButton)
                   .map((button, idx) => {
@@ -84,12 +80,7 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview = fa
                         ? `/${locale}${button.url}`
                         : button.url;
                     return (
-                      <li
-                        key={button.url + idx}
-                        {...(preview
-                          ? inspectorProps({ fieldId: `menuButtonsCollection.items[${idx}]` })
-                          : {})}
-                      >
+                      <li key={button.url + idx}>
                         <Link href={href} className="hover:text-jii-medium-green transition-colors">
                           {button.label}
                         </Link>
@@ -101,11 +92,14 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview = fa
             <div>
               <h4
                 className="text-jii-bright-green mb-2 text-center font-bold md:text-left"
-                {...(preview ? inspectorProps({ fieldId: "supportTitle" }) : {})}
+                {...inspectorProps({ fieldId: "supportTitle" })}
               >
                 {currentFooter.supportTitle}
               </h4>
-              <ul className="space-y-3 text-center text-sm text-white md:text-left">
+              <ul
+                className="space-y-3 text-center text-sm text-white md:text-left"
+                {...inspectorProps({ fieldId: `supportButtons` })}
+              >
                 {currentFooter.supportButtonsCollection?.items
                   ?.filter(isComponentButton)
                   .map((button, idx) => {
@@ -115,12 +109,7 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview = fa
                         ? `/${locale}${button.url}`
                         : button.url;
                     return (
-                      <li
-                        key={button.url + idx}
-                        {...(preview
-                          ? inspectorProps({ fieldId: `supportButtonsCollection.items[${idx}]` })
-                          : {})}
-                      >
+                      <li key={button.url + idx}>
                         <Link href={href} className="hover:text-jii-medium-green transition-colors">
                           {button.label}
                         </Link>
@@ -132,10 +121,7 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview = fa
           </div>
         </div>
         <div className="w-full border-t border-gray-800 pt-8 text-center">
-          <p
-            className="text-sm text-white"
-            {...(preview ? inspectorProps({ fieldId: "copyright" }) : {})}
-          >
+          <p className="text-sm text-white" {...inspectorProps({ fieldId: "copyright" })}>
             {currentFooter.copyright}
           </p>
         </div>

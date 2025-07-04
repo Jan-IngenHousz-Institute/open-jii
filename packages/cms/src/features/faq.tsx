@@ -12,13 +12,13 @@ import type { PageFaqFieldsFragment, FaqQuestionFieldsFragment } from "../lib/__
 interface FaqContentProps {
   faq: PageFaqFieldsFragment;
   locale: string;
-  preview?: boolean;
+  preview: boolean;
 }
 
 export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
   faq,
   locale,
-  preview = false,
+  preview,
 }) => {
   // Enable live updates only in preview mode using the correct options signature
   const liveFaq = useContentfulLiveUpdates<PageFaqFieldsFragment>(faq, {
@@ -42,30 +42,27 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
       <div className="mb-12 text-left">
         <h1
           className="mb-4 text-center text-4xl font-bold text-gray-900"
-          {...(preview ? inspectorProps({ fieldId: "title" }) : {})}
+          {...inspectorProps({ fieldId: "title" })}
         >
           {currentFaq.title}
         </h1>
         {typeof currentFaq.intro === "string" ? (
           <p
-            className="mx-auto max-w-2xl text-lg text-gray-600"
-            {...(preview ? inspectorProps({ fieldId: "intro" }) : {})}
+            className="mx-auto max-w-2xl text-center text-lg text-gray-600"
+            {...inspectorProps({ fieldId: "intro" })}
           >
             {currentFaq.intro}
           </p>
         ) : null}
       </div>
-      <div className="space-y-6">
+      <div className="space-y-6" {...inspectorProps({ fieldId: `questions` })}>
         {(currentFaq.questionsCollection?.items || [])
           .filter((q): q is FaqQuestionFieldsFragment => q?.__typename === "ComponentFaqQuestion")
-          .map((q, idx) =>
+          .map((q) =>
             q ? (
               <div
                 key={q.sys.id}
-                className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
-                {...(preview
-                  ? inspectorProps({ fieldId: `questionsCollection.items[${idx}]` })
-                  : {})}
+                className="rounded-lg border border-gray-200 bg-gradient-to-br from-gray-50 via-white to-gray-100 p-6 shadow-sm transition-shadow hover:shadow-md"
               >
                 <h3 className="mb-3 text-xl font-semibold text-gray-900">{q.question}</h3>
                 {q.answer?.json && (

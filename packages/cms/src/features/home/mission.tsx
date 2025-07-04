@@ -13,25 +13,25 @@ import type { PageHomeMissionFieldsFragment } from "../../lib/__generated/sdk";
 
 interface HomeAboutMissionProps {
   missionData: PageHomeMissionFieldsFragment;
-  preview?: boolean;
-  locale?: string;
+  preview: boolean;
+  locale: string;
 }
 
 export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
   missionData,
-  preview = false,
+  preview,
   locale,
 }) => {
   // Enable live updates only in preview mode
   const liveMission = useContentfulLiveUpdates<PageHomeMissionFieldsFragment>(missionData, {
     skip: !preview,
-    ...(locale ? { locale } : {}),
+    locale,
   });
   const currentMission = liveMission || missionData;
 
   const inspectorProps = useContentfulInspectorMode({
     entryId: currentMission?.sys?.id,
-    ...(locale ? { locale } : {}),
+    locale,
   });
   if (!currentMission) return null;
   return (
@@ -39,14 +39,14 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
       <div className="flex-1 text-center md:text-left">
         <h2
           className="from-jii-medium-green to-jii-dark-green mb-6 bg-gradient-to-r bg-clip-text text-4xl font-bold text-transparent"
-          {...(preview ? inspectorProps({ fieldId: "title" }) : {})}
+          {...inspectorProps({ fieldId: "title" })}
         >
           {currentMission.title}
         </h2>
         {currentMission.about?.json ? (
           <div
             className="mb-8 text-lg leading-relaxed text-gray-600"
-            {...(preview ? inspectorProps({ fieldId: "about" }) : {})}
+            {...inspectorProps({ fieldId: "about" })}
           >
             {documentToReactComponents(currentMission.about.json)}
           </div>
@@ -54,7 +54,7 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
         <div className="rounded-2xl border-l-4 border-emerald-400 bg-gradient-to-r from-emerald-50 to-blue-50 p-8">
           <h3
             className="mb-4 flex items-center space-x-2 text-2xl font-bold text-emerald-700"
-            {...(preview ? inspectorProps({ fieldId: "subtitle" }) : {})}
+            {...inspectorProps({ fieldId: "subtitle" })}
           >
             <Globe className="h-6 w-6" />
             <span>{currentMission.subtitle}</span>
@@ -62,7 +62,7 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
           {currentMission.mission?.json ? (
             <p
               className="font-medium leading-relaxed text-gray-700"
-              {...(preview ? inspectorProps({ fieldId: "mission" }) : {})}
+              {...inspectorProps({ fieldId: "mission" })}
             >
               {documentToReactComponents(currentMission.mission.json)}
             </p>
@@ -72,11 +72,11 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
       {/* Image section only if image exists */}
       {currentMission.image?.url && (
         <div className="w-full md:flex-1">
-          <div className="group relative h-full overflow-hidden rounded-2xl">
-            <div
-              className="h-full w-full"
-              {...(preview ? inspectorProps({ fieldId: "image" }) : {})}
-            >
+          <div
+            className="group relative h-full overflow-hidden rounded-2xl"
+            {...inspectorProps({ fieldId: "image" })}
+          >
+            <div className="h-full w-full">
               <Image
                 src={currentMission.image.url}
                 alt={currentMission.image.title || "Scientific research and collaboration"}

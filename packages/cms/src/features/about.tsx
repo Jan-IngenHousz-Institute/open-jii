@@ -13,10 +13,10 @@ import type { PageAboutFieldsFragment } from "../lib/__generated/sdk";
 interface AboutContentProps {
   about: PageAboutFieldsFragment;
   locale: string;
-  preview?: boolean;
+  preview: boolean;
 }
 
-export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, preview = false }) => {
+export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, preview }) => {
   // Enable live updates only in preview mode using the correct options signature
   const liveAbout = useContentfulLiveUpdates<PageAboutFieldsFragment>(about, {
     locale,
@@ -37,22 +37,25 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
   return (
     <div
       className={`flex w-full max-w-7xl flex-col items-center gap-12 md:gap-16 ${
-        !currentAbout.image?.url ? "md:flex-col" : "md:flex-row md:items-center"
+        !currentAbout.image?.url ? "md:flex-col" : "md:flex-row md:items-stretch"
       }`}
     >
       {/* Image */}
       {currentAbout.image?.url && (
-        <div className="w-full md:w-1/2">
-          <div className="overflow-hidden rounded-3xl shadow-2xl">
+        <div className="flex w-full items-stretch md:flex-1">
+          <div
+            className="group relative h-full w-full flex-1 overflow-hidden rounded-3xl shadow-2xl"
+            {...inspectorProps({ fieldId: "image" })}
+          >
             <Image
               src={currentAbout.image.url}
               alt={currentAbout.image.title || currentAbout.title || "About"}
               width={800}
               height={500}
-              className="w-full object-cover"
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
               priority
-              {...(preview ? inspectorProps({ fieldId: "image" }) : {})}
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/20 to-transparent"></div>
           </div>
         </div>
       )}
@@ -60,12 +63,12 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
       {/* Title + Rich Text */}
       <div
         className={`flex w-full flex-col justify-center text-left ${
-          currentAbout.image?.url ? "md:w-1/2" : "md:w-full"
+          currentAbout.image?.url ? "md:flex-1" : "md:w-full"
         }`}
       >
         <h1
           className="text-jii-dark-green mb-8 text-5xl font-bold tracking-tight"
-          {...(preview ? inspectorProps({ fieldId: "title" }) : {})}
+          {...inspectorProps({ fieldId: "title" })}
         >
           {currentAbout.title}
         </h1>
@@ -77,7 +80,7 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
             style={
               !currentAbout.image?.url ? { marginLeft: 0, marginRight: 0, textAlign: "left" } : {}
             }
-            {...(preview ? inspectorProps({ fieldId: "description" }) : {})}
+            {...inspectorProps({ fieldId: "description" })}
           >
             {documentToReactComponents(currentAbout.description.json)}
           </div>

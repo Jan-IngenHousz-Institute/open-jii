@@ -14,19 +14,19 @@ import type {
 
 interface HomePartnersProps {
   partnersData: PageHomePartnersFieldsFragment;
-  preview?: boolean;
-  locale?: string;
+  preview: boolean;
+  locale: string;
 }
 
-export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, preview = false, locale }) => {
+export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, preview, locale }) => {
   const livePartners = useContentfulLiveUpdates<PageHomePartnersFieldsFragment>(partnersData, {
     skip: !preview,
-    ...(locale ? { locale } : {}),
+    locale,
   });
   const currentPartners = livePartners || partnersData;
   const inspectorProps = useContentfulInspectorMode({
     entryId: currentPartners?.sys?.id,
-    ...(locale ? { locale } : {}),
+    locale,
   });
   if (!currentPartners) return null;
 
@@ -42,7 +42,7 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
         <>
           <h2
             className="text-jii-dark-green mb-4 text-center text-3xl font-bold"
-            {...(preview ? inspectorProps({ fieldId: "title" }) : {})}
+            {...inspectorProps({ fieldId: "title" })}
           >
             {currentPartners.title}
           </h2>
@@ -50,19 +50,21 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
             <p
               className="mx-auto mb-12 w-full max-w-3xl break-words text-center text-gray-500"
               style={{ wordBreak: "break-word" }}
-              {...(preview ? inspectorProps({ fieldId: "subtitle" }) : {})}
+              {...inspectorProps({ fieldId: "subtitle" })}
             >
               {currentPartners.subtitle}
             </p>
           )}
         </>
       )}
-      <div className="mb-12 flex w-full flex-wrap justify-center gap-6">
+      <div
+        className="mb-12 flex w-full flex-wrap justify-center gap-6"
+        {...inspectorProps({ fieldId: `partners` })}
+      >
         {items.map((partner, idx) => (
           <div
             key={idx}
             className="flex w-full max-w-xs flex-col items-center rounded-xl border bg-white p-6 transition hover:shadow-md"
-            {...(preview ? inspectorProps({ fieldId: `partnersCollection.items[${idx}]` }) : {})}
           >
             {partner.logo && partner.logo.url ? (
               <Image
@@ -87,6 +89,7 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
           <div
             className="scrollbar-hide flex gap-4 overflow-x-auto px-1 py-2"
             style={{ scrollSnapType: "x mandatory" }}
+            {...inspectorProps({ fieldId: `images` })}
           >
             {currentPartners.imagesCollection?.items?.map((img, idx) =>
               img?.url ? (
@@ -98,9 +101,6 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
                   height={500}
                   className="w-full min-w-[600px] max-w-2xl snap-center rounded-2xl object-cover shadow-sm"
                   priority={idx === 0}
-                  {...(preview
-                    ? inspectorProps({ fieldId: `imagesCollection.items[${idx}]` })
-                    : {})}
                 />
               ) : null,
             )}

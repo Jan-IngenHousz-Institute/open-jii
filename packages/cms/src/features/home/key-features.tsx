@@ -11,24 +11,25 @@ import type { PageHomeFeaturesFieldsFragment } from "../../lib/__generated/sdk";
 
 interface HomeKeyFeaturesProps {
   featuresData: PageHomeFeaturesFieldsFragment;
-  preview?: boolean;
-  locale?: string;
+  preview: boolean;
+  locale: string;
 }
 
 export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
   featuresData,
-  preview = false,
+  preview,
   locale,
 }) => {
   const liveFeatures = useContentfulLiveUpdates<PageHomeFeaturesFieldsFragment>(featuresData, {
     skip: !preview,
-    ...(locale ? { locale } : {}),
+    locale,
   });
   const currentFeatures = liveFeatures || featuresData;
   const inspectorProps = useContentfulInspectorMode({
     entryId: currentFeatures?.sys?.id,
-    ...(locale ? { locale } : {}),
+    locale,
   });
+
   if (!currentFeatures) return null;
 
   return (
@@ -36,27 +37,29 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
       <div className="mb-16 text-center">
         <h2
           className="from-jii-medium-green to-jii-dark-green mb-4 bg-gradient-to-r bg-clip-text text-4xl font-bold text-transparent"
-          {...(preview ? inspectorProps({ fieldId: "title" }) : {})}
+          {...inspectorProps({ fieldId: "title" })}
         >
           {currentFeatures.title}
         </h2>
         {currentFeatures.subtitle && (
           <p
             className="mx-auto max-w-3xl text-xl text-gray-600"
-            {...(preview ? inspectorProps({ fieldId: "subtitle" }) : {})}
+            {...inspectorProps({ fieldId: "subtitle" })}
           >
             {currentFeatures.subtitle}
           </p>
         )}
       </div>
 
-      <div className="grid w-full grid-cols-1 gap-8 md:grid-cols-2">
+      <div
+        className="grid w-full grid-cols-1 gap-8 md:grid-cols-2"
+        {...inspectorProps({ fieldId: `features` })}
+      >
         {currentFeatures.featuresCollection?.items?.map((feature, idx) =>
           feature && feature.__typename === "ComponentFeature" ? (
             <div
               key={idx}
               className="border-jii-light-blue group relative transform overflow-hidden rounded-3xl border bg-white/90 p-8 shadow-xl backdrop-blur-sm transition-all duration-300 hover:shadow-2xl"
-              {...(preview ? inspectorProps({ fieldId: `featuresCollection.items[${idx}]` }) : {})}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-gray-50/40 to-slate-50/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
               <div className="relative z-10">
