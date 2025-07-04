@@ -391,6 +391,9 @@ importers:
       react-native-swipe-list-view:
         specifier: ^3.2.9
         version: 3.2.9(prop-types@15.8.1)(react-native@0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0))(react@19.0.0)
+      react-native-toast-message:
+        specifier: ^2.3.3
+        version: 2.3.3(react-native@0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0))(react@19.0.0)
       react-native-usb-serialport-for-android:
         specifier: ^0.5.0
         version: 0.5.0(patch_hash=9e2d330f192bae950cb28995b520bfa3da427c7736afa4d77e62aa2b2d77fd2b)(react-native@0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0))(react@19.0.0)
@@ -14038,6 +14041,12 @@ packages:
       prop-types: '>=15.5.0'
       react: '>=0.14.8'
       react-native: '>=0.23.1'
+
+  react-native-toast-message@2.3.3:
+    resolution: {integrity: sha512-4IIUHwUPvKHu4gjD0Vj2aGQzqPATiblL1ey8tOqsxOWRPGGu52iIbL8M/mCz4uyqecvPdIcMY38AfwRuUADfQQ==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
 
   react-native-usb-serialport-for-android@0.5.0:
     resolution: {integrity: sha512-J+pQZBxcmlFbPGzBr/sUJkWRxNiJCzIIAbcDF4LySH6u/WY0/qe7Vdi/SCHTw+ukV9tfnanPAa/JxWR0JQwUOA==}
@@ -34559,6 +34568,11 @@ snapshots:
   react-native-swipe-list-view@3.2.9(prop-types@15.8.1)(react-native@0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0))(react@19.0.0):
     dependencies:
       prop-types: 15.8.1
+      react: 19.0.0
+      react-native: 0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0)
+
+  react-native-toast-message@2.3.3(react-native@0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0))(react@19.0.0):
+    dependencies:
       react: 19.0.0
       react-native: 0.79.3(@babel/core@7.27.1)(@types/react@19.1.4)(react@19.0.0)
 

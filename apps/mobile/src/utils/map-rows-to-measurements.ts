@@ -31,8 +31,12 @@ export interface MeasurementRecord {
 
 export function mapRowsToMeasurements(
   columns: { name: string; type_name: string }[],
-  rows: any[][],
+  rows: any[][] | undefined,
 ): MeasurementRecord[] {
+  if (!rows) {
+    return [];
+  }
+
   return rows.map((row) => {
     const rawRecord: any = {};
 
