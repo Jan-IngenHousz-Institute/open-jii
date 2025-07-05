@@ -41,7 +41,7 @@ export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col items-center">
-      <div className="relative w-full">
+      <div className="relative w-full overflow-hidden rounded-2xl">
         {/* Carousel controls */}
         {filteredImages.length > 1 && (
           <>
@@ -92,7 +92,7 @@ export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps
           .carousel-scrollbar-hide::-webkit-scrollbar { display: none; }
         `}</style>
         <div
-          className="carousel-scrollbar-hide scrollbar-hide flex gap-4 overflow-x-auto scroll-smooth px-1 py-2"
+          className="carousel-scrollbar-hide scrollbar-hide flex gap-4 overflow-x-auto scroll-smooth px-1"
           ref={carouselRef}
           style={{
             scrollSnapType: "x mandatory",
@@ -125,23 +125,23 @@ export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps
             ) : null,
           )}
         </div>
-        {/* Pagination dots */}
-        {filteredImages.length > 1 && (
-          <div className="mt-4 flex w-full justify-center gap-1">
-            {filteredImages.map((_, idx) => (
-              <button
-                key={idx}
-                aria-label={`Go to image ${idx + 1}`}
-                className={`h-2 w-2 rounded-full border-none transition-all ${
-                  idx === currentIdx ? "bg-jii-dark-green" : "bg-gray-300"
-                }`}
-                onClick={() => scrollToIdx(idx)}
-                style={{ outline: "none" }}
-              />
-            ))}
-          </div>
-        )}
       </div>
+      {/* Pagination dots - moved outside the container */}
+      {filteredImages.length > 1 && (
+        <div className="mt-4 flex w-full justify-center gap-1">
+          {filteredImages.map((_, idx) => (
+            <button
+              key={idx}
+              aria-label={`Go to image ${idx + 1}`}
+              className={`h-2 w-2 rounded-full border-none transition-all ${
+                idx === currentIdx ? "bg-jii-dark-green" : "bg-gray-300"
+              }`}
+              onClick={() => scrollToIdx(idx)}
+              style={{ outline: "none" }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
