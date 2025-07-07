@@ -15,7 +15,7 @@ interface ExperimentDataPageProps {
 export default function ExperimentDataPage({ params }: ExperimentDataPageProps) {
   const { id, locale } = use(params);
   const { data, isLoading, error } = useExperiment(id);
-  const { t } = useTranslation(locale, "experiments");
+  const { t } = useTranslation(undefined, "experiments");
 
   if (isLoading) {
     return <div>{t("loading")}</div>;
