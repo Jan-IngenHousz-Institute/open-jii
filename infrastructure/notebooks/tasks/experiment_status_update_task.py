@@ -85,6 +85,10 @@ def extract_parameters(dbutils, spark) -> Dict[str, Any]:
     # Validate that the webhook URL uses HTTPS
     if webhook_url and not webhook_url.lower().startswith("https://"):
         raise ValueError("Webhook URL must use HTTPS protocol.")
+        
+    # Validate that the webhook URL contains the :experimentId placeholder
+    if ":experimentId" not in webhook_url:
+        logger.warning("Webhook URL should contain ':experimentId' placeholder. Using the provided URL as-is.")
 
     # Get experiment ID
     experiment_id = dbutils.widgets.get("experiment_id")
@@ -241,12 +245,13 @@ class WebhookClient:
         
         return signature
     
-    def send_status_update(self, payload: Dict[str, Any], timeout: int = 30) -> Dict[str, Any]:
+    def send_status_update(self, payload: Dict[str, Any], experiment_id: str, timeout: int = 30) -> Dict[str, Any]:
         """
         Send status update to webhook with HMAC authentication.
         
         Args:
             payload: Webhook payload
+            experiment_id: ID of the experiment to update
             timeout: Request timeout in seconds
             
         Returns:
@@ -271,9 +276,12 @@ class WebhookClient:
             # to ensure the signature matches what was signed
             canonical_payload = json.dumps(payload, sort_keys=True, separators=(',', ':'))
             
+            # Replace :experimentId placeholder in the webhook URL with the actual experiment ID
+            webhook_url = self.webhook_url.replace(':experimentId', experiment_id)
+            
             # Use data with explicit content-type to ensure the exact canonical format is preserved
             response = self.session.post(
-                self.webhook_url,
+                webhook_url,
                 data=canonical_payload,
                 headers=headers,
                 timeout=timeout
@@ -292,7 +300,6 @@ class WebhookClient:
 # DBTITLE 1,Status Update Function
 
 def create_status_payload(
-    experiment_id: str,
     status: str,
     job_run_id: str,
     task_run_id: str
@@ -301,7 +308,6 @@ def create_status_payload(
     Create payload for status update webhook.
     
     Args:
-        experiment_id: Experiment identifier
         status: Provisioning status
         job_run_id: Job run ID
         task_run_id: Task run ID
@@ -312,7 +318,6 @@ def create_status_payload(
     timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
     payload = {
-        "experimentId": experiment_id,
         "status": status,
         "timestamp": timestamp,
         "jobRunId": str(job_run_id),
@@ -343,14 +348,13 @@ def main() -> None:
         
         # Create payload
         payload = create_status_payload(
-            experiment_id=params["experiment_id"],
             status=params["status"],
             job_run_id=params["job_run_id"],
             task_run_id=params["task_run_id"]
         )
         
         # Send update
-        response = client.send_status_update(payload)
+        response = client.send_status_update(payload, params["experiment_id"])
         
         # Print summary
         print("\n" + "="*50)
