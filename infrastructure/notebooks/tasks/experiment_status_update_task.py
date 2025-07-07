@@ -17,7 +17,8 @@ Parameters (all provided via Databricks widgets):
 - webhook_url: MUST be provided as a parameter (Databricks widget)
                MUST use HTTPS protocol for security reasons
 - key_scope: MUST be provided as a parameter (Databricks widget)
-- key_name: MUST be provided as a parameter (Databricks widget)
+- webhook_secret_name: MUST be provided as a parameter (Databricks widget)
+- api_key_id_name: MUST be provided as a parameter (Databricks widget)
 - experiment_id: Required UUID of the experiment
 - job_run_id: Required ID of the job run
 - task_run_id: Required ID of the task run
@@ -30,6 +31,9 @@ Parameters (all provided via Databricks widgets):
 import json
 import logging
 import requests
+import time
+import hmac
+import hashlib
 from datetime import datetime
 from enum import Enum
 from typing import Dict, Any
@@ -159,14 +163,20 @@ def extract_parameters(dbutils, spark) -> Dict[str, Any]:
     if status not in [s.value for s in ProvisioningStatus]:
         raise ValueError(f"Invalid status: {status}. Must be one of: {', '.join([s.value for s in ProvisioningStatus])}")
 
-    # Get API key secret information from widgets
+    # Get API key and webhook secret information from widgets
     key_scope = dbutils.widgets.get("key_scope")
     if not key_scope:
         raise ValueError("API key scope not provided. Please provide it as a widget parameter 'key_scope'.")
 
-    key_name = dbutils.widgets.get("key_name")
-    if not key_name:
-        raise ValueError("API key secret not provided. Please provide it as a widget parameter 'key_name'.")
+    # We no longer need key_name parameter as we're using HMAC authentication
+        
+    webhook_secret_name = dbutils.widgets.get("webhook_secret_name")
+    if not webhook_secret_name:
+        raise ValueError("Webhook secret name not provided. Please provide it as a widget parameter 'webhook_secret_name'.")
+        
+    api_key_id_name = dbutils.widgets.get("api_key_id_name")
+    if not api_key_id_name:
+        raise ValueError("API key ID secret name not provided. Please provide it as a widget parameter 'api_key_id_name'.")
 
     return {
         "webhook_url": webhook_url,
@@ -175,7 +185,8 @@ def extract_parameters(dbutils, spark) -> Dict[str, Any]:
         "task_run_id": task_run_id,
         "status": status,
         "key_scope": key_scope,
-        "key_name": key_name
+        "webhook_secret_name": webhook_secret_name,
+        "api_key_id_name": api_key_id_name
     }
 
 # COMMAND ----------
@@ -183,11 +194,12 @@ def extract_parameters(dbutils, spark) -> Dict[str, Any]:
 # DBTITLE 1,Webhook Client
 
 class WebhookClient:
-    """Client for sending status updates to the OpenJII backend webhook."""
+    """Client for sending status updates to the OpenJII backend webhook with HMAC authentication."""
     
-    def __init__(self, webhook_url: str, key_scope: str, key_name: str, dbutils):
+    def __init__(self, webhook_url: str, key_scope: str, webhook_secret_name: str, api_key_id_name: str, dbutils):
         self.webhook_url = webhook_url
-        self.api_key = dbutils.secrets.get(scope=key_scope, key=key_name)
+        self.webhook_secret = dbutils.secrets.get(scope=key_scope, key=webhook_secret_name)
+        self.api_key_id = dbutils.secrets.get(scope=key_scope, key=api_key_id_name)
         self.session = self._create_session()
     
     def _create_session(self) -> requests.Session:
@@ -203,9 +215,35 @@ class WebhookClient:
         session.mount("https://", adapter)
         return session
     
+    def _create_hmac_signature(self, payload: Dict[str, Any], timestamp: int) -> str:
+        """
+        Create HMAC signature for the webhook request.
+        
+        Args:
+            payload: The payload to sign
+            timestamp: Unix timestamp in seconds
+            
+        Returns:
+            Hex digest of the HMAC signature
+        """
+        # Create canonical JSON string (sorted keys, compact representation)
+        canonical_payload = json.dumps(payload, sort_keys=True, separators=(',', ':'))
+        
+        # Create payload string with timestamp prefix as required by the backend
+        message = f"{timestamp}:{canonical_payload}"
+        
+        # Create HMAC signature using SHA-256
+        signature = hmac.new(
+            key=self.webhook_secret.encode('utf-8'),
+            msg=message.encode('utf-8'),
+            digestmod=hashlib.sha256
+        ).hexdigest()
+        
+        return signature
+    
     def send_status_update(self, payload: Dict[str, Any], timeout: int = 30) -> Dict[str, Any]:
         """
-        Send status update to webhook.
+        Send status update to webhook with HMAC authentication.
         
         Args:
             payload: Webhook payload
@@ -214,17 +252,33 @@ class WebhookClient:
         Returns:
             Response JSON
         """
+        # Create timestamp for request (seconds since epoch)
+        timestamp = int(time.time())
+        
+        # Create HMAC signature
+        signature = self._create_hmac_signature(payload, timestamp)
+        
+        # Set up headers with HMAC authentication
         headers = {
             "Content-Type": "application/json",
-            "x-api-key": self.api_key
+            "x-api-key-id": self.api_key_id,
+            "x-databricks-signature": signature,
+            "x-databricks-timestamp": str(timestamp)
         }
         
-        logger.info("Sending webhook request to webhook URL")
+        logger.info("Sending authenticated webhook request to webhook URL")
+        logger.debug(f"Using API key ID: {self.api_key_id}")
+        logger.debug(f"Request headers: {headers}")
         
         try:
+            # We need to use the canonical JSON in the actual request as well
+            # to ensure the signature matches what was signed
+            canonical_payload = json.dumps(payload, sort_keys=True, separators=(',', ':'))
+            
+            # Use data with explicit content-type to ensure the exact canonical format is preserved
             response = self.session.post(
                 self.webhook_url,
-                json=payload,
+                data=canonical_payload,
                 headers=headers,
                 timeout=timeout
             )
@@ -286,7 +340,8 @@ def main() -> None:
         client = WebhookClient(
             webhook_url=params["webhook_url"],
             key_scope=params["key_scope"],
-            key_name=params["key_name"],
+            webhook_secret_name=params["webhook_secret_name"],
+            api_key_id_name=params["api_key_id_name"],
             dbutils=dbutils
         )
         
