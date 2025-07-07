@@ -21,7 +21,9 @@
     "link": "Link",
     "secondary": "sekundär",
     "outline": "Umriss",
-    "days": "Tage"
+    "days": "Tage",
+    "created": "Erstellt",
+    "updated": "Aktualisiert"
   },
   "navigation": {
     "experiments": "Experimente",
@@ -170,7 +172,9 @@
     "serverError": "Serverfehler aufgetreten",
     "validationError": "Validierungsfehler",
     "unauthorized": "Unbefugter Zugriff",
-    "forbidden": "Zugriff verboten"
+    "forbidden": "Zugriff verboten",
+    "failedToLoadProtocol": "Protokoll konnte nicht geladen werden",
+    "loginRequired": "Bitte melden Sie sich an, um auf diese Seite zuzugreifen"
   },
   "footer": {
     "aboutUs": "Über uns",
@@ -223,5 +227,75 @@
   "article": {
     "featured": "vorgestellt",
     "relatedArticles": "Verwandte artikel"
+  },
+  "protocols": {
+    "title": "Protokolle",
+    "newProtocol": "Neues Protokoll",
+    "overview": "Übersicht",
+    "create": "Protokoll erstellen",
+    "edit": "Protokoll bearbeiten",
+    "delete": "Protokoll löschen",
+    "status": "Status",
+    "createdAt": "Erstellt am",
+    "updatedAt": "Aktualisiert am",
+    "noProtocols": "Keine Protokolle gefunden",
+    "protocolCreated": "Protokoll erfolgreich erstellt",
+    "protocolUpdated": "Protokoll erfolgreich aktualisiert",
+    "protocolDeleted": "Protokoll erfolgreich gelöscht",
+    "listDescription": "Diese Seite zeigt eine Liste der vorhandenen Protokolle.",
+    "protocol": "Protokoll",
+    "settings": "Protokolleinstellungen",
+    "settingsDescription": "Verwalten Sie Einstellungen für dieses Protokoll.",
+    "manageProtocolDescription": "Anzeigen und verwalten Sie die Details und Einstellungen Ihres Protokolls.",
+    "noDescription": "Keine Beschreibung vorhanden",
+    "protocolId": "Protokoll-ID",
+    "descriptionTitle": "Beschreibung",
+    "codeTitle": "Protokollcode",
+    "notFound": "Protokoll nicht gefunden",
+    "notFoundDescription": "Das angeforderte Protokoll konnte nicht gefunden werden",
+    "family": "Sensorfamilie",
+    "onlyCreatorCanEdit": "Nur der Protokollersteller kann auf die Einstellungen zugreifen"
+  },
+  "newProtocol": {
+    "description": "Richten Sie ein neues Protokoll ein.",
+    "name": "Name",
+    "description_field": "Beschreibung",
+    "code": "Protokollcode",
+    "cancel": "Abbrechen",
+    "creating": "Wird erstellt...",
+    "create": "Protokoll erstellen",
+    "detailsTitle": "Protokolldetails",
+    "detailsDescription": "Legen Sie den Namen und die Beschreibung für Ihr Protokoll fest",
+    "family": "Sensor-Familie",
+    "selectFamily": "Wählen Sie eine Sensor-Familie",
+    "codeTitle": "Protokollcode",
+    "codeDescription": "Definieren Sie die Code-Struktur für Ihr Protokoll",
+    "codePlaceholder": "Protokollcode als JSON eingeben",
+    "finalizeSetup": "Protokoll erstellen"
+  },
+  "protocolSettings": {
+    "loading": "Protokolleinstellungen werden geladen...",
+    "notFound": "Protokoll nicht gefunden",
+    "generalSettings": "Allgemeine Einstellungen",
+    "generalDescription": "Grundlegende Informationen über das Protokoll",
+    "protocolInfo": "Protokollinformationen",
+    "protocolInfoDescription": "Protokoll-Metadaten und Gefahrenzone anzeigen",
+    "name": "Name",
+    "description": "Beschreibung",
+    "dangerZone": "Gefahrenzone",
+    "deleteProtocol": "Protokoll löschen",
+    "deleteWarning": "Sobald Sie ein Protokoll löschen, gibt es kein Zurück mehr. Bitte seien Sie sicher.",
+    "delete": "Löschen",
+    "deleting": "Löschen...",
+    "cancel": "Abbrechen",
+    "confirmDelete": "Sind Sie sicher, dass Sie löschen möchten",
+    "save": "Speichern",
+    "saving": "Speichern...",
+    "created": "Erstellt",
+    "updated": "Aktualisiert",
+    "code": "Protokollcode",
+    "codePlaceholder": "Protokollcode als JSON eingeben",
+    "codeDescription": "Definieren Sie die JSON-Struktur und Logik für Ihr Protokoll",
+    "family": "Sensor-Familie"
   }
 }

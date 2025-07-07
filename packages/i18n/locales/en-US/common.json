@@ -21,7 +21,9 @@
     "link": "link",
     "secondary": "secondary",
     "outline": "outline",
-    "days": "days"
+    "days": "days",
+    "created": "Created",
+    "updated": "Updated"
   },
   "navigation": {
     "experiments": "Experiments",
@@ -172,7 +174,9 @@
     "serverError": "Server error occurred",
     "validationError": "Validation error",
     "unauthorized": "Unauthorized access",
-    "forbidden": "Access forbidden"
+    "forbidden": "Access forbidden",
+    "failedToLoadProtocol": "Failed to load protocol",
+    "loginRequired": "Please log in to access this page"
   },
   "footer": {
     "aboutUs": "About Us",
@@ -225,5 +229,75 @@
   "article": {
     "featured": "Featured",
     "relatedArticles": "Related articles"
+  },
+  "protocols": {
+    "title": "Protocols",
+    "newProtocol": "New Protocol",
+    "overview": "Overview",
+    "create": "Create Protocol",
+    "edit": "Edit Protocol",
+    "delete": "Delete Protocol",
+    "status": "Status",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At",
+    "noProtocols": "No protocols found",
+    "protocolCreated": "Protocol created successfully",
+    "protocolUpdated": "Protocol updated successfully",
+    "protocolDeleted": "Protocol deleted successfully",
+    "listDescription": "This page will show a list of existing protocols.",
+    "protocol": "Protocol",
+    "settings": "Protocol Settings",
+    "settingsDescription": "Manage settings for this protocol.",
+    "manageProtocolDescription": "View and manage your protocol's details and settings.",
+    "noDescription": "No description provided",
+    "protocolId": "Protocol ID",
+    "descriptionTitle": "Description",
+    "codeTitle": "Protocol Code",
+    "notFound": "Protocol not found",
+    "notFoundDescription": "The requested protocol could not be found",
+    "family": "Sensor Family",
+    "onlyCreatorCanEdit": "Only the protocol creator can access settings"
+  },
+  "newProtocol": {
+    "description": "Set up a new protocol.",
+    "name": "Name",
+    "description_field": "Description",
+    "code": "Protocol Code",
+    "cancel": "Cancel",
+    "creating": "Creating...",
+    "create": "Create Protocol",
+    "detailsTitle": "Protocol Details",
+    "detailsDescription": "Set the name and description for your protocol",
+    "family": "Sensor Family",
+    "selectFamily": "Select a sensor family",
+    "codeTitle": "Protocol Code",
+    "codeDescription": "Define the code structure for your protocol",
+    "codePlaceholder": "Enter protocol code as JSON",
+    "finalizeSetup": "Create Protocol"
+  },
+  "protocolSettings": {
+    "loading": "Loading protocol settings...",
+    "notFound": "Protocol not found",
+    "generalSettings": "General Settings",
+    "generalDescription": "Basic information about the protocol",
+    "protocolInfo": "Protocol Information",
+    "protocolInfoDescription": "View protocol metadata and danger zone",
+    "name": "Name",
+    "description": "Description",
+    "dangerZone": "Danger Zone",
+    "deleteProtocol": "Delete Protocol",
+    "deleteWarning": "Once you delete a protocol, there is no going back. Please be certain.",
+    "delete": "Delete",
+    "deleting": "Deleting...",
+    "cancel": "Cancel",
+    "confirmDelete": "Are you sure you want to delete",
+    "save": "Save",
+    "saving": "Saving...",
+    "created": "Created",
+    "updated": "Updated",
+    "code": "Protocol Code",
+    "codePlaceholder": "Enter protocol code as JSON",
+    "codeDescription": "Define the JSON structure and logic for your protocol",
+    "family": "Sensor Family"
   }
 }
