@@ -86,13 +86,7 @@ export class HmacGuard implements CanActivate {
       // Get the raw body directly from the request
       let rawBody: string;
       try {
-        // Check if we have a raw body property on the request
-        const reqWithRaw = request as Request & { rawBody?: string };
-
-        if (reqWithRaw.rawBody) {
-          // If we have raw body saved by some middleware, use it
-          rawBody = reqWithRaw.rawBody;
-        } else if (request.body) {
+        if (request.body) {
           // If body-parser already consumed the stream, use the parsed body
           // and re-stringify it in a stable way
           rawBody = stableStringify(request.body);
