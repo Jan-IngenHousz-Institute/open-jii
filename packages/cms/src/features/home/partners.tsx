@@ -52,15 +52,14 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
       {items.length > 0 && (
         <>
           <h2
-            className="text-jii-dark-green mb-4 text-center text-3xl font-bold"
+            className="from-jii-medium-green to-jii-dark-green mb-4 bg-gradient-to-r bg-clip-text text-center text-4xl font-bold text-transparent"
             {...inspectorProps({ fieldId: "title" })}
           >
             {currentPartners.title}
           </h2>
           {currentPartners.subtitle && (
             <p
-              className="mx-auto mb-12 w-full max-w-3xl break-words text-center text-gray-500"
-              style={{ wordBreak: "break-word" }}
+              className="mx-auto mb-12 max-w-3xl text-center text-xl text-gray-600"
               {...inspectorProps({ fieldId: "subtitle" })}
             >
               {currentPartners.subtitle}
@@ -79,7 +78,7 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
           });
           return (
             <div
-              key={idx}
+              key={partner.sys.id}
               className="flex w-full max-w-xs flex-col items-center rounded-2xl border border-gray-200 bg-gray-50 p-8 shadow-sm transition-colors duration-200 hover:bg-white hover:shadow-md"
             >
               {/* Removed gradient overlay and backdrop-blur for performance */}

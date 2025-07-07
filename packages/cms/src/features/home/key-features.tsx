@@ -64,7 +64,7 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
           });
           return (
             <div
-              key={idx}
+              key={feature.sys.id}
               className="border-jii-light-blue hover:border-jii-dark-green hover:bg-jii-light-green/40 before:bg-gradient-radial before:from-jii-light-blue/40 group relative overflow-hidden rounded-3xl border bg-white/90 p-8 shadow-xl backdrop-blur-sm transition-colors duration-200 before:pointer-events-none before:absolute before:inset-0 before:rounded-3xl before:to-transparent before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100"
             >
               <div className="relative z-10">

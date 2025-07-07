@@ -57,7 +57,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
     // Remove linkProps and spread props directly in <Link>
     return (
       <Link
-        key={`${button.url}-${index}`}
+        key={button.sys.id}
         href={href}
         className="sm:h-14"
         {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
