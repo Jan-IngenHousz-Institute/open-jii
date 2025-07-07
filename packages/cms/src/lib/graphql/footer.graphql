@@ -1,0 +1,44 @@
+fragment FooterFields on Footer {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+  internalName
+  brand
+  title
+  badge
+  menuTitle
+  supportTitle
+  copyright
+  menuButtonsCollection {
+    items {
+      ...ButtonFields
+    }
+  }
+  supportButtonsCollection {
+    items {
+      ...ButtonFields
+    }
+  }
+}
+
+fragment ButtonFields on ComponentButton {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+  label
+  url
+}
+
+query footer($locale: String, $preview: Boolean) {
+  footerCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...FooterFields
+    }
+  }
+}

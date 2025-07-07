@@ -1,0 +1,34 @@
+fragment PageHomeMissionFields on PageHomeMission {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+  internalName
+  title
+  about {
+    json
+  }
+  subtitle
+  mission {
+    json
+  }
+  image {
+    url
+    title
+    sys {
+      id
+      publishedAt
+      environmentId
+    }
+  }
+}
+
+query pageHomeMission($locale: String, $preview: Boolean) {
+  pageHomeMissionCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...PageHomeMissionFields
+    }
+  }
+}

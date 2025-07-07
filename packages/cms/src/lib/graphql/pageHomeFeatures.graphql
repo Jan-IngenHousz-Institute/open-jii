@@ -1,0 +1,45 @@
+fragment PageHomeFeaturesFields on PageHomeFeatures {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+  internalName
+  title
+  subtitle
+  featuresCollection {
+    items {
+      ...FeatureFields
+    }
+  }
+}
+
+fragment FeatureFields on ComponentFeature {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+
+  title
+  subtitle
+  icon {
+    url
+    title
+    sys {
+      id
+      publishedAt
+      environmentId
+    }
+  }
+}
+
+query pageHomeFeatures($locale: String, $preview: Boolean) {
+  pageHomeFeaturesCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...PageHomeFeaturesFields
+    }
+  }
+}

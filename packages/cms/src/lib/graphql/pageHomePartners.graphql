@@ -1,0 +1,60 @@
+fragment PageHomePartnersFields on PageHomePartners {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+  title
+  subtitle
+  partnersCollection {
+    items {
+      ...PartnerFields
+    }
+  }
+  imagesCollection {
+    items {
+      ...ImageFields
+    }
+  }
+}
+
+fragment PartnerFields on ComponentPartner {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+  logo {
+    url
+    title
+    sys {
+      id
+      publishedAt
+      environmentId
+    }
+  }
+  subtitle
+}
+
+fragment ImageFields on Asset {
+  __typename
+  sys {
+    id
+  }
+  title
+  description
+  width
+  height
+  url
+  contentType
+}
+
+query pageHomePartners($locale: String, $preview: Boolean) {
+  pageHomePartnersCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...PageHomePartnersFields
+    }
+  }
+}
