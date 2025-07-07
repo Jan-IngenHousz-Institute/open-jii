@@ -266,10 +266,6 @@ class WebhookClient:
             "x-databricks-timestamp": str(timestamp)
         }
         
-        logger.info("Sending authenticated webhook request to webhook URL")
-        logger.debug(f"Using API key ID: {self.api_key_id}")
-        logger.debug(f"Request headers: {headers}")
-        
         try:
             # We need to use the canonical JSON in the actual request as well
             # to ensure the signature matches what was signed
