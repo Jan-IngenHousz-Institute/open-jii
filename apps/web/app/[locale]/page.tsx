@@ -54,15 +54,6 @@ export default async function Home({ params }: HomePageProps) {
     <>
       <UnifiedNavbar locale={locale} session={session} />
       <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-slate-50 via-white to-blue-50">
-        {/* Animated Background Elements */}
-        <div className="pointer-events-none fixed inset-0 overflow-hidden opacity-30">
-          <div className="absolute left-1/4 top-1/4 h-64 w-64 animate-pulse rounded-full bg-gradient-to-r from-emerald-400/20 to-blue-400/20 blur-3xl"></div>
-          <div
-            className="absolute bottom-1/4 right-1/4 h-80 w-80 animate-pulse rounded-full bg-gradient-to-r from-purple-400/20 to-pink-400/20 blur-3xl"
-            style={{ animationDelay: "2s" }}
-          ></div>
-        </div>
-
         {/* Hero Section */}
         <HomeHeroComponent heroData={homeHero} preview={preview} locale={locale} />
 
