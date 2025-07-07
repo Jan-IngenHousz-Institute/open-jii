@@ -16,19 +16,19 @@ import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-
 // Repositories
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
-import { DatabricksWebhookController } from "./presentation/databricks-webhook.controller";
 // Controllers
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
 import { ExperimentMembersController } from "./presentation/experiment-members.controller";
+import { ExperimentWebhookController } from "./presentation/experiment-webhook.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
 
 @Module({
   imports: [DatabricksModule],
   controllers: [
     ExperimentController,
-    ExperimentMembersController,
     ExperimentDataController,
-    DatabricksWebhookController,
+    ExperimentMembersController,
+    ExperimentWebhookController,
   ],
   providers: [
     // Repositories

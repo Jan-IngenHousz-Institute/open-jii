@@ -2,7 +2,10 @@ import { faker } from "@faker-js/faker";
 import * as crypto from "crypto";
 import { StatusCodes } from "http-status-codes";
 
-import type { DatabricksWebhookPayload, WebhookErrorResponse } from "@repo/api";
+import type {
+  ExperimentProvisioningStatusWebhookPayload,
+  ExperimentWebhookErrorResponse,
+} from "@repo/api";
 import { contract } from "@repo/api";
 
 import { assertSuccess } from "../../common/utils/fp-utils";
@@ -10,7 +13,7 @@ import { stableStringify } from "../../common/utils/stable-json";
 import { TestHarness } from "../../test/test-harness";
 import { ExperimentRepository } from "../core/repositories/experiment.repository";
 
-describe("DatabricksWebhookController", () => {
+describe("ExperimentWebhookController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let experimentRepository: ExperimentRepository;
@@ -49,8 +52,7 @@ describe("DatabricksWebhookController", () => {
       });
 
       // Define webhook payload
-      const webhookPayload: DatabricksWebhookPayload = {
-        experimentId: experiment.id,
+      const webhookPayload: Omit<ExperimentProvisioningStatusWebhookPayload, "experimentId"> = {
         status: "SUCCESS",
         jobRunId: faker.string.numeric(15),
         taskRunId: faker.string.numeric(15),
@@ -66,7 +68,7 @@ describe("DatabricksWebhookController", () => {
 
       // Make the API request with the required headers
       const response = await testApp
-        .post(contract.webhooks.updateProvisioningStatus.path)
+        .post(contract.experiments.updateProvisioningStatus.path.replace(":id", experiment.id))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -97,8 +99,7 @@ describe("DatabricksWebhookController", () => {
       });
 
       // Define webhook payload
-      const webhookPayload: DatabricksWebhookPayload = {
-        experimentId: experiment.id,
+      const webhookPayload: Omit<ExperimentProvisioningStatusWebhookPayload, "experimentId"> = {
         status: "FAILURE",
         jobRunId: faker.string.numeric(15),
         taskRunId: faker.string.numeric(15),
@@ -112,7 +113,7 @@ describe("DatabricksWebhookController", () => {
 
       // Make the API request with the required headers
       const response = await testApp
-        .post(contract.webhooks.updateProvisioningStatus.path)
+        .post(contract.experiments.updateProvisioningStatus.path.replace(":id", experiment.id))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
@@ -143,8 +144,7 @@ describe("DatabricksWebhookController", () => {
       });
 
       // Define webhook payload with non-terminal status
-      const webhookPayload: DatabricksWebhookPayload = {
-        experimentId: experiment.id,
+      const webhookPayload: Omit<ExperimentProvisioningStatusWebhookPayload, "experimentId"> = {
         status: "RUNNING",
         jobRunId: faker.string.numeric(15),
         taskRunId: faker.string.numeric(15),
@@ -158,13 +158,13 @@ describe("DatabricksWebhookController", () => {
 
       // Act & Assert
       await testApp
-        .post(contract.webhooks.updateProvisioningStatus.path)
+        .post(contract.experiments.updateProvisioningStatus.path.replace(":id", experiment.id))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
         .send(webhookPayload)
         .expect(StatusCodes.BAD_REQUEST)
-        .expect(({ body }: { body: WebhookErrorResponse }) => {
+        .expect(({ body }: { body: ExperimentWebhookErrorResponse }) => {
           expect(body.message).toContain(
             "Non-terminal status 'RUNNING' does not require a state change.",
           );
@@ -180,9 +180,9 @@ describe("DatabricksWebhookController", () => {
     });
 
     it("should handle non-existent experiment", async () => {
+      const experimentId = faker.string.uuid();
       // Define webhook payload with non-existent experiment ID
-      const webhookPayload: DatabricksWebhookPayload = {
-        experimentId: faker.string.uuid(),
+      const webhookPayload: Omit<ExperimentProvisioningStatusWebhookPayload, "experimentId"> = {
         status: "SUCCESS",
         jobRunId: faker.string.numeric(15),
         taskRunId: faker.string.numeric(15),
@@ -196,23 +196,20 @@ describe("DatabricksWebhookController", () => {
 
       // Act & Assert
       await testApp
-        .post(contract.webhooks.updateProvisioningStatus.path)
+        .post(contract.experiments.updateProvisioningStatus.path.replace(":id", experimentId))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
         .send(webhookPayload)
         .expect(StatusCodes.NOT_FOUND)
-        .expect(({ body }: { body: WebhookErrorResponse }) => {
-          expect(body.message).toContain(
-            `Experiment with ID ${webhookPayload.experimentId} not found`,
-          );
+        .expect(({ body }: { body: ExperimentWebhookErrorResponse }) => {
+          expect(body.message).toContain(`Experiment with ID ${experimentId} not found`);
         });
     });
 
     it("should reject requests without valid API key ID", async () => {
       // Define webhook payload
-      const webhookPayload: DatabricksWebhookPayload = {
-        experimentId: faker.string.uuid(),
+      const webhookPayload: Omit<ExperimentProvisioningStatusWebhookPayload, "experimentId"> = {
         status: "SUCCESS",
         jobRunId: faker.string.numeric(15),
         taskRunId: faker.string.numeric(15),
@@ -221,10 +218,12 @@ describe("DatabricksWebhookController", () => {
 
       // Make the API request without required headers
       await testApp
-        .post(contract.webhooks.updateProvisioningStatus.path)
+        .post(
+          contract.experiments.updateProvisioningStatus.path.replace(":id", faker.string.uuid()),
+        )
         .send(webhookPayload)
         .expect(StatusCodes.UNAUTHORIZED)
-        .expect(({ body }: { body: WebhookErrorResponse }) => {
+        .expect(({ body }: { body: ExperimentWebhookErrorResponse }) => {
           expect(body.message).toContain("Missing API key ID");
         });
     });
