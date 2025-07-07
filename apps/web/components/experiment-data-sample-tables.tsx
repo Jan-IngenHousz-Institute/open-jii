@@ -1,16 +1,12 @@
 "use client";
 
-import type { ColumnDef } from "@tanstack/react-table";
 import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { TableIcon } from "lucide-react";
 import Link from "next/link";
-import type {
-  DataRow,
-  DataValue,
-  ExperimentDataTableInfo,
-} from "~/components/experiment-data-table";
-import { getReactTableColumns } from "~/components/experiment-data-table";
-import { useExperimentData } from "~/hooks/experiment/useExperimentData/useExperimentData";
+import React from "react";
+import { formatValue } from "~/components/experiment-data-table";
+import type { SampleTable } from "~/hooks/experiment/useExperimentData/useExperimentData";
+import { useExperimentSampleData } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n";
@@ -24,8 +20,6 @@ import {
   TableRow,
 } from "@repo/ui/components";
 
-const staleTime = 2 * 60 * 1000;
-
 export function ExperimentDataSampleTables({
   experimentId,
   sampleSize = 10,
@@ -35,67 +29,63 @@ export function ExperimentDataSampleTables({
   sampleSize: number;
   locale: Locale;
 }) {
-  const { data, isLoading } = useExperimentData(
+  const { sampleTables, isLoading } = useExperimentSampleData(
     experimentId,
-    {
-      page: 1,
-      pageSize: sampleSize,
-    },
-    staleTime,
+    sampleSize,
+    formatValue,
   );
 
   const { t } = useTranslation(locale, "common");
   if (isLoading) return <div>{t("experimentDataTable.loading")}</div>;
-  if (data?.body) {
-    return (
-      <>
-        {data.body.map((table) => (
-          <div key={table.name}>
-            <ExperimentDataSampleTable tableData={table} locale={locale} />
-            <div className="text-muted-foreground ml-4 mt-4">
-              <Link href={`/${locale}/platform/experiments/${experimentId}/data/${table.name}`}>
-                <Button variant="outline" size="sm">
-                  <TableIcon /> {t("experimentDataTable.details")}
-                </Button>
-              </Link>
-            </div>
+  if (sampleTables.length == 0) return <div>{t("experimentDataTable.noData")}</div>;
+  return (
+    <>
+      {sampleTables.map((sampleTable) => (
+        <div key={sampleTable.tableName}>
+          <ExperimentDataSampleTable sampleTable={sampleTable} locale={locale} />
+          <div className="text-muted-foreground mt-4">
+            <Link
+              href={`/${locale}/platform/experiments/${experimentId}/data/${sampleTable.tableName}`}
+            >
+              <Button variant="outline" size="sm">
+                <TableIcon /> {t("experimentDataTable.details")}
+              </Button>
+            </Link>
           </div>
-        ))}
-      </>
-    );
-  }
-  return <div>{t("experimentDataTable.noData")}</div>;
+        </div>
+      ))}
+    </>
+  );
 }
 
 function ExperimentDataSampleTable({
-  tableData,
+  sampleTable,
   locale,
 }: {
-  tableData: ExperimentDataTableInfo;
+  sampleTable: SampleTable;
   locale: Locale;
 }) {
   const { t } = useTranslation(locale, "common");
-  if (!tableData.data) return <div>{t("experimentDataTable.noData")}</div>;
-  const columns = getReactTableColumns(tableData.data);
+  if (sampleTable.tableRows.length == 0) return <div>{t("experimentDataTable.noData")}</div>;
   return (
     <div className="">
       <h5 className="mb-4 text-base font-medium">
-        {t("experimentDataTable.table")} {tableData.name}
+        {t("experimentDataTable.table")} {sampleTable.tableName}
       </h5>
-      <SampleDataTable columns={columns} data={tableData.data.rows} locale={locale} />
+      <SampleDataTable sampleTable={sampleTable} locale={locale} />
     </div>
   );
 }
 
 interface SampleDataTableProps {
-  columns: ColumnDef<DataRow, DataValue>[];
-  data: DataRow[];
+  sampleTable: SampleTable;
   locale: Locale;
 }
 
-function SampleDataTable({ columns, data, locale }: SampleDataTableProps) {
+function SampleDataTable({ sampleTable, locale }: SampleDataTableProps) {
+  const columns = sampleTable.tableMetadata.columns;
   const table = useReactTable({
-    data,
+    data: sampleTable.tableRows,
     columns,
     getCoreRowModel: getCoreRowModel(),
     defaultColumn: {

@@ -1,24 +1,16 @@
 "use client";
 
+import type { TableMetadata } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
-import type {
-  AccessorKeyColumnDef,
-  PaginationState,
-  Row,
-  RowData,
-  Updater,
-} from "@tanstack/react-table";
-import { createColumnHelper } from "@tanstack/react-table";
+import type { PaginationState, Row, RowData, Updater } from "@tanstack/react-table";
 import {
   flexRender,
   getCoreRowModel,
   getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import type z from "zod";
+import React, { useCallback, useEffect, useState } from "react";
 
-import type { ExperimentData, zExperimentDataTableInfo } from "@repo/api";
 import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -32,14 +24,8 @@ import {
   TableRow,
 } from "@repo/ui/components";
 
-const staleTime = 2 * 60 * 1000;
-
-export type DataValue = string | null;
-export type DataRow = Record<string, DataValue>;
-
-function getFormattedValue(row: Row<DataRow>, columnName: string, type_name: string) {
-  const value = row.getValue(columnName);
-  switch (type_name) {
+export function formatValue(value: unknown, type: string) {
+  switch (type) {
     case "DOUBLE":
     case "INT":
     case "LONG":
@@ -53,35 +39,6 @@ function getFormattedValue(row: Row<DataRow>, columnName: string, type_name: str
   }
 }
 
-export function getReactTableColumns(
-  data: ExperimentData | undefined,
-  persistedColumns?: AccessorKeyColumnDef<DataRow, DataValue>[],
-) {
-  const columnHelper = createColumnHelper<DataRow>();
-
-  // Return persisted columns if data is loading and we have them
-  if (!data && persistedColumns) {
-    return persistedColumns;
-  }
-
-  const columns: AccessorKeyColumnDef<DataRow, DataValue>[] = [];
-  if (!data) return columns;
-
-  data.columns.forEach((dataColumn) => {
-    columns.push(
-      columnHelper.accessor(dataColumn.name, {
-        header: dataColumn.name,
-        cell: ({ row }) => {
-          return getFormattedValue(row, dataColumn.name, dataColumn.type_name);
-        },
-      }),
-    );
-  });
-  return columns;
-}
-
-export type ExperimentDataTableInfo = z.infer<typeof zExperimentDataTableInfo>;
-
 export function ExperimentDataTable({
   experimentId,
   tableName,
@@ -94,23 +51,17 @@ export function ExperimentDataTable({
   locale: Locale;
 }) {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
-  const [persistedColumns, setPersistedColumns] =
-    useState<AccessorKeyColumnDef<DataRow, DataValue>[]>();
-  const [totalPages, setTotalPages] = useState<number>();
-  const [totalRows, setTotalRows] = useState<number>(0);
+  const [persistedMetaData, setPersistedMetaData] = useState<TableMetadata>();
+  const { t } = useTranslation(locale, "common");
 
   // Use traditional pagination with improved column persistence
-  const { data, isLoading, error } = useExperimentData(
+  const { tableMetadata, tableRows, isLoading, error } = useExperimentData(
     experimentId,
-    {
-      page: pagination.pageIndex + 1,
-      pageSize: pagination.pageSize,
-      tableName,
-    },
-    staleTime,
+    pagination.pageIndex + 1,
+    pagination.pageSize,
+    tableName,
+    formatValue,
   );
-
-  const { t } = useTranslation(locale, "common");
 
   const onPaginationChange = useCallback(
     (updaterOrValue: Updater<PaginationState>) => {
@@ -122,33 +73,20 @@ export function ExperimentDataTable({
     [pagination],
   );
 
-  // Update persisted columns when we get new data
+  // Update persisted metadata when we get new data
   useEffect(() => {
-    const tableData = data?.body[0];
-    if (tableData?.data) {
-      const newColumns = getReactTableColumns(tableData.data);
-      if (newColumns.length > 0) {
-        setPersistedColumns(newColumns);
-        setTotalPages(tableData.totalPages);
-        setTotalRows(tableData.totalRows);
-      }
+    if (tableMetadata) {
+      setPersistedMetaData(tableMetadata);
     }
-  }, [data?.body]);
+  }, [tableMetadata]);
 
-  // Use either current columns or persisted columns
-  const currentColumns = useMemo(() => {
-    const tableData = data?.body[0];
-    if (tableData?.data) {
-      return getReactTableColumns(tableData.data);
-    }
-    return persistedColumns ?? [];
-  }, [data?.body, persistedColumns]);
-
-  const tableData = data?.body[0];
+  const columnCount = persistedMetaData?.columns.length ?? 0;
+  const totalPages = persistedMetaData?.totalPages ?? 0;
+  const totalRows = persistedMetaData?.totalRows ?? 0;
 
   const table = useReactTable({
-    data: data?.body[0].data?.rows ?? [],
-    columns: currentColumns,
+    data: tableRows ?? [],
+    columns: persistedMetaData?.columns ?? [],
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     manualPagination: true,
@@ -156,13 +94,13 @@ export function ExperimentDataTable({
     state: {
       pagination,
     },
-    rowCount: tableData?.totalRows ?? 0,
+    rowCount: totalRows,
     defaultColumn: {
       size: 180,
     },
   });
 
-  if (isLoading && !persistedColumns) {
+  if (isLoading && !persistedMetaData) {
     return <div>{t("experimentDataTable.loading")}</div>;
   }
 
@@ -170,16 +108,11 @@ export function ExperimentDataTable({
     return <div>{t("experimentDataTable.error")}</div>;
   }
 
-  if (!data?.body && !isLoading) {
-    return <div>{t("experimentDataTable.noData")}</div>;
-  }
-
-  if (!tableData?.data && !isLoading && !persistedColumns) {
+  if (!tableRows && !isLoading) {
     return <div>{t("experimentDataTable.noData")}</div>;
   }
 
   // Calculate column count for empty state
-  const columnCount = currentColumns.length || (tableData?.data?.columns.length ?? 1);
   const loadingRowCount =
     pagination.pageIndex + 1 == totalPages ? totalRows % pagination.pageSize : pagination.pageSize;
 
@@ -188,7 +121,7 @@ export function ExperimentDataTable({
       <h5 className="mb-4 text-base font-medium">
         {t("experimentDataTable.table")} {tableName}
       </h5>
-      <div className="rounded-md border">
+      <div className="text-muted-foreground rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -211,12 +144,8 @@ export function ExperimentDataTable({
             ))}
           </TableHeader>
           <TableBody>
-            {isLoading && persistedColumns && (
-              <LoadingRows
-                columnCount={persistedColumns.length}
-                rowCount={loadingRowCount}
-                locale={locale}
-              />
+            {isLoading && persistedMetaData && (
+              <LoadingRows columnCount={columnCount} rowCount={loadingRowCount} locale={locale} />
             )}
             {!isLoading && table.getRowModel().rows.length && (
               <ExperimentDataRows rows={table.getRowModel().rows} />
