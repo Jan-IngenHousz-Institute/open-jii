@@ -48,6 +48,8 @@ export function ExperimentDataTable({
       if (typeof updaterOrValue === "function") {
         const newPagination = updaterOrValue(pagination);
         setPagination(newPagination);
+      } else {
+        setPagination(updaterOrValue);
       }
     },
     [pagination],
