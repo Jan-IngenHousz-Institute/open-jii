@@ -2,7 +2,9 @@ import { z } from "zod";
 
 // Auth header schema for webhook authentication
 export const zWebhookAuthHeader = z.object({
-  "x-api-key": z.string(),
+  "x-api-key-id": z.string(),
+  "x-databricks-signature": z.string(),
+  "x-databricks-timestamp": z.string(),
 });
 
 // Schema for Databricks webhook payload

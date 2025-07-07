@@ -145,9 +145,16 @@ export const zExperimentDataTableInfo = z.object({
   totalRows: z.number().int(),
 });
 
+export const zIdPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+});
+export const zExperimentMemberPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+  memberId: z.string().uuid().describe("ID of the member"),
+});
+
 export const zExperimentDataTableList = z.array(zExperimentDataTableInfo);
 
-// Now the response is an array of table data objects
 export const zExperimentDataResponse = zExperimentDataTableList;
 
 export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
@@ -161,14 +168,5 @@ export type ExperimentFilter = ExperimentFilterQuery["filter"];
 export type CreateExperimentResponse = z.infer<typeof zCreateExperimentResponse>;
 export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
 export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
-
-export const zIdPathParam = z.object({
-  id: z.string().uuid().describe("ID of the experiment"),
-});
-export const zExperimentMemberPathParam = z.object({
-  id: z.string().uuid().describe("ID of the experiment"),
-  memberId: z.string().uuid().describe("ID of the member"),
-});
-
 export type IdPathParam = z.infer<typeof zIdPathParam>;
 export type ExperimentMemberPathParam = z.infer<typeof zExperimentMemberPathParam>;

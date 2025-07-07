@@ -4,18 +4,18 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
 
-import { ApiKeyGuard } from "../../common/guards/api-key.guard";
+import { HmacGuard } from "../../common/guards/hmac.guard";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { UpdateProvisioningStatusUseCase } from "../application/use-cases/update-provisioning-status/update-provisioning-status";
 
 @Controller()
+@UseGuards(HmacGuard)
 export class DatabricksWebhookController {
   private readonly logger = new Logger(DatabricksWebhookController.name);
 
   constructor(private readonly updateProvisioningStatusUseCase: UpdateProvisioningStatusUseCase) {}
 
   @TsRestHandler(contract.webhooks.updateProvisioningStatus)
-  @UseGuards(ApiKeyGuard)
   handleWorkflowStatus() {
     return tsRestHandler(contract.webhooks.updateProvisioningStatus, async ({ body }) => {
       this.logger.log(

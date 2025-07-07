@@ -1,10 +1,12 @@
 import { faker } from "@faker-js/faker";
+import * as crypto from "crypto";
 import { StatusCodes } from "http-status-codes";
 
 import type { DatabricksWebhookPayload, WebhookErrorResponse } from "@repo/api";
 import { contract } from "@repo/api";
 
 import { assertSuccess } from "../../common/utils/fp-utils";
+import { stableStringify } from "../../common/utils/stable-json";
 import { TestHarness } from "../../test/test-harness";
 import { ExperimentRepository } from "../core/repositories/experiment.repository";
 
@@ -12,6 +14,9 @@ describe("DatabricksWebhookController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let experimentRepository: ExperimentRepository;
+
+  const apiKeyId = process.env.DATABRICKS_WEBHOOK_API_KEY_ID ?? "test-api-key-id";
+  const webhookSecret = process.env.DATABRICKS_WEBHOOK_SECRET ?? "test-webhook-secret";
 
   beforeAll(async () => {
     await testApp.setup();
@@ -35,7 +40,7 @@ describe("DatabricksWebhookController", () => {
   });
 
   describe("handleWorkflowStatus", () => {
-    it("should process SUCCESS status and return success response", async () => {
+    it("should process SUCCES status and return success response", async () => {
       // Create an experiment with provisioning status
       const { experiment } = await testApp.createExperiment({
         name: "Databricks Webhook Test",
@@ -52,10 +57,19 @@ describe("DatabricksWebhookController", () => {
         timestamp: new Date().toISOString(),
       };
 
-      // Make the API request with the required API key header
+      // Get current timestamp
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+
+      // Create signature
+      const payload = `${timestamp}:${stableStringify(webhookPayload)}`;
+      const signature = crypto.createHmac("sha256", webhookSecret).update(payload).digest("hex");
+
+      // Make the API request with the required headers
       const response = await testApp
         .post(contract.webhooks.updateProvisioningStatus.path)
-        .set("x-api-key", process.env.DATABRICKS_WEBHOOK_API_KEY ?? "test-api-key")
+        .set("x-api-key-id", apiKeyId)
+        .set("x-databricks-signature", signature)
+        .set("x-databricks-timestamp", timestamp)
         .send(webhookPayload);
 
       // Verify response
@@ -91,10 +105,17 @@ describe("DatabricksWebhookController", () => {
         timestamp: new Date().toISOString(),
       };
 
-      // Make the API request
+      // Get current timestamp and create signature
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+      const payload = `${timestamp}:${stableStringify(webhookPayload)}`;
+      const signature = crypto.createHmac("sha256", webhookSecret).update(payload).digest("hex");
+
+      // Make the API request with the required headers
       const response = await testApp
         .post(contract.webhooks.updateProvisioningStatus.path)
-        .set("x-api-key", process.env.DATABRICKS_WEBHOOK_API_KEY ?? "test-api-key")
+        .set("x-api-key-id", apiKeyId)
+        .set("x-databricks-signature", signature)
+        .set("x-databricks-timestamp", timestamp)
         .send(webhookPayload);
 
       // Verify response
@@ -130,10 +151,17 @@ describe("DatabricksWebhookController", () => {
         timestamp: new Date().toISOString(),
       };
 
+      // Get current timestamp and create signature
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+      const payload = `${timestamp}:${stableStringify(webhookPayload)}`;
+      const signature = crypto.createHmac("sha256", webhookSecret).update(payload).digest("hex");
+
       // Act & Assert
       await testApp
         .post(contract.webhooks.updateProvisioningStatus.path)
-        .set("x-api-key", process.env.DATABRICKS_WEBHOOK_API_KEY ?? "test-api-key")
+        .set("x-api-key-id", apiKeyId)
+        .set("x-databricks-signature", signature)
+        .set("x-databricks-timestamp", timestamp)
         .send(webhookPayload)
         .expect(StatusCodes.BAD_REQUEST)
         .expect(({ body }: { body: WebhookErrorResponse }) => {
@@ -161,10 +189,17 @@ describe("DatabricksWebhookController", () => {
         timestamp: new Date().toISOString(),
       };
 
+      // Get current timestamp and create signature
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+      const payload = `${timestamp}:${stableStringify(webhookPayload)}`;
+      const signature = crypto.createHmac("sha256", webhookSecret).update(payload).digest("hex");
+
       // Act & Assert
       await testApp
         .post(contract.webhooks.updateProvisioningStatus.path)
-        .set("x-api-key", process.env.DATABRICKS_WEBHOOK_API_KEY ?? "test-api-key")
+        .set("x-api-key-id", apiKeyId)
+        .set("x-databricks-signature", signature)
+        .set("x-databricks-timestamp", timestamp)
         .send(webhookPayload)
         .expect(StatusCodes.NOT_FOUND)
         .expect(({ body }: { body: WebhookErrorResponse }) => {
@@ -174,20 +209,23 @@ describe("DatabricksWebhookController", () => {
         });
     });
 
-    it("should reject requests without valid API key", async () => {
+    it("should reject requests without valid API key ID", async () => {
       // Define webhook payload
-      const webhookPayload = {
+      const webhookPayload: DatabricksWebhookPayload = {
         experimentId: faker.string.uuid(),
         status: "SUCCESS",
+        jobRunId: faker.string.numeric(15),
+        taskRunId: faker.string.numeric(15),
+        timestamp: new Date().toISOString(),
       };
 
-      // Make the API request without API key
+      // Make the API request without required headers
       await testApp
         .post(contract.webhooks.updateProvisioningStatus.path)
         .send(webhookPayload)
         .expect(StatusCodes.UNAUTHORIZED)
         .expect(({ body }: { body: WebhookErrorResponse }) => {
-          expect(body.message).toContain("Unauthorized");
+          expect(body.message).toContain("Missing API key ID");
         });
     });
   });
