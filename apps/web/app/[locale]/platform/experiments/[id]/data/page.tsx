@@ -3,7 +3,7 @@
 import { ErrorDisplay } from "@/components/error-display";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { use } from "react";
-import { ExperimentDataSampleTables } from "~/components/experiment-data-sample-tables";
+import { ExperimentDataSampleTables } from "~/components/experiment-data/experiment-data-sample-tables";
 
 import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n/client";

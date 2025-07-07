@@ -1,43 +1,23 @@
 "use client";
 
-import type { TableMetadata } from "@/hooks/experiment/useExperimentData/useExperimentData";
+import type {
+  DataRow,
+  TableMetadata,
+} from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
-import type { PaginationState, Row, RowData, Updater } from "@tanstack/react-table";
-import {
-  flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import type { PaginationState, Updater } from "@tanstack/react-table";
+import { getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
 import React, { useCallback, useEffect, useState } from "react";
+import {
+  ExperimentDataRows,
+  ExperimentTableHeader,
+  formatValue,
+  LoadingRows,
+} from "~/components/experiment-data/experiment-data-utils";
 
 import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n";
-import {
-  Button,
-  Skeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@repo/ui/components";
-
-export function formatValue(value: unknown, type: string) {
-  switch (type) {
-    case "DOUBLE":
-    case "INT":
-    case "LONG":
-    case "BIGINT":
-      return <div className="text-right italic">{value as number}</div>;
-    case "TIMESTAMP":
-      return (value as string).substring(0, 19).replace("T", " ");
-    default: {
-      return value as string;
-    }
-  }
-}
+import { Button, Table, TableBody } from "@repo/ui/components";
 
 export function ExperimentDataTable({
   experimentId,
@@ -84,7 +64,7 @@ export function ExperimentDataTable({
   const totalPages = persistedMetaData?.totalPages ?? 0;
   const totalRows = persistedMetaData?.totalRows ?? 0;
 
-  const table = useReactTable({
+  const table = useReactTable<DataRow>({
     data: tableRows ?? [],
     columns: persistedMetaData?.columns ?? [],
     getCoreRowModel: getCoreRowModel(),
@@ -123,39 +103,17 @@ export function ExperimentDataTable({
       </h5>
       <div className="text-muted-foreground rounded-md border">
         <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="h-2">
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead
-                      key={header.id}
-                      style={{
-                        minWidth: header.column.columnDef.size,
-                      }}
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
+          <ExperimentTableHeader headerGroups={table.getHeaderGroups()} />
           <TableBody>
             {isLoading && persistedMetaData && (
               <LoadingRows columnCount={columnCount} rowCount={loadingRowCount} locale={locale} />
             )}
-            {!isLoading && table.getRowModel().rows.length && (
-              <ExperimentDataRows rows={table.getRowModel().rows} />
-            )}
-            {!isLoading && table.getRowModel().rows.length == 0 && (
-              <TableRow>
-                <TableCell colSpan={columnCount} className="h-4 text-center">
-                  {t("experimentDataTable.noResults")}
-                </TableCell>
-              </TableRow>
+            {!isLoading && (
+              <ExperimentDataRows
+                rows={table.getRowModel().rows}
+                columnCount={columnCount}
+                locale={locale}
+              />
             )}
           </TableBody>
         </Table>
@@ -185,52 +143,5 @@ export function ExperimentDataTable({
         </Button>
       </div>
     </div>
-  );
-}
-
-function ExperimentDataRows({ rows }: { rows: Row<RowData>[] }) {
-  return rows.map((row) => (
-    <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-      {row.getVisibleCells().map((cell) => (
-        <TableCell
-          key={cell.id}
-          style={{
-            minWidth: cell.column.columnDef.size,
-          }}
-        >
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </TableCell>
-      ))}
-    </TableRow>
-  ));
-}
-
-function LoadingRows({
-  rowCount,
-  columnCount,
-  locale,
-}: {
-  rowCount: number;
-  columnCount: number;
-  locale: Locale;
-}) {
-  const { t } = useTranslation(locale, "common");
-  return (
-    <>
-      <TableRow>
-        <TableCell colSpan={columnCount} className="h-4">
-          {t("experimentDataTable.loading")}
-        </TableCell>
-      </TableRow>
-      {Array.from({ length: rowCount - 1 }).map((_, index) => (
-        <TableRow key={`skeleton-${index}`}>
-          {Array.from({ length: columnCount }).map((_, colIndex) => (
-            <TableCell key={colIndex}>
-              <Skeleton className="h-4" key={`skeleton-col-${colIndex}`} />
-            </TableCell>
-          ))}
-        </TableRow>
-      ))}
-    </>
   );
 }

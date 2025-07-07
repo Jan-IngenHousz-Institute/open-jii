@@ -83,7 +83,7 @@ export const useExperimentData = (
 };
 
 export interface SampleTable {
-  tableName: string;
+  name: string;
   tableMetadata: TableMetadata;
   tableRows: DataRow[];
 }
@@ -117,7 +117,7 @@ export const useExperimentSampleData = (
     if (!data) return tables;
     data.body.forEach((tableData) => {
       tables.push({
-        tableName: tableData.name,
+        name: tableData.name,
         tableMetadata: {
           columns: createTableColumns(tableData.data, formatFunction),
           totalPages: tableData.totalPages,
