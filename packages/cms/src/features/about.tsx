@@ -30,7 +30,7 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
 
   // Inspector mode tagging
   const inspectorProps = useContentfulInspectorMode({
-    entryId: about?.sys?.id,
+    entryId: currentAbout?.sys?.id,
     locale,
   });
 

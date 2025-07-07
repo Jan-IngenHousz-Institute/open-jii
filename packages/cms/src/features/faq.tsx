@@ -33,7 +33,7 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
 
   // Inspector mode tagging
   const inspectorProps = useContentfulInspectorMode({
-    entryId: faq?.sys?.id,
+    entryId: currentFaq?.sys?.id,
     locale,
   });
 

@@ -29,7 +29,7 @@ export const PoliciesContent: React.FC<PoliciesContentProps> = ({ policies, loca
 
   // Inspector mode tagging
   const inspectorProps = useContentfulInspectorMode({
-    entryId: policies?.sys?.id,
+    entryId: currentPolicies?.sys?.id,
     locale,
   });
 
