@@ -18,11 +18,5 @@ export default async function FaqPage({ params }: FaqPageProps) {
   const faqQuery = await gqlClient.pageFaq({ locale, preview });
   const faq = faqQuery.pageFaqCollection?.items[0] as PageFaqFieldsFragment;
 
-  return (
-    <main className="min-h-screen py-12">
-      <div className="mx-auto max-w-4xl px-4">
-        <FaqContent faq={faq} locale={locale} preview={preview} />
-      </div>
-    </main>
-  );
+  return <FaqContent faq={faq} locale={locale} preview={preview} />;
 }

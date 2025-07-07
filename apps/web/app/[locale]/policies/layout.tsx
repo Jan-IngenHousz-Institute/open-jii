@@ -36,8 +36,8 @@ export default async function PoliciesLayout({ children, params }: LayoutProps) 
         targetOrigin={allowedOriginList}
       >
         <UnifiedNavbar locale={locale} session={session} />
-        <div className={`mx-auto flex w-full max-w-7xl flex-1 flex-col`}>
-          <main className="flex-1 pt-8">{children}</main>
+        <div className="mx-auto flex w-full max-w-7xl flex-1">
+          <main className="flex min-h-screen flex-col items-start px-4 pb-24 pt-8">{children}</main>
         </div>
         <HomeFooter locale={locale} footerData={footerData} preview={preview} />
       </ContentfulPreviewProvider>

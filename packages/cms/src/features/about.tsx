@@ -36,7 +36,7 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
 
   return (
     <div
-      className={`flex w-full max-w-7xl flex-col items-center gap-12 md:gap-16 ${
+      className={`flex w-full flex-col items-center gap-12 md:gap-16 ${
         !currentAbout.image?.url ? "md:flex-col" : "md:flex-row md:items-stretch"
       }`}
     >

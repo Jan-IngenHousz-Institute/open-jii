@@ -18,9 +18,5 @@ export default async function PoliciesPage({ params }: PoliciesPageProps) {
   const policiesQuery = await gqlClient.pagePolicies({ locale, preview });
   const policies = policiesQuery.pagePoliciesCollection?.items[0] as PagePoliciesFieldsFragment;
 
-  return (
-    <main className="flex min-h-screen flex-col items-start px-4 pb-24 pt-8">
-      <PoliciesContent policies={policies} locale={locale} preview={preview} />
-    </main>
-  );
+  return <PoliciesContent policies={policies} locale={locale} preview={preview} />;
 }

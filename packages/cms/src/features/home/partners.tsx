@@ -47,6 +47,45 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
       (img): img is ImageFieldsFragment => !!img && img.__typename === "Asset",
     ) ?? [];
 
+  // Helper to render the partners list
+  const renderPartnersList = (partners: PartnerFieldsFragment[]) =>
+    partners.map((partner) => {
+      const partnerInspectorProps = useContentfulInspectorMode({
+        entryId: partner.sys.id,
+        locale,
+      });
+      return (
+        <div
+          key={partner.sys.id}
+          className="flex w-full max-w-xs flex-col items-center rounded-2xl border border-gray-200 bg-gray-50 p-8 shadow-sm transition-colors duration-200 hover:bg-white hover:shadow-md"
+        >
+          {/* Removed gradient overlay and backdrop-blur for performance */}
+          {partner.logo && partner.logo.url ? (
+            <div
+              className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-white shadow-inner"
+              {...partnerInspectorProps({ fieldId: "logo" })}
+            >
+              <Image
+                src={partner.logo.url}
+                alt={partner.logo.title || "Partner logo"}
+                width={80}
+                height={80}
+                className="h-20 w-20 object-contain"
+              />
+            </div>
+          ) : (
+            <span className="mb-4 h-24 w-24 rounded-full bg-gray-100" />
+          )}
+          <span
+            className="mb-1 w-full break-words text-center text-base font-medium text-gray-700"
+            {...partnerInspectorProps({ fieldId: "subtitle" })}
+          >
+            {partner.subtitle}
+          </span>
+        </div>
+      );
+    });
+
   return (
     <section className="mx-auto w-full max-w-7xl px-4 py-20">
       {items.length > 0 && (
@@ -71,42 +110,7 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
         className="mb-12 flex w-full flex-wrap justify-center gap-6"
         {...inspectorProps({ fieldId: `partners` })}
       >
-        {items.map((partner, idx) => {
-          const partnerInspectorProps = useContentfulInspectorMode({
-            entryId: partner.sys.id,
-            locale,
-          });
-          return (
-            <div
-              key={partner.sys.id}
-              className="flex w-full max-w-xs flex-col items-center rounded-2xl border border-gray-200 bg-gray-50 p-8 shadow-sm transition-colors duration-200 hover:bg-white hover:shadow-md"
-            >
-              {/* Removed gradient overlay and backdrop-blur for performance */}
-              {partner.logo && partner.logo.url ? (
-                <div
-                  className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-white shadow-inner"
-                  {...partnerInspectorProps({ fieldId: "logo" })}
-                >
-                  <Image
-                    src={partner.logo.url}
-                    alt={partner.logo.title || "Partner logo"}
-                    width={80}
-                    height={80}
-                    className="h-20 w-20 object-contain"
-                  />
-                </div>
-              ) : (
-                <span className="mb-4 h-24 w-24 rounded-full bg-gray-100" />
-              )}
-              <span
-                className="mb-1 w-full break-words text-center text-base font-medium text-gray-700"
-                {...partnerInspectorProps({ fieldId: "subtitle" })}
-              >
-                {partner.subtitle}
-              </span>
-            </div>
-          );
-        })}
+        {renderPartnersList(items)}
       </div>
       {/* Visual media carousel section */}
       <VisualMedia images={images} inspectorProps={inspectorProps} />

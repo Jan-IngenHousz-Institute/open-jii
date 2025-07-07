@@ -37,7 +37,9 @@ export default async function AboutLayout({ children, params }: LayoutProps) {
       >
         <UnifiedNavbar locale={locale} session={session} />
         <div className={`mx-auto flex w-full max-w-7xl flex-1 flex-col`}>
-          <main className="flex-1 pt-8">{children}</main>
+          <main className="flex min-h-screen flex-col items-center justify-center px-4 pb-24 pt-8">
+            {children}
+          </main>
         </div>
         <HomeFooter footerData={footerData} preview={preview} locale={locale} />
       </ContentfulPreviewProvider>

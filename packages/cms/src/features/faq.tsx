@@ -31,11 +31,47 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
 
   if (!currentFaq) return <div>No content found.</div>;
 
+  // Extract questions array once
+  const questions = currentFaq.questionsCollection?.items || [];
+
   // Inspector mode tagging
   const inspectorProps = useContentfulInspectorMode({
     entryId: currentFaq?.sys?.id,
     locale,
   });
+
+  // Helper to render the questions list
+  const renderQuestionsList = (questions: (FaqQuestionFieldsFragment | null)[]) =>
+    questions
+      .filter((q): q is FaqQuestionFieldsFragment => q?.__typename === "ComponentFaqQuestion")
+      .map((q) => {
+        if (!q) return null;
+        const questionInspectorProps = useContentfulInspectorMode({
+          entryId: q.sys.id,
+          locale,
+        });
+        return (
+          <div
+            key={q.sys.id}
+            className="rounded-lg border border-gray-200 bg-gradient-to-br from-gray-50 via-white to-gray-100 p-6 shadow-sm transition-shadow hover:shadow-md"
+          >
+            <h3
+              className="mb-3 text-xl font-semibold text-gray-900"
+              {...questionInspectorProps({ fieldId: "question" })}
+            >
+              {q.question}
+            </h3>
+            {q.answer?.json && (
+              <div
+                className="leading-relaxed text-gray-700"
+                {...questionInspectorProps({ fieldId: "answer" })}
+              >
+                {documentToReactComponents(q.answer.json)}
+              </div>
+            )}
+          </div>
+        );
+      });
 
   return (
     <>
@@ -56,36 +92,7 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
         ) : null}
       </div>
       <div className="space-y-6" {...inspectorProps({ fieldId: `questions` })}>
-        {(currentFaq.questionsCollection?.items || [])
-          .filter((q): q is FaqQuestionFieldsFragment => q?.__typename === "ComponentFaqQuestion")
-          .map((q) => {
-            if (!q) return null;
-            const questionInspectorProps = useContentfulInspectorMode({
-              entryId: q.sys.id,
-              locale,
-            });
-            return (
-              <div
-                key={q.sys.id}
-                className="rounded-lg border border-gray-200 bg-gradient-to-br from-gray-50 via-white to-gray-100 p-6 shadow-sm transition-shadow hover:shadow-md"
-              >
-                <h3
-                  className="mb-3 text-xl font-semibold text-gray-900"
-                  {...questionInspectorProps({ fieldId: "question" })}
-                >
-                  {q.question}
-                </h3>
-                {q.answer?.json && (
-                  <div
-                    className="leading-relaxed text-gray-700"
-                    {...questionInspectorProps({ fieldId: "answer" })}
-                  >
-                    {documentToReactComponents(q.answer.json)}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        {renderQuestionsList(questions)}
       </div>
     </>
   );

@@ -18,9 +18,5 @@ export default async function AboutPage({ params }: AboutPageProps) {
   const aboutQuery = await gqlClient.pageAbout({ locale, preview });
   const about = aboutQuery.pageAboutCollection?.items[0] as PageAboutFieldsFragment;
 
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center px-4 pb-24 pt-8">
-      <AboutContent about={about} locale={locale} preview={preview} />
-    </main>
-  );
+  return <AboutContent about={about} locale={locale} preview={preview} />;
 }

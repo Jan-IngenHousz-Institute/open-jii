@@ -36,8 +36,8 @@ export default async function FaqLayout({ children, params }: LayoutProps) {
         targetOrigin={allowedOriginList}
       >
         <UnifiedNavbar locale={locale} session={session} />
-        <div className={`mx-auto flex w-full max-w-7xl flex-1 flex-col`}>
-          <main className="flex-1 pt-8">{children}</main>
+        <div className={`mx-auto flex w-full max-w-4xl flex-1 flex-col`}>
+          <main className="mx-auto min-h-screen flex-1 px-4 py-12 pt-8">{children}</main>
         </div>
         <HomeFooter locale={locale} footerData={footerData} preview={preview} />
       </ContentfulPreviewProvider>
