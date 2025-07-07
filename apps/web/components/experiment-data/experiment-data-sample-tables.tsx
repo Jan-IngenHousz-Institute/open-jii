@@ -31,14 +31,14 @@ export function ExperimentDataSampleTables({
     formatValue,
   );
 
-  const { t } = useTranslation(locale, "common");
+  const { t } = useTranslation(undefined, "common");
   if (isLoading) return <div>{t("experimentDataTable.loading")}</div>;
   if (sampleTables.length == 0) return <div>{t("experimentDataTable.noData")}</div>;
   return (
     <>
       {sampleTables.map((sampleTable) => (
         <div key={sampleTable.name}>
-          <ExperimentDataSampleTable sampleTable={sampleTable} locale={locale} />
+          <ExperimentDataSampleTable sampleTable={sampleTable} />
           <div className="text-muted-foreground mt-4">
             <Link href={`/${locale}/platform/experiments/${experimentId}/data/${sampleTable.name}`}>
               <Button variant="outline" size="sm">
@@ -52,14 +52,8 @@ export function ExperimentDataSampleTables({
   );
 }
 
-function ExperimentDataSampleTable({
-  sampleTable,
-  locale,
-}: {
-  sampleTable: SampleTable;
-  locale: Locale;
-}) {
-  const { t } = useTranslation(locale, "common");
+function ExperimentDataSampleTable({ sampleTable }: { sampleTable: SampleTable }) {
+  const { t } = useTranslation(undefined, "common");
   const columns = sampleTable.tableMetadata.columns;
   const table = useReactTable<DataRow>({
     data: sampleTable.tableRows,
@@ -79,11 +73,7 @@ function ExperimentDataSampleTable({
         <Table>
           <ExperimentTableHeader headerGroups={table.getHeaderGroups()} />
           <TableBody>
-            <ExperimentDataRows
-              rows={table.getRowModel().rows}
-              columnCount={columns.length}
-              locale={locale}
-            />
+            <ExperimentDataRows rows={table.getRowModel().rows} columnCount={columns.length} />
           </TableBody>
         </Table>
       </div>

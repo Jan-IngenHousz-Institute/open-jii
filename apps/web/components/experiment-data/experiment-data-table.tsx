@@ -15,7 +15,6 @@ import {
   LoadingRows,
 } from "~/components/experiment-data/experiment-data-utils";
 
-import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n";
 import { Button, Table, TableBody } from "@repo/ui/components";
 
@@ -23,16 +22,14 @@ export function ExperimentDataTable({
   experimentId,
   tableName,
   pageSize = 10,
-  locale,
 }: {
   experimentId: string;
   tableName: string;
   pageSize: number;
-  locale: Locale;
 }) {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
   const [persistedMetaData, setPersistedMetaData] = useState<TableMetadata>();
-  const { t } = useTranslation(locale, "common");
+  const { t } = useTranslation(undefined, "common");
 
   // Use traditional pagination with improved column persistence
   const { tableMetadata, tableRows, isLoading, error } = useExperimentData(
@@ -108,14 +105,10 @@ export function ExperimentDataTable({
           <ExperimentTableHeader headerGroups={table.getHeaderGroups()} />
           <TableBody>
             {isLoading && persistedMetaData && (
-              <LoadingRows columnCount={columnCount} rowCount={loadingRowCount} locale={locale} />
+              <LoadingRows columnCount={columnCount} rowCount={loadingRowCount} />
             )}
             {!isLoading && (
-              <ExperimentDataRows
-                rows={table.getRowModel().rows}
-                columnCount={columnCount}
-                locale={locale}
-              />
+              <ExperimentDataRows rows={table.getRowModel().rows} columnCount={columnCount} />
             )}
           </TableBody>
         </Table>

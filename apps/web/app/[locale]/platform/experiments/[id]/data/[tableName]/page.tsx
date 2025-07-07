@@ -5,17 +5,16 @@ import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { use } from "react";
 import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
 
-import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n/client";
 
 interface ExperimentDataDetailsPageProps {
-  params: Promise<{ id: string; tableName: string; locale: Locale }>;
+  params: Promise<{ id: string; tableName: string }>;
 }
 
 export default function ExperimentDataDetailsPage({ params }: ExperimentDataDetailsPageProps) {
-  const { id, tableName, locale } = use(params);
+  const { id, tableName } = use(params);
   const { data, isLoading, error } = useExperiment(id);
-  const { t } = useTranslation(locale, "experiments");
+  const { t } = useTranslation(undefined, "experiments");
 
   if (isLoading) {
     return <div>{t("loading")}</div>;
@@ -36,7 +35,7 @@ export default function ExperimentDataDetailsPage({ params }: ExperimentDataDeta
         <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
       </div>
 
-      <ExperimentDataTable experimentId={id} tableName={tableName} pageSize={10} locale={locale} />
+      <ExperimentDataTable experimentId={id} tableName={tableName} pageSize={10} />
     </div>
   );
 }

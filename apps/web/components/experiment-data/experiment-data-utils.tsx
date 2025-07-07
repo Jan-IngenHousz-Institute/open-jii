@@ -2,7 +2,6 @@ import { flexRender } from "@tanstack/react-table";
 import type { Row, HeaderGroup, RowData } from "@tanstack/react-table";
 import React from "react";
 
-import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components";
 
@@ -47,13 +46,11 @@ export function ExperimentTableHeader({ headerGroups }: { headerGroups: HeaderGr
 export function ExperimentDataRows({
   rows,
   columnCount,
-  locale,
 }: {
   rows: Row<RowData>[];
   columnCount: number;
-  locale: Locale;
 }) {
-  const { t } = useTranslation(locale, "common");
+  const { t } = useTranslation(undefined, "common");
   if (rows.length === 0)
     return (
       <TableRow>
@@ -78,16 +75,8 @@ export function ExperimentDataRows({
   ));
 }
 
-export function LoadingRows({
-  rowCount,
-  columnCount,
-  locale,
-}: {
-  rowCount: number;
-  columnCount: number;
-  locale: Locale;
-}) {
-  const { t } = useTranslation(locale, "common");
+export function LoadingRows({ rowCount, columnCount }: { rowCount: number; columnCount: number }) {
+  const { t } = useTranslation(undefined, "common");
   return (
     <>
       <TableRow>
