@@ -33,22 +33,23 @@ export default async function Home({ params }: HomePageProps) {
   const gqlClient = preview ? previewClient : client;
 
   // Fetch hero, mission, features, partners, and footer data from Contentful
-  const [homeHeroQuery, homeMissionQuery, homeFeaturesQuery, homePartnersQuery, footerQuery] =
-    await Promise.all([
-      gqlClient.pageHomeHero({ locale, preview }),
-      gqlClient.pageHomeMission({ locale, preview }),
-      gqlClient.pageHomeFeatures({ locale, preview }),
-      gqlClient.pageHomePartners({ locale, preview }),
-      gqlClient.footer({ locale, preview }),
-    ]);
-  const homeHero = homeHeroQuery.pageHomeHeroCollection?.items[0] as PageHomeHeroFieldsFragment;
-  const homeMission = homeMissionQuery.pageHomeMissionCollection
-    ?.items[0] as PageHomeMissionFieldsFragment;
-  const homeFeatures = homeFeaturesQuery.pageHomeFeaturesCollection
-    ?.items[0] as PageHomeFeaturesFieldsFragment;
-  const homePartners = homePartnersQuery.pageHomePartnersCollection
-    ?.items[0] as PageHomePartnersFieldsFragment;
-  const footerData = footerQuery.footerCollection?.items[0] as FooterFieldsFragment;
+  // Fetch all home page content from Contentful
+  const contentQueries = await Promise.all([
+    gqlClient.pageHomeHero({ locale, preview }),
+    gqlClient.pageHomeMission({ locale, preview }),
+    gqlClient.pageHomeFeatures({ locale, preview }),
+    gqlClient.pageHomePartners({ locale, preview }),
+    gqlClient.footer({ locale, preview }),
+  ]);
+
+  // Extract and type the content data
+  const [homeHero, homeMission, homeFeatures, homePartners, footerData] = [
+    contentQueries[0].pageHomeHeroCollection?.items[0] as PageHomeHeroFieldsFragment,
+    contentQueries[1].pageHomeMissionCollection?.items[0] as PageHomeMissionFieldsFragment,
+    contentQueries[2].pageHomeFeaturesCollection?.items[0] as PageHomeFeaturesFieldsFragment,
+    contentQueries[3].pageHomePartnersCollection?.items[0] as PageHomePartnersFieldsFragment,
+    contentQueries[4].footerCollection?.items[0] as FooterFieldsFragment,
+  ];
 
   return (
     <>
