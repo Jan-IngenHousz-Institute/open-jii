@@ -41,8 +41,7 @@ export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="gap-2" aria-label="Switch language">
           <Languages className="h-4 w-4" />
-          <span className="hidden sm:inline">{currentLocale.flag}</span>
-          <span className="hidden md:inline">{currentLocale.name}</span>
+          <span>{currentLocale.flag}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
