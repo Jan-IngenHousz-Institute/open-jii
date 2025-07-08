@@ -62,8 +62,8 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
 
       {/* Title + Rich Text */}
       <div
-        className={`flex w-full flex-col justify-center text-left ${
-          currentAbout.image?.url ? "md:flex-1" : "md:w-full"
+        className={`flex flex-col justify-center text-left ${
+          currentAbout.image?.url ? "w-full md:flex-1" : "w-full"
         }`}
       >
         <h1
@@ -74,7 +74,7 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
         </h1>
         {currentAbout.description?.json ? (
           <div
-            className={`max-w-3xl text-xl leading-relaxed text-gray-700 ${
+            className={`text-xl leading-relaxed text-gray-700 ${
               currentAbout.image?.url ? "" : "mx-0"
             }`}
             style={

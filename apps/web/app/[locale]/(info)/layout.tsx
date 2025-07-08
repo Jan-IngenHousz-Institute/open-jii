@@ -16,7 +16,7 @@ interface LayoutProps {
   params: Promise<{ locale: Locale }>;
 }
 
-export default async function FaqLayout({ children, params }: LayoutProps) {
+export default async function InfoGroupLayout({ children, params }: LayoutProps) {
   const { isEnabled: preview } = await draftMode();
   const { locale } = await params;
   const session = await auth();
@@ -36,10 +36,10 @@ export default async function FaqLayout({ children, params }: LayoutProps) {
         targetOrigin={allowedOriginList}
       >
         <UnifiedNavbar locale={locale} session={session} />
-        <div className={`mx-auto flex w-full max-w-4xl flex-1 flex-col`}>
-          <main className="mx-auto min-h-screen flex-1 px-4 py-12 pt-8">{children}</main>
+        <div className="mx-auto flex w-full max-w-7xl justify-center">
+          <main className="flex min-h-screen w-full flex-col px-4 pb-24 pt-8">{children}</main>
         </div>
-        <HomeFooter locale={locale} footerData={footerData} preview={preview} />
+        <HomeFooter footerData={footerData} preview={preview} locale={locale} />
       </ContentfulPreviewProvider>
     </>
   );
