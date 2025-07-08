@@ -88,6 +88,10 @@ export const zCreateExperimentBody = z.object({
     )
     .optional()
     .describe("Optional array of member objects with userId and role"),
+  protocols: z
+    .array(z.string().uuid())
+    .optional()
+    .describe("Optional array of protocol IDs to associate with the experiment"),
 });
 
 export const zUpdateExperimentBody = z.object({
