@@ -24,7 +24,7 @@ export const zDataColumn = z.object({
 // Experiment data schema
 export const zExperimentData = z.object({
   columns: z.array(zDataColumn),
-  rows: z.array(z.array(z.string().nullable())),
+  rows: z.array(z.record(z.string(), z.string().nullable())),
   totalRows: z.number().int(),
   truncated: z.boolean(),
 });
