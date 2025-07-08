@@ -1,4 +1,3 @@
-import type { DatabricksTaskRunStatus } from "@repo/api";
 import type { ExperimentStatus } from "@repo/api";
 
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
@@ -44,7 +43,7 @@ describe("UpdateProvisioningStatusUseCase", () => {
       // Execute the use case with SUCCESS status
       const result = await useCase.execute({
         experimentId: experiment.id,
-        status: "SUCCESS" as DatabricksTaskRunStatus,
+        status: "SUCCESS",
       });
 
       // Assert the result is successful and the status is now active
@@ -65,14 +64,14 @@ describe("UpdateProvisioningStatusUseCase", () => {
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment for COMPLETED",
         description: "Testing status update from COMPLETED",
-        status: "provisioning" as ExperimentStatus,
+        status: "provisioning",
         userId: testUserId,
       });
 
       // Execute the use case with COMPLETED status
       const result = await useCase.execute({
         experimentId: experiment.id,
-        status: "COMPLETED" as DatabricksTaskRunStatus,
+        status: "COMPLETED",
       });
 
       // Assert the result is successful and the status is now active
@@ -91,14 +90,14 @@ describe("UpdateProvisioningStatusUseCase", () => {
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment for FAILURE",
         description: "Testing status update from FAILURE",
-        status: "provisioning" as ExperimentStatus,
+        status: "provisioning",
         userId: testUserId,
       });
 
       // Execute the use case with FAILURE status
       const result = await useCase.execute({
         experimentId: experiment.id,
-        status: "FAILURE" as DatabricksTaskRunStatus,
+        status: "FAILURE",
       });
 
       // Assert the result is successful and the status is now provisioning_failed
@@ -117,14 +116,14 @@ describe("UpdateProvisioningStatusUseCase", () => {
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment for FAILED",
         description: "Testing status update from FAILED",
-        status: "provisioning" as ExperimentStatus,
+        status: "provisioning",
         userId: testUserId,
       });
 
       // Execute the use case with FAILED status
       const result = await useCase.execute({
         experimentId: experiment.id,
-        status: "FAILED" as DatabricksTaskRunStatus,
+        status: "FAILED",
       });
 
       // Assert the result is successful and the status is now provisioning_failed
@@ -143,14 +142,14 @@ describe("UpdateProvisioningStatusUseCase", () => {
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment for CANCELED",
         description: "Testing status update from CANCELED",
-        status: "provisioning" as ExperimentStatus,
+        status: "provisioning",
         userId: testUserId,
       });
 
       // Execute the use case with CANCELED status
       const result = await useCase.execute({
         experimentId: experiment.id,
-        status: "CANCELED" as DatabricksTaskRunStatus,
+        status: "CANCELED",
       });
 
       // Assert the result is successful and the status is now provisioning_failed
@@ -176,7 +175,7 @@ describe("UpdateProvisioningStatusUseCase", () => {
       // Execute the use case with a non-terminal status
       const result = await useCase.execute({
         experimentId: experiment.id,
-        status: "RUNNING" as DatabricksTaskRunStatus,
+        status: "RUNNING",
       });
 
       // Assert the result is a failure with the correct error message
@@ -197,7 +196,7 @@ describe("UpdateProvisioningStatusUseCase", () => {
       // Execute the use case with a non-existent experiment ID
       const result = await useCase.execute({
         experimentId: nonExistentId,
-        status: "SUCCESS" as DatabricksTaskRunStatus,
+        status: "SUCCESS",
       });
 
       // Assert the result is a failure with the correct error message
@@ -217,7 +216,7 @@ describe("UpdateProvisioningStatusUseCase", () => {
       // Execute the use case with SUCCESS status (which should map to active)
       const result = await useCase.execute({
         experimentId: experiment.id,
-        status: "SUCCESS" as DatabricksTaskRunStatus,
+        status: "SUCCESS",
       });
 
       // Assert the result is successful and the status is still active

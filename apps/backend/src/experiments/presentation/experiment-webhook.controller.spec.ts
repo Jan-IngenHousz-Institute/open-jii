@@ -224,7 +224,7 @@ describe("ExperimentWebhookController", () => {
         .send(webhookPayload)
         .expect(StatusCodes.UNAUTHORIZED)
         .expect(({ body }: { body: ExperimentWebhookErrorResponse }) => {
-          expect(body.message).toContain("Missing API key ID");
+          expect(body.message).toContain("Unauthorized");
         });
     });
   });
