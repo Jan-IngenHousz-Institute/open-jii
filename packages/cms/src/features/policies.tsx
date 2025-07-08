@@ -34,7 +34,7 @@ export const PoliciesContent: React.FC<PoliciesContentProps> = ({ policies, loca
   });
 
   return (
-    <div className="mx-auto flex w-full flex-col items-center">
+    <div className="flex w-full max-w-7xl flex-col items-start">
       <h1
         className="text-jii-dark-green mb-8 w-full text-left text-3xl font-bold tracking-tight"
         {...inspectorProps({ fieldId: "title" })}

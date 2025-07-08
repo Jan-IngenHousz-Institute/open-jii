@@ -75,7 +75,7 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
 
   return (
     <>
-      <div className="mb-12 text-left">
+      <div className="mx-auto mb-12 max-w-4xl text-left">
         <h1
           className="mb-4 text-center text-4xl font-bold text-gray-900"
           {...inspectorProps({ fieldId: "title" })}
@@ -91,7 +91,7 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
           </p>
         ) : null}
       </div>
-      <div className="space-y-6" {...inspectorProps({ fieldId: `questions` })}>
+      <div className="mx-auto max-w-4xl space-y-6" {...inspectorProps({ fieldId: `questions` })}>
         {renderQuestionsList(questions)}
       </div>
     </>
