@@ -53,14 +53,14 @@ export class HmacGuard implements CanActivate {
       // Validate API key ID and look up the actual API key
       if (!apiKeyId) {
         this.logger.warn("Missing API key ID");
-        throw new UnauthorizedException("Missing API key ID");
+        throw new UnauthorizedException("Unauthorized");
       }
 
       // Get the actual API key using the ID
       const apiKey = this.getApiKeyById(apiKeyId);
       if (!apiKey) {
         this.logger.warn("Invalid API key ID provided");
-        throw new UnauthorizedException("Invalid API key ID");
+        throw new UnauthorizedException("Unauthorized");
       }
 
       // Get webhook secret from config
@@ -69,7 +69,7 @@ export class HmacGuard implements CanActivate {
       // Validate HMAC signature
       if (!signature || !timestamp) {
         this.logger.warn("Missing signature or timestamp headers");
-        throw new UnauthorizedException("Missing signature or timestamp");
+        throw new UnauthorizedException("Unauthorized");
       }
 
       // Validate timestamp to prevent replay attacks
@@ -80,7 +80,7 @@ export class HmacGuard implements CanActivate {
 
       if (isNaN(timestampValue) || Math.abs(currentTime - timestampValue) > fiveMinutesInSeconds) {
         this.logger.warn(`Invalid timestamp: ${timestamp}. Current time: ${currentTime}`);
-        throw new UnauthorizedException("Request timestamp is too old or invalid");
+        throw new UnauthorizedException("Unauthorized");
       }
 
       // Get the raw body directly from the request
@@ -115,12 +115,12 @@ export class HmacGuard implements CanActivate {
 
         if (!crypto.timingSafeEqual(signatureBuffer, expectedSignatureBuffer)) {
           this.logger.warn("Invalid signature provided");
-          throw new UnauthorizedException("Invalid signature");
+          throw new UnauthorizedException("Unauthorized");
         }
       } catch (error) {
         // This can happen if the signatures have different lengths or are not valid hex
         this.logger.warn("Signature comparison failed", error);
-        throw new UnauthorizedException("Invalid signature format");
+        throw new UnauthorizedException("Unauthorized");
       }
 
       return true;
@@ -129,8 +129,8 @@ export class HmacGuard implements CanActivate {
         throw error;
       }
 
-      this.logger.error("Webhook authentication failed", error);
-      throw new InternalServerErrorException("Webhook authentication failed");
+      this.logger.error("HMAC verification failed", error);
+      throw new InternalServerErrorException("HMAC verification failed");
     }
   }
 }
