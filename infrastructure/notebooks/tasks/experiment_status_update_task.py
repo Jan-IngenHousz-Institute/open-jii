@@ -3,31 +3,7 @@
 """
 This notebook sends experiment provisioning status updates to the OpenJII backend webhook.
 It should be executed after the experiment pipeline creation task in a shared job.
-
-Workflow:
-1. The experiment_pipeline_create_task.py creates a pipeline for an experiment
-2. If the creation is successful, this task is executed and reports SUCCESS to the webhook
-3. If the creation fails, this task is executed in a failure context and reports FAILED to the webhook
-4. The backend processes these statuses to update the experiment status accordingly:
-   - SUCCESS → active
-   - FAILED → provisioning_failed
-   - CANCELED → provisioning_canceled
-
-Parameters (all provided via Databricks widgets):
-- webhook_url: MUST be provided as a parameter (Databricks widget)
-               MUST use HTTPS protocol for security reasons
-- key_scope: MUST be provided as a parameter (Databricks widget)
-- webhook_secret_name: MUST be provided as a parameter (Databricks widget)
-- api_key_id_name: MUST be provided as a parameter (Databricks widget)
-- experiment_id: Required UUID of the experiment
-- job_run_id: Required ID of the job run
-- task_run_id: Required ID of the task run
-- status: Optional manual override of the status (auto-detected if not provided)
 """
-
-# This is a Databricks notebook, so `dbutils` and `spark` are globally available
-# Adding type-ignores to prevent local linting errors
-# type: ignore
 import json
 import logging
 import requests
