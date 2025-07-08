@@ -24,7 +24,7 @@ export const zDataColumn = z.object({
 // Experiment data schema
 export const zExperimentData = z.object({
   columns: z.array(zDataColumn),
-  rows: z.array(z.array(z.string().nullable())),
+  rows: z.array(z.record(z.string(), z.string().nullable())),
   totalRows: z.number().int(),
   truncated: z.boolean(),
 });
@@ -145,12 +145,65 @@ export const zExperimentDataTableInfo = z.object({
   totalRows: z.number().int(),
 });
 
+export const zIdPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+});
+export const zExperimentMemberPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+  memberId: z.string().uuid().describe("ID of the member"),
+});
+
 export const zExperimentDataTableList = z.array(zExperimentDataTableInfo);
 
-// Now the response is an array of table data objects
 export const zExperimentDataResponse = zExperimentDataTableList;
 
 export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
+
+// Webhook Schemas
+export const zExperimentWebhookAuthHeader = z.object({
+  "x-api-key-id": z.string(),
+  "x-databricks-signature": z.string(),
+  "x-databricks-timestamp": z.string(),
+});
+
+export const zExperimentProvisioningStatusWebhookPayload = z.object({
+  status: z.enum([
+    // Terminal statuses
+    "SUCCESS",
+    "FAILURE",
+    "CANCELED",
+    "TIMEOUT",
+    "FAILED",
+    // Non-terminal statuses
+    "RUNNING",
+    "PENDING",
+    "SKIPPED",
+    "DEPLOYING",
+    "DEPLOYED",
+    "COMPLETED",
+    "QUEUED",
+    "TERMINATED",
+    "WAITING",
+    "INITIALIZING",
+    "IDLE",
+    "SETTING_UP",
+    "RESETTING",
+  ]),
+  jobRunId: z.string(),
+  taskRunId: z.string(),
+  timestamp: z.string(),
+});
+
+export const zExperimentWebhookSuccessResponse = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+
+export const zExperimentWebhookErrorResponse = z.object({
+  error: z.string(),
+  message: z.string(),
+  statusCode: z.number(),
+});
 
 // Infer request and response types
 export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;
@@ -161,14 +214,13 @@ export type ExperimentFilter = ExperimentFilterQuery["filter"];
 export type CreateExperimentResponse = z.infer<typeof zCreateExperimentResponse>;
 export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
 export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
-
-export const zIdPathParam = z.object({
-  id: z.string().uuid().describe("ID of the experiment"),
-});
-export const zExperimentMemberPathParam = z.object({
-  id: z.string().uuid().describe("ID of the experiment"),
-  memberId: z.string().uuid().describe("ID of the member"),
-});
-
 export type IdPathParam = z.infer<typeof zIdPathParam>;
 export type ExperimentMemberPathParam = z.infer<typeof zExperimentMemberPathParam>;
+
+// Webhook types
+export type ExperimentProvisioningStatusWebhookPayload = z.infer<
+  typeof zExperimentProvisioningStatusWebhookPayload
+>;
+export type ExperimentProvisioningStatus = ExperimentProvisioningStatusWebhookPayload["status"];
+export type ExperimentWebhookSuccessResponse = z.infer<typeof zExperimentWebhookSuccessResponse>;
+export type ExperimentWebhookErrorResponse = z.infer<typeof zExperimentWebhookErrorResponse>;

@@ -171,8 +171,8 @@ class ExperimentPipelineManager:
                 configuration=pipeline_configuration,
                 continuous=False,          # Cost optimization: manual triggering
                 development=True,          # Cost optimization: development mode
-                serverless=True,          # Cost optimization: serverless compute
-                edition="ADVANCED",       # Required for serverless
+                serverless=True,           # Cost optimization: serverless compute
+                edition="ADVANCED",        # Required for serverless
                 channel="CURRENT"
             )
             

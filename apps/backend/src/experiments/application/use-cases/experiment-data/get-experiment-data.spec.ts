@@ -74,6 +74,17 @@ describe("GetExperimentDataUseCase", () => {
       totalRows: 2,
       truncated: false,
     };
+    
+    // Create expected data format after transformation by the service
+    const expectedTableData = {
+      columns: mockTableData.columns,
+      rows: [
+        { column1: "value1", column2: "1" },
+        { column1: "value2", column2: "2" },
+      ],
+      totalRows: mockTableData.totalRows,
+      truncated: mockTableData.truncated,
+    };
 
     // Mock token request
     nock(DATABRICKS_HOST).post(DatabricksService.TOKEN_ENDPOINT).reply(200, {
@@ -167,7 +178,7 @@ describe("GetExperimentDataUseCase", () => {
       name: "test_table",
       catalog_name: experiment.name,
       schema_name: `exp_${experiment.name}_${experiment.id}`,
-      data: mockTableData,
+      data: expectedTableData,
       page: 1,
       pageSize: 20,
       totalRows: 100,

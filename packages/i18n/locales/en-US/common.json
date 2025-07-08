@@ -210,6 +210,18 @@
       "title": "Data Analysis"
     }
   },
+  "experimentDataTable": {
+    "loading": "Data loading... Please wait. It can take several minutes.",
+    "noData": "No data returned",
+    "noResults": "No results",
+    "error": "Error loading data",
+    "page": "Page",
+    "pageOf": "of",
+    "previous": "Previous",
+    "next": "Next",
+    "table": "Table",
+    "details": "Show table details"
+  },
   "landingPage": {
     "latestArticles": "Latest articles"
   },

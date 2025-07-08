@@ -20,7 +20,7 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   // Determine active tab from URL
   const getActiveTab = () => {
     if (pathname.endsWith("/settings")) return "settings";
-    if (pathname.endsWith("/data")) return "data";
+    if (pathname.startsWith(`/${locale}/platform/experiments/${id}/data`)) return "data";
     if (pathname.endsWith(`/experiments/${id}`)) return "overview";
     return "overview";
   };
