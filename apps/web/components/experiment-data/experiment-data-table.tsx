@@ -98,6 +98,21 @@ export function ExperimentDataTable({
     },
   });
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowRight" && table.getCanNextPage()) {
+        table.nextPage();
+      }
+
+      if (event.key === "ArrowLeft" && table.getCanPreviousPage()) {
+        table.previousPage();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [table]);
+
   if (isLoading && !persistedMetaData) {
     return <div>{t("experimentDataTable.loading")}</div>;
   }
