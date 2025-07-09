@@ -16,7 +16,21 @@ import {
 } from "~/components/experiment-data/experiment-data-utils";
 
 import { useTranslation } from "@repo/i18n";
-import { Button, Table, TableBody } from "@repo/ui/components";
+import {
+  Label,
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Table,
+  TableBody,
+} from "@repo/ui/components";
 
 export function ExperimentDataTable({
   experimentId,
@@ -51,6 +65,11 @@ export function ExperimentDataTable({
     },
     [pagination],
   );
+
+  function changePageSize(pageSize: number) {
+    const newPagination = { pageIndex: 0, pageSize };
+    setPagination(newPagination);
+  }
 
   // Update persisted metadata when we get new data
   useEffect(() => {
@@ -115,27 +134,57 @@ export function ExperimentDataTable({
       </div>
 
       {/* Traditional pagination controls */}
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="mr-2 text-sm">
-          {t("experimentDataTable.page")} {pagination.pageIndex + 1}{" "}
-          {t("experimentDataTable.pageOf")} {totalPages}
+      <div className="mt-4 flex w-full flex-col-reverse items-center justify-between gap-4 overflow-auto p-1 text-sm sm:flex-row sm:gap-8">
+        <div className="flex-1 whitespace-nowrap">Total rows: {totalRows}</div>
+        <div className="flex items-center space-x-2">
+          <Label className="whitespace-nowrap">Rows per page:</Label>
+          <Select
+            value={pagination.pageSize.toString()}
+            onValueChange={(rowsPerPage) => changePageSize(+rowsPerPage)}
+          >
+            <SelectTrigger className="w-[65px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          {t("experimentDataTable.previous")}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          {t("experimentDataTable.next")}
-        </Button>
+        <Pagination className="flex max-w-xs items-center justify-end pl-4">
+          <PaginationContent className="w-full justify-between">
+            <PaginationItem>
+              <PaginationPrevious
+                className={
+                  table.getCanPreviousPage()
+                    ? "border"
+                    : "pointer-events-none cursor-not-allowed border opacity-50"
+                }
+                onClick={() => table.previousPage()}
+                aria-disabled={!table.getCanPreviousPage()}
+              />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="">
+                {t("experimentDataTable.page")} {pagination.pageIndex + 1}{" "}
+                {t("experimentDataTable.pageOf")} {totalPages}
+              </span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext
+                className={
+                  table.getCanNextPage()
+                    ? "border"
+                    : "pointer-events-none cursor-not-allowed border opacity-50"
+                }
+                onClick={() => table.nextPage()}
+                aria-disabled={!table.getCanNextPage()}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
     </div>
   );
