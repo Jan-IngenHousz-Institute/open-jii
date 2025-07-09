@@ -31,6 +31,7 @@ import {
   Table,
   TableBody,
 } from "@repo/ui/components";
+import { cn } from "@repo/ui/lib/utils";
 
 export function ExperimentDataTable({
   experimentId,
@@ -150,9 +151,11 @@ export function ExperimentDataTable({
 
       {/* Traditional pagination controls */}
       <div className="mt-4 flex w-full flex-col-reverse items-center justify-between gap-4 overflow-auto p-1 text-sm sm:flex-row sm:gap-8">
-        <div className="flex-1 whitespace-nowrap">Total rows: {totalRows}</div>
+        <div className="flex-1 whitespace-nowrap">
+          {t("experimentDataTable.totalRows")}: {totalRows}
+        </div>
         <div className="flex items-center space-x-2">
-          <Label className="whitespace-nowrap">Rows per page:</Label>
+          <Label className="whitespace-nowrap">{t("experimentDataTable.rowsPerPage")}:</Label>
           <Select
             value={pagination.pageSize.toString()}
             onValueChange={(rowsPerPage) => changePageSize(+rowsPerPage)}
@@ -172,13 +175,14 @@ export function ExperimentDataTable({
           <PaginationContent className="w-full justify-between">
             <PaginationItem>
               <PaginationPrevious
-                className={
-                  table.getCanPreviousPage()
-                    ? "border"
-                    : "pointer-events-none cursor-not-allowed border opacity-50"
-                }
+                className={cn(
+                  "border",
+                  !table.getCanPreviousPage() &&
+                    "pointer-events-none cursor-not-allowed opacity-50",
+                )}
                 onClick={() => table.previousPage()}
                 aria-disabled={!table.getCanPreviousPage()}
+                title={t("experimentDataTable.previous")}
               />
             </PaginationItem>
             <PaginationItem>
@@ -189,13 +193,13 @@ export function ExperimentDataTable({
             </PaginationItem>
             <PaginationItem>
               <PaginationNext
-                className={
-                  table.getCanNextPage()
-                    ? "border"
-                    : "pointer-events-none cursor-not-allowed border opacity-50"
-                }
+                className={cn(
+                  "border",
+                  !table.getCanNextPage() && "pointer-events-none cursor-not-allowed opacity-50",
+                )}
                 onClick={() => table.nextPage()}
                 aria-disabled={!table.getCanNextPage()}
+                title={t("experimentDataTable.next")}
               />
             </PaginationItem>
           </PaginationContent>
