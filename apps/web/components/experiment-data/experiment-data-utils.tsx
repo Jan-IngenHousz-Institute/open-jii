@@ -1,6 +1,7 @@
 import { flexRender } from "@tanstack/react-table";
 import type { Row, HeaderGroup, RowData } from "@tanstack/react-table";
 import React from "react";
+import type { DataRow } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import { useTranslation } from "@repo/i18n";
 import { Skeleton, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components";
@@ -20,7 +21,7 @@ export function formatValue(value: unknown, type: string) {
   }
 }
 
-export function ExperimentTableHeader({ headerGroups }: { headerGroups: HeaderGroup<RowData>[] }) {
+export function ExperimentTableHeader({ headerGroups }: { headerGroups: HeaderGroup<DataRow>[] }) {
   return headerGroups.map((headerGroup) => (
     <TableHeader key={headerGroup.id}>
       <TableRow className="h-2">
