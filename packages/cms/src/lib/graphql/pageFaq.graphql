@@ -1,0 +1,37 @@
+fragment FaqQuestionFields on ComponentFaqQuestion {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+  question
+  answer {
+    json
+  }
+}
+
+fragment PageFaqFields on PageFaq {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+  internalName
+  title
+  intro
+  questionsCollection {
+    items {
+      ...FaqQuestionFields
+    }
+  }
+}
+
+query pageFaq($locale: String, $preview: Boolean) {
+  pageFaqCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...PageFaqFields
+    }
+  }
+}

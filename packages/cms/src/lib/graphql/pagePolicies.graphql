@@ -1,0 +1,21 @@
+fragment PagePoliciesFields on PagePolicies {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+  internalName
+  title
+  content {
+    json
+  }
+}
+
+query pagePolicies($locale: String, $preview: Boolean) {
+  pagePoliciesCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...PagePoliciesFields
+    }
+  }
+}

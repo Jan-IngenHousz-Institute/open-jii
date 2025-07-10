@@ -1132,6 +1132,160 @@
         }
       }
     },
+    "/api/v1/experiments/{id}/provisioning-status": {
+      "post": {
+        "description": "Receives status updates from Databricks workflows and updates the corresponding experiment status",
+        "summary": "Handle experiment provisioning status updates",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          },
+          {
+            "name": "x-api-key-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-databricks-signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-databricks-timestamp",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "operationId": "experiments.updateProvisioningStatus",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "SUCCESS",
+                      "FAILURE",
+                      "CANCELED",
+                      "TIMEOUT",
+                      "FAILED",
+                      "RUNNING",
+                      "PENDING",
+                      "SKIPPED",
+                      "DEPLOYING",
+                      "DEPLOYED",
+                      "COMPLETED",
+                      "QUEUED",
+                      "TERMINATED",
+                      "WAITING",
+                      "INITIALIZING",
+                      "IDLE",
+                      "SETTING_UP",
+                      "RESETTING"
+                    ]
+                  },
+                  "jobRunId": {
+                    "type": "string"
+                  },
+                  "taskRunId": {
+                    "type": "string"
+                  },
+                  "timestamp": {
+                    "type": "string"
+                  }
+                },
+                "required": ["status", "jobRunId", "taskRunId", "timestamp"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["success", "message"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["error", "message", "statusCode"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["error", "message", "statusCode"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/protocols": {
       "get": {
         "description": "Returns a list of protocols based on the specified filter criteria",
@@ -1179,6 +1333,10 @@
                           "additionalProperties": {}
                         }
                       },
+                      "family": {
+                        "type": "string",
+                        "enum": ["multispeq", "ambit"]
+                      },
                       "createdBy": {
                         "type": "string",
                         "format": "uuid"
@@ -1197,6 +1355,7 @@
                       "name",
                       "description",
                       "code",
+                      "family",
                       "createdBy",
                       "createdAt",
                       "updatedAt"
@@ -1253,9 +1412,13 @@
                       "type": "object",
                       "additionalProperties": {}
                     }
+                  },
+                  "family": {
+                    "type": "string",
+                    "enum": ["multispeq", "ambit"]
                   }
                 },
-                "required": ["name", "code"]
+                "required": ["name", "code", "family"]
               }
             }
           }
@@ -1286,6 +1449,10 @@
                         "additionalProperties": {}
                       }
                     },
+                    "family": {
+                      "type": "string",
+                      "enum": ["multispeq", "ambit"]
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -1304,6 +1471,7 @@
                     "name",
                     "description",
                     "code",
+                    "family",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
@@ -1377,6 +1545,10 @@
                         "additionalProperties": {}
                       }
                     },
+                    "family": {
+                      "type": "string",
+                      "enum": ["multispeq", "ambit"]
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -1395,6 +1567,7 @@
                     "name",
                     "description",
                     "code",
+                    "family",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
@@ -1459,6 +1632,10 @@
                       "type": "object",
                       "additionalProperties": {}
                     }
+                  },
+                  "family": {
+                    "type": "string",
+                    "enum": ["multispeq", "ambit"]
                   }
                 }
               }
@@ -1491,6 +1668,10 @@
                         "additionalProperties": {}
                       }
                     },
+                    "family": {
+                      "type": "string",
+                      "enum": ["multispeq", "ambit"]
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -1509,6 +1690,7 @@
                     "name",
                     "description",
                     "code",
+                    "family",
                     "createdBy",
                     "createdAt",
                     "updatedAt"

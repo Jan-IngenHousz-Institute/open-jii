@@ -1,0 +1,30 @@
+fragment PageAboutFields on PageAbout {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+  internalName
+  title
+  description {
+    json
+  }
+  image {
+    url
+    title
+    sys {
+      id
+      publishedAt
+      environmentId
+    }
+  }
+}
+
+query pageAbout($locale: String, $preview: Boolean) {
+  pageAboutCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...PageAboutFields
+    }
+  }
+}

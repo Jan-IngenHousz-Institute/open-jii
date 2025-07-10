@@ -1,9 +1,11 @@
 import { TranslationsProvider } from "@/components/translations-provider";
 import type { Metadata } from "next";
 import { Poppins, Overpass } from "next/font/google";
+import { draftMode } from "next/headers";
 import type { ReactNode } from "react";
 
 import { SessionProvider } from "@repo/auth/client";
+import { ContentfulPreviewProvider } from "@repo/cms/contentful";
 import { dir } from "@repo/i18n";
 import type { Locale, Namespace } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
@@ -48,8 +50,11 @@ export async function generateMetadata({
   };
 }
 
+const allowedOriginList = ["https://app.contentful.com", "https://app.eu.contentful.com"];
+
 export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
   const { locale } = await params;
+  const { isEnabled: preview } = await draftMode();
   const { resources } = await initTranslations({
     locale,
     namespaces: i18nNamespaces,
@@ -67,11 +72,18 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
           overpass.variable,
         )}
       >
-        <TranslationsProvider locale={locale} namespaces={i18nNamespaces} resources={resources}>
-          <SessionProvider>
-            <QueryProvider>{children}</QueryProvider>
-          </SessionProvider>
-        </TranslationsProvider>
+        <ContentfulPreviewProvider
+          locale={locale}
+          enableInspectorMode={preview}
+          enableLiveUpdates={preview}
+          targetOrigin={allowedOriginList}
+        >
+          <TranslationsProvider locale={locale} namespaces={i18nNamespaces} resources={resources}>
+            <SessionProvider>
+              <QueryProvider>{children}</QueryProvider>
+            </SessionProvider>
+          </TranslationsProvider>
+        </ContentfulPreviewProvider>
       </body>
     </html>
   );

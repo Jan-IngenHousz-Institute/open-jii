@@ -12,17 +12,24 @@ import { RemoveExperimentMemberUseCase } from "./application/use-cases/experimen
 import { GetExperimentUseCase } from "./application/use-cases/get-experiment/get-experiment";
 import { ListExperimentsUseCase } from "./application/use-cases/list-experiments/list-experiments";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
+import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-provisioning-status/update-provisioning-status";
 // Repositories
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
 // Controllers
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
 import { ExperimentMembersController } from "./presentation/experiment-members.controller";
+import { ExperimentWebhookController } from "./presentation/experiment-webhook.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
 
 @Module({
   imports: [DatabricksModule],
-  controllers: [ExperimentController, ExperimentMembersController, ExperimentDataController],
+  controllers: [
+    ExperimentController,
+    ExperimentDataController,
+    ExperimentMembersController,
+    ExperimentWebhookController,
+  ],
   providers: [
     // Repositories
     ExperimentRepository,
@@ -35,6 +42,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     UpdateExperimentUseCase,
     DeleteExperimentUseCase,
     ChangeExperimentStatusUseCase,
+    UpdateProvisioningStatusUseCase,
 
     // Experiment data use cases
     GetExperimentDataUseCase,

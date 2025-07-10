@@ -128,6 +128,12 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
         isActive: pathname === `/${locale}`,
       },
       {
+        href: `/${locale}/about`,
+        label: t("navigation.about", "About"),
+        icon: User,
+        isActive: pathname.startsWith(`/${locale}/about`),
+      },
+      {
         href: `/${locale}/blog`,
         label: t("navigation.blog", "Blog"),
         icon: BookOpen,
@@ -151,17 +157,19 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
 
   return (
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
-      <nav className="container mx-auto flex h-16 items-center justify-between px-4">
+      <nav className="container mx-auto grid h-16 grid-cols-3 items-center px-4">
         {/* Logo/Brand */}
-        <Link
-          href={`/${locale}`}
-          className="flex items-center space-x-2 text-xl font-bold transition-opacity hover:opacity-80"
-        >
-          <span className="text-primary">openJII</span>
-        </Link>
+        <div className="col-start-1 col-end-2 flex items-center">
+          <Link
+            href={`/${locale}`}
+            className="flex items-center space-x-2 text-xl font-bold transition-opacity hover:opacity-80"
+          >
+            <span className="text-primary">openJII</span>
+          </Link>
+        </div>
 
         {/* Navigation Links - Desktop */}
-        <div className="hidden items-center space-x-6 md:flex">
+        <div className="col-start-2 col-end-3 hidden items-center justify-center space-x-6 md:flex">
           {visibleNavItems.map((item) => {
             const Icon = item.icon;
 
@@ -182,11 +190,12 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
         </div>
 
         {/* Right side: Language Switcher + User Menu */}
-        <div className="flex items-center space-x-3">
-          <LanguageSwitcher locale={locale} />
-
+        <div className="col-start-3 col-end-4 flex items-center justify-end space-x-3 justify-self-end md:justify-end">
           {/* Desktop User Menu */}
-          <UserMenu locale={locale} session={session} onSignOut={handleSignOut} />
+          <div className="hidden md:block">
+            <UserMenu locale={locale} session={session} onSignOut={handleSignOut} />
+          </div>
+          <LanguageSwitcher locale={locale} />
 
           {/* Mobile Navigation Menu */}
           <div className="md:hidden">

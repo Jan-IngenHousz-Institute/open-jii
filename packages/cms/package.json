@@ -28,7 +28,9 @@
     "dev": "tsc --watch",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "codegen": "graphql-codegen -r dotenv/config --config src/codegen.ts",
+    "codegen:watch": "graphql-codegen --watch -r dotenv/config --config src/codegen.ts"
   },
   "dependencies": {
     "@contentful/live-preview": "^4.6.23",
@@ -39,6 +41,7 @@
     "contentful": "^11.7.3",
     "graphql-request": "^7.2.0",
     "graphql-tag": "^2.12.6",
+    "lucide-react": "^0.507.0",
     "next": "^15.3.3",
     "react": "catalog:react19",
     "react-dom": "catalog:react19"
@@ -47,6 +50,7 @@
     "@contentful/f36-icons": "4.29.1",
     "@contentful/f36-tokens": "4.2.0",
     "@graphql-codegen/cli": "^5.0.7",
+    "@graphql-codegen/introspection": "^4.0.3",
     "@graphql-codegen/typescript": "^4.1.6",
     "@graphql-codegen/typescript-graphql-request": "^6.3.0",
     "@graphql-codegen/typescript-operations": "^4.6.1",

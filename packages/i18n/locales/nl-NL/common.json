@@ -275,5 +275,17 @@
     "codePlaceholder": "Voer protocol code in als JSON",
     "codeDescription": "Definieer de JSON-structuur en logica voor je protocol",
     "family": "Sensor familie"
+  },
+  "experimentDataTable": {
+    "loading": "Gegevens laden... Even geduld. Dit kan enkele minuten duren.",
+    "noData": "Geen gegevens ontvangen",
+    "noResults": "Geen resultaten",
+    "error": "Fout bij het laden van gegevens",
+    "page": "Pagina",
+    "pageOf": "van",
+    "previous": "Vorige",
+    "next": "Volgende",
+    "table": "Tabel",
+    "details": "Toon tabeldetails"
   }
 }

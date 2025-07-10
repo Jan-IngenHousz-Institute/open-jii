@@ -9,13 +9,27 @@ import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 /**
+ * Data structure based on DataBricks
+ */
+export interface SchemaDataDto {
+  columns: {
+    name: string;
+    type_name: string;
+    type_text: string;
+  }[];
+  rows: Record<string, string | null>[];
+  totalRows: number;
+  truncated: boolean;
+}
+
+/**
  * Single table data structure that forms our array response
  */
 export interface TableDataDto {
   name: string;
   catalog_name: string;
   schema_name: string;
-  data?: SchemaData;
+  data?: SchemaDataDto;
   page: number;
   pageSize: number;
   totalPages: number;
@@ -118,7 +132,7 @@ export class GetExperimentDataUseCase {
                 name: query.tableName,
                 catalog_name: experiment.name,
                 schema_name: schemaName,
-                data: dataResult.value,
+                data: this.transformSchemaData(dataResult.value),
                 page,
                 pageSize,
                 totalRows,
@@ -163,7 +177,7 @@ export class GetExperimentDataUseCase {
               };
 
               if (dataResult.isSuccess()) {
-                tableInfo.data = dataResult.value;
+                tableInfo.data = this.transformSchemaData(dataResult.value);
               } else {
                 this.logger.warn(
                   `Failed to get sample data for table ${table.name}: ${dataResult.error.message}`,
@@ -191,5 +205,22 @@ export class GetExperimentDataUseCase {
         }
       },
     );
+  }
+
+  private transformSchemaData(schemaData: SchemaData) {
+    const result: SchemaDataDto = {
+      columns: schemaData.columns,
+      rows: [],
+      totalRows: schemaData.totalRows,
+      truncated: schemaData.truncated,
+    };
+    schemaData.rows.forEach((row) => {
+      const dataRow: Record<string, string | null> = {};
+      row.forEach((dataColumn, index) => {
+        dataRow[schemaData.columns[index].name] = dataColumn;
+      });
+      result.rows.push(dataRow);
+    });
+    return result;
   }
 }

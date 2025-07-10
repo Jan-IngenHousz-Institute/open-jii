@@ -14,6 +14,10 @@ import {
   zExperimentMemberPathParam,
   zExperimentDataQuery,
   zExperimentDataResponse,
+  zExperimentProvisioningStatusWebhookPayload,
+  zExperimentWebhookAuthHeader,
+  zExperimentWebhookSuccessResponse,
+  zExperimentWebhookErrorResponse,
 } from "../schemas/experiment.schema";
 
 const c = initContract();
@@ -133,5 +137,21 @@ export const experimentContract = c.router({
     },
     summary: "Get experiment data",
     description: "Retrieves data tables from the experiment with pagination support",
+  },
+
+  updateProvisioningStatus: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/provisioning-status",
+    pathParams: zIdPathParam,
+    body: zExperimentProvisioningStatusWebhookPayload,
+    headers: zExperimentWebhookAuthHeader,
+    responses: {
+      200: zExperimentWebhookSuccessResponse,
+      400: zExperimentWebhookErrorResponse,
+      401: zExperimentWebhookErrorResponse,
+    },
+    summary: "Handle experiment provisioning status updates",
+    description:
+      "Receives status updates from Databricks workflows and updates the corresponding experiment status",
   },
 });

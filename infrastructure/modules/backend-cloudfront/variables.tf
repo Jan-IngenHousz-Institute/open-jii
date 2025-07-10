@@ -47,7 +47,17 @@ variable "max_ttl" {
 variable "forwarded_headers" {
   description = "List of headers to forward to the origin"
   type        = list(string)
-  default     = ["Authorization", "Host", "Origin", "Referer", "User-Agent"]
+  default = [
+    "Authorization",
+    "Host",
+    "Origin",
+    "Referer",
+    "User-Agent",
+    "Content-Type",
+    "x-api-key-id",
+    "x-databricks-signature",
+    "x-databricks-timestamp",
+  ]
 }
 
 variable "custom_domain" {
