@@ -150,7 +150,7 @@ export function ExperimentDataTable({
       </div>
 
       {/* Traditional pagination controls */}
-      <div className="mt-4 flex w-full flex-col-reverse items-center justify-between gap-4 overflow-auto p-1 text-sm sm:flex-row sm:gap-8">
+      <div className="mt-4 flex w-full flex-col items-center justify-between gap-4 overflow-auto p-1 text-sm sm:flex-row sm:gap-8">
         <div className="flex-1 whitespace-nowrap">
           {t("experimentDataTable.totalRows")}: {totalRows}
         </div>
@@ -171,7 +171,7 @@ export function ExperimentDataTable({
             </SelectContent>
           </Select>
         </div>
-        <Pagination className="flex max-w-xs items-center justify-end pl-4">
+        <Pagination className="max-w-72">
           <PaginationContent className="w-full justify-between">
             <PaginationItem>
               <PaginationPrevious
