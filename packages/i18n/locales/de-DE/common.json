@@ -213,6 +213,8 @@
     "noData": "Keine Daten zurückgegeben",
     "noResults": "Keine Ergebnisse",
     "error": "Fehler beim Laden der Daten",
+    "totalRows": "Zeilen gesamt",
+    "rowsPerPage": "Zeilen pro Seite",
     "page": "Seite",
     "pageOf": "von",
     "previous": "Zurück",
