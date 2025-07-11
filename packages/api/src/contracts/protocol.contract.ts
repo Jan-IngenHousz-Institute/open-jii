@@ -1,6 +1,12 @@
 import { initContract } from "@ts-rest/core";
 
 import {
+  zExperimentProtocolList,
+  zAddExperimentProtocolsBody,
+  zExperimentProtocolPathParam,
+} from "../schemas/experiment.schema";
+import { zIdPathParam, zErrorResponse } from "../schemas/experiment.schema";
+import {
   zProtocol,
   zProtocolList,
   zProtocolErrorResponse,
@@ -23,6 +29,53 @@ export const protocolContract = c.router({
     },
     summary: "List protocols",
     description: "Returns a list of protocols based on the specified filter criteria",
+  },
+
+  // Experiment Protocol Association Endpoints
+  listExperimentProtocols: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/protocols",
+    pathParams: zIdPathParam,
+    responses: {
+      200: zExperimentProtocolList,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "List protocols associated with an experiment",
+    description: "Returns a list of protocol associations for the specified experiment.",
+  },
+
+  addExperimentProtocols: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/protocols",
+    pathParams: zIdPathParam,
+    body: zAddExperimentProtocolsBody,
+    responses: {
+      201: zExperimentProtocolList,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Add protocols to an experiment",
+    description: "Associates one or more protocols with an experiment.",
+  },
+
+  removeExperimentProtocol: {
+    method: "DELETE",
+    path: "/api/v1/experiments/:id/protocols/:protocolId",
+    pathParams: zExperimentProtocolPathParam,
+    responses: {
+      204: null,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Remove a protocol from an experiment",
+    description: "Removes the association between a protocol and an experiment.",
   },
 
   getProtocol: {
