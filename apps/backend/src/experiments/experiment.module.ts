@@ -24,6 +24,7 @@ import { ExperimentRepository } from "./core/repositories/experiment.repository"
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
 import { ExperimentMembersController } from "./presentation/experiment-members.controller";
 import { ExperimentProtocolsController } from "./presentation/experiment-protocols.controller";
+import { ExperimentWebhookController } from "./presentation/experiment-webhook.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
 
 @Module({
@@ -32,6 +33,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ExperimentController,
     ExperimentDataController,
     ExperimentMembersController,
+    ExperimentWebhookController,
     ExperimentProtocolsController,
   ],
   providers: [
