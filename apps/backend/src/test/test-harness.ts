@@ -19,6 +19,7 @@ import {
   auditLogs,
   profiles,
   protocols,
+  experimentProtocols,
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
@@ -253,6 +254,44 @@ export class TestHarness {
       .returning();
 
     return membership;
+  }
+
+  /**
+   * Helper to create a protocol for testing
+   */
+  public async createProtocol(data: {
+    name: string;
+    description?: string;
+    code?: Record<string, unknown>[];
+    family?: "multispeq" | "ambit";
+    createdBy: string;
+  }) {
+    const [protocol] = await this.database
+      .insert(protocols)
+      .values({
+        name: data.name,
+        description: data.description ?? "Test protocol description",
+        code: data.code ?? [{}],
+        family: data.family ?? "multispeq",
+        createdBy: data.createdBy,
+      })
+      .returning();
+    return protocol;
+  }
+
+  /**
+   * Helper to associate a protocol with an experiment
+   */
+  public async addExperimentProtocol(experimentId: string, protocolId: string, order = 0) {
+    const [association] = await this.database
+      .insert(experimentProtocols)
+      .values({
+        experimentId,
+        protocolId,
+        order,
+      })
+      .returning();
+    return association;
   }
 
   /**

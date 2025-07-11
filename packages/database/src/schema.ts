@@ -189,6 +189,26 @@ export const experimentMembers = pgTable(
   (table) => [primaryKey({ columns: [table.experimentId, table.userId] })],
 );
 
+// Associative table: Experiment Protocols
+export const experimentProtocols = pgTable(
+  "experiment_protocols",
+  {
+    experimentId: uuid("experiment_id")
+      .references(() => experiments.id, { onDelete: "cascade" })
+      .notNull(),
+    protocolId: uuid("protocol_id")
+      .references(() => protocols.id)
+      .notNull(),
+    order: integer("order").default(0).notNull(),
+    addedAt: timestamp("added_at").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.experimentId, table.protocolId] }),
+    // Add index on experimentId for faster lookups
+    { index: { columns: [table.experimentId] } },
+  ],
+);
+
 // Audit Log Table
 export const auditLogs = pgTable("audit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
