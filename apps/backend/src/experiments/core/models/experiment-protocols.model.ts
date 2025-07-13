@@ -11,7 +11,7 @@ export const experimentProtocolSchema = createSelectSchema(experimentProtocols)
       id: z.string().uuid(),
       name: z.string(),
       family: z.enum(["multispeq", "ambit"]),
-      createdby: z.string().uuid(),
+      createdBy: z.string().uuid(),
     }),
   });
 

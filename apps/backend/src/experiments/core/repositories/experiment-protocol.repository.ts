@@ -24,7 +24,7 @@ export class ExperimentProtocolRepository {
             id: protocols.id,
             name: protocols.name,
             family: protocols.family,
-            createdby: protocols.createdBy,
+            createdBy: protocols.createdBy,
           },
         })
         .from(experimentProtocols)
@@ -57,7 +57,7 @@ export class ExperimentProtocolRepository {
             id: protocols.id,
             name: protocols.name,
             family: protocols.family,
-            createdby: protocols.createdBy,
+            createdBy: protocols.createdBy,
           },
         })
         .from(experimentProtocols)

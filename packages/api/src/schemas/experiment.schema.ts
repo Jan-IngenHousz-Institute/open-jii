@@ -5,7 +5,7 @@ export const zExperimentProtocolDetails = z.object({
   id: z.string().uuid(),
   name: z.string(),
   family: z.enum(["multispeq", "ambit"]),
-  createdby: z.string().uuid(),
+  createdBy: z.string().uuid(),
 });
 
 export const zExperimentProtocol = z.object({
