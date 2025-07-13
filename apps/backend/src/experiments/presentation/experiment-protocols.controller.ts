@@ -27,9 +27,9 @@ export class ExperimentProtocolsController {
     private readonly removeExperimentProtocolUseCase: RemoveExperimentProtocolUseCase,
   ) {}
 
-  @TsRestHandler(contract.protocols.listExperimentProtocols)
+  @TsRestHandler(contract.experiments.listExperimentProtocols)
   listProtocols(@CurrentUser() user: SessionUser) {
-    return tsRestHandler(contract.protocols.listExperimentProtocols, async ({ params }) => {
+    return tsRestHandler(contract.experiments.listExperimentProtocols, async ({ params }) => {
       const result = await this.listExperimentProtocolsUseCase.execute(params.id, user.id);
 
       if (result.isSuccess()) {
@@ -57,9 +57,9 @@ export class ExperimentProtocolsController {
     });
   }
 
-  @TsRestHandler(contract.protocols.addExperimentProtocols)
+  @TsRestHandler(contract.experiments.addExperimentProtocols)
   addProtocols(@CurrentUser() user: SessionUser) {
-    return tsRestHandler(contract.protocols.addExperimentProtocols, async ({ params, body }) => {
+    return tsRestHandler(contract.experiments.addExperimentProtocols, async ({ params, body }) => {
       const result = await this.addExperimentProtocolsUseCase.execute(
         params.id,
         body.protocols,
@@ -94,9 +94,9 @@ export class ExperimentProtocolsController {
     });
   }
 
-  @TsRestHandler(contract.protocols.removeExperimentProtocol)
+  @TsRestHandler(contract.experiments.removeExperimentProtocol)
   removeProtocol(@CurrentUser() user: SessionUser) {
-    return tsRestHandler(contract.protocols.removeExperimentProtocol, async ({ params }) => {
+    return tsRestHandler(contract.experiments.removeExperimentProtocol, async ({ params }) => {
       const result = await this.removeExperimentProtocolUseCase.execute(
         params.id,
         params.protocolId,

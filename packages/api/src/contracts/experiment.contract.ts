@@ -19,6 +19,11 @@ import {
   zExperimentWebhookSuccessResponse,
   zExperimentWebhookErrorResponse,
 } from "../schemas/experiment.schema";
+import {
+  zExperimentProtocolList,
+  zAddExperimentProtocolsBody,
+  zExperimentProtocolPathParam,
+} from "../schemas/experiment.schema";
 
 const c = initContract();
 
@@ -153,5 +158,51 @@ export const experimentContract = c.router({
     summary: "Handle experiment provisioning status updates",
     description:
       "Receives status updates from Databricks workflows and updates the corresponding experiment status",
+  },
+
+  listExperimentProtocols: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/protocols",
+    pathParams: zIdPathParam,
+    responses: {
+      200: zExperimentProtocolList,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "List protocols associated with an experiment",
+    description: "Returns a list of protocol associations for the specified experiment.",
+  },
+
+  addExperimentProtocols: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/protocols",
+    pathParams: zIdPathParam,
+    body: zAddExperimentProtocolsBody,
+    responses: {
+      201: zExperimentProtocolList,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Add protocols to an experiment",
+    description: "Associates one or more protocols with an experiment.",
+  },
+
+  removeExperimentProtocol: {
+    method: "DELETE",
+    path: "/api/v1/experiments/:id/protocols/:protocolId",
+    pathParams: zExperimentProtocolPathParam,
+    responses: {
+      204: null,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Remove a protocol from an experiment",
+    description: "Removes the association between a protocol and an experiment.",
   },
 });

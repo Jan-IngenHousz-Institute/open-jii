@@ -47,7 +47,7 @@ describe("ExperimentProtocolsController", () => {
       await testApp.addExperimentProtocol(experiment.id, protocol1.id, 0);
       await testApp.addExperimentProtocol(experiment.id, protocol2.id, 1);
 
-      const path = testApp.resolvePath(contract.protocols.listExperimentProtocols.path, {
+      const path = testApp.resolvePath(contract.experiments.listExperimentProtocols.path, {
         id: experiment.id,
       });
 
@@ -75,7 +75,7 @@ describe("ExperimentProtocolsController", () => {
 
     it("should return 404 if experiment doesn't exist", async () => {
       const nonExistentId = "00000000-0000-0000-0000-000000000000";
-      const path = testApp.resolvePath(contract.protocols.listExperimentProtocols.path, {
+      const path = testApp.resolvePath(contract.experiments.listExperimentProtocols.path, {
         id: nonExistentId,
       });
       await testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
@@ -83,7 +83,7 @@ describe("ExperimentProtocolsController", () => {
 
     it("should return 400 for invalid experiment UUID", async () => {
       const invalidId = "not-a-uuid";
-      const path = testApp.resolvePath(contract.protocols.listExperimentProtocols.path, {
+      const path = testApp.resolvePath(contract.experiments.listExperimentProtocols.path, {
         id: invalidId,
       });
       await testApp.get(path).withAuth(testUserId).expect(StatusCodes.BAD_REQUEST);
@@ -94,7 +94,7 @@ describe("ExperimentProtocolsController", () => {
         name: "Test Experiment for Protocols List",
         userId: testUserId,
       });
-      const path = testApp.resolvePath(contract.protocols.listExperimentProtocols.path, {
+      const path = testApp.resolvePath(contract.experiments.listExperimentProtocols.path, {
         id: experiment.id,
       });
       await testApp.get(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
@@ -118,7 +118,7 @@ describe("ExperimentProtocolsController", () => {
         family: "ambit",
       });
 
-      const path = testApp.resolvePath(contract.protocols.addExperimentProtocols.path, {
+      const path = testApp.resolvePath(contract.experiments.addExperimentProtocols.path, {
         id: experiment.id,
       });
       const body = {
@@ -146,7 +146,7 @@ describe("ExperimentProtocolsController", () => {
         createdBy: testUserId,
         family: "multispeq",
       });
-      const path = testApp.resolvePath(contract.protocols.addExperimentProtocols.path, {
+      const path = testApp.resolvePath(contract.experiments.addExperimentProtocols.path, {
         id: nonExistentId,
       });
       await testApp
@@ -161,7 +161,7 @@ describe("ExperimentProtocolsController", () => {
         name: "Test Experiment for Invalid Protocol Data",
         userId: testUserId,
       });
-      const path = testApp.resolvePath(contract.protocols.addExperimentProtocols.path, {
+      const path = testApp.resolvePath(contract.experiments.addExperimentProtocols.path, {
         id: experiment.id,
       });
       // Missing protocolId
@@ -188,7 +188,7 @@ describe("ExperimentProtocolsController", () => {
         createdBy: testUserId,
         family: "multispeq",
       });
-      const path = testApp.resolvePath(contract.protocols.addExperimentProtocols.path, {
+      const path = testApp.resolvePath(contract.experiments.addExperimentProtocols.path, {
         id: experiment.id,
       });
       await testApp
@@ -212,7 +212,7 @@ describe("ExperimentProtocolsController", () => {
       });
       await testApp.addExperimentProtocol(experiment.id, protocol1.id, 0);
 
-      const path = testApp.resolvePath(contract.protocols.removeExperimentProtocol.path, {
+      const path = testApp.resolvePath(contract.experiments.removeExperimentProtocol.path, {
         id: experiment.id,
         protocolId: protocol1.id,
       });
@@ -220,7 +220,7 @@ describe("ExperimentProtocolsController", () => {
       await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NO_CONTENT);
 
       // Should be empty after removal
-      const listPath = testApp.resolvePath(contract.protocols.listExperimentProtocols.path, {
+      const listPath = testApp.resolvePath(contract.experiments.listExperimentProtocols.path, {
         id: experiment.id,
       });
       const listResponse = await testApp.get(listPath).withAuth(testUserId).expect(StatusCodes.OK);
@@ -234,7 +234,7 @@ describe("ExperimentProtocolsController", () => {
         createdBy: testUserId,
         family: "multispeq",
       });
-      const path = testApp.resolvePath(contract.protocols.removeExperimentProtocol.path, {
+      const path = testApp.resolvePath(contract.experiments.removeExperimentProtocol.path, {
         id: nonExistentId,
         protocolId: protocol1.id,
       });
@@ -247,7 +247,7 @@ describe("ExperimentProtocolsController", () => {
         userId: testUserId,
       });
       const nonExistentProtocolId = "00000000-0000-0000-0000-000000000000";
-      const path = testApp.resolvePath(contract.protocols.removeExperimentProtocol.path, {
+      const path = testApp.resolvePath(contract.experiments.removeExperimentProtocol.path, {
         id: experiment.id,
         protocolId: nonExistentProtocolId,
       });
@@ -259,7 +259,7 @@ describe("ExperimentProtocolsController", () => {
         name: "Test Experiment for Protocol Remove Invalid",
         userId: testUserId,
       });
-      const path = testApp.resolvePath(contract.protocols.removeExperimentProtocol.path, {
+      const path = testApp.resolvePath(contract.experiments.removeExperimentProtocol.path, {
         id: experiment.id,
         protocolId: "not-a-uuid",
       });
@@ -277,7 +277,7 @@ describe("ExperimentProtocolsController", () => {
         family: "multispeq",
       });
       await testApp.addExperimentProtocol(experiment.id, protocol1.id, 0);
-      const path = testApp.resolvePath(contract.protocols.removeExperimentProtocol.path, {
+      const path = testApp.resolvePath(contract.experiments.removeExperimentProtocol.path, {
         id: experiment.id,
         protocolId: protocol1.id,
       });
