@@ -33,7 +33,6 @@ async function getDevices(type: DeviceType) {
 
   if (type === "usb") {
     const devices = await listSerialPortDevices();
-    console.log("devices", devices);
     return devices.map((device) => ({
       id: device.deviceId.toString(),
       type: "usb",
