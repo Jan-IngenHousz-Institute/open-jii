@@ -5,8 +5,6 @@ import { getLoginArgs } from "~/api/get-login-args";
 export async function login() {
   const { expectedRedirectUrl, loginUrl } = getLoginArgs();
 
-  console.log("expectedRedirectUrl", expectedRedirectUrl);
-  console.log("loginUrl", loginUrl);
   const result = await openAuthSessionAsync(loginUrl, expectedRedirectUrl);
 
   if (result.type !== "success") {
