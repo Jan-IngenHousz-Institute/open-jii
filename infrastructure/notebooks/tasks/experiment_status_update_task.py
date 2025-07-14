@@ -143,20 +143,10 @@ def extract_parameters(dbutils, spark) -> Dict[str, Any]:
     if status not in [s.value for s in ProvisioningStatus]:
         raise ValueError(f"Invalid status: {status}. Must be one of: {', '.join([s.value for s in ProvisioningStatus])}")
 
-    # Get API key and webhook secret information from widgets
+    # Get API key scope from widgets
     key_scope = dbutils.widgets.get("key_scope")
     if not key_scope:
         raise ValueError("API key scope not provided. Please provide it as a widget parameter 'key_scope'.")
-
-    # We no longer need key_name parameter as we're using HMAC authentication
-        
-    webhook_secret_name = dbutils.widgets.get("webhook_secret_name")
-    if not webhook_secret_name:
-        raise ValueError("Webhook secret name not provided. Please provide it as a widget parameter 'webhook_secret_name'.")
-        
-    api_key_id_name = dbutils.widgets.get("api_key_id_name")
-    if not api_key_id_name:
-        raise ValueError("API key ID secret name not provided. Please provide it as a widget parameter 'api_key_id_name'.")
 
     return {
         "webhook_url": webhook_url,
@@ -164,9 +154,7 @@ def extract_parameters(dbutils, spark) -> Dict[str, Any]:
         "job_run_id": job_run_id,
         "task_run_id": task_run_id,
         "status": status,
-        "key_scope": key_scope,
-        "webhook_secret_name": webhook_secret_name,
-        "api_key_id_name": api_key_id_name
+        "key_scope": key_scope
     }
 
 # COMMAND ----------
@@ -176,10 +164,10 @@ def extract_parameters(dbutils, spark) -> Dict[str, Any]:
 class WebhookClient:
     """Client for sending status updates to the OpenJII backend webhook with HMAC authentication."""
     
-    def __init__(self, webhook_url: str, key_scope: str, webhook_secret_name: str, api_key_id_name: str, dbutils):
+    def __init__(self, webhook_url: str, key_scope: str, dbutils):
         self.webhook_url = webhook_url
-        self.webhook_secret = dbutils.secrets.get(scope=key_scope, key=webhook_secret_name)
-        self.api_key_id = dbutils.secrets.get(scope=key_scope, key=api_key_id_name)
+        self.webhook_secret = dbutils.secrets.get(scope=key_scope, key="webhook_secret")
+        self.api_key_id = dbutils.secrets.get(scope=key_scope, key="webhook_api_key_id")
         self.session = self._create_session()
     
     def _create_session(self) -> requests.Session:
@@ -275,11 +263,7 @@ class WebhookClient:
 
 # DBTITLE 1,Status Update Function
 
-def create_status_payload(
-    status: str,
-    job_run_id: str,
-    task_run_id: str
-) -> Dict[str, Any]:
+def create_status_payload(status: str, job_run_id: str, task_run_id: str) -> Dict[str, Any]:
     """
     Create payload for status update webhook.
     
@@ -293,13 +277,12 @@ def create_status_payload(
     """
     timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
-    payload = {
+    return {
         "status": status,
         "timestamp": timestamp,
         "jobRunId": str(job_run_id),
         "taskRunId": str(task_run_id)
     }
-    return payload
 
 # COMMAND ----------
 
@@ -313,12 +296,10 @@ def main() -> None:
         dbutils = DBUtils(spark)
         params = extract_parameters(dbutils, spark)
         
-        # Create webhook client, pass dbutils
+        # Create webhook client
         client = WebhookClient(
             webhook_url=params["webhook_url"],
             key_scope=params["key_scope"],
-            webhook_secret_name=params["webhook_secret_name"],
-            api_key_id_name=params["api_key_id_name"],
             dbutils=dbutils
         )
         
