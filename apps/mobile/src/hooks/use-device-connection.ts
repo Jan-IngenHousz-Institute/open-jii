@@ -62,19 +62,16 @@ export function useDeviceConnection() {
     const result = await multispeqExecutor?.execute(protocol);
 
     if (typeof result !== "object") {
-      console.log("not object");
       return result;
     }
 
     if (!("sample" in result)) {
-      console.log("no sample key");
       return result;
     }
 
     const { sample } = result;
 
     if (!sample) {
-      console.log("on sample value");
       return result;
     }
 
@@ -98,7 +95,6 @@ export function useDeviceConnection() {
       return;
     }
 
-    console.log("protocolName", protocolName);
     return executeScan(protocolDefinition);
   }
 
