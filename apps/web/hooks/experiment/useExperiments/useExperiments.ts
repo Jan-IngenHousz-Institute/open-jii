@@ -1,8 +1,7 @@
+import { tsr } from "@/lib/tsr";
 import { useState } from "react";
 
 import type { ExperimentStatus } from "@repo/api";
-
-import { tsr } from "../../../lib/tsr";
 
 export type ExperimentFilter = "my" | "member" | "related" | "all";
 

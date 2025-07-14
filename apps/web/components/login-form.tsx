@@ -1,6 +1,7 @@
+import { providerMap, signIn } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
-import { AuthError, providerMap, signIn } from "@repo/auth/next";
+import { AuthError } from "@repo/auth/next";
 import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { Button } from "@repo/ui/components";

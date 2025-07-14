@@ -21,7 +21,9 @@
     "link": "link",
     "secondary": "secundair",
     "outline": "omlijning",
-    "days": "dagen"
+    "days": "dagen",
+    "created": "Aangemaakt",
+    "updated": "Bijgewerkt"
   },
   "navigation": {
     "experiments": "Experimenten",
@@ -138,7 +140,15 @@
     "loggedInAs": "Ingelogd als {{name}}",
     "loginToAccount": "Log in op je account",
     "continueWith": "Doorgaan met",
-    "loginWith": "Inloggen met {{provider}}"
+    "loginWith": "Inloggen met {{provider}}",
+    "account": "Account",
+    "userMenu": "Gebruikersmenu",
+    "signingOut": "Uitloggen..."
+  },
+  "signout": {
+    "title": "Uitloggen",
+    "description": "Weet je zeker dat je wilt uitloggen van je account?",
+    "confirm": "Ja, uitloggen"
   },
   "forms": {
     "required": "Dit veld is verplicht",
@@ -160,7 +170,9 @@
     "serverError": "Serverfout opgetreden",
     "validationError": "Validatiefout",
     "unauthorized": "Ongeautoriseerde toegang",
-    "forbidden": "Toegang verboden"
+    "forbidden": "Toegang verboden",
+    "failedToLoadProtocol": "Protocol kon niet worden geladen",
+    "loginRequired": "Log in om toegang te krijgen tot deze pagina"
   },
   "footer": {
     "aboutUs": "Over ons",
@@ -193,5 +205,87 @@
     "dataAnalysis": {
       "title": "Gegevensanalyse"
     }
+  },
+  "protocols": {
+    "title": "Protocollen",
+    "newProtocol": "Nieuw protocol",
+    "overview": "Overzicht",
+    "create": "Protocol maken",
+    "edit": "Protocol bewerken",
+    "delete": "Protocol verwijderen",
+    "status": "Status",
+    "createdAt": "Aangemaakt op",
+    "updatedAt": "Bijgewerkt op",
+    "noProtocols": "Geen protocollen gevonden",
+    "protocolCreated": "Protocol succesvol aangemaakt",
+    "protocolUpdated": "Protocol succesvol bijgewerkt",
+    "protocolDeleted": "Protocol succesvol verwijderd",
+    "listDescription": "Deze pagina toont een lijst van bestaande protocollen.",
+    "protocol": "Protocol",
+    "settings": "Protocol instellingen",
+    "settingsDescription": "Beheer instellingen voor dit protocol.",
+    "manageProtocolDescription": "Bekijk en beheer de details en instellingen van je protocol.",
+    "noDescription": "Geen beschrijving opgegeven",
+    "protocolId": "Protocol ID",
+    "descriptionTitle": "Beschrijving",
+    "codeTitle": "Protocol code",
+    "notFound": "Protocol niet gevonden",
+    "notFoundDescription": "Het gevraagde protocol kon niet worden gevonden",
+    "family": "Sensorfamilie",
+    "onlyCreatorCanEdit": "Alleen de protocolmaker kan de instellingen benaderen"
+  },
+  "newProtocol": {
+    "description": "Stel een nieuw protocol in.",
+    "name": "Naam",
+    "description_field": "Beschrijving",
+    "code": "Protocol code",
+    "cancel": "Annuleren",
+    "creating": "Aanmaken...",
+    "create": "Protocol maken",
+    "detailsTitle": "Protocol details",
+    "detailsDescription": "Stel de naam en beschrijving van je protocol in",
+    "family": "Sensor familie",
+    "selectFamily": "Selecteer een sensor familie",
+    "codeTitle": "Protocol code",
+    "codeDescription": "Definieer de code structuur voor je protocol",
+    "codePlaceholder": "Voer protocol code in als JSON",
+    "finalizeSetup": "Protocol maken"
+  },
+  "protocolSettings": {
+    "loading": "Protocol instellingen laden...",
+    "notFound": "Protocol niet gevonden",
+    "generalSettings": "Algemene instellingen",
+    "generalDescription": "Basisinformatie over het protocol",
+    "protocolInfo": "Protocol informatie",
+    "protocolInfoDescription": "Bekijk protocol metadata en gevarenzone",
+    "name": "Naam",
+    "description": "Beschrijving",
+    "dangerZone": "Gevarenzone",
+    "deleteProtocol": "Protocol verwijderen",
+    "deleteWarning": "Als je een protocol verwijdert, is er geen weg terug. Wees zeker.",
+    "delete": "Verwijderen",
+    "deleting": "Verwijderen...",
+    "cancel": "Annuleren",
+    "confirmDelete": "Weet je zeker dat je wilt verwijderen",
+    "save": "Opslaan",
+    "saving": "Opslaan...",
+    "created": "Aangemaakt",
+    "updated": "Bijgewerkt",
+    "code": "Protocol code",
+    "codePlaceholder": "Voer protocol code in als JSON",
+    "codeDescription": "Definieer de JSON-structuur en logica voor je protocol",
+    "family": "Sensor familie"
+  },
+  "experimentDataTable": {
+    "loading": "Gegevens laden... Even geduld. Dit kan enkele minuten duren.",
+    "noData": "Geen gegevens ontvangen",
+    "noResults": "Geen resultaten",
+    "error": "Fout bij het laden van gegevens",
+    "page": "Pagina",
+    "pageOf": "van",
+    "previous": "Vorige",
+    "next": "Volgende",
+    "table": "Tabel",
+    "details": "Toon tabeldetails"
   }
 }

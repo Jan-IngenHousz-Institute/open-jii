@@ -1,6 +1,5 @@
 import * as React from "react";
 
-import { auth } from "@repo/auth/next";
 import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
@@ -8,15 +7,11 @@ import { AppSidebar } from "./app-sidebar";
 
 export async function AppSidebarWrapper({
   locale,
+  user,
   ...props
-}: Omit<
-  React.ComponentProps<typeof AppSidebar>,
-  "user" | "locale" | "navigationData" | "translations"
-> & {
+}: Omit<React.ComponentProps<typeof AppSidebar>, "locale" | "navigationData" | "translations"> & {
   locale: Locale;
 }) {
-  const session = await auth();
-
   // Get translations server-side
   const { t: tNavigation } = await initTranslations({
     locale,
@@ -33,7 +28,7 @@ export async function AppSidebarWrapper({
     navExperiments: [
       {
         title: tNavigation("sidebar.experiments"),
-        url: "#",
+        url: `/${locale}/platform/experiments`,
         icon: "Microscope",
         isActive: true,
         items: [
@@ -47,53 +42,21 @@ export async function AppSidebarWrapper({
           },
         ],
       },
-      {
-        title: tNavigation("sidebar.archive"),
-        url: "#",
-        icon: "Archive",
-        items: [
-          {
-            title: tNavigation("sidebar.public"),
-            url: "#",
-          },
-          {
-            title: tNavigation("sidebar.private"),
-            url: "#",
-          },
-        ],
-      },
     ],
     navHardware: [
       {
-        title: tNavigation("sidebar.sensors"),
-        url: "#",
-        icon: "Webcam",
-        items: [
-          {
-            title: tNavigation("sidebar.multispeq"),
-            url: "#",
-          },
-        ],
-      },
-      {
         title: tNavigation("sidebar.protocols"),
-        url: "#",
+        url: `/${locale}/platform/protocols`,
         icon: "FileSliders",
+        isActive: true,
         items: [
           {
-            title: tNavigation("sidebar.protocol1"),
-            url: "#",
+            title: tNavigation("sidebar.newProtocol"),
+            url: `/${locale}/platform/protocols/new`,
           },
-        ],
-      },
-      {
-        title: tNavigation("sidebar.otherDevices"),
-        url: "#",
-        icon: "RadioReceiver",
-        items: [
           {
-            title: tNavigation("sidebar.otherDevice1"),
-            url: "#",
+            title: tNavigation("sidebar.overview"),
+            url: `/${locale}/platform/protocols`,
           },
         ],
       },
@@ -101,7 +64,7 @@ export async function AppSidebarWrapper({
   };
 
   const translations = {
-    openJII: tNavigation("navigation.openJII"),
+    openJII: tCommon("navigation.openJII"),
     logoAlt: tCommon("common.logo"),
     signIn: tCommon("signIn"),
     experimentsTitle: tNavigation("sidebar.experiments"),
@@ -110,7 +73,7 @@ export async function AppSidebarWrapper({
 
   return (
     <AppSidebar
-      user={session?.user}
+      user={user}
       locale={locale}
       navigationData={navigationData}
       translations={translations}

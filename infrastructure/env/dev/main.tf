@@ -371,6 +371,30 @@ module "databricks_secrets" {
   }
 }
 
+# Contentful secrets
+module "contentful_secrets" {
+  source = "../../modules/secrets-manager"
+
+  name        = "openjii-contentful-secrets-dev"
+  description = "Contentful API secrets for the OpenJII services"
+
+  # Store secrets as JSON using variables
+  secret_string = jsonencode({
+    CONTENTFUL_SPACE_ID             = var.contentful_space_id
+    CONTENTFUL_ACCESS_TOKEN         = var.contentful_access_token
+    CONTENTFUL_PREVIEW_ACCESS_TOKEN = var.contentful_preview_access_token
+    CONTENTFUL_PREVIEW_SECRET       = var.contentful_preview_secret
+  })
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "web"
+    SecretType  = "contentful"
+  }
+}
+
 # WAF for OpenNext Web Application
 module "opennext_waf" {
   source = "../../modules/waf"
@@ -401,6 +425,8 @@ module "opennext" {
   certificate_arn = module.route53.cloudfront_certificate_arns["web"]
   hosted_zone_id  = module.route53.route53_zone_id
 
+  function_url_authorization_type = "AWS_IAM"
+
   # VPC configuration for server Lambda database access
   enable_server_vpc               = true
   server_subnet_ids               = module.vpc.private_subnets
@@ -413,11 +439,17 @@ module "opennext" {
   enable_logging = true
   log_bucket     = module.logs_bucket.bucket_id
 
+  # Secrets Manager Integration
+  db_credentials_secret_arn = module.aurora_db.master_user_secret_arn
+  oauth_secret_arn          = module.auth_secrets.secret_arn
+  contentful_secret_arn     = module.contentful_secrets.secret_arn
+
   server_environment_variables = {
-    DB_HOST             = module.aurora_db.cluster_endpoint
-    DB_PORT             = module.aurora_db.cluster_port
-    DB_NAME             = module.aurora_db.database_name
-    NEXT_PUBLIC_API_URL = module.route53.api_domain
+    COOKIE_DOMAIN = ".${var.environment}.${var.domain_name}"
+    DB_HOST       = module.aurora_db.cluster_endpoint
+    DB_PORT       = module.aurora_db.cluster_port
+    DB_NAME       = module.aurora_db.database_name
+    NODE_ENV      = "production"
   }
 
   # Performance configuration
@@ -710,6 +742,18 @@ module "backend_ecs" {
     {
       name  = "LOG_LEVEL"
       value = "debug"
+    },
+    {
+      name  = "CORS_ENABLED"
+      value = "true"
+    },
+    {
+      name  = "CORS_ORIGINS"
+      value = "https://${module.route53.environment_domain}"
+    },
+    {
+      name  = "COOKIE_DOMAIN"
+      value = ".${var.environment}.${var.domain_name}"
     }
   ]
 
@@ -835,4 +879,3 @@ module "route53" {
     ManagedBy   = "Terraform"
   }
 }
-

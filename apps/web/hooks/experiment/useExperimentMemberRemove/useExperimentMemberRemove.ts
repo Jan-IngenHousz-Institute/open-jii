@@ -1,6 +1,6 @@
-import type { ExperimentMember } from "@repo/api";
+import { tsr } from "@/lib/tsr";
 
-import { tsr } from "../../../lib/tsr";
+import type { ExperimentMember } from "@repo/api";
 
 /**
  * Hook to remove a member from an experiment

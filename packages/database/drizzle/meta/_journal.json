@@ -22,6 +22,20 @@
       "when": 1749728396630,
       "tag": "0002_simple_warbound",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1751450722378,
+      "tag": "0003_chunky_cyclops",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1751882968577,
+      "tag": "0004_overjoyed_shocker",
+      "breakpoints": true
     }
   ]
 }

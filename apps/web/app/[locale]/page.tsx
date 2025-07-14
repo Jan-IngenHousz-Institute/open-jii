@@ -1,11 +1,24 @@
-import { LanguageSwitcher } from "@/components/language-switcher";
-import Link from "next/link";
+import { UnifiedNavbar } from "@/components/unified-navbar";
+import { auth } from "@/lib/auth";
+import { ChevronDown } from "lucide-react";
+import { draftMode } from "next/headers";
+import { getContentfulClients } from "~/lib/contentful";
 
+import {
+  HomeHero as HomeHeroComponent,
+  HomeAboutMission,
+  HomeKeyFeatures,
+  HomePartners,
+  HomeFooter,
+} from "@repo/cms";
+import type {
+  PageHomeMissionFieldsFragment,
+  PageHomeHeroFieldsFragment,
+  PageHomeFeaturesFieldsFragment,
+  PageHomePartnersFieldsFragment,
+  FooterFieldsFragment,
+} from "@repo/cms/lib/__generated/sdk";
 import type { Locale } from "@repo/i18n";
-import initTranslations from "@repo/i18n/server";
-import { Button } from "@repo/ui/components";
-
-import { AuthShowcase } from "../_components/auth-showcase";
 
 interface HomePageProps {
   params: Promise<{ locale: Locale }>;
@@ -13,39 +26,55 @@ interface HomePageProps {
 
 export default async function Home({ params }: HomePageProps) {
   const { locale } = await params;
-  const { t } = await initTranslations({
-    locale,
-    namespaces: ["common"],
-  });
+  const session = await auth();
+
+  const { isEnabled: preview } = await draftMode();
+  const { previewClient, client } = await getContentfulClients();
+  const gqlClient = preview ? previewClient : client;
+
+  // Fetch hero, mission, features, partners, and footer data from Contentful
+  // Fetch all home page content from Contentful
+  const contentQueries = await Promise.all([
+    gqlClient.pageHomeHero({ locale, preview }),
+    gqlClient.pageHomeMission({ locale, preview }),
+    gqlClient.pageHomeFeatures({ locale, preview }),
+    gqlClient.pageHomePartners({ locale, preview }),
+    gqlClient.footer({ locale, preview }),
+  ]);
+
+  // Extract and type the content data
+  const [homeHero, homeMission, homeFeatures, homePartners, footerData] = [
+    contentQueries[0].pageHomeHeroCollection?.items[0] as PageHomeHeroFieldsFragment,
+    contentQueries[1].pageHomeMissionCollection?.items[0] as PageHomeMissionFieldsFragment,
+    contentQueries[2].pageHomeFeaturesCollection?.items[0] as PageHomeFeaturesFieldsFragment,
+    contentQueries[3].pageHomePartnersCollection?.items[0] as PageHomePartnersFieldsFragment,
+    contentQueries[4].footerCollection?.items[0] as FooterFieldsFragment,
+  ];
 
   return (
     <>
-      {/* Language switcher in top right */}
-      <div className="fixed right-4 top-4 z-50">
-        <LanguageSwitcher locale={locale} />
-      </div>
+      <UnifiedNavbar locale={locale} session={session} />
+      <main className="flex min-h-screen flex-col items-center bg-gradient-to-br from-slate-50 via-white to-blue-50">
+        {/* Hero Section */}
+        <HomeHeroComponent heroData={homeHero} preview={preview} locale={locale} />
 
-      <AuthShowcase t={t} />
+        {/* Scroll Indicator */}
+        <div className="animate-bounce">
+          <ChevronDown className="mx-auto h-8 w-8 text-emerald-500" />
+        </div>
 
-      <h1 className="text-jii-dark-green mb-6 text-4xl font-bold">{t("jii.institute")}</h1>
-      <div className="flex items-center gap-2 py-12">
-        <Button>{t("common.noVariant")}</Button>
-        <Button variant={"destructive"}>{t("common.destructive")}</Button>
-        <Button variant={"ghost"}>{t("common.ghost")}</Button>
-        <Button variant={"link"}>{t("common.link")}</Button>
-        <Button variant={"secondary"}>{t("common.secondary")}</Button>
-        <Button variant={"outline"}>{t("common.outline")}</Button>
-      </div>
-      <p className="mb-4 text-lg">{t("jii.aboutDescription")}</p>
-      <div className="bg-jii-light-blue/30 mt-8 h-64 rounded-lg p-6">
-        <h2 className="text-jii-dark-green mb-4 text-2xl font-semibold">{t("jii.mission")}</h2>
-        <p>{t("jii.missionDescription")}</p>
-      </div>
-      <div className="p-6">
-        <Link href={`/platform`} locale={locale}>
-          <Button>{t("jii.goToPlatform")}</Button>
-        </Link>
-      </div>
+        {/* About & Mission Section */}
+        <HomeAboutMission missionData={homeMission} preview={preview} locale={locale} />
+
+        {/* Enhanced Key Features */}
+        <HomeKeyFeatures featuresData={homeFeatures} preview={preview} locale={locale} />
+
+        {/*Partner & Visual Media */}
+        <HomePartners partnersData={homePartners} preview={preview} locale={locale} />
+
+        {/* Footer */}
+        <HomeFooter locale={locale} footerData={footerData} preview={preview} />
+      </main>
     </>
   );
 }

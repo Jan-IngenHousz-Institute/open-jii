@@ -54,6 +54,12 @@ variable "environment_variables" {
   default     = {}
 }
 
+variable "function_url_authorization_type" {
+  description = "The authorization type for the function URL. Can be NONE or AWS_IAM."
+  type        = string
+  default     = "NONE"
+}
+
 variable "create_function_url" {
   description = "Whether to create a Lambda function URL"
   type        = bool
@@ -137,4 +143,16 @@ variable "security_group_ids" {
   description = "List of security group IDs to associate with the Lambda function (required if enable_vpc is true)"
   type        = list(string)
   default     = []
+}
+
+variable "lambda_layers" {
+  description = "List of Lambda Layer ARNs to attach to the function."
+  type        = list(string)
+  default     = []
+}
+
+variable "additional_iam_policies" {
+  description = "A map of additional IAM policies to attach to the Lambda role. Keys are policy names, values are JSON policy documents."
+  type        = map(string)
+  default     = {}
 }

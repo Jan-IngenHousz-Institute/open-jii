@@ -9,9 +9,12 @@
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
     "paths": {
+      "~/*": ["./*"],
       "@/components/*": ["./components/*"],
       "@/util/*": ["./util/*"],
-      "@/hooks/*": ["./hooks/*"]
+      "@/hooks/*": ["./hooks/*"],
+      "@repo/cms/lib/*": ["../../packages/cms/src/lib/*"],
+      "@/lib/*": ["./lib/*"]
     },
     "incremental": true,
     "resolveJsonModule": true

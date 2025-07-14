@@ -1,6 +1,6 @@
-import type { Experiment } from "@repo/api";
+import { tsr } from "@/lib/tsr";
 
-import { tsr } from "../../../lib/tsr";
+import type { Experiment } from "@repo/api";
 
 /**
  * Hook to update an existing experiment

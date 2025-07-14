@@ -18,7 +18,7 @@ resource "aws_cloudfront_distribution" "cdn" {
     origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
   }
 
-  enabled             = true
+  enabled             = false
   default_root_object = var.default_root_object
 
   # Set aliases for custom domain if provided
@@ -53,5 +53,5 @@ resource "aws_cloudfront_distribution" "cdn" {
   }
 
   price_class = "PriceClass_100"
-  web_acl_id = var.waf_acl_id
+  web_acl_id  = var.waf_acl_id
 }

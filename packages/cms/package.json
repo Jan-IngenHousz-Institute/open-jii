@@ -1,0 +1,63 @@
+{
+  "name": "@repo/cms",
+  "version": "1.0.0",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./article": {
+      "types": "./dist/features/article/index.d.ts",
+      "default": "./dist/features/article/index.js"
+    },
+    "./container": {
+      "types": "./dist/shared/container.d.ts",
+      "default": "./dist/shared/container.js"
+    },
+    "./contentful": {
+      "types": "./dist/features/contentful/index.d.ts",
+      "default": "./dist/features/contentful/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build --verbose",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "dev": "tsc --watch",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "codegen": "graphql-codegen -r dotenv/config --config src/codegen.ts",
+    "codegen:watch": "graphql-codegen --watch -r dotenv/config --config src/codegen.ts"
+  },
+  "dependencies": {
+    "@contentful/live-preview": "^4.6.23",
+    "@contentful/rich-text-react-renderer": "16.0.2",
+    "@contentful/rich-text-types": "17.0.1",
+    "@repo/i18n": "workspace:*",
+    "@repo/ui": "workspace:*",
+    "contentful": "^11.7.3",
+    "graphql-request": "^7.2.0",
+    "graphql-tag": "^2.12.6",
+    "lucide-react": "^0.507.0",
+    "next": "^15.3.3",
+    "react": "catalog:react19",
+    "react-dom": "catalog:react19"
+  },
+  "devDependencies": {
+    "@contentful/f36-icons": "4.29.1",
+    "@contentful/f36-tokens": "4.2.0",
+    "@graphql-codegen/cli": "^5.0.7",
+    "@graphql-codegen/introspection": "^4.0.3",
+    "@graphql-codegen/typescript": "^4.1.6",
+    "@graphql-codegen/typescript-graphql-request": "^6.3.0",
+    "@graphql-codegen/typescript-operations": "^4.6.1",
+    "@repo/typescript-config": "workspace:*",
+    "@types/react": "catalog:react19",
+    "@types/react-dom": "catalog:react19",
+    "eslint": "catalog:",
+    "typescript": "catalog:"
+  }
+}

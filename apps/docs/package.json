@@ -13,12 +13,13 @@
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
     "typecheck": "tsc",
-    "openapi": "pnpm run openapi:copy",
-    "openapi:copy": "mkdir -p static/api/rest && cp -R ../../packages/api/dist/openapi.json static/api/rest/openapi.json"
+    "openapi": "pnpm run openapi:copy && pnpm run openapi:fmt",
+    "openapi:copy": "mkdir -p static/api/rest && cp -R ../../packages/api/dist/openapi.json static/api/rest/openapi.json",
+    "openapi:fmt": "prettier --write static/api/rest/openapi.json"
   },
   "dependencies": {
-    "@docusaurus/core": "3.7.0",
-    "@docusaurus/preset-classic": "3.7.0",
+    "@docusaurus/core": "3.8.1",
+    "@docusaurus/preset-classic": "3.8.1",
     "@mdx-js/react": "^3.0.0",
     "clsx": "^2.0.0",
     "prism-react-renderer": "^2.3.0",
@@ -28,9 +29,9 @@
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "3.7.0",
-    "@docusaurus/theme-mermaid": "^3.7.0",
-    "@docusaurus/tsconfig": "3.7.0",
-    "@docusaurus/types": "3.7.0",
+    "@docusaurus/theme-mermaid": "^3.8.1",
+    "@docusaurus/tsconfig": "3.8.1",
+    "@docusaurus/types": "3.8.1",
     "@types/swagger-ui-react": "^4.18.3",
     "typescript": "catalog:"
   },

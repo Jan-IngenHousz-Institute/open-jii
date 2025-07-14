@@ -7,10 +7,14 @@
     "settings": "Instellingen",
     "dashboard": "Dashboard",
     "profile": "Profiel",
-    "home": "Home"
+    "home": "Home",
+    "blog": "Blog",
+    "platform": "Platform",
+    "menu": "Navigatiemenu"
   },
   "sidebar": {
     "newExperiment": "Nieuw experiment",
+    "newProtocol": "Nieuw protocol",
     "overview": "Overzicht",
     "archivedData": "Gearchiveerde gegevens",
     "recentMeasurements": "Recente metingen",

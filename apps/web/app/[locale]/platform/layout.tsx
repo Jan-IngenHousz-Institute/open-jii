@@ -1,11 +1,11 @@
 import { Breadcrumbs } from "@/components/app-breadcrumbs";
 import { AppSidebarWrapper } from "@/components/app-sidebar-wrapper";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
 
-import { auth } from "@repo/auth/next";
 import type { Locale } from "@repo/i18n";
 import {
   Separator,
@@ -28,7 +28,7 @@ export default async function AppLayout({
   const typedLocale = locale as Locale;
   const session = await auth();
 
-  if (!session) {
+  if (!session?.user) {
     // Get the current path from the 'x-current-path' header.
     // This logic mirrors how `pathname` is fetched later in the provided code.
     // It assumes `x-current-path` provides the necessary path information (path and query string).
@@ -44,7 +44,7 @@ export default async function AppLayout({
 
   return (
     <SidebarProvider>
-      <AppSidebarWrapper locale={typedLocale} />
+      <AppSidebarWrapper locale={typedLocale} user={session.user} />
       <SidebarInset>
         <header className="group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear">
           <div className="flex w-full items-center justify-between gap-2 px-4">

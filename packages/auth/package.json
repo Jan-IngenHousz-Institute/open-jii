@@ -38,7 +38,7 @@
     "@auth/express": "^0.10.1",
     "@repo/database": "workspace:*",
     "next": "^15.3.3",
-    "next-auth": "5.0.0-beta.25",
+    "next-auth": "5.0.0-beta.29",
     "react": "catalog:react19",
     "react-dom": "catalog:react19"
   },

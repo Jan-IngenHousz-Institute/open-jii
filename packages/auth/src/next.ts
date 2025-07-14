@@ -1,24 +1,50 @@
-import type { CommonProviderOptions } from "@auth/core/providers";
+import GitHub from "@auth/core/providers/github";
+import type { NextAuthConfig, NextAuthResult } from "next-auth";
 import NextAuth from "next-auth";
 import { AuthError } from "next-auth";
 
-import { adapter } from "./adapter";
-import { authConfig } from "./config";
+import { adapter, lambdaAdapter } from "./adapter";
+import { baseAuthConfig } from "./config";
 
-const { auth: middleware } = NextAuth(authConfig);
+interface InitAuthParams {
+  authSecrets: Record<string, string>;
+  dbSecrets: Record<string, string>;
+  isLambda: boolean;
+}
 
-const { handlers, auth, signIn, signOut } = NextAuth({
-  ...authConfig,
-  adapter,
-  session: { strategy: "jwt" },
-  pages: { signIn: "/login" },
-});
+export type NextAuth = NextAuthResult & {
+  providerMap: { id: string; name: string }[];
+};
 
-const providerMap = authConfig.providers
-  .map((provider) => {
-    const simpleProvider = provider as unknown as CommonProviderOptions;
-    return { id: simpleProvider.id, name: simpleProvider.name };
-  })
-  .filter((provider) => provider.id !== "credentials");
+export function initAuth({ authSecrets, dbSecrets, isLambda }: InitAuthParams): NextAuth {
+  const authConfig: NextAuthConfig = {
+    ...baseAuthConfig,
+    secret: authSecrets.AUTH_SECRET || process.env.AUTH_SECRET,
+    providers: [
+      GitHub({
+        clientId: authSecrets.AUTH_GITHUB_ID || process.env.AUTH_GITHUB_ID,
+        clientSecret: authSecrets.AUTH_GITHUB_SECRET || process.env.AUTH_GITHUB_SECRET,
+      }),
+    ],
+    adapter: isLambda ? lambdaAdapter(dbSecrets) : adapter,
+    session: { strategy: "jwt" },
+    pages: { signIn: "/login" },
+  };
 
-export { handlers, auth, signIn, signOut, middleware, AuthError, providerMap };
+  const providerMap = authConfig.providers
+    .map((provider) => {
+      if (typeof provider === "function") {
+        const providerData = provider();
+        return { id: providerData.id, name: providerData.name };
+      } else {
+        return { id: provider.id, name: provider.name };
+      }
+    })
+    .filter((provider) => provider.id !== "credentials");
+
+  const nextAuth = NextAuth(authConfig);
+
+  return { ...nextAuth, providerMap };
+}
+
+export { AuthError, NextAuthResult };

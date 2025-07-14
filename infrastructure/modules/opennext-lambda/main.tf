@@ -149,6 +149,7 @@ resource "aws_lambda_function" "function" {
   memory_size   = var.memory_size
   timeout       = var.timeout
   tags          = var.tags
+  layers        = var.lambda_layers
 
   filename         = var.lambda_package_path != null ? var.lambda_package_path : data.archive_file.empty_package[0].output_path
   source_code_hash = var.lambda_package_path != null ? filebase64sha256(var.lambda_package_path) : data.archive_file.empty_package[0].output_base64sha256
@@ -176,17 +177,16 @@ resource "aws_lambda_function" "function" {
   }
 }
 
+resource "aws_iam_role_policy" "additional_policies" {
+  for_each = var.additional_iam_policies
+  name     = "${var.function_name}-${each.key}"
+  role     = aws_iam_role.lambda_role.id
+  policy   = each.value
+}
+
 # Lambda function URL (conditional)
 resource "aws_lambda_function_url" "function_url" {
   count              = var.create_function_url ? 1 : 0
   function_name      = aws_lambda_function.function.function_name
-  authorization_type = "NONE"
-
-  cors {
-    allow_credentials = false
-    allow_methods     = ["*"]
-    allow_origins     = ["*"]
-    expose_headers    = ["date", "keep-alive"]
-    max_age           = 86400
-  }
+  authorization_type = var.function_url_authorization_type
 }

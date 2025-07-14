@@ -543,7 +543,10 @@ describe("ExperimentController", () => {
         .send({ members: [{ userId: newMemberId, role: "member" }] })
         .expect(StatusCodes.CREATED)
         .expect(({ body }) => {
-          expect(body).toMatchObject({
+          expect(body).toHaveLength(1);
+          expect(body[0]).toMatchObject({
+            experimentId: experiment.id,
+            joinedAt: expect.any(String),
             role: "member",
             user: expect.objectContaining({
               id: newMemberId,

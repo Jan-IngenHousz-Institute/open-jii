@@ -4,6 +4,7 @@ import { DatabricksService } from "../../../../common/services/databricks/databr
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { CreateExperimentDto, ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
+import { ExperimentProtocolRepository } from "../../../core/repositories/experiment-protocol.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 @Injectable()
@@ -13,6 +14,7 @@ export class CreateExperimentUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentMemberRepository: ExperimentMemberRepository,
+    private readonly experimentProtocolRepository: ExperimentProtocolRepository,
     private readonly databricksService: DatabricksService,
   ) {}
 
@@ -69,6 +71,25 @@ export class CreateExperimentUseCase {
         );
 
         return addMembersResult.chain(async () => {
+          // Associate protocols if provided
+          if (Array.isArray(data.protocols) && data.protocols.length > 0) {
+            const addProtocolsResult = await this.experimentProtocolRepository.addProtocols(
+              experiment.id,
+              data.protocols,
+            );
+            if (addProtocolsResult.isFailure()) {
+              this.logger.error(
+                `Failed to associate protocols with experiment ${experiment.id}:`,
+                addProtocolsResult.error.message,
+              );
+              return failure(
+                AppError.badRequest(
+                  `Failed to associate protocols: ${addProtocolsResult.error.message}`,
+                ),
+              );
+            }
+          }
+
           this.logger.debug(`Triggering Databricks job for experiment ${experiment.id}`);
           // Trigger Databricks job for the new experiment
           const databricksResult = await this.databricksService.triggerJob({
