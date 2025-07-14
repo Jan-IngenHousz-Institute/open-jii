@@ -1,5 +1,36 @@
 import { z } from "zod";
 
+// --- Protocol Association Schemas ---
+export const zExperimentProtocolDetails = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  family: z.enum(["multispeq", "ambit"]),
+  createdBy: z.string().uuid(),
+});
+
+export const zExperimentProtocol = z.object({
+  experimentId: z.string().uuid(),
+  order: z.number().int(),
+  addedAt: z.string().datetime(),
+  protocol: zExperimentProtocolDetails,
+});
+
+export const zExperimentProtocolList = z.array(zExperimentProtocol);
+
+export const zExperimentProtocolPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+  protocolId: z.string().uuid().describe("ID of the protocol association"),
+});
+
+export const zAddExperimentProtocolsBody = z.object({
+  protocols: z.array(
+    z.object({
+      protocolId: z.string().uuid(),
+      order: z.number().int().optional(),
+    }),
+  ),
+});
+
 // Define Zod schemas for experiment models
 export const zExperimentStatus = z.enum([
   "provisioning",
@@ -88,6 +119,17 @@ export const zCreateExperimentBody = z.object({
     )
     .optional()
     .describe("Optional array of member objects with userId and role"),
+  protocols: z
+    .array(
+      z.object({
+        protocolId: z.string().uuid(),
+        order: z.number().int().optional(),
+      }),
+    )
+    .optional()
+    .describe(
+      "Optional array of protocol objects with protocolId and order to associate with the experiment",
+    ),
 });
 
 export const zUpdateExperimentBody = z.object({
