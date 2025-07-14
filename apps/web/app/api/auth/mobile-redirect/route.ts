@@ -2,8 +2,6 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 export function GET(request: NextRequest) {
-  // Log all headers
-  console.log("Request Headers:");
   for (const [key, value] of request.headers.entries()) {
     console.log(`${key}: ${value}`);
   }
@@ -17,6 +15,5 @@ export function GET(request: NextRequest) {
   }
 
   const redirectUrl = `photosynq://callback?session_token=${encodeURIComponent(sessionToken)}`;
-  console.log("about to redirect to", redirectUrl);
   return NextResponse.redirect(redirectUrl);
 }
