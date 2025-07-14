@@ -7,7 +7,7 @@ export default function Index() {
     return null;
   }
 
-  if (session?.token || process.env.DISABLE_AUTH === "true") {
+  if (session?.token) {
     return <Redirect href="(tabs)" />;
   }
 
