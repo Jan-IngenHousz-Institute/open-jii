@@ -7,14 +7,11 @@ import type { SessionUser } from "@repo/auth/config";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
+import { formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { AddExperimentProtocolsUseCase } from "../application/use-cases/experiment-protocols/add-experiment-protocols";
 import { ListExperimentProtocolsUseCase } from "../application/use-cases/experiment-protocols/list-experiment-protocols";
 import { RemoveExperimentProtocolUseCase } from "../application/use-cases/experiment-protocols/remove-experiment-protocol";
-
-function isProtocolFamily(family: unknown): family is "multispeq" | "ambit" {
-  return family === "multispeq" || family === "ambit";
-}
 
 @Controller()
 @UseGuards(AuthGuard)
@@ -33,23 +30,10 @@ export class ExperimentProtocolsController {
       const result = await this.listExperimentProtocolsUseCase.execute(params.id, user.id);
 
       if (result.isSuccess()) {
-        const serialized = result.value.map((assoc) => {
-          const family = assoc.protocol.family;
-          if (!isProtocolFamily(family)) {
-            throw new Error('Protocol family must be "multispeq" or "ambit"');
-          }
-          return {
-            ...assoc,
-            addedAt: assoc.addedAt instanceof Date ? assoc.addedAt.toISOString() : assoc.addedAt,
-            protocol: {
-              ...assoc.protocol,
-              family,
-            },
-          };
-        });
+        const protocols = formatDatesList(result.value);
         return {
           status: StatusCodes.OK as const,
-          body: serialized,
+          body: protocols,
         };
       }
 
@@ -67,26 +51,10 @@ export class ExperimentProtocolsController {
       );
 
       if (result.isSuccess()) {
-        this.logger.log(
-          `Protocols [${body.protocols.map((p) => p.protocolId).join(", ")}] added to experiment ${params.id} by user ${user.id}`,
-        );
-        const serialized = result.value.map((assoc) => {
-          const family = assoc.protocol.family;
-          if (!isProtocolFamily(family)) {
-            throw new Error('Protocol family must be "multispeq" or "ambit"');
-          }
-          return {
-            ...assoc,
-            addedAt: assoc.addedAt instanceof Date ? assoc.addedAt.toISOString() : assoc.addedAt,
-            protocol: {
-              ...assoc.protocol,
-              family,
-            },
-          };
-        });
+        const protocols = formatDatesList(result.value);
         return {
           status: StatusCodes.CREATED as const,
-          body: serialized,
+          body: protocols,
         };
       }
 
@@ -104,9 +72,6 @@ export class ExperimentProtocolsController {
       );
 
       if (result.isSuccess()) {
-        this.logger.log(
-          `Protocol ${params.protocolId} removed from experiment ${params.id} by user ${user.id}`,
-        );
         return {
           status: StatusCodes.NO_CONTENT,
           body: null,
