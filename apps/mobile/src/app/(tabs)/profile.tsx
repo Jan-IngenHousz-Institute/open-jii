@@ -8,9 +8,12 @@ import { Toast } from "~/components/Toast";
 import { colors } from "~/constants/colors";
 import { useSessionStore } from "~/hooks/use-session-store";
 import { useTheme } from "~/hooks/use-theme";
+import { assertEnvVariables } from "~/utils/assert";
 import { formatIsoDateString } from "~/utils/format-iso-date-string";
 
 import packageJson from "../../../package.json";
+
+const { NEXT_AUTH_URI } = assertEnvVariables({ NEXT_AUTH_URI: process.env.NEXT_AUTH_URI });
 
 export default function ProfileScreen() {
   const { clearSession, session } = useSessionStore();
@@ -30,7 +33,7 @@ export default function ProfileScreen() {
   };
 
   const handleOpenWebProfile = async () => {
-    const url = "https://dev.openjii.org/en-US/platform/experiments";
+    const url = NEXT_AUTH_URI + "/en-US/platform/experiments";
     const canOpen = await Linking.canOpenURL(url);
 
     if (canOpen) {
