@@ -17,7 +17,7 @@ function getSerialDeviceName({ vendorId, productId }: { vendorId: number; produc
     return "MultispeQ";
   }
 
-  return vendorId.toString() + ":" + productId.toString();
+  return `${vendorId}:${productId}`;
 }
 
 async function getDevices(type: DeviceType) {
