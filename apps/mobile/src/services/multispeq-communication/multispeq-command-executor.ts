@@ -8,6 +8,8 @@ export interface IMultispeqCommandExecutor {
   destroy(): Promise<void>;
 }
 
+const seconds = 1000;
+
 export class MultispeqCommandExecutor implements IMultispeqCommandExecutor {
   constructor(private readonly emitter: Emitter<MultispeqStreamEvents>) {}
 
@@ -22,7 +24,7 @@ export class MultispeqCommandExecutor implements IMultispeqCommandExecutor {
       this.emitter.on("receivedReplyFromDevice", handler);
     });
 
-    return promiseWithTimeout(executePromise, 20000);
+    return promiseWithTimeout(executePromise, 120 * seconds);
   }
 
   destroy() {

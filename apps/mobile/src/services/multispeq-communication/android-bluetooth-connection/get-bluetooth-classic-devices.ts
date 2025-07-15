@@ -16,5 +16,8 @@ export async function getBluetoothClassicDevices() {
     RNBluetoothClassic.startDiscovery(),
   ]);
 
-  return _.uniqBy([...bondedDevices, ...connectedDevices, ...visibleDevices], "id");
+  return _.uniqBy([...bondedDevices, ...connectedDevices, ...visibleDevices], "id").filter((d) => {
+    const name = d.name?.toLowerCase() || "";
+    return name.includes("multi") || name.includes("photo");
+  });
 }
