@@ -18,8 +18,6 @@ interface Actions {
   clearSession: () => void;
 }
 
-const SESSION_TOKEN_OVERRIDE = process.env.SESSION_TOKEN_OVERRIDE;
-
 export const useSessionStore = create<State & Actions>()(
   persist(
     (set) => {
@@ -36,13 +34,7 @@ export const useSessionStore = create<State & Actions>()(
       storage: createJSONStorage(() => AsyncStorage),
       onRehydrateStorage: () => {
         return () => {
-          if (SESSION_TOKEN_OVERRIDE) {
-            useSessionStore.setState({
-              isLoaded: true,
-            });
-          } else {
-            useSessionStore.setState({ isLoaded: true });
-          }
+          useSessionStore.setState({ isLoaded: true });
         };
       },
     },
