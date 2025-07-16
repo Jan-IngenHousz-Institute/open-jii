@@ -1,11 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
-import type { ParamListBase } from "@react-navigation/native";
 import { Text, TouchableOpacity, View } from "react-native";
 import { LoginWidget } from "~/widgets/login-widget";
 
-interface RootTabParamList extends ParamListBase {
+interface RootTabParamList {
   Home: undefined;
   Bluetooth: undefined;
   Serial: undefined;

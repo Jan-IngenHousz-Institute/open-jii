@@ -1,7 +1,7 @@
 import type { ParamListBase } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { BleConnectionScreen } from "~/screens/ble-connection-screen";
-import { BleDevicesListScreen } from "~/screens/ble-devices-list-screen/ble-devices-list-screen";
+import { BleConnectionScreen } from "~/screens/old-app/ble-connection-screen";
+import { BleDevicesListScreen } from "~/screens/old-app/ble-devices-list-screen/ble-devices-list-screen";
 
 export interface BleStackParamList extends ParamListBase {
   BleDeviceList: undefined;

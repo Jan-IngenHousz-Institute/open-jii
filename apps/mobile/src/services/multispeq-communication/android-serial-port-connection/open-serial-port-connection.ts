@@ -27,17 +27,11 @@ export function hexToString(hex: string) {
   return result;
 }
 
-export async function openSerialPortConnection() {
-  const devices = await UsbSerialManager.list();
+export async function listSerialPortDevices() {
+  return await UsbSerialManager.list();
+}
 
-  console.log("devices", devices);
-  const [device] = devices;
-  if (!device) {
-    throw new Error(
-      "PhotosynQ device not detected. Please reconnect the sensor, press the button to activate it and try again.",
-    );
-  }
-  const { deviceId } = device;
+export async function openSerialPortConnection(deviceId: number) {
   while (true) {
     if (await UsbSerialManager.hasPermission(deviceId)) {
       break;
