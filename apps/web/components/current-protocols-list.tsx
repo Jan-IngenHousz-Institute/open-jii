@@ -1,5 +1,5 @@
+import { useLocale } from "@/hooks/useLocale";
 import { Trash2, ExternalLink } from "lucide-react";
-import { useLocale } from "~/hooks/useLocale";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components";
