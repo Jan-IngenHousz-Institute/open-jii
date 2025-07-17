@@ -118,7 +118,6 @@ export function ExperimentProtocolManagement({ experimentId }: ExperimentProtoco
         <ProtocolSearchWithDropdown
           availableProtocols={availableProtocols}
           value={selectedProtocolId}
-          onValueChange={setSelectedProtocolId}
           placeholder={t("experimentSettings.addProtocolPlaceholder")}
           loading={!isDebounced || isFetchingProtocols}
           searchValue={protocolSearch}

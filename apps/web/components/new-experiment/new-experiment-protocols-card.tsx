@@ -74,7 +74,6 @@ export function NewExperimentProtocolsCard({ form }: NewExperimentProtocolsCardP
           <ProtocolSearchWithDropdown
             availableProtocols={availableProtocols}
             value={selectedProtocolId}
-            onValueChange={setSelectedProtocolId}
             placeholder={t("newExperiment.addProtocolsPlaceholder")}
             loading={!isDebounced || isFetchingProtocols}
             searchValue={protocolSearch}

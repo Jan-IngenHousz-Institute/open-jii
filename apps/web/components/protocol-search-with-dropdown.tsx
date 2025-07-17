@@ -13,7 +13,6 @@ import { ProtocolSearchPopover } from "./protocol-search-popover";
 export interface ProtocolSearchWithDropdownProps {
   availableProtocols: Protocol[];
   value: string;
-  onValueChange: (value: string) => void;
   placeholder?: string;
   loading?: boolean;
   searchValue: string;
