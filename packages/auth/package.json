@@ -36,20 +36,23 @@
     "@auth/core": "^0.39.1",
     "@auth/drizzle-adapter": "^1.9.1",
     "@auth/express": "^0.10.1",
+    "@react-email/components": "catalog:react-email",
     "@repo/database": "workspace:*",
     "next": "^15.3.3",
     "next-auth": "5.0.0-beta.29",
-    "nodemailer": "^7.0.4",
+    "nodemailer": "catalog:",
     "react": "catalog:react19",
-    "react-dom": "catalog:react19"
+    "react-dom": "catalog:react19",
+    "react-email": "catalog:react-email"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/express": "^5.0.1",
     "@types/node": "catalog:",
-    "@types/nodemailer": "^6.4.17",
+    "@types/nodemailer": "catalog:",
     "eslint": "catalog:",
+    "transactional": "workspace:*",
     "typescript": "catalog:"
   }
 }

@@ -1,14 +1,23 @@
 import Image from "next/image";
+import { redirect } from "next/navigation";
+import type { SearchParamsType } from "~/util/searchParams";
 
 import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
-export default async function VerifyRequestPage(props: { params: Promise<{ locale: Locale }> }) {
+export default async function VerifyRequestPage(props: {
+  params: Promise<{ locale: Locale }>;
+  searchParams: SearchParamsType;
+}) {
   const { locale } = await props.params;
   const { t } = await initTranslations({
     locale,
     namespaces: ["common"],
   });
+  const { provider } = await props.searchParams;
+  if (!provider) {
+    redirect(`/${locale}/`);
+  }
 
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
