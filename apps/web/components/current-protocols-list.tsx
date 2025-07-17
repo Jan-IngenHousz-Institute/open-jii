@@ -79,6 +79,7 @@ export function ProtocolList({
               disabled={isRemovingProtocol && removingProtocolId === protocol.id}
               title={t("experimentSettings.removeProtocol")}
               className="hover:bg-destructive/10 h-8 w-8 flex-shrink-0 p-0"
+              aria-label={t("experimentSettings.removeProtocol")}
             >
               <Trash2 className="text-destructive h-4 w-4" />
             </Button>
@@ -92,7 +93,7 @@ export function ProtocolList({
                 // Open protocol details in a new tab with locale
                 window.open(`/${locale}/platform/protocols/${protocol.id}`, "_blank");
               }}
-              aria-label="See protocol details"
+              aria-label={t("experimentSettings.seeProtocolDetails")}
             >
               <ExternalLink className="h-6 w-6" />
             </Button>
