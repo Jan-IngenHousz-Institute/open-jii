@@ -6,6 +6,7 @@ import { useExperiment } from "../../hooks/experiment/useExperiment/useExperimen
 import { ExperimentDetailsCard } from "./experiment-details-card";
 import { ExperimentInfoCard } from "./experiment-info-card";
 import { ExperimentMemberManagement } from "./experiment-member-management-card";
+import { ExperimentProtocolManagement } from "./experiment-protocol-management-card";
 import { ExperimentVisibilityCard } from "./experiment-visibility-card";
 
 interface ExperimentSettingsProps {
@@ -15,7 +16,6 @@ interface ExperimentSettingsProps {
 export function ExperimentSettings({ experimentId }: ExperimentSettingsProps) {
   const { data, isLoading } = useExperiment(experimentId);
   const { t } = useTranslation(undefined, "common");
-
   if (isLoading) {
     return <div>{t("experimentSettings.loading")}</div>;
   }
@@ -43,6 +43,11 @@ export function ExperimentSettings({ experimentId }: ExperimentSettingsProps) {
           initialVisibility={experiment.visibility}
           initialEmbargoIntervalDays={experiment.embargoIntervalDays}
         />
+      </div>
+
+      {/* Protocol Management - New Row */}
+      <div className="mt-2">
+        <ExperimentProtocolManagement experimentId={experimentId} />
       </div>
 
       {/* Experiment Info Card - Last */}

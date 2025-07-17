@@ -59,7 +59,15 @@
     "experimentId": "Experiment-ID",
     "descriptionTitle": "Beschreibung",
     "searchUsers": "Benutzer suchen",
-    "startTypingToSearch": "Tippen Sie, um zu suchen"
+    "startTypingToSearch": "Tippen Sie, um zu suchen",
+    "searchProtocols": "Protokolle suchen",
+    "loadingProtocols": "Laden...",
+    "noProtocolsFoundFor": "Keine Protokolle gefunden für \"{{search}}\"",
+    "noProtocolsAvailable": "Keine Protokolle verfügbar.",
+    "addProtocol": "Protokoll hinzufügen",
+    "seeProtocolDetails": "Protokolldetails anzeigen",
+    "family": "Familie:",
+    "createdBy": "Erstellt von:"
   },
   "experimentSettings": {
     "loading": "Experimenteinstellungen werden geladen...",
@@ -91,7 +99,19 @@
     "noEmail": "Keine E-Mail",
     "joined": "Beigetreten am",
     "cannotRemoveLastAdmin": "Letzten Admin kann man nicht entfernen",
-    "removeMember": "Mitglied entfernen"
+    "removeMember": "Mitglied entfernen",
+    "noProtocolsYet": "Noch keine Protokolle",
+    "addProtocols": "Fügen Sie diesem Experiment Protokolle hinzu",
+    "unknownProtocol": "Unbekanntes Protokoll",
+    "removeProtocol": "Protokoll entfernen",
+    "seeProtocolDetails": "Protokolldetails anzeigen",
+    "protocolManagement": "Protokollverwaltung",
+    "manageAndOrderProtocols": "Verwalten und ordnen Sie die Experimentprotokolle",
+    "addProtocolPlaceholder": "Protokoll hinzufügen",
+    "currentProtocols": "Aktuelle Protokolle",
+    "protocolAdded": "Protokoll erfolgreich hinzugefügt",
+    "protocolRemoved": "Protokoll erfolgreich entfernt",
+    "errorLoadingProtocols": "Fehler beim Laden der Protokolle. Bitte versuchen Sie es erneut."
   },
   "newExperiment": {
     "description": "Richten Sie ein neues Experiment (Projekt) ein.",
@@ -109,7 +129,10 @@
     "addMembersDescription": "Verwalten Sie, wer Zugriff auf dieses Experiment hat",
     "addMemberPlaceholder": "Mitglied hinzufügen",
     "visibilityTitle": "Sichtbarkeitseinstellungen",
-    "visibilityDescription": "Steuern Sie die Sichtbarkeit und Embargoperiode Ihres Experiments"
+    "visibilityDescription": "Steuern Sie die Sichtbarkeit und Embargoperiode Ihres Experiments",
+    "addProtocolsTitle": "Protokolle hinzufügen",
+    "addProtocolsDescription": "Verwalten und ordnen Sie die Experimentprotokolle",
+    "addProtocolsPlaceholder": "Protokoll hinzufügen"
   },
   "dashboard": {
     "title": "Dashboard",
