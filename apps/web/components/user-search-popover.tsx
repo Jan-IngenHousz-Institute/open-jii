@@ -68,7 +68,7 @@ interface SearchStatusProps {
 
 // Display appropriate message based on search status
 function SearchStatus({ loading, hasUsers, hasSearchQuery, searchValue }: SearchStatusProps) {
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
 
   if (loading) {
     return (
@@ -99,7 +99,7 @@ interface SearchFieldProps {
 }
 
 function SearchField({ searchValue, onSearchChange, isAddingUser }: SearchFieldProps) {
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
 
   return (
     <div className="relative">

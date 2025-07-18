@@ -12,7 +12,7 @@ interface ProtocolSettingsProps {
 
 export function ProtocolSettings({ protocolId }: ProtocolSettingsProps) {
   const { data, isLoading } = useProtocol(protocolId);
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
 
   if (isLoading) {
     return <div>{t("protocolSettings.loading")}</div>;

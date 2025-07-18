@@ -41,7 +41,7 @@ export function MemberList({
   removingMemberId,
   adminCount = 0,
 }: MemberListProps) {
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
 
   // Convert members and users to membersWithUserInfo if needed
   const membersWithUserInfo = useMemo(() => {

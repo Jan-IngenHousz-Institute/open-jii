@@ -14,7 +14,7 @@ interface ExperimentDataDetailsPageProps {
 export default function ExperimentDataDetailsPage({ params }: ExperimentDataDetailsPageProps) {
   const { id, tableName } = use(params);
   const { data, isLoading, error } = useExperiment(id);
-  const { t } = useTranslation(undefined, "experiments");
+  const { t } = useTranslation("experiments");
 
   if (isLoading) {
     return <div>{t("loading")}</div>;

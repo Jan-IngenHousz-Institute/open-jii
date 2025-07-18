@@ -23,7 +23,7 @@ interface ExperimentOverviewPageProps {
 export default function ExperimentOverviewPage({ params }: ExperimentOverviewPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useExperiment(id);
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
   if (isLoading) {
     return <div>{t("common.loading")}</div>;
   }

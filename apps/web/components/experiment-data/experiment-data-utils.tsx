@@ -51,7 +51,7 @@ export function ExperimentDataRows({
   rows: Row<RowData>[];
   columnCount: number;
 }) {
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
   if (rows.length === 0)
     return (
       <TableRow>
@@ -77,7 +77,7 @@ export function ExperimentDataRows({
 }
 
 export function LoadingRows({ rowCount, columnCount }: { rowCount: number; columnCount: number }) {
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
   return (
     <>
       <TableRow>

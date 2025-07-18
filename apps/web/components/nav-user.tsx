@@ -33,7 +33,7 @@ export function NavUser({
   locale: Locale;
 }) {
   const { isMobile } = useSidebar();
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
 
   return (
     <SidebarMenu>

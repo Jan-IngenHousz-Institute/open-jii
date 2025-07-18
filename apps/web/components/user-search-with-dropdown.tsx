@@ -32,7 +32,7 @@ export function UserSearchWithDropdown({
   onAddUser,
   isAddingUser,
 }: UserSearchWithDropdownProps) {
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const selectedUser = availableUsers.find((user) => user.id === value);

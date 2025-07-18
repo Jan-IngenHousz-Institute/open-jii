@@ -37,7 +37,7 @@ export function ExperimentDetailsCard({
   initialDescription,
 }: ExperimentDetailsCardProps) {
   const { mutateAsync: updateExperiment, isPending: isUpdating } = useExperimentUpdate();
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
 
   const form = useForm<{ name: string; description?: string }>({
     resolver: zodResolver(editExperimentFormSchema.pick({ name: true, description: true })),

@@ -23,7 +23,7 @@ interface NewExperimentMembersCardProps {
 }
 
 export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps) {
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
   const { data: session } = useSession();
   const currentUserId = session?.user.id ?? "";
 

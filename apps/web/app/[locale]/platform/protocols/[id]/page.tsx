@@ -17,7 +17,7 @@ interface ProtocolOverviewPageProps {
 export default function ProtocolOverviewPage({ params }: ProtocolOverviewPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useProtocol(id);
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
 
   if (isLoading) {
     return <div>{t("common.loading")}</div>;

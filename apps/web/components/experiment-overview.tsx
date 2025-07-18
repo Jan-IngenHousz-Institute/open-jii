@@ -12,7 +12,7 @@ interface ExperimentOverviewProps {
 
 export function ExperimentOverview({ experimentId }: ExperimentOverviewProps) {
   const { data, isLoading } = useExperiment(experimentId);
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
 
   if (isLoading) {
     return <div>{t("common.loading")}</div>;

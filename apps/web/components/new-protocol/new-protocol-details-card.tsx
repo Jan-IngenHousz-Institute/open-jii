@@ -27,7 +27,7 @@ interface NewProtocolDetailsCardProps {
 }
 
 export function NewProtocolDetailsCard({ form }: NewProtocolDetailsCardProps) {
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
 
   return (
     <Card>

@@ -31,7 +31,7 @@ export function ExperimentDataSampleTables({
     formatValue,
   );
 
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
   if (isLoading) return <div>{t("experimentDataTable.loading")}</div>;
   if (sampleTables.length == 0) return <div>{t("experimentDataTable.noData")}</div>;
   return (
@@ -53,7 +53,7 @@ export function ExperimentDataSampleTables({
 }
 
 function ExperimentDataSampleTable({ sampleTable }: { sampleTable: SampleTable }) {
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
   const columns = sampleTable.tableMetadata.columns;
   const table = useReactTable<DataRow>({
     data: sampleTable.tableRows,

@@ -41,7 +41,7 @@ export function ExperimentVisibilityCard({
   initialEmbargoIntervalDays,
 }: ExperimentVisibilityCardProps) {
   const { mutateAsync: updateExperiment, isPending: isUpdating } = useExperimentUpdate();
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
 
   interface VisibilityFormValues {
     visibility?: "private" | "public";
