@@ -19,7 +19,7 @@ import { NewExperimentVisibilityCard } from "./new-experiment-visibility-card";
 
 export function NewExperimentForm() {
   const router = useRouter();
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
   const locale = useLocale();
 
   const { mutate: createExperiment, isPending } = useExperimentCreate({

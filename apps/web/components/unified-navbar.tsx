@@ -38,7 +38,7 @@ function UserMenu({
   session: Session | null;
   onSignOut: () => void;
 }) {
-  const { t } = useTranslation("common");
+  const { t } = useTranslation();
 
   if (!session?.user) {
     return (
