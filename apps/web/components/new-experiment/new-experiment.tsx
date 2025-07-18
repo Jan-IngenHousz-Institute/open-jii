@@ -15,6 +15,7 @@ import { toast } from "@repo/ui/hooks";
 
 import { NewExperimentDetailsCard } from "./new-experiment-details-card";
 import { NewExperimentMembersCard } from "./new-experiment-members-card";
+import { NewExperimentProtocolsCard } from "./new-experiment-protocols-card";
 import { NewExperimentVisibilityCard } from "./new-experiment-visibility-card";
 
 export function NewExperimentForm() {
@@ -53,12 +54,18 @@ export function NewExperimentForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         {/* Card 1: Name & Description */}
         <NewExperimentDetailsCard form={form} />
+
+        {/* Card 2: Add Members & Card 4: Visibility & Embargo (same row) */}
         <div className="flex flex-col gap-6 md:flex-row">
-          {/* Card 2: Add Members */}
           <NewExperimentMembersCard form={form} />
-          {/* Card 3: Visibility & Embargo */}
           <NewExperimentVisibilityCard form={form} />
         </div>
+
+        {/* Card 3: Add Protocols (new row) */}
+        <div className="flex flex-col gap-6">
+          <NewExperimentProtocolsCard form={form} />
+        </div>
+
         <div className="flex gap-2">
           <Button type="button" onClick={cancel} variant="outline">
             {t("newExperiment.cancel")}

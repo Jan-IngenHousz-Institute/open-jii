@@ -2,6 +2,7 @@
 const config = {
   projects: [
     "<rootDir>/apps/backend/jest.config.js",
+    "<rootDir>/apps/web/jest.config.js",
     // Add other project test configs here as needed
     // '<rootDir>/packages/ui/jest.config.js',
   ],

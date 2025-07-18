@@ -135,6 +135,28 @@ describe("ProtocolRepository", () => {
       expect(protocols.some((p) => p.name === protocol1.name)).toBe(true);
       expect(protocols.every((p) => p.name !== protocol2.name)).toBe(true);
     });
+
+    it("should filter protocols by name search (case-insensitive)", async () => {
+      // Arrange
+      const uniquePrefix = "CaseTest";
+      const protocol1 = {
+        name: `${uniquePrefix} Protocol 1`,
+        description: "Description 1",
+        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
+      };
+
+      await repository.create(protocol1, testUserId);
+
+      // Act
+      const result = await repository.findAll(uniquePrefix.toLowerCase());
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const protocols = result.value;
+      expect(protocols.some((p) => p.name === protocol1.name)).toBe(true);
+    });
   });
 
   describe("findOne", () => {

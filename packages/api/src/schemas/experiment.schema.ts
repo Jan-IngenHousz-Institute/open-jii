@@ -100,6 +100,7 @@ export type ExperimentData = z.infer<typeof zExperimentData>;
 export type Experiment = z.infer<typeof zExperiment>;
 export type ExperimentList = z.infer<typeof zExperimentList>;
 export type ExperimentMember = z.infer<typeof zExperimentMember>;
+export type ExperimentProtocol = z.infer<typeof zExperimentProtocol>;
 export type ExperimentMemberList = z.infer<typeof zExperimentMemberList>;
 export type ErrorResponse = z.infer<typeof zErrorResponse>;
 

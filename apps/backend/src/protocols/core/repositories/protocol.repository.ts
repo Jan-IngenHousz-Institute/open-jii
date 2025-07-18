@@ -1,7 +1,7 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import { ProtocolFilter } from "@repo/api";
-import { eq, like, protocols } from "@repo/database";
+import { eq, ilike, protocols } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -35,7 +35,7 @@ export class ProtocolRepository {
       const query = this.database.select().from(protocols);
 
       if (search) {
-        query.where(like(protocols.name, `%${search}%`));
+        query.where(ilike(protocols.name, `%${search}%`));
       }
 
       const results = await query;
