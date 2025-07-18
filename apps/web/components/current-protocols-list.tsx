@@ -1,5 +1,6 @@
 import { useLocale } from "@/hooks/useLocale";
 import { Trash2, ExternalLink } from "lucide-react";
+import Link from "next/link";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components";
@@ -84,19 +85,16 @@ export function ProtocolList({
               <Trash2 className="text-destructive h-4 w-4" />
             </Button>
             {/* External link button */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
+            <Link
+              href={`/${locale}/platform/protocols/${protocol.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
               title={t("experimentSettings.seeProtocolDetails")}
-              onClick={() => {
-                // Open protocol details in a new tab with locale
-                window.open(`/${locale}/platform/protocols/${protocol.id}`, "_blank");
-              }}
               aria-label={t("experimentSettings.seeProtocolDetails")}
+              className="hover:bg-muted m-0.5 rounded-md p-2"
             >
-              <ExternalLink className="h-6 w-6" />
-            </Button>
+              <ExternalLink className="h-4 w-4" />
+            </Link>
           </div>
         </div>
       ))}

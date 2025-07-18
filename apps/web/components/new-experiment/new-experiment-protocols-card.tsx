@@ -70,18 +70,16 @@ export function NewExperimentProtocolsCard({ form }: NewExperimentProtocolsCardP
         <CardDescription>{t("newExperiment.addProtocolsDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="mb-2">
-          <ProtocolSearchWithDropdown
-            availableProtocols={availableProtocols}
-            value={selectedProtocolId}
-            placeholder={t("newExperiment.addProtocolsPlaceholder")}
-            loading={!isDebounced || isFetchingProtocols}
-            searchValue={protocolSearch}
-            onSearchChange={handleSearchChange}
-            onAddProtocol={handleAddProtocol}
-            isAddingProtocol={false}
-          />
-        </div>
+        <ProtocolSearchWithDropdown
+          availableProtocols={availableProtocols}
+          value={selectedProtocolId}
+          placeholder={t("newExperiment.addProtocolsPlaceholder")}
+          loading={!isDebounced || isFetchingProtocols}
+          searchValue={protocolSearch}
+          onSearchChange={handleSearchChange}
+          onAddProtocol={handleAddProtocol}
+          isAddingProtocol={false}
+        />
         <ProtocolList
           protocols={addedProtocols}
           onRemoveProtocol={handleRemoveProtocol}

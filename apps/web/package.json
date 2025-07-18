@@ -10,7 +10,8 @@
     "clean": "git clean -xdf .cache .next .turbo node_modules .open-next",
     "start": "next start",
     "lint": "next lint --max-warnings 0",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "jest --coverage"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
@@ -38,11 +39,15 @@
     "@repo/tailwind-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@tanstack/react-query-devtools": "^5.75.4",
+    "@testing-library/react": "^16.3.0",
+    "@types/jest": "^29.5.14",
     "@types/node": "catalog:",
     "@types/react": "catalog:react19",
     "@types/react-dom": "catalog:react19",
     "eslint": "catalog:",
+    "jest": "^29.7.0",
     "tailwindcss": "catalog:",
+    "ts-jest": "^29.3.2",
     "typescript": "catalog:"
   }
 }

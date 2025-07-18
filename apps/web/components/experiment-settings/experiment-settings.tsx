@@ -46,9 +46,7 @@ export function ExperimentSettings({ experimentId }: ExperimentSettingsProps) {
       </div>
 
       {/* Protocol Management - New Row */}
-      <div className="mt-2">
-        <ExperimentProtocolManagement experimentId={experimentId} />
-      </div>
+      <ExperimentProtocolManagement experimentId={experimentId} />
 
       {/* Experiment Info Card - Last */}
       <ExperimentInfoCard experimentId={experimentId} experiment={experiment} />

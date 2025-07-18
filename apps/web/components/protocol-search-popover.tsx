@@ -2,7 +2,8 @@
 
 import { useLocale } from "@/hooks/useLocale";
 import { SearchX, PlusSquare, ExternalLink } from "lucide-react";
-import React from "react";
+import Link from "next/link";
+import React, { useCallback } from "react";
 
 import type { Protocol } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
@@ -26,7 +27,6 @@ interface ProtocolListProps {
   onSearchChange: (value: string) => void;
 }
 
-// Display a list of protocol items with add buttons
 function ProtocolList({
   protocols,
   onAddProtocol,
@@ -36,6 +36,16 @@ function ProtocolList({
 }: ProtocolListProps) {
   const locale = useLocale();
   const { t } = useTranslation(undefined, "common");
+
+  const handleAddProtocol = useCallback(
+    async (e: React.MouseEvent, protocolId: string) => {
+      e.stopPropagation();
+      await onAddProtocol(protocolId);
+      setOpen(false);
+      onSearchChange("");
+    },
+    [onAddProtocol, setOpen, onSearchChange],
+  );
 
   return (
     <>
@@ -75,30 +85,23 @@ function ProtocolList({
               size="icon"
               className="text-primary hover:bg-accent/40 mt-1 p-0"
               title={t("experiments.addProtocol")}
-              onClick={async (e) => {
-                e.stopPropagation();
-                await onAddProtocol(protocol.id);
-                setOpen(false);
-                onSearchChange("");
-              }}
+              onClick={async (e) => handleAddProtocol(e, protocol.id)}
               disabled={isAddingProtocol}
               aria-label={t("experiments.addProtocol")}
             >
               <PlusSquare className="h-6 w-6" />
             </Button>
             {/* CTA button for more details */}
-            <Button
-              variant="ghost"
-              size="icon"
+            <Link
+              href={`/${locale}/platform/protocols/${protocol.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
               title={t("experiments.seeProtocolDetails")}
-              onClick={(e) => {
-                e.stopPropagation();
-                window.open(`/${locale}/platform/protocols/${protocol.id}`, "_blank");
-              }}
               aria-label={t("experiments.seeProtocolDetails")}
+              className="group p-2.5"
             >
-              <ExternalLink className="h-6 w-6" />
-            </Button>
+              <ExternalLink className="group-hover:text-muted-foreground h-6 w-6 transition-colors" />
+            </Link>
           </div>
         </CommandItem>
       ))}
