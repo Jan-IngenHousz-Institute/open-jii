@@ -1,7 +1,7 @@
 "use client";
 
 import { useDebounce } from "@/hooks/useDebounce";
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useProtocolSearch } from "~/hooks/protocol/useProtocolSearch/useProtocolSearch";
 
@@ -58,11 +58,6 @@ export function NewExperimentProtocolsCard({ form }: NewExperimentProtocolsCardP
     setAddedProtocols((prev) => prev.filter((p) => p.id !== protocolId));
   }
 
-  // Only recreate handler if setProtocolSearch changes
-  const handleSearchChange = useCallback((value: string) => {
-    setProtocolSearch(value);
-  }, []);
-
   return (
     <Card className="min-w-0 flex-1">
       <CardHeader>
@@ -76,7 +71,7 @@ export function NewExperimentProtocolsCard({ form }: NewExperimentProtocolsCardP
           placeholder={t("newExperiment.addProtocolsPlaceholder")}
           loading={!isDebounced || isFetchingProtocols}
           searchValue={protocolSearch}
-          onSearchChange={handleSearchChange}
+          onSearchChange={setProtocolSearch}
           onAddProtocol={handleAddProtocol}
           isAddingProtocol={false}
         />
