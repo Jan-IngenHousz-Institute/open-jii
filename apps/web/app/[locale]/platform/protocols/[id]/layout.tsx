@@ -16,7 +16,7 @@ interface ProtocolLayoutProps {
 export default function ProtocolLayout({ children }: ProtocolLayoutProps) {
   const pathname = usePathname();
   const { id } = useParams<{ id: string }>();
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
   const locale = useLocale();
   const { data: session } = useSession();
   const { data: protocolData } = useProtocol(id);

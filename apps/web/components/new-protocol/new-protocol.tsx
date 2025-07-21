@@ -16,7 +16,7 @@ import { NewProtocolDetailsCard } from "./new-protocol-details-card";
 
 export function NewProtocolForm() {
   const router = useRouter();
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
   const locale = useLocale();
 
   const { mutate: createProtocol, isPending } = useProtocolCreate({

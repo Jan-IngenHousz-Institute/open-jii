@@ -22,7 +22,7 @@ interface NewExperimentDetailsCardProps {
 }
 
 export function NewExperimentDetailsCard({ form }: NewExperimentDetailsCardProps) {
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
   return (
     <Card>
       <CardHeader>
