@@ -20,7 +20,7 @@ interface ExperimentProtocolManagementProps {
 }
 
 export function ExperimentProtocolManagement({ experimentId }: ExperimentProtocolManagementProps) {
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation("common");
   // Get experiment protocols
   const {
     data: protocolsData,

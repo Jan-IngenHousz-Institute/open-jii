@@ -17,7 +17,7 @@ interface NewExperimentProtocolsCardProps {
 }
 
 export function NewExperimentProtocolsCard({ form }: NewExperimentProtocolsCardProps) {
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation("common");
 
   // Protocol management state
   const [selectedProtocolId, setSelectedProtocolId] = useState("");

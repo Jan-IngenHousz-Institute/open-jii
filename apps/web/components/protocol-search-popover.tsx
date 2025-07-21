@@ -35,7 +35,7 @@ function ProtocolList({
   onSearchChange,
 }: ProtocolListProps) {
   const locale = useLocale();
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation("common");
 
   const handleAddProtocol = useCallback(
     async (e: React.MouseEvent, protocolId: string) => {
@@ -119,7 +119,7 @@ interface SearchStatusProps {
 
 // Display appropriate message based on search status
 function SearchStatus({ loading, hasProtocols, hasSearchQuery, searchValue }: SearchStatusProps) {
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation("common");
 
   if (loading) {
     return (
@@ -154,7 +154,7 @@ interface SearchFieldProps {
 }
 
 function SearchField({ searchValue, onSearchChange, isAddingProtocol }: SearchFieldProps) {
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation("common");
   return (
     <div className="relative w-full">
       <CommandInput

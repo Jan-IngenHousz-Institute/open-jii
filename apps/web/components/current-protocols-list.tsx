@@ -25,7 +25,7 @@ export function ProtocolList({
   isRemovingProtocol,
   removingProtocolId,
 }: ProtocolListProps) {
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation("common");
   const locale = useLocale();
   if (protocols.length === 0) {
     return (

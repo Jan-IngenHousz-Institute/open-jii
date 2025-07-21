@@ -32,7 +32,7 @@ export function ProtocolSearchWithDropdown({
   isAddingProtocol,
 }: ProtocolSearchWithDropdownProps) {
   const [open, setOpen] = useState(false);
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation("common");
 
   const selectedProtocol = availableProtocols.find((protocol) => protocol.id === value);
 
