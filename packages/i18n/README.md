@@ -56,7 +56,7 @@ console.log(t("common:homepage")); // "Homepage"
 import { useTranslation } from '@repo/i18n/client';
 
 export function MyComponent() {
-  const { t } = useTranslation('en-US', 'common');
+  const { t } = useTranslation('common');
 
   return (
     <div>

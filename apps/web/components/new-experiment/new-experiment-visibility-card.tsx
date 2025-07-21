@@ -26,7 +26,7 @@ interface NewExperimentVisibilityCardProps {
 }
 
 export function NewExperimentVisibilityCard({ form }: NewExperimentVisibilityCardProps) {
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
   // Temporary removed:
   // const visibility = form.watch("visibility");
   return (

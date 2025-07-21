@@ -15,7 +15,8 @@ interface ExperimentSettingsProps {
 
 export function ExperimentSettings({ experimentId }: ExperimentSettingsProps) {
   const { data, isLoading } = useExperiment(experimentId);
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
+
   if (isLoading) {
     return <div>{t("experimentSettings.loading")}</div>;
   }
