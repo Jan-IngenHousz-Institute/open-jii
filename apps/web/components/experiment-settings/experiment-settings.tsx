@@ -6,6 +6,7 @@ import { useExperiment } from "../../hooks/experiment/useExperiment/useExperimen
 import { ExperimentDetailsCard } from "./experiment-details-card";
 import { ExperimentInfoCard } from "./experiment-info-card";
 import { ExperimentMemberManagement } from "./experiment-member-management-card";
+import { ExperimentProtocolManagement } from "./experiment-protocol-management-card";
 import { ExperimentVisibilityCard } from "./experiment-visibility-card";
 
 interface ExperimentSettingsProps {
@@ -44,6 +45,9 @@ export function ExperimentSettings({ experimentId }: ExperimentSettingsProps) {
           initialEmbargoIntervalDays={experiment.embargoIntervalDays}
         />
       </div>
+
+      {/* Protocol Management - New Row */}
+      <ExperimentProtocolManagement experimentId={experimentId} />
 
       {/* Experiment Info Card - Last */}
       <ExperimentInfoCard experimentId={experimentId} experiment={experiment} />

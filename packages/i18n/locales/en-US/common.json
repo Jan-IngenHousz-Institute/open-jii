@@ -59,7 +59,15 @@
     "experimentId": "Experiment ID",
     "descriptionTitle": "Description",
     "searchUsers": "Search users",
-    "startTypingToSearch": "Start typing to search"
+    "startTypingToSearch": "Start typing to search",
+    "searchProtocols": "Search protocols",
+    "loadingProtocols": "Loading...",
+    "noProtocolsFoundFor": "No protocols found for \"{{search}}\"",
+    "noProtocolsAvailable": "No protocols available.",
+    "addProtocol": "Add protocol",
+    "seeProtocolDetails": "See protocol details",
+    "family": "Family:",
+    "createdBy": "Created by:"
   },
   "newExperiment": {
     "description": "Set up a new experiment (project).",
@@ -77,7 +85,10 @@
     "addMembersDescription": "Manage who has access to this experiment",
     "addMemberPlaceholder": "Add a member",
     "visibilityTitle": "Visibility Settings",
-    "visibilityDescription": "Control your experiment's visibility and embargo period"
+    "visibilityDescription": "Control your experiment's visibility and embargo period",
+    "addProtocolsTitle": "Add Protocols",
+    "addProtocolsDescription": "Manage and order experiment protocols",
+    "addProtocolsPlaceholder": "Add a protocol"
   },
 
   "experimentSettings": {
@@ -110,7 +121,19 @@
     "noEmail": "No email",
     "joined": "Joined",
     "cannotRemoveLastAdmin": "Cannot remove last admin",
-    "removeMember": "Remove member"
+    "removeMember": "Remove member",
+    "noProtocolsYet": "No protocols yet",
+    "addProtocols": "Add protocols to this experiment",
+    "unknownProtocol": "Unknown Protocol",
+    "removeProtocol": "Remove protocol",
+    "seeProtocolDetails": "See protocol details",
+    "protocolManagement": "Protocol Management",
+    "manageAndOrderProtocols": "Manage and order experiment protocols",
+    "addProtocolPlaceholder": "Add a protocol",
+    "currentProtocols": "Current Protocols",
+    "protocolAdded": "Protocol added successfully",
+    "protocolRemoved": "Protocol removed successfully",
+    "errorLoadingProtocols": "Error loading protocols. Please try again."
   },
 
   "dashboard": {
