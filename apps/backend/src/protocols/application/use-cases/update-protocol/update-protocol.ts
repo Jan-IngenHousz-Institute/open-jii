@@ -26,7 +26,20 @@ export class UpdateProtocolUseCase {
       return failure(AppError.notFound(`Protocol not found`));
     }
 
-    // Protocol exists, now update it
+    // Prevent update if protocol is assigned to any experiment
+    const isAssignedResult = await this.protocolRepository.isAssignedToAnyExperiment(id);
+    if (isAssignedResult.isFailure()) {
+      this.logger.error(`Error checking protocol assignment for ID ${id}:`, isAssignedResult.error);
+      return failure(isAssignedResult.error);
+    }
+    if (isAssignedResult.value) {
+      this.logger.warn(
+        `Attempt to update protocol with ID ${id} which is assigned to an experiment`,
+      );
+      return failure(AppError.forbidden("Cannot update protocol assigned to an experiment"));
+    }
+
+    // Protocol exists and is not assigned, now update it
     const updateResult = await this.protocolRepository.update(id, updateProtocolDto);
 
     if (updateResult.isFailure()) {

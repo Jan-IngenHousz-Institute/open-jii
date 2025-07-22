@@ -153,7 +153,6 @@ export function ProtocolDetailsCard({
                         error={form.formState.errors.code?.message?.toString()}
                       />
                     </FormControl>
-                    <FormMessage />
                   </FormItem>
                 )}
               />

@@ -10,6 +10,7 @@ import type { CreateProtocolRequestBody } from "@repo/api";
 import { zCreateProtocolRequestBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Button, Form, FormField } from "@repo/ui/components";
+import { toast } from "@repo/ui/hooks";
 
 import ProtocolCodeEditor from "../protocol-code-editor";
 import { NewProtocolDetailsCard } from "./new-protocol-details-card";
@@ -46,6 +47,7 @@ export function NewProtocolForm() {
         family: data.family,
       },
     });
+    toast({ description: t("protocols.protocolCreated") });
   }
 
   return (
