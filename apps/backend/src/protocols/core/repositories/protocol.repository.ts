@@ -98,12 +98,14 @@ export class ProtocolRepository {
     });
   }
 
-  async isAssignedToAnyExperiment(protocolId: string): Promise<boolean> {
-    const result = await this.database
-      .select()
-      .from(experimentProtocols)
-      .where(eq(experimentProtocols.protocolId, protocolId))
-      .limit(1);
-    return result.length > 0;
+  async isAssignedToAnyExperiment(protocolId: string): Promise<Result<boolean>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select()
+        .from(experimentProtocols)
+        .where(eq(experimentProtocols.protocolId, protocolId))
+        .limit(1);
+      return result.length > 0;
+    });
   }
 }

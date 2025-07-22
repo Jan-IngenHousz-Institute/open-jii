@@ -399,7 +399,8 @@ describe("ProtocolRepository", () => {
       const isAssigned = await repository.isAssignedToAnyExperiment(protocolId);
 
       // Assert
-      expect(isAssigned).toBe(false);
+      assertSuccess(isAssigned);
+      expect(isAssigned.value).toBe(false);
     });
 
     it("should return true if protocol is assigned to an experiment", async () => {
@@ -430,7 +431,8 @@ describe("ProtocolRepository", () => {
       const isAssigned = await repository.isAssignedToAnyExperiment(protocolId);
 
       // Assert
-      expect(isAssigned).toBe(true);
+      assertSuccess(isAssigned);
+      expect(isAssigned.value).toBe(true);
     });
   });
 });

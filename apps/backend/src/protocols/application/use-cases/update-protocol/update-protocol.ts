@@ -27,8 +27,12 @@ export class UpdateProtocolUseCase {
     }
 
     // Prevent update if protocol is assigned to any experiment
-    const isAssigned = await this.protocolRepository.isAssignedToAnyExperiment(id);
-    if (isAssigned) {
+    const isAssignedResult = await this.protocolRepository.isAssignedToAnyExperiment(id);
+    if (isAssignedResult.isFailure()) {
+      this.logger.error(`Error checking protocol assignment for ID ${id}:`, isAssignedResult.error);
+      return failure(isAssignedResult.error);
+    }
+    if (isAssignedResult.value) {
       this.logger.warn(
         `Attempt to update protocol with ID ${id} which is assigned to an experiment`,
       );
