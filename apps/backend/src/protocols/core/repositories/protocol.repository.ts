@@ -1,7 +1,7 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import { ProtocolFilter } from "@repo/api";
-import { eq, ilike, protocols } from "@repo/database";
+import { eq, ilike, protocols, experimentProtocols } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -96,5 +96,14 @@ export class ProtocolRepository {
 
       return results as unknown as ProtocolDto[];
     });
+  }
+
+  async isAssignedToAnyExperiment(protocolId: string): Promise<boolean> {
+    const result = await this.database
+      .select()
+      .from(experimentProtocols)
+      .where(eq(experimentProtocols.protocolId, protocolId))
+      .limit(1);
+    return result.length > 0;
   }
 }

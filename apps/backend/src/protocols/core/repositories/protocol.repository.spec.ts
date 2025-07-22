@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { protocols as protocolsTable, eq } from "@repo/database";
+import { protocols as protocolsTable, experimentProtocols, eq } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -379,6 +379,58 @@ describe("ProtocolRepository", () => {
 
       // Should return an empty array
       expect(protocols.length).toBe(0);
+    });
+  });
+
+  describe("isAssignedToAnyExperiment", () => {
+    it("should return false if protocol is not assigned to any experiment", async () => {
+      // Arrange
+      const createProtocolDto = {
+        name: "Unassigned Protocol",
+        description: "Test Description",
+        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
+      };
+      const createResult = await repository.create(createProtocolDto, testUserId);
+      assertSuccess(createResult);
+      const protocolId = createResult.value[0].id;
+
+      // Act
+      const isAssigned = await repository.isAssignedToAnyExperiment(protocolId);
+
+      // Assert
+      expect(isAssigned).toBe(false);
+    });
+
+    it("should return true if protocol is assigned to an experiment", async () => {
+      // Arrange
+      const createProtocolDto = {
+        name: "Assigned Protocol",
+        description: "Test Description",
+        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
+      };
+      const createResult = await repository.create(createProtocolDto, testUserId);
+      assertSuccess(createResult);
+      const protocolId = createResult.value[0].id;
+
+      // Create a valid experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      // Simulate assignment in experimentProtocols table
+      await testApp.database.insert(experimentProtocols).values({
+        protocolId,
+        experimentId: experiment.id,
+      });
+
+      // Act
+      const isAssigned = await repository.isAssignedToAnyExperiment(protocolId);
+
+      // Assert
+      expect(isAssigned).toBe(true);
     });
   });
 });
