@@ -1,34 +1,17 @@
 import Image from "next/image";
 import type React from "react";
-import { UserRegistration } from "~/components/user-registration";
-import type { SearchParamsType } from "~/util/searchParams";
+import { RegistrationForm } from "~/components/registration-form";
 
-import type { Locale } from "@repo/i18n";
-import initTranslations from "@repo/i18n/server";
 import { Toaster } from "@repo/ui/components";
 
-export default async function VerifyRequestPage(props: {
-  params: Promise<{ locale: Locale }>;
-  searchParams: SearchParamsType;
-}) {
-  const { locale } = await props.params;
-  const { t } = await initTranslations({
-    locale,
-    namespaces: ["common"],
-  });
+export default function VerifyRequestPage() {
   return (
     <>
       <div className="grid min-h-svh lg:grid-cols-2">
         <div className="flex flex-col gap-4 p-6 md:p-10">
           <div className="flex flex-1 items-center justify-center">
-            <div className="w-full max-w-96">
-              <div className="flex flex-col gap-6">
-                <div className="flex flex-col items-center gap-2 text-center">
-                  <h1 className="text-2xl font-bold">{t("auth.register")}</h1>
-                  <p>{t("auth.registerDetails")}</p>
-                  <UserRegistration />
-                </div>
-              </div>
+            <div className="w-full max-w-fit">
+              <RegistrationForm />
             </div>
           </div>
         </div>
