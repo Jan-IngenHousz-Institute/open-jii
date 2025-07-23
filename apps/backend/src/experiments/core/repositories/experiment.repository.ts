@@ -215,4 +215,16 @@ export class ExperimentRepository {
       return { experiment, hasAccess: isMember, isAdmin };
     });
   }
+
+  async findByFlowId(flowId: string): Promise<Result<ExperimentDto | null>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select()
+        .from(experiments)
+        .where(eq(experiments.flowId, flowId))
+        .limit(1);
+
+      return result.length === 0 ? null : result[0];
+    });
+  }
 }
