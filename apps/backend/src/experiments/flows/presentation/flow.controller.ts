@@ -83,22 +83,22 @@ export class FlowController {
 
       // Find experiment that owns this flow and check access
       const experimentResult = await this.experimentRepository.findByFlowId(params.id);
-      
+
       if (experimentResult.isFailure()) {
         return handleFailure(experimentResult, this.logger);
       }
 
       const experiment = experimentResult.value;
-      
+
       if (experiment) {
         const accessResult = await this.experimentRepository.checkAccess(experiment.id, user.id);
-        
+
         if (accessResult.isFailure()) {
           return handleFailure(accessResult, this.logger);
         }
 
         const { hasAccess } = accessResult.value;
-        
+
         if (!hasAccess) {
           return {
             status: StatusCodes.FORBIDDEN,
@@ -126,22 +126,22 @@ export class FlowController {
     return tsRestHandler(contract.flows.createFlowStep, async ({ params, body }) => {
       // Find experiment that owns this flow and check admin access
       const experimentResult = await this.experimentRepository.findByFlowId(params.id);
-      
+
       if (experimentResult.isFailure()) {
         return handleFailure(experimentResult, this.logger);
       }
 
       const experiment = experimentResult.value;
-      
+
       if (experiment) {
         const accessResult = await this.experimentRepository.checkAccess(experiment.id, user.id);
-        
+
         if (accessResult.isFailure()) {
           return handleFailure(accessResult, this.logger);
         }
 
         const { hasAccess, isAdmin } = accessResult.value;
-        
+
         if (!hasAccess) {
           return {
             status: StatusCodes.FORBIDDEN,
@@ -188,25 +188,25 @@ export class FlowController {
       }
 
       const flowData = result.value;
-      
+
       // Find experiment that owns this flow and check access
       const experimentResult = await this.experimentRepository.findByFlowId(params.id);
-      
+
       if (experimentResult.isFailure()) {
         return handleFailure(experimentResult, this.logger);
       }
 
       const experiment = experimentResult.value;
-      
+
       if (experiment) {
         const accessResult = await this.experimentRepository.checkAccess(experiment.id, user.id);
-        
+
         if (accessResult.isFailure()) {
           return handleFailure(accessResult, this.logger);
         }
 
         const { hasAccess } = accessResult.value;
-        
+
         if (!hasAccess) {
           return {
             status: StatusCodes.FORBIDDEN,

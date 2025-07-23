@@ -98,7 +98,7 @@ export class FlowStepRepository {
       condition?: any;
       priority?: number;
     } = {},
-  ): Promise<Result<any>> {
+  ) {
     return tryCatch(async () => {
       const result = await this.database
         .insert(flowStepConnections)

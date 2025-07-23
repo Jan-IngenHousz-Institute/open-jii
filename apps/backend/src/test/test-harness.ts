@@ -22,6 +22,7 @@ import {
   experimentProtocols,
   flows,
   flowSteps,
+  eq,
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
@@ -244,20 +245,59 @@ export class TestHarness {
    * Helper to create an experiment membership
    */
   public async addExperimentMember(
-    experimentId: string,
-    userId: string,
+    data:
+      | {
+          experimentId: string;
+          userId: string;
+          role: "admin" | "member";
+        }
+      | string,
+    userId?: string,
     role: "admin" | "member" = "member",
   ) {
+    // Support both object and parameter calling styles for backward compatibility
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const params = typeof data === "string" ? { experimentId: data, userId: userId!, role } : data;
+
     const [membership] = await this.database
       .insert(experimentMembers)
       .values({
-        experimentId,
-        userId,
-        role,
+        experimentId: params.experimentId,
+        userId: params.userId,
+        role: params.role,
       })
       .returning();
 
     return membership;
+  }
+
+  /**
+   * Helper to update an experiment
+   */
+  public async updateExperiment(data: {
+    experimentId: string;
+    updates: {
+      name?: string;
+      description?: string;
+      status?:
+        | "provisioning"
+        | "provisioning_failed"
+        | "active"
+        | "stale"
+        | "archived"
+        | "published";
+      visibility?: "private" | "public";
+      embargoIntervalDays?: number;
+      flowId?: string;
+    };
+  }) {
+    const [experiment] = await this.database
+      .update(experiments)
+      .set(data.updates)
+      .where(eq(experiments.id, data.experimentId))
+      .returning();
+
+    return experiment;
   }
 
   /**
