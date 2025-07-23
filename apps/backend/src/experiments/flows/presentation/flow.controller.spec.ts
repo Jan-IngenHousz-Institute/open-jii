@@ -701,10 +701,7 @@ describe("FlowController", () => {
           id: flowId,
         });
 
-        await testApp
-          .get(path)
-          .withAuth(adminUserId)
-          .expect(StatusCodes.OK);
+        await testApp.get(path).withAuth(adminUserId).expect(StatusCodes.OK);
       });
 
       it("should allow member to view flow", async () => {
@@ -712,10 +709,7 @@ describe("FlowController", () => {
           id: flowId,
         });
 
-        await testApp
-          .get(path)
-          .withAuth(memberUserId)
-          .expect(StatusCodes.OK);
+        await testApp.get(path).withAuth(memberUserId).expect(StatusCodes.OK);
       });
 
       it("should deny non-member access to flow", async () => {
@@ -758,10 +752,7 @@ describe("FlowController", () => {
           id: flowId,
         });
 
-        const response = await testApp
-          .get(path)
-          .withAuth(adminUserId)
-          .expect(StatusCodes.OK);
+        const response = await testApp.get(path).withAuth(adminUserId).expect(StatusCodes.OK);
 
         expect(response.body).toHaveLength(1);
       });
@@ -771,10 +762,7 @@ describe("FlowController", () => {
           id: flowId,
         });
 
-        const response = await testApp
-          .get(path)
-          .withAuth(memberUserId)
-          .expect(StatusCodes.OK);
+        const response = await testApp.get(path).withAuth(memberUserId).expect(StatusCodes.OK);
 
         expect(response.body).toHaveLength(1);
       });
@@ -808,11 +796,7 @@ describe("FlowController", () => {
           id: flowId,
         });
 
-        await testApp
-          .post(path)
-          .withAuth(adminUserId)
-          .send(stepData)
-          .expect(StatusCodes.CREATED);
+        await testApp.post(path).withAuth(adminUserId).send(stepData).expect(StatusCodes.CREATED);
       });
 
       it("should deny member from creating flow steps", async () => {
@@ -869,10 +853,7 @@ describe("FlowController", () => {
           id: standaloneFlowId,
         });
 
-        await testApp
-          .get(path)
-          .withAuth(nonMemberUserId)
-          .expect(StatusCodes.OK);
+        await testApp.get(path).withAuth(nonMemberUserId).expect(StatusCodes.OK);
       });
 
       it("should allow any authenticated user to view standalone flow steps", async () => {
@@ -880,10 +861,7 @@ describe("FlowController", () => {
           id: standaloneFlowId,
         });
 
-        await testApp
-          .get(path)
-          .withAuth(nonMemberUserId)
-          .expect(StatusCodes.OK);
+        await testApp.get(path).withAuth(nonMemberUserId).expect(StatusCodes.OK);
       });
 
       it("should allow any authenticated user to create steps in standalone flows", async () => {

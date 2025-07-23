@@ -32,9 +32,7 @@ export class GetFlowUseCase {
     return flowResult.chain(async (flow) => {
       if (!flow) {
         this.logger.warn(`Flow with ID ${flowId} not found`);
-        return failure(
-          new GetFlowError(`Flow with ID ${flowId} not found`)
-        );
+        return failure(new GetFlowError(`Flow with ID ${flowId} not found`));
       }
 
       // Get the flow steps

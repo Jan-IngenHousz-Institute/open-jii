@@ -190,6 +190,5 @@ describe("CreateFlowStepUseCase", () => {
       assertSuccess(result);
       expect(result.value.stepSpecification).toEqual({});
     });
-
   });
 });

@@ -203,5 +203,158 @@ describe("FlowRepository", () => {
 
       expect(flowExists).toHaveLength(0);
     });
+
+    it("should handle non-existent flow gracefully", async () => {
+      const result = await repository.hardDelete("123e4567-e89b-12d3-a456-426614174001");
+      assertSuccess(result);
+    });
+  });
+
+  describe("error handling", () => {
+    it("should handle invalid UUID format in findOne", async () => {
+      const result = await repository.findOne("invalid-uuid");
+      expect(result.isFailure()).toBe(true);
+    });
+
+    it("should handle invalid UUID format in update", async () => {
+      const result = await repository.update("invalid-uuid", { name: "Updated" });
+      expect(result.isFailure()).toBe(true);
+    });
+
+    it("should handle invalid UUID format in delete", async () => {
+      const result = await repository.delete("invalid-uuid");
+      expect(result.isFailure()).toBe(true);
+    });
+  });
+
+  describe("edge cases", () => {
+    it("should handle empty name creation", async () => {
+      const result = await repository.create({ name: "" }, testUserId);
+      assertSuccess(result);
+      expect(result.value[0].name).toBe("");
+    });
+
+    it("should handle very long names within database limits", async () => {
+      const longName = "a".repeat(250); // Stay within varchar(255) limit
+      const result = await repository.create({ name: longName }, testUserId);
+      assertSuccess(result);
+      expect(result.value[0].name).toBe(longName);
+    });
+
+    it("should handle null/undefined description", async () => {
+      const flowData = { name: "Test Flow", description: null };
+      const result = await repository.create(flowData, testUserId);
+      assertSuccess(result);
+      expect(result.value[0].description).toBeNull();
+    });
+
+    it("should handle concurrent updates", async () => {
+      const flowData = { name: "Concurrent Flow" };
+      const createResult = await repository.create(flowData, testUserId);
+      assertSuccess(createResult);
+      const flowId = createResult.value[0].id;
+
+      // Perform concurrent updates
+      const [result1, result2] = await Promise.all([
+        repository.update(flowId, { name: "Update 1" }),
+        repository.update(flowId, { name: "Update 2" }),
+      ]);
+
+      assertSuccess(result1);
+      assertSuccess(result2);
+      // Both should succeed, with the last one winning
+    });
+
+    it("should handle multiple flows with same name", async () => {
+      const flowData = { name: "Duplicate Name" };
+
+      const result1 = await repository.create(flowData, testUserId);
+      const result2 = await repository.create(flowData, testUserId);
+
+      assertSuccess(result1);
+      assertSuccess(result2);
+      expect(result1.value[0].id).not.toBe(result2.value[0].id);
+    });
+
+    it("should handle findAll with large number of flows", async () => {
+      // Create 50 flows to test performance
+      const promises = Array.from({ length: 50 }, (_, i) =>
+        repository.create({ name: `Flow ${i}` }, testUserId),
+      );
+
+      await Promise.all(promises);
+
+      const result = await repository.findAll();
+      assertSuccess(result);
+      expect(result.value.length).toBe(50);
+    });
+
+    it("should handle update with no changes", async () => {
+      const flowData = { name: "Original Flow" };
+      const createResult = await repository.create(flowData, testUserId);
+      assertSuccess(createResult);
+      const flowId = createResult.value[0].id;
+
+      const result = await repository.update(flowId, {});
+      assertSuccess(result);
+      expect(result.value[0].name).toBe("Original Flow");
+    });
+
+    it("should handle update of non-existent flow", async () => {
+      const result = await repository.update("123e4567-e89b-12d3-a456-426614174001", {
+        name: "Updated",
+      });
+      assertSuccess(result);
+      expect(result.value).toHaveLength(0);
+    });
+
+    it("should handle soft delete of already inactive flow", async () => {
+      const flowData = { name: "Inactive Flow", isActive: false };
+      const createResult = await repository.create(flowData, testUserId);
+      assertSuccess(createResult);
+      const flowId = createResult.value[0].id;
+
+      const result = await repository.delete(flowId);
+      assertSuccess(result);
+    });
+  });
+
+  describe("data integrity", () => {
+    it("should preserve creation metadata on update", async () => {
+      const flowData = { name: "Original Flow" };
+      const createResult = await repository.create(flowData, testUserId);
+      assertSuccess(createResult);
+      const flowId = createResult.value[0].id;
+      const originalCreatedAt = createResult.value[0].createdAt;
+      const originalCreatedBy = createResult.value[0].createdBy;
+
+      const updateResult = await repository.update(flowId, { name: "Updated Flow" });
+      assertSuccess(updateResult);
+
+      expect(updateResult.value[0].createdAt).toEqual(originalCreatedAt);
+      expect(updateResult.value[0].createdBy).toBe(originalCreatedBy);
+      expect(new Date(updateResult.value[0].updatedAt).getTime()).toBeGreaterThan(
+        new Date(originalCreatedAt).getTime(),
+      );
+    });
+
+    it("should maintain version consistency", async () => {
+      const flowData = { name: "Version Test", version: 5 };
+      const result = await repository.create(flowData, testUserId);
+      assertSuccess(result);
+      expect(result.value[0].version).toBe(5);
+    });
+
+    it("should handle special characters in names and descriptions", async () => {
+      const flowData = {
+        name: "Test Flow with Special Characters: !@#$%^&*()_+-=[]{}|;:'\",.<>?",
+        description: "Description with emojis 🚀 and unicode characters éñü",
+      };
+
+      const result = await repository.create(flowData, testUserId);
+      assertSuccess(result);
+      expect(result.value[0].name).toBe(flowData.name);
+      expect(result.value[0].description).toBe(flowData.description);
+    });
   });
 });
