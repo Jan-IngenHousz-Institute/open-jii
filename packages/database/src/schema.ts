@@ -1,4 +1,4 @@
-import { primaryKey } from "drizzle-orm/pg-core";
+import { primaryKey, unique, index } from "drizzle-orm/pg-core";
 import {
   pgTable,
   text,
@@ -105,6 +105,17 @@ export const organizationTypeEnum = pgEnum("organization_type", [
 // Sensor Family Enum
 export const sensorFamilyEnum = pgEnum("sensor_family", ["multispeq", "ambit"]);
 
+// Flow Step Type Enum
+export const stepTypeEnum = pgEnum("step_type", [
+  "INSTRUCTION",
+  "QUESTION",
+  "MEASUREMENT",
+  "ANALYSIS",
+]);
+
+// Answer Type Enum
+export const answerTypeEnum = pgEnum("answer_type", ["TEXT", "SELECT", "NUMBER", "BOOLEAN"]);
+
 // Profiles Table
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -162,6 +173,7 @@ export const experiments = pgTable("experiments", {
   status: experimentStatusEnum("status").default("provisioning").notNull(),
   visibility: experimentVisibilityEnum("visibility").default("public").notNull(),
   embargoIntervalDays: integer("embargo_interval_days").default(90).notNull(),
+  flowId: uuid("flow_id").references(() => flows.id), // Optional reference to flow
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
@@ -236,3 +248,101 @@ export const protocols = pgTable("protocols", {
     .$onUpdate(() => new Date())
     .notNull(),
 });
+
+// Flows Table
+export const flows = pgTable("flows", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  version: integer("version").default(1).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: uuid("created_by")
+    .references(() => users.id)
+    .notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+// Flow Steps Table (React Flow Nodes)
+export const flowSteps = pgTable(
+  "flow_steps",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    flowId: uuid("flow_id")
+      .references(() => flows.id, { onDelete: "cascade" })
+      .notNull(),
+    type: stepTypeEnum("type").notNull(),
+
+    title: varchar("title", { length: 255 }),
+    description: text("description"),
+    media: jsonb("media"), // Array of URLs
+
+    // React Flow Node Properties
+    position: jsonb("position"), // {x: number, y: number} - nullable during migration
+    size: jsonb("size"), // {width?: number, height?: number} - optional
+
+    // Node Behavior
+    isStartNode: boolean("is_start_node").default(false).notNull(),
+    isEndNode: boolean("is_end_node").default(false).notNull(),
+
+    // Step specification (stored as JSONB for flexibility)
+    stepSpecification: jsonb("step_specification"), // Contains step-specific configuration based on type
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    // Indexes for React Flow compatibility
+    index("flow_steps_flow_id_idx").on(table.flowId),
+    index("flow_steps_start_node_idx").on(table.flowId, table.isStartNode),
+  ],
+);
+
+// Flow Step Connections Table (React Flow Edges)
+export const flowStepConnections = pgTable(
+  "flow_step_connections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    flowId: uuid("flow_id")
+      .references(() => flows.id, { onDelete: "cascade" })
+      .notNull(),
+
+    // Connection endpoints
+    sourceStepId: uuid("source_step_id")
+      .references(() => flowSteps.id, { onDelete: "cascade" })
+      .notNull(),
+    targetStepId: uuid("target_step_id")
+      .references(() => flowSteps.id, { onDelete: "cascade" })
+      .notNull(),
+
+    // React Flow Edge Properties
+    type: varchar("type", { length: 50 }).default("default").notNull(), // 'default', 'smoothstep', 'straight'
+    animated: boolean("animated").default(false).notNull(),
+    label: varchar("label", { length: 255 }), // Optional label on the edge
+
+    // Conditional Logic
+    condition: jsonb("condition"), // Optional condition for this connection path
+    priority: integer("priority").default(0).notNull(), // For multiple outgoing connections
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    // Prevent self-loops and ensure unique connections
+    unique("unique_connection").on(table.sourceStepId, table.targetStepId),
+
+    // Indexes for efficient queries
+    index("flow_step_connections_flow_id_idx").on(table.flowId),
+    index("flow_step_connections_source_idx").on(table.sourceStepId),
+    index("flow_step_connections_target_idx").on(table.targetStepId),
+  ],
+);
