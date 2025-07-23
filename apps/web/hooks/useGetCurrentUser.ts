@@ -12,3 +12,4 @@ export const useGetUser = (userId: string) => {
     queryKey: ["user", userId],
   });
 };
+
