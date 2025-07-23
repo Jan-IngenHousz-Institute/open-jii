@@ -1,7 +1,13 @@
 import { initContract } from "@ts-rest/core";
 
 import { zErrorResponse } from "../schemas/experiment.schema";
-import { zUser, zUserList, zSearchUsersQuery, zUserIdPathParam } from "../schemas/user.schema";
+import {
+  zUser,
+  zUserList,
+  zSearchUsersQuery,
+  zUserIdPathParam,
+  zSetUserRegisteredBody,
+} from "../schemas/user.schema";
 
 const c = initContract();
 
@@ -28,5 +34,17 @@ export const userContract = c.router({
     },
     summary: "Get a user by ID",
     description: "Returns a single user by their unique identifier",
+  },
+
+  setUserRegistered: {
+    method: "POST",
+    path: "/api/v1/users/registered",
+    body: zSetUserRegisteredBody,
+    responses: {
+      201: zUser,
+      400: zErrorResponse,
+    },
+    summary: "Set user as registered",
+    description: "Sets the user as registered, allowing access to the platform",
   },
 });

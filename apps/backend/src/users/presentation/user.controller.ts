@@ -11,6 +11,7 @@ import { formatDates, formatDatesList } from "../../common/utils/date-formatter"
 import { handleFailure } from "../../common/utils/fp-utils";
 import { GetUserUseCase } from "../application/use-cases/get-user/get-user";
 import { SearchUsersUseCase } from "../application/use-cases/search-users/search-users";
+import { SetUserRegisteredUseCase } from "../application/use-cases/set-user-registered/set-user-registered";
 
 @Controller()
 @UseGuards(AuthGuard)
@@ -20,6 +21,7 @@ export class UserController {
   constructor(
     private readonly searchUsersUseCase: SearchUsersUseCase,
     private readonly getUserUseCase: GetUserUseCase,
+    private readonly setUserRegisteredUseCase: SetUserRegisteredUseCase,
   ) {}
 
   @TsRestHandler(contract.users.searchUsers)
@@ -63,6 +65,26 @@ export class UserController {
         return {
           status: StatusCodes.OK,
           body: formattedUser,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.users.setUserRegistered)
+  setUserRegistered(@CurrentUser() user: SessionUser) {
+    return tsRestHandler(contract.users.setUserRegistered, async () => {
+      const result = await this.setUserRegisteredUseCase.execute(user.id);
+      this.logger.log(`Setting current user as registered`);
+
+      if (result.isSuccess()) {
+        const user = result.value;
+
+        this.logger.log(`User ${user.id} set as registered`);
+        return {
+          status: StatusCodes.CREATED,
+          body: user,
         };
       }
 

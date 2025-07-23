@@ -77,4 +77,10 @@ export class UserRepository {
       await this.database.delete(users).where(eq(users.id, id));
     });
   }
+
+  async updateRegisteredStatus(id: string): Promise<Result<UserDto[]>> {
+    return tryCatch(() =>
+      this.database.update(users).set({ registered: true }).where(eq(users.id, id)).returning(),
+    );
+  }
 }

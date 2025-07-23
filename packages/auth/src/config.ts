@@ -11,6 +11,7 @@ declare module "next-auth" {
   export interface Session {
     user: {
       id: string;
+      registered: boolean;
       /**
        * By default, TypeScript merges new interface properties and overwrites existing ones.
        * In this case, the default session user properties will be overwritten,
@@ -22,10 +23,11 @@ declare module "next-auth" {
 
   export interface SessionUser extends User {
     id: string;
+    registered: boolean;
   }
 }
 
-export type { Session, SessionUser, DefaultSession, User } from "next-auth";
+export type { Session, DefaultSession, User } from "next-auth";
 
 const useSecureCookies = process.env.NODE_ENV === "production";
 const cookiePrefix = useSecureCookies ? "__Secure-" : "";
@@ -70,6 +72,7 @@ export const baseAuthConfig = {
     jwt({ token, user }: { token: JWT; user?: User }) {
       if (user) {
         token.id = user.id;
+        token.registered = user.registered;
       }
       return token;
     },
@@ -77,6 +80,7 @@ export const baseAuthConfig = {
     session({ session, token }: { session: DefaultSession; token: JWT & { id?: string } }) {
       if (token.id && session.user) {
         session.user.id = token.id;
+        session.user.registered = token.registered;
       }
       return session;
     },
