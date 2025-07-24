@@ -74,7 +74,7 @@ describe("GetExperimentDataUseCase", () => {
       totalRows: 2,
       truncated: false,
     };
-    
+
     // Create expected data format after transformation by the service
     const expectedTableData = {
       columns: mockTableData.columns,

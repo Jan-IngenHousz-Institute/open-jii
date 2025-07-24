@@ -1,33 +1,7 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
-import type { JWT } from "@auth/core/jwt";
 import GitHub from "@auth/core/providers/github";
 import type { ExpressAuthConfig } from "@auth/express";
-import type { DefaultSession, NextAuthConfig, User } from "next-auth";
-
-declare module "next-auth" {
-  /**
-   * Returned by `auth`, `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
-   */
-  export interface Session {
-    user: {
-      id: string;
-      registered: boolean;
-      /**
-       * By default, TypeScript merges new interface properties and overwrites existing ones.
-       * In this case, the default session user properties will be overwritten,
-       * with the new ones defined above. To keep the default session user properties,
-       * you need to add them back into the newly declared interface.
-       */
-    } & DefaultSession["user"];
-  }
-
-  export interface SessionUser extends User {
-    id: string;
-    registered: boolean;
-  }
-}
-
-export type { Session, DefaultSession, User } from "next-auth";
+import type { NextAuthConfig } from "next-auth";
 
 const useSecureCookies = process.env.NODE_ENV === "production";
 const cookiePrefix = useSecureCookies ? "__Secure-" : "";
@@ -69,18 +43,22 @@ export const baseAuthConfig = {
     },
   },
   callbacks: {
-    jwt({ token, user }: { token: JWT; user?: User }) {
+    jwt({ token, user }) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (user) {
         token.id = user.id;
         token.registered = user.registered;
+        // token.role = user.role;
       }
+
       return token;
     },
 
-    session({ session, token }: { session: DefaultSession; token: JWT & { id?: string } }) {
-      if (token.id && session.user) {
+    session({ session, token }) {
+      if (token.id) {
         session.user.id = token.id;
         session.user.registered = token.registered;
+        // session.user.role = token.role;
       }
       return session;
     },

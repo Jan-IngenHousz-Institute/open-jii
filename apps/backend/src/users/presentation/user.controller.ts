@@ -3,7 +3,7 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
-import type { SessionUser } from "@repo/auth/config";
+import type { User } from "@repo/auth/types";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
@@ -25,7 +25,7 @@ export class UserController {
   ) {}
 
   @TsRestHandler(contract.users.searchUsers)
-  searchUsers(@CurrentUser() user: SessionUser) {
+  searchUsers(@CurrentUser() user: User) {
     return tsRestHandler(contract.users.searchUsers, async ({ query }) => {
       const result = await this.searchUsersUseCase.execute({
         query: query.query,
@@ -73,7 +73,7 @@ export class UserController {
   }
 
   @TsRestHandler(contract.users.createUserProfile)
-  createUserProfile(@CurrentUser() user: SessionUser) {
+  createUserProfile(@CurrentUser() user: User) {
     return tsRestHandler(contract.users.createUserProfile, async ({ body }) => {
       const result = await this.createUserProfileUseCase.execute(body, user.id);
       this.logger.log(`Setting current user as registered`);

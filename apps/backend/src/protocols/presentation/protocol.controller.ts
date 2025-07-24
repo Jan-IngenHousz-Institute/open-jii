@@ -3,7 +3,7 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
-import type { SessionUser } from "@repo/auth/config";
+import type { User } from "@repo/auth/types";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
@@ -101,7 +101,7 @@ export class ProtocolController {
   }
 
   @TsRestHandler(contract.protocols.createProtocol)
-  createProtocol(@CurrentUser() user: SessionUser) {
+  createProtocol(@CurrentUser() user: User) {
     return tsRestHandler(contract.protocols.createProtocol, async ({ body }) => {
       // Convert the code from Record<string, unknown> to a JSON string for database storage
       const createDto: CreateProtocolDto = {
@@ -131,7 +131,7 @@ export class ProtocolController {
   }
 
   @TsRestHandler(contract.protocols.updateProtocol)
-  updateProtocol(@CurrentUser() user: SessionUser) {
+  updateProtocol(@CurrentUser() user: User) {
     return tsRestHandler(contract.protocols.updateProtocol, async ({ params, body }) => {
       // First check if protocol exists and user is the creator
       const protocolResult = await this.getProtocolUseCase.execute(params.id);
@@ -178,7 +178,7 @@ export class ProtocolController {
   }
 
   @TsRestHandler(contract.protocols.deleteProtocol)
-  deleteProtocol(@CurrentUser() user: SessionUser) {
+  deleteProtocol(@CurrentUser() user: User) {
     return tsRestHandler(contract.protocols.deleteProtocol, async ({ params }) => {
       // First check if protocol exists and user is the creator
       const protocolResult = await this.getProtocolUseCase.execute(params.id);
