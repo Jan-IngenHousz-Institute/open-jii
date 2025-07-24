@@ -11,7 +11,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 }
 
 export function useToast() {
-  function showToast(message: string, type: ToastType) {
+  function showToast(message: string, type: "success" | "error" | "info") {
     Toast.show({
       type,
       text1: message,

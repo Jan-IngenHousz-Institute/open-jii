@@ -48,7 +48,7 @@ export function useFailedUploads() {
       await removeFailedUpload(key);
     } catch (error) {
       console.warn(`Failed to upload item with key ${key}:`, error);
-      showToast("Failed to upload, try again later", "warning");
+      showToast("Failed to upload, try again later", "info");
     }
 
     await queryClient.invalidateQueries({ queryKey: ["failedUploads"] });
