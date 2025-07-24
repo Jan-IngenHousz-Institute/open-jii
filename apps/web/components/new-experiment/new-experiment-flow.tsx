@@ -11,7 +11,7 @@ import {
   getConnectedEdges,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { FileInput, BookText, HelpCircle, Cpu, BarChart2 } from "lucide-react";
+import { FileInput, BookText, HelpCircle, Cpu, ChartColumn } from "lucide-react";
 import { useCallback, useState, useMemo } from "react";
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components";
@@ -82,7 +82,7 @@ export function NewExperimentFlow({
         analysis: {
           border: "!border-red-400",
           bg: "!bg-red-50",
-          icon: <BarChart2 size={32} strokeWidth={2} />,
+          icon: <ChartColumn size={32} strokeWidth={2} />,
         },
       }),
       [],
