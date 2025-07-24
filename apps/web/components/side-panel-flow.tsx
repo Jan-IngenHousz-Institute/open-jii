@@ -197,7 +197,7 @@ export function ExperimentSidePanel({
                                     onChange={() => !q.isOpenAnswer || toggleQuestionType(q.id)}
                                     className="peer sr-only"
                                   />
-                                  <span className="border-jii-medium-green peer-checked:border-jii-dark-green peer-checked:bg-jii-dark-green flex aspect-square h-4 w-4 items-center justify-center rounded-full border bg-white transition-colors"></span>
+                                  <span className="border-jii-medium-green peer-checked:border-jii-dark-green peer-checked:bg-jii-dark-green flex aspect-square h-3 w-3 items-center justify-center rounded-full border bg-white transition-colors"></span>
                                   <span className="text-jii-medium-green text-sm">
                                     Multiple Choice
                                   </span>
@@ -210,7 +210,7 @@ export function ExperimentSidePanel({
                                     onChange={() => q.isOpenAnswer || toggleQuestionType(q.id)}
                                     className="peer sr-only"
                                   />
-                                  <span className="border-jii-medium-green peer-checked:border-jii-dark-green peer-checked:bg-jii-dark-green flex aspect-square h-4 w-4 items-center justify-center rounded-full border bg-white transition-colors"></span>
+                                  <span className="border-jii-medium-green peer-checked:border-jii-dark-green peer-checked:bg-jii-dark-green flex aspect-square h-3 w-3 items-center justify-center rounded-full border bg-white transition-colors"></span>
                                   <span className="text-jii-medium-green text-sm">Open Answer</span>
                                 </label>
                               </div>
