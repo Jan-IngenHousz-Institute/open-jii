@@ -3,7 +3,7 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
-import type { SessionUser } from "@repo/auth/config";
+import type { User } from "@repo/auth/types";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
@@ -18,7 +18,7 @@ export class ExperimentDataController {
   constructor(private readonly getExperimentDataUseCase: GetExperimentDataUseCase) {}
 
   @TsRestHandler(contract.experiments.getExperimentData)
-  getExperimentData(@CurrentUser() user: SessionUser) {
+  getExperimentData(@CurrentUser() user: User) {
     return tsRestHandler(contract.experiments.getExperimentData, async ({ params, query }) => {
       const { id: experimentId } = params;
       const { page, pageSize, tableName } = query;

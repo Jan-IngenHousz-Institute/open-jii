@@ -3,7 +3,7 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
-import type { SessionUser } from "@repo/auth/config";
+import type { User } from "@repo/auth/types";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
@@ -25,7 +25,7 @@ export class ExperimentMembersController {
   ) {}
 
   @TsRestHandler(contract.experiments.listExperimentMembers)
-  listMembers(@CurrentUser() user: SessionUser) {
+  listMembers(@CurrentUser() user: User) {
     return tsRestHandler(contract.experiments.listExperimentMembers, async ({ params }) => {
       const result = await this.listExperimentMembersUseCase.execute(params.id, user.id);
 
@@ -45,7 +45,7 @@ export class ExperimentMembersController {
   }
 
   @TsRestHandler(contract.experiments.addExperimentMembers)
-  addMembers(@CurrentUser() user: SessionUser) {
+  addMembers(@CurrentUser() user: User) {
     return tsRestHandler(contract.experiments.addExperimentMembers, async ({ params, body }) => {
       const result = await this.addExperimentMembersUseCase.execute(
         params.id,
@@ -72,7 +72,7 @@ export class ExperimentMembersController {
   }
 
   @TsRestHandler(contract.experiments.removeExperimentMember)
-  removeMember(@CurrentUser() user: SessionUser) {
+  removeMember(@CurrentUser() user: User) {
     return tsRestHandler(contract.experiments.removeExperimentMember, async ({ params }) => {
       const result = await this.removeExperimentMemberUseCase.execute(
         params.id,
