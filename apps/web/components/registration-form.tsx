@@ -29,21 +29,34 @@ import {
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-const registrationSchema = z.object({
-  name: z.string().min(1),
-  organization: z.string().optional(),
-  acceptedTerms: z.boolean(),
-});
-
-type Registration = z.infer<typeof registrationSchema>;
-
 export function RegistrationForm() {
   const { t } = useTranslation();
   const locale = useLocale();
+
+  const registrationSchema = z
+    .object({
+      firstName: z.string().min(2, t("registration.firstNameError")),
+      lastName: z.string().min(2, t("registration.lastNameError")),
+      organization: z.string().optional(),
+      acceptedTerms: z.boolean(),
+    })
+    .superRefine(({ acceptedTerms }, ctx) => {
+      if (!acceptedTerms) {
+        ctx.addIssue({
+          code: "custom",
+          message: t("registration.acceptTermsError"),
+          path: ["acceptedTerms"],
+        });
+      }
+    });
+
+  type Registration = z.infer<typeof registrationSchema>;
+
   const form = useForm<Registration>({
     resolver: zodResolver(registrationSchema),
     defaultValues: {
-      name: "",
+      firstName: "",
+      lastName: "",
       organization: "",
       acceptedTerms: false,
     },
@@ -55,22 +68,18 @@ export function RegistrationForm() {
 
   function onSubmit(data: Registration) {
     console.log("Submitting", data);
-    if (data.acceptedTerms) {
-      toast({ description: "Registration successfully" });
-      // setUserRegistered({
-      //   body: undefined,
-      // });
-    } else {
-      toast({ description: "You need to accept the terms and conditions." });
-    }
+    toast({ description: "Registration successfully" });
+    // setUserRegistered({
+    //   body: undefined,
+    // });
   }
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>{t("auth.registration")}</CardTitle>
-          <CardDescription>{t("auth.registrationDetails")}</CardDescription>
+          <CardTitle>{t("registration.title")}</CardTitle>
+          <CardDescription>{t("registration.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -78,12 +87,27 @@ export function RegistrationForm() {
               <div className="space-y-2">
                 <FormField
                   control={form.control}
-                  name="name"
+                  name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Full Name</FormLabel>
+                      <FormLabel>{t("registration.firstName")}</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Enter your full name" />
+                        <Input {...field} placeholder={t("registration.firstNamePlaceholder")} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="space-y-2">
+                <FormField
+                  control={form.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("registration.lastName")}</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder={t("registration.lastNamePlaceholder")} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -97,9 +121,9 @@ export function RegistrationForm() {
                   name="organization"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Organization</FormLabel>
+                      <FormLabel>{t("registration.organization")}</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Enter your organization" />
+                        <Input {...field} placeholder={t("registration.organizationPlaceholder")} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -108,50 +132,42 @@ export function RegistrationForm() {
               </div>
 
               <div className="space-y-3">
-                <Label>Terms and Conditions</Label>
+                <Label>{t("registration.termsAndConditions")}</Label>
                 <ScrollArea className="h-32 w-full rounded-md border p-4">
                   <div className="text-muted-foreground space-y-2 text-sm">
-                    <p className="font-semibold">Terms of Service</p>
+                    <p className="font-semibold">Lorem ipsum</p>
                     <p>
-                      By registering for our service, you agree to comply with and be bound by the
-                      following terms and conditions of use.
+                      Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex
+                      sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis
+                      convallis. Tempus leo eu aenean sed diam urna tempor. Pulvinar vivamus
+                      fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada
+                      lacinia integer nunc posuere. Ut hendrerit semper vel class aptent taciti
+                      sociosqu. Ad litora torquent per conubia nostra inceptos himenaeos.
                     </p>
                     <p>
-                      <strong>1. Acceptance of Terms:</strong> By accessing and using this service,
-                      you accept and agree to be bound by the terms and provision of this agreement.
+                      Nostra hendrerit litora ullamcorper praesent ligula taciti dignissim lacus
+                      interdum. A gravida pharetra a himenaeos tincidunt. Tellus sociosqu elementum
+                      lobortis lacus arcu volutpat turpis nunc. Suspendisse torquent cras morbi
+                      habitant non id lacinia per ligula hendrerit nunc laoreet sollicitudin
+                      blandit.
                     </p>
                     <p>
-                      <strong>2. Privacy Policy:</strong> Your privacy is important to us. We
-                      collect and use your information in accordance with our Privacy Policy.
+                      Congue inceptos condimentum adipiscing viverra vestibulum sociosqu conubia
+                      finibus nisi class nam. Quisque senectus massa convallis mollis gravida ipsum
+                      risus imperdiet quisque fermentum. Adipiscing ut dictum proin pulvinar
+                      sociosqu leo orci bibendum tempus rutrum sagittis eros mattis pulvinar.
                     </p>
                     <p>
-                      <strong>3. User Responsibilities:</strong> You are responsible for maintaining
-                      the confidentiality of your account and password and for restricting access to
-                      your computer.
+                      Class mauris donec mollis ipsum elit curae ligula convallis pretium et vitae.
+                      Donec posuere nisi odio mi felis venenatis habitasse orci. Duis feugiat
+                      scelerisque mauris per morbi habitant aptent elementum felis consequat id
+                      euismod leo mattis himenaeos. Congue sollicitudin aliquet eleifend platea
+                      scelerisque elit praesent vestibulum.
                     </p>
                     <p>
-                      <strong>4. Prohibited Uses:</strong> You may not use our service for any
-                      illegal or unauthorized purpose nor may you, in the use of the service,
-                      violate any laws.
-                    </p>
-                    <p>
-                      <strong>5. Limitation of Liability:</strong> In no event shall our company be
-                      liable for any indirect, incidental, special, consequential, or punitive
-                      damages.
-                    </p>
-                    <p>
-                      <strong>6. Modifications:</strong> We reserve the right to modify these terms
-                      at any time. Your continued use of the service constitutes acceptance of such
-                      modifications.
-                    </p>
-                    <p>
-                      <strong>7. Termination:</strong> We may terminate or suspend your account
-                      immediately, without prior notice or liability, for any reason whatsoever.
-                    </p>
-                    <p>
-                      <strong>8. Governing Law:</strong> These terms shall be governed and construed
-                      in accordance with the laws of the jurisdiction in which our company is
-                      located.
+                      Dictum facilisis sociosqu venenatis dignissim rutrum erat per porta urna
+                      aptent praesent quam finibus habitasse. Lorem placerat venenatis tellus eget
+                      eget ut blandit cras turpis hendrerit aliquam rutrum consectetur.
                     </p>
                   </div>
                 </ScrollArea>
@@ -174,7 +190,7 @@ export function RegistrationForm() {
                           />
                         </FormControl>
                         <FormLabel className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                          {t("auth.registrationAcceptTerms")}
+                          {t("registration.acceptTerms")}
                         </FormLabel>
                         <FormMessage />
                       </FormItem>
@@ -183,8 +199,8 @@ export function RegistrationForm() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={!form.formState.isValid}>
-                Register
+              <Button type="submit" className="w-full">
+                {t("registration.register")}
               </Button>
             </form>
           </Form>
