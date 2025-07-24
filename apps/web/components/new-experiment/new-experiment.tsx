@@ -14,6 +14,7 @@ import { Button, Form } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 import { NewExperimentDetailsCard } from "./new-experiment-details-card";
+import { NewExperimentFlow } from "./new-experiment-flow";
 import { NewExperimentMembersCard } from "./new-experiment-members-card";
 import { NewExperimentProtocolsCard } from "./new-experiment-protocols-card";
 import { NewExperimentVisibilityCard } from "./new-experiment-visibility-card";
@@ -65,6 +66,9 @@ export function NewExperimentForm() {
         <div className="flex flex-col gap-6">
           <NewExperimentProtocolsCard form={form} />
         </div>
+
+        {/* Experiment Flow Diagram */}
+        <NewExperimentFlow />
 
         <div className="flex gap-2">
           <Button type="button" onClick={cancel} variant="outline">
