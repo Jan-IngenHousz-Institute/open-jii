@@ -39,7 +39,7 @@ export class GetFlowUseCase {
       const stepsResult = await this.flowStepRepository.findByFlowId(flowId);
 
       return stepsResult.chain((steps) => {
-        this.logger.log(`Found flow "${flow.name}" with ${steps.length} steps`);
+        this.logger.log(`Found flow "${flow.name}" with ${steps?.length ?? 0} steps`);
         return success({
           ...flow,
           steps,

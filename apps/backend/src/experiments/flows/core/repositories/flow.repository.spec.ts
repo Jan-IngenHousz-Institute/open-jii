@@ -3,7 +3,7 @@ import { TestHarness } from "@/test/test-harness";
 import { flows as flowsTable, eq } from "@repo/database";
 
 import { assertSuccess } from "../../../../common/utils/fp-utils";
-import { FlowRepository } from "./flow.repository";
+import { FlowRepository, FlowRepositoryError, FlowNotFoundError } from "./flow.repository";
 
 describe("FlowRepository", () => {
   const testApp = TestHarness.App;
@@ -316,6 +316,100 @@ describe("FlowRepository", () => {
 
       const result = await repository.delete(flowId);
       assertSuccess(result);
+    });
+
+    describe("FlowRepositoryError", () => {
+      it("should create error with message and default properties", () => {
+        const error = new FlowRepositoryError("Test error message");
+
+        expect(error.message).toBe("Test error message");
+        expect(error.code).toBe("FLOW_REPOSITORY_ERROR");
+        expect(error.statusCode).toBe(500);
+        expect(error.details).toEqual({});
+      });
+
+      it("should create error with message and cause", () => {
+        const cause = new Error("Root cause");
+        const error = new FlowRepositoryError("Test error message", cause);
+
+        expect(error.message).toBe("Test error message");
+        expect(error.code).toBe("FLOW_REPOSITORY_ERROR");
+        expect(error.statusCode).toBe(500);
+        expect(error.details).toEqual({ cause });
+      });
+
+      it("should create error with undefined cause", () => {
+        const error = new FlowRepositoryError("Test error message", undefined);
+
+        expect(error.message).toBe("Test error message");
+        expect(error.code).toBe("FLOW_REPOSITORY_ERROR");
+        expect(error.statusCode).toBe(500);
+        expect(error.details).toEqual({ cause: undefined });
+      });
+
+      it("should create error with null cause", () => {
+        const error = new FlowRepositoryError("Test error message", null);
+
+        expect(error.message).toBe("Test error message");
+        expect(error.code).toBe("FLOW_REPOSITORY_ERROR");
+        expect(error.statusCode).toBe(500);
+        expect(error.details).toEqual({ cause: null });
+      });
+
+      it("should create error with complex cause object", () => {
+        const cause = {
+          type: "DatabaseError",
+          details: { table: "flows", constraint: "foreign_key" },
+        };
+        const error = new FlowRepositoryError("Database constraint violation", cause);
+
+        expect(error.message).toBe("Database constraint violation");
+        expect(error.code).toBe("FLOW_REPOSITORY_ERROR");
+        expect(error.statusCode).toBe(500);
+        expect(error.details).toEqual({ cause });
+      });
+    });
+
+    describe("FlowNotFoundError", () => {
+      it("should create error with flow ID", () => {
+        const flowId = "123e4567-e89b-12d3-a456-426614174000";
+        const error = new FlowNotFoundError(flowId);
+
+        expect(error.message).toBe(`Flow with ID ${flowId} not found`);
+        expect(error.code).toBe("FLOW_NOT_FOUND");
+        expect(error.statusCode).toBe(404);
+        expect(error.details).toEqual({ id: flowId });
+      });
+
+      it("should create error with invalid flow ID", () => {
+        const invalidId = "invalid-uuid";
+        const error = new FlowNotFoundError(invalidId);
+
+        expect(error.message).toBe(`Flow with ID ${invalidId} not found`);
+        expect(error.code).toBe("FLOW_NOT_FOUND");
+        expect(error.statusCode).toBe(404);
+        expect(error.details).toEqual({ id: invalidId });
+      });
+
+      it("should create error with empty flow ID", () => {
+        const emptyId = "";
+        const error = new FlowNotFoundError(emptyId);
+
+        expect(error.message).toBe(`Flow with ID ${emptyId} not found`);
+        expect(error.code).toBe("FLOW_NOT_FOUND");
+        expect(error.statusCode).toBe(404);
+        expect(error.details).toEqual({ id: emptyId });
+      });
+
+      it("should create error with special characters in flow ID", () => {
+        const specialId = "flow-with-special-chars-!@#$%";
+        const error = new FlowNotFoundError(specialId);
+
+        expect(error.message).toBe(`Flow with ID ${specialId} not found`);
+        expect(error.code).toBe("FLOW_NOT_FOUND");
+        expect(error.statusCode).toBe(404);
+        expect(error.details).toEqual({ id: specialId });
+      });
     });
   });
 

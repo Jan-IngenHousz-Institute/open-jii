@@ -1,9 +1,14 @@
 import { TestHarness } from "@/test/test-harness";
 
-import { assertSuccess, assertFailure } from "../../../../../common/utils/fp-utils";
+import {
+  assertSuccess,
+  assertFailure,
+  success,
+  failure,
+} from "../../../../../common/utils/fp-utils";
 import { FlowStepRepository } from "../../../core/repositories/flow-step.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
-import { CreateFlowStepUseCase } from "./create-flow-step";
+import { CreateFlowStepUseCase, CreateFlowStepError } from "./create-flow-step";
 
 describe("CreateFlowStepUseCase", () => {
   const testApp = TestHarness.App;
@@ -189,6 +194,318 @@ describe("CreateFlowStepUseCase", () => {
 
       assertSuccess(result);
       expect(result.value.stepSpecification).toEqual({});
+    });
+
+    describe("CreateFlowStepError", () => {
+      it("should create error with message and default properties", () => {
+        const error = new CreateFlowStepError("Test error message");
+
+        expect(error.message).toBe("Test error message");
+        expect(error.code).toBe("CREATE_FLOW_STEP_ERROR");
+        expect(error.statusCode).toBe(400);
+        expect(error.details).toEqual({});
+      });
+
+      it("should create error with message and cause", () => {
+        const cause = new Error("Root cause");
+        const error = new CreateFlowStepError("Test error message", cause);
+
+        expect(error.message).toBe("Test error message");
+        expect(error.code).toBe("CREATE_FLOW_STEP_ERROR");
+        expect(error.statusCode).toBe(400);
+        expect(error.details).toEqual({ cause });
+      });
+
+      it("should create error with undefined cause", () => {
+        const error = new CreateFlowStepError("Test error message", undefined);
+
+        expect(error.message).toBe("Test error message");
+        expect(error.code).toBe("CREATE_FLOW_STEP_ERROR");
+        expect(error.statusCode).toBe(400);
+        expect(error.details).toEqual({ cause: undefined });
+      });
+
+      it("should create error with null cause", () => {
+        const error = new CreateFlowStepError("Test error message", null);
+
+        expect(error.message).toBe("Test error message");
+        expect(error.code).toBe("CREATE_FLOW_STEP_ERROR");
+        expect(error.statusCode).toBe(400);
+        expect(error.details).toEqual({ cause: null });
+      });
+
+      it("should create error with complex cause object", () => {
+        const cause = {
+          type: "DatabaseError",
+          details: { table: "flow_steps", constraint: "unique_position" },
+        };
+        const error = new CreateFlowStepError("Database constraint violation", cause);
+
+        expect(error.message).toBe("Database constraint violation");
+        expect(error.code).toBe("CREATE_FLOW_STEP_ERROR");
+        expect(error.statusCode).toBe(400);
+        expect(error.details).toEqual({ cause });
+      });
+    });
+
+    describe("edge cases and error scenarios", () => {
+      it("should handle repository create method returning null", async () => {
+        const stepData = {
+          type: "INSTRUCTION" as const,
+          title: "Test Step",
+          position: { x: 100, y: 100 },
+          stepSpecification: {},
+        };
+
+        // Mock the repository to return null
+        jest.spyOn(_flowStepRepository, "create").mockResolvedValueOnce(success(null as any));
+
+        const result = await useCase.execute(testFlowId, stepData);
+
+        assertFailure(result);
+        expect(result.error).toBeInstanceOf(CreateFlowStepError);
+      });
+
+      it("should handle repository create method returning undefined", async () => {
+        const stepData = {
+          type: "INSTRUCTION" as const,
+          title: "Test Step",
+          position: { x: 100, y: 100 },
+          stepSpecification: {},
+        };
+
+        // Mock the repository to return undefined
+        jest.spyOn(_flowStepRepository, "create").mockResolvedValueOnce(success(undefined as any));
+
+        const result = await useCase.execute(testFlowId, stepData);
+
+        assertFailure(result);
+        expect(result.error).toBeInstanceOf(CreateFlowStepError);
+      });
+
+      it("should handle repository create method returning array with null elements", async () => {
+        const stepData = {
+          type: "INSTRUCTION" as const,
+          title: "Test Step",
+          position: { x: 100, y: 100 },
+          stepSpecification: {},
+        };
+
+        // Mock the repository to return array with null
+        jest.spyOn(_flowStepRepository, "create").mockResolvedValueOnce(success([null] as any));
+
+        const result = await useCase.execute(testFlowId, stepData);
+
+        assertFailure(result);
+        expect(result.error).toBeInstanceOf(CreateFlowStepError);
+      });
+
+      it("should handle flow repository findOne returning null", async () => {
+        const stepData = {
+          type: "INSTRUCTION" as const,
+          title: "Test Step",
+          position: { x: 100, y: 100 },
+          stepSpecification: {},
+        };
+
+        // Mock the flow repository to return null (flow not found)
+        jest.spyOn(flowRepository, "findOne").mockResolvedValueOnce(success(null));
+
+        const result = await useCase.execute(testFlowId, stepData);
+
+        assertFailure(result);
+        expect(result.error).toBeInstanceOf(CreateFlowStepError);
+        expect(result.error.message).toContain("not found");
+      });
+
+      it("should handle chain method failure propagation", async () => {
+        const stepData = {
+          type: "INSTRUCTION" as const,
+          title: "Test Step",
+          position: { x: 100, y: 100 },
+          stepSpecification: {},
+        };
+
+        const chainError = new Error("Chain processing failed");
+
+        // Mock repository to return success but simulate chain failure
+        const mockResult = {
+          chain: jest.fn().mockReturnValue(failure(chainError)),
+        };
+        jest.spyOn(flowRepository, "findOne").mockResolvedValueOnce(mockResult as any);
+
+        const result = await useCase.execute(testFlowId, stepData);
+
+        assertFailure(result);
+        expect(result.error).toBe(chainError);
+      });
+
+      it("should handle very long step titles", async () => {
+        const stepData = {
+          type: "INSTRUCTION" as const,
+          title: "x".repeat(1000), // Very long title
+          description: "Step with extremely long title",
+          position: { x: 100, y: 100 },
+          stepSpecification: {},
+        };
+
+        const result = await useCase.execute(testFlowId, stepData);
+
+        // Should either succeed or fail gracefully depending on database constraints
+        if (result.isSuccess()) {
+          expect(result.value.title).toBe(stepData.title);
+        } else {
+          expect(result.error).toBeInstanceOf(Error);
+        }
+      });
+
+      it("should handle special characters in step data", async () => {
+        const stepData = {
+          type: "INSTRUCTION" as const,
+          title: "Test Step with émojis 🚀 and spéciål chars",
+          description: "Description with newlines\nand tabs\t and quotes'\"",
+          position: { x: 100, y: 100 },
+          stepSpecification: {},
+        };
+
+        const result = await useCase.execute(testFlowId, stepData);
+
+        assertSuccess(result);
+        expect(result.value.title).toBe(stepData.title);
+        expect(result.value.description).toBe(stepData.description);
+      });
+
+      it("should handle concurrent step creation", async () => {
+        const stepData1 = {
+          type: "INSTRUCTION" as const,
+          title: "Concurrent Step 1",
+          position: { x: 100, y: 100 },
+          stepSpecification: {},
+        };
+        const stepData2 = {
+          type: "QUESTION" as const,
+          title: "Concurrent Step 2",
+          position: { x: 200, y: 200 },
+          stepSpecification: {},
+        };
+
+        const [result1, result2] = await Promise.all([
+          useCase.execute(testFlowId, stepData1),
+          useCase.execute(testFlowId, stepData2),
+        ]);
+
+        assertSuccess(result1);
+        assertSuccess(result2);
+        expect(result1.value.id).not.toBe(result2.value.id);
+      });
+
+      it("should handle invalid flow ID format", async () => {
+        const stepData = {
+          type: "INSTRUCTION" as const,
+          title: "Test Step",
+          position: { x: 100, y: 100 },
+          stepSpecification: {},
+        };
+
+        const invalidFlowId = "invalid-uuid-format";
+
+        const result = await useCase.execute(invalidFlowId, stepData);
+
+        assertFailure(result);
+      });
+
+      it("should handle step with complex nested stepSpecification", async () => {
+        const complexSpec = {
+          protocolId: "complex-protocol",
+          settings: {
+            advanced: {
+              calibration: {
+                temperature: 25,
+                humidity: 60,
+                pressure: 1013.25,
+              },
+              filters: ["lowpass", "highpass"],
+              algorithms: {
+                preprocessing: "normalize",
+                analysis: "fft",
+              },
+            },
+          },
+          validations: [
+            { field: "ph", range: { min: 6.5, max: 7.5 } },
+            { field: "conductivity", range: { min: 100, max: 500 } },
+          ],
+          metadata: {
+            version: "2.1.0",
+            author: "system",
+            created: "2023-01-01T00:00:00.000Z",
+          },
+        };
+
+        const stepData = {
+          type: "MEASUREMENT" as const,
+          title: "Complex Measurement Step",
+          description: "Step with complex nested specification",
+          position: { x: 100, y: 100 },
+          stepSpecification: complexSpec,
+        };
+
+        const result = await useCase.execute(testFlowId, stepData);
+
+        assertSuccess(result);
+        expect(result.value.stepSpecification).toEqual(complexSpec);
+      });
+
+      it("should handle step with media array", async () => {
+        const stepData = {
+          type: "INSTRUCTION" as const,
+          title: "Step with Media",
+          description: "Step that includes media files",
+          position: { x: 100, y: 100 },
+          media: [
+            "https://example.com/image1.jpg",
+            "https://example.com/video1.mp4",
+            "https://example.com/audio1.mp3",
+          ],
+          stepSpecification: {},
+        };
+
+        const result = await useCase.execute(testFlowId, stepData);
+
+        assertSuccess(result);
+        expect(result.value.media).toEqual(stepData.media);
+      });
+
+      it("should handle step with boundary position values", async () => {
+        const stepData = {
+          type: "INSTRUCTION" as const,
+          title: "Boundary Position Step",
+          position: { x: -1000, y: 10000 }, // Extreme position values
+          stepSpecification: {},
+        };
+
+        const result = await useCase.execute(testFlowId, stepData);
+
+        assertSuccess(result);
+        expect(result.value.position).toEqual(stepData.position);
+      });
+
+      it("should handle step with start and end node flags", async () => {
+        const stepData = {
+          type: "INSTRUCTION" as const,
+          title: "Node Flag Step",
+          position: { x: 100, y: 100 },
+          isStartNode: true,
+          isEndNode: false,
+          stepSpecification: {},
+        };
+
+        const result = await useCase.execute(testFlowId, stepData);
+
+        assertSuccess(result);
+        expect(result.value.isStartNode).toBe(true);
+        expect(result.value.isEndNode).toBe(false);
+      });
     });
   });
 });

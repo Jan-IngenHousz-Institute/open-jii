@@ -1,7 +1,7 @@
 import { TestHarness } from "@/test/test-harness";
 
 import { assertSuccess } from "../../../../common/utils/fp-utils";
-import { FlowStepRepository } from "./flow-step.repository";
+import { FlowStepRepository, FlowStepRepositoryError } from "./flow-step.repository";
 import { FlowRepository } from "./flow.repository";
 
 describe("FlowStepRepository", () => {
@@ -561,6 +561,59 @@ describe("FlowStepRepository", () => {
       expect(startStep?.nextStepIds).toHaveLength(2);
       expect(startStep?.nextStepIds).toContain(path1StepId);
       expect(startStep?.nextStepIds).toContain(path2StepId);
+      expect(startStep?.isEndStep).toBe(false);
+    });
+
+    describe("FlowStepRepositoryError", () => {
+      it("should create error with message and default properties", () => {
+        const error = new FlowStepRepositoryError("Test error message");
+
+        expect(error.message).toBe("Test error message");
+        expect(error.code).toBe("FLOW_STEP_REPOSITORY_ERROR");
+        expect(error.statusCode).toBe(500);
+        expect(error.details).toEqual({});
+      });
+
+      it("should create error with message and cause", () => {
+        const cause = new Error("Root cause");
+        const error = new FlowStepRepositoryError("Test error message", cause);
+
+        expect(error.message).toBe("Test error message");
+        expect(error.code).toBe("FLOW_STEP_REPOSITORY_ERROR");
+        expect(error.statusCode).toBe(500);
+        expect(error.details).toEqual({ cause });
+      });
+
+      it("should create error with undefined cause", () => {
+        const error = new FlowStepRepositoryError("Test error message", undefined);
+
+        expect(error.message).toBe("Test error message");
+        expect(error.code).toBe("FLOW_STEP_REPOSITORY_ERROR");
+        expect(error.statusCode).toBe(500);
+        expect(error.details).toEqual({ cause: undefined });
+      });
+
+      it("should create error with null cause", () => {
+        const error = new FlowStepRepositoryError("Test error message", null);
+
+        expect(error.message).toBe("Test error message");
+        expect(error.code).toBe("FLOW_STEP_REPOSITORY_ERROR");
+        expect(error.statusCode).toBe(500);
+        expect(error.details).toEqual({ cause: null });
+      });
+
+      it("should create error with complex cause object", () => {
+        const cause = {
+          type: "DatabaseError",
+          details: { table: "flow_steps", constraint: "foreign_key" },
+        };
+        const error = new FlowStepRepositoryError("Database constraint violation", cause);
+
+        expect(error.message).toBe("Database constraint violation");
+        expect(error.code).toBe("FLOW_STEP_REPOSITORY_ERROR");
+        expect(error.statusCode).toBe(500);
+        expect(error.details).toEqual({ cause });
+      });
     });
   });
 

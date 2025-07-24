@@ -223,6 +223,7 @@ export class TestHarness {
     status?: "provisioning" | "provisioning_failed" | "active" | "stale" | "archived" | "published";
     visibility?: "private" | "public";
     embargoIntervalDays?: number;
+    flowId?: string;
   }) {
     const [experiment] = await this.database
       .insert(experiments)

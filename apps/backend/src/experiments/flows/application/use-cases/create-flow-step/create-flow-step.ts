@@ -48,12 +48,17 @@ export class CreateFlowStepUseCase {
       const stepResult = await this.flowStepRepository.create(flowId, stepData);
 
       return stepResult.chain((steps: FlowStepDto[]) => {
-        if (steps.length === 0) {
+        if (!steps || steps.length === 0) {
           this.logger.error(`Failed to create flow step for flow ${flowId}`);
           return failure(new CreateFlowStepError("Failed to create flow step"));
         }
 
         const step = steps[0];
+        if (!step) {
+          this.logger.error(`Failed to create flow step for flow ${flowId}`);
+          return failure(new CreateFlowStepError("Failed to create flow step"));
+        }
+
         this.logger.log(`Successfully created ${step.type} step with ID ${step.id}`);
         return success(step);
       });

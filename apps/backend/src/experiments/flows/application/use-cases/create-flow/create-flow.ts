@@ -23,12 +23,17 @@ export class CreateFlowUseCase {
     const flowResult = await this.flowRepository.create(data, userId);
 
     return flowResult.chain((flows: FlowDto[]) => {
-      if (flows.length === 0) {
+      if (!flows || flows.length === 0) {
         this.logger.error(`Failed to create flow "${data.name}" for user ${userId}`);
         return failure(new CreateFlowError("Failed to create flow"));
       }
 
       const flow = flows[0];
+      if (!flow) {
+        this.logger.error(`Failed to create flow "${data.name}" for user ${userId}`);
+        return failure(new CreateFlowError("Failed to create flow"));
+      }
+
       this.logger.log(`Successfully created flow "${flow.name}" with ID ${flow.id}`);
       return success(flow);
     });

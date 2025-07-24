@@ -5,6 +5,11 @@ import type { ErrorResponse } from "@repo/api";
 import { contract } from "@repo/api";
 
 import { TestHarness } from "../../../test/test-harness";
+import { ExperimentRepository } from "../../core/repositories/experiment.repository";
+import { CreateFlowStepUseCase } from "../application/use-cases/create-flow-step/create-flow-step";
+import { CreateFlowUseCase } from "../application/use-cases/create-flow/create-flow";
+import { GetFlowUseCase } from "../application/use-cases/get-flow/get-flow";
+import { ListFlowsUseCase } from "../application/use-cases/list-flows/list-flows";
 
 describe("FlowController", () => {
   const testApp = TestHarness.App;
