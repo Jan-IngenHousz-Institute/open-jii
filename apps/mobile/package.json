@@ -59,6 +59,7 @@
     "react-native-toast-message": "^2.3.3",
     "react-native-usb-serialport-for-android": "^0.5.0",
     "react-native-vector-icons": "^10.2.0",
+    "react-native-webview": "13.13.5",
     "tailwindcss": "catalog:",
     "uuid": "^11.1.0",
     "with-rn-bluetooth-classic": "^1.0.5",

@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
-import { Home, User, FlaskConical, Activity } from "lucide-react-native";
+import { Home, User, FlaskConical, Activity, Code } from "lucide-react-native";
 import { View } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "~/hooks/use-theme";
 
 export default function TabLayout() {
@@ -59,6 +59,13 @@ export default function TabLayout() {
           options={{
             title: "Profile",
             tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="python"
+          options={{
+            title: "Python Demo",
+            tabBarIcon: ({ color, size }) => <Code size={size} color={color} />,
           }}
         />
       </Tabs>
