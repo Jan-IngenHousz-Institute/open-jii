@@ -170,7 +170,7 @@ export class FlowController {
         this.logger.log(`Flow step created: ${step.id} by user ${user.id}`);
         return {
           status: StatusCodes.CREATED as const,
-          body: { id: step.id },
+          body: step,
         };
       }
 

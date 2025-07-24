@@ -148,7 +148,7 @@ describe("ListFlowsUseCase", () => {
     });
 
     it("should log flow listing start", async () => {
-      const logSpy = jest.spyOn(useCase["logger"], "log");
+      const logSpy = jest.spyOn(useCase.logger, "log");
 
       await useCase.execute();
 
@@ -353,7 +353,7 @@ describe("ListFlowsUseCase", () => {
 
   describe("logging behavior", () => {
     it("should log flow listing attempt", async () => {
-      const logSpy = jest.spyOn(useCase["logger"], "log");
+      const logSpy = jest.spyOn(useCase.logger, "log");
       jest.spyOn(flowRepository, "findAll").mockResolvedValueOnce(success([]));
 
       await useCase.execute();
@@ -363,7 +363,7 @@ describe("ListFlowsUseCase", () => {
     });
 
     it("should still log even when repository fails", async () => {
-      const logSpy = jest.spyOn(useCase["logger"], "log");
+      const logSpy = jest.spyOn(useCase.logger, "log");
       jest.spyOn(flowRepository, "findAll").mockResolvedValueOnce(failure(new Error("Failed")));
 
       const result = await useCase.execute();
