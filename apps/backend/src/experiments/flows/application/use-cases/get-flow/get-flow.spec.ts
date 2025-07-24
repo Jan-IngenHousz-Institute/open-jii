@@ -154,7 +154,7 @@ describe("GetFlowUseCase", () => {
     });
 
     it("should log flow retrieval start", async () => {
-      const logSpy = jest.spyOn(useCase["logger"], "log");
+      const logSpy = jest.spyOn(useCase.logger, "log");
 
       await useCase.execute(testFlowId);
 
@@ -176,7 +176,7 @@ describe("GetFlowUseCase", () => {
         stepSpecification: {},
       });
 
-      const logSpy = jest.spyOn(useCase["logger"], "log");
+      const logSpy = jest.spyOn(useCase.logger, "log");
 
       const result = await useCase.execute(testFlowId);
       assertSuccess(result);
@@ -186,7 +186,7 @@ describe("GetFlowUseCase", () => {
 
     it("should log warning when flow not found", async () => {
       const nonExistentId = "123e4567-e89b-12d3-a456-426614174000";
-      const warnSpy = jest.spyOn(useCase["logger"], "warn");
+      const warnSpy = jest.spyOn(useCase.logger, "warn");
 
       const result = await useCase.execute(nonExistentId);
       assertFailure(result);
@@ -501,7 +501,7 @@ describe("GetFlowUseCase", () => {
 
   describe("logging behavior", () => {
     it("should log flow retrieval attempt", async () => {
-      const logSpy = jest.spyOn(useCase["logger"], "log");
+      const logSpy = jest.spyOn(useCase.logger, "log");
 
       await useCase.execute(testFlowId);
 
@@ -510,7 +510,7 @@ describe("GetFlowUseCase", () => {
     });
 
     it("should still log even when flow repository fails", async () => {
-      const logSpy = jest.spyOn(useCase["logger"], "log");
+      const logSpy = jest.spyOn(useCase.logger, "log");
       jest.spyOn(flowRepository, "findOne").mockResolvedValueOnce(failure(new Error("Failed")));
 
       const result = await useCase.execute(testFlowId);
@@ -520,7 +520,7 @@ describe("GetFlowUseCase", () => {
     });
 
     it("should log warning when flow not found", async () => {
-      const warnSpy = jest.spyOn(useCase["logger"], "warn");
+      const warnSpy = jest.spyOn(useCase.logger, "warn");
       jest.spyOn(flowRepository, "findOne").mockResolvedValueOnce(success(null));
 
       const result = await useCase.execute(testFlowId);

@@ -149,7 +149,6 @@ describe("CreateFlowStepUseCase", () => {
         },
       } as any; // Allow missing position for this test
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const result = await useCase.execute(testFlowId, stepData);
 
       assertSuccess(result);

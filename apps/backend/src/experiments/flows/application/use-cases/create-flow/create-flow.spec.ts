@@ -131,7 +131,7 @@ describe("CreateFlowUseCase", () => {
         description: "A test flow to verify logging",
       };
 
-      const logSpy = jest.spyOn(useCase["logger"], "log");
+      const logSpy = jest.spyOn(useCase.logger, "log");
 
       const result = await useCase.execute(flowData, testUserId);
 
@@ -150,7 +150,7 @@ describe("CreateFlowUseCase", () => {
         description: "A test flow to verify error logging",
       };
 
-      const logSpy = jest.spyOn(useCase["logger"], "error");
+      const logSpy = jest.spyOn(useCase.logger, "error");
 
       // Mock the repository to return empty array
       jest.spyOn(flowRepository, "create").mockResolvedValueOnce(success([]));
