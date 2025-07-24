@@ -5,8 +5,8 @@ import { router } from "next/client";
 import type React from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
+import { useCreateUserProfile } from "~/hooks/useCreateUserProfile";
 import { useLocale } from "~/hooks/useLocale";
-import { useSetUserRegistered } from "~/hooks/useSetUserRegistered";
 
 import { useTranslation } from "@repo/i18n";
 import {
@@ -61,7 +61,7 @@ export function RegistrationForm() {
       acceptedTerms: false,
     },
   });
-  const { mutate: setUserRegistered } = useSetUserRegistered({
+  const { mutate: createUserProfile } = useCreateUserProfile({
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     onSuccess: () => router.push(`/${locale}/platform/`),
   });
@@ -69,9 +69,13 @@ export function RegistrationForm() {
   function onSubmit(data: Registration) {
     console.log("Submitting", data);
     toast({ description: "Registration successfully" });
-    // setUserRegistered({
-    //   body: undefined,
-    // });
+    createUserProfile({
+      body: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        organization: data.organization,
+      },
+    });
   }
 
   return (

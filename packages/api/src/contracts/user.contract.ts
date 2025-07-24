@@ -6,7 +6,7 @@ import {
   zUserList,
   zSearchUsersQuery,
   zUserIdPathParam,
-  zSetUserRegisteredBody,
+  zCreateUserProfileBody,
 } from "../schemas/user.schema";
 
 const c = initContract();
@@ -36,15 +36,15 @@ export const userContract = c.router({
     description: "Returns a single user by their unique identifier",
   },
 
-  setUserRegistered: {
+  createUserProfile: {
     method: "POST",
-    path: "/api/v1/users/registered",
-    body: zSetUserRegisteredBody,
+    path: "/api/v1/users/profile",
+    body: zCreateUserProfileBody,
     responses: {
       201: zUser,
       400: zErrorResponse,
     },
-    summary: "Set user as registered",
-    description: "Sets the user as registered, allowing access to the platform",
+    summary: "Create user profile",
+    description: "Creates user profile and sets the user as registered",
   },
 });

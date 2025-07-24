@@ -9,9 +9,9 @@ import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
+import { CreateUserProfileUseCase } from "../application/use-cases/create-user-profile/create-user-profile";
 import { GetUserUseCase } from "../application/use-cases/get-user/get-user";
 import { SearchUsersUseCase } from "../application/use-cases/search-users/search-users";
-import { SetUserRegisteredUseCase } from "../application/use-cases/set-user-registered/set-user-registered";
 
 @Controller()
 @UseGuards(AuthGuard)
@@ -19,9 +19,9 @@ export class UserController {
   private readonly logger = new Logger(UserController.name);
 
   constructor(
+    private readonly createUserProfileUseCase: CreateUserProfileUseCase,
     private readonly searchUsersUseCase: SearchUsersUseCase,
     private readonly getUserUseCase: GetUserUseCase,
-    private readonly setUserRegisteredUseCase: SetUserRegisteredUseCase,
   ) {}
 
   @TsRestHandler(contract.users.searchUsers)
@@ -72,16 +72,19 @@ export class UserController {
     });
   }
 
-  @TsRestHandler(contract.users.setUserRegistered)
-  setUserRegistered(@CurrentUser() user: SessionUser) {
-    return tsRestHandler(contract.users.setUserRegistered, async () => {
-      const result = await this.setUserRegisteredUseCase.execute(user.id);
+  @TsRestHandler(contract.users.createUserProfile)
+  createUserProfile(@CurrentUser() user: SessionUser) {
+    return tsRestHandler(contract.users.createUserProfile, async ({ body }) => {
+      const result = await this.createUserProfileUseCase.execute(body, user.id);
       this.logger.log(`Setting current user as registered`);
+      this.logger.log(
+        `Profile: firstName=${body.firstName} lastName=${body.lastName} organization=${body.organization}`,
+      );
 
       if (result.isSuccess()) {
         const user = result.value;
 
-        this.logger.log(`User ${user.id} set as registered`);
+        this.logger.log(`Create user profile for ${user.id}`);
         return {
           status: StatusCodes.CREATED,
           body: user,

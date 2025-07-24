@@ -35,7 +35,11 @@ export const zCreateUserResponse = z.object({
   id: z.string().uuid(),
 });
 
-export const zSetUserRegisteredBody = z.void();
+export const zCreateUserProfileBody = z.object({
+  firstName: z.string().min(2).describe("First name"),
+  lastName: z.string().min(2).describe("Last name"),
+  organization: z.string().optional().describe("Organization"),
+});
 
 // Path parameters
 export const zUserIdPathParam = z.object({
