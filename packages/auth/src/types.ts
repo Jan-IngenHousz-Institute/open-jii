@@ -5,7 +5,8 @@ declare module "@auth/core/jwt" {
   /** Augment JWT to include user's id and additional properties */
   interface JWT extends Record<string, unknown>, DefaultJWT {
     id: string;
-    role?: "admin" | "user";
+    // Example on how to extend the User type
+    // role?: "admin" | "user";
   }
 }
 
@@ -20,7 +21,8 @@ declare module "@auth/core/types" {
   /** Augment the default `User` type to match our application's `User` */
   interface User extends DefaultUser {
     id: string;
-    role?: "admin" | "user";
+    // Example on how to extend the User type
+    // role?: "admin" | "user";
   }
 }
 
@@ -28,13 +30,15 @@ declare module "@auth/core/adapters" {
   /** Augment the default `AdapterUser` to match our application's `User` */
   interface AdapterUser extends User {
     id: string;
-    role?: "admin" | "user";
+    // Example on how to extend the User type
+    // role?: "admin" | "user";
   }
 }
 
 export interface User extends DefaultUser {
   id: string;
-  role?: "admin" | "user";
+  // Example on how to extend the User type
+  // role?: "admin" | "user";
 }
 
 export interface Session extends DefaultSession {
