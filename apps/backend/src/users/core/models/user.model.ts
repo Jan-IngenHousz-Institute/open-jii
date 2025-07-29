@@ -13,11 +13,18 @@ export const updateUserSchema = createInsertSchema(users).partial().omit({
   createdAt: true,
 });
 export const selectUserSchema = createSelectSchema(users);
-export const createUserProfileSchema = z.object({
-  firstName: z.string(),
-  lastName: z.string(),
-  organization: z.string().optional(),
-});
+export const createUserProfileSchema = createInsertSchema(profiles)
+  .omit({
+    id: true,
+    bio: true,
+    avatarUrl: true,
+    userId: true,
+    organizationId: true,
+    createdAt: true,
+  })
+  .extend({
+    organization: z.string().optional(),
+  });
 export const selectUserProfileSchema = createSelectSchema(profiles)
   .omit({
     id: true,

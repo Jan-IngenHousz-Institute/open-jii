@@ -123,7 +123,6 @@ export class UserRepository {
             .insert(organizations)
             .values({
               name: createUserProfileDto.organization,
-              type: "non_profit",
             })
             .returning();
           organizationId = newOrganization[0].id;
