@@ -189,7 +189,7 @@
     "lastNamePlaceholder": "Enter your last name",
     "lastNameError": "Your last name must be at least 2 characters long",
     "organization": "Organization",
-    "organizationPlaceholder": "Enter your organisation (optional)",
+    "organizationPlaceholder": "Enter your organization (optional)",
     "termsAndConditions": "Terms and conditions",
     "acceptTerms": "I accept the terms and conditions",
     "acceptTermsError": "You must accept the terms and conditions",
