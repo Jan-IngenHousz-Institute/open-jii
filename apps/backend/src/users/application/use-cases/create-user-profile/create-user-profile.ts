@@ -28,13 +28,14 @@ export class CreateUserProfileUseCase {
       }
 
       // Update the user
-      const updatedResult = await this.userRepository.update(userId, {
+      const updatedUser: UpdateUserDto = {
         name: `${data.firstName} ${data.lastName}`,
         email: user.email,
         emailVerified: user.emailVerified,
         image: user.image,
         registered: true,
-      } as UpdateUserDto);
+      };
+      const updatedResult = await this.userRepository.update(userId, updatedUser);
       if (updatedResult.isFailure()) {
         return failure(AppError.notFound(`Cannot update user with ID ${userId}`));
       }

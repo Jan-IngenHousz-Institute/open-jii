@@ -97,7 +97,6 @@ export class UserRepository {
       return {
         firstName: result[0].firstName,
         lastName: result[0].lastName,
-        organization: "?",
       } as UserProfileDto;
     });
   }
