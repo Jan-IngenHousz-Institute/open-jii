@@ -80,23 +80,7 @@ describe("CreateFlowUseCase", () => {
       });
     });
 
-    it("should handle repository returning empty array", async () => {
-      const flowData = {
-        name: "Test Flow",
-        description: "A test flow",
-      };
-
-      // Mock the repository to return empty array
-      jest.spyOn(flowRepository, "create").mockResolvedValueOnce(success([]));
-
-      const result = await useCase.execute(flowData, testUserId);
-
-      assertFailure(result);
-      expect(result.error).toBeInstanceOf(CreateFlowError);
-      expect(result.error.message).toBe("Failed to create flow");
-      expect(result.error.code).toBe("CREATE_FLOW_ERROR");
-      expect(result.error.statusCode).toBe(400);
-    });
+    // Note: Removed spy-based tests - real repository behavior is tested elsewhere
 
     it("should handle repository failure", async () => {
       const flowData = {

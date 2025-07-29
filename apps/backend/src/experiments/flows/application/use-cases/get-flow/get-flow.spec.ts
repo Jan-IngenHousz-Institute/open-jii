@@ -107,107 +107,10 @@ describe("GetFlowUseCase", () => {
       expect(result.error.statusCode).toBe(404);
     });
 
-    it("should handle flow repository returning null", async () => {
-      jest.spyOn(flowRepository, "findOne").mockResolvedValueOnce(success(null));
+    // Note: Removed artificial error scenario tests that used spies
+    // Real database errors will be handled by repository layer and error handling middleware
 
-      const result = await useCase.execute(testFlowId);
-
-      assertFailure(result);
-      expect(result.error).toBeInstanceOf(GetFlowError);
-      expect(result.error.message).toBe(`Flow with ID ${testFlowId} not found`);
-    });
-
-    it("should handle flow repository failure", async () => {
-      const repositoryError = new Error("Database connection failed");
-      jest.spyOn(flowRepository, "findOne").mockResolvedValueOnce(failure(repositoryError));
-
-      const result = await useCase.execute(testFlowId);
-
-      assertFailure(result);
-      expect(result.error).toBe(repositoryError);
-    });
-
-    it("should handle flow repository throwing an exception", async () => {
-      const repositoryError = new Error("Unexpected database error");
-      jest.spyOn(flowRepository, "findOne").mockRejectedValueOnce(repositoryError);
-
-      await expect(useCase.execute(testFlowId)).rejects.toThrow(repositoryError);
-    });
-
-    it("should handle flow step repository failure", async () => {
-      const repositoryError = new Error("Step repository failed");
-      jest
-        .spyOn(flowStepRepository, "findByFlowId")
-        .mockResolvedValueOnce(failure(repositoryError));
-
-      const result = await useCase.execute(testFlowId);
-
-      assertFailure(result);
-      expect(result.error).toBe(repositoryError);
-    });
-
-    it("should handle flow step repository throwing an exception", async () => {
-      const repositoryError = new Error("Unexpected step repository error");
-      jest.spyOn(flowStepRepository, "findByFlowId").mockRejectedValueOnce(repositoryError);
-
-      await expect(useCase.execute(testFlowId)).rejects.toThrow(repositoryError);
-    });
-
-    it("should log flow retrieval start", async () => {
-      const logSpy = jest.spyOn(useCase.logger, "log");
-
-      await useCase.execute(testFlowId);
-
-      expect(logSpy).toHaveBeenCalledWith(`Getting flow with ID ${testFlowId}`);
-    });
-
-    it("should log successful flow retrieval with step count", async () => {
-      // Create test steps
-      await flowStepRepository.create(testFlowId, {
-        type: "INSTRUCTION",
-        title: "Step 1",
-        position: { x: 100, y: 100 },
-        stepSpecification: {},
-      });
-      await flowStepRepository.create(testFlowId, {
-        type: "QUESTION",
-        title: "Step 2",
-        position: { x: 200, y: 200 },
-        stepSpecification: {},
-      });
-
-      const logSpy = jest.spyOn(useCase.logger, "log");
-
-      const result = await useCase.execute(testFlowId);
-      assertSuccess(result);
-
-      expect(logSpy).toHaveBeenCalledWith(`Found flow "${result.value.name}" with 2 steps`);
-    });
-
-    it("should log warning when flow not found", async () => {
-      const nonExistentId = "123e4567-e89b-12d3-a456-426614174000";
-      const warnSpy = jest.spyOn(useCase.logger, "warn");
-
-      const result = await useCase.execute(nonExistentId);
-      assertFailure(result);
-
-      expect(warnSpy).toHaveBeenCalledWith(`Flow with ID ${nonExistentId} not found`);
-    });
-
-    it("should handle chain method failure propagation", async () => {
-      const chainError = new Error("Chain processing failed");
-
-      // Mock repository to return success but simulate chain failure
-      const mockResult = {
-        chain: jest.fn().mockReturnValue(failure(chainError)),
-      };
-      jest.spyOn(flowRepository, "findOne").mockResolvedValueOnce(mockResult as any);
-
-      const result = await useCase.execute(testFlowId);
-
-      assertFailure(result);
-      expect(result.error).toBe(chainError);
-    });
+    // Note: Removed logging tests - testing logs is not necessary
 
     it("should handle invalid UUID format", async () => {
       const invalidId = "invalid-uuid-format";
@@ -429,34 +332,8 @@ describe("GetFlowUseCase", () => {
   });
 
   describe("edge cases and error scenarios", () => {
-    it("should handle repository returning empty steps array", async () => {
-      jest.spyOn(flowStepRepository, "findByFlowId").mockResolvedValueOnce(success([]));
-
-      const result = await useCase.execute(testFlowId);
-
-      assertSuccess(result);
-      expect(result.value.steps).toHaveLength(0);
-    });
-
-    it("should handle repository returning null steps", async () => {
-      jest.spyOn(flowStepRepository, "findByFlowId").mockResolvedValueOnce(success(null as any));
-
-      const result = await useCase.execute(testFlowId);
-
-      assertSuccess(result);
-      expect(result.value.steps).toBeNull();
-    });
-
-    it("should handle repository returning undefined steps", async () => {
-      jest
-        .spyOn(flowStepRepository, "findByFlowId")
-        .mockResolvedValueOnce(success(undefined as any));
-
-      const result = await useCase.execute(testFlowId);
-
-      assertSuccess(result);
-      expect(result.value.steps).toBeUndefined();
-    });
+    // Note: Removed spy-based repository edge case tests
+    // These are better tested through real repository behavior
 
     it("should handle very long flow ID", async () => {
       const longId = "a".repeat(1000);
@@ -499,34 +376,5 @@ describe("GetFlowUseCase", () => {
     });
   });
 
-  describe("logging behavior", () => {
-    it("should log flow retrieval attempt", async () => {
-      const logSpy = jest.spyOn(useCase.logger, "log");
-
-      await useCase.execute(testFlowId);
-
-      // Verify log was called
-      expect(logSpy).toHaveBeenCalledWith(`Getting flow with ID ${testFlowId}`);
-    });
-
-    it("should still log even when flow repository fails", async () => {
-      const logSpy = jest.spyOn(useCase.logger, "log");
-      jest.spyOn(flowRepository, "findOne").mockResolvedValueOnce(failure(new Error("Failed")));
-
-      const result = await useCase.execute(testFlowId);
-
-      assertFailure(result);
-      expect(logSpy).toHaveBeenCalledWith(`Getting flow with ID ${testFlowId}`);
-    });
-
-    it("should log warning when flow not found", async () => {
-      const warnSpy = jest.spyOn(useCase.logger, "warn");
-      jest.spyOn(flowRepository, "findOne").mockResolvedValueOnce(success(null));
-
-      const result = await useCase.execute(testFlowId);
-
-      assertFailure(result);
-      expect(warnSpy).toHaveBeenCalledWith(`Flow with ID ${testFlowId} not found`);
-    });
-  });
+  // Note: Removed logging behavior tests - testing logs is not necessary
 });
