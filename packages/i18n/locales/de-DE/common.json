@@ -192,6 +192,7 @@
     "acceptTerms": "Ich akzeptiere die allgemeinen Geschäftsbedingungen",
     "acceptTermsError": "Sie müssen die allgemeinen Geschäftsbedingungen akzeptieren",
     "register": "Registrieren",
+    "successMessage": "Registrierung erfolgreich",
     "signOutTitle": "Abmelden",
     "signOutDescription": "Um Ihre Registrierung abzuschließen, müssen Sie sich jetzt abmelden und erneut anmelden.",
     "signOutConfirm": "Abmelden"

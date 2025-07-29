@@ -194,6 +194,7 @@
     "acceptTerms": "I accept the terms and conditions",
     "acceptTermsError": "You must accept the terms and conditions",
     "register": "Register",
+    "successMessage": "Registration successful",
     "signOutTitle": "Sign Out",
     "signOutDescription": "To complete your registration, you now need to sign out and sign back in again.",
     "signOutConfirm": "Sign out"

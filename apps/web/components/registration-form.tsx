@@ -87,7 +87,7 @@ export function RegistrationForm() {
         organization: data.organization,
       },
     });
-    toast({ description: "Registration successfully" });
+    toast({ description: t("registration.successMessage") });
   }
 
   return (
