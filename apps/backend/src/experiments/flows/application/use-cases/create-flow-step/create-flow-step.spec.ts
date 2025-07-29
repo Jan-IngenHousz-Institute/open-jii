@@ -45,6 +45,7 @@ describe("CreateFlowStepUseCase", () => {
 
   describe("execute", () => {
     it("should create an instruction step successfully", async () => {
+      // Arrange
       const stepData = {
         type: "INSTRUCTION" as const,
         title: "Welcome Step",
@@ -53,8 +54,10 @@ describe("CreateFlowStepUseCase", () => {
         stepSpecification: {},
       };
 
+      // Act
       const result = await useCase.execute(testFlowId, stepData);
 
+      // Assert
       assertSuccess(result);
       expect(result.value).toMatchObject({
         flowId: testFlowId,
@@ -67,6 +70,7 @@ describe("CreateFlowStepUseCase", () => {
     });
 
     it("should create a question step successfully", async () => {
+      // Arrange
       const stepData = {
         type: "QUESTION" as const,
         title: "User Question",
@@ -78,8 +82,10 @@ describe("CreateFlowStepUseCase", () => {
         },
       };
 
+      // Act
       const result = await useCase.execute(testFlowId, stepData);
 
+      // Assert
       assertSuccess(result);
       expect(result.value).toMatchObject({
         flowId: testFlowId,
@@ -91,6 +97,7 @@ describe("CreateFlowStepUseCase", () => {
     });
 
     it("should create a measurement step successfully", async () => {
+      // Arrange
       const stepData = {
         type: "MEASUREMENT" as const,
         title: "Take Measurement",
@@ -102,8 +109,10 @@ describe("CreateFlowStepUseCase", () => {
         },
       };
 
+      // Act
       const result = await useCase.execute(testFlowId, stepData);
 
+      // Assert
       assertSuccess(result);
       expect(result.value).toMatchObject({
         flowId: testFlowId,
@@ -115,6 +124,7 @@ describe("CreateFlowStepUseCase", () => {
     });
 
     it("should create an analysis step successfully", async () => {
+      // Arrange
       const stepData = {
         type: "ANALYSIS" as const,
         title: "Analyze Results",
@@ -125,8 +135,10 @@ describe("CreateFlowStepUseCase", () => {
         },
       };
 
+      // Act
       const result = await useCase.execute(testFlowId, stepData);
 
+      // Assert
       assertSuccess(result);
       expect(result.value).toMatchObject({
         flowId: testFlowId,
@@ -138,6 +150,7 @@ describe("CreateFlowStepUseCase", () => {
     });
 
     it("should create step with default position when position not provided", async () => {
+      // Arrange
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const stepData = {
         type: "MEASUREMENT" as const,
@@ -149,35 +162,42 @@ describe("CreateFlowStepUseCase", () => {
         },
       } as any; // Allow missing position for this test
 
+      // Act
       const result = await useCase.execute(testFlowId, stepData);
 
+      // Assert
       assertSuccess(result);
       expect(result.value.position).toEqual({ x: 250, y: 100 }); // Should use default position
     });
 
     it("should fail when flow does not exist", async () => {
+      // Arrange
       const stepData = {
         type: "INSTRUCTION" as const,
         position: { x: 100, y: 100 },
         stepSpecification: {},
       };
-      // Use a valid but non-existent UUID
       const nonExistentFlowId = "123e4567-e89b-12d3-a456-426614174000";
 
+      // Act
       const result = await useCase.execute(nonExistentFlowId, stepData);
 
+      // Assert
       assertFailure(result);
       expect(result.error.message).toBe(`Flow with ID ${nonExistentFlowId} not found`);
     });
 
     it("should succeed when no step configuration is provided", async () => {
+      // Arrange
       const stepData = {
         type: "INSTRUCTION" as const,
         position: { x: 100, y: 100 },
       };
 
+      // Act
       const result = await useCase.execute(testFlowId, stepData);
 
+      // Assert
       assertSuccess(result);
       expect(result.value.type).toBe("INSTRUCTION");
     });

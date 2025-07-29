@@ -64,6 +64,7 @@ describe("GetFlowUseCase", () => {
 
       const result = await useCase.execute(testFlowId);
 
+      // Assert
       assertSuccess(result);
       expect(result.value).toMatchObject({
         id: testFlowId,
@@ -83,8 +84,12 @@ describe("GetFlowUseCase", () => {
     });
 
     it("should get flow without steps successfully", async () => {
+      // Arrange - flow exists without steps from beforeEach
+
+      // Act
       const result = await useCase.execute(testFlowId);
 
+      // Assert
       assertSuccess(result);
       expect(result.value).toMatchObject({
         id: testFlowId,
@@ -96,10 +101,13 @@ describe("GetFlowUseCase", () => {
     });
 
     it("should return error when flow does not exist", async () => {
+      // Arrange
       const nonExistentId = "123e4567-e89b-12d3-a456-426614174000";
 
+      // Act
       const result = await useCase.execute(nonExistentId);
 
+      // Assert
       assertFailure(result);
       expect(result.error).toBeInstanceOf(GetFlowError);
       expect(result.error.message).toBe(`Flow with ID ${nonExistentId} not found`);
@@ -113,15 +121,18 @@ describe("GetFlowUseCase", () => {
     // Note: Removed logging tests - testing logs is not necessary
 
     it("should handle invalid UUID format", async () => {
+      // Arrange
       const invalidId = "invalid-uuid-format";
 
+      // Act
       const result = await useCase.execute(invalidId);
 
+      // Assert
       assertFailure(result);
     });
 
     it("should handle flow with many steps", async () => {
-      // Create many steps to test performance
+      // Arrange
       const promises = Array.from({ length: 100 }, (_, i) =>
         flowStepRepository.create(testFlowId, {
           type: "INSTRUCTION",
@@ -132,13 +143,16 @@ describe("GetFlowUseCase", () => {
       );
       await Promise.all(promises);
 
+      // Act
       const result = await useCase.execute(testFlowId);
 
+      // Assert
       assertSuccess(result);
       expect(result.value.steps).toHaveLength(100);
     });
 
     it("should handle flow with complex step specifications", async () => {
+      // Arrange
       const complexSpec = {
         protocolId: "complex-protocol",
         settings: {
@@ -163,31 +177,35 @@ describe("GetFlowUseCase", () => {
         stepSpecification: complexSpec,
       });
 
+      // Act
       const result = await useCase.execute(testFlowId);
 
+      // Assert
       assertSuccess(result);
       expect(result.value.steps).toHaveLength(1);
       expect(result.value.steps[0].stepSpecification).toEqual(complexSpec);
     });
 
     it("should handle concurrent flow retrieval", async () => {
+      // Arrange - flow already exists from beforeEach
+
+      // Act
       const [result1, result2, result3] = await Promise.all([
         useCase.execute(testFlowId),
         useCase.execute(testFlowId),
         useCase.execute(testFlowId),
       ]);
 
+      // Assert
       assertSuccess(result1);
       assertSuccess(result2);
       assertSuccess(result3);
-
-      // All results should be the same
       expect(result1.value.id).toBe(result2.value.id);
       expect(result2.value.id).toBe(result3.value.id);
     });
 
     it("should handle flow with special characters in name and description", async () => {
-      // Create flow with special characters
+      // Arrange
       const specialFlow = await flowRepository.create(
         {
           name: "Flow with émojis 🚀 and spéciål chars",
@@ -198,15 +216,17 @@ describe("GetFlowUseCase", () => {
       assertSuccess(specialFlow);
       const specialFlowId = specialFlow.value[0].id;
 
+      // Act
       const result = await useCase.execute(specialFlowId);
 
+      // Assert
       assertSuccess(result);
       expect(result.value.name).toBe("Flow with émojis 🚀 and spéciål chars");
       expect(result.value.description).toBe("Description with newlines\nand tabs\t and quotes'\"");
     });
 
     it("should handle flow with null description", async () => {
-      // Create flow with null description
+      // Arrange
       const nullDescFlow = await flowRepository.create(
         { name: "Flow with null description", description: null },
         testUserId,
@@ -214,14 +234,17 @@ describe("GetFlowUseCase", () => {
       assertSuccess(nullDescFlow);
       const nullDescFlowId = nullDescFlow.value[0].id;
 
+      // Act
       const result = await useCase.execute(nullDescFlowId);
 
+      // Assert
       assertSuccess(result);
       expect(result.value.name).toBe("Flow with null description");
       expect(result.value.description).toBeNull();
     });
 
     it("should handle steps with media arrays", async () => {
+      // Arrange
       await flowStepRepository.create(testFlowId, {
         type: "INSTRUCTION",
         title: "Step with Media",
@@ -234,8 +257,10 @@ describe("GetFlowUseCase", () => {
         stepSpecification: {},
       });
 
+      // Act
       const result = await useCase.execute(testFlowId);
 
+      // Assert
       assertSuccess(result);
       expect(result.value.steps).toHaveLength(1);
       expect(result.value.steps[0].media).toEqual([
@@ -246,6 +271,7 @@ describe("GetFlowUseCase", () => {
     });
 
     it("should handle steps with start and end node flags", async () => {
+      // Arrange
       await flowStepRepository.create(testFlowId, {
         type: "INSTRUCTION",
         title: "Start Step",
@@ -264,8 +290,10 @@ describe("GetFlowUseCase", () => {
         stepSpecification: {},
       });
 
+      // Act
       const result = await useCase.execute(testFlowId);
 
+      // Assert
       assertSuccess(result);
       expect(result.value.steps).toHaveLength(2);
 
@@ -336,20 +364,28 @@ describe("GetFlowUseCase", () => {
     // These are better tested through real repository behavior
 
     it("should handle very long flow ID", async () => {
+      // Arrange
       const longId = "a".repeat(1000);
 
+      // Act
       const result = await useCase.execute(longId);
 
+      // Assert
       assertFailure(result);
     });
 
     it("should handle empty string flow ID", async () => {
+      // Arrange - empty string ID
+
+      // Act
       const result = await useCase.execute("");
 
+      // Assert
       assertFailure(result);
     });
 
     it("should handle flow with large version number", async () => {
+      // Arrange
       const maxVersionFlow = await flowRepository.create(
         { name: "Large Version Flow", version: 999999 },
         testUserId,
@@ -357,20 +393,25 @@ describe("GetFlowUseCase", () => {
       assertSuccess(maxVersionFlow);
       const maxVersionFlowId = maxVersionFlow.value[0].id;
 
+      // Act
       const result = await useCase.execute(maxVersionFlowId);
 
+      // Assert
       assertSuccess(result);
       expect(result.value.version).toBe(999999);
     });
 
     it("should handle flow created by different user", async () => {
+      // Arrange
       const otherUserId = await testApp.createTestUser({});
       const otherUserFlow = await flowRepository.create({ name: "Other User Flow" }, otherUserId);
       assertSuccess(otherUserFlow);
       const otherUserFlowId = otherUserFlow.value[0].id;
 
+      // Act
       const result = await useCase.execute(otherUserFlowId);
 
+      // Assert
       assertSuccess(result);
       expect(result.value.createdBy).toBe(otherUserId);
     });

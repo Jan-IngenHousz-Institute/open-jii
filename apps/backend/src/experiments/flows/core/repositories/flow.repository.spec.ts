@@ -151,7 +151,7 @@ describe("FlowRepository", () => {
       const flowData = { name: "Original Flow" };
       const createResult = await repository.create(flowData, testUserId);
       assertSuccess(createResult);
-      const flowId = createResult.value[0].id;
+      const flowId: string = createResult.value[0].id;
 
       const updateData = { name: "Updated Flow", description: "Updated description" };
       const result = await repository.update(flowId, updateData);

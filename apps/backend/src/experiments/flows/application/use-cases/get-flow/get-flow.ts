@@ -2,11 +2,8 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { Result, AppError, failure, success } from "../../../../../common/utils/fp-utils";
 import { FlowWithStepsDto } from "../../../core/models/flow.model";
-import {
-  FlowStepRepository,
-  FlowStepRepositoryError,
-} from "../../../core/repositories/flow-step.repository";
-import { FlowRepository, FlowRepositoryError } from "../../../core/repositories/flow.repository";
+import { FlowStepRepository } from "../../../core/repositories/flow-step.repository";
+import { FlowRepository } from "../../../core/repositories/flow.repository";
 
 export class GetFlowError extends AppError {
   constructor(message: string, cause?: unknown) {

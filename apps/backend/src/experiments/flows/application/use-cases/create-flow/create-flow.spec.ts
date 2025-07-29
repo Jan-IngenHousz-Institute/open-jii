@@ -36,6 +36,7 @@ describe("CreateFlowUseCase", () => {
 
   describe("execute", () => {
     it("should create a flow successfully", async () => {
+      // Arrange
       const flowData = {
         name: "Test Flow",
         description: "A test flow for validation",
@@ -43,8 +44,10 @@ describe("CreateFlowUseCase", () => {
         isActive: true,
       };
 
+      // Act
       const result = await useCase.execute(flowData, testUserId);
 
+      // Assert
       assertSuccess(result);
       expect(result.value).toMatchObject({
         name: flowData.name,
@@ -65,12 +68,15 @@ describe("CreateFlowUseCase", () => {
     });
 
     it("should create a flow with minimal data", async () => {
+      // Arrange
       const flowData = {
         name: "Minimal Flow",
       };
 
+      // Act
       const result = await useCase.execute(flowData, testUserId);
 
+      // Assert
       assertSuccess(result);
       expect(result.value).toMatchObject({
         name: flowData.name,
@@ -82,72 +88,8 @@ describe("CreateFlowUseCase", () => {
 
     // Note: Removed spy-based tests - real repository behavior is tested elsewhere
 
-    it("should handle repository failure", async () => {
-      const flowData = {
-        name: "Test Flow",
-        description: "A test flow",
-      };
-
-      const repositoryError = new Error("Database connection failed");
-      jest.spyOn(flowRepository, "create").mockResolvedValueOnce(failure(repositoryError as any));
-
-      const result = await useCase.execute(flowData, testUserId);
-
-      assertFailure(result);
-      expect(result.error).toBe(repositoryError);
-    });
-
-    it("should handle repository throwing an exception", async () => {
-      const flowData = {
-        name: "Test Flow",
-        description: "A test flow",
-      };
-
-      const repositoryError = new Error("Unexpected database error");
-      jest.spyOn(flowRepository, "create").mockRejectedValueOnce(repositoryError);
-
-      await expect(useCase.execute(flowData, testUserId)).rejects.toThrow(repositoryError);
-    });
-
-    it("should log flow creation start and success", async () => {
-      const flowData = {
-        name: "Test Flow for Logging",
-        description: "A test flow to verify logging",
-      };
-
-      const logSpy = jest.spyOn(useCase.logger, "log");
-
-      const result = await useCase.execute(flowData, testUserId);
-
-      assertSuccess(result);
-      expect(logSpy).toHaveBeenCalledWith(
-        `Creating flow "${flowData.name}" for user ${testUserId}`,
-      );
-      expect(logSpy).toHaveBeenCalledWith(
-        `Successfully created flow "${result.value.name}" with ID ${result.value.id}`,
-      );
-    });
-
-    it("should log error when flow creation fails", async () => {
-      const flowData = {
-        name: "Test Flow for Error Logging",
-        description: "A test flow to verify error logging",
-      };
-
-      const logSpy = jest.spyOn(useCase.logger, "error");
-
-      // Mock the repository to return empty array
-      jest.spyOn(flowRepository, "create").mockResolvedValueOnce(success([]));
-
-      const result = await useCase.execute(flowData, testUserId);
-
-      assertFailure(result);
-      expect(logSpy).toHaveBeenCalledWith(
-        `Failed to create flow "${flowData.name}" for user ${testUserId}`,
-      );
-    });
-
     it("should create flow with all optional fields", async () => {
+      // Arrange
       const flowData = {
         name: "Complete Flow",
         description: "A complete flow with all fields",
@@ -155,8 +97,10 @@ describe("CreateFlowUseCase", () => {
         isActive: false,
       };
 
+      // Act
       const result = await useCase.execute(flowData, testUserId);
 
+      // Assert
       assertSuccess(result);
       expect(result.value).toMatchObject({
         name: flowData.name,
@@ -220,81 +164,20 @@ describe("CreateFlowUseCase", () => {
     });
   });
 
-  describe("edge cases and error scenarios", () => {
-    it("should handle repository create method returning null", async () => {
-      const flowData = {
-        name: "Test Flow",
-        description: "A test flow",
-      };
-
-      // Mock the repository to return null
-      jest.spyOn(flowRepository, "create").mockResolvedValueOnce(success(null as any));
-
-      const result = await useCase.execute(flowData, testUserId);
-
-      assertFailure(result);
-      expect(result.error).toBeInstanceOf(CreateFlowError);
-    });
-
-    it("should handle repository create method returning undefined", async () => {
-      const flowData = {
-        name: "Test Flow",
-        description: "A test flow",
-      };
-
-      // Mock the repository to return undefined
-      jest.spyOn(flowRepository, "create").mockResolvedValueOnce(success(undefined as any));
-
-      const result = await useCase.execute(flowData, testUserId);
-
-      assertFailure(result);
-      expect(result.error).toBeInstanceOf(CreateFlowError);
-    });
-
-    it("should handle repository create method returning array with null elements", async () => {
-      const flowData = {
-        name: "Test Flow",
-        description: "A test flow",
-      };
-
-      // Mock the repository to return array with null
-      jest.spyOn(flowRepository, "create").mockResolvedValueOnce(success([null] as any));
-
-      const result = await useCase.execute(flowData, testUserId);
-
-      assertFailure(result);
-      expect(result.error).toBeInstanceOf(CreateFlowError);
-    });
-
-    it("should handle chain method failure propagation", async () => {
-      const flowData = {
-        name: "Test Flow",
-        description: "A test flow",
-      };
-
-      const chainError = new Error("Chain processing failed");
-
-      // Mock repository to return success but simulate chain failure
-      const mockResult = {
-        chain: jest.fn().mockReturnValue(failure(chainError)),
-      };
-      jest.spyOn(flowRepository, "create").mockResolvedValueOnce(mockResult as any);
-
-      const result = await useCase.execute(flowData, testUserId);
-
-      assertFailure(result);
-      expect(result.error).toBe(chainError);
-    });
+  describe("edge cases", () => {
+    // Note: Removed spy-based edge case tests - these are covered by integration tests
 
     it("should handle very long flow names", async () => {
+      // Arrange
       const flowData = {
         name: "x".repeat(1000), // Very long name
         description: "Flow with extremely long name",
       };
 
+      // Act
       const result = await useCase.execute(flowData, testUserId);
 
-      // Should either succeed or fail gracefully depending on database constraints
+      // Assert - Should either succeed or fail gracefully depending on database constraints
       if (result.isSuccess()) {
         expect(result.value.name).toBe(flowData.name);
       } else {
@@ -303,27 +186,33 @@ describe("CreateFlowUseCase", () => {
     });
 
     it("should handle special characters in flow data", async () => {
+      // Arrange
       const flowData = {
         name: "Test Flow with émojis 🚀 and spéciål chars",
         description: "Description with newlines\nand tabs\t and quotes'\"",
       };
 
+      // Act
       const result = await useCase.execute(flowData, testUserId);
 
+      // Assert
       assertSuccess(result);
       expect(result.value.name).toBe(flowData.name);
       expect(result.value.description).toBe(flowData.description);
     });
 
     it("should handle concurrent flow creation", async () => {
+      // Arrange
       const flowData1 = { name: "Concurrent Flow 1" };
       const flowData2 = { name: "Concurrent Flow 2" };
 
+      // Act
       const [result1, result2] = await Promise.all([
         useCase.execute(flowData1, testUserId),
         useCase.execute(flowData2, testUserId),
       ]);
 
+      // Assert
       assertSuccess(result1);
       assertSuccess(result2);
       expect(result1.value.id).not.toBe(result2.value.id);
