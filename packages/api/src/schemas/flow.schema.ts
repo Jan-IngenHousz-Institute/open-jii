@@ -286,3 +286,4 @@ export type CreateFlowStepBody = z.infer<typeof zCreateFlowStepBody>;
 export type UpdateFlowStepBody = z.infer<typeof zUpdateFlowStepBody>;
 export type UpdateFlowStepPositionsBody = z.infer<typeof zUpdateFlowStepPositionsBody>;
 export type FlowStepPathParam = z.infer<typeof zFlowStepPathParam>;
+export type MobileFlowExecution = z.infer<typeof zMobileFlowExecution>;
