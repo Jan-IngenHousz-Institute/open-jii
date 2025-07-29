@@ -13,14 +13,14 @@ import { DrizzleQueryError } from "drizzle-orm/errors";
  */
 export const isPostgresError = (
   cause: unknown
-): cause is { code: string; message: string; detail?: string } => {
+): cause is { code: string; message: string; detail?: string; hint?: string } => {
   return (
     cause !== null &&
     typeof cause === "object" &&
     "code" in cause &&
     "message" in cause &&
-    typeof (cause as any).code === "string" &&
-    typeof (cause as any).message === "string"
+    typeof (cause as { code: unknown }).code === "string" &&
+    typeof (cause as { message: unknown }).message === "string"
   );
 };
 
@@ -36,7 +36,7 @@ export const isDrizzleQueryError = (error: unknown): error is DrizzleQueryError 
  */
 export const getPostgresError = (
   error: unknown
-): { code: string; message: string; detail?: string } | null => {
+): { code: string; message: string; detail?: string; hint?: string } | null => {
   if (!isDrizzleQueryError(error)) {
     return null;
   }
@@ -50,6 +50,7 @@ export const getPostgresError = (
     code: cause.code,
     message: cause.message,
     detail: cause.detail,
+    hint: cause.hint,
   };
 };
 
