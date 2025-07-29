@@ -3,8 +3,6 @@ import { isAxiosError } from "axios";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
 
-import * as DrizzleErrorUtils from "./drizzle-error-utils";
-
 /**
  * Result type that represents either a success or failure
  */
@@ -249,6 +247,22 @@ export function defaultRepositoryErrorMapper(error: unknown): AppError {
   const message = error instanceof Error ? error.message : String(error);
   const messageLower = message.toLowerCase();
 
+  // Check for Drizzle errors with nested PostgreSQL errors
+  const isPostgresError = (cause: unknown): cause is { code: string; message: string } => {
+    return (
+      cause !== null &&
+      typeof cause === "object" &&
+      "code" in cause &&
+      "message" in cause &&
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      typeof (cause as any).code === "string"
+    );
+  };
+
+  const cause = (error as any)?.cause;
+  const causeMessage = cause instanceof Error ? cause.message.toLowerCase() : "";
+  const postgresError = isPostgresError(cause) ? cause : null;
+
   // Check for common database error patterns
   if (
     messageLower.includes("not found") ||
@@ -258,36 +272,29 @@ export function defaultRepositoryErrorMapper(error: unknown): AppError {
     return AppError.notFound(message, "REPOSITORY_NOT_FOUND");
   }
 
-  // Use Drizzle error utilities for PostgreSQL error detection
-  const postgresError = DrizzleErrorUtils.getPostgresError(error);
-
   // Check for constraint violations using PostgreSQL error codes (more reliable)
   if (postgresError) {
     switch (postgresError.code) {
-      case DrizzleErrorUtils.PostgresErrorCodes.UNIQUE_VIOLATION:
+      case "23505": // Unique constraint violation
         return AppError.badRequest(message, "REPOSITORY_DUPLICATE");
-      case DrizzleErrorUtils.PostgresErrorCodes.FOREIGN_KEY_VIOLATION:
+      case "23503": // Foreign key constraint violation
         return AppError.badRequest(message, "REPOSITORY_REFERENCE");
-      case DrizzleErrorUtils.PostgresErrorCodes.NOT_NULL_VIOLATION:
+      case "23502": // Not null constraint violation
         return AppError.badRequest(message, "REPOSITORY_NOT_NULL");
-      case DrizzleErrorUtils.PostgresErrorCodes.CHECK_VIOLATION:
+      case "23514": // Check constraint violation
         return AppError.badRequest(message, "REPOSITORY_CHECK_CONSTRAINT");
-      case DrizzleErrorUtils.PostgresErrorCodes.INVALID_TEXT_REPRESENTATION:
+      case "22P02": // Invalid text representation (type conversion error)
         return AppError.badRequest(message, "REPOSITORY_INVALID_TYPE");
-      case DrizzleErrorUtils.PostgresErrorCodes.STRING_DATA_TOO_LONG:
+      case "22001": // String data right truncation
         return AppError.badRequest(message, "REPOSITORY_DATA_TOO_LONG");
-      case DrizzleErrorUtils.PostgresErrorCodes.UNDEFINED_TABLE:
-        return AppError.internal(message, "REPOSITORY_UNDEFINED_TABLE");
-      case DrizzleErrorUtils.PostgresErrorCodes.UNDEFINED_COLUMN:
-        return AppError.internal(message, "REPOSITORY_UNDEFINED_COLUMN");
+      case "42P01": // Undefined table
+        return AppError.internalServerError(message, "REPOSITORY_UNDEFINED_TABLE");
+      case "42703": // Undefined column
+        return AppError.internalServerError(message, "REPOSITORY_UNDEFINED_COLUMN");
     }
   }
 
   // Fallback to message-based detection for cases where cause parsing fails
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-  const cause = (error as any)?.cause;
-  const causeMessage = cause instanceof Error ? cause.message.toLowerCase() : "";
-
   if (
     messageLower.includes("duplicate") ||
     messageLower.includes("unique constraint") ||
