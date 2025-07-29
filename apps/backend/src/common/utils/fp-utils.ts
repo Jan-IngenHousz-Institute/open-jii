@@ -1,7 +1,11 @@
 import type { Logger } from "@nestjs/common";
 import { isAxiosError } from "axios";
-import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
+
+import { AppError, defaultRepositoryErrorMapper } from "./drizzle-error-utils";
+
+// Re-export AppError for backward compatibility
+export { AppError };
 
 /**
  * Result type that represents either a success or failure
@@ -132,68 +136,6 @@ export const success = <T, _>(value: T): Result<T> => new Success(value);
 export const failure = <E extends AppError>(error: E): Result<never, E> => new Failure(error);
 
 /**
- * Base application error type
- */
-export class AppError extends Error {
-  constructor(
-    readonly message: string,
-    readonly code: string,
-    readonly statusCode: number = StatusCodes.INTERNAL_SERVER_ERROR,
-    readonly details?: unknown,
-  ) {
-    super();
-  }
-
-  static notFound(message = "Resource not found", code = "NOT_FOUND", details?: unknown): AppError {
-    return new AppError(message, code, StatusCodes.NOT_FOUND, details);
-  }
-
-  static badRequest(
-    message = "Invalid request data",
-    code = "BAD_REQUEST",
-    details?: unknown,
-  ): AppError {
-    return new AppError(message, code, StatusCodes.BAD_REQUEST, details);
-  }
-
-  static forbidden(message = "Access forbidden", code = "FORBIDDEN", details?: unknown): AppError {
-    return new AppError(message, code, StatusCodes.FORBIDDEN, details);
-  }
-
-  static unauthorized(
-    message = "Unauthorized access",
-    code = "UNAUTHORIZED",
-    details?: unknown,
-  ): AppError {
-    return new AppError(message, code, StatusCodes.UNAUTHORIZED, details);
-  }
-
-  static internal(
-    message = "Internal server error",
-    code = "INTERNAL_ERROR",
-    details?: unknown,
-  ): AppError {
-    return new AppError(message, code, StatusCodes.INTERNAL_SERVER_ERROR, details);
-  }
-
-  static repositoryError(
-    message = "Repository operation failed",
-    code = "REPOSITORY_ERROR",
-    details?: unknown,
-  ): AppError {
-    return new AppError(message, code, StatusCodes.INTERNAL_SERVER_ERROR, details);
-  }
-
-  static validationError(
-    message = "Validation error",
-    code = "VALIDATION_ERROR",
-    details?: unknown,
-  ): AppError {
-    return new AppError(message, code, StatusCodes.BAD_REQUEST, details);
-  }
-}
-
-/**
  * Utility for handling errors in a controller context
  * @param error The AppError object to handle
  * @param logger Logger to use for logging errors
@@ -234,43 +176,6 @@ export async function tryCatch<T>(
   } catch (error) {
     return failure(errorMapper(error));
   }
-}
-
-/**
- * Default error mapper for repository operations
- */
-export function defaultRepositoryErrorMapper(error: unknown): AppError {
-  if (error instanceof AppError) {
-    return error;
-  }
-
-  const message = error instanceof Error ? error.message : String(error);
-
-  // Check for common database error patterns
-  if (
-    message.toLowerCase().includes("not found") ||
-    message.toLowerCase().includes("no rows") ||
-    message.toLowerCase().includes("does not exist")
-  ) {
-    return AppError.notFound(message, "REPOSITORY_NOT_FOUND");
-  }
-
-  if (
-    message.toLowerCase().includes("duplicate") ||
-    message.toLowerCase().includes("unique constraint") ||
-    message.toLowerCase().includes("already exists")
-  ) {
-    return AppError.badRequest(message, "REPOSITORY_DUPLICATE");
-  }
-
-  if (
-    message.toLowerCase().includes("foreign key") ||
-    message.toLowerCase().includes("reference")
-  ) {
-    return AppError.badRequest(message, "REPOSITORY_REFERENCE");
-  }
-
-  return AppError.repositoryError(message);
 }
 
 /**
