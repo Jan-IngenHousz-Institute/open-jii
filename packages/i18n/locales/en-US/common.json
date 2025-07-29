@@ -179,6 +179,25 @@
     "userMenu": "User menu",
     "signingOut": "Signing out..."
   },
+  "registration": {
+    "title": "Registration",
+    "description": "Please fill out the form below to create your account.",
+    "firstName": "First Name",
+    "firstNamePlaceholder": "Enter your first name",
+    "firstNameError": "Your first name must be at least 2 characters long",
+    "lastName": "Last Name",
+    "lastNamePlaceholder": "Enter your last name",
+    "lastNameError": "Your last name must be at least 2 characters long",
+    "organization": "Organization",
+    "organizationPlaceholder": "Enter your organisation (optional)",
+    "termsAndConditions": "Terms and conditions",
+    "acceptTerms": "I accept the terms and conditions",
+    "acceptTermsError": "You must accept the terms and conditions",
+    "register": "Register",
+    "signOutTitle": "Sign Out",
+    "signOutDescription": "To complete your registration, you now need to sign out and sign back in again.",
+    "signOutConfirm": "Sign out"
+  },
   "signout": {
     "title": "Sign Out",
     "description": "Are you sure you want to sign out of your account?",

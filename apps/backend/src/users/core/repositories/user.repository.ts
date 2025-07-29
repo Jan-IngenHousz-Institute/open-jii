@@ -1,10 +1,17 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { eq, ilike, or, users } from "@repo/database";
+import { eq, ilike, or, organizations, profiles, users } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import { CreateUserDto, UpdateUserDto, UserDto, SearchUsersParams } from "../models/user.model";
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  UserDto,
+  SearchUsersParams,
+  UserProfileDto,
+  CreateUserProfileDto,
+} from "../models/user.model";
 
 @Injectable()
 export class UserRepository {
@@ -75,6 +82,65 @@ export class UserRepository {
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
       await this.database.delete(users).where(eq(users.id, id));
+    });
+  }
+
+  async findOneUserProfile(userId: string) {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select()
+        .from(profiles)
+        .where(eq(profiles.userId, userId))
+        .limit(1);
+
+      if (result.length == 0) return null;
+      return {
+        firstName: result[0].firstName,
+        lastName: result[0].lastName,
+        organization: "?",
+      } as UserProfileDto;
+    });
+  }
+
+  async createUserProfile(
+    userId: string,
+    createUserProfileDto: CreateUserProfileDto,
+  ): Promise<Result<UserProfileDto>> {
+    return tryCatch(async () => {
+      let organizationId: string | null = null;
+      if (createUserProfileDto.organization) {
+        // Check if organization already exists with this name
+        const organizationResult = await this.database
+          .select()
+          .from(organizations)
+          .where(eq(organizations.name, createUserProfileDto.organization));
+        if (organizationResult.length > 0) {
+          // Use existing organization
+          organizationId = organizationResult[0].id;
+        } else {
+          // Create organization
+          const newOrganization = await this.database
+            .insert(organizations)
+            .values({
+              name: createUserProfileDto.organization,
+              type: "non_profit",
+            })
+            .returning();
+          organizationId = newOrganization[0].id;
+        }
+      }
+
+      await this.database.insert(profiles).values({
+        ...createUserProfileDto,
+        organizationId,
+        userId,
+      });
+
+      return {
+        firstName: createUserProfileDto.firstName,
+        lastName: createUserProfileDto.lastName,
+        organization: createUserProfileDto.organization,
+      } as UserProfileDto;
     });
   }
 }

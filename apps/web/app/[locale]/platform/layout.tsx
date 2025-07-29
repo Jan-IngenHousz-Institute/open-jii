@@ -39,6 +39,10 @@ export default async function AppLayout({
     // The redirect() function throws an error to stop rendering and initiate the redirect,
     // so no 'return' statement is needed after it.
   }
+  if (!session.user.registered) {
+    // If the user is not registered, redirect them to the registration page.
+    redirect(`/${typedLocale}/register`);
+  }
 
   const pathname = (await headers()).get("x-current-path") ?? "/";
 
