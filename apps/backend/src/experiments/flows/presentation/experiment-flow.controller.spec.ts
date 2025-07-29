@@ -1,15 +1,15 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import type { ErrorResponse } from "@repo/api";
 import { contract } from "@repo/api";
 
-import { assertSuccess, success, failure } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 
 describe("ExperimentFlowController", () => {
   const testApp = TestHarness.App;
-  let testUserId: string;
   let adminUserId: string;
   let memberUserId: string;
   let nonMemberUserId: string;
@@ -24,7 +24,6 @@ describe("ExperimentFlowController", () => {
     await testApp.beforeEach();
 
     // Create users with different roles
-    testUserId = await testApp.createTestUser({});
     adminUserId = await testApp.createTestUser({});
     memberUserId = await testApp.createTestUser({});
     nonMemberUserId = await testApp.createTestUser({});
@@ -104,164 +103,16 @@ describe("ExperimentFlowController", () => {
     await testApp.teardown();
   });
 
-  describe("submitStepResult", () => {
-    const stepResultData = {
-      stepId: faker.string.uuid(),
-      result: {
-        type: "INSTRUCTION",
-        completedAt: new Date().toISOString(),
-      },
-    };
-
-    it("should successfully submit step result for admin user", async () => {
-      const path = testApp.resolvePath(contract.flows.submitStepResult.path, {
-        id: experimentId,
-      });
-
-      const response = await testApp
-        .post(path)
-        .withAuth(adminUserId)
-        .send(stepResultData)
-        .expect(StatusCodes.OK);
-
-      expect(response.body).toMatchObject({
-        success: true,
-        nextCursor: expect.any(Number),
-        message: "Step result processed successfully",
-      });
-    });
-
-    it("should successfully submit step result for member user", async () => {
-      const path = testApp.resolvePath(contract.flows.submitStepResult.path, {
-        id: experimentId,
-      });
-
-      const response = await testApp
-        .post(path)
-        .withAuth(memberUserId)
-        .send(stepResultData)
-        .expect(StatusCodes.OK);
-
-      expect(response.body).toMatchObject({
-        success: true,
-        nextCursor: expect.any(Number),
-        message: "Step result processed successfully",
-      });
-    });
-
-    it("should return 404 for non-existent experiment", async () => {
-      const nonExistentId = faker.string.uuid();
-      const path = testApp.resolvePath(contract.flows.submitStepResult.path, {
-        id: nonExistentId,
-      });
-
-      await testApp
-        .post(path)
-        .withAuth(adminUserId)
-        .send(stepResultData)
-        .expect(StatusCodes.NOT_FOUND)
-        .expect(({ body }: { body: ErrorResponse }) => {
-          expect(body.message).toContain("not found");
-          expect(body.code).toBe("EXPERIMENT_NOT_FOUND");
-        });
-    });
-
-    it("should return 403 for non-member user accessing private experiment", async () => {
-      const path = testApp.resolvePath(contract.flows.submitStepResult.path, {
-        id: experimentId,
-      });
-
-      await testApp
-        .post(path)
-        .withAuth(nonMemberUserId)
-        .send(stepResultData)
-        .expect(StatusCodes.FORBIDDEN)
-        .expect(({ body }: { body: ErrorResponse }) => {
-          expect(body.message).toBe("You do not have access to this experiment");
-          expect(body.code).toBe("ACCESS_DENIED");
-        });
-    });
-
-    it("should allow access to public experiment for non-member", async () => {
-      // Update experiment to be public
-      await testApp.updateExperiment({
-        experimentId,
-        updates: { visibility: "public" },
-      });
-
-      const path = testApp.resolvePath(contract.flows.submitStepResult.path, {
-        id: experimentId,
-      });
-
-      const response = await testApp
-        .post(path)
-        .withAuth(nonMemberUserId)
-        .send(stepResultData)
-        .expect(StatusCodes.OK);
-
-      expect(response.body).toMatchObject({
-        success: true,
-        message: "Step result processed successfully",
-      });
-    });
-
-    it("should return 401 if not authenticated", async () => {
-      const path = testApp.resolvePath(contract.flows.submitStepResult.path, {
-        id: experimentId,
-      });
-
-      await testApp.post(path).withoutAuth().send(stepResultData).expect(StatusCodes.UNAUTHORIZED);
-    });
-
-    it("should handle different step result types", async () => {
-      const questionResult = {
-        stepId: faker.string.uuid(),
-        result: {
-          type: "QUESTION",
-          result: {
-            questionId: faker.string.uuid(),
-            answer: "Test answer",
-            answeredAt: new Date().toISOString(),
-          },
-        },
-      };
-
-      const path = testApp.resolvePath(contract.flows.submitStepResult.path, {
-        id: experimentId,
-      });
-
-      const response = await testApp
-        .post(path)
-        .withAuth(adminUserId)
-        .send(questionResult)
-        .expect(StatusCodes.OK);
-
-      expect(response.body.success).toBe(true);
-    });
-
-    it("should return 400 for invalid request body", async () => {
-      const path = testApp.resolvePath(contract.flows.submitStepResult.path, {
-        id: experimentId,
-      });
-
-      await testApp
-        .post(path)
-        .withAuth(adminUserId)
-        .send({
-          // Missing required fields
-          invalidField: "invalid",
-        })
-        .expect(StatusCodes.BAD_REQUEST);
-    });
-  });
-
   describe("getMobileFlow", () => {
     it("should successfully get mobile flow for admin user", async () => {
       const path = testApp.resolvePath(contract.flows.getMobileFlow.path, {
         id: experimentId,
       });
 
-      const response = await testApp.get(path).withAuth(adminUserId).expect(StatusCodes.OK);
+      const response = await testApp
+        .contractRequest(contract.flows.getMobileFlow, path)
+        .withAuth(adminUserId)
+        .expect(StatusCodes.OK);
 
       expect(response.body).toMatchObject({
         flowId: flowId,
@@ -289,7 +140,10 @@ describe("ExperimentFlowController", () => {
         id: experimentId,
       });
 
-      const response = await testApp.get(path).withAuth(memberUserId).expect(StatusCodes.OK);
+      const response = await testApp
+        .contractRequest(contract.flows.getMobileFlow, path)
+        .withAuth(memberUserId)
+        .expect(StatusCodes.OK);
 
       expect(response.body.flowId).toBe(flowId);
       expect(response.body.steps).toHaveLength(2);
@@ -337,9 +191,11 @@ describe("ExperimentFlowController", () => {
         id: experimentId,
       });
 
-      const response = await testApp.get(path).withAuth(nonMemberUserId).expect(StatusCodes.OK);
+      const response = await testApp
+        .contractRequest(contract.flows.getMobileFlow, path)
+        .withAuth(nonMemberUserId)
+        .expect(StatusCodes.OK);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(response.body.flowId).toBe(flowId);
     });
 
@@ -398,7 +254,10 @@ describe("ExperimentFlowController", () => {
         id: newExperiment.id,
       });
 
-      const response = await testApp.get(path).withAuth(adminUserId).expect(StatusCodes.OK);
+      const response = await testApp
+        .contractRequest(contract.flows.getMobileFlow, path)
+        .withAuth(adminUserId)
+        .expect(StatusCodes.OK);
 
       expect(response.body.flowName).toBe("Flow Without Description");
       expect(response.body.description).toBeUndefined();
@@ -431,7 +290,10 @@ describe("ExperimentFlowController", () => {
         id: emptyFlowExperiment.id,
       });
 
-      const response = await testApp.get(path).withAuth(adminUserId).expect(StatusCodes.OK);
+      const response = await testApp
+        .contractRequest(contract.flows.getMobileFlow, path)
+        .withAuth(adminUserId)
+        .expect(StatusCodes.OK);
 
       expect(response.body.steps).toHaveLength(0);
       expect(response.body.startStepId).toBeUndefined();
@@ -492,26 +354,29 @@ describe("ExperimentFlowController", () => {
         id: complexExperiment.id,
       });
 
-      const response = await testApp.get(path).withAuth(adminUserId).expect(StatusCodes.OK);
+      const response = await testApp
+        .contractRequest(contract.flows.getMobileFlow, path)
+        .withAuth(adminUserId)
+        .expect(StatusCodes.OK);
 
       expect(response.body.steps).toHaveLength(4);
 
       // Verify each step type is properly formatted
-      const instructionStep = response.body.steps.find((s: any) => s.type === "INSTRUCTION");
-      const questionStep = response.body.steps.find((s: any) => s.type === "QUESTION");
-      const measurementStep = response.body.steps.find((s: any) => s.type === "MEASUREMENT");
-      const analysisStep = response.body.steps.find((s: any) => s.type === "ANALYSIS");
+      const instructionStep = response.body.steps.find((s) => s.type === "INSTRUCTION");
+      const questionStep = response.body.steps.find((s) => s.type === "QUESTION");
+      const measurementStep = response.body.steps.find((s) => s.type === "MEASUREMENT");
+      const analysisStep = response.body.steps.find((s) => s.type === "ANALYSIS");
 
       expect(instructionStep).toBeDefined();
       expect(questionStep).toBeDefined();
       expect(measurementStep).toBeDefined();
       expect(analysisStep).toBeDefined();
 
-      expect(instructionStep.stepSpecification).toEqual({});
+      expect(instructionStep?.stepSpecification).toEqual({});
       // Note: stepSpecification is currently not being preserved in mobile flow format
-      expect(questionStep.stepSpecification).toBeDefined();
-      expect(measurementStep.stepSpecification).toBeDefined();
-      expect(analysisStep.stepSpecification).toBeDefined();
+      expect(questionStep?.stepSpecification).toBeDefined();
+      expect(measurementStep?.stepSpecification).toBeDefined();
+      expect(analysisStep?.stepSpecification).toBeDefined();
     });
   });
 
@@ -532,28 +397,13 @@ describe("ExperimentFlowController", () => {
         id: experimentId,
       });
 
-      const response = await testApp.get(path).withAuth(adminUserId).expect(StatusCodes.OK);
+      const response = await testApp
+        .contractRequest(contract.flows.getMobileFlow, path)
+        .withAuth(adminUserId)
+        .expect(StatusCodes.OK);
 
       // The controller should log the retrieval
       expect(response.body.steps.length).toBeGreaterThan(0);
-    });
-
-    it("should log successful step result submission", async () => {
-      const stepResultData = {
-        stepId: faker.string.uuid(),
-        result: {
-          type: "INSTRUCTION",
-          completedAt: new Date().toISOString(),
-        },
-      };
-
-      const path = testApp.resolvePath(contract.flows.submitStepResult.path, {
-        id: experimentId,
-      });
-
-      await testApp.post(path).withAuth(adminUserId).send(stepResultData).expect(StatusCodes.OK);
-
-      // The controller should log the submission
     });
   });
 });

@@ -6,13 +6,9 @@ import {
   zFlow,
   zFlowStep,
   zFlowStepList,
-  zMobileNextStepResponse,
-  zSubmitStepResultBody,
-  zSubmitStepResultResponse,
   zCreateFlowStepBody,
   zUpdateFlowStepBody,
   zUpdateFlowStepPositionsBody,
-  zGetNextStepQuery,
   zMobileFlowExecution,
   zFlowStepPathParam,
 } from "../schemas/flow.schema";
@@ -164,35 +160,6 @@ export const flowContract = c.router({
     },
     summary: "Update flow step positions",
     description: "Updates the positions and sizes of steps in a flow",
-  },
-
-  // Mobile flow execution
-  getNextStep: {
-    method: "GET",
-    path: "/api/v1/experiments/:id/flow/next-step",
-    pathParams: zIdPathParam,
-    query: zGetNextStepQuery,
-    responses: {
-      200: zMobileNextStepResponse,
-      404: zErrorResponse,
-      400: zErrorResponse,
-    },
-    summary: "Get next step in experiment flow",
-    description: "Returns the next step for mobile execution",
-  },
-
-  submitStepResult: {
-    method: "POST",
-    path: "/api/v1/experiments/:id/flow/step-result",
-    pathParams: zIdPathParam,
-    body: zSubmitStepResultBody,
-    responses: {
-      200: zSubmitStepResultResponse,
-      400: zErrorResponse,
-      404: zErrorResponse,
-    },
-    summary: "Submit step result",
-    description: "Submits the result of a completed flow step",
   },
 
   getMobileFlow: {
