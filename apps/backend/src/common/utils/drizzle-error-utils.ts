@@ -1,18 +1,27 @@
 /**
  * Utility functions for handling Drizzle ORM errors in a type-safe manner
- * 
+ *
  * This module provides type-safe error handling for Drizzle ORM operations,
  * particularly when dealing with PostgreSQL constraint violations and other
  * database errors that are wrapped in DrizzleQueryError.
+ *
+ * NOTE: Due to a known issue with Drizzle ORM (https://github.com/drizzle-team/drizzle-orm/issues/4618),
+ * DrizzleQueryError is not properly exported. The functions in this module will not work correctly
+ * until this issue is resolved. They are implemented here as a future-ready solution.
  */
 
-import { DrizzleQueryError } from "drizzle-orm/errors";
+// Temporary type definition for DrizzleQueryError until it's properly exported
+interface DrizzleQueryError extends Error {
+  cause: unknown;
+  sql?: string;
+  params?: unknown[];
+}
 
 /**
  * Type guard to check if an error is a PostgreSQL error with code and message
  */
 export const isPostgresError = (
-  cause: unknown
+  cause: unknown,
 ): cause is { code: string; message: string; detail?: string } => {
   return (
     cause !== null &&
@@ -26,16 +35,20 @@ export const isPostgresError = (
 
 /**
  * Type guard to check if an error is a DrizzleQueryError
+ *
+ * NOTE: This will always return false until DrizzleQueryError is properly exported
+ * from drizzle-orm. It checks for the expected structure as a fallback.
  */
 export const isDrizzleQueryError = (error: unknown): error is DrizzleQueryError => {
-  return error instanceof DrizzleQueryError;
+  // Since we can't import DrizzleQueryError properly, we check for the expected structure
+  return error instanceof Error && error.name === "DrizzleQueryError" && "cause" in error;
 };
 
 /**
  * Extracts PostgreSQL error information from a Drizzle error
  */
 export const getPostgresError = (
-  error: unknown
+  error: unknown,
 ): { code: string; message: string; detail?: string } | null => {
   if (!isDrizzleQueryError(error)) {
     return null;
@@ -59,20 +72,20 @@ export const getPostgresError = (
 export const PostgresErrorCodes = {
   // Constraint violations
   UNIQUE_VIOLATION: "23505",
-  FOREIGN_KEY_VIOLATION: "23503", 
+  FOREIGN_KEY_VIOLATION: "23503",
   NOT_NULL_VIOLATION: "23502",
   CHECK_VIOLATION: "23514",
-  
+
   // Data type errors
   INVALID_TEXT_REPRESENTATION: "22P02", // Type mismatch (e.g., number into string)
   STRING_DATA_TOO_LONG: "22001",
   NUMERIC_VALUE_OUT_OF_RANGE: "22003",
-  
-  // Schema errors  
+
+  // Schema errors
   UNDEFINED_TABLE: "42P01",
   UNDEFINED_COLUMN: "42703",
   UNDEFINED_FUNCTION: "42883",
-  
+
   // Permission errors
   INSUFFICIENT_PRIVILEGE: "42501",
 } as const;
@@ -107,16 +120,16 @@ export const isDataTooLongError = (error: unknown): boolean => {
 
 /**
  * Example usage:
- * 
+ *
  * ```typescript
  * import { TransactionRollbackError } from "drizzle-orm";
- * import { 
- *   isUniqueConstraintError, 
+ * import {
+ *   isUniqueConstraintError,
  *   isTypeConversionError,
  *   getPostgresError,
- *   PostgresErrorCodes 
+ *   PostgresErrorCodes
  * } from "./drizzle-error-utils";
- * 
+ *
  * try {
  *   const result = await tx.insert(table).values(data);
  * } catch (error) {
@@ -124,17 +137,17 @@ export const isDataTooLongError = (error: unknown): boolean => {
  *     // Handle manual rollback
  *     return;
  *   }
- *   
+ *
  *   if (isUniqueConstraintError(error)) {
  *     // Handle duplicate key error
  *     throw new ConflictError("Record already exists");
  *   }
- *   
+ *
  *   if (isTypeConversionError(error)) {
  *     // Handle type mismatch (e.g., number into string column)
  *     throw new ValidationError("Invalid data type provided");
  *   }
- *   
+ *
  *   // For more complex error handling
  *   const pgError = getPostgresError(error);
  *   if (pgError) {
@@ -147,7 +160,7 @@ export const isDataTooLongError = (error: unknown): boolean => {
  *         throw new DatabaseError(pgError.message);
  *     }
  *   }
- *   
+ *
  *   throw error; // Re-throw unknown errors
  * }
  * ```
