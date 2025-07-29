@@ -5,6 +5,8 @@
  * particularly when dealing with PostgreSQL constraint violations and other
  * database errors that are wrapped in DrizzleQueryError.
  */
+import { StatusCodes } from "http-status-codes";
+
 import { DrizzleQueryError } from "@repo/database";
 
 /**
@@ -40,6 +42,7 @@ export const getPostgresError = (
     return null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
   const cause = error.cause;
   if (!isPostgresError(cause)) {
     return null;
@@ -104,3 +107,130 @@ export const isDataTooLongError = (error: unknown): boolean => {
   const pgError = getPostgresError(error);
   return pgError?.code === PostgresErrorCodes.STRING_DATA_TOO_LONG;
 };
+
+/**
+ * Base application error type
+ */
+export class AppError extends Error {
+  constructor(
+    readonly message: string,
+    readonly code: string,
+    readonly statusCode: number = StatusCodes.INTERNAL_SERVER_ERROR,
+    readonly details?: unknown,
+  ) {
+    super();
+  }
+
+  static notFound(message = "Resource not found", code = "NOT_FOUND", details?: unknown): AppError {
+    return new AppError(message, code, StatusCodes.NOT_FOUND, details);
+  }
+
+  static badRequest(
+    message = "Invalid request data",
+    code = "BAD_REQUEST",
+    details?: unknown,
+  ): AppError {
+    return new AppError(message, code, StatusCodes.BAD_REQUEST, details);
+  }
+
+  static forbidden(message = "Access forbidden", code = "FORBIDDEN", details?: unknown): AppError {
+    return new AppError(message, code, StatusCodes.FORBIDDEN, details);
+  }
+
+  static unauthorized(
+    message = "Unauthorized access",
+    code = "UNAUTHORIZED",
+    details?: unknown,
+  ): AppError {
+    return new AppError(message, code, StatusCodes.UNAUTHORIZED, details);
+  }
+
+  static internal(
+    message = "Internal server error",
+    code = "INTERNAL_ERROR",
+    details?: unknown,
+  ): AppError {
+    return new AppError(message, code, StatusCodes.INTERNAL_SERVER_ERROR, details);
+  }
+
+  static repositoryError(
+    message = "Repository operation failed",
+    code = "REPOSITORY_ERROR",
+    details?: unknown,
+  ): AppError {
+    return new AppError(message, code, StatusCodes.INTERNAL_SERVER_ERROR, details);
+  }
+
+  static validationError(
+    message = "Validation error",
+    code = "VALIDATION_ERROR",
+    details?: unknown,
+  ): AppError {
+    return new AppError(message, code, StatusCodes.BAD_REQUEST, details);
+  }
+}
+
+/**
+ * Default error mapper for repository operations
+ */
+export function defaultRepositoryErrorMapper(error: unknown): AppError {
+  if (error instanceof AppError) {
+    return error;
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+  const messageLower = message.toLowerCase();
+
+  // Check for common database error patterns
+  if (
+    messageLower.includes("not found") ||
+    messageLower.includes("no rows") ||
+    messageLower.includes("does not exist")
+  ) {
+    return AppError.notFound(message, "REPOSITORY_NOT_FOUND");
+  }
+
+  // Use single call to get PostgreSQL error and map using switch statement
+  const pgError = getPostgresError(error);
+  if (pgError) {
+    switch (pgError.code) {
+      case PostgresErrorCodes.UNIQUE_VIOLATION:
+        return AppError.badRequest(message, "REPOSITORY_DUPLICATE");
+      case PostgresErrorCodes.FOREIGN_KEY_VIOLATION:
+        return AppError.badRequest(message, "REPOSITORY_REFERENCE");
+      case PostgresErrorCodes.NOT_NULL_VIOLATION:
+        return AppError.badRequest(message, "REPOSITORY_NOT_NULL");
+      case PostgresErrorCodes.INVALID_TEXT_REPRESENTATION:
+        return AppError.badRequest(message, "REPOSITORY_INVALID_TYPE");
+      case PostgresErrorCodes.STRING_DATA_TOO_LONG:
+        return AppError.badRequest(message, "REPOSITORY_DATA_TOO_LONG");
+      case PostgresErrorCodes.CHECK_VIOLATION:
+        return AppError.badRequest(message, "REPOSITORY_CHECK_CONSTRAINT");
+      case PostgresErrorCodes.UNDEFINED_TABLE:
+        return AppError.internal(message, "REPOSITORY_UNDEFINED_TABLE");
+      case PostgresErrorCodes.UNDEFINED_COLUMN:
+        return AppError.internal(message, "REPOSITORY_UNDEFINED_COLUMN");
+      case PostgresErrorCodes.NUMERIC_VALUE_OUT_OF_RANGE:
+        return AppError.badRequest(message, "REPOSITORY_NUMERIC_OUT_OF_RANGE");
+      case PostgresErrorCodes.UNDEFINED_FUNCTION:
+        return AppError.internal(message, "REPOSITORY_UNDEFINED_FUNCTION");
+      case PostgresErrorCodes.INSUFFICIENT_PRIVILEGE:
+        return AppError.forbidden(message, "REPOSITORY_INSUFFICIENT_PRIVILEGE");
+    }
+  }
+
+  // Fallback to message-based detection for cases where Drizzle error detection fails
+  if (
+    messageLower.includes("duplicate") ||
+    messageLower.includes("unique constraint") ||
+    messageLower.includes("already exists")
+  ) {
+    return AppError.badRequest(message, "REPOSITORY_DUPLICATE");
+  }
+
+  if (messageLower.includes("foreign key") || messageLower.includes("reference")) {
+    return AppError.badRequest(message, "REPOSITORY_REFERENCE");
+  }
+
+  return AppError.repositoryError(message);
+}

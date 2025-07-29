@@ -1,7 +1,11 @@
 import type { Logger } from "@nestjs/common";
 import { isAxiosError } from "axios";
-import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
+
+import { AppError, defaultRepositoryErrorMapper } from "./drizzle-error-utils";
+
+// Re-export AppError for backward compatibility
+export { AppError };
 
 /**
  * Result type that represents either a success or failure
@@ -132,68 +136,6 @@ export const success = <T, _>(value: T): Result<T> => new Success(value);
 export const failure = <E extends AppError>(error: E): Result<never, E> => new Failure(error);
 
 /**
- * Base application error type
- */
-export class AppError extends Error {
-  constructor(
-    readonly message: string,
-    readonly code: string,
-    readonly statusCode: number = StatusCodes.INTERNAL_SERVER_ERROR,
-    readonly details?: unknown,
-  ) {
-    super();
-  }
-
-  static notFound(message = "Resource not found", code = "NOT_FOUND", details?: unknown): AppError {
-    return new AppError(message, code, StatusCodes.NOT_FOUND, details);
-  }
-
-  static badRequest(
-    message = "Invalid request data",
-    code = "BAD_REQUEST",
-    details?: unknown,
-  ): AppError {
-    return new AppError(message, code, StatusCodes.BAD_REQUEST, details);
-  }
-
-  static forbidden(message = "Access forbidden", code = "FORBIDDEN", details?: unknown): AppError {
-    return new AppError(message, code, StatusCodes.FORBIDDEN, details);
-  }
-
-  static unauthorized(
-    message = "Unauthorized access",
-    code = "UNAUTHORIZED",
-    details?: unknown,
-  ): AppError {
-    return new AppError(message, code, StatusCodes.UNAUTHORIZED, details);
-  }
-
-  static internal(
-    message = "Internal server error",
-    code = "INTERNAL_ERROR",
-    details?: unknown,
-  ): AppError {
-    return new AppError(message, code, StatusCodes.INTERNAL_SERVER_ERROR, details);
-  }
-
-  static repositoryError(
-    message = "Repository operation failed",
-    code = "REPOSITORY_ERROR",
-    details?: unknown,
-  ): AppError {
-    return new AppError(message, code, StatusCodes.INTERNAL_SERVER_ERROR, details);
-  }
-
-  static validationError(
-    message = "Validation error",
-    code = "VALIDATION_ERROR",
-    details?: unknown,
-  ): AppError {
-    return new AppError(message, code, StatusCodes.BAD_REQUEST, details);
-  }
-}
-
-/**
  * Utility for handling errors in a controller context
  * @param error The AppError object to handle
  * @param logger Logger to use for logging errors
@@ -234,88 +176,6 @@ export async function tryCatch<T>(
   } catch (error) {
     return failure(errorMapper(error));
   }
-}
-
-/**
- * Default error mapper for repository operations
- */
-export function defaultRepositoryErrorMapper(error: unknown): AppError {
-  if (error instanceof AppError) {
-    return error;
-  }
-
-  const message = error instanceof Error ? error.message : String(error);
-  const messageLower = message.toLowerCase();
-
-  // Check for Drizzle errors with nested PostgreSQL errors
-  const isPostgresError = (cause: unknown): cause is { code: string; message: string } => {
-    return (
-      cause !== null &&
-      typeof cause === "object" &&
-      "code" in cause &&
-      "message" in cause &&
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      typeof (cause as any).code === "string"
-    );
-  };
-
-  const cause = (error as any)?.cause;
-  const causeMessage = cause instanceof Error ? cause.message.toLowerCase() : "";
-  const postgresError = isPostgresError(cause) ? cause : null;
-
-  // Check for common database error patterns
-  if (
-    messageLower.includes("not found") ||
-    messageLower.includes("no rows") ||
-    messageLower.includes("does not exist")
-  ) {
-    return AppError.notFound(message, "REPOSITORY_NOT_FOUND");
-  }
-
-  // Check for constraint violations using PostgreSQL error codes (more reliable)
-  if (postgresError) {
-    switch (postgresError.code) {
-      case "23505": // Unique constraint violation
-        return AppError.badRequest(message, "REPOSITORY_DUPLICATE");
-      case "23503": // Foreign key constraint violation
-        return AppError.badRequest(message, "REPOSITORY_REFERENCE");
-      case "23502": // Not null constraint violation
-        return AppError.badRequest(message, "REPOSITORY_NOT_NULL");
-      case "23514": // Check constraint violation
-        return AppError.badRequest(message, "REPOSITORY_CHECK_CONSTRAINT");
-      case "22P02": // Invalid text representation (type conversion error)
-        return AppError.badRequest(message, "REPOSITORY_INVALID_TYPE");
-      case "22001": // String data right truncation
-        return AppError.badRequest(message, "REPOSITORY_DATA_TOO_LONG");
-      case "42P01": // Undefined table
-        return AppError.internal(message, "REPOSITORY_UNDEFINED_TABLE");
-      case "42703": // Undefined column
-        return AppError.internal(message, "REPOSITORY_UNDEFINED_COLUMN");
-    }
-  }
-
-  // Fallback to message-based detection for cases where cause parsing fails
-  if (
-    messageLower.includes("duplicate") ||
-    messageLower.includes("unique constraint") ||
-    messageLower.includes("already exists") ||
-    causeMessage.includes("duplicate") ||
-    causeMessage.includes("unique constraint") ||
-    causeMessage.includes("already exists")
-  ) {
-    return AppError.badRequest(message, "REPOSITORY_DUPLICATE");
-  }
-
-  if (
-    messageLower.includes("foreign key") ||
-    messageLower.includes("reference") ||
-    causeMessage.includes("foreign key") ||
-    causeMessage.includes("reference")
-  ) {
-    return AppError.badRequest(message, "REPOSITORY_REFERENCE");
-  }
-
-  return AppError.repositoryError(message);
 }
 
 /**
