@@ -245,27 +245,72 @@ export function defaultRepositoryErrorMapper(error: unknown): AppError {
   }
 
   const message = error instanceof Error ? error.message : String(error);
+  const messageLower = message.toLowerCase();
+
+  // Check for Drizzle errors with nested PostgreSQL errors
+  const isPostgresError = (cause: unknown): cause is { code: string; message: string } => {
+    return (
+      cause !== null &&
+      typeof cause === "object" &&
+      "code" in cause &&
+      "message" in cause &&
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      typeof (cause as any).code === "string"
+    );
+  };
+
+  const cause = (error as any)?.cause;
+  const causeMessage = cause instanceof Error ? cause.message.toLowerCase() : "";
+  const postgresError = isPostgresError(cause) ? cause : null;
 
   // Check for common database error patterns
   if (
-    message.toLowerCase().includes("not found") ||
-    message.toLowerCase().includes("no rows") ||
-    message.toLowerCase().includes("does not exist")
+    messageLower.includes("not found") ||
+    messageLower.includes("no rows") ||
+    messageLower.includes("does not exist")
   ) {
     return AppError.notFound(message, "REPOSITORY_NOT_FOUND");
   }
 
+  // Check for constraint violations using PostgreSQL error codes (more reliable)
+  if (postgresError) {
+    switch (postgresError.code) {
+      case "23505": // Unique constraint violation
+        return AppError.badRequest(message, "REPOSITORY_DUPLICATE");
+      case "23503": // Foreign key constraint violation
+        return AppError.badRequest(message, "REPOSITORY_REFERENCE");
+      case "23502": // Not null constraint violation
+        return AppError.badRequest(message, "REPOSITORY_NOT_NULL");
+      case "23514": // Check constraint violation
+        return AppError.badRequest(message, "REPOSITORY_CHECK_CONSTRAINT");
+      case "22P02": // Invalid text representation (type conversion error)
+        return AppError.badRequest(message, "REPOSITORY_INVALID_TYPE");
+      case "22001": // String data right truncation
+        return AppError.badRequest(message, "REPOSITORY_DATA_TOO_LONG");
+      case "42P01": // Undefined table
+        return AppError.internal(message, "REPOSITORY_UNDEFINED_TABLE");
+      case "42703": // Undefined column
+        return AppError.internal(message, "REPOSITORY_UNDEFINED_COLUMN");
+    }
+  }
+
+  // Fallback to message-based detection for cases where cause parsing fails
   if (
-    message.toLowerCase().includes("duplicate") ||
-    message.toLowerCase().includes("unique constraint") ||
-    message.toLowerCase().includes("already exists")
+    messageLower.includes("duplicate") ||
+    messageLower.includes("unique constraint") ||
+    messageLower.includes("already exists") ||
+    causeMessage.includes("duplicate") ||
+    causeMessage.includes("unique constraint") ||
+    causeMessage.includes("already exists")
   ) {
     return AppError.badRequest(message, "REPOSITORY_DUPLICATE");
   }
 
   if (
-    message.toLowerCase().includes("foreign key") ||
-    message.toLowerCase().includes("reference")
+    messageLower.includes("foreign key") ||
+    messageLower.includes("reference") ||
+    causeMessage.includes("foreign key") ||
+    causeMessage.includes("reference")
   ) {
     return AppError.badRequest(message, "REPOSITORY_REFERENCE");
   }
