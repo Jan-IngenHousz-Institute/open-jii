@@ -4,6 +4,10 @@
  * This module provides type-safe error handling for Drizzle ORM operations,
  * particularly when dealing with PostgreSQL constraint violations and other
  * database errors that are wrapped in DrizzleQueryError.
+ *
+ * NOTE: Due to a known issue with Drizzle ORM (https://github.com/drizzle-team/drizzle-orm/issues/4618),
+ * DrizzleQueryError is not properly exported. The functions in this module will not work correctly
+ * until this issue is resolved. They are implemented here as a future-ready solution.
  */
 import { StatusCodes } from "http-status-codes";
 
@@ -27,9 +31,13 @@ export const isPostgresError = (
 
 /**
  * Type guard to check if an error is a DrizzleQueryError
+ *
+ * NOTE: This will always return false until DrizzleQueryError is properly exported
+ * from drizzle-orm. It checks for the expected structure as a fallback.
  */
 export const isDrizzleQueryError = (error: unknown): error is DrizzleQueryError => {
-  return error instanceof DrizzleQueryError;
+  // Since we can't import DrizzleQueryError properly, we check for the expected structure
+  return error instanceof Error && error.name === "DrizzleQueryError" && "cause" in error;
 };
 
 /**
