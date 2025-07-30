@@ -1,359 +1,45 @@
-import type { Node, Edge, NodeProps, Connection } from "@xyflow/react";
+import type { Node, Edge, Connection } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
 import {
   ReactFlow,
   addEdge,
-  Position,
   useNodesState,
   useEdgesState,
   getIncomers,
   getOutgoers,
   getConnectedEdges,
 } from "@xyflow/react";
+import type { NodeProps } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { FileInput, BookText, HelpCircle, Cpu, ChartColumn } from "lucide-react";
-import { useCallback, useState, useMemo } from "react";
+import { useCallback, useState } from "react";
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components";
 
-import { BaseHandle } from "../base-handle";
-import { BaseNode, BaseNodeContent } from "../base-node";
 import { LegendFlow } from "../legend-flow";
-import { ExperimentSidePanel } from "../side-panel-flow";
+import { BaseNode } from "../react-flow/base-node";
+import { getInitialFlowData, createNewNode } from "../react-flow/initial-data";
+import type { NodeType } from "../react-flow/node-config";
+import { ALL_NODE_TYPES, getStyledEdges } from "../react-flow/node-config";
+import { ExperimentSidePanel } from "../side-panel-flow/side-panel-flow";
 
 export function NewExperimentFlow({
   onNodeSelect,
 }: {
   onNodeSelect?: (node: Node | null) => void;
 }) {
-  // State for selected edge
+  // State for selected edge and node
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 
-  // 1) A helper to convert "left"/"right"/etc into Position enum
-  function toPosition(pos?: string | Position): Position | undefined {
-    if (!pos) return undefined;
-    if (typeof pos !== "string") return pos;
-    switch (pos.toLowerCase()) {
-      case "left":
-        return Position.Left;
-      case "right":
-        return Position.Right;
-      case "top":
-        return Position.Top;
-      case "bottom":
-        return Position.Bottom;
-      default:
-        return undefined;
-    }
-  }
-
-  // 2) Define a “raw” node type that lets you use strings…
-  type RawNode = Omit<Node, "sourcePosition" | "targetPosition"> & {
-    sourcePosition?: string | Position;
-    targetPosition?: string | Position;
-  };
-
-  // Node type color map (border/bg) and icons
-  type NodeType = "input" | "instruction" | "question" | "measurement" | "analysis";
-  const nodeTypeColorMap: Record<NodeType, { border: string; bg: string; icon: React.ReactNode }> =
-    useMemo(
-      () => ({
-        input: {
-          border: "!border-blue-400",
-          bg: "!bg-blue-50",
-          icon: <FileInput size={32} strokeWidth={2} />,
-        },
-        instruction: {
-          border: "!border-yellow-400",
-          bg: "!bg-yellow-50",
-          icon: <BookText size={32} strokeWidth={2} />,
-        },
-        question: {
-          border: "!border-purple-400",
-          bg: "!bg-purple-50",
-          icon: <HelpCircle size={32} strokeWidth={2} />,
-        },
-        measurement: {
-          border: "!border-green-400",
-          bg: "!bg-green-50",
-          icon: <Cpu size={32} strokeWidth={2} />,
-        },
-        analysis: {
-          border: "!border-red-400",
-          bg: "!bg-red-50",
-          icon: <ChartColumn size={32} strokeWidth={2} />,
-        },
-      }),
-      [],
-    );
-
-  // === Horizontal flow with current node types and labels ===
-  const initialNodes: RawNode[] = [
-    {
-      id: "horizontal-1",
-      type: "input",
-      data: { label: "Input" },
-      position: { x: 0, y: 100 },
-      sourcePosition: "right",
-    },
-    {
-      id: "horizontal-2",
-      type: "instruction",
-      data: { label: "Instruction" },
-      position: { x: 400, y: 0 },
-      sourcePosition: "right",
-      targetPosition: "left",
-    },
-    {
-      id: "horizontal-3",
-      type: "analysis",
-      data: { label: "Analysis" },
-      position: { x: 400, y: 220 },
-      sourcePosition: "right",
-      targetPosition: "left",
-    },
-    {
-      id: "horizontal-4",
-      type: "measurement",
-      data: { label: "Measurement" },
-      position: { x: 850, y: 0 },
-      sourcePosition: "right",
-      targetPosition: "left",
-    },
-    {
-      id: "horizontal-5",
-      type: "question",
-      data: { label: "Question" },
-      position: { x: 1050, y: 200 },
-      sourcePosition: "top",
-      targetPosition: "bottom",
-    },
-    {
-      id: "horizontal-6",
-      type: "analysis",
-      data: { label: "Analysis 2" },
-      position: { x: 850, y: 400 },
-      sourcePosition: "bottom",
-      targetPosition: "top",
-    },
-    {
-      id: "horizontal-7",
-      type: "measurement",
-      data: { label: "Measurement 2" },
-      position: { x: 1300, y: 100 },
-      sourcePosition: "right",
-      targetPosition: "left",
-    },
-    {
-      id: "horizontal-8",
-      type: "question",
-      data: { label: "Question 2" },
-      position: { x: 1300, y: 400 },
-      sourcePosition: "right",
-      targetPosition: "left",
-    },
-  ];
-
-  const initialEdges: Edge[] = [
-    {
-      id: "horizontal-e1-2",
-      source: "horizontal-1",
-      type: "smoothstep",
-      target: "horizontal-2",
-      animated: true,
-    },
-    {
-      id: "horizontal-e1-3",
-      source: "horizontal-1",
-      type: "smoothstep",
-      target: "horizontal-3",
-      animated: true,
-    },
-    {
-      id: "horizontal-e1-4",
-      source: "horizontal-2",
-      type: "smoothstep",
-      target: "horizontal-4",
-      label: "edge label",
-    },
-    {
-      id: "horizontal-e3-5",
-      source: "horizontal-3",
-      type: "smoothstep",
-      target: "horizontal-5",
-      animated: true,
-    },
-    {
-      id: "horizontal-e3-6",
-      source: "horizontal-3",
-      type: "smoothstep",
-      target: "horizontal-6",
-      animated: true,
-    },
-    {
-      id: "horizontal-e5-7",
-      source: "horizontal-5",
-      type: "smoothstep",
-      target: "horizontal-7",
-      animated: true,
-    },
-    {
-      id: "horizontal-e6-8",
-      source: "horizontal-6",
-      type: "smoothstep",
-      target: "horizontal-8",
-      animated: true,
-    },
-  ];
-
-  const processedInitialNodes: Node[] = initialNodes.map((n) => ({
-    ...n,
-    sourcePosition: toPosition(n.sourcePosition),
-    targetPosition: toPosition(n.targetPosition),
-  }));
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(processedInitialNodes);
+  // Initialize nodes and edges from extracted data
+  const { nodes: initialNodes, edges: initialEdges } = getInitialFlowData();
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-
-  // Helpers to compute handle positions (accept Position enum or string)
-  const getHandlePositions = useCallback((src?: Position | string, tgt?: Position | string) => {
-    // Normalize to string for comparison, handle undefined/null
-    const srcStr = src ? (typeof src === "string" ? src : String(src).toLowerCase()) : undefined;
-    const tgtStr = tgt ? (typeof tgt === "string" ? tgt : String(tgt).toLowerCase()) : undefined;
-    return {
-      hasInput: !!tgt,
-      hasOutput: !!src,
-      inputPosition:
-        tgtStr === "left"
-          ? Position.Left
-          : tgtStr === "right"
-            ? Position.Right
-            : tgtStr === "top"
-              ? Position.Top
-              : tgtStr === "bottom"
-                ? Position.Bottom
-                : Position.Left,
-      outputPosition:
-        srcStr === "left"
-          ? Position.Left
-          : srcStr === "right"
-            ? Position.Right
-            : srcStr === "top"
-              ? Position.Top
-              : srcStr === "bottom"
-                ? Position.Bottom
-                : Position.Right,
-    };
-  }, []);
-
-  // Render input/output handles
-  const createHandles = useCallback(
-    (
-      hasIn: boolean,
-      hasOut: boolean,
-      inPos: Position,
-      outPos: Position,
-      sel: boolean | undefined,
-      drag: boolean | undefined,
-      nodeType?: NodeType,
-    ) => {
-      // Pick color classes from nodeTypeColorMap
-      const highlightClass = "!border-jii-dark-green !bg-white";
-      const colorClass =
-        sel || drag
-          ? highlightClass
-          : nodeType
-            ? `${nodeTypeColorMap[nodeType].border} ${nodeTypeColorMap[nodeType].bg}`
-            : "!border-slate-300 !bg-slate-100";
-      return (
-        <>
-          {hasIn && (
-            <div
-              className={`absolute z-[10] ${
-                inPos === Position.Left
-                  ? "left-0 top-1/2 -translate-y-1/2"
-                  : inPos === Position.Right
-                    ? "right-0 top-1/2 -translate-y-1/2"
-                    : inPos === Position.Top
-                      ? "left-1/2 top-0 -translate-x-1/2"
-                      : "bottom-0 left-1/2 -translate-x-1/2"
-              }`}
-            >
-              <BaseHandle
-                type="target"
-                position={inPos}
-                id="in"
-                selected={sel}
-                dragging={drag}
-                colorClass={colorClass}
-              />
-            </div>
-          )}
-          {hasOut && (
-            <div
-              className={`absolute z-[10] ${
-                outPos === Position.Left
-                  ? "left-0 top-1/2 -translate-y-1/2"
-                  : outPos === Position.Right
-                    ? "right-0 top-1/2 -translate-y-1/2"
-                    : outPos === Position.Top
-                      ? "left-1/2 top-0 -translate-x-1/2"
-                      : "bottom-0 left-1/2 -translate-x-1/2"
-              }`}
-            >
-              <BaseHandle
-                type="source"
-                position={outPos}
-                id="out"
-                selected={sel}
-                dragging={drag}
-                colorClass={colorClass}
-              />
-            </div>
-          )}
-        </>
-      );
-    },
-    [nodeTypeColorMap],
-  );
-
-  // Node content inside BaseNode
-  const createNodeContent = useCallback(
-    (
-      label: string,
-      nodeType: NodeType,
-      hasIn: boolean,
-      hasOut: boolean,
-      inPos: Position,
-      outPos: Position,
-      sel?: boolean,
-      drag?: boolean,
-    ) => (
-      <>
-        {createHandles(hasIn, hasOut, inPos, outPos, sel, drag, nodeType)}
-        <BaseNodeContent>
-          <div className="flex flex-col items-center justify-center p-3">
-            {/* Icon */}
-            <div className={`${sel ? "text-jii-dark-green" : "text-slate-600"} mb-1`}>
-              {nodeTypeColorMap[nodeType].icon}
-            </div>
-            {/* Label inside the node */}
-            <div className="text-center">
-              <span className="text-md font-medium text-slate-700">{label}</span>
-            </div>
-          </div>
-        </BaseNodeContent>
-      </>
-    ),
-    [createHandles, nodeTypeColorMap],
-  );
 
   // Delete logic and reconnection
   const onNodesDelete = useCallback(
     (deleted: Node[]) => {
       setEdges((eds) => {
-        // Start the reducer with the existing edges, and type the accumulator:
         const updatedEdges = deleted.reduce<Edge[]>((acc, node) => {
           const incomers = getIncomers(node, nodes, acc);
           const outgoers = getOutgoers(node, nodes, acc);
@@ -362,26 +48,31 @@ export function NewExperimentFlow({
           // Drop edges touching this node
           const filtered = acc.filter((e) => !connected.includes(e));
 
-          // Reconnect incomers → outgoers
+          // Reconnect incomers to outgoers, but only if no edge already exists between them
           const reconnected = incomers.flatMap(({ id: s }) =>
-            outgoers.map(({ id: t }) => {
+            outgoers.flatMap(({ id: t }) => {
+              // Check if edge already exists between s and t
+              const alreadyExists = filtered.some((e) => e.source === s && e.target === t);
+              if (alreadyExists) return []; // Do not reconnect if edge exists
+
               const wasAnimated = connected.some((e) =>
                 (e.source === s && e.target === node.id) || (e.source === node.id && e.target === t)
                   ? e.animated
                   : false,
               );
-              return {
-                id: `${s}->${t}`,
-                source: s,
-                target: t,
-                type: "smoothstep" as const,
-                markerEnd: { type: MarkerType.ArrowClosed },
-                animated: wasAnimated,
-              };
+              return [
+                {
+                  id: `${s}->${t}`,
+                  source: s,
+                  target: t,
+                  type: "smoothstep" as const,
+                  markerEnd: { type: MarkerType.ArrowClosed },
+                  animated: wasAnimated,
+                },
+              ];
             }),
           );
 
-          // Return the new edge list
           return [...filtered, ...reconnected];
         }, eds);
         return updatedEdges;
@@ -390,90 +81,94 @@ export function NewExperimentFlow({
     [nodes, setEdges],
   );
 
-  // Node wrapper
-  const CustomNodeWrapper = useCallback(
-    (props: NodeProps) => {
-      const { label } = props.data as { label: string };
-      const { sourcePosition, targetPosition } = props;
-      const { hasInput, hasOutput, inputPosition, outputPosition } = getHandlePositions(
-        sourcePosition,
-        targetPosition,
-      );
-      const handleDelete = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setNodes((nds) => {
-          const toDel = nds.find((n) => n.id === props.id);
-          if (toDel) onNodesDelete([toDel]);
-          return nds.filter((n) => n.id !== props.id);
-        });
-      };
-      const handleSelect = () => {
-        // Find the actual node from the nodes array by id
-        const node = nodes.find((n) => n.id === props.id) ?? null;
-        setSelectedNode(node);
-        if (onNodeSelect) onNodeSelect(node);
-      };
-
-      // Pass border color from color map
-      const borderColor = nodeTypeColorMap[props.type as NodeType].border;
-
-      return (
-        <div onClick={handleSelect}>
-          <BaseNode
-            selected={props.selected}
-            dragging={props.dragging}
-            onDelete={handleDelete}
-            nodeType={props.type}
-            borderColor={borderColor}
-          >
-            {createNodeContent(
-              label,
-              props.type as NodeType,
-              hasInput,
-              hasOutput,
-              inputPosition,
-              outputPosition,
-              props.selected,
-              props.dragging,
-            )}
-          </BaseNode>
-        </div>
-      );
+  // Handle node deletion
+  const handleNodeDelete = useCallback(
+    (nodeId: string) => {
+      setNodes((nds) => {
+        const toDel = nds.find((n) => n.id === nodeId);
+        if (toDel) onNodesDelete([toDel]);
+        return nds.filter((n) => n.id !== nodeId);
+      });
     },
-    [
-      getHandlePositions,
-      nodeTypeColorMap,
-      createNodeContent,
-      setNodes,
-      onNodesDelete,
-      nodes,
-      onNodeSelect,
-    ],
+    [setNodes, onNodesDelete],
   );
 
-  const nodeTypes = {
-    input: CustomNodeWrapper,
-    instruction: CustomNodeWrapper,
-    question: CustomNodeWrapper,
-    measurement: CustomNodeWrapper,
-    analysis: CustomNodeWrapper,
-  };
+  // Handle node selection
+  const handleNodeSelect = useCallback(
+    (node: Node | null) => {
+      setSelectedNode(node);
+      setSelectedEdgeId(null); // Clear edge selection when node is selected
+      if (onNodeSelect) onNodeSelect(node);
+    },
+    [onNodeSelect],
+  );
 
-  // Edge creation & highlighting
+  // Handle node label changes
+  const handleLabelChange = useCallback(
+    (newLabel: string) => {
+      if (selectedNode) {
+        setNodes((nds) =>
+          nds.map((node) =>
+            node.id === selectedNode.id
+              ? { ...node, data: { ...node.data, label: newLabel } }
+              : node,
+          ),
+        );
+        // Update the selected node state to reflect the change
+        setSelectedNode((prevNode) =>
+          prevNode ? { ...prevNode, data: { ...prevNode.data, label: newLabel } } : null,
+        );
+      }
+    },
+    [selectedNode, setNodes],
+  );
+
+  // Handle edge updates
+  const handleEdgeUpdate = useCallback(
+    (edgeId: string, updates: Partial<Edge>) => {
+      setEdges((eds) => eds.map((edge) => (edge.id === edgeId ? { ...edge, ...updates } : edge)));
+    },
+    [setEdges],
+  );
+
+  // Handle edge deletion
+  const handleEdgeDelete = useCallback(
+    (edgeId: string) => {
+      setEdges((eds) => eds.filter((edge) => edge.id !== edgeId));
+      setSelectedEdgeId(null);
+    },
+    [setEdges],
+  );
+
+  // Create node wrapper component
+  const NodeWrapper = (props: NodeProps) => (
+    <BaseNode
+      {...props}
+      nodes={nodes}
+      onNodeSelect={handleNodeSelect}
+      onNodeDelete={handleNodeDelete}
+    />
+  );
+
+  // Node types configuration
+  const nodeTypes = ALL_NODE_TYPES.reduce(
+    (map, type) => {
+      map[type] = NodeWrapper;
+      return map;
+    },
+    {} as Record<NodeType, React.ComponentType<NodeProps>>,
+  );
+
+  // Edge creation
   const onConnect = useCallback(
     (params: Connection) => {
-      // prevent self‑loops
       if (params.source === params.target) return;
 
-      // generate a unique ID however you like
       const id = `e-${params.source}-${params.target}-${Date.now()}`;
-
-      // build a fully‑typed Edge
       const newEdge: Edge = {
         id,
         source: params.source,
         target: params.target,
-        // preserve any handle if present
         sourceHandle: params.sourceHandle ?? null,
         targetHandle: params.targetHandle ?? null,
         type: "smoothstep",
@@ -485,36 +180,57 @@ export function NewExperimentFlow({
     [setEdges],
   );
 
+  // Edge selection
   const onEdgeClick = useCallback((e: React.MouseEvent, edge: Edge) => {
     e.stopPropagation();
     setSelectedEdgeId(edge.id);
+    setSelectedNode(null);
   }, []);
 
+  // Pane click (deselect)
   const onPaneClick = useCallback(() => {
     setSelectedEdgeId(null);
-    setSelectedNode(null); // Also clear selected node when clicking on pane
+    setSelectedNode(null);
   }, []);
 
-  const edgesWithStyles = edges.map((edge) =>
-    edge.id === selectedEdgeId
-      ? { ...edge, style: { ...(edge.style ?? {}), stroke: "#49e06d", strokeWidth: 2 } }
-      : { ...edge, style: { ...(edge.style ?? {}), stroke: "#005e5e", strokeWidth: 2 } },
+  // Handle drag and drop for new nodes
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      const type = e.dataTransfer.getData("application/reactflow");
+      if (!type) return;
+
+      const bounds = e.currentTarget.getBoundingClientRect();
+      const position = { x: e.clientX - bounds.left, y: e.clientY - bounds.top };
+
+      const newNode = createNewNode(type, position);
+      setNodes((nds) => [...nds, newNode]);
+    },
+    [setNodes],
   );
+
+  // Apply edge styles based on selection
+  const styledEdges = getStyledEdges(edges, selectedEdgeId);
 
   return (
     <>
-      {/* Side panel for instruction/question nodes */}
+      {/* Side panel for nodes and edges */}
       <ExperimentSidePanel
-        open={
-          !!selectedNode &&
-          (selectedNode.type === "instruction" || selectedNode.type === "question")
-        }
+        open={!!selectedNode || !!selectedEdgeId}
         nodeType={selectedNode?.type}
         nodeLabel={
           typeof selectedNode?.data.label === "string" ? selectedNode.data.label : undefined
         }
-        onClose={() => setSelectedNode(null)}
+        onClose={() => {
+          setSelectedNode(null);
+          setSelectedEdgeId(null);
+        }}
+        onLabelChange={handleLabelChange}
+        selectedEdge={edges.find((edge) => edge.id === selectedEdgeId) ?? null}
+        onEdgeUpdate={handleEdgeUpdate}
+        onEdgeDelete={handleEdgeDelete}
       />
+
       <Card>
         <CardHeader>
           <CardTitle>Experiment Flow</CardTitle>
@@ -531,37 +247,11 @@ export function NewExperimentFlow({
                 <div
                   className="h-[700px]"
                   onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const type = e.dataTransfer.getData("application/reactflow");
-                    if (!type) return;
-                    const bounds = e.currentTarget.getBoundingClientRect();
-                    const pos = { x: e.clientX - bounds.left, y: e.clientY - bounds.top };
-                    // For instruction, question, measurement, analysis: handles on both sides
-                    let sourcePosition: Position | undefined = undefined;
-                    let targetPosition: Position | undefined = undefined;
-                    if (["instruction", "question", "measurement", "analysis"].includes(type)) {
-                      sourcePosition = Position.Right;
-                      targetPosition = Position.Left;
-                    } else if (type === "input") {
-                      sourcePosition = Position.Right;
-                    }
-                    setNodes((nds) => [
-                      ...nds,
-                      {
-                        id: `node_${Date.now()}`,
-                        type,
-                        position: pos,
-                        ...(sourcePosition ? { sourcePosition } : {}),
-                        ...(targetPosition ? { targetPosition } : {}),
-                        data: { label: `${type.charAt(0).toUpperCase() + type.slice(1)} Node` },
-                      },
-                    ]);
-                  }}
+                  onDrop={handleDrop}
                 >
                   <ReactFlow
                     nodes={nodes}
-                    edges={edgesWithStyles}
+                    edges={styledEdges}
                     onNodesChange={onNodesChange}
                     onNodesDelete={onNodesDelete}
                     onEdgesChange={onEdgesChange}
@@ -569,6 +259,7 @@ export function NewExperimentFlow({
                     onEdgeClick={onEdgeClick}
                     onPaneClick={onPaneClick}
                     nodeTypes={nodeTypes}
+                    deleteKeyCode={[]}
                     fitView
                     defaultEdgeOptions={{
                       type: "smoothstep",
@@ -580,19 +271,7 @@ export function NewExperimentFlow({
             </Card>
 
             {/* Legend */}
-            <Card className="w-48">
-              <CardHeader>
-                <CardTitle>Legend</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                <LegendFlow
-                  nodeTypeColorMap={nodeTypeColorMap}
-                  selectedEdgeId={selectedEdgeId}
-                  edges={edges}
-                  setEdges={setEdges}
-                />
-              </CardContent>
-            </Card>
+            <LegendFlow />
           </div>
         </CardContent>
       </Card>
