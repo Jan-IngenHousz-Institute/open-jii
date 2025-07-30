@@ -11,21 +11,23 @@ import {
 } from "@xyflow/react";
 import type { NodeProps } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components";
 
 import { LegendFlow } from "../legend-flow";
 import { BaseNode } from "../react-flow/base-node";
-import { getInitialFlowData, createNewNode } from "../react-flow/initial-data";
+import { getInitialFlowData, createNewNode } from "../react-flow/flow-utils";
 import type { NodeType } from "../react-flow/node-config";
 import { ALL_NODE_TYPES, getStyledEdges } from "../react-flow/node-config";
 import { ExperimentSidePanel } from "../side-panel-flow/side-panel-flow";
 
 export function NewExperimentFlow({
   onNodeSelect,
+  onFlowStateChange,
 }: {
   onNodeSelect?: (node: Node | null) => void;
+  onFlowStateChange?: (nodes: Node[], edges: Edge[]) => void;
 }) {
   // State for selected edge and node
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
@@ -35,6 +37,13 @@ export function NewExperimentFlow({
   const { nodes: initialNodes, edges: initialEdges } = getInitialFlowData();
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Notify parent component when flow state changes
+  useEffect(() => {
+    if (onFlowStateChange) {
+      onFlowStateChange(nodes, edges);
+    }
+  }, [nodes, edges, onFlowStateChange]);
 
   // Delete logic and reconnection
   const onNodesDelete = useCallback(
@@ -65,7 +74,6 @@ export function NewExperimentFlow({
                   id: `${s}->${t}`,
                   source: s,
                   target: t,
-                  type: "smoothstep" as const,
                   markerEnd: { type: MarkerType.ArrowClosed },
                   animated: wasAnimated,
                 },
@@ -103,20 +111,20 @@ export function NewExperimentFlow({
     [onNodeSelect],
   );
 
-  // Handle node label changes
-  const handleLabelChange = useCallback(
-    (newLabel: string) => {
+  // Handle node title changes
+  const handleTitleChange = useCallback(
+    (newTitle: string) => {
       if (selectedNode) {
         setNodes((nds) =>
           nds.map((node) =>
             node.id === selectedNode.id
-              ? { ...node, data: { ...node.data, label: newLabel } }
+              ? { ...node, data: { ...node.data, title: newTitle } }
               : node,
           ),
         );
         // Update the selected node state to reflect the change
         setSelectedNode((prevNode) =>
-          prevNode ? { ...prevNode, data: { ...prevNode.data, label: newLabel } } : null,
+          prevNode ? { ...prevNode, data: { ...prevNode.data, title: newTitle } } : null,
         );
       }
     },
@@ -138,6 +146,20 @@ export function NewExperimentFlow({
       setSelectedEdgeId(null);
     },
     [setEdges],
+  );
+
+  // Handle node data changes (including stepSpecification)
+  const handleNodeDataChange = useCallback(
+    (nodeId: string, newData: Record<string, unknown>) => {
+      setNodes((nds) =>
+        nds.map((node) => (node.id === nodeId ? { ...node, data: newData } : node)),
+      );
+      // Update selected node if it's the one being changed
+      if (selectedNode && selectedNode.id === nodeId) {
+        setSelectedNode({ ...selectedNode, data: newData });
+      }
+    },
+    [setNodes, selectedNode],
   );
 
   // Create node wrapper component
@@ -171,7 +193,6 @@ export function NewExperimentFlow({
         target: params.target,
         sourceHandle: params.sourceHandle ?? null,
         targetHandle: params.targetHandle ?? null,
-        type: "smoothstep",
         animated: true,
         markerEnd: { type: MarkerType.ArrowClosed },
       };
@@ -217,15 +238,17 @@ export function NewExperimentFlow({
       {/* Side panel for nodes and edges */}
       <ExperimentSidePanel
         open={!!selectedNode || !!selectedEdgeId}
+        selectedNode={selectedNode}
         nodeType={selectedNode?.type}
-        nodeLabel={
-          typeof selectedNode?.data.label === "string" ? selectedNode.data.label : undefined
+        nodeTitle={
+          typeof selectedNode?.data.title === "string" ? selectedNode.data.title : undefined
         }
         onClose={() => {
           setSelectedNode(null);
           setSelectedEdgeId(null);
         }}
-        onLabelChange={handleLabelChange}
+        onTitleChange={handleTitleChange}
+        onNodeDataChange={handleNodeDataChange}
         selectedEdge={edges.find((edge) => edge.id === selectedEdgeId) ?? null}
         onEdgeUpdate={handleEdgeUpdate}
         onEdgeDelete={handleEdgeDelete}
@@ -260,9 +283,8 @@ export function NewExperimentFlow({
                     onPaneClick={onPaneClick}
                     nodeTypes={nodeTypes}
                     deleteKeyCode={[]}
-                    fitView
+                    defaultViewport={{ x: 50, y: 150, zoom: 1 }}
                     defaultEdgeOptions={{
-                      type: "smoothstep",
                       markerEnd: { type: MarkerType.ArrowClosed },
                     }}
                   />

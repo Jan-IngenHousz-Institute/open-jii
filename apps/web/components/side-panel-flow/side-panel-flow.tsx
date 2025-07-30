@@ -1,4 +1,4 @@
-import type { Edge } from "@xyflow/react";
+import type { Edge, Node } from "@xyflow/react";
 import React, { useState, useEffect } from "react";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
@@ -9,10 +9,12 @@ import { QuestionPanel } from "./question-panel";
 
 export interface ExperimentSidePanelProps {
   open: boolean;
+  selectedNode?: Node | null;
   nodeType?: string;
-  nodeLabel?: string;
+  nodeTitle?: string;
   onClose: () => void;
-  onLabelChange?: (newLabel: string) => void;
+  onTitleChange?: (newTitle: string) => void;
+  onNodeDataChange?: (nodeId: string, data: Record<string, unknown>) => void;
   selectedEdge?: Edge | null;
   onEdgeUpdate: (edgeId: string, updates: Partial<Edge>) => void;
   onEdgeDelete: (edgeId: string) => void;
@@ -20,23 +22,25 @@ export interface ExperimentSidePanelProps {
 
 export function ExperimentSidePanel({
   open,
+  selectedNode,
   nodeType,
-  nodeLabel,
+  nodeTitle,
   onClose,
-  onLabelChange,
+  onTitleChange,
+  onNodeDataChange,
   selectedEdge,
   onEdgeUpdate,
   onEdgeDelete,
 }: ExperimentSidePanelProps) {
   // Keep previous content during transition
   const [displayNodeType, setDisplayNodeType] = useState(nodeType);
-  const [currentLabel, setCurrentLabel] = useState(nodeLabel ?? "");
+  const [currentTitle, setCurrentTitle] = useState(nodeTitle ?? "");
 
-  const handleLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newLabel = e.target.value;
-    setCurrentLabel(newLabel);
-    if (onLabelChange) {
-      onLabelChange(newLabel);
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTitle = e.target.value;
+    setCurrentTitle(newTitle);
+    if (onTitleChange) {
+      onTitleChange(newTitle);
     }
   };
 
@@ -44,7 +48,7 @@ export function ExperimentSidePanel({
     if (open && nodeType) {
       // Immediately update content when opening
       setDisplayNodeType(nodeType);
-      setCurrentLabel(nodeLabel ?? "");
+      setCurrentTitle(nodeTitle ?? "");
     } else if (!open) {
       // Delay clearing content until transition ends (300ms)
       const timeout = setTimeout(() => {
@@ -52,7 +56,7 @@ export function ExperimentSidePanel({
       }, 300);
       return () => clearTimeout(timeout);
     }
-  }, [open, nodeType, nodeLabel]);
+  }, [open, nodeType, nodeTitle]);
 
   return (
     <>
@@ -84,7 +88,7 @@ export function ExperimentSidePanel({
           </button>
           <h2 className="text-jii-dark-green mb-4 text-xl font-bold">
             {displayNodeType
-              ? displayNodeType.charAt(0).toUpperCase() + displayNodeType.slice(1)
+              ? displayNodeType.charAt(0) + displayNodeType.slice(1).toLowerCase()
               : ""}{" "}
             Node Panel
           </h2>
@@ -98,23 +102,34 @@ export function ExperimentSidePanel({
               <input
                 id="node-label"
                 type="text"
-                value={currentLabel}
-                onChange={handleLabelChange}
-                placeholder="Enter node label..."
+                value={currentTitle}
+                onChange={handleTitleChange}
+                placeholder="Enter node title..."
                 className="focus:border-jii-dark-green focus:ring-jii-dark-green w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-opacity-50"
               />
             </CardContent>
           </Card>
 
           {/* InstructionPanel for instruction node */}
-          {displayNodeType === "instruction" && (
+          {displayNodeType === "INSTRUCTION" && selectedNode && (
             <InstructionPanel
-              value={""}
-              onChange={(val) => console.log("Instruction details changed:", val)}
+              value={
+                typeof selectedNode.data.description === "string"
+                  ? selectedNode.data.description
+                  : ""
+              }
+              onChange={(val) => {
+                if (onNodeDataChange) {
+                  onNodeDataChange(selectedNode.id, {
+                    ...selectedNode.data,
+                    description: val,
+                  });
+                }
+              }}
             />
           )}
           {/* QuestionPanel for question node */}
-          {displayNodeType === "question" && <QuestionPanel />}
+          {displayNodeType === "QUESTION" && <QuestionPanel />}
         </div>
       </div>
 

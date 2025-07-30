@@ -4,7 +4,7 @@ import React from "react";
 
 import { cn } from "@repo/ui/lib/utils";
 
-import { toPosition } from "./initial-data";
+import { toPosition } from "./flow-utils";
 import { nodeTypeColorMap } from "./node-config";
 import type { NodeType } from "./node-config";
 import { NodeContent } from "./node-content";
@@ -30,7 +30,7 @@ export const getHandlePositions = (src?: Position | string, tgt?: Position | str
 
 export function BaseNode(props: BaseNodeProps) {
   const { nodes, onNodeSelect, onNodeDelete, ...nodeProps } = props;
-  const { label } = nodeProps.data as { label: string };
+  const { title } = nodeProps.data as { title: string };
   const { sourcePosition, targetPosition } = nodeProps;
 
   const { hasInput, hasOutput, inputPosition, outputPosition } = getHandlePositions(
@@ -38,11 +38,7 @@ export function BaseNode(props: BaseNodeProps) {
     targetPosition,
   );
 
-  // Only allow delete if node is not input type
-  const isInputType = nodeProps.type === "input";
-
   const handleDelete = (e: React.MouseEvent) => {
-    if (isInputType) return;
     e.stopPropagation();
     onNodeDelete(nodeProps.id);
   };
@@ -63,19 +59,17 @@ export function BaseNode(props: BaseNodeProps) {
         tabIndex={0}
       >
         {/* Delete button removed for input type nodes */}
-        {!isInputType && (
-          <button
-            className={cn(
-              "pointer-events-auto absolute right-1 top-1 z-20 h-5 w-5 cursor-pointer rounded-full p-0 text-center text-xs leading-[18px] opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100",
-              (nodeProps.selected || nodeProps.dragging) && "opacity-100",
-            )}
-            title="Delete node"
-            onClick={handleDelete}
-            aria-label="Delete node"
-          >
-            <span className="text-[18px] font-bold leading-[18px]">×</span>
-          </button>
-        )}
+        <button
+          className={cn(
+            "pointer-events-auto absolute right-1 top-1 z-20 h-5 w-5 cursor-pointer rounded-full p-0 text-center text-xs leading-[18px] opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100",
+            (nodeProps.selected || nodeProps.dragging) && "opacity-100",
+          )}
+          title="Delete node"
+          onClick={handleDelete}
+          aria-label="Delete node"
+        >
+          <span className="text-[18px] font-bold leading-[18px]">×</span>
+        </button>
         <div className="node-hover-area absolute inset-0 z-[9] rounded-xl" />
         <div
           className={cn(
@@ -86,7 +80,7 @@ export function BaseNode(props: BaseNodeProps) {
           )}
         >
           <NodeContent
-            label={label}
+            title={title}
             nodeType={nodeProps.type as NodeType}
             hasInput={hasInput}
             hasOutput={hasOutput}

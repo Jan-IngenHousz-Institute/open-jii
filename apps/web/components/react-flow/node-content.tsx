@@ -8,7 +8,7 @@ import type { NodeType } from "./node-config";
 import { NodeHandles } from "./node-handles";
 
 interface NodeContentProps {
-  label: string;
+  title: string;
   nodeType: NodeType;
   hasInput: boolean;
   hasOutput: boolean;
@@ -19,7 +19,7 @@ interface NodeContentProps {
 }
 
 export function NodeContent({
-  label,
+  title,
   nodeType,
   hasInput,
   hasOutput,
@@ -49,9 +49,9 @@ export function NodeContent({
           <div className="text-center">
             <span
               className="text-md inline-block max-w-[250px] truncate font-medium text-slate-700"
-              title={label}
+              title={title}
             >
-              {label}
+              {title}
             </span>
           </div>
         </div>
