@@ -58,36 +58,50 @@ export class ExperimentFlowController {
               );
             }
 
-            // Get the mobile flow execution format first
-            const mobileFlowResult = await this.flowStepRepository.getMobileFlowExecution(
-              experiment.flowId,
-            );
-            if (mobileFlowResult.isFailure()) {
-              return failure(AppError.internal("Failed to get mobile flow execution"));
-            }
-
-            // Then get flow details
+            // Get flow details and steps
             const flowResult = await this.getFlowUseCase.execute(experiment.flowId);
             if (flowResult.isFailure()) {
               return failure(AppError.internal("Failed to get flow details"));
             }
 
-            const mobileFlow = mobileFlowResult.value;
+            // Get flow with connections for mobile format
+            const flowWithStepsResult = await this.flowStepRepository.getFlowWithConnections(
+              experiment.flowId,
+            );
+            if (flowWithStepsResult.isFailure()) {
+              return failure(AppError.internal("Failed to get flow steps"));
+            }
+
             const flow = flowResult.value;
+            const flowWithSteps = flowWithStepsResult.value;
 
             const flowName = flow.name;
             const flowDescription = flow.description ?? undefined;
 
+            // Convert to mobile format (simplified version)
+            const steps = flowWithSteps.steps.map((step) => ({
+              id: step.id,
+              type: step.type,
+              title: step.title,
+              description: step.description || null,
+              stepSpecification: step.stepSpecification,
+              nextStepIds: [], // Simplified - could be enhanced to use connections
+              isStartStep: step.isStartNode || false,
+              isEndStep: step.isEndNode || false,
+            }));
+
+            const startStep = steps.find((step) => step.isStartStep);
+
             const response = {
-              flowId: mobileFlow.flowId,
+              flowId: experiment.flowId,
               flowName,
               description: flowDescription,
-              steps: mobileFlow.steps,
-              startStepId: mobileFlow.startStepId,
+              steps,
+              startStepId: startStep?.id,
             };
 
             this.logger.log(
-              `Mobile flow retrieved for experiment ${params.id}: ${mobileFlow.steps.length} steps`,
+              `Mobile flow retrieved for experiment ${params.id}: ${steps.length} steps`,
             );
 
             return success(response);
