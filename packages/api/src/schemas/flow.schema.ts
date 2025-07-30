@@ -232,7 +232,8 @@ export const zSubmitStepResultResponse = z.object({
 });
 
 // Flow Builder Schemas (for web interface)
-export const zCreateFlowStepBody = z.object({
+// Base schema for creating flow steps (without stepSpecification)
+const zCreateFlowStepBodyBase = z.object({
   type: zStepType,
   title: z.string().optional(),
   description: z.string().optional(),
@@ -241,12 +242,42 @@ export const zCreateFlowStepBody = z.object({
   size: zSize.optional(),
   isStartNode: z.boolean().default(false),
   isEndNode: z.boolean().default(false),
+});
+
+// Discriminated union for creating flow steps with proper stepSpecification validation
+export const zCreateFlowStepBody = z.discriminatedUnion("type", [
+  zCreateFlowStepBodyBase.extend({
+    type: z.literal("INSTRUCTION"),
+    stepSpecification: zInstructionStep.optional(),
+  }),
+  zCreateFlowStepBodyBase.extend({
+    type: z.literal("QUESTION"),
+    stepSpecification: zQuestionStep.optional(),
+  }),
+  zCreateFlowStepBodyBase.extend({
+    type: z.literal("MEASUREMENT"),
+    stepSpecification: zMeasurementStep.optional(),
+  }),
+  zCreateFlowStepBodyBase.extend({
+    type: z.literal("ANALYSIS"),
+    stepSpecification: zAnalysisStep.optional(),
+  }),
+]);
+
+// Update schema for flow steps - simplified approach for partial updates
+export const zUpdateFlowStepBody = z.object({
+  type: zStepType.optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  media: z.array(z.string().url()).optional(),
+  position: zPosition.optional(),
+  size: zSize.optional(),
+  isStartNode: z.boolean().optional(),
+  isEndNode: z.boolean().optional(),
   stepSpecification: z
     .union([zInstructionStep, zQuestionStep, zMeasurementStep, zAnalysisStep])
     .optional(),
 });
-
-export const zUpdateFlowStepBody = zCreateFlowStepBody.partial();
 
 export const zUpdateFlowStepPositionsBody = z.object({
   steps: z.array(
@@ -276,8 +307,8 @@ export const zCreateFlowWithStepsBody = z.object({
   connections: z
     .array(
       z.object({
-        sourceStepId: z.string().uuid(),
-        targetStepId: z.string().uuid(),
+        sourceStepId: z.string(), // Uses temporary IDs during creation, backend will assign real UUIDs
+        targetStepId: z.string(), // Uses temporary IDs during creation, backend will assign real UUIDs
         type: z.string().optional().default("default"),
         animated: z.boolean().optional().default(false),
         label: z.string().optional(),

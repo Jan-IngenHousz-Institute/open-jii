@@ -12,20 +12,17 @@ interface Question {
 interface QuestionCardProps {
   question: Question;
   index: number;
-  onUpdateText: (questionId: number, text: string) => void;
+  onUpdateText: (text: string) => void;
   onToggleType: (questionId: number) => void;
-  onDeleteQuestion: (questionId: number) => void;
   onAddAnswer: (questionId: number) => void;
-  onUpdateAnswer: (questionId: number, answerIndex: number, text: string) => void;
+  onUpdateAnswer: (answerIndex: number, text: string) => void;
   onDeleteAnswer: (questionId: number, answerIndex: number) => void;
 }
 
 export function QuestionCard({
   question,
-  index,
   onUpdateText,
   onToggleType,
-  onDeleteQuestion,
   onAddAnswer,
   onUpdateAnswer,
   onDeleteAnswer,
@@ -36,37 +33,12 @@ export function QuestionCard({
       <div className="from-jii-dark-green to-jii-medium-green absolute left-0 top-0 h-full w-1 bg-gradient-to-b"></div>
 
       <CardContent className="p-6 pl-8">
-        {/* Header */}
-        <div className="mb-6 flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-700">
-              {index + 1}
-            </div>
-            <span className="text-sm font-medium text-gray-500">Question</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => onDeleteQuestion(question.id)}
-            className="rounded-lg p-2 text-gray-400 opacity-100 transition-all hover:bg-red-50 hover:text-red-500 md:opacity-0 md:group-hover:opacity-100"
-            title="Delete question"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
         {/* Question Input */}
         <div className="mb-6">
           <input
             type="text"
             value={question.text}
-            onChange={(e) => onUpdateText(question.id, e.target.value)}
+            onChange={(e) => onUpdateText(e.target.value)}
             placeholder="What would you like to ask?"
             className="focus:border-jii-dark-green w-full border-0 border-b-2 border-gray-100 bg-transparent px-0 py-3 text-lg font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-0"
           />
@@ -126,7 +98,7 @@ export function QuestionCard({
                     <input
                       type="text"
                       value={answer}
-                      onChange={(e) => onUpdateAnswer(question.id, answerIndex, e.target.value)}
+                      onChange={(e) => onUpdateAnswer(answerIndex, e.target.value)}
                       placeholder="Enter an answer option"
                       className="focus:border-jii-dark-green focus:ring-jii-dark-green/20 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 transition-colors focus:bg-white focus:outline-none focus:ring-2"
                     />
