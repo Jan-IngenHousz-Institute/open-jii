@@ -1,10 +1,18 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { eq, and, asc, flowSteps, flowStepConnections } from "@repo/database";
+import { eq, and, asc, inArray, flows, flowSteps, flowStepConnections } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, AppError, tryCatch, success } from "../../../../common/utils/fp-utils";
-import { CreateFlowStepDto, UpdateFlowStepDto, FlowStepDto } from "../models/flow.model";
+import {
+  CreateFlowStepDto,
+  UpdateFlowStepDto,
+  FlowStepDto,
+  CreateFlowWithStepsDto,
+  UpdateFlowWithStepsDto,
+  FlowWithGraphDto,
+} from "../models/flow.model";
+import { FlowRepository } from "./flow.repository";
 
 export class FlowStepRepositoryError extends AppError {
   constructor(message: string, cause?: unknown) {
@@ -17,6 +25,7 @@ export class FlowStepRepository {
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
+    private readonly flowRepository: FlowRepository,
   ) {}
 
   async create(
@@ -33,7 +42,7 @@ export class FlowStepRepository {
           stepSpecification: createFlowStepDto.stepSpecification ?? null,
         })
         .returning(),
-    ).then((result) => result.map((rows) => rows as unknown as FlowStepDto[]));
+    );
   }
 
   async findByFlowId(flowId: string) {
@@ -154,68 +163,239 @@ export class FlowStepRepository {
     });
   }
 
-  // Mobile-specific method: Get flow as sequential execution format
-  async getMobileFlowExecution(flowId: string): Promise<
-    Result<{
-      flowId: string;
-      steps: {
-        id: string;
-        type: "INSTRUCTION" | "QUESTION" | "MEASUREMENT" | "ANALYSIS";
-        title?: string;
-        description?: string;
-        media?: string[];
-        stepSpecification?: Record<string, unknown>;
-        nextStepIds: string[];
-        isStartStep: boolean;
-        isEndStep: boolean;
-      }[];
-      startStepId?: string;
-    }>
-  > {
-    const flowWithConnectionsResult = await this.getFlowWithConnections(flowId);
+  // Bulk operations for React Flow frontend integration
+  async createFlowWithSteps(
+    createFlowWithStepsDto: CreateFlowWithStepsDto,
+    userId: string,
+  ): Promise<Result<FlowWithGraphDto>> {
+    return tryCatch(async () => {
+      return await this.database.transaction(async (tx) => {
+        // 1. Create the flow
+        const [flow] = await tx
+          .insert(flows)
+          .values({
+            name: createFlowWithStepsDto.name,
+            description: createFlowWithStepsDto.description,
+            version: createFlowWithStepsDto.version ?? 1,
+            isActive: createFlowWithStepsDto.isActive ?? true,
+            createdBy: userId,
+          })
+          .returning();
 
-    return flowWithConnectionsResult.map(({ steps, connections }) => {
-      // Build adjacency map from connections
-      const adjacencyMap = new Map<string, string[]>();
-      const incomingMap = new Map<string, string[]>();
+        // 2. Create all steps with temporary ID mapping
+        const createdSteps = await tx
+          .insert(flowSteps)
+          .values(
+            (createFlowWithStepsDto.steps as any[]).map((step: any) => ({
+              ...step,
+              flowId: flow.id,
+              stepSpecification: step.stepSpecification ?? null,
+            })),
+          )
+          .returning();
 
-      connections.forEach((conn: any) => {
-        if (!adjacencyMap.has(conn.sourceStepId)) {
-          adjacencyMap.set(conn.sourceStepId, []);
+        // 3. Create connections if provided, mapping temporary step IDs to real ones
+        let createdConnections: any[] = [];
+        if (createFlowWithStepsDto.connections && createFlowWithStepsDto.connections.length > 0) {
+          // Create a mapping from temporary step IDs (like "temp-step-1") to real step IDs
+          const stepIdMap = new Map<string, string>();
+          (createFlowWithStepsDto.steps as any[]).forEach((step: any, index: number) => {
+            // Map temp-step-1, temp-step-2, etc. to actual step IDs
+            stepIdMap.set(`temp-step-${index + 1}`, createdSteps[index].id);
+            // Also map any custom step IDs that might be in the step data
+            if (step.id && typeof step.id === 'string' && step.id.startsWith('temp-')) {
+              stepIdMap.set(step.id, createdSteps[index].id);
+            }
+          });
+
+          createdConnections = await tx
+            .insert(flowStepConnections)
+            .values(
+              (createFlowWithStepsDto.connections as any[]).map((conn: any) => ({
+                ...conn,
+                flowId: flow.id,
+                sourceStepId: stepIdMap.get(conn.sourceStepId) ?? conn.sourceStepId,
+                targetStepId: stepIdMap.get(conn.targetStepId) ?? conn.targetStepId,
+                type: conn.type ?? "default",
+                animated: conn.animated ?? false,
+                priority: conn.priority ?? 0,
+              })),
+            )
+            .returning();
         }
-        adjacencyMap.get(conn.sourceStepId)!.push(conn.targetStepId);
 
-        if (!incomingMap.has(conn.targetStepId)) {
-          incomingMap.set(conn.targetStepId, []);
-        }
-        incomingMap.get(conn.targetStepId)!.push(conn.sourceStepId);
+        return {
+          ...flow,
+          steps: createdSteps as unknown as FlowStepDto[],
+          connections: createdConnections,
+        } as FlowWithGraphDto;
       });
+    });
+  }
 
-      // Find start step (no incoming connections or marked as start)
-      const startStep = steps.find(
-        (step: any) =>
-          step.isStartNode ?? !incomingMap.has(step.id) ?? incomingMap.get(step.id)!.length === 0,
-      );
+  async updateFlowWithSteps(
+    flowId: string,
+    updateFlowWithStepsDto: UpdateFlowWithStepsDto,
+  ): Promise<Result<FlowWithGraphDto>> {
+    return tryCatch(async () => {
+      return await this.database.transaction(async (tx) => {
+        let updatedFlow;
 
-      // Convert to mobile format
-      const mobileSteps = steps.map((step: any) => ({
-        id: step.id,
-        type: step.type,
-        title: step.title ?? undefined,
-        description: step.description ?? undefined,
-        media: (step.media as string[]) ?? undefined,
-        stepSpecification: step.stepSpecification as Record<string, unknown> | undefined,
-        nextStepIds: adjacencyMap.get(step.id) ?? [],
-        isStartStep: step.isStartNode ?? step.id === startStep?.id,
-        isEndStep:
-          step.isEndNode ?? !adjacencyMap.has(step.id) ?? adjacencyMap.get(step.id)!.length === 0,
-      }));
+        // 1. Update flow if provided
+        if (updateFlowWithStepsDto.flow) {
+          const updatedFlows = await tx
+            .update(flows)
+            .set({
+              ...updateFlowWithStepsDto.flow,
+              updatedAt: new Date(),
+            })
+            .where(eq(flows.id, flowId))
+            .returning();
 
-      return {
-        flowId,
-        steps: mobileSteps,
-        startStepId: startStep?.id,
-      };
+          if (updatedFlows.length === 0) {
+            throw AppError.notFound("Flow not found");
+          }
+
+          updatedFlow = updatedFlows[0];
+        } else {
+          // Get existing flow
+          const existingFlows = await tx.select().from(flows).where(eq(flows.id, flowId)).limit(1);
+
+          if (existingFlows.length === 0) {
+            throw AppError.notFound("Flow not found");
+          }
+
+          updatedFlow = existingFlows[0];
+        }
+
+        // 2. Handle step operations
+        // Initialize step ID mapping for placeholder IDs like "new-step-id"
+        const stepIdMap = new Map<string, string>();
+
+        if (updateFlowWithStepsDto.steps) {
+          // Delete steps if specified
+          if (
+            updateFlowWithStepsDto.steps.delete &&
+            updateFlowWithStepsDto.steps.delete.length > 0
+          ) {
+            await tx
+              .delete(flowSteps)
+              .where(
+                and(
+                  eq(flowSteps.flowId, flowId),
+                  inArray(flowSteps.id, updateFlowWithStepsDto.steps.delete),
+                ),
+              );
+          }
+
+          // Create new steps if specified and build mapping for placeholder IDs
+          if (
+            updateFlowWithStepsDto.steps.create &&
+            updateFlowWithStepsDto.steps.create.length > 0
+          ) {
+            const createdSteps = await tx
+              .insert(flowSteps)
+              .values(
+                (updateFlowWithStepsDto.steps.create as any[]).map((step: any) => ({
+                  ...step,
+                  flowId,
+                  stepSpecification: step.stepSpecification ?? null,
+                })),
+              )
+              .returning();
+
+            // Map "new-step-id" to the first created step's ID
+            // (this is a simple approach - could be enhanced for multiple new steps)
+            if (createdSteps.length > 0) {
+              stepIdMap.set("new-step-id", createdSteps[0].id);
+            }
+          }
+
+          // Update existing steps if specified
+          if (
+            updateFlowWithStepsDto.steps.update &&
+            updateFlowWithStepsDto.steps.update.length > 0
+          ) {
+            for (const stepUpdate of updateFlowWithStepsDto.steps.update) {
+              const { id, ...updateData } = stepUpdate as any;
+              await tx
+                .update(flowSteps)
+                .set({
+                  ...updateData,
+                  stepSpecification: updateData.stepSpecification ?? null,
+                  updatedAt: new Date(),
+                })
+                .where(and(eq(flowSteps.flowId, flowId), eq(flowSteps.id, id as string)));
+            }
+          }
+        }
+
+        // 3. Handle connection operations
+        if (updateFlowWithStepsDto.connections) {
+          // Delete connections if specified
+          if (
+            updateFlowWithStepsDto.connections.delete &&
+            updateFlowWithStepsDto.connections.delete.length > 0
+          ) {
+            await tx
+              .delete(flowStepConnections)
+              .where(inArray(flowStepConnections.id, updateFlowWithStepsDto.connections.delete));
+          }
+
+          // Create new connections if specified (with step ID mapping)
+          if (
+            updateFlowWithStepsDto.connections.create &&
+            updateFlowWithStepsDto.connections.create.length > 0
+          ) {
+            await tx.insert(flowStepConnections).values(
+              (updateFlowWithStepsDto.connections.create as any[]).map((conn: any) => ({
+                ...conn,
+                flowId,
+                sourceStepId: stepIdMap.get(conn.sourceStepId) ?? conn.sourceStepId,
+                targetStepId: stepIdMap.get(conn.targetStepId) ?? conn.targetStepId,
+                type: conn.type ?? "default",
+                animated: conn.animated ?? false,
+                priority: conn.priority ?? 0,
+              })),
+            );
+          }
+
+          // Update existing connections if specified
+          if (
+            updateFlowWithStepsDto.connections.update &&
+            updateFlowWithStepsDto.connections.update.length > 0
+          ) {
+            for (const connUpdate of updateFlowWithStepsDto.connections.update) {
+              const { id, ...updateData } = connUpdate as any;
+              await tx
+                .update(flowStepConnections)
+                .set({
+                  ...updateData,
+                  updatedAt: new Date(),
+                })
+                .where(eq(flowStepConnections.id, id as string));
+            }
+          }
+        }
+
+        // 4. Get final state with all steps and connections
+        const finalSteps = await tx
+          .select()
+          .from(flowSteps)
+          .where(eq(flowSteps.flowId, flowId))
+          .orderBy(asc(flowSteps.createdAt));
+
+        const finalConnections = await tx
+          .select()
+          .from(flowStepConnections)
+          .where(eq(flowStepConnections.flowId, flowId));
+
+        return {
+          ...updatedFlow,
+          steps: finalSteps as unknown as FlowStepDto[],
+          connections: finalConnections,
+        } as FlowWithGraphDto;
+      });
     });
   }
 }

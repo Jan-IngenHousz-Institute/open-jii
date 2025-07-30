@@ -11,6 +11,9 @@ import {
   zUpdateFlowStepPositionsBody,
   zMobileFlowExecution,
   zFlowStepPathParam,
+  zCreateFlowWithStepsBody,
+  zUpdateFlowWithStepsBody,
+  zFlowWithGraph,
 } from "../schemas/flow.schema";
 
 const c = initContract();
@@ -173,5 +176,34 @@ export const flowContract = c.router({
     },
     summary: "Get mobile flow execution format",
     description: "Returns the complete flow in a mobile-friendly sequential format",
+  },
+
+  // Bulk operations for React Flow frontend
+  createFlowWithSteps: {
+    method: "POST",
+    path: "/api/v1/flows/bulk",
+    body: zCreateFlowWithStepsBody,
+    responses: {
+      201: zFlowWithGraph,
+      400: zErrorResponse,
+    },
+    summary: "Create flow with steps and connections",
+    description:
+      "Creates a complete flow with all its steps and connections in a single operation. Designed for React Flow frontend integration.",
+  },
+
+  updateFlowWithSteps: {
+    method: "PATCH",
+    path: "/api/v1/flows/:id/bulk",
+    pathParams: zIdPathParam,
+    body: zUpdateFlowWithStepsBody,
+    responses: {
+      200: zFlowWithGraph,
+      400: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Update flow with bulk step operations",
+    description:
+      "Performs bulk operations (create, update, delete) on flow steps and connections in a single transaction. Designed for React Flow frontend integration.",
   },
 });

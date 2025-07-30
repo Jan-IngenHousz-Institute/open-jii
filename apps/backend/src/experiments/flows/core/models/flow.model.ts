@@ -110,3 +110,30 @@ export const stepExecutionResultSchema = z.discriminatedUnion("type", [
 ]);
 
 export type StepExecutionResult = z.infer<typeof stepExecutionResultSchema>;
+
+// Bulk operations schemas
+export const createFlowWithStepsSchema = createFlowSchema.extend({
+  steps: z.array(createFlowStepSchema),
+  connections: z.array(createFlowStepConnectionSchema.omit({ flowId: true })).optional(),
+});
+
+export const updateFlowWithStepsSchema = z.object({
+  flow: updateFlowSchema.optional(),
+  steps: z
+    .object({
+      create: z.array(createFlowStepSchema).optional(),
+      update: z.array(updateFlowStepSchema.extend({ id: z.string().uuid() })).optional(),
+      delete: z.array(z.string().uuid()).optional(),
+    })
+    .optional(),
+  connections: z
+    .object({
+      create: z.array(createFlowStepConnectionSchema.omit({ flowId: true })).optional(),
+      update: z.array(updateFlowStepConnectionSchema.extend({ id: z.string().uuid() })).optional(),
+      delete: z.array(z.string().uuid()).optional(),
+    })
+    .optional(),
+});
+
+export type CreateFlowWithStepsDto = z.infer<typeof createFlowWithStepsSchema>;
+export type UpdateFlowWithStepsDto = z.infer<typeof updateFlowWithStepsSchema>;

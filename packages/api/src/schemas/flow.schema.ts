@@ -264,6 +264,91 @@ export const zFlowStepPathParam = z.object({
   stepId: z.string().uuid().describe("ID of the flow step"),
 });
 
+// Bulk Operations Schemas
+export const zCreateFlowWithStepsBody = z.object({
+  // Flow fields
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+  version: z.number().int().positive().optional().default(1),
+  isActive: z.boolean().optional().default(true),
+  // Steps and connections
+  steps: z.array(zCreateFlowStepBody),
+  connections: z
+    .array(
+      z.object({
+        sourceStepId: z.string().uuid(),
+        targetStepId: z.string().uuid(),
+        type: z.string().optional().default("default"),
+        animated: z.boolean().optional().default(false),
+        label: z.string().optional(),
+        condition: z.record(z.unknown()).optional(),
+        priority: z.number().optional().default(0),
+      }),
+    )
+    .optional(),
+});
+
+export const zUpdateFlowWithStepsBody = z.object({
+  flow: z
+    .object({
+      name: z.string().min(1).max(255).optional(),
+      description: z.string().optional(),
+      version: z.number().int().positive().optional(),
+      isActive: z.boolean().optional(),
+    })
+    .optional(),
+  steps: z
+    .object({
+      create: z.array(zCreateFlowStepBody).optional(),
+      update: z
+        .array(
+          zUpdateFlowStepBody.extend({
+            id: z.string().uuid(),
+          }),
+        )
+        .optional(),
+      delete: z.array(z.string().uuid()).optional(),
+    })
+    .optional(),
+  connections: z
+    .object({
+      create: z
+        .array(
+          z.object({
+            sourceStepId: z.string().uuid(),
+            targetStepId: z.string().uuid(),
+            type: z.string().optional().default("default"),
+            animated: z.boolean().optional().default(false),
+            label: z.string().optional(),
+            condition: z.record(z.unknown()).optional(),
+            priority: z.number().optional().default(0),
+          }),
+        )
+        .optional(),
+      update: z
+        .array(
+          z.object({
+            id: z.string().uuid(),
+            sourceStepId: z.string().uuid().optional(),
+            targetStepId: z.string().uuid().optional(),
+            type: z.string().optional(),
+            animated: z.boolean().optional(),
+            label: z.string().optional(),
+            condition: z.record(z.unknown()).optional(),
+            priority: z.number().optional(),
+          }),
+        )
+        .optional(),
+      delete: z.array(z.string().uuid()).optional(),
+    })
+    .optional(),
+});
+
+export const zFlowWithGraph = zFlow.extend({
+  steps: z.array(zFlowStep),
+  connections: z.array(zFlowStepConnection),
+});
+
 // Type Exports
 export type StepType = z.infer<typeof zStepType>;
 export type AnswerType = z.infer<typeof zAnswerType>;
@@ -287,3 +372,6 @@ export type UpdateFlowStepBody = z.infer<typeof zUpdateFlowStepBody>;
 export type UpdateFlowStepPositionsBody = z.infer<typeof zUpdateFlowStepPositionsBody>;
 export type FlowStepPathParam = z.infer<typeof zFlowStepPathParam>;
 export type MobileFlowExecution = z.infer<typeof zMobileFlowExecution>;
+export type CreateFlowWithStepsBody = z.infer<typeof zCreateFlowWithStepsBody>;
+export type UpdateFlowWithStepsBody = z.infer<typeof zUpdateFlowWithStepsBody>;
+export type FlowWithGraph = z.infer<typeof zFlowWithGraph>;
