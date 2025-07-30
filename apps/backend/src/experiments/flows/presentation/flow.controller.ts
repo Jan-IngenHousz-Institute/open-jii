@@ -11,9 +11,11 @@ import { formatDates, formatDatesList } from "../../../common/utils/date-formatt
 import { handleFailure } from "../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../core/repositories/experiment.repository";
 import { CreateFlowStepUseCase } from "../application/use-cases/create-flow-step/create-flow-step";
+import { CreateFlowWithStepsUseCase } from "../application/use-cases/create-flow-with-steps/create-flow-with-steps";
 import { CreateFlowUseCase } from "../application/use-cases/create-flow/create-flow";
 import { GetFlowUseCase } from "../application/use-cases/get-flow/get-flow";
 import { ListFlowsUseCase } from "../application/use-cases/list-flows/list-flows";
+import { UpdateFlowWithStepsUseCase } from "../application/use-cases/update-flow-with-steps/update-flow-with-steps";
 
 @Controller()
 @UseGuards(AuthGuard)
@@ -25,6 +27,8 @@ export class FlowController {
     private readonly getFlowUseCase: GetFlowUseCase,
     private readonly listFlowsUseCase: ListFlowsUseCase,
     private readonly createFlowStepUseCase: CreateFlowStepUseCase,
+    private readonly createFlowWithStepsUseCase: CreateFlowWithStepsUseCase,
+    private readonly updateFlowWithStepsUseCase: UpdateFlowWithStepsUseCase,
     private readonly experimentRepository: ExperimentRepository,
   ) {}
 
@@ -239,6 +243,87 @@ export class FlowController {
         status: StatusCodes.OK as const,
         body: reactFlowSteps,
       };
+    });
+  }
+
+  @TsRestHandler(contract.flows.createFlowWithSteps)
+  createFlowWithSteps(@CurrentUser() user: SessionUser) {
+    return tsRestHandler(contract.flows.createFlowWithSteps, async ({ body }) => {
+      const result = await this.createFlowWithStepsUseCase.execute(body, user.id);
+
+      if (result.isSuccess()) {
+        const flowWithGraph = result.value;
+        this.logger.log(`Flow with steps created: ${flowWithGraph.id} by user ${user.id}`);
+        return {
+          status: StatusCodes.CREATED as const,
+          body: formatDates({
+            ...flowWithGraph,
+            description: flowWithGraph.description ?? undefined,
+          }),
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.flows.updateFlowWithSteps)
+  updateFlowWithSteps(@CurrentUser() user: SessionUser) {
+    return tsRestHandler(contract.flows.updateFlowWithSteps, async ({ params, body }) => {
+      // Find experiment that owns this flow and check admin access
+      const experimentResult = await this.experimentRepository.findByFlowId(params.id);
+
+      if (experimentResult.isFailure()) {
+        return handleFailure(experimentResult, this.logger);
+      }
+
+      const experiment = experimentResult.value;
+
+      if (experiment) {
+        const accessResult = await this.experimentRepository.checkAccess(experiment.id, user.id);
+
+        if (accessResult.isFailure()) {
+          return handleFailure(accessResult, this.logger);
+        }
+
+        const { hasAccess, isAdmin } = accessResult.value;
+
+        if (!hasAccess) {
+          return {
+            status: StatusCodes.FORBIDDEN,
+            body: {
+              message: "Access denied to this experiment",
+              code: "ACCESS_DENIED",
+            },
+          };
+        }
+
+        if (!isAdmin) {
+          return {
+            status: StatusCodes.FORBIDDEN,
+            body: {
+              message: "Only experiment admins can update flow steps",
+              code: "ADMIN_REQUIRED",
+            },
+          };
+        }
+      }
+
+      const result = await this.updateFlowWithStepsUseCase.execute(params.id, body);
+
+      if (result.isSuccess()) {
+        const flowWithGraph = result.value;
+        this.logger.log(`Flow with steps updated: ${flowWithGraph.id} by user ${user.id}`);
+        return {
+          status: StatusCodes.OK as const,
+          body: formatDates({
+            ...flowWithGraph,
+            description: flowWithGraph.description ?? undefined,
+          }),
+        };
+      }
+
+      return handleFailure(result, this.logger);
     });
   }
 }
