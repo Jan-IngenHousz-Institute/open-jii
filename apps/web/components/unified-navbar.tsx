@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Session } from "@repo/auth/config";
+import type { Session } from "@repo/auth/types";
 import type { Locale } from "@repo/i18n";
 import {
   Avatar,

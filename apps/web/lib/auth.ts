@@ -2,6 +2,7 @@
 /* eslint-disable no-restricted-properties */
 import { initAuth } from "@repo/auth/next";
 import type { NextAuth, NextAuthResult } from "@repo/auth/next";
+import "@repo/auth/types";
 
 import type { SecretMap } from "./secrets";
 import { getSecret, isLambdaEnvironment } from "./secrets";
