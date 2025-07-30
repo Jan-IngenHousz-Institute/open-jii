@@ -47,6 +47,7 @@ export class ExperimentRepository {
       status: experiments.status,
       visibility: experiments.visibility,
       embargoIntervalDays: experiments.embargoIntervalDays,
+      flowId: experiments.flowId,
       createdAt: experiments.createdAt,
       createdBy: experiments.createdBy,
       updatedAt: experiments.updatedAt,
@@ -181,6 +182,7 @@ export class ExperimentRepository {
         status: experiments.status,
         visibility: experiments.visibility,
         embargoIntervalDays: experiments.embargoIntervalDays,
+        flowId: experiments.flowId,
         createdAt: experiments.createdAt,
         createdBy: experiments.createdBy,
         updatedAt: experiments.updatedAt,
@@ -211,6 +213,18 @@ export class ExperimentRepository {
       const isAdmin = memberRole === "admin";
 
       return { experiment, hasAccess: isMember, isAdmin };
+    });
+  }
+
+  async findByFlowId(flowId: string): Promise<Result<ExperimentDto | null>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select()
+        .from(experiments)
+        .where(eq(experiments.flowId, flowId))
+        .limit(1);
+
+      return result.length === 0 ? null : result[0];
     });
   }
 }

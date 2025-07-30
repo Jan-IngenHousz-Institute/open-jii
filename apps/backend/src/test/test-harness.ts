@@ -9,6 +9,7 @@ import { resolve } from "path";
 import request from "supertest";
 import type { Response } from "supertest";
 import type { App } from "supertest/types";
+import type { ZodType } from "zod";
 
 import * as authExpress from "@repo/auth/express";
 import type { DatabaseInstance } from "@repo/database";
@@ -20,9 +21,30 @@ import {
   profiles,
   protocols,
   experimentProtocols,
+  flows,
+  flowSteps,
+  eq,
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
+
+// Type utility for extracting response types from contract endpoints
+interface ContractEndpoint {
+  responses: Record<number, any>;
+}
+
+type ResponseType<
+  T extends ContractEndpoint,
+  Status extends keyof T["responses"],
+> = T["responses"][Status] extends { _output: infer U }
+  ? U
+  : T["responses"][Status] extends {
+        _def: { typeName: "ZodType"; innerType: { _output: infer U } };
+      }
+    ? U
+    : T["responses"][Status] extends ZodType<infer U>
+      ? U
+      : T["responses"][Status];
 
 // Ensure test environment is loaded
 config({ path: resolve(__dirname, "../../.env.test") });
@@ -124,6 +146,8 @@ export class TestHarness {
     await this.database.delete(experimentMembers).execute();
     await this.database.delete(experiments).execute();
     await this.database.delete(protocols).execute();
+    await this.database.delete(flowSteps).execute(); // Delete flow steps first
+    await this.database.delete(flows).execute(); // Then flows
     await this.database.delete(profiles).execute();
     await this.database.delete(users).execute();
   }
@@ -183,6 +207,28 @@ export class TestHarness {
   public patch: ReturnType<typeof this.request> = this.request("patch");
   public delete: ReturnType<typeof this.request> = this.request("delete");
 
+  // Contract-aware request method
+  public contractRequest<T extends ContractEndpoint, Status extends number = 200>(
+    endpoint: T,
+    url: string,
+  ) {
+    const method = (endpoint as any).method?.toLowerCase() as "get" | "post" | "patch" | "delete";
+    const req = this[method](url);
+
+    return {
+      withAuth: (userId: string) => ({
+        expect: (status: Status) =>
+          req.withAuth(userId).expect(status) as Promise<
+            SuperTestResponse<ResponseType<T, Status>>
+          >,
+      }),
+      withoutAuth: () => ({
+        expect: (status: Status) =>
+          req.withoutAuth().expect(status) as Promise<SuperTestResponse<ResponseType<T, Status>>>,
+      }),
+    };
+  }
+
   public get module() {
     if (!this._module) {
       throw new Error("Call setup() before accessing the module.");
@@ -218,6 +264,7 @@ export class TestHarness {
     status?: "provisioning" | "provisioning_failed" | "active" | "stale" | "archived" | "published";
     visibility?: "private" | "public";
     embargoIntervalDays?: number;
+    flowId?: string;
   }) {
     const [experiment] = await this.database
       .insert(experiments)
@@ -240,20 +287,59 @@ export class TestHarness {
    * Helper to create an experiment membership
    */
   public async addExperimentMember(
-    experimentId: string,
-    userId: string,
+    data:
+      | {
+          experimentId: string;
+          userId: string;
+          role: "admin" | "member";
+        }
+      | string,
+    userId?: string,
     role: "admin" | "member" = "member",
   ) {
+    // Support both object and parameter calling styles for backward compatibility
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const params = typeof data === "string" ? { experimentId: data, userId: userId!, role } : data;
+
     const [membership] = await this.database
       .insert(experimentMembers)
       .values({
-        experimentId,
-        userId,
-        role,
+        experimentId: params.experimentId,
+        userId: params.userId,
+        role: params.role,
       })
       .returning();
 
     return membership;
+  }
+
+  /**
+   * Helper to update an experiment
+   */
+  public async updateExperiment(data: {
+    experimentId: string;
+    updates: {
+      name?: string;
+      description?: string;
+      status?:
+        | "provisioning"
+        | "provisioning_failed"
+        | "active"
+        | "stale"
+        | "archived"
+        | "published";
+      visibility?: "private" | "public";
+      embargoIntervalDays?: number;
+      flowId?: string;
+    };
+  }) {
+    const [experiment] = await this.database
+      .update(experiments)
+      .set(data.updates)
+      .where(eq(experiments.id, data.experimentId))
+      .returning();
+
+    return experiment;
   }
 
   /**
