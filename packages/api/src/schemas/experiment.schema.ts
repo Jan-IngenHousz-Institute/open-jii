@@ -67,6 +67,7 @@ export const zExperiment = z.object({
   status: zExperimentStatus,
   visibility: zExperimentVisibility,
   embargoIntervalDays: z.number().int(),
+  flowId: z.string().uuid().nullable(),
   createdBy: z.string().uuid(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -111,6 +112,7 @@ export const zCreateExperimentBody = z.object({
   status: zExperimentStatus.optional().describe("Initial status of the experiment"),
   visibility: zExperimentVisibility.optional().describe("Experiment visibility setting"),
   embargoIntervalDays: z.number().int().positive().optional().describe("Embargo period in days"),
+  flowId: z.string().uuid().optional().describe("Optional flow to associate with the experiment"),
   members: z
     .array(
       z.object({
@@ -139,6 +141,7 @@ export const zUpdateExperimentBody = z.object({
   status: zExperimentStatus.optional().describe("Updated experiment status"),
   visibility: zExperimentVisibility.optional().describe("Updated visibility setting"),
   embargoIntervalDays: z.number().int().optional().describe("Updated embargo period in days"),
+  flowId: z.string().uuid().optional().describe("Updated flow association"),
 });
 
 export const zAddExperimentMembersBody = z.object({
