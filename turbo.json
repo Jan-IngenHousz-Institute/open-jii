@@ -25,6 +25,9 @@
     "check-types": {
       "dependsOn": ["^check-types"]
     },
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
+    },
     "dev": {
       "env": ["NEXT_PUBLIC_ENABLE_DEVTOOLS"],
       "cache": false,
