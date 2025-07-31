@@ -54,5 +54,8 @@
       "react": "catalog:react19",
       "react-dom": "catalog:react19"
     }
+  },
+  "dependencies": {
+    "jest-environment-jsdom": "^30.0.5"
   }
 }
