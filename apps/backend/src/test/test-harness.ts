@@ -167,7 +167,7 @@ export class TestHarness {
   // Mock the auth session for testing
   private mockUserSession(userId: string) {
     jest.spyOn(authExpress, "getSession").mockResolvedValue({
-      user: { id: userId, name: "Test User", email: "test@example.com" },
+      user: { id: userId, name: "Test User", email: "test@example.com", registered: true },
       expires: new Date(Date.now() + 60 * 1000).toISOString(),
     });
   }

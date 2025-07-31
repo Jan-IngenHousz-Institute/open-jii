@@ -9,6 +9,7 @@ import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
+import { CreateUserProfileUseCase } from "../application/use-cases/create-user-profile/create-user-profile";
 import { GetUserUseCase } from "../application/use-cases/get-user/get-user";
 import { SearchUsersUseCase } from "../application/use-cases/search-users/search-users";
 
@@ -18,6 +19,7 @@ export class UserController {
   private readonly logger = new Logger(UserController.name);
 
   constructor(
+    private readonly createUserProfileUseCase: CreateUserProfileUseCase,
     private readonly searchUsersUseCase: SearchUsersUseCase,
     private readonly getUserUseCase: GetUserUseCase,
   ) {}
@@ -63,6 +65,22 @@ export class UserController {
         return {
           status: StatusCodes.OK,
           body: formattedUser,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.users.createUserProfile)
+  createUserProfile(@CurrentUser() user: User) {
+    return tsRestHandler(contract.users.createUserProfile, async ({ body }) => {
+      const result = await this.createUserProfileUseCase.execute(body, user.id);
+      if (result.isSuccess()) {
+        this.logger.log(`Created user profile for ${user.id}`);
+        return {
+          status: StatusCodes.CREATED,
+          body: {},
         };
       }
 

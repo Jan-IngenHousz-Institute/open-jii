@@ -47,6 +47,7 @@ export const baseAuthConfig = {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (user) {
         token.id = user.id;
+        token.registered = user.registered;
         // token.role = user.role;
       }
 
@@ -56,6 +57,7 @@ export const baseAuthConfig = {
     session({ session, token }) {
       if (token.id) {
         session.user.id = token.id;
+        session.user.registered = token.registered;
         // session.user.role = token.role;
       }
       return session;

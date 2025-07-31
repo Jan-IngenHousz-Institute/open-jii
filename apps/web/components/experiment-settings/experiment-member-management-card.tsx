@@ -132,6 +132,7 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
         emailVerified: null,
         image: null,
         createdAt: "",
+        registered: true,
       };
     }
     const foundUser = availableUsers.find((u) => u.id === member.user.id);
@@ -145,6 +146,7 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
       emailVerified: null,
       image: null,
       createdAt: "",
+      registered: true,
     };
   };
 

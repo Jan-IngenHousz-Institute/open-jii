@@ -266,4 +266,32 @@ describe("UserController", () => {
       });
     });
   });
+
+  describe("createUserProfile", () => {
+    it("should successfully create a user profile", async () => {
+      const response = await testApp
+        .post(contract.users.createUserProfile.path)
+        .withAuth(testUserId)
+        .send({ firstName: "Test", lastName: "User", organization: "Test Organization" })
+        .expect(StatusCodes.CREATED);
+
+      expect(response.body).toEqual({});
+    });
+
+    it("should return 400 on invalid input", async () => {
+      await testApp
+        .post(contract.users.createUserProfile.path)
+        .withAuth(testUserId)
+        .send({ firstName: "Test" }) // Missing required fields
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 401 if not authenticated", async () => {
+      await testApp
+        .post(contract.users.createUserProfile.path)
+        .withoutAuth()
+        .send({ firstName: "Test", lastName: "User" })
+        .expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
 });
