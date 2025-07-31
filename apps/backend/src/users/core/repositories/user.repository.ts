@@ -85,7 +85,34 @@ export class UserRepository {
     });
   }
 
-  async findOneUserProfile(userId: string) {
+  private async createOrReturnOrganization(organization?: string): Promise<string | undefined> {
+    if (organization) {
+      // Check if organization already exists with this name
+      const organizationResult = await this.database
+        .select()
+        .from(organizations)
+        .where(eq(organizations.name, organization));
+      if (organizationResult.length > 0) {
+        // Use existing organization
+        return organizationResult[0].id;
+      } else {
+        // Create organization
+        const newOrganization = await this.database
+          .insert(organizations)
+          .values({
+            name: organization,
+          })
+          .returning();
+        return newOrganization[0].id;
+      }
+    }
+    return undefined;
+  }
+
+  async createOrUpdateUserProfile(
+    userId: string,
+    createUserProfileDto: CreateUserProfileDto,
+  ): Promise<Result<UserProfileDto>> {
     return tryCatch(async () => {
       const result = await this.database
         .select()
@@ -93,47 +120,26 @@ export class UserRepository {
         .where(eq(profiles.userId, userId))
         .limit(1);
 
-      if (result.length == 0) return null;
-      return {
-        firstName: result[0].firstName,
-        lastName: result[0].lastName,
-      } as UserProfileDto;
-    });
-  }
-
-  async createUserProfile(
-    userId: string,
-    createUserProfileDto: CreateUserProfileDto,
-  ): Promise<Result<UserProfileDto>> {
-    return tryCatch(async () => {
-      let organizationId: string | null = null;
-      if (createUserProfileDto.organization) {
-        // Check if organization already exists with this name
-        const organizationResult = await this.database
-          .select()
-          .from(organizations)
-          .where(eq(organizations.name, createUserProfileDto.organization));
-        if (organizationResult.length > 0) {
-          // Use existing organization
-          organizationId = organizationResult[0].id;
-        } else {
-          // Create organization
-          const newOrganization = await this.database
-            .insert(organizations)
-            .values({
-              name: createUserProfileDto.organization,
-            })
-            .returning();
-          organizationId = newOrganization[0].id;
-        }
+      const organizationId = await this.createOrReturnOrganization(
+        createUserProfileDto.organization,
+      );
+      if (result.length > 0) {
+        // Update profile
+        await this.database
+          .update(profiles)
+          .set({
+            ...createUserProfileDto,
+            organizationId,
+          })
+          .where(eq(profiles.userId, userId));
+      } else {
+        // Create profile
+        await this.database.insert(profiles).values({
+          ...createUserProfileDto,
+          organizationId,
+          userId,
+        });
       }
-
-      await this.database.insert(profiles).values({
-        ...createUserProfileDto,
-        organizationId,
-        userId,
-      });
-
       return {
         firstName: createUserProfileDto.firstName,
         lastName: createUserProfileDto.lastName,

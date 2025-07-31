@@ -331,15 +331,15 @@ describe("UserRepository", () => {
     });
   });
 
-  describe("createUserProfile", () => {
-    it("should create a user profile with a new organization", async () => {
+  describe("createOrUpdateUserProfile", () => {
+    it("should create a new user profile with a new organization", async () => {
       const dto = {
         firstName: "Alice",
         lastName: "Smith",
         organization: "NewOrg",
       };
 
-      const result = await repository.createUserProfile(testUserId, dto);
+      const result = await repository.createOrUpdateUserProfile(testUserId, dto);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -365,29 +365,36 @@ describe("UserRepository", () => {
       expect(profs[0].firstName).toBe(dto.firstName);
     });
 
-    it("should create a user profile with an existing organization", async () => {
-      // Pre-create organization
-      const orgName = "ExistingOrg";
-      await testApp.database.insert(organizations).values({ name: orgName }).returning();
-
-      const dto = {
+    it("should update an existing user profile", async () => {
+      // First, create a profile
+      const initialDto = {
         firstName: "Bob",
         lastName: "Jones",
-        organization: orgName,
+        organization: "Org1",
       };
+      await repository.createOrUpdateUserProfile(testUserId, initialDto);
 
-      const result = await repository.createUserProfile(testUserId, dto);
+      // Now, update the profile
+      const updateDto = {
+        firstName: "Robert",
+        lastName: "Jones",
+        organization: "Org1",
+      };
+      const result = await repository.createOrUpdateUserProfile(testUserId, updateDto);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value.organization).toBe(orgName);
+      expect(result.value.firstName).toBe("Robert");
 
-      // Should not create a duplicate organization
-      const orgs = await testApp.database
+      // Check profile was updated
+      const profs = await testApp.database
         .select()
-        .from(organizations)
-        .where(eq(organizations.name, orgName));
-      expect(orgs.length).toBe(1);
+        .from(profiles)
+        .where(eq(profiles.userId, testUserId));
+      expect(profs.length).toBe(1);
+      expect(profs[0].firstName).toBe("Robert");
+
+      // Cleanup
     });
 
     it("should create a user profile without an organization", async () => {
@@ -396,7 +403,7 @@ describe("UserRepository", () => {
         lastName: "Brown",
       };
 
-      const result = await repository.createUserProfile(testUserId, dto);
+      const result = await repository.createOrUpdateUserProfile(testUserId, dto);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -413,6 +420,31 @@ describe("UserRepository", () => {
         .where(eq(profiles.userId, testUserId));
       expect(profs.length).toBe(1);
       expect(profs[0].firstName).toBe(dto.firstName);
+    });
+
+    it("should use existing organization if it already exists", async () => {
+      // Pre-create organization
+      const orgName = "ExistingOrg";
+      await testApp.database.insert(organizations).values({ name: orgName }).returning();
+
+      const dto = {
+        firstName: "Dana",
+        lastName: "White",
+        organization: orgName,
+      };
+
+      const result = await repository.createOrUpdateUserProfile(testUserId, dto);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value.organization).toBe(orgName);
+
+      // Should not create a duplicate organization
+      const orgs = await testApp.database
+        .select()
+        .from(organizations)
+        .where(eq(organizations.name, orgName));
+      expect(orgs.length).toBe(1);
     });
   });
 });

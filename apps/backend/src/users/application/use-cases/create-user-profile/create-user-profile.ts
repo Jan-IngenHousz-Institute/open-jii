@@ -27,29 +27,18 @@ export class CreateUserProfileUseCase {
         return failure(AppError.notFound(`User with ID ${userId} not found`));
       }
 
-      // Update the user
-      const updatedUser: UpdateUserDto = {
-        name: `${data.firstName} ${data.lastName}`,
-        email: user.email,
-        emailVerified: user.emailVerified,
-        image: user.image,
-        registered: true,
-      };
-      const updatedResult = await this.userRepository.update(userId, updatedUser);
-      if (updatedResult.isFailure()) {
-        return failure(AppError.notFound(`Cannot update user with ID ${userId}`));
-      }
-
-      // Check if a user profile already exists for the user
-      const userProfileResult = await this.userRepository.findOneUserProfile(user.id);
-      return userProfileResult.chain(async (userProfile: UserProfileDto | null) => {
-        if (!userProfile) {
-          // Create a new user profile
-          const newUserProfileResult = await this.userRepository.createUserProfile(userId, data);
-          return newUserProfileResult.chain((userProfile: UserProfileDto | null) => {
-            return success(userProfile);
-          });
+      // Create or update the profile
+      const userProfileResult = await this.userRepository.createOrUpdateUserProfile(userId, data);
+      return userProfileResult.chain(async (userProfile: UserProfileDto) => {
+        // Update the user with the registered flag
+        const updatedUser: UpdateUserDto = {
+          registered: true,
+        };
+        const updatedResult = await this.userRepository.update(userId, updatedUser);
+        if (updatedResult.isFailure()) {
+          return failure(AppError.notFound(`Cannot update user with ID ${userId}`));
         }
+
         return success(userProfile);
       });
     });
