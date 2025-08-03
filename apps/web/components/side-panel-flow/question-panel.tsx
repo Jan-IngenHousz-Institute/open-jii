@@ -1,54 +1,73 @@
-import React, { useState } from "react";
+import React from "react";
 
+import type { QuestionStep } from "@repo/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components";
 
 import { QuestionCard } from "../question-card";
 
-interface Question {
-  id: number;
-  text: string;
-  answers: string[];
-  isOpenAnswer: boolean;
+interface QuestionPanelProps {
+  stepSpecification: QuestionStep;
+  onChange: (spec: QuestionStep) => void;
 }
 
-export function QuestionPanel() {
-  // State for a single question
-  const [question, setQuestion] = useState<Question>({
-    id: 1,
-    text: "",
-    answers: [],
-    isOpenAnswer: false,
-  });
-
-  // Handler functions for single question
+export function QuestionPanel({ stepSpecification, onChange }: QuestionPanelProps) {
+  // Handler functions for the step specification
   const updateQuestionText = (text: string) => {
-    setQuestion((q) => ({ ...q, text }));
+    onChange({
+      ...stepSpecification,
+      validationMessage: text,
+    });
   };
 
-  const toggleQuestionType = () => {
-    setQuestion((q) => ({
-      ...q,
-      isOpenAnswer: !q.isOpenAnswer,
-      answers: !q.isOpenAnswer ? [] : q.answers,
-    }));
+  const updateAnswerType = (answerType: QuestionStep["answerType"]) => {
+    const updatedSpec: QuestionStep = {
+      ...stepSpecification,
+      answerType,
+    };
+
+    // Clear options if not SELECT type
+    if (answerType !== "SELECT") {
+      delete updatedSpec.options;
+    } else {
+      // Initialize with empty options for SELECT type
+      updatedSpec.options = stepSpecification.options ?? [];
+    }
+
+    onChange(updatedSpec);
   };
 
-  const addAnswer = () => {
-    setQuestion((q) => ({ ...q, answers: [...q.answers, ""] }));
+  const toggleRequired = () => {
+    onChange({
+      ...stepSpecification,
+      required: !stepSpecification.required,
+    });
   };
 
-  const updateAnswer = (answerIndex: number, text: string) => {
-    setQuestion((q) => ({
-      ...q,
-      answers: q.answers.map((a, i) => (i === answerIndex ? text : a)),
-    }));
+  const addOption = () => {
+    if (stepSpecification.answerType === "SELECT") {
+      onChange({
+        ...stepSpecification,
+        options: [...(stepSpecification.options ?? []), ""],
+      });
+    }
   };
 
-  const deleteAnswer = (answerIndex: number) => {
-    setQuestion((q) => ({
-      ...q,
-      answers: q.answers.filter((_, i) => i !== answerIndex),
-    }));
+  const updateOption = (optionIndex: number, text: string) => {
+    if (stepSpecification.answerType === "SELECT" && stepSpecification.options) {
+      onChange({
+        ...stepSpecification,
+        options: stepSpecification.options.map((option, i) => (i === optionIndex ? text : option)),
+      });
+    }
+  };
+
+  const deleteOption = (optionIndex: number) => {
+    if (stepSpecification.answerType === "SELECT" && stepSpecification.options) {
+      onChange({
+        ...stepSpecification,
+        options: stepSpecification.options.filter((_, i) => i !== optionIndex),
+      });
+    }
   };
 
   return (
@@ -61,14 +80,13 @@ export function QuestionPanel() {
       <CardContent>
         <div className="space-y-4">
           <QuestionCard
-            key={question.id}
-            question={question}
-            index={0}
+            stepSpecification={stepSpecification}
             onUpdateText={updateQuestionText}
-            onToggleType={toggleQuestionType}
-            onAddAnswer={addAnswer}
-            onUpdateAnswer={updateAnswer}
-            onDeleteAnswer={deleteAnswer}
+            onUpdateAnswerType={updateAnswerType}
+            onToggleRequired={toggleRequired}
+            onAddOption={addOption}
+            onUpdateOption={updateOption}
+            onDeleteOption={deleteOption}
           />
         </div>
       </CardContent>

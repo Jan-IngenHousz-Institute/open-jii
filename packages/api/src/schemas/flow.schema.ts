@@ -42,13 +42,22 @@ export const zInstructionStep = z.object({
 });
 
 // Question Step Schema
-export const zQuestionStep = z.object({
-  required: z.boolean().default(false),
-  answerType: zAnswerType,
-  options: z.array(z.string()).optional(), // For SELECT type questions
-  placeholder: z.string().optional(),
-  validationMessage: z.string().optional(),
-});
+export const zQuestionStep = z
+  .object({
+    required: z.boolean().default(false),
+    answerType: zAnswerType,
+    options: z.array(z.string()).optional(), // For SELECT type questions
+    placeholder: z.string().optional(),
+    validationMessage: z.string().optional(),
+  })
+  .refine(
+    (data) =>
+      data.answerType !== "SELECT" || (data.options !== undefined && data.options.length > 0),
+    {
+      message: "Options must be provided when answerType is SELECT",
+      path: ["options"],
+    },
+  );
 
 // Measurement Step Schema
 export const zMeasurementStep = z.object({

@@ -54,6 +54,7 @@ export function NewExperimentForm() {
 
   const { mutate: createExperiment, isPending } = useExperimentCreate({
     onSuccess: (experimentId: string) => {
+      toast({ description: t("experiments.experimentCreated") });
       router.push(`/${locale}/platform/experiments/${experimentId}`);
     },
   });
@@ -86,8 +87,6 @@ export function NewExperimentForm() {
         body: data,
       });
     }
-
-    toast({ description: t("experiments.experimentCreated") });
   }
 
   return (
