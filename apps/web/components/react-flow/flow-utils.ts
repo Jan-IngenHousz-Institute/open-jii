@@ -38,7 +38,7 @@ const initialFlowData: CreateFlowWithStepsBody = {
       stepSpecification: {
         required: true,
         answerType: "TEXT",
-        placeholder: "Enter your name and institution",
+        validationMessage: "Please provide your name and institution",
       },
     },
     {
@@ -67,7 +67,7 @@ const initialFlowData: CreateFlowWithStepsBody = {
           "LED grow lights",
           "Low light conditions",
         ],
-        placeholder: "Select the lighting condition",
+        validationMessage: "What type of lighting conditions are you using?",
       },
     },
     {
@@ -196,6 +196,32 @@ export function createNewNode(
 ): Node {
   const config = nodeTypeColorMap[type as keyof typeof nodeTypeColorMap];
 
+  // Create appropriate default stepSpecification based on node type
+  let defaultStepSpecification = {};
+  if (type === "INSTRUCTION") {
+    defaultStepSpecification = {};
+  } else if (type === "QUESTION") {
+    defaultStepSpecification = {
+      required: false,
+      answerType: "TEXT" as const,
+      options: [],
+      validationMessage: "",
+    };
+  } else if (type === "MEASUREMENT") {
+    defaultStepSpecification = {
+      protocolId: "", // This would need to be selected by user
+      autoStart: false,
+      timeoutSeconds: undefined,
+      retryAttempts: 3,
+    };
+  } else if (type === "ANALYSIS") {
+    defaultStepSpecification = {
+      macroId: "", // This would need to be selected by user
+      autoRun: true,
+      visualizationType: undefined,
+    };
+  }
+
   return {
     id: `node_${Date.now()}`,
     type,
@@ -205,7 +231,7 @@ export function createNewNode(
     data: {
       title: title ?? `${type.charAt(0) + type.slice(1).toLowerCase()} Node`,
       description: type === "INSTRUCTION" ? "" : undefined, // Initialize description for instructions
-      stepSpecification: {},
+      stepSpecification: defaultStepSpecification,
       isStartNode: false,
       isEndNode: false,
     },

@@ -252,6 +252,7 @@ export function NewExperimentFlow({
         selectedEdge={edges.find((edge) => edge.id === selectedEdgeId) ?? null}
         onEdgeUpdate={handleEdgeUpdate}
         onEdgeDelete={handleEdgeDelete}
+        nodes={nodes}
       />
 
       <Card>

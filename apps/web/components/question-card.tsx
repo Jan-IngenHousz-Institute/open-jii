@@ -1,32 +1,29 @@
 import React from "react";
 
+import type { QuestionStep } from "@repo/api";
 import { Card, CardContent } from "@repo/ui/components";
 
-interface Question {
-  id: number;
-  text: string;
-  answers: string[];
-  isOpenAnswer: boolean;
-}
-
 interface QuestionCardProps {
-  question: Question;
-  index: number;
+  stepSpecification: QuestionStep;
   onUpdateText: (text: string) => void;
-  onToggleType: (questionId: number) => void;
-  onAddAnswer: (questionId: number) => void;
-  onUpdateAnswer: (answerIndex: number, text: string) => void;
-  onDeleteAnswer: (questionId: number, answerIndex: number) => void;
+  onUpdateAnswerType: (answerType: QuestionStep["answerType"]) => void;
+  onToggleRequired: () => void;
+  onAddOption: () => void;
+  onUpdateOption: (optionIndex: number, text: string) => void;
+  onDeleteOption: (optionIndex: number) => void;
 }
 
 export function QuestionCard({
-  question,
+  stepSpecification,
   onUpdateText,
-  onToggleType,
-  onAddAnswer,
-  onUpdateAnswer,
-  onDeleteAnswer,
+  onUpdateAnswerType,
+  onToggleRequired,
+  onAddOption,
+  onUpdateOption,
+  onDeleteOption,
 }: QuestionCardProps) {
+  const { answerType, validationMessage, options, required } = stepSpecification;
+
   return (
     <Card className="group relative overflow-hidden border border-gray-200 bg-white shadow-sm transition-all hover:border-gray-300 hover:shadow-lg">
       {/* Subtle accent line */}
@@ -37,75 +34,92 @@ export function QuestionCard({
         <div className="mb-6">
           <input
             type="text"
-            value={question.text}
+            value={validationMessage ?? ""}
             onChange={(e) => onUpdateText(e.target.value)}
             placeholder="What would you like to ask?"
             className="focus:border-jii-dark-green w-full border-0 border-b-2 border-gray-100 bg-transparent px-0 py-3 text-lg font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-0"
           />
         </div>
 
-        {/* Question Type Toggle */}
-        <div className="mb-6 flex items-center gap-6">
-          <label className="flex cursor-pointer items-center gap-3">
-            <div className="relative">
+        {/* Required Toggle */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <div>
+              <p className="text-sm font-medium text-gray-900">Required Question</p>
+              <p className="text-xs text-gray-500">
+                Participants must answer this question to continue
+              </p>
+            </div>
+            <label className="relative inline-flex cursor-pointer items-center">
               <input
-                type="radio"
-                name={`question-type-${question.id}`}
-                checked={!question.isOpenAnswer}
-                onChange={() => !question.isOpenAnswer || onToggleType(question.id)}
+                type="checkbox"
+                checked={required}
+                onChange={onToggleRequired}
                 className="peer sr-only"
               />
-              <div className="peer-checked:border-jii-dark-green peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 h-4 w-4 rounded-full border-2 border-gray-300 bg-white transition-all peer-focus:ring-2"></div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="h-1.5 w-1.5 rounded-full bg-white opacity-0 transition-opacity peer-checked:opacity-100"></div>
-              </div>
-            </div>
-            <span className="text-sm font-medium text-gray-700">Multiple Choice</span>
-          </label>
-          <label className="flex cursor-pointer items-center gap-3">
-            <div className="relative">
-              <input
-                type="radio"
-                name={`question-type-${question.id}`}
-                checked={question.isOpenAnswer}
-                onChange={() => question.isOpenAnswer || onToggleType(question.id)}
-                className="peer sr-only"
-              />
-              <div className="peer-checked:border-jii-dark-green peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 h-4 w-4 rounded-full border-2 border-gray-300 bg-white transition-all peer-focus:ring-2"></div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="h-1.5 w-1.5 rounded-full bg-white opacity-0 transition-opacity peer-checked:opacity-100"></div>
-              </div>
-            </div>
-            <span className="text-sm font-medium text-gray-700">Open Answer</span>
-          </label>
+              <div className="peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4"></div>
+            </label>
+          </div>
         </div>
 
-        {/* Multiple Choice Answers */}
-        {!question.isOpenAnswer && (
+        {/* Question Type Selection */}
+        <div className="mb-6">
+          <div className="mb-3 flex items-center gap-2">
+            <div className="h-1 w-1 rounded-full bg-gray-400"></div>
+            <span className="text-sm font-medium text-gray-600">Answer Type</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {["TEXT", "SELECT", "NUMBER", "BOOLEAN"].map((type) => (
+              <label key={type} className="flex cursor-pointer items-center gap-3">
+                <input
+                  type="radio"
+                  name="answer-type"
+                  checked={answerType === type}
+                  onChange={() => onUpdateAnswerType(type as QuestionStep["answerType"])}
+                  className="peer sr-only"
+                />
+                <div className="peer-checked:border-jii-dark-green peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 relative h-4 w-4 rounded-full border-2 border-gray-300 bg-white transition-all peer-focus:ring-2">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="h-1.5 w-1.5 rounded-full bg-white opacity-0 transition-opacity peer-checked:opacity-100"></div>
+                  </div>
+                </div>
+                <span className="text-sm font-medium text-gray-700">
+                  {type === "TEXT" && "Text"}
+                  {type === "SELECT" && "Multiple Choice"}
+                  {type === "NUMBER" && "Number"}
+                  {type === "BOOLEAN" && "Yes/No"}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Answer Type Specific Content */}
+        {answerType === "SELECT" && (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <div className="h-1 w-1 rounded-full bg-gray-400"></div>
               <span className="text-sm font-medium text-gray-600">Answer Options</span>
             </div>
 
-            {question.answers.length > 0 ? (
+            {options && options.length > 0 ? (
               <div className="space-y-3">
-                {question.answers.map((answer, answerIndex) => (
-                  <div key={answerIndex} className="group/answer flex items-center gap-3">
+                {options.map((option, optionIndex) => (
+                  <div key={optionIndex} className="group/option flex items-center gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 text-xs font-medium text-gray-600">
-                      {String.fromCharCode(65 + answerIndex)}
+                      {String.fromCharCode(65 + optionIndex)}
                     </div>
                     <input
                       type="text"
-                      value={answer}
-                      onChange={(e) => onUpdateAnswer(answerIndex, e.target.value)}
+                      value={option}
+                      onChange={(e) => onUpdateOption(optionIndex, e.target.value)}
                       placeholder="Enter an answer option"
                       className="focus:border-jii-dark-green focus:ring-jii-dark-green/20 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 transition-colors focus:bg-white focus:outline-none focus:ring-2"
                     />
                     <button
                       type="button"
-                      onClick={() => onDeleteAnswer(question.id, answerIndex)}
-                      className="rounded-lg p-2 text-gray-400 opacity-100 transition-all hover:bg-red-50 hover:text-red-500 md:opacity-0 md:group-hover/answer:opacity-100"
+                      onClick={() => onDeleteOption(optionIndex)}
+                      className="rounded-lg p-2 text-gray-400 opacity-100 transition-all hover:bg-red-50 hover:text-red-500 md:opacity-0 md:group-hover/option:opacity-100"
                       title="Remove option"
                     >
                       <svg
@@ -148,7 +162,7 @@ export function QuestionCard({
 
             <button
               type="button"
-              onClick={() => onAddAnswer(question.id)}
+              onClick={onAddOption}
               className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -164,8 +178,8 @@ export function QuestionCard({
           </div>
         )}
 
-        {/* Open Answer Display */}
-        {question.isOpenAnswer && (
+        {/* Text Answer Display */}
+        {answerType === "TEXT" && (
           <div className="from-jii-medium-green/10 to-jii-dark-green/10 rounded-lg bg-gradient-to-r p-6 text-center">
             <div className="mx-auto mb-3 w-fit rounded-full bg-white p-3 shadow-sm">
               <svg
@@ -182,8 +196,54 @@ export function QuestionCard({
                 />
               </svg>
             </div>
-            <p className="mb-1 font-medium text-gray-900">Open Answer Response</p>
+            <p className="mb-1 font-medium text-gray-900">Text Response</p>
             <p className="text-sm text-gray-600">Participants can write their own answer</p>
+          </div>
+        )}
+
+        {/* Number Answer Display */}
+        {answerType === "NUMBER" && (
+          <div className="rounded-lg bg-gradient-to-r from-blue-50 to-blue-100 p-6 text-center">
+            <div className="mx-auto mb-3 w-fit rounded-full bg-white p-3 shadow-sm">
+              <svg
+                className="h-5 w-5 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
+                />
+              </svg>
+            </div>
+            <p className="mb-1 font-medium text-gray-900">Number Response</p>
+            <p className="text-sm text-gray-600">Participants will enter a numeric value</p>
+          </div>
+        )}
+
+        {/* Boolean Answer Display */}
+        {answerType === "BOOLEAN" && (
+          <div className="rounded-lg bg-gradient-to-r from-green-50 to-green-100 p-6 text-center">
+            <div className="mx-auto mb-3 w-fit rounded-full bg-white p-3 shadow-sm">
+              <svg
+                className="h-5 w-5 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <p className="mb-1 font-medium text-gray-900">Yes/No Response</p>
+            <p className="text-sm text-gray-600">Participants will choose Yes or No</p>
           </div>
         )}
       </CardContent>
