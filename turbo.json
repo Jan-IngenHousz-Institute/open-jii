@@ -1,13 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
-  "globalEnv": [
-    "CONTENTFUL_SPACE_ID",
-    "CONTENTFUL_ACCESS_TOKEN", 
-    "CONTENTFUL_PREVIEW_ACCESS_TOKEN",
-    "CONTENTFUL_PREVIEW_SECRET",
-    "CONTENTFUL_SPACE_ENVIRONMENT"
-  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -28,50 +21,18 @@
         "DB_HOST",
         "DB_PORT",
         "DB_NAME",
-        "DB_CREDENTIALS",
-        "CONTENTFUL_SPACE_ID",
-        "CONTENTFUL_ACCESS_TOKEN",
-        "CONTENTFUL_PREVIEW_ACCESS_TOKEN",
-        "CONTENTFUL_PREVIEW_SECRET",
-        "CONTENTFUL_SPACE_ENVIRONMENT",
-        "CONTENTFUL_GRAPHQL_ENDPOINT"
+        "DB_CREDENTIALS"
       ]
     },
     "lint": {
       "dependsOn": ["^lint"],
-      "env": [
-        "DATABASE_URL",
-        "DB_HOST",
-        "DB_PORT",
-        "DB_NAME",
-        "DB_CREDENTIALS",
-        "CONTENTFUL_SPACE_ID",
-        "CONTENTFUL_ACCESS_TOKEN",
-        "CONTENTFUL_PREVIEW_ACCESS_TOKEN",
-        "CONTENTFUL_PREVIEW_SECRET",
-        "CONTENTFUL_SPACE_ENVIRONMENT",
-        "CONTENTFUL_GRAPHQL_ENDPOINT"
-      ]
+      "env": ["DATABASE_URL", "DB_HOST", "DB_PORT", "DB_NAME", "DB_CREDENTIALS"]
     },
     "check-types": {
-      "dependsOn": ["^check-types"],
-      "env": [
-        "CONTENTFUL_SPACE_ID",
-        "CONTENTFUL_ACCESS_TOKEN",
-        "CONTENTFUL_PREVIEW_ACCESS_TOKEN",
-        "CONTENTFUL_PREVIEW_SECRET",
-        "CONTENTFUL_SPACE_ENVIRONMENT"
-      ]
+      "dependsOn": ["^check-types"]
     },
     "dev": {
-      "env": [
-        "NEXT_PUBLIC_ENABLE_DEVTOOLS",
-        "CONTENTFUL_SPACE_ID",
-        "CONTENTFUL_ACCESS_TOKEN",
-        "CONTENTFUL_PREVIEW_ACCESS_TOKEN",
-        "CONTENTFUL_PREVIEW_SECRET",
-        "CONTENTFUL_SPACE_ENVIRONMENT"
-      ],
+      "env": ["NEXT_PUBLIC_ENABLE_DEVTOOLS"],
       "cache": false,
       "persistent": true
     },
