@@ -52,7 +52,7 @@ runs:
         TURBO_REF_FILTER: ${{ (github.event_name == 'pull_request' && github.event.pull_request.base.sha) || github.event.before || 'HEAD~1' }}
 
       run: |
-        echo "Using base for change detection:  $TURBO_REF_FILTER"
+        echo "Using base for change detection: $TURBO_REF_FILTER"
 
         # Get list of affected projects using provided base
         pnpm turbo run build --dry-run=json --filter=...[$TURBO_REF_FILTER] --output-logs=none > affected.json
