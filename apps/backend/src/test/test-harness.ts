@@ -212,6 +212,7 @@ export class TestHarness {
     endpoint: T,
     url: string,
   ) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     const method = (endpoint as any).method?.toLowerCase() as "get" | "post" | "patch" | "delete";
     const req = this[method](url);
 

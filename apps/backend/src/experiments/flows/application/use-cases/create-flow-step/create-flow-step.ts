@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { Result, AppError, failure, success } from "../../../../../common/utils/fp-utils";
-import { CreateFlowStepDto, FlowStepDto } from "../../../core/models/flow.model";
+import { AppError, failure, success } from "../../../../../common/utils/fp-utils";
+import { CreateFlowStepDto } from "../../../core/models/flow.model";
 import { FlowStepRepository } from "../../../core/repositories/flow-step.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
 
@@ -20,7 +20,7 @@ export class CreateFlowStepUseCase {
     private readonly flowStepRepository: FlowStepRepository,
   ) {}
 
-  async execute(flowId: string, data: CreateFlowStepDto): Promise<Result<FlowStepDto>> {
+  async execute(flowId: string, data: CreateFlowStepDto) {
     this.logger.log(`Creating flow step for flow ${flowId}`);
 
     // Note: This currently assumes repositories will be migrated to fp-utils
@@ -47,18 +47,13 @@ export class CreateFlowStepUseCase {
       // Create the flow step
       const stepResult = await this.flowStepRepository.create(flowId, stepData);
 
-      return stepResult.chain((steps: FlowStepDto[]) => {
-        if (!steps || steps.length === 0) {
+      return stepResult.chain((steps) => {
+        if (steps.length === 0) {
           this.logger.error(`Failed to create flow step for flow ${flowId}`);
           return failure(new CreateFlowStepError("Failed to create flow step"));
         }
 
         const step = steps[0];
-        if (!step) {
-          this.logger.error(`Failed to create flow step for flow ${flowId}`);
-          return failure(new CreateFlowStepError("Failed to create flow step"));
-        }
-
         this.logger.log(`Successfully created ${step.type} step with ID ${step.id}`);
         return success(step);
       });

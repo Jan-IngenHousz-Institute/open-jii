@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
 
 import { Result } from "../../../../../common/utils/fp-utils";
-import { FlowStepRepository } from "../../../core/repositories/flow-step.repository";
 import { UpdateFlowWithStepsDto, FlowWithGraphDto } from "../../../core/models/flow.model";
+import { FlowStepRepository } from "../../../core/repositories/flow-step.repository";
 
 @Injectable()
 export class UpdateFlowWithStepsUseCase {

@@ -10,8 +10,6 @@ import {
   FlowStepDto,
   CreateFlowWithStepsDto,
   UpdateFlowWithStepsDto,
-  FlowWithGraphDto,
-  FlowStepConnectionDto,
 } from "../models/flow.model";
 
 export class FlowStepRepositoryError extends AppError {
@@ -119,7 +117,7 @@ export class FlowStepRepository {
     });
   }
 
-  async getConnections(flowId: string): Promise<Result<any[]>> {
+  async getConnections(flowId: string) {
     return tryCatch(() =>
       this.database
         .select()
@@ -136,9 +134,7 @@ export class FlowStepRepository {
     });
   }
 
-  async getFlowWithConnections(
-    flowId: string,
-  ): Promise<Result<{ steps: FlowStepDto[]; connections: any[] }>> {
+  async getFlowWithConnections(flowId: string) {
     const stepsResult = await this.findByFlowId(flowId);
     if (stepsResult.isFailure()) {
       return stepsResult;
@@ -150,7 +146,7 @@ export class FlowStepRepository {
     }
 
     return success({
-      steps: stepsResult.value as unknown as FlowStepDto[],
+      steps: stepsResult.value,
       connections: connectionsResult.value,
     });
   }
