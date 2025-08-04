@@ -1,4 +1,4 @@
-import { DatabricksService } from "../../../../common/services/databricks/databricks.service";
+import { DatabricksService } from "../../../../common/modules/databricks/databricks.service";
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentMemberRepository } from "../../../../experiments/core/repositories/experiment-member.repository";
 import { TestHarness } from "../../../../test/test-harness";

@@ -60,7 +60,9 @@ export class TestHarness {
         imports: this._imports,
       }).compile();
 
-      this.app = this._module.createNestApplication<INestApplication<App>>();
+      this.app = this._module.createNestApplication<INestApplication<App>>({
+        logger: false,
+      });
       await this.app.init();
       this._request = request(this.app.getHttpServer());
     }

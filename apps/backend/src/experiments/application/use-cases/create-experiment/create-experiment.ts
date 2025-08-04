@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { DatabricksService } from "../../../../common/services/databricks/databricks.service";
+import { DatabricksService } from "../../../../common/modules/databricks/databricks.service";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { CreateExperimentDto, ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";

@@ -1,6 +1,8 @@
 import nock from "nock";
 
-import { DatabricksService } from "../../../../common/services/databricks/databricks.service";
+import { DatabricksAuthService } from "../../../../common/modules/databricks/services/auth/auth.service";
+import { DatabricksSqlService } from "../../../../common/modules/databricks/services/sql/sql.service";
+import { DatabricksTablesService } from "../../../../common/modules/databricks/services/tables/tables.service";
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { GetExperimentDataUseCase } from "./get-experiment-data";
@@ -87,7 +89,7 @@ describe("GetExperimentDataUseCase", () => {
     };
 
     // Mock token request
-    nock(DATABRICKS_HOST).post(DatabricksService.TOKEN_ENDPOINT).reply(200, {
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
       access_token: "mock-token",
       expires_in: 3600,
       token_type: "Bearer",
@@ -95,7 +97,7 @@ describe("GetExperimentDataUseCase", () => {
 
     // Mock SQL query for row count
     nock(DATABRICKS_HOST)
-      .post(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`, {
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT COUNT(*) as count FROM test_table",
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: `exp_${experiment.name}_${experiment.id}`,
@@ -129,7 +131,7 @@ describe("GetExperimentDataUseCase", () => {
     // Mock SQL query for table data
     // pageSize is 20, page is 1 => LIMIT 20 OFFSET 0
     nock(DATABRICKS_HOST)
-      .post(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`, {
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT * FROM test_table LIMIT 20 OFFSET 0",
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: `exp_${experiment.name}_${experiment.id}`,
@@ -242,18 +244,21 @@ describe("GetExperimentDataUseCase", () => {
     };
 
     // Mock token request
-    nock(DATABRICKS_HOST).post(DatabricksService.TOKEN_ENDPOINT).reply(200, {
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
       access_token: "mock-token",
       expires_in: 3600,
       token_type: "Bearer",
     });
 
     // Mock listTables API call
-    nock(DATABRICKS_HOST).get(DatabricksService.TABLES_ENDPOINT).query(true).reply(200, mockTables);
+    nock(DATABRICKS_HOST)
+      .get(DatabricksTablesService.TABLES_ENDPOINT)
+      .query(true)
+      .reply(200, mockTables);
 
     // Mock SQL query for sample data - first table ("table1")
     nock(DATABRICKS_HOST)
-      .post(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`, {
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: `SELECT * FROM table1 LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: `exp_${experiment.name}_${experiment.id}`,
@@ -286,7 +291,7 @@ describe("GetExperimentDataUseCase", () => {
 
     // Mock SQL query for sample data - second table ("table2")
     nock(DATABRICKS_HOST)
-      .post(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`, {
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: `SELECT * FROM table2 LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: `exp_${experiment.name}_${experiment.id}`,
@@ -439,18 +444,21 @@ describe("GetExperimentDataUseCase", () => {
     };
 
     // Mock token request
-    nock(DATABRICKS_HOST).post(DatabricksService.TOKEN_ENDPOINT).reply(200, {
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
       access_token: "mock-token",
       expires_in: 3600,
       token_type: "Bearer",
     });
 
     // Mock listTables API call
-    nock(DATABRICKS_HOST).get(DatabricksService.TABLES_ENDPOINT).query(true).reply(200, mockTables);
+    nock(DATABRICKS_HOST)
+      .get(DatabricksTablesService.TABLES_ENDPOINT)
+      .query(true)
+      .reply(200, mockTables);
 
     // Mock SQL query for sample data ("public_table")
     nock(DATABRICKS_HOST)
-      .post(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`, {
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: `SELECT * FROM public_table LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: `exp_${experiment.name}_${experiment.id}`,
@@ -517,7 +525,7 @@ describe("GetExperimentDataUseCase", () => {
     };
 
     // Mock token request
-    nock(DATABRICKS_HOST).post(DatabricksService.TOKEN_ENDPOINT).reply(200, {
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
       access_token: "mock-token",
       expires_in: 3600,
       token_type: "Bearer",
@@ -525,7 +533,7 @@ describe("GetExperimentDataUseCase", () => {
 
     // Mock SQL query for row count - success
     nock(DATABRICKS_HOST)
-      .post(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`, {
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT COUNT(*) as count FROM test_table",
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: `exp_${experiment.name}_${experiment.id}`,
@@ -559,7 +567,7 @@ describe("GetExperimentDataUseCase", () => {
     // Mock SQL query for table data - error
     // pageSize is 20, page is 1 => LIMIT 20 OFFSET 0
     nock(DATABRICKS_HOST)
-      .post(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`, {
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT * FROM test_table LIMIT 20 OFFSET 0",
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: `exp_${experiment.name}_${experiment.id}`,
@@ -592,7 +600,7 @@ describe("GetExperimentDataUseCase", () => {
     });
 
     // Mock token request
-    nock(DATABRICKS_HOST).post(DatabricksService.TOKEN_ENDPOINT).reply(200, {
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
       access_token: "mock-token",
       expires_in: 3600,
       token_type: "Bearer",
@@ -600,7 +608,7 @@ describe("GetExperimentDataUseCase", () => {
 
     // Mock SQL query for row count - error
     nock(DATABRICKS_HOST)
-      .post(`${DatabricksService.SQL_STATEMENTS_ENDPOINT}/`, {
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT COUNT(*) as count FROM test_table",
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: `exp_${experiment.name}_${experiment.id}`,
@@ -633,7 +641,7 @@ describe("GetExperimentDataUseCase", () => {
     });
 
     // Mock token request
-    nock(DATABRICKS_HOST).post(DatabricksService.TOKEN_ENDPOINT).reply(200, {
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
       access_token: "mock-token",
       expires_in: 3600,
       token_type: "Bearer",
@@ -641,7 +649,7 @@ describe("GetExperimentDataUseCase", () => {
 
     // Mock listTables API call - error
     nock(DATABRICKS_HOST)
-      .get(DatabricksService.TABLES_ENDPOINT)
+      .get(DatabricksTablesService.TABLES_ENDPOINT)
       .query(true)
       .reply(500, { error: "Tables listing error" });
 

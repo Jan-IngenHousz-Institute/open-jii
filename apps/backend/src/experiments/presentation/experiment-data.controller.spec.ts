@@ -4,7 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import type { ErrorResponse, ExperimentDataResponse } from "@repo/api";
 import { contract } from "@repo/api";
 
-import { DatabricksService } from "../../common/services/databricks/databricks.service";
+import { DatabricksService } from "../../common/modules/databricks/databricks.service";
 import { success, failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";

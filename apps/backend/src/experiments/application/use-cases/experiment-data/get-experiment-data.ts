@@ -2,8 +2,8 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ExperimentDataQuery } from "@repo/api";
 
-import { DatabricksService } from "../../../../common/services/databricks/databricks.service";
-import { SchemaData } from "../../../../common/services/databricks/databricks.types";
+import { DatabricksService } from "../../../../common/modules/databricks/databricks.service";
+import { SchemaData } from "../../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
