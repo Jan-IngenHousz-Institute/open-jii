@@ -27,8 +27,8 @@ export function useExperimentsData(experimentId: string | undefined, tableName: 
     };
   }
 
-  const { columns, rows } = table.data;
-  const measurements = mapRowsToMeasurements(columns, rows);
+  const { rows } = table.data;
+  const measurements = mapRowsToMeasurements(rows);
 
   return {
     error,

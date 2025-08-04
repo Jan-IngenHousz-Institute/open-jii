@@ -1,10 +1,17 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { eq, ilike, or, users } from "@repo/database";
+import { eq, ilike, or, organizations, profiles, users } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import { CreateUserDto, UpdateUserDto, UserDto, SearchUsersParams } from "../models/user.model";
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  UserDto,
+  SearchUsersParams,
+  UserProfileDto,
+  CreateUserProfileDto,
+} from "../models/user.model";
 
 @Injectable()
 export class UserRepository {
@@ -75,6 +82,69 @@ export class UserRepository {
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
       await this.database.delete(users).where(eq(users.id, id));
+    });
+  }
+
+  private async createOrReturnOrganization(organization?: string): Promise<string | undefined> {
+    if (organization) {
+      // Check if organization already exists with this name
+      const organizationResult = await this.database
+        .select()
+        .from(organizations)
+        .where(eq(organizations.name, organization));
+      if (organizationResult.length > 0) {
+        // Use existing organization
+        return organizationResult[0].id;
+      } else {
+        // Create organization
+        const newOrganization = await this.database
+          .insert(organizations)
+          .values({
+            name: organization,
+          })
+          .returning();
+        return newOrganization[0].id;
+      }
+    }
+    return undefined;
+  }
+
+  async createOrUpdateUserProfile(
+    userId: string,
+    createUserProfileDto: CreateUserProfileDto,
+  ): Promise<Result<UserProfileDto>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select()
+        .from(profiles)
+        .where(eq(profiles.userId, userId))
+        .limit(1);
+
+      const organizationId = await this.createOrReturnOrganization(
+        createUserProfileDto.organization,
+      );
+      if (result.length > 0) {
+        // Update profile
+        await this.database
+          .update(profiles)
+          .set({
+            ...createUserProfileDto,
+            organizationId,
+          })
+          .where(eq(profiles.userId, userId));
+      } else {
+        // Create profile
+        await this.database.insert(profiles).values({
+          ...createUserProfileDto,
+          organizationId,
+          userId,
+        });
+      }
+      return {
+        firstName: createUserProfileDto.firstName,
+        lastName: createUserProfileDto.lastName,
+        organization: createUserProfileDto.organization,
+      } as UserProfileDto;
     });
   }
 }

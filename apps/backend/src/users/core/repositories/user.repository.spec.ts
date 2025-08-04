@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { users, eq } from "@repo/database";
+import { users, organizations, profiles, eq } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -328,6 +328,123 @@ describe("UserRepository", () => {
         .where(eq(users.id, userToDeleteId));
 
       expect(dbResult.length).toBe(0);
+    });
+  });
+
+  describe("createOrUpdateUserProfile", () => {
+    it("should create a new user profile with a new organization", async () => {
+      const dto = {
+        firstName: "Alice",
+        lastName: "Smith",
+        organization: "NewOrg",
+      };
+
+      const result = await repository.createOrUpdateUserProfile(testUserId, dto);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toMatchObject({
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        organization: dto.organization,
+      });
+
+      // Check organization was created
+      const orgs = await testApp.database
+        .select()
+        .from(organizations)
+        .where(eq(organizations.name, dto.organization));
+      expect(orgs.length).toBe(1);
+
+      // Check profile was created
+      const profs = await testApp.database
+        .select()
+        .from(profiles)
+        .where(eq(profiles.userId, testUserId));
+      expect(profs.length).toBe(1);
+      expect(profs[0].firstName).toBe(dto.firstName);
+    });
+
+    it("should update an existing user profile", async () => {
+      // First, create a profile
+      const initialDto = {
+        firstName: "Bob",
+        lastName: "Jones",
+        organization: "Org1",
+      };
+      await repository.createOrUpdateUserProfile(testUserId, initialDto);
+
+      // Now, update the profile
+      const updateDto = {
+        firstName: "Robert",
+        lastName: "Jones",
+        organization: "Org1",
+      };
+      const result = await repository.createOrUpdateUserProfile(testUserId, updateDto);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value.firstName).toBe("Robert");
+
+      // Check profile was updated
+      const profs = await testApp.database
+        .select()
+        .from(profiles)
+        .where(eq(profiles.userId, testUserId));
+      expect(profs.length).toBe(1);
+      expect(profs[0].firstName).toBe("Robert");
+
+      // Cleanup
+    });
+
+    it("should create a user profile without an organization", async () => {
+      const dto = {
+        firstName: "Charlie",
+        lastName: "Brown",
+      };
+
+      const result = await repository.createOrUpdateUserProfile(testUserId, dto);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toMatchObject({
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        organization: undefined,
+      });
+
+      // Check profile was created
+      const profs = await testApp.database
+        .select()
+        .from(profiles)
+        .where(eq(profiles.userId, testUserId));
+      expect(profs.length).toBe(1);
+      expect(profs[0].firstName).toBe(dto.firstName);
+    });
+
+    it("should use existing organization if it already exists", async () => {
+      // Pre-create organization
+      const orgName = "ExistingOrg";
+      await testApp.database.insert(organizations).values({ name: orgName }).returning();
+
+      const dto = {
+        firstName: "Dana",
+        lastName: "White",
+        organization: orgName,
+      };
+
+      const result = await repository.createOrUpdateUserProfile(testUserId, dto);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value.organization).toBe(orgName);
+
+      // Should not create a duplicate organization
+      const orgs = await testApp.database
+        .select()
+        .from(organizations)
+        .where(eq(organizations.name, orgName));
+      expect(orgs.length).toBe(1);
     });
   });
 });

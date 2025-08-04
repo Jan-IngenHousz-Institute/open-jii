@@ -19,7 +19,7 @@ export default function HomeScreen() {
       await uploadAll();
       showToast("All measurements synced successfully", "success");
     } catch {
-      showToast("Sync failed. Please try again.", "warning");
+      showToast("Sync failed. Please try again.", "error");
     }
   };
 
