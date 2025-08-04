@@ -1,4 +1,5 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import type z from "zod";
 
 import { users } from "@repo/database";
 
@@ -14,9 +15,9 @@ export const updateUserSchema = createInsertSchema(users).partial().omit({
 export const selectUserSchema = createSelectSchema(users);
 
 // Define the types
-export type CreateUserDto = typeof createUserSchema._type;
-export type UpdateUserDto = typeof updateUserSchema._type;
-export type UserDto = typeof selectUserSchema._type;
+export type CreateUserDto = z.infer<typeof createUserSchema>;
+export type UpdateUserDto = z.infer<typeof updateUserSchema>;
+export type UserDto = z.infer<typeof selectUserSchema>;
 
 // Define search parameters type
 export interface SearchUsersParams {

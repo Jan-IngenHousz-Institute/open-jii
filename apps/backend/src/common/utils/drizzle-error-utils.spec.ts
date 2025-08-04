@@ -96,6 +96,7 @@ describe("drizzle-error-utils", () => {
       const pgError = new Error("duplicate key value violates unique constraint");
       // @ts-expect-error - Adding PostgreSQL properties for testing
       pgError.code = "23505";
+      // @ts-expect-error - Adding PostgreSQL properties for testing
       pgError.detail = "Key (email)=(test@example.com) already exists.";
       const drizzleError = new DrizzleQueryError("INSERT INTO users ...", [], pgError);
 

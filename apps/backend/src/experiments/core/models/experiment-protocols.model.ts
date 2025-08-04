@@ -16,4 +16,4 @@ export const experimentProtocolSchema = createSelectSchema(experimentProtocols)
   });
 
 // DTOs
-export type ExperimentProtocolDto = typeof experimentProtocolSchema._type;
+export type ExperimentProtocolDto = z.infer<typeof experimentProtocolSchema>;
