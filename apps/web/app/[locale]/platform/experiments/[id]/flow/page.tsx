@@ -3,13 +3,7 @@
 import { ErrorDisplay } from "@/components/error-display";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentUpdate } from "@/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
-import {
-  useFlow,
-  useCreateFlowWithSteps,
-  useUpdateFlowWithSteps,
-  useFlowSteps,
-  useFlowConnections,
-} from "@/hooks/flow";
+import { useCreateFlowWithSteps, useUpdateFlowWithSteps, useFlowWithGraph } from "@/hooks/flow";
 import type { Node, Edge } from "@xyflow/react";
 import { use, useCallback, useState, useEffect } from "react";
 import { NewExperimentFlow } from "~/components/new-experiment/new-experiment-flow";
@@ -37,15 +31,15 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
   // Get existing flow if experiment has one
   const experimentData = experiment?.body;
   const existingFlowId = experimentData?.flowId;
-  const { data: existingFlow } = useFlow(existingFlowId ?? "");
-  const { data: existingFlowSteps } = useFlowSteps(existingFlowId ?? "");
-  const { data: existingFlowConnections } = useFlowConnections(existingFlowId ?? "");
+  const { data: existingFlowWithGraph } = useFlowWithGraph(existingFlowId ?? "");
 
   // Load existing flow data into React Flow editor
   useEffect(() => {
-    if (existingFlowSteps?.body && existingFlowId) {
+    if (existingFlowWithGraph?.body && existingFlowId) {
+      const flowData = existingFlowWithGraph.body;
+
       // Convert API steps to React Flow nodes
-      const nodes: Node[] = existingFlowSteps.body.map((step) => {
+      const nodes: Node[] = flowData.steps.map((step) => {
         // Get the configuration for this step type
         const config = nodeTypeColorMap[step.type];
 
@@ -66,33 +60,24 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
         };
       });
 
-      setCurrentNodes(nodes);
-      setHasUnsavedChanges(false);
-    }
-  }, [existingFlowSteps, existingFlowId]);
-
-  // Load existing flow connections into React Flow editor
-  useEffect(() => {
-    if (existingFlowConnections?.body && existingFlowId) {
       // Convert API connections to React Flow edges
-      const edges: Edge[] = existingFlowConnections.body.map((connection) => ({
+      const edges: Edge[] = flowData.connections.map((connection) => ({
         id: connection.id,
         source: connection.sourceStepId,
         target: connection.targetStepId,
-        type: connection.type ?? "default",
-        animated: connection.animated ?? false,
+        type: connection.type,
+        animated: connection.animated,
         data: {
           condition: connection.condition,
           priority: connection.priority,
         },
       }));
 
+      setCurrentNodes(nodes);
       setCurrentEdges(edges);
-    } else {
-      // Set empty edges if no connections or no flow
-      setCurrentEdges([]);
+      setHasUnsavedChanges(false);
     }
-  }, [existingFlowConnections, existingFlowId]);
+  }, [existingFlowWithGraph, existingFlowId]);
 
   // Hooks for flow operations
   const createFlowMutation = useCreateFlowWithSteps({
@@ -130,7 +115,7 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
     // Use the utility function to transform React Flow data to API format
     const { steps: flowSteps, connections } = transformFlowDataForAPI(currentNodes, currentEdges);
 
-    if (existingFlowId && existingFlow) {
+    if (existingFlowId && existingFlowWithGraph?.body) {
       // Update existing flow
       updateFlowMutation.mutate({
         params: { id: existingFlowId },
@@ -159,7 +144,7 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
     currentNodes,
     currentEdges,
     existingFlowId,
-    existingFlow,
+    existingFlowWithGraph?.body,
     createFlowMutation,
     updateFlowMutation,
   ]);

@@ -3,3 +3,4 @@ export { useUpdateFlowWithSteps } from "./useUpdateFlowWithSteps/useUpdateFlowWi
 export { useFlow } from "./useFlow/useFlow";
 export { useFlowSteps } from "./useFlowSteps/useFlowSteps";
 export { useFlowConnections } from "./useFlowConnections/useFlowConnections";
+export { useFlowWithGraph } from "./useFlowWithGraph/useFlowWithGraph";
