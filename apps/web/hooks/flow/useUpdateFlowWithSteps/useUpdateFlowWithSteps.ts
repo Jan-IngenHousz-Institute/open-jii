@@ -2,31 +2,32 @@ import { tsr } from "@/lib/tsr";
 
 import type { FlowWithGraph } from "@repo/api";
 
-interface CreateFlowWithStepsProps {
+interface UpdateFlowWithStepsProps {
+  flowId: string;
   onSuccess?: (flowWithGraph: FlowWithGraph) => void;
   onError?: (error: unknown) => void;
 }
 
-export const useCreateFlowWithSteps = (props: CreateFlowWithStepsProps) => {
+export const useUpdateFlowWithSteps = (props: UpdateFlowWithStepsProps) => {
   const queryClient = tsr.useQueryClient();
 
-  return tsr.flows.createFlowWithSteps.useMutation({
+  return tsr.flows.updateFlowWithSteps.useMutation({
     onMutate: async () => {
       // Cancel any outgoing refetches so they don't overwrite our optimistic update
-      await queryClient.cancelQueries({ queryKey: ["flows"] });
+      await queryClient.cancelQueries({ queryKey: ["flows", props.flowId] });
 
-      // Get the current flows
-      const previousFlows = queryClient.getQueryData<{
-        body: FlowWithGraph[];
-      }>(["flows"]);
+      // Get the current flow
+      const previousFlow = queryClient.getQueryData<{
+        body: FlowWithGraph;
+      }>(["flows", props.flowId]);
 
-      // Return the previous flows to use in case of error
-      return { previousFlows };
+      // Return the previous flow to use in case of error
+      return { previousFlow };
     },
     onError: (error, variables, context) => {
       // If there was an error, revert to the previous state
-      if (context?.previousFlows) {
-        queryClient.setQueryData(["flows"], context.previousFlows);
+      if (context?.previousFlow) {
+        queryClient.setQueryData(["flows", props.flowId], context.previousFlow);
       }
 
       // Call the provided onError callback if it exists
@@ -36,6 +37,9 @@ export const useCreateFlowWithSteps = (props: CreateFlowWithStepsProps) => {
     },
     onSettled: async () => {
       // Always refetch after error or success to make sure cache is in sync with server
+      await queryClient.invalidateQueries({
+        queryKey: ["flows", props.flowId],
+      });
       await queryClient.invalidateQueries({
         queryKey: ["flows"],
       });

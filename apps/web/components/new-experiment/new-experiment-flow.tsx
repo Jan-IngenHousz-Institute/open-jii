@@ -25,18 +25,39 @@ import { ExperimentSidePanel } from "../side-panel-flow/side-panel-flow";
 export function NewExperimentFlow({
   onNodeSelect,
   onFlowStateChange,
+  initialNodes: providedInitialNodes,
+  initialEdges: providedInitialEdges,
 }: {
   onNodeSelect?: (node: Node | null) => void;
   onFlowStateChange?: (nodes: Node[], edges: Edge[]) => void;
+  initialNodes?: Node[];
+  initialEdges?: Edge[];
 }) {
   // State for selected edge and node
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 
-  // Initialize nodes and edges from extracted data
-  const { nodes: initialNodes, edges: initialEdges } = getInitialFlowData();
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  // Initialize nodes and edges from provided data or default data
+  const { nodes: defaultInitialNodes, edges: defaultInitialEdges } = getInitialFlowData();
+  const [nodes, setNodes, onNodesChange] = useNodesState(
+    providedInitialNodes ?? defaultInitialNodes,
+  );
+  const [edges, setEdges, onEdgesChange] = useEdgesState(
+    providedInitialEdges ?? defaultInitialEdges,
+  );
+
+  // Update nodes and edges when new initial data is provided
+  useEffect(() => {
+    if (providedInitialNodes) {
+      setNodes(providedInitialNodes);
+    }
+  }, [providedInitialNodes, setNodes]);
+
+  useEffect(() => {
+    if (providedInitialEdges) {
+      setEdges(providedInitialEdges);
+    }
+  }, [providedInitialEdges, setEdges]);
 
   // Notify parent component when flow state changes
   useEffect(() => {
