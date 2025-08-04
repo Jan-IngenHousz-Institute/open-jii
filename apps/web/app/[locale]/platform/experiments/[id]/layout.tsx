@@ -20,6 +20,7 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   // Determine active tab from URL
   const getActiveTab = () => {
     if (pathname.endsWith("/settings")) return "settings";
+    if (pathname.endsWith("/flow")) return "flow";
     if (pathname.startsWith(`/${locale}/platform/experiments/${id}/data`)) return "data";
     if (pathname.endsWith(`/experiments/${id}`)) return "overview";
     return "overview";
@@ -37,7 +38,7 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
       </div>
 
       <Tabs value={activeTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview" asChild>
             <Link href={`/platform/experiments/${id}`} locale={locale}>
               {t("experiments.overview")}
@@ -46,6 +47,11 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
           <TabsTrigger value="data" asChild>
             <Link href={`/platform/experiments/${id}/data`} locale={locale}>
               {t("experiments.data")}
+            </Link>
+          </TabsTrigger>
+          <TabsTrigger value="flow" asChild>
+            <Link href={`/platform/experiments/${id}/flow`} locale={locale}>
+              {t("experiments.flow.tabLabel")}
             </Link>
           </TabsTrigger>
           <TabsTrigger value="settings" asChild>
