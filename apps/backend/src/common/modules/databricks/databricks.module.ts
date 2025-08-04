@@ -1,7 +1,7 @@
 import { HttpModule } from "@nestjs/axios";
 import { Module } from "@nestjs/common";
 
-import { DatabricksService } from "./databricks.service";
+import { DatabricksAdapter } from "./databricks.adapter";
 import { DatabricksAuthService } from "./services/auth/auth.service";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
@@ -21,8 +21,8 @@ import { DatabricksTablesService } from "./services/tables/tables.service";
     DatabricksJobsService,
     DatabricksSqlService,
     DatabricksTablesService,
-    DatabricksService,
+    DatabricksAdapter,
   ],
-  exports: [DatabricksService, DatabricksConfigService],
+  exports: [DatabricksAdapter, DatabricksConfigService],
 })
 export class DatabricksModule {}
