@@ -167,7 +167,7 @@ module "experiment_secret_scope" {
 
   scope_name = "node-webhook-secret-scope-${var.environment}"
   secrets = {
-    webhook_api_key_id = var.backend_webook_api_key_id
+    webhook_api_key_id = var.backend_webhook_api_key_id
     webhook_secret     = var.backend_webhook_secret
   }
 
@@ -452,7 +452,7 @@ module "opennext_waf" {
 
   service_name       = "opennext"
   environment        = "dev"
-  rate_limit         = 2000
+  rate_limit         = 500
   log_retention_days = 30
 
   tags = {
@@ -821,7 +821,7 @@ module "backend_waf" {
 
   service_name       = "backend"
   environment        = "dev"
-  rate_limit         = 2000
+  rate_limit         = 500
   log_retention_days = 30
 
   tags = {
