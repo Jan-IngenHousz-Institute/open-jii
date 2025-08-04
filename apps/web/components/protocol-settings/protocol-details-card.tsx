@@ -48,7 +48,7 @@ export function ProtocolDetailsCard({
   initialFamily,
 }: ProtocolDetailsCardProps) {
   const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(protocolId);
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
 
   const form = useForm<UpdateProtocolRequestBody & { name: string; family: SensorFamily }>({
     resolver: zodResolver(
@@ -153,7 +153,6 @@ export function ProtocolDetailsCard({
                         error={form.formState.errors.code?.message?.toString()}
                       />
                     </FormControl>
-                    <FormMessage />
                   </FormItem>
                 )}
               />

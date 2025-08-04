@@ -1,7 +1,7 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import { ProtocolFilter } from "@repo/api";
-import { eq, like, protocols } from "@repo/database";
+import { eq, ilike, protocols, experimentProtocols } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -35,7 +35,7 @@ export class ProtocolRepository {
       const query = this.database.select().from(protocols);
 
       if (search) {
-        query.where(like(protocols.name, `%${search}%`));
+        query.where(ilike(protocols.name, `%${search}%`));
       }
 
       const results = await query;
@@ -95,6 +95,17 @@ export class ProtocolRepository {
       const results = await this.database.delete(protocols).where(eq(protocols.id, id)).returning();
 
       return results as unknown as ProtocolDto[];
+    });
+  }
+
+  async isAssignedToAnyExperiment(protocolId: string): Promise<Result<boolean>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select()
+        .from(experimentProtocols)
+        .where(eq(experimentProtocols.protocolId, protocolId))
+        .limit(1);
+      return result.length > 0;
     });
   }
 }

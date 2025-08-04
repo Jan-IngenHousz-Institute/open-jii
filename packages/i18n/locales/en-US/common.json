@@ -32,7 +32,7 @@
     "settings": "Settings",
     "dashboard": "Dashboard",
     "profile": "Profile",
-    "logout": "Logout",
+    "logout": "Sign out",
     "home": "Home",
     "openJII": "openJII"
   },
@@ -59,7 +59,15 @@
     "experimentId": "Experiment ID",
     "descriptionTitle": "Description",
     "searchUsers": "Search users",
-    "startTypingToSearch": "Start typing to search"
+    "startTypingToSearch": "Start typing to search",
+    "searchProtocols": "Search protocols",
+    "loadingProtocols": "Loading...",
+    "noProtocolsFoundFor": "No protocols found for \"{{search}}\"",
+    "noProtocolsAvailable": "No protocols available.",
+    "addProtocol": "Add protocol",
+    "seeProtocolDetails": "See protocol details",
+    "family": "Family:",
+    "createdBy": "Created by:"
   },
   "newExperiment": {
     "description": "Set up a new experiment (project).",
@@ -77,7 +85,10 @@
     "addMembersDescription": "Manage who has access to this experiment",
     "addMemberPlaceholder": "Add a member",
     "visibilityTitle": "Visibility Settings",
-    "visibilityDescription": "Control your experiment's visibility and embargo period"
+    "visibilityDescription": "Control your experiment's visibility and embargo period",
+    "addProtocolsTitle": "Add Protocols",
+    "addProtocolsDescription": "Manage and order experiment protocols",
+    "addProtocolsPlaceholder": "Add a protocol"
   },
 
   "experimentSettings": {
@@ -110,7 +121,19 @@
     "noEmail": "No email",
     "joined": "Joined",
     "cannotRemoveLastAdmin": "Cannot remove last admin",
-    "removeMember": "Remove member"
+    "removeMember": "Remove member",
+    "noProtocolsYet": "No protocols yet",
+    "addProtocols": "Add protocols to this experiment",
+    "unknownProtocol": "Unknown Protocol",
+    "removeProtocol": "Remove protocol",
+    "seeProtocolDetails": "See protocol details",
+    "protocolManagement": "Protocol Management",
+    "manageAndOrderProtocols": "Manage and order experiment protocols",
+    "addProtocolPlaceholder": "Add a protocol",
+    "currentProtocols": "Current Protocols",
+    "protocolAdded": "Protocol added successfully",
+    "protocolRemoved": "Protocol removed successfully",
+    "errorLoadingProtocols": "Error loading protocols. Please try again."
   },
 
   "dashboard": {
@@ -121,8 +144,8 @@
     "quickActions": "Quick Actions"
   },
   "auth": {
-    "login": "Login",
-    "logout": "Logout",
+    "login": "Sign in",
+    "logout": "Sign out",
     "email": "Email",
     "password": "Password",
     "forgotPassword": "Forgot Password?",
@@ -132,19 +155,26 @@
     "signOut": "Sign out",
     "signOutServer": "Sign out (Server)",
     "welcomeBack": "Welcome Back",
-    "loginSuccess": "Logged in successfully",
-    "logoutSuccess": "Logged out successfully",
+    "loginSuccess": "Signed in successfully",
+    "logoutSuccess": "Signed out successfully",
     "invalidCredentials": "Invalid credentials",
-    "loggedInAs": "Logged in as {{name}}",
-    "loginToAccount": "Login to your account",
+    "loggedInAs": "Signed in in as {{name}}",
+    "loginToAccount": "Sign in to your account",
     "continueWith": "Continue with",
-    "loginWith": "Login with {{provider}}",
-    "signInWithEmail": "Sign in with email",
-    "signInWithGoogle": "Sign in with Google",
-    "signInWithGithub": "Sign in with GitHub",
+    "orContinueWith": "Or continue with",
+    "loginWith": "Sign in with {{provider}}",
+    "loginWith-github": "Sign in with GitHub",
+    "loginWith-nodemailer": "Sign in with Email",
+    "verifyRequest": "We emailed you a sign in link",
+    "verifyRequestDetails": "We sent you an email to your email address. Tap the button in the email to continue.",
+    "verifyRequestDetailsJunk": "If you don’t see the email, check your spam or junk folder.",
+    "loginEmail": "Confirm your email address to sign in",
+    "loginEmailConfirm": "Confirm and sign in",
+    "loginEmailNotClickable": "If the button above is not clickable, copy-paste the following url into your web browser:",
+    "loginEmailNotRequested": "If you didn't request this email, there's nothing to worry about - you can safely ignore it.",
     "noAccount": "No account?",
     "createAccount": "Create an account",
-    "errorMessage": "An error occurred during login. Please try again.",
+    "errorMessage": "An error occurred during sign in. Please try again.",
     "account": "Account",
     "userMenu": "User menu",
     "signingOut": "Signing out..."

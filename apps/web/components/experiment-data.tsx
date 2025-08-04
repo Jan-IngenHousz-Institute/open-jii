@@ -11,7 +11,7 @@ interface ExperimentDataProps {
 
 export function ExperimentData({ experimentId }: ExperimentDataProps) {
   const { data, isLoading, error } = useExperiment(experimentId);
-  const { t } = useTranslation(undefined, "experiments");
+  const { t } = useTranslation("experiments");
 
   if (isLoading) {
     return <div>{t("experimentData.loading")}</div>;

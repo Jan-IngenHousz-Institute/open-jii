@@ -17,7 +17,7 @@ interface ProtocolOverviewPageProps {
 export default function ProtocolOverviewPage({ params }: ProtocolOverviewPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useProtocol(id);
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
 
   if (isLoading) {
     return <div>{t("common.loading")}</div>;
@@ -66,9 +66,9 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
             </div>
             <div>
               <h4 className="text-muted-foreground text-sm font-medium">
-                {t("protocols.protocolId")}
+                {t("experiments.createdBy")}
               </h4>
-              <p className="truncate font-mono text-xs">{protocol.id}</p>
+              <p className="truncate font-mono text-xs">{protocol.createdBy}</p>
             </div>
           </div>
         </CardContent>

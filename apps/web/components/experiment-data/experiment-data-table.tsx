@@ -44,7 +44,7 @@ export function ExperimentDataTable({
 }) {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
   const [persistedMetaData, setPersistedMetaData] = useState<TableMetadata>();
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
 
   // Use traditional pagination with improved column persistence
   const { tableMetadata, tableRows, isLoading, error } = useExperimentData(

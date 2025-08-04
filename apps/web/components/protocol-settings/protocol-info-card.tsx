@@ -35,7 +35,7 @@ export function ProtocolInfoCard({ protocolId, protocol }: ProtocolInfoCardProps
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const router = useRouter();
 
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
   const locale = useLocale();
 
   const handleDeleteProtocol = async () => {

@@ -14,7 +14,7 @@ interface ExperimentLayoutProps {
 export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   const pathname = usePathname();
   const { id } = useParams<{ id: string }>();
-  const { t } = useTranslation(undefined, "common");
+  const { t } = useTranslation();
   const locale = useLocale();
 
   // Determine active tab from URL

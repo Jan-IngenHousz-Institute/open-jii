@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { protocols as protocolsTable, eq } from "@repo/database";
+import { protocols as protocolsTable, experimentProtocols, eq } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -134,6 +134,28 @@ describe("ProtocolRepository", () => {
       expect(protocols.length).toBeGreaterThanOrEqual(1);
       expect(protocols.some((p) => p.name === protocol1.name)).toBe(true);
       expect(protocols.every((p) => p.name !== protocol2.name)).toBe(true);
+    });
+
+    it("should filter protocols by name search (case-insensitive)", async () => {
+      // Arrange
+      const uniquePrefix = "CaseTest";
+      const protocol1 = {
+        name: `${uniquePrefix} Protocol 1`,
+        description: "Description 1",
+        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
+      };
+
+      await repository.create(protocol1, testUserId);
+
+      // Act
+      const result = await repository.findAll(uniquePrefix.toLowerCase());
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const protocols = result.value;
+      expect(protocols.some((p) => p.name === protocol1.name)).toBe(true);
     });
   });
 
@@ -357,6 +379,60 @@ describe("ProtocolRepository", () => {
 
       // Should return an empty array
       expect(protocols.length).toBe(0);
+    });
+  });
+
+  describe("isAssignedToAnyExperiment", () => {
+    it("should return false if protocol is not assigned to any experiment", async () => {
+      // Arrange
+      const createProtocolDto = {
+        name: "Unassigned Protocol",
+        description: "Test Description",
+        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
+      };
+      const createResult = await repository.create(createProtocolDto, testUserId);
+      assertSuccess(createResult);
+      const protocolId = createResult.value[0].id;
+
+      // Act
+      const isAssigned = await repository.isAssignedToAnyExperiment(protocolId);
+
+      // Assert
+      assertSuccess(isAssigned);
+      expect(isAssigned.value).toBe(false);
+    });
+
+    it("should return true if protocol is assigned to an experiment", async () => {
+      // Arrange
+      const createProtocolDto = {
+        name: "Assigned Protocol",
+        description: "Test Description",
+        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
+      };
+      const createResult = await repository.create(createProtocolDto, testUserId);
+      assertSuccess(createResult);
+      const protocolId = createResult.value[0].id;
+
+      // Create a valid experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      // Simulate assignment in experimentProtocols table
+      await testApp.database.insert(experimentProtocols).values({
+        protocolId,
+        experimentId: experiment.id,
+      });
+
+      // Act
+      const isAssigned = await repository.isAssignedToAnyExperiment(protocolId);
+
+      // Assert
+      assertSuccess(isAssigned);
+      expect(isAssigned.value).toBe(true);
     });
   });
 });
