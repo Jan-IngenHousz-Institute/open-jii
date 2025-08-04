@@ -4,11 +4,11 @@ import Image from "next/image";
 import React, { useRef, useState } from "react";
 
 interface VisualMediaProps {
-  images: Array<{
+  images: {
     url?: string | null;
     title?: string | null;
     sys?: { id?: string | null };
-  }>;
+  }[];
   inspectorProps?: (args: any) => any;
 }
 

@@ -43,7 +43,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
 
   // Button component for cleaner JSX
   const renderButton = (button: ButtonFieldsFragment | null, index: number) => {
-    if (!button || !button.url) return null;
+    if (!button?.url) return null;
 
     const isPrimary = index === 0;
     const href = buildHref(button.url);

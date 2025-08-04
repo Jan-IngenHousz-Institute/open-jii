@@ -1,6 +1,13 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "globalEnv": [
+    "CONTENTFUL_SPACE_ID",
+    "CONTENTFUL_ACCESS_TOKEN", 
+    "CONTENTFUL_PREVIEW_ACCESS_TOKEN",
+    "CONTENTFUL_PREVIEW_SECRET",
+    "CONTENTFUL_SPACE_ENVIRONMENT"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -16,17 +23,55 @@
         "AUTH_GITHUB_ID",
         "AUTH_GITHUB_SECRET",
         "AUTH_EMAIL_SERVER",
-        "AUTH_EMAIL_FROM"
+        "AUTH_EMAIL_FROM",
+        "DATABASE_URL",
+        "DB_HOST",
+        "DB_PORT",
+        "DB_NAME",
+        "DB_CREDENTIALS",
+        "CONTENTFUL_SPACE_ID",
+        "CONTENTFUL_ACCESS_TOKEN",
+        "CONTENTFUL_PREVIEW_ACCESS_TOKEN",
+        "CONTENTFUL_PREVIEW_SECRET",
+        "CONTENTFUL_SPACE_ENVIRONMENT",
+        "CONTENTFUL_GRAPHQL_ENDPOINT"
       ]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": ["^lint"],
+      "env": [
+        "DATABASE_URL",
+        "DB_HOST",
+        "DB_PORT",
+        "DB_NAME",
+        "DB_CREDENTIALS",
+        "CONTENTFUL_SPACE_ID",
+        "CONTENTFUL_ACCESS_TOKEN",
+        "CONTENTFUL_PREVIEW_ACCESS_TOKEN",
+        "CONTENTFUL_PREVIEW_SECRET",
+        "CONTENTFUL_SPACE_ENVIRONMENT",
+        "CONTENTFUL_GRAPHQL_ENDPOINT"
+      ]
     },
     "check-types": {
-      "dependsOn": ["^check-types"]
+      "dependsOn": ["^check-types"],
+      "env": [
+        "CONTENTFUL_SPACE_ID",
+        "CONTENTFUL_ACCESS_TOKEN",
+        "CONTENTFUL_PREVIEW_ACCESS_TOKEN",
+        "CONTENTFUL_PREVIEW_SECRET",
+        "CONTENTFUL_SPACE_ENVIRONMENT"
+      ]
     },
     "dev": {
-      "env": ["NEXT_PUBLIC_ENABLE_DEVTOOLS"],
+      "env": [
+        "NEXT_PUBLIC_ENABLE_DEVTOOLS",
+        "CONTENTFUL_SPACE_ID",
+        "CONTENTFUL_ACCESS_TOKEN",
+        "CONTENTFUL_PREVIEW_ACCESS_TOKEN",
+        "CONTENTFUL_PREVIEW_SECRET",
+        "CONTENTFUL_SPACE_ENVIRONMENT"
+      ],
       "cache": false,
       "persistent": true
     },
@@ -49,7 +94,16 @@
     "test": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["coverage/**"]
+      "outputs": ["coverage/**"],
+      "env": [
+        "DATABRICKS_WEBHOOK_API_KEY_ID",
+        "DATABRICKS_WEBHOOK_SECRET",
+        "DATABASE_URL",
+        "DB_HOST",
+        "DB_PORT",
+        "DB_NAME",
+        "DB_CREDENTIALS"
+      ]
     },
     "clean": {
       "cache": false

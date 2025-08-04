@@ -60,7 +60,7 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
           className="flex w-full max-w-xs flex-col items-center rounded-2xl border border-gray-200 bg-gray-50 p-8 shadow-sm transition-colors duration-200 hover:bg-white hover:shadow-md"
         >
           {/* Removed gradient overlay and backdrop-blur for performance */}
-          {partner.logo && partner.logo.url ? (
+          {partner.logo?.url ? (
             <div
               className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-white shadow-inner"
               {...partnerInspectorProps({ fieldId: "logo" })}

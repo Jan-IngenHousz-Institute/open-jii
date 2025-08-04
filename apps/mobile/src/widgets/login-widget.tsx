@@ -1,8 +1,5 @@
-import { parse } from "expo-linking";
-import { openAuthSessionAsync } from "expo-web-browser";
 import { useAsyncCallback } from "react-async-hook";
 import { Text, TouchableOpacity, View } from "react-native";
-import { getLoginArgs } from "~/api/get-login-args";
 import { getSessionData } from "~/api/get-session-data";
 import { login } from "~/auth/login";
 

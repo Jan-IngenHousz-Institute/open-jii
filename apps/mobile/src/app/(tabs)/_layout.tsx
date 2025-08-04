@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
 import { Home, User, FlaskConical, Activity } from "lucide-react-native";
 import { View } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "~/hooks/use-theme";
 
 export default function TabLayout() {

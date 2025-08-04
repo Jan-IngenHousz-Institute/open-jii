@@ -29,7 +29,7 @@ export {
 export { default as resourcesToBackend } from "i18next-resources-to-backend";
 
 // Utility types for better TypeScript support
-export type TranslationKeys<T = Record<string, any>> = {
+export type TranslationKeys<T = Record<string, unknown>> = {
   [K in keyof T]: K extends string ? K : never;
 }[keyof T];
 

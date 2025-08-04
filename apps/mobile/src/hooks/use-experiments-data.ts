@@ -15,7 +15,7 @@ export function useExperimentsData(experimentId: string | undefined, tableName: 
   });
 
   const refetchAsync = useAsyncCallback(originalRefetch);
-  const isFetching = reactQueryIsFetching || refetchAsync.loading;
+  const isFetching = reactQueryIsFetching ?? refetchAsync.loading;
   const table = data?.body.find((table) => table.name === tableName);
 
   if (!table?.data) {

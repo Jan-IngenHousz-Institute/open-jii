@@ -1,5 +1,7 @@
-import { documentToReactComponents, Options } from "@contentful/rich-text-react-renderer";
-import { BLOCKS, Document } from "@contentful/rich-text-types";
+import type { Options } from "@contentful/rich-text-react-renderer";
+import { documentToReactComponents } from "@contentful/rich-text-react-renderer";
+import type { Document } from "@contentful/rich-text-types";
+import { BLOCKS } from "@contentful/rich-text-types";
 
 import type { ComponentRichImage } from "../../lib/__generated/sdk";
 import { ArticleImage } from "../article";
