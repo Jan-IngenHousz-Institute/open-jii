@@ -62,9 +62,9 @@ def extract_parameters(dbutils, spark) -> Dict[str, Any]:
     if webhook_url and not webhook_url.lower().startswith("https://"):
         raise ValueError("Webhook URL must use HTTPS protocol.")
         
-    # Validate that the webhook URL contains the :experimentId placeholder
+    # Validate that the webhook URL contains the :experimentId parameter
     if ":experimentId" not in webhook_url:
-        logger.warning("Webhook URL should contain ':experimentId' placeholder. Using the provided URL as-is.")
+        raise ValueError("Webhook URL must contain ':experimentId' parameter.")
 
     # Get experiment ID
     experiment_id = dbutils.widgets.get("experiment_id")

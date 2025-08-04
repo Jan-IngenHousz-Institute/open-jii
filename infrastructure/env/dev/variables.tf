@@ -228,7 +228,7 @@ variable "github_oauth_client_secret" {
 }
 # Backend Databricks webhook secrets
 
-variable "backend_webook_api_key_id" {
+variable "backend_webhook_api_key_id" {
   description = "Databricks webhook API key ID"
   type        = string
   sensitive   = true
