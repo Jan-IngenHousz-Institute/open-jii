@@ -2,17 +2,17 @@ import nock from "nock";
 
 import { TestHarness } from "../../../test/test-harness";
 import { assertSuccess } from "../../utils/fp-utils";
-import { DatabricksService } from "./databricks.service";
+import { DatabricksAdapter } from "./databricks.adapter";
 import { DatabricksAuthService } from "./services/auth/auth.service";
 
 // Constants for testing
 const MOCK_ACCESS_TOKEN = "mock-token";
 const MOCK_EXPIRES_IN = 3600;
 
-describe("DatabricksService", () => {
+describe("DatabricksAdapter", () => {
   const testApp = TestHarness.App;
   const databricksHost = `${process.env.DATABRICKS_HOST}`;
-  let databricksService: DatabricksService;
+  let databricksAdapter: DatabricksAdapter;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -20,7 +20,7 @@ describe("DatabricksService", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
-    databricksService = testApp.module.get(DatabricksService);
+    databricksAdapter = testApp.module.get(DatabricksAdapter);
 
     nock.cleanAll();
   });
@@ -52,7 +52,7 @@ describe("DatabricksService", () => {
         });
 
       // Execute health check
-      const result = await databricksService.healthCheck();
+      const result = await databricksAdapter.healthCheck();
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -90,7 +90,7 @@ describe("DatabricksService", () => {
         .reply(200, mockResponse);
 
       // Execute trigger job
-      const result = await databricksService.triggerJob(mockParams);
+      const result = await databricksAdapter.triggerJob(mockParams);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -150,7 +150,7 @@ describe("DatabricksService", () => {
         });
 
       // Execute SQL query
-      const result = await databricksService.executeSqlQuery(schemaName, sqlStatement);
+      const result = await databricksAdapter.executeSqlQuery(schemaName, sqlStatement);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -201,7 +201,7 @@ describe("DatabricksService", () => {
         .reply(200, mockTablesResponse);
 
       // Execute list tables
-      const result = await databricksService.listTables(experimentName, experimentId);
+      const result = await databricksAdapter.listTables(experimentName, experimentId);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);

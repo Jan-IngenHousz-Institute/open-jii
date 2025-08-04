@@ -1,19 +1,21 @@
 import { Injectable } from "@nestjs/common";
 
-import { Result } from "../../utils/fp-utils";
-import { DatabricksAuthService } from "./services/auth/auth.service";
+import { DatabricksPort } from "../../../experiments/core/ports/databricks.port";
+import type { Result } from "../../utils/fp-utils";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
-import { DatabricksHealthCheck } from "./services/jobs/jobs.types";
-import { DatabricksJobTriggerParams, DatabricksJobRunResponse } from "./services/jobs/jobs.types";
+import type { DatabricksHealthCheck } from "./services/jobs/jobs.types";
+import type {
+  DatabricksJobTriggerParams,
+  DatabricksJobRunResponse,
+} from "./services/jobs/jobs.types";
 import { DatabricksSqlService } from "./services/sql/sql.service";
-import { SchemaData } from "./services/sql/sql.types";
+import type { SchemaData } from "./services/sql/sql.types";
 import { DatabricksTablesService } from "./services/tables/tables.service";
-import { ListTablesResponse } from "./services/tables/tables.types";
+import type { ListTablesResponse } from "./services/tables/tables.types";
 
 @Injectable()
-export class DatabricksService {
+export class DatabricksAdapter implements DatabricksPort {
   constructor(
-    private readonly authService: DatabricksAuthService,
     private readonly jobsService: DatabricksJobsService,
     private readonly sqlService: DatabricksSqlService,
     private readonly tablesService: DatabricksTablesService,
