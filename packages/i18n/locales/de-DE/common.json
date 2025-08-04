@@ -177,6 +177,26 @@
     "userMenu": "Benutzermenü",
     "signingOut": "Abmelden..."
   },
+  "registration": {
+    "title": "Registrierung",
+    "description": "Bitte füllen Sie das untenstehende Formular aus, um Ihr Konto zu erstellen.",
+    "firstName": "Vorname",
+    "firstNamePlaceholder": "Geben Sie Ihren Vornamen ein",
+    "firstNameError": "Ihr Vorname muss mindestens 2 Zeichen lang sein",
+    "lastName": "Nachname",
+    "lastNamePlaceholder": "Geben Sie Ihren Nachnamen ein",
+    "lastNameError": "Ihr Nachname muss mindestens 2 Zeichen lang sein",
+    "organization": "Organisation",
+    "organizationPlaceholder": "Geben Sie Ihre Organisation ein (optional)",
+    "termsAndConditions": "Allgemeine Geschäftsbedingungen",
+    "acceptTerms": "Ich akzeptiere die allgemeinen Geschäftsbedingungen",
+    "acceptTermsError": "Sie müssen die allgemeinen Geschäftsbedingungen akzeptieren",
+    "register": "Registrieren",
+    "successMessage": "Registrierung erfolgreich",
+    "signOutTitle": "Abmelden",
+    "signOutDescription": "Um Ihre Registrierung abzuschließen, müssen Sie sich jetzt abmelden und erneut anmelden.",
+    "signOutConfirm": "Abmelden"
+  },
   "signout": {
     "title": "Abmelden",
     "description": "Sind Sie sicher, dass Sie sich von Ihrem Konto abmelden möchten?",

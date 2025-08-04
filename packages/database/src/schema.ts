@@ -18,6 +18,7 @@ export const users = pgTable("users", {
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  registered: boolean("registered").notNull().default(false),
 });
 
 export const accounts = pgTable(
@@ -123,7 +124,7 @@ export const profiles = pgTable("profiles", {
 export const organizations = pgTable("organizations", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
-  type: organizationTypeEnum("type").notNull(),
+  type: organizationTypeEnum("type"),
   description: text("description"),
   website: varchar("website", { length: 255 }),
   location: text("location"),

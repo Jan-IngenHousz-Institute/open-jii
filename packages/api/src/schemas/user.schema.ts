@@ -7,6 +7,7 @@ export const zUser = z.object({
   emailVerified: z.string().datetime().nullable(),
   image: z.string().nullable(),
   createdAt: z.string().datetime(),
+  registered: z.boolean(),
 });
 
 export const zUserList = z.array(zUser);
@@ -33,6 +34,14 @@ export const zSearchUsersQuery = z.object({
 export const zCreateUserResponse = z.object({
   id: z.string().uuid(),
 });
+
+export const zCreateUserProfileBody = z.object({
+  firstName: z.string().min(2).describe("First name"),
+  lastName: z.string().min(2).describe("Last name"),
+  organization: z.string().optional().describe("Organization"),
+});
+
+export const zCreateUserProfileResponse = z.object({});
 
 // Path parameters
 export const zUserIdPathParam = z.object({

@@ -38,7 +38,7 @@
   },
   "dependencies": {
     "@auth/core": "^0.40.0",
-    "@auth/drizzle-adapter": "^1.9.1",
+    "@auth/drizzle-adapter": "^1.10.0",
     "@auth/express": "^0.11.0",
     "@react-email/components": "catalog:react-email",
     "@repo/database": "workspace:*",
