@@ -17,7 +17,6 @@ catalog:
   "@types/node": ^22.15.3
   nodemailer: ^7.0.4
   "@types/nodemailer": ^6.4.17
-  "@tanstack/react-query": ^5.84.1
 
 catalogs:
   react19:
