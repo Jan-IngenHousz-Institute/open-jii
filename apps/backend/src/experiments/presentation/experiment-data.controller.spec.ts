@@ -79,6 +79,19 @@ describe("ExperimentDataController", () => {
         truncated: false,
       };
 
+      // Mock listTables to validate table exists
+      const mockTablesResponse = {
+        tables: [
+          {
+            name: "test_table",
+            catalog_name: experiment.name,
+            schema_name: `exp_${experiment.name}_${experiment.id}`,
+          },
+        ],
+      };
+
+      jest.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
+
       jest
         .spyOn(databricksAdapter, "executeSqlQuery")
         .mockResolvedValueOnce(success(mockCountData)) // First call for count
@@ -118,6 +131,8 @@ describe("ExperimentDataController", () => {
       });
 
       // Verify the DatabricksAdapter was called correctly
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.name, experiment.id);
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenCalledTimes(2);
       // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -346,6 +361,19 @@ describe("ExperimentDataController", () => {
         userId: testUserId,
       });
 
+      // Mock listTables to return the table exists
+      const mockTablesResponse = {
+        tables: [
+          {
+            name: "nonexistent_table",
+            catalog_name: experiment.name,
+            schema_name: `exp_${experiment.name}_${experiment.id}`,
+          },
+        ],
+      };
+
+      jest.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
+
       // Mock the DatabricksAdapter to fail on SQL execution
       jest
         .spyOn(databricksAdapter, "executeSqlQuery")
@@ -397,6 +425,19 @@ describe("ExperimentDataController", () => {
         truncated: false,
       };
 
+      // Mock listTables to validate table exists
+      const mockTablesResponse = {
+        tables: [
+          {
+            name: "test_table",
+            catalog_name: experiment.name,
+            schema_name: `exp_${experiment.name}_${experiment.id}`,
+          },
+        ],
+      };
+
+      jest.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
+
       jest
         .spyOn(databricksAdapter, "executeSqlQuery")
         .mockResolvedValueOnce(success(mockCountData)) // First call for count
@@ -435,6 +476,40 @@ describe("ExperimentDataController", () => {
         `exp_${experiment.name}_${experiment.id}`,
         "SELECT * FROM test_table LIMIT 10 OFFSET 10", // page 2 with pageSize 10
       );
+    });
+
+    it("should return 404 if specified table does not exist", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment Table Not Found",
+        userId: testUserId,
+      });
+
+      // Mock listTables to return empty table list
+      const mockTablesResponse = {
+        tables: [
+          {
+            name: "existing_table",
+            catalog_name: experiment.name,
+            schema_name: `exp_${experiment.name}_${experiment.id}`,
+          },
+        ],
+      };
+
+      jest.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
+
+      const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
+        id: experiment.id,
+      });
+
+      await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .query({ tableName: "non_existent_table" })
+        .expect(StatusCodes.NOT_FOUND)
+        .expect(({ body }: { body: ErrorResponse }) => {
+          expect(body.message).toContain("Table 'non_existent_table' not found in this experiment");
+        });
     });
   });
 });

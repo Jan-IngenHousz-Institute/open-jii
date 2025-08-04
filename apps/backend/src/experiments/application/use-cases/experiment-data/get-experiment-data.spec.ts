@@ -13,13 +13,13 @@ describe("GetExperimentDataUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: GetExperimentDataUseCase;
-  // Define constants for Databricks mock values to ensure consistency
+
   const MOCK_WAREHOUSE_ID = "test-warehouse-id";
   const MOCK_CATALOG_NAME = "test_catalog";
   const MOCK_WAIT_TIMEOUT = "50s";
   const MOCK_DISPOSITION = "INLINE";
   const MOCK_FORMAT = "JSON_ARRAY";
-  const SAMPLE_DATA_LIMIT = 5; // Assuming a default limit for sample data
+  const SAMPLE_DATA_LIMIT = 5;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -94,6 +94,20 @@ describe("GetExperimentDataUseCase", () => {
       expires_in: 3600,
       token_type: "Bearer",
     });
+
+    // Mock listTables API call to validate table exists
+    nock(DATABRICKS_HOST)
+      .get(DatabricksTablesService.TABLES_ENDPOINT)
+      .query(true)
+      .reply(200, {
+        tables: [
+          {
+            name: "test_table",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: `exp_${experiment.name}_${experiment.id}`,
+          },
+        ],
+      });
 
     // Mock SQL query for row count
     nock(DATABRICKS_HOST)
@@ -531,6 +545,20 @@ describe("GetExperimentDataUseCase", () => {
       token_type: "Bearer",
     });
 
+    // Mock listTables API call to validate table exists
+    nock(DATABRICKS_HOST)
+      .get(DatabricksTablesService.TABLES_ENDPOINT)
+      .query(true)
+      .reply(200, {
+        tables: [
+          {
+            name: "test_table",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: `exp_${experiment.name}_${experiment.id}`,
+          },
+        ],
+      });
+
     // Mock SQL query for row count - success
     nock(DATABRICKS_HOST)
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
@@ -606,6 +634,20 @@ describe("GetExperimentDataUseCase", () => {
       token_type: "Bearer",
     });
 
+    // Mock listTables API call to validate table exists
+    nock(DATABRICKS_HOST)
+      .get(DatabricksTablesService.TABLES_ENDPOINT)
+      .query(true)
+      .reply(200, {
+        tables: [
+          {
+            name: "test_table",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: `exp_${experiment.name}_${experiment.id}`,
+          },
+        ],
+      });
+
     // Mock SQL query for row count - error
     nock(DATABRICKS_HOST)
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
@@ -664,5 +706,54 @@ describe("GetExperimentDataUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("INTERNAL_ERROR");
     expect(result.error.message).toContain("Failed to list tables");
+  });
+
+  it("should return not found error when specified table does not exist", async () => {
+    // Create an experiment in the database
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      description: "Test Description",
+      status: "active",
+      visibility: "private",
+      embargoIntervalDays: 90,
+      userId: testUserId,
+    });
+
+    // Mock the Databricks methods - empty tables list
+    const mockTables = {
+      tables: [
+        {
+          name: "existing_table",
+          catalog_name: MOCK_CATALOG_NAME,
+          schema_name: `exp_${experiment.name}_${experiment.id}`,
+        },
+      ],
+    };
+
+    // Mock token request
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+      access_token: "mock-token",
+      expires_in: 3600,
+      token_type: "Bearer",
+    });
+
+    // Mock listTables API call
+    nock(DATABRICKS_HOST)
+      .get(DatabricksTablesService.TABLES_ENDPOINT)
+      .query(true)
+      .reply(200, mockTables);
+
+    // Act - try to access a table that doesn't exist
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "non_existent_table",
+      page: 1,
+      pageSize: 20,
+    });
+
+    // Assert result is failure
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("NOT_FOUND");
+    expect(result.error.message).toContain("Table 'non_existent_table' not found in this experiment");
   });
 });

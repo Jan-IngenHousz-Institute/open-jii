@@ -98,6 +98,30 @@ export class GetExperimentDataUseCase {
               `Fetching data for table ${query.tableName} in experiment ${experimentId}`,
             );
 
+            // First, validate that the table exists by listing all tables
+            const tablesResult = await this.databricksPort.listTables(
+              experiment.name,
+              experimentId,
+            );
+
+            if (tablesResult.isFailure()) {
+              return failure(
+                AppError.internal(`Failed to list tables: ${tablesResult.error.message}`),
+              );
+            }
+
+            // Check if the specified table exists
+            const tableExists = tablesResult.value.tables.some(
+              (table: TableDataDto) => table.name === query.tableName,
+            );
+
+            if (!tableExists) {
+              this.logger.warn(`Table ${query.tableName} not found in experiment ${experimentId}`);
+              return failure(
+                AppError.notFound(`Table '${query.tableName}' not found in this experiment`),
+              );
+            }
+
             // Execute SQL query to get experiment data with pagination
             const offset = (page - 1) * pageSize;
             const sqlQuery = `SELECT * FROM ${query.tableName} LIMIT ${pageSize} OFFSET ${offset}`;
