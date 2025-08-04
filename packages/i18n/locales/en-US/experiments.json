@@ -16,7 +16,8 @@
     "active": "Active",
     "completed": "Completed",
     "paused": "Paused",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "provisioning": "Provisioning"
   },
   "actions": {
     "start": "Start Experiment",

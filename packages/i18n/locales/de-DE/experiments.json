@@ -16,7 +16,8 @@
     "active": "Aktiv",
     "completed": "Abgeschlossen",
     "paused": "Pausiert",
-    "cancelled": "Abgebrochen"
+    "cancelled": "Abgebrochen",
+    "provisioning": "Bereitstellung"
   },
   "actions": {
     "start": "Experiment starten",

@@ -1,28 +1,13 @@
 "use client";
 
+import { ExperimentOverviewCards } from "~/components/experiment-overview-cards";
+import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments";
+
 import type { ExperimentStatus } from "@repo/api";
 import { zExperimentStatus } from "@repo/api";
-import {
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components";
 
-import { useExperiments } from "../hooks/experiment/useExperiments/useExperiments";
-import { ExperimentTableContent } from "./experiment-table-rows";
-
-interface ListExperimentProps {
-  userId: string;
-}
-
-export function ListExperiments({ userId }: ListExperimentProps) {
+export function ListExperiments() {
   const { data, filter, setFilter, status, setStatus } = useExperiments({});
 
   return (
@@ -62,21 +47,7 @@ export function ListExperiments({ userId }: ListExperimentProps) {
         </Select>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Experiment name</TableHead>
-            <TableHead className="text-center">Visibility</TableHead>
-            <TableHead>State</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead>Updated</TableHead>
-            <TableHead className="text-center">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <ExperimentTableContent data={data?.body} userId={userId} />
-        </TableBody>
-      </Table>
+      <ExperimentOverviewCards experiments={data?.body} />
     </div>
   );
 }
