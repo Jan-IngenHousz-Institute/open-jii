@@ -17,7 +17,7 @@ export function useMeasurementUpload({ experimentName, experimentId, protocolNam
         showToast("Measurement uploaded!", "success");
       } catch (e: any) {
         console.log("Upload failed", e);
-        showToast("Upload not available, upload it later from Home screen", "warning");
+        showToast("Upload not available, upload it later from Home screen", "error");
         await saveFailedUpload({
           topic,
           measurementResult,

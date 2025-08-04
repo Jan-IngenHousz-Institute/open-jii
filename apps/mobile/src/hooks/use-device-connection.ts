@@ -83,7 +83,7 @@ export function useDeviceConnection() {
       setMeasurementTimestamp(timestamp);
       return { ...result, timestamp, output };
     } catch (error: any) {
-      showToast("Could not process measurement information " + error.message, "warning");
+      showToast("Could not process measurement information " + error.message, "info");
       return result;
     }
   });

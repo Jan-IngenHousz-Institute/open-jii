@@ -66,7 +66,7 @@ export function MeasurementScreen() {
 
   const handleScanForDevices = async () => {
     if (!selectedConnectionType) {
-      return showToast("Please select a connection type first", "warning");
+      return showToast("Please select a connection type first", "info");
     }
 
     const scanResult = await startScan();
