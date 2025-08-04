@@ -11,8 +11,8 @@ import {
   CreateFlowWithStepsDto,
   UpdateFlowWithStepsDto,
   FlowWithGraphDto,
+  FlowStepConnectionDto,
 } from "../models/flow.model";
-import { FlowRepository } from "./flow.repository";
 
 export class FlowStepRepositoryError extends AppError {
   constructor(message: string, cause?: unknown) {
@@ -25,13 +25,9 @@ export class FlowStepRepository {
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
-    private readonly flowRepository: FlowRepository,
   ) {}
 
-  async create(
-    flowId: string,
-    createFlowStepDto: CreateFlowStepDto,
-  ): Promise<Result<FlowStepDto[]>> {
+  async create(flowId: string, createFlowStepDto: CreateFlowStepDto) {
     return tryCatch(() =>
       this.database
         .insert(flowSteps)
@@ -68,11 +64,7 @@ export class FlowStepRepository {
     });
   }
 
-  async update(
-    flowId: string,
-    stepId: string,
-    updateFlowStepDto: UpdateFlowStepDto,
-  ): Promise<Result<FlowStepDto[]>> {
+  async update(flowId: string, stepId: string, updateFlowStepDto: UpdateFlowStepDto) {
     return tryCatch(() =>
       this.database
         .update(flowSteps)
@@ -84,7 +76,7 @@ export class FlowStepRepository {
         })
         .where(and(eq(flowSteps.flowId, flowId), eq(flowSteps.id, stepId)))
         .returning(),
-    ).then((result) => result.map((rows) => rows as unknown as FlowStepDto[]));
+    );
   }
 
   async delete(flowId: string, stepId: string): Promise<Result<void>> {
@@ -164,10 +156,7 @@ export class FlowStepRepository {
   }
 
   // Bulk operations for React Flow frontend integration
-  async createFlowWithSteps(
-    createFlowWithStepsDto: CreateFlowWithStepsDto,
-    userId: string,
-  ): Promise<Result<FlowWithGraphDto>> {
+  async createFlowWithSteps(createFlowWithStepsDto: CreateFlowWithStepsDto, userId: string) {
     return tryCatch(async () => {
       return await this.database.transaction(async (tx) => {
         // 1. Create the flow
@@ -186,7 +175,7 @@ export class FlowStepRepository {
         const createdSteps = await tx
           .insert(flowSteps)
           .values(
-            (createFlowWithStepsDto.steps as any[]).map((step: any) => ({
+            createFlowWithStepsDto.steps.map((step) => ({
               ...step,
               flowId: flow.id,
               stepSpecification: step.stepSpecification ?? null,
@@ -195,15 +184,15 @@ export class FlowStepRepository {
           .returning();
 
         // 3. Create connections if provided, mapping temporary step IDs to real ones
-        let createdConnections: any[] = [];
+        let createdConnections = [];
         if (createFlowWithStepsDto.connections && createFlowWithStepsDto.connections.length > 0) {
           // Create a mapping from temporary step IDs (like "temp-step-1") to real step IDs
           const stepIdMap = new Map<string, string>();
-          (createFlowWithStepsDto.steps as any[]).forEach((step: any, index: number) => {
+          createFlowWithStepsDto.steps.forEach((step, index) => {
             // Map temp-step-1, temp-step-2, etc. to actual step IDs
             stepIdMap.set(`temp-step-${index + 1}`, createdSteps[index].id);
             // Also map any custom step IDs that might be in the step data
-            if (step.id && typeof step.id === 'string' && step.id.startsWith('temp-')) {
+            if ("id" in step && typeof step.id === "string" && step.id.startsWith("temp-")) {
               stepIdMap.set(step.id, createdSteps[index].id);
             }
           });
@@ -211,7 +200,7 @@ export class FlowStepRepository {
           createdConnections = await tx
             .insert(flowStepConnections)
             .values(
-              (createFlowWithStepsDto.connections as any[]).map((conn: any) => ({
+              createFlowWithStepsDto.connections.map((conn) => ({
                 ...conn,
                 flowId: flow.id,
                 sourceStepId: stepIdMap.get(conn.sourceStepId) ?? conn.sourceStepId,
@@ -226,19 +215,16 @@ export class FlowStepRepository {
 
         return {
           ...flow,
-          steps: createdSteps as unknown as FlowStepDto[],
+          steps: createdSteps,
           connections: createdConnections,
-        } as FlowWithGraphDto;
+        };
       });
     });
   }
 
-  async updateFlowWithSteps(
-    flowId: string,
-    updateFlowWithStepsDto: UpdateFlowWithStepsDto,
-  ): Promise<Result<FlowWithGraphDto>> {
+  async updateFlowWithSteps(flowId: string, updateFlowWithStepsDto: UpdateFlowWithStepsDto) {
     return tryCatch(async () => {
-      return await this.database.transaction(async (tx) => {
+      return this.database.transaction(async (tx) => {
         let updatedFlow;
 
         // 1. Update flow if provided
@@ -394,7 +380,7 @@ export class FlowStepRepository {
           ...updatedFlow,
           steps: finalSteps as unknown as FlowStepDto[],
           connections: finalConnections,
-        } as FlowWithGraphDto;
+        };
       });
     });
   }
