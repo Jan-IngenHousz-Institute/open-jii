@@ -56,7 +56,7 @@ describe("GetExperimentDataUseCase", () => {
       userId: testUserId,
     });
 
-    // Mock the DatabricksService methods
+    // Mock the Databricks methods
     const mockCountData = {
       columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
       rows: [["100"]],
@@ -200,7 +200,7 @@ describe("GetExperimentDataUseCase", () => {
       userId: testUserId,
     });
 
-    // Mock the DatabricksService methods
+    // Mock the Databricks methods
     const mockTables = {
       tables: [
         {
@@ -418,7 +418,7 @@ describe("GetExperimentDataUseCase", () => {
       userId: otherUserId,
     });
 
-    // Mock the DatabricksService methods
+    // Mock the Databricks methods
     const mockTables = {
       tables: [
         {

@@ -4,7 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import type { ErrorResponse, ExperimentDataResponse } from "@repo/api";
 import { contract } from "@repo/api";
 
-import { DatabricksService } from "../../common/modules/databricks/databricks.service";
+import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { success, failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
@@ -12,7 +12,7 @@ import { TestHarness } from "../../test/test-harness";
 describe("ExperimentDataController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
-  let databricksService: DatabricksService;
+  let databricksAdapter: DatabricksAdapter;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -22,8 +22,8 @@ describe("ExperimentDataController", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
 
-    // Get the DatabricksService instance
-    databricksService = testApp.module.get(DatabricksService);
+    // Get the DatabricksAdapter instance
+    databricksAdapter = testApp.module.get(DatabricksAdapter);
 
     // Reset any mocks before each test
     jest.restoreAllMocks();
@@ -45,7 +45,7 @@ describe("ExperimentDataController", () => {
         userId: testUserId,
       });
 
-      // Mock the DatabricksService methods
+      // Mock the DatabricksAdapter methods
       const mockCountData = {
         columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
         rows: [["100"]],
@@ -80,7 +80,7 @@ describe("ExperimentDataController", () => {
       };
 
       jest
-        .spyOn(databricksService, "executeSqlQuery")
+        .spyOn(databricksAdapter, "executeSqlQuery")
         .mockResolvedValueOnce(success(mockCountData)) // First call for count
         .mockResolvedValueOnce(success(mockTableData)); // Second call for actual data
 
@@ -117,17 +117,17 @@ describe("ExperimentDataController", () => {
         totalRows: 100,
       });
 
-      // Verify the DatabricksService was called correctly
+      // Verify the DatabricksAdapter was called correctly
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.executeSqlQuery).toHaveBeenCalledTimes(2);
+      expect(databricksAdapter.executeSqlQuery).toHaveBeenCalledTimes(2);
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.executeSqlQuery).toHaveBeenNthCalledWith(
+      expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         1,
         `exp_${experiment.name}_${experiment.id}`,
         "SELECT COUNT(*) as count FROM test_table",
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.executeSqlQuery).toHaveBeenNthCalledWith(
+      expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         2,
         `exp_${experiment.name}_${experiment.id}`,
         "SELECT * FROM test_table LIMIT 5 OFFSET 0",
@@ -141,7 +141,7 @@ describe("ExperimentDataController", () => {
         userId: testUserId,
       });
 
-      // Mock the DatabricksService listTables method
+      // Mock the DatabricksAdapter listTables method
       const mockTablesResponse = {
         tables: [
           {
@@ -185,10 +185,10 @@ describe("ExperimentDataController", () => {
       };
 
       // Setup mocks
-      jest.spyOn(databricksService, "listTables").mockResolvedValue(success(mockTablesResponse));
+      jest.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
 
       jest
-        .spyOn(databricksService, "executeSqlQuery")
+        .spyOn(databricksAdapter, "executeSqlQuery")
         .mockResolvedValueOnce(success(mockBronzeTableData))
         .mockResolvedValueOnce(success(mockSilverTableData));
 
@@ -231,21 +231,21 @@ describe("ExperimentDataController", () => {
       expect(response.body[0].data).toBeDefined();
       expect(response.body[1].data).toBeDefined();
 
-      // Verify the DatabricksService was called correctly
+      // Verify the DatabricksAdapter was called correctly
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.listTables).toHaveBeenCalledWith(experiment.name, experiment.id);
+      expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.name, experiment.id);
 
       // Verify SQL queries were executed for each table
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.executeSqlQuery).toHaveBeenCalledTimes(2);
+      expect(databricksAdapter.executeSqlQuery).toHaveBeenCalledTimes(2);
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.executeSqlQuery).toHaveBeenNthCalledWith(
+      expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         1,
         `exp_${experiment.name}_${experiment.id}`,
         "SELECT * FROM bronze_data LIMIT 5",
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.executeSqlQuery).toHaveBeenNthCalledWith(
+      expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         2,
         `exp_${experiment.name}_${experiment.id}`,
         "SELECT * FROM silver_data LIMIT 5",
@@ -321,9 +321,9 @@ describe("ExperimentDataController", () => {
         userId: testUserId,
       });
 
-      // Mock the DatabricksService to return an error
+      // Mock the DatabricksAdapter to return an error
       jest
-        .spyOn(databricksService, "listTables")
+        .spyOn(databricksAdapter, "listTables")
         .mockResolvedValue(failure(AppError.internal("Error retrieving data from Databricks")));
 
       const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
@@ -346,9 +346,9 @@ describe("ExperimentDataController", () => {
         userId: testUserId,
       });
 
-      // Mock the DatabricksService to fail on SQL execution
+      // Mock the DatabricksAdapter to fail on SQL execution
       jest
-        .spyOn(databricksService, "executeSqlQuery")
+        .spyOn(databricksAdapter, "executeSqlQuery")
         .mockResolvedValue(failure(AppError.internal("SQL execution failed: table not found")));
 
       const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
@@ -376,7 +376,7 @@ describe("ExperimentDataController", () => {
       const page = 2;
       const pageSize = 10;
 
-      // Mock the DatabricksService methods
+      // Mock the DatabricksAdapter methods
       const mockCountData = {
         columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
         rows: [["42"]],
@@ -398,7 +398,7 @@ describe("ExperimentDataController", () => {
       };
 
       jest
-        .spyOn(databricksService, "executeSqlQuery")
+        .spyOn(databricksAdapter, "executeSqlQuery")
         .mockResolvedValueOnce(success(mockCountData)) // First call for count
         .mockResolvedValueOnce(success(mockTableData)); // Second call for actual data
 
@@ -428,9 +428,9 @@ describe("ExperimentDataController", () => {
       expect(response.body[0].totalPages).toBe(5); // Math.ceil(42 / 10)
       expect(response.body[0].totalRows).toBe(42);
 
-      // Verify the DatabricksService was called with correct pagination
+      // Verify the DatabricksAdapter was called with correct pagination
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.executeSqlQuery).toHaveBeenNthCalledWith(
+      expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         2,
         `exp_${experiment.name}_${experiment.id}`,
         "SELECT * FROM test_table LIMIT 10 OFFSET 10", // page 2 with pageSize 10
