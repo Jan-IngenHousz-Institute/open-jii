@@ -3,7 +3,7 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
-import type { SessionUser } from "@repo/auth/config";
+import type { User } from "@repo/auth/types";
 
 import { CurrentUser } from "../../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../../common/guards/auth.guard";
@@ -24,7 +24,7 @@ export class ExperimentFlowController {
   ) {}
 
   @TsRestHandler(contract.flows.getMobileFlow)
-  getMobileFlow(@CurrentUser() user: SessionUser) {
+  getMobileFlow(@CurrentUser() user: User) {
     return tsRestHandler(contract.flows.getMobileFlow, async ({ params }) => {
       try {
         const accessResult = await this.experimentRepository.checkAccess(params.id, user.id);

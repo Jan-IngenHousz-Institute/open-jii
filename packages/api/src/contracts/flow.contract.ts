@@ -58,6 +58,18 @@ export const flowContract = c.router({
     description: "Returns detailed information about a specific flow",
   },
 
+  getFlowWithGraph: {
+    method: "GET",
+    path: "/api/v1/flows/:id/graph",
+    pathParams: zIdPathParam,
+    responses: {
+      200: zFlowWithGraph,
+      404: zErrorResponse,
+    },
+    summary: "Get complete flow with steps and connections",
+    description: "Returns flow metadata along with all steps and connections in a single call",
+  },
+
   updateFlow: {
     method: "PATCH",
     path: "/api/v1/flows/:id",

@@ -1,10 +1,10 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { eq, and, desc, flows, flowSteps } from "@repo/database";
+import { eq, and, desc, flows, flowSteps, flowStepConnections } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, AppError, tryCatch } from "../../../../common/utils/fp-utils";
-import { CreateFlowDto, UpdateFlowDto, FlowDto } from "../models/flow.model";
+import { CreateFlowDto, UpdateFlowDto, FlowDto, FlowWithGraphDto } from "../models/flow.model";
 
 export class FlowRepositoryError extends AppError {
   constructor(message: string, cause?: unknown) {
@@ -87,6 +87,41 @@ export class FlowRepository {
       await this.database.delete(flowSteps).where(eq(flowSteps.flowId, id));
       // Then delete the flow
       await this.database.delete(flows).where(eq(flows.id, id));
+    });
+  }
+
+  async findOneWithGraph(id: string): Promise<Result<FlowWithGraphDto | null>> {
+    return tryCatch(async () => {
+      // Get the flow metadata
+      const flowResult = await this.database
+        .select()
+        .from(flows)
+        .where(and(eq(flows.id, id), eq(flows.isActive, true)))
+        .limit(1);
+
+      if (flowResult.length === 0) {
+        return null;
+      }
+
+      const flow = flowResult[0] as unknown as FlowDto;
+
+      // Get the flow steps
+      const stepsResult = await this.database
+        .select()
+        .from(flowSteps)
+        .where(eq(flowSteps.flowId, id));
+
+      // Get the flow connections
+      const connectionsResult = await this.database
+        .select()
+        .from(flowStepConnections)
+        .where(eq(flowStepConnections.flowId, id));
+
+      return {
+        ...flow,
+        steps: stepsResult,
+        connections: connectionsResult,
+      } as FlowWithGraphDto;
     });
   }
 }

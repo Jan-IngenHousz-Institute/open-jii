@@ -4,9 +4,10 @@ import { DatabaseModule } from "../../common/database/database.module";
 // External dependencies
 import { ExperimentRepository } from "../core/repositories/experiment.repository";
 import { CreateFlowStepUseCase } from "./application/use-cases/create-flow-step/create-flow-step";
+import { CreateFlowWithStepsUseCase } from "./application/use-cases/create-flow-with-steps/create-flow-with-steps";
 // Use Cases
 import { CreateFlowUseCase } from "./application/use-cases/create-flow/create-flow";
-import { CreateFlowWithStepsUseCase } from "./application/use-cases/create-flow-with-steps/create-flow-with-steps";
+import { GetFlowWithGraphUseCase } from "./application/use-cases/get-flow-with-graph/get-flow-with-graph";
 import { GetFlowUseCase } from "./application/use-cases/get-flow/get-flow";
 import { ListFlowsUseCase } from "./application/use-cases/list-flows/list-flows";
 import { UpdateFlowWithStepsUseCase } from "./application/use-cases/update-flow-with-steps/update-flow-with-steps";
@@ -31,6 +32,7 @@ import { FlowController } from "./presentation/flow.controller";
     CreateFlowUseCase,
     CreateFlowWithStepsUseCase,
     GetFlowUseCase,
+    GetFlowWithGraphUseCase,
     ListFlowsUseCase,
     CreateFlowStepUseCase,
     UpdateFlowWithStepsUseCase,

@@ -169,7 +169,7 @@ export class FlowStepRepository {
     userId: string,
   ): Promise<Result<FlowWithGraphDto>> {
     return tryCatch(async () => {
-      return await this.database.transaction(async (tx) => {
+      return this.database.transaction(async (tx) => {
         // 1. Create the flow
         const [flow] = await tx
           .insert(flows)
@@ -203,7 +203,7 @@ export class FlowStepRepository {
             // Map temp-step-1, temp-step-2, etc. to actual step IDs
             stepIdMap.set(`temp-step-${index + 1}`, createdSteps[index].id);
             // Also map any custom step IDs that might be in the step data
-            if (step.id && typeof step.id === 'string' && step.id.startsWith('temp-')) {
+            if (step.id && typeof step.id === "string" && step.id.startsWith("temp-")) {
               stepIdMap.set(step.id, createdSteps[index].id);
             }
           });
@@ -238,15 +238,17 @@ export class FlowStepRepository {
     updateFlowWithStepsDto: UpdateFlowWithStepsDto,
   ): Promise<Result<FlowWithGraphDto>> {
     return tryCatch(async () => {
+      // Cast to the proper type to avoid TypeScript inference issues
+      const dto = updateFlowWithStepsDto;
       return await this.database.transaction(async (tx) => {
         let updatedFlow;
 
         // 1. Update flow if provided
-        if (updateFlowWithStepsDto.flow) {
+        if (dto.flow) {
           const updatedFlows = await tx
             .update(flows)
             .set({
-              ...updateFlowWithStepsDto.flow,
+              ...dto.flow,
               updatedAt: new Date(),
             })
             .where(eq(flows.id, flowId))
@@ -272,31 +274,21 @@ export class FlowStepRepository {
         // Initialize step ID mapping for placeholder IDs like "new-step-id"
         const stepIdMap = new Map<string, string>();
 
-        if (updateFlowWithStepsDto.steps) {
+        const stepsOps = dto.steps;
+        if (stepsOps) {
           // Delete steps if specified
-          if (
-            updateFlowWithStepsDto.steps.delete &&
-            updateFlowWithStepsDto.steps.delete.length > 0
-          ) {
+          if (stepsOps.delete && stepsOps.delete.length > 0) {
             await tx
               .delete(flowSteps)
-              .where(
-                and(
-                  eq(flowSteps.flowId, flowId),
-                  inArray(flowSteps.id, updateFlowWithStepsDto.steps.delete),
-                ),
-              );
+              .where(and(eq(flowSteps.flowId, flowId), inArray(flowSteps.id, stepsOps.delete)));
           }
 
           // Create new steps if specified and build mapping for placeholder IDs
-          if (
-            updateFlowWithStepsDto.steps.create &&
-            updateFlowWithStepsDto.steps.create.length > 0
-          ) {
+          if (stepsOps.create && stepsOps.create.length > 0) {
             const createdSteps = await tx
               .insert(flowSteps)
               .values(
-                (updateFlowWithStepsDto.steps.create as any[]).map((step: any) => ({
+                stepsOps.create.map((step: any) => ({
                   ...step,
                   flowId,
                   stepSpecification: step.stepSpecification ?? null,
@@ -312,11 +304,8 @@ export class FlowStepRepository {
           }
 
           // Update existing steps if specified
-          if (
-            updateFlowWithStepsDto.steps.update &&
-            updateFlowWithStepsDto.steps.update.length > 0
-          ) {
-            for (const stepUpdate of updateFlowWithStepsDto.steps.update) {
+          if (stepsOps.update && stepsOps.update.length > 0) {
+            for (const stepUpdate of stepsOps.update) {
               const { id, ...updateData } = stepUpdate as any;
               await tx
                 .update(flowSteps)
@@ -331,24 +320,19 @@ export class FlowStepRepository {
         }
 
         // 3. Handle connection operations
-        if (updateFlowWithStepsDto.connections) {
+        const connectionsOps = dto.connections;
+        if (connectionsOps) {
           // Delete connections if specified
-          if (
-            updateFlowWithStepsDto.connections.delete &&
-            updateFlowWithStepsDto.connections.delete.length > 0
-          ) {
+          if (connectionsOps.delete && connectionsOps.delete.length > 0) {
             await tx
               .delete(flowStepConnections)
-              .where(inArray(flowStepConnections.id, updateFlowWithStepsDto.connections.delete));
+              .where(inArray(flowStepConnections.id, connectionsOps.delete));
           }
 
           // Create new connections if specified (with step ID mapping)
-          if (
-            updateFlowWithStepsDto.connections.create &&
-            updateFlowWithStepsDto.connections.create.length > 0
-          ) {
+          if (connectionsOps.create && connectionsOps.create.length > 0) {
             await tx.insert(flowStepConnections).values(
-              (updateFlowWithStepsDto.connections.create as any[]).map((conn: any) => ({
+              connectionsOps.create.map((conn: any) => ({
                 ...conn,
                 flowId,
                 sourceStepId: stepIdMap.get(conn.sourceStepId) ?? conn.sourceStepId,
@@ -361,11 +345,8 @@ export class FlowStepRepository {
           }
 
           // Update existing connections if specified
-          if (
-            updateFlowWithStepsDto.connections.update &&
-            updateFlowWithStepsDto.connections.update.length > 0
-          ) {
-            for (const connUpdate of updateFlowWithStepsDto.connections.update) {
+          if (connectionsOps.update && connectionsOps.update.length > 0) {
+            for (const connUpdate of connectionsOps.update) {
               const { id, ...updateData } = connUpdate as any;
               await tx
                 .update(flowStepConnections)
