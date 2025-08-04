@@ -52,7 +52,7 @@ runs:
         TURBO_REF_FILTER: ${{ (github.event_name == 'pull_request' && github.event.pull_request.base.sha) || github.event.before || 'HEAD~1' }}
 
       run: |
-        echo "Using base for change detection: $TURBO_REF_FILTER"
+        echo "Using base for change detection:  $TURBO_REF_FILTER"
 
         # Get list of affected projects using provided base
         pnpm turbo run build --dry-run=json --filter=...[$TURBO_REF_FILTER] --output-logs=none > affected.json
@@ -117,62 +117,62 @@ runs:
         echo "Running: $TEST_CMD"
         eval "$TEST_CMD"
 
-    - name: Generate AsyncAPI HTML
-      if: steps.check.outputs.has_affected_apps == 'true'
-      shell: bash
-      run: |
-        echo "📄 Generating AsyncAPI documentation"
-        pnpm run asyncapi:html
+    # - name: Generate AsyncAPI HTML
+    #   if: steps.check.outputs.has_affected_apps == 'true'
+    #   shell: bash
+    #   run: |
+    #     echo "📄 Generating AsyncAPI documentation"
+    #     pnpm run asyncapi:html
 
-    - name: Collect Build Artifacts
-      if: steps.check.outputs.has_affected_apps == 'true'
-      shell: bash
-      run: |
-        echo "📦 Collecting build artifacts"
-        # Create artifacts directory if it doesn't exist
-        mkdir -p artifacts
+    # - name: Collect Build Artifacts
+    #   if: steps.check.outputs.has_affected_apps == 'true'
+    #   shell: bash
+    #   run: |
+    #     echo "📦 Collecting build artifacts"
+    #     # Create artifacts directory if it doesn't exist
+    #     mkdir -p artifacts
 
-        # Read the affected apps JSON
-        AFFECTED_APPS=$(cat affected_apps.json)
+    #     # Read the affected apps JSON
+    #     AFFECTED_APPS=$(cat affected_apps.json)
 
-        # Process each affected app
-        echo $AFFECTED_APPS | jq -r '.[]' | while read -r APP; do
-          echo "Collecting artifacts for $APP"
+    #     # Process each affected app
+    #     echo $AFFECTED_APPS | jq -r '.[]' | while read -r APP; do
+    #       echo "Collecting artifacts for $APP"
           
-          # Determine the build output location based on app directory structure
-          if [[ -d "apps/$APP/build" ]]; then
-            # Copy from apps/{app}/build
-            mkdir -p "artifacts/$APP"
-            cp -r "apps/$APP/build/." "artifacts/$APP/"
-            echo "✅ Copied from apps/$APP/build"
-          elif [[ -d "apps/$APP/dist" ]]; then
-            # Copy from apps/{app}/dist
-            mkdir -p "artifacts/$APP" 
-            cp -r "apps/$APP/dist/." "artifacts/$APP/"
-            echo "✅ Copied from apps/$APP/dist"
-          elif [[ -d "packages/$APP/build" ]]; then
-            # Copy from packages/{app}/build
-            mkdir -p "artifacts/$APP"
-            cp -r "packages/$APP/build/." "artifacts/$APP/"
-            echo "✅ Copied from packages/{app}/build"
-          elif [[ -d "packages/$APP/dist" ]]; then
-            # Copy from packages/{app}/dist
-            mkdir -p "artifacts/$APP"
-            cp -r "packages/$APP/dist/." "artifacts/$APP/"
-            echo "✅ Copied from packages/{app}/dist"
-          else
-            echo "❌ No build output found for $APP in standard locations"
-          fi
-        done
+    #       # Determine the build output location based on app directory structure
+    #       if [[ -d "apps/$APP/build" ]]; then
+    #         # Copy from apps/{app}/build
+    #         mkdir -p "artifacts/$APP"
+    #         cp -r "apps/$APP/build/." "artifacts/$APP/"
+    #         echo "✅ Copied from apps/$APP/build"
+    #       elif [[ -d "apps/$APP/dist" ]]; then
+    #         # Copy from apps/{app}/dist
+    #         mkdir -p "artifacts/$APP" 
+    #         cp -r "apps/$APP/dist/." "artifacts/$APP/"
+    #         echo "✅ Copied from apps/$APP/dist"
+    #       elif [[ -d "packages/$APP/build" ]]; then
+    #         # Copy from packages/{app}/build
+    #         mkdir -p "artifacts/$APP"
+    #         cp -r "packages/$APP/build/." "artifacts/$APP/"
+    #         echo "✅ Copied from packages/{app}/build"
+    #       elif [[ -d "packages/$APP/dist" ]]; then
+    #         # Copy from packages/{app}/dist
+    #         mkdir -p "artifacts/$APP"
+    #         cp -r "packages/$APP/dist/." "artifacts/$APP/"
+    #         echo "✅ Copied from packages/{app}/dist"
+    #       else
+    #         echo "❌ No build output found for $APP in standard locations"
+    #       fi
+    #     done
 
-        # List collected artifacts for verification
-        echo "Collected artifacts in these directories:"
-        ls -la artifacts/
+    #     # List collected artifacts for verification
+    #     echo "Collected artifacts in these directories:"
+    #     ls -la artifacts/
 
-    - name: Upload Consolidated Artifacts
-      if: steps.check.outputs.has_affected_apps == 'true'
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-artifacts
-        path: artifacts/
-        retention-days: ${{ inputs.artifact_retention }}
+    # - name: Upload Consolidated Artifacts
+    #   if: steps.check.outputs.has_affected_apps == 'true'
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: app-artifacts
+    #     path: artifacts/
+    #     retention-days: ${{ inputs.artifact_retention }}
