@@ -1,4 +1,4 @@
-import { DatabricksService } from "../../../../common/modules/databricks/databricks.service";
+import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentMemberRepository } from "../../../../experiments/core/repositories/experiment-member.repository";
 import { TestHarness } from "../../../../test/test-harness";
@@ -10,7 +10,7 @@ describe("CreateExperimentUseCase", () => {
   let testUserId: string;
   let useCase: CreateExperimentUseCase;
   let experimentMemberRepository: ExperimentMemberRepository;
-  let databricksService: DatabricksService;
+  let databricksAdapter: DatabricksAdapter;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -21,11 +21,11 @@ describe("CreateExperimentUseCase", () => {
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(CreateExperimentUseCase);
     experimentMemberRepository = testApp.module.get(ExperimentMemberRepository);
-    databricksService = testApp.module.get(DatabricksService);
+    databricksAdapter = testApp.module.get(DatabricksAdapter);
 
     // Mock the Databricks service
     jest
-      .spyOn(databricksService, "triggerJob")
+      .spyOn(databricksAdapter, "triggerJob")
       .mockResolvedValue(success({ run_id: 12345, number_in_job: 1 }));
   });
 
@@ -67,7 +67,7 @@ describe("CreateExperimentUseCase", () => {
 
     // Verify Databricks job was triggered
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksService.triggerJob).toHaveBeenCalledWith({
+    expect(databricksAdapter.triggerJob).toHaveBeenCalledWith({
       experimentId: createdExperiment.id,
       experimentName: experimentData.name,
       userId: testUserId,
@@ -106,7 +106,7 @@ describe("CreateExperimentUseCase", () => {
 
   it("should create an experiment even if Databricks job trigger fails", async () => {
     // Mock Databricks job trigger failure
-    jest.spyOn(databricksService, "triggerJob").mockResolvedValue(
+    jest.spyOn(databricksAdapter, "triggerJob").mockResolvedValue(
       failure({
         name: "DatabricksError",
         code: "INTERNAL_ERROR",
@@ -129,7 +129,7 @@ describe("CreateExperimentUseCase", () => {
 
     // Verify Databricks job was triggered but failed
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksService.triggerJob).toHaveBeenCalledWith({
+    expect(databricksAdapter.triggerJob).toHaveBeenCalledWith({
       experimentId: result.value.id,
       experimentName: experimentData.name,
       userId: testUserId,
@@ -158,7 +158,7 @@ describe("CreateExperimentUseCase", () => {
 
     // Verify Databricks job was triggered
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksService.triggerJob).toHaveBeenCalledWith({
+    expect(databricksAdapter.triggerJob).toHaveBeenCalledWith({
       experimentId: createdExperiment.id,
       experimentName: minimalData.name,
       userId: testUserId,
@@ -181,7 +181,7 @@ describe("CreateExperimentUseCase", () => {
 
     // Verify Databricks job was not triggered
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksService.triggerJob).not.toHaveBeenCalled();
+    expect(databricksAdapter.triggerJob).not.toHaveBeenCalled();
   });
 
   it("should return error if userId is not provided", async () => {
@@ -200,7 +200,7 @@ describe("CreateExperimentUseCase", () => {
 
     // Verify Databricks job was not triggered
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksService.triggerJob).not.toHaveBeenCalled();
+    expect(databricksAdapter.triggerJob).not.toHaveBeenCalled();
   });
 
   it("should return error if experiment name already exists", async () => {
@@ -224,6 +224,6 @@ describe("CreateExperimentUseCase", () => {
 
     // Verify Databricks job was not triggered
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksService.triggerJob).not.toHaveBeenCalled();
+    expect(databricksAdapter.triggerJob).not.toHaveBeenCalled();
   });
 });
