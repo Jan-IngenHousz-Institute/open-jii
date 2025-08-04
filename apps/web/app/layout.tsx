@@ -4,7 +4,7 @@ import type React from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Jan IngenHousz Institut",
+  title: "Jan IngenHousz Institute",
   description: "Improving photosynthesis for a sustainable future",
 };
 
