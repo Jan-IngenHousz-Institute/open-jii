@@ -6,10 +6,12 @@ services:
     restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/create-additional-databases.sh:/docker-entrypoint-initdb.d/create-additional-databases.sh
     environment:
       POSTGRES_DB: openjii_local
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      POSTGRES_CREATE_ADDITIONAL_DATABASES: openjii_local_test
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
