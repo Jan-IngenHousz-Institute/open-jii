@@ -4,6 +4,7 @@ import { ExperimentStatusBadge } from "~/components/ExperimentStatusBadge";
 
 import type { Experiment } from "@repo/api";
 import { zExperimentVisibility } from "@repo/api";
+import { useTranslation } from "@repo/i18n";
 import { Button, Card, CardContent, CardHeader } from "@repo/ui/components";
 
 export function ExperimentOverviewCards({
@@ -11,12 +12,14 @@ export function ExperimentOverviewCards({
 }: {
   experiments: Experiment[] | undefined;
 }) {
+  const { t } = useTranslation("experiments");
+
   if (!experiments) {
-    return <span>Loading...</span>;
+    return <span>{t("experiments.loadingExperiments")}</span>;
   }
 
   if (experiments.length === 0) {
-    return <span>Empty.</span>;
+    return <span>{t("experiments.noExperiments")}</span>;
   }
 
   return (
@@ -40,15 +43,12 @@ export function ExperimentOverviewCards({
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <p className="mb-4 text-sm leading-relaxed text-gray-600">
-                  {experiment.description}
-                </p>
                 <Link href={`/platform/experiments/${experiment.id}`}>
                   <Button
                     variant="ghost"
                     className="h-auto p-0 font-normal text-gray-900 hover:bg-transparent hover:text-gray-700"
                   >
-                    View Details
+                    {t("experiments.viewDetails")}
                     <ArrowRight className="ml-1 h-3 w-3" />
                   </Button>
                 </Link>

@@ -104,6 +104,43 @@ describe("ExperimentRepository", () => {
       );
     });
 
+    it("should return experiments in the correct order", async () => {
+      // Arrange
+      const { experiment: experiment1 } = await testApp.createExperiment({
+        name: "Experiment 1",
+        userId: testUserId,
+      });
+      const { experiment: experiment2 } = await testApp.createExperiment({
+        name: "Experiment 2",
+        userId: testUserId,
+      });
+      const { experiment: experiment3 } = await testApp.createExperiment({
+        name: "Experiment 3",
+        userId: testUserId,
+      });
+      const updateData = {
+        status: "active" as const,
+      };
+      await repository.update(experiment2.id, updateData);
+
+      // Act
+      const result = await repository.findAll(testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+
+      assertSuccess(result);
+      const experiments = result.value;
+      expect(experiments.length).toBe(3);
+      expect(experiments).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: experiment2.id, name: "Experiment 2" }),
+          expect.objectContaining({ id: experiment1.id, name: "Experiment 1" }),
+          expect.objectContaining({ id: experiment3.id, name: "Experiment 3" }),
+        ]),
+      );
+    });
+
     it("should filter experiments by 'my' filter", async () => {
       // Arrange
       const mainUserId = await testApp.createTestUser({
