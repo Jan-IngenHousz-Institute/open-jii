@@ -40,6 +40,18 @@
     "downloadData": "Download Data",
     "noMeasurements": "No measurements recorded yet"
   },
+  "flow": {
+    "title": "Experiment Flow",
+    "description": "Design and visualize your experiment workflow by connecting different steps and operations.",
+    "tabLabel": "Flow"
+  },
+  "overview": "Overview",
+  "data": "Data",
+  "experiment": "Experiment",
+  "manageExperimentDescription": "View and manage experiment details, data, flow, and settings.",
+  "loading": "Loading...",
+  "failedToLoad": "Failed to load experiment",
+  "notFound": "Experiment not found",
   "validation": {
     "nameRequired": "Experiment name is required",
     "nameMinLength": "Name must be at least 3 characters",

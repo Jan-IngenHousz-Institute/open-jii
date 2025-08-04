@@ -35,6 +35,18 @@
     "downloadData": "Gegevens downloaden",
     "noMeasurements": "Nog geen metingen geregistreerd"
   },
+  "flow": {
+    "title": "Experiment Flow",
+    "description": "Ontwerp en visualiseer uw experimentworkflow door verschillende stappen en bewerkingen te verbinden.",
+    "tabLabel": "Flow"
+  },
+  "overview": "Overzicht",
+  "data": "Gegevens",
+  "experiment": "Experiment",
+  "manageExperimentDescription": "Bekijk en beheer experimentdetails, gegevens, flow en instellingen.",
+  "loading": "Laden...",
+  "failedToLoad": "Experiment laden mislukt",
+  "notFound": "Experiment niet gevonden",
   "validation": {
     "nameRequired": "Experimentnaam is verplicht",
     "nameMinLength": "Naam moet minimaal 3 tekens bevatten",
