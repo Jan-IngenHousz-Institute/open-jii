@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { AppError, failure, success } from "../../../../../common/utils/fp-utils";
-import { CreateFlowStepDto } from "../../../core/models/flow.model";
+import { CreateFlowStepDto, FlowStepDto } from "../../../core/models/flow.model";
 import { FlowStepRepository } from "../../../core/repositories/flow-step.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
 
@@ -29,34 +29,37 @@ export class CreateFlowStepUseCase {
     // Verify the flow exists
     const flowResult = await this.flowRepository.findOne(flowId);
 
-    return flowResult.chain(async (flow) => {
-      if (!flow) {
-        this.logger.warn(`Flow with ID ${flowId} not found`);
-        return failure(new CreateFlowStepError(`Flow with ID ${flowId} not found`));
+    if (flowResult.isFailure()) {
+      return flowResult;
+    }
+
+    const flow = flowResult.value;
+    if (!flow) {
+      this.logger.warn(`Flow with ID ${flowId} not found`);
+      return failure(new CreateFlowStepError(`Flow with ID ${flowId} not found`));
+    }
+
+    // React Flow steps require position, use default if not provided
+    let stepData = data;
+    if (!stepData.position) {
+      stepData = {
+        ...data,
+        position: { x: 250, y: 100 },
+      };
+    }
+
+    // Create the flow step
+    const stepResult = await this.flowStepRepository.create(flowId, stepData);
+
+    return stepResult.chain((steps: FlowStepDto[]) => {
+      if (steps.length === 0) {
+        this.logger.error(`Failed to create flow step for flow ${flowId}`);
+        return failure(new CreateFlowStepError("Failed to create flow step"));
       }
 
-      // React Flow steps require position, use default if not provided
-      let stepData = data;
-      if (!stepData.position) {
-        stepData = {
-          ...data,
-          position: { x: 250, y: 100 },
-        };
-      }
-
-      // Create the flow step
-      const stepResult = await this.flowStepRepository.create(flowId, stepData);
-
-      return stepResult.chain((steps) => {
-        if (steps.length === 0) {
-          this.logger.error(`Failed to create flow step for flow ${flowId}`);
-          return failure(new CreateFlowStepError("Failed to create flow step"));
-        }
-
-        const step = steps[0];
-        this.logger.log(`Successfully created ${step.type} step with ID ${step.id}`);
-        return success(step);
-      });
+      const step = steps[0];
+      this.logger.log(`Successfully created ${step.type} step with ID ${step.id}`);
+      return success(step);
     });
   }
 }

@@ -1,7 +1,7 @@
 import { TestHarness } from "@/test/test-harness";
 
 import { assertSuccess } from "../../../../common/utils/fp-utils";
-import { FlowStepRepository, FlowStepRepositoryError } from "./flow-step.repository";
+import { FlowStepRepository } from "./flow-step.repository";
 import { FlowRepository } from "./flow.repository";
 
 describe("FlowStepRepository", () => {

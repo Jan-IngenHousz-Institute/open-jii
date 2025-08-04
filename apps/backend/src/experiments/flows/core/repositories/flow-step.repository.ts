@@ -26,8 +26,8 @@ export class FlowStepRepository {
   ) {}
 
   async create(flowId: string, createFlowStepDto: CreateFlowStepDto) {
-    return tryCatch(() =>
-      this.database
+    return tryCatch(async () => {
+      const result = await this.database
         .insert(flowSteps)
         .values({
           ...createFlowStepDto,
@@ -35,8 +35,11 @@ export class FlowStepRepository {
           // Convert step-specific config to JSONB
           stepSpecification: createFlowStepDto.stepSpecification ?? null,
         })
-        .returning(),
-    );
+        .returning();
+
+      // Transform Drizzle types to DTO types
+      return result as FlowStepDto[];
+    });
   }
 
   async findByFlowId(flowId: string) {
@@ -180,7 +183,7 @@ export class FlowStepRepository {
           .returning();
 
         // 3. Create connections if provided, mapping temporary step IDs to real ones
-        let createdConnections = [];
+        let createdConnections: (typeof flowStepConnections.$inferSelect)[] = [];
         if (createFlowWithStepsDto.connections && createFlowWithStepsDto.connections.length > 0) {
           // Create a mapping from temporary step IDs (like "temp-step-1") to real step IDs
           const stepIdMap = new Map<string, string>();
@@ -221,7 +224,7 @@ export class FlowStepRepository {
   async updateFlowWithSteps(flowId: string, updateFlowWithStepsDto: UpdateFlowWithStepsDto) {
     return tryCatch(async () => {
       return this.database.transaction(async (tx) => {
-        let updatedFlow;
+        let updatedFlow: typeof flows.$inferSelect;
 
         // 1. Update flow if provided
         if (updateFlowWithStepsDto.flow) {
@@ -278,7 +281,7 @@ export class FlowStepRepository {
             const createdSteps = await tx
               .insert(flowSteps)
               .values(
-                (updateFlowWithStepsDto.steps.create as any[]).map((step: any) => ({
+                updateFlowWithStepsDto.steps.create.map((step) => ({
                   ...step,
                   flowId,
                   stepSpecification: step.stepSpecification ?? null,
@@ -299,7 +302,7 @@ export class FlowStepRepository {
             updateFlowWithStepsDto.steps.update.length > 0
           ) {
             for (const stepUpdate of updateFlowWithStepsDto.steps.update) {
-              const { id, ...updateData } = stepUpdate as any;
+              const { id, ...updateData } = stepUpdate;
               await tx
                 .update(flowSteps)
                 .set({
@@ -307,7 +310,7 @@ export class FlowStepRepository {
                   stepSpecification: updateData.stepSpecification ?? null,
                   updatedAt: new Date(),
                 })
-                .where(and(eq(flowSteps.flowId, flowId), eq(flowSteps.id, id as string)));
+                .where(and(eq(flowSteps.flowId, flowId), eq(flowSteps.id, id)));
             }
           }
         }
@@ -330,7 +333,7 @@ export class FlowStepRepository {
             updateFlowWithStepsDto.connections.create.length > 0
           ) {
             await tx.insert(flowStepConnections).values(
-              (updateFlowWithStepsDto.connections.create as any[]).map((conn: any) => ({
+              updateFlowWithStepsDto.connections.create.map((conn) => ({
                 ...conn,
                 flowId,
                 sourceStepId: stepIdMap.get(conn.sourceStepId) ?? conn.sourceStepId,
@@ -348,14 +351,14 @@ export class FlowStepRepository {
             updateFlowWithStepsDto.connections.update.length > 0
           ) {
             for (const connUpdate of updateFlowWithStepsDto.connections.update) {
-              const { id, ...updateData } = connUpdate as any;
+              const { id, ...updateData } = connUpdate;
               await tx
                 .update(flowStepConnections)
                 .set({
                   ...updateData,
                   updatedAt: new Date(),
                 })
-                .where(eq(flowStepConnections.id, id as string));
+                .where(eq(flowStepConnections.id, id));
             }
           }
         }
@@ -374,7 +377,7 @@ export class FlowStepRepository {
 
         return {
           ...updatedFlow,
-          steps: finalSteps as unknown as FlowStepDto[],
+          steps: finalSteps,
           connections: finalConnections,
         };
       });

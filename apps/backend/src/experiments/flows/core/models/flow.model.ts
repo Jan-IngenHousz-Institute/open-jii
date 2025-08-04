@@ -1,8 +1,15 @@
+import type { jsonSchema } from "drizzle-zod";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
 import { zInstructionStep, zQuestionStep, zMeasurementStep, zAnalysisStep } from "@repo/api";
 import { flows, flowSteps, flowStepConnections } from "@repo/database";
+
+// Generic type helper to convert json fields to json | unknown
+type Json = (typeof jsonSchema)["_type"];
+type WithJsonUnknown<T> = {
+  [K in keyof T]: T[K] extends Json ? unknown : T[K];
+};
 
 // Flow schemas
 export const createFlowSchema = createInsertSchema(flows).omit({
@@ -62,54 +69,12 @@ export type UpdateFlowDto = z.infer<typeof updateFlowSchema>;
 export type FlowDto = z.infer<typeof flowSchema>;
 export type CreateFlowStepDto = z.infer<typeof createFlowStepSchema>;
 export type UpdateFlowStepDto = z.infer<typeof updateFlowStepSchema>;
-export type FlowStepDto = z.infer<typeof flowStepSchema>;
+export type FlowStepDto = WithJsonUnknown<z.infer<typeof flowStepSchema>>;
 export type CreateFlowStepConnectionDto = z.infer<typeof createFlowStepConnectionSchema>;
 export type UpdateFlowStepConnectionDto = z.infer<typeof updateFlowStepConnectionSchema>;
-export type FlowStepConnectionDto = z.infer<typeof flowStepConnectionSchema>;
-export type FlowWithStepsDto = z.infer<typeof flowWithStepsSchema>;
-export type FlowWithGraphDto = z.infer<typeof flowWithGraphSchema>;
-
-// Step execution result types
-export const stepExecutionResultSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("INSTRUCTION"),
-    completedAt: z.string().datetime(),
-  }),
-  z.object({
-    type: z.literal("QUESTION"),
-    result: z.object({
-      questionId: z.string().uuid(),
-      answer: z.union([z.string(), z.number(), z.boolean()]),
-      answeredAt: z.string().datetime(),
-    }),
-  }),
-  z.object({
-    type: z.literal("MEASUREMENT"),
-    result: z.object({
-      protocolId: z.string().uuid(),
-      rawData: z.record(z.any()),
-      metadata: z.object({
-        deviceId: z.string().optional(),
-        timestamp: z.string().datetime(),
-        duration: z.number().optional(),
-        temperature: z.number().optional(),
-        humidity: z.number().optional(),
-      }),
-    }),
-  }),
-  z.object({
-    type: z.literal("ANALYSIS"),
-    result: z.object({
-      macroId: z.string().uuid(),
-      vizData: z.record(z.any()),
-      computedAt: z.string().datetime(),
-      status: z.enum(["success", "error", "pending"]),
-      errorMessage: z.string().optional(),
-    }),
-  }),
-]);
-
-export type StepExecutionResult = z.infer<typeof stepExecutionResultSchema>;
+export type FlowStepConnectionDto = WithJsonUnknown<z.infer<typeof flowStepConnectionSchema>>;
+export type FlowWithStepsDto = WithJsonUnknown<z.infer<typeof flowWithStepsSchema>>;
+export type FlowWithGraphDto = WithJsonUnknown<z.infer<typeof flowWithGraphSchema>>;
 
 // Bulk operations schemas
 export const createFlowWithStepsSchema = createFlowSchema.extend({
