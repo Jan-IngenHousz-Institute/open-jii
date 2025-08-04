@@ -1,9 +1,10 @@
 import { Controller, Logger, UseGuards } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import { ExperimentDto } from "dist/experiments/core/models/experiment.model";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
-import type { SessionUser } from "@repo/auth/config";
+import type { User } from "@repo/auth/types";
 
 import { CurrentUser } from "../../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../../common/guards/auth.guard";
@@ -24,12 +25,18 @@ export class ExperimentFlowController {
   ) {}
 
   @TsRestHandler(contract.flows.getMobileFlow)
-  getMobileFlow(@CurrentUser() user: SessionUser) {
+  getMobileFlow(@CurrentUser() user: User) {
     return tsRestHandler(contract.flows.getMobileFlow, async ({ params }) => {
       try {
         const accessResult = await this.experimentRepository.checkAccess(params.id, user.id);
         const result = await accessResult.chain(
-          async ({ experiment, hasAccess }: { experiment: any; hasAccess: boolean }) => {
+          async ({
+            experiment,
+            hasAccess,
+          }: {
+            experiment: ExperimentDto | null;
+            hasAccess: boolean;
+          }) => {
             if (!experiment) {
               this.logger.warn(
                 `Attempt to get mobile flow for non-existent experiment with ID ${params.id}`,
@@ -117,6 +124,7 @@ export class ExperimentFlowController {
           body: result.value,
         };
       } catch (error) {
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
         this.logger.error(`Error getting mobile flow: ${error}`);
         return {
           status: StatusCodes.INTERNAL_SERVER_ERROR,
