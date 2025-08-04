@@ -406,11 +406,14 @@ module "databricks_secrets" {
 
   # Store secrets as JSON using variables
   secret_string = jsonencode({
-    DATABRICKS_HOST          = module.databricks_workspace.workspace_url
-    DATABRICKS_CLIENT_ID     = module.node_service_principal.service_principal_application_id
-    DATABRICKS_CLIENT_SECRET = module.node_service_principal.service_principal_secret_value
-    DATABRICKS_JOB_ID        = module.expeirment_provisioning_job.job_id
-    DATABRICKS_WAREHOUSE_ID  = var.backend_databricks_warehouse_id
+    DATABRICKS_HOST               = module.databricks_workspace.workspace_url
+    DATABRICKS_CLIENT_ID          = module.node_service_principal.service_principal_application_id
+    DATABRICKS_CLIENT_SECRET      = module.node_service_principal.service_principal_secret_value
+    DATABRICKS_JOB_ID             = module.expeirment_provisioning_job.job_id
+    DATABRICKS_WAREHOUSE_ID       = var.backend_databricks_warehouse_id
+    DATABRICKS_WEBHOOK_API_KEY_ID = var.backend_webhook_api_key_id
+    DATABRICKS_WEBHOOK_SECRET     = var.backend_webhook_secret
+    DATABRICKS_WEBHOOK_API_KEY    = var.backend_webhook_api_key
   })
 
   tags = {
@@ -765,6 +768,18 @@ module "backend_ecs" {
     {
       name      = "DATABRICKS_WAREHOUSE_ID"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WAREHOUSE_ID::"
+    },
+    {
+      name      = "DATABRICKS_WEBHOOK_API_KEY_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_API_KEY_ID::"
+    },
+    {
+      name      = "DATABRICKS_WEBHOOK_API_KEY"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_API_KEY::"
+    },
+    {
+      name      = "DATABRICKS_WEBHOOK_SECRET"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_SECRET::"
     },
     {
       name      = "DB_CREDENTIALS"
