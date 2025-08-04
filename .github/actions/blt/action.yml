@@ -9,33 +9,9 @@ inputs:
     description: "Artifact retention period in days"
     required: false
     default: "1"
-  base:
-    description: "Base reference for detecting changes (commit hash, branch, or tag)"
-    required: true
-    default: "main"
   environment:
     description: "Deployment environment (e.g., dev, staging, production)"
     required: true
-  database_url:
-    description: "Database URL for connecting to the database"
-    required: false
-    default: ""
-  auth_secret:
-    description: "Auth secret for authentication"
-    required: false
-    default: ""
-  auth_url:
-    description: "Auth URL for authentication"
-    required: false
-    default: ""
-  auth_github_id:
-    description: "GitHub OAuth ID for authentication"
-    required: false
-    default: ""
-  auth_github_secret:
-    description: "GitHub OAuth secret for authentication"
-    required: false
-    default: ""
 
 outputs:
   affected_apps:
@@ -72,8 +48,11 @@ runs:
     - name: Identify Affected Projects
       id: check
       shell: bash
+      env:
+        TURBO_REF_FILTER: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+
       run: |
-        echo "Using base for change detection: ${{ inputs.base }}"
+        echo "Using base for change detection: ${{ TURBO_REF_FILTER }}"
 
         # Get list of affected projects using provided base
         pnpm turbo run build --dry-run=json --filter=...[$TURBO_REF_FILTER] --output-logs=none > affected.json
@@ -102,12 +81,6 @@ runs:
     - name: Build Apps
       if: steps.check.outputs.has_affected_apps == 'true'
       shell: bash
-      env:
-        DATABASE_URL: ${{ inputs.database_url }}
-        AUTH_SECRET: ${{ inputs.auth_secret }}
-        AUTH_URL: ${{ inputs.auth_url }}
-        AUTH_GITHUB_ID: ${{ inputs.auth_github_id }}
-        AUTH_GITHUB_SECRET: ${{ inputs.auth_github_secret }}
       run: |
         echo "🔨 Building affected packages"
         # Build command with individual --filter flags for each package

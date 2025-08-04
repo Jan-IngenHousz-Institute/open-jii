@@ -10,6 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  contents: read
   pull-requests: read
 
 jobs:
@@ -30,24 +31,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set TURBO_REF_FILTER
-        run: |
-          DEFAULT_REF="main"
-          BASE_REF="${{ github.base_ref }}"
-          if [ -z "$BASE_REF" ]; then
-            echo "TURBO_REF_FILTER=origin/$DEFAULT_REF" >> $GITHUB_ENV
-          else
-            echo "TURBO_REF_FILTER=origin/$BASE_REF" >> $GITHUB_ENV
-          fi
-
       - name: Build, Lint & Test
         id: blt
         uses: ./.github/actions/blt
         with:
           node-version: "22"
           artifact_retention: "7"
-          base: "main"
           environment: "dev"
+        env:
+          DO_NOT_TRACK: 1
+          TURBO_TELEMETRY_DISABLED: 1
 
   tofu:
     name: OpenTofu
