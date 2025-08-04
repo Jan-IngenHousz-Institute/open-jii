@@ -32,4 +32,3 @@ catalogs:
     "@tanstack/react-query-devtools": ^5.84.1
     "@tanstack/query-async-storage-persister": ^5.83.1
     "@tanstack/react-query-persist-client": ^5.84.1
-
