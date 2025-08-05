@@ -418,10 +418,7 @@ export class FlowStepRepository {
     // Update existing connections
     if (connectionOperations.update?.length) {
       for (const { id, ...updateData } of connectionOperations.update) {
-        await tx
-          .update(flowStepConnections)
-          .set({ ...updateData, updatedAt: new Date() })
-          .where(eq(flowStepConnections.id, id));
+        await tx.update(flowStepConnections).set(updateData).where(eq(flowStepConnections.id, id));
       }
     }
   }
