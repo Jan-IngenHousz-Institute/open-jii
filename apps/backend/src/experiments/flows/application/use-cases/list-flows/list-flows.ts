@@ -1,8 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { Result, AppError, success, failure } from "../../../../../common/utils/fp-utils";
+import { Result } from "../../../../../common/utils/fp-utils";
 import { FlowDto } from "../../../core/models/flow.model";
-import { FlowRepository, FlowRepositoryError } from "../../../core/repositories/flow.repository";
+import { FlowRepository } from "../../../core/repositories/flow.repository";
 
 @Injectable()
 export class ListFlowsUseCase {

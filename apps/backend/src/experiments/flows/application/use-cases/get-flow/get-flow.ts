@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { Result, AppError, failure, success } from "../../../../../common/utils/fp-utils";
-import { FlowWithStepsDto } from "../../../core/models/flow.model";
+import { FlowDto, FlowWithStepsDto } from "../../../core/models/flow.model";
 import { FlowStepRepository } from "../../../core/repositories/flow-step.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
 
@@ -26,7 +26,7 @@ export class GetFlowUseCase {
     // Get the flow
     const flowResult = await this.flowRepository.findOne(flowId);
 
-    return flowResult.chain(async (flow) => {
+    return flowResult.chain(async (flow: FlowDto | null) => {
       if (!flow) {
         this.logger.warn(`Flow with ID ${flowId} not found`);
         return failure(new GetFlowError(`Flow with ID ${flowId} not found`));
@@ -36,10 +36,11 @@ export class GetFlowUseCase {
       const stepsResult = await this.flowStepRepository.findByFlowId(flowId);
 
       return stepsResult.chain((steps) => {
-        this.logger.log(`Found flow "${flow.name}" with ${steps?.length ?? 0} steps`);
+        const stepsArray = Array.isArray(steps) ? steps : [];
+        this.logger.log(`Found flow "${flow.name}" with ${stepsArray.length} steps`);
         return success({
           ...flow,
-          steps,
+          steps: stepsArray,
         });
       });
     });

@@ -79,8 +79,8 @@ describe("UpdateFlowWithStepsUseCase", () => {
         version: 1,
         isActive: true,
         createdBy: "user-123",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
         steps: [
           {
             id: mockStepId1,
@@ -94,8 +94,8 @@ describe("UpdateFlowWithStepsUseCase", () => {
             isStartNode: true,
             isEndNode: false,
             stepSpecification: {},
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
           },
           {
             id: mockStepId3,
@@ -109,8 +109,8 @@ describe("UpdateFlowWithStepsUseCase", () => {
             isStartNode: false,
             isEndNode: true,
             stepSpecification: {},
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
           },
         ],
         connections: [
@@ -124,8 +124,8 @@ describe("UpdateFlowWithStepsUseCase", () => {
             label: null,
             condition: null,
             priority: 0,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
           },
         ],
       };
@@ -184,8 +184,8 @@ describe("UpdateFlowWithStepsUseCase", () => {
         version: 1,
         isActive: false,
         createdBy: "user-123",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
         steps: [],
         connections: [],
       };
@@ -232,8 +232,8 @@ describe("UpdateFlowWithStepsUseCase", () => {
         version: 1,
         isActive: true,
         createdBy: "user-123",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
         steps: [
           {
             id: mockStepId1,
@@ -247,8 +247,8 @@ describe("UpdateFlowWithStepsUseCase", () => {
             isStartNode: true,
             isEndNode: false,
             stepSpecification: {},
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
           },
           {
             id: "new-step-id",
@@ -265,8 +265,8 @@ describe("UpdateFlowWithStepsUseCase", () => {
               required: true,
               answerType: "NUMBER",
             },
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
           },
         ],
         connections: [],
@@ -313,8 +313,8 @@ describe("UpdateFlowWithStepsUseCase", () => {
         version: 1,
         isActive: true,
         createdBy: "user-123",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
         steps: [],
         connections: [
           {
@@ -327,8 +327,8 @@ describe("UpdateFlowWithStepsUseCase", () => {
             label: "Updated Connection Label",
             condition: null,
             priority: 1,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
           },
           {
             id: "new-conn-id",
@@ -340,8 +340,8 @@ describe("UpdateFlowWithStepsUseCase", () => {
             label: "New Connection",
             condition: null,
             priority: 0,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
           },
         ],
       };
@@ -369,8 +369,8 @@ describe("UpdateFlowWithStepsUseCase", () => {
         version: 1,
         isActive: true,
         createdBy: "user-123",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
         steps: [],
         connections: [],
       };

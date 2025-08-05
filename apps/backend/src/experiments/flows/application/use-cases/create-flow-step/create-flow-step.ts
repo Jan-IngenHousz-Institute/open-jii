@@ -58,7 +58,7 @@ export class CreateFlowStepUseCase {
       }
 
       const step = steps[0];
-      this.logger.log(`Successfully created ${step.type} step with ID ${step.id}`);
+      this.logger.log(`Successfully created ${String(step.type)} step with ID ${String(step.id)}`);
       return success(step);
     });
   }

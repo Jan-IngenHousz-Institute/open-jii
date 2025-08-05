@@ -90,7 +90,7 @@ export class ExperimentFlowController {
               id: step.id,
               type: step.type,
               title: step.title,
-              description: step.description || null,
+              description: step.description ?? null,
               stepSpecification: step.stepSpecification,
               nextStepIds: [], // Simplified - could be enhanced to use connections
               isStartStep: step.isStartNode || false,

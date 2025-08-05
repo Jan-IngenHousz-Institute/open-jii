@@ -1,6 +1,12 @@
 import { Test } from "@nestjs/testing";
 
-import { success, failure, AppError } from "../../../../../common/utils/fp-utils";
+import {
+  success,
+  failure,
+  AppError,
+  assertSuccess,
+  assertFailure,
+} from "../../../../../common/utils/fp-utils";
 import type { CreateFlowWithStepsDto, FlowWithGraphDto } from "../../../core/models/flow.model";
 import { FlowStepRepository } from "../../../core/repositories/flow-step.repository";
 import { CreateFlowWithStepsUseCase } from "./create-flow-with-steps";
@@ -8,6 +14,7 @@ import { CreateFlowWithStepsUseCase } from "./create-flow-with-steps";
 describe("CreateFlowWithStepsUseCase", () => {
   let useCase: CreateFlowWithStepsUseCase;
   let mockFlowStepRepository: jest.Mocked<FlowStepRepository>;
+  let createFlowWithStepsMock: jest.MockedFunction<FlowStepRepository["createFlowWithSteps"]>;
 
   const mockUserId = "550e8400-e29b-41d4-a716-446655440000";
   const mockFlowId = "550e8400-e29b-41d4-a716-446655440001";
@@ -16,8 +23,9 @@ describe("CreateFlowWithStepsUseCase", () => {
   const mockConnectionId = "550e8400-e29b-41d4-a716-446655440004";
 
   beforeEach(async () => {
+    createFlowWithStepsMock = jest.fn();
     const mockRepository = {
-      createFlowWithSteps: jest.fn(),
+      createFlowWithSteps: createFlowWithStepsMock,
     };
 
     const module = await Test.createTestingModule({
@@ -83,8 +91,8 @@ describe("CreateFlowWithStepsUseCase", () => {
         version: 1,
         isActive: true,
         createdBy: mockUserId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
         steps: [
           {
             id: mockStepId1,
@@ -98,8 +106,8 @@ describe("CreateFlowWithStepsUseCase", () => {
             isStartNode: true,
             isEndNode: false,
             stepSpecification: {},
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
           },
           {
             id: mockStepId2,
@@ -116,8 +124,8 @@ describe("CreateFlowWithStepsUseCase", () => {
               required: true,
               answerType: "TEXT",
             },
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
           },
         ],
         connections: [
@@ -131,25 +139,23 @@ describe("CreateFlowWithStepsUseCase", () => {
             label: null,
             condition: null,
             priority: 0,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
           },
         ],
       };
 
-      mockFlowStepRepository.createFlowWithSteps.mockResolvedValue(success(expectedResult));
+      createFlowWithStepsMock.mockResolvedValue(success(expectedResult as any));
 
       // Act
       const result = await useCase.execute(createFlowWithStepsDto, mockUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
       expect(result.value).toEqual(expectedResult);
-      expect(mockFlowStepRepository.createFlowWithSteps).toHaveBeenCalledWith(
-        createFlowWithStepsDto,
-        mockUserId,
-      );
-      expect(mockFlowStepRepository.createFlowWithSteps).toHaveBeenCalledTimes(1);
+      expect(createFlowWithStepsMock).toHaveBeenCalledWith(createFlowWithStepsDto, mockUserId);
+      expect(createFlowWithStepsMock).toHaveBeenCalledTimes(1);
     });
 
     it("should return failure when repository fails", async () => {
@@ -168,11 +174,9 @@ describe("CreateFlowWithStepsUseCase", () => {
 
       // Assert
       expect(result.isFailure()).toBe(true);
+      assertFailure(result);
       expect(result.error).toEqual(expectedError);
-      expect(mockFlowStepRepository.createFlowWithSteps).toHaveBeenCalledWith(
-        createFlowWithStepsDto,
-        mockUserId,
-      );
+      expect(createFlowWithStepsMock).toHaveBeenCalledWith(createFlowWithStepsDto, mockUserId);
     });
 
     it("should handle flow creation without connections", async () => {
@@ -198,8 +202,8 @@ describe("CreateFlowWithStepsUseCase", () => {
         version: 1,
         isActive: true,
         createdBy: mockUserId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
         steps: [
           {
             id: mockStepId1,
@@ -213,20 +217,21 @@ describe("CreateFlowWithStepsUseCase", () => {
             isStartNode: true,
             isEndNode: true,
             stepSpecification: null,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
           },
         ],
         connections: [],
       };
 
-      mockFlowStepRepository.createFlowWithSteps.mockResolvedValue(success(expectedResult));
+      mockFlowStepRepository.createFlowWithSteps.mockResolvedValue(success(expectedResult as any));
 
       // Act
       const result = await useCase.execute(createFlowWithStepsDto, mockUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
       expect(result.value).toEqual(expectedResult);
       expect(result.value.connections).toHaveLength(0);
     });
@@ -282,30 +287,34 @@ describe("CreateFlowWithStepsUseCase", () => {
         version: 1,
         isActive: true,
         createdBy: mockUserId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
         steps: createFlowWithStepsDto.steps.map((step, index) => ({
           id: `step-${index}`,
           flowId: mockFlowId,
-          ...step,
+          type: step.type,
+          title: step.title ?? null,
           description: null,
           media: null,
+          position: step.position ?? { x: 0, y: 0 },
           size: null,
           isStartNode: index === 0,
           isEndNode: index === createFlowWithStepsDto.steps.length - 1,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          stepSpecification: step.stepSpecification ?? null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         })),
         connections: [],
       };
 
-      mockFlowStepRepository.createFlowWithSteps.mockResolvedValue(success(expectedResult));
+      mockFlowStepRepository.createFlowWithSteps.mockResolvedValue(success(expectedResult as any));
 
       // Act
       const result = await useCase.execute(createFlowWithStepsDto, mockUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
       expect(result.value.steps).toHaveLength(4);
       expect(result.value.steps[0].type).toBe("INSTRUCTION");
       expect(result.value.steps[1].type).toBe("QUESTION");

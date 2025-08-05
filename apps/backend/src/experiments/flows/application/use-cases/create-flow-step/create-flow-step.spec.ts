@@ -146,7 +146,6 @@ describe("CreateFlowStepUseCase", () => {
 
     it("should create step with default position when position not provided", async () => {
       // Arrange
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const stepData = {
         type: "MEASUREMENT" as const,
         title: "New Step",
@@ -155,7 +154,7 @@ describe("CreateFlowStepUseCase", () => {
           autoStart: false,
           retryAttempts: 3,
         },
-      } as any; // Allow missing position for this test
+      } as Parameters<CreateFlowStepUseCase["execute"]>[1]; // typed as correct input, position stays optional
 
       // Act
       const result = await useCase.execute(testFlowId, stepData);
