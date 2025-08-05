@@ -259,6 +259,13 @@ describe("UpdateFlowWithStepsUseCase", () => {
       position: { x: 200, y: 200 },
     });
 
+    const step3 = await testApp.createFlowStep({
+      flowId: flow.id,
+      type: "INSTRUCTION",
+      title: "Step 3",
+      position: { x: 300, y: 300 },
+    });
+
     const connection = await testApp.createFlowStepConnection({
       flowId: flow.id,
       sourceStepId: step1.id,
@@ -272,8 +279,8 @@ describe("UpdateFlowWithStepsUseCase", () => {
       connections: {
         create: [
           {
-            sourceStepId: step1.id,
-            targetStepId: step2.id,
+            sourceStepId: step2.id,
+            targetStepId: step3.id,
             type: "default",
             label: "New Connection",
           },
