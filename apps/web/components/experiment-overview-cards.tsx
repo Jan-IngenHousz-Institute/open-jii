@@ -29,6 +29,7 @@ export function ExperimentOverviewCards({
         {experiments.map((experiment) => {
           const isPrivate = experiment.visibility === zExperimentVisibility.enum.private;
           const IconComponent = isPrivate ? Lock : Globe;
+          const iconDescription = isPrivate ? t("visibility.private") : t("visibility.public");
           return (
             <Card key={experiment.id} className="bg-white transition-shadow hover:shadow-md">
               <CardHeader className="pb-3">
@@ -39,7 +40,12 @@ export function ExperimentOverviewCards({
                     </h3>
                     <ExperimentStatusBadge status={experiment.status} />
                   </div>
-                  <IconComponent className="mt-1 h-4 w-4 text-gray-400" />
+                  <span title={iconDescription}>
+                    <IconComponent
+                      className="mt-1 h-4 w-4 text-gray-400"
+                      aria-description={iconDescription}
+                    />
+                  </span>
                 </div>
               </CardHeader>
               <CardContent className="pt-0">

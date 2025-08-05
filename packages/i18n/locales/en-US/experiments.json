@@ -19,6 +19,10 @@
     "cancelled": "Cancelled",
     "provisioning": "Provisioning"
   },
+  "visibility": {
+    "private": "Private",
+    "public": "Public"
+  },
   "actions": {
     "start": "Start Experiment",
     "pause": "Pause Experiment",
