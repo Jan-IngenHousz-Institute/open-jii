@@ -153,6 +153,9 @@ describe("FlowRepository", () => {
       assertSuccess(createResult);
       const flowId: string = createResult.value[0].id;
 
+      // Add small delay to ensure different timestamps
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
       const updateData = { name: "Updated Flow", description: "Updated description" };
       const result = await repository.update(flowId, updateData);
       assertSuccess(result);

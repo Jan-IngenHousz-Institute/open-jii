@@ -1179,12 +1179,9 @@ describe("FlowStepRepository", () => {
           ],
         };
 
-        // Force failure by using a duplicate flow name or other constraint violation
-        // First create a flow with this name
-        await repository.createFlowWithSteps(createFlowWithStepsDto, testUserId);
-
-        // Now try to create another with the same name (should fail due to unique constraint)
-        const result = await repository.createFlowWithSteps(createFlowWithStepsDto, testUserId);
+        // Force failure by using an invalid user ID (foreign key constraint violation)
+        const invalidUserId = "00000000-0000-0000-0000-000000000000";
+        const result = await repository.createFlowWithSteps(createFlowWithStepsDto, invalidUserId);
 
         expect(result.isFailure()).toBe(true);
       });
