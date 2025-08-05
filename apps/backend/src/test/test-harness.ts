@@ -23,7 +23,9 @@ import {
   experimentProtocols,
   flows,
   flowSteps,
+  flowStepConnections,
   eq,
+  organizations,
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
@@ -146,10 +148,12 @@ export class TestHarness {
     await this.database.delete(experimentMembers).execute();
     await this.database.delete(experiments).execute();
     await this.database.delete(protocols).execute();
-    await this.database.delete(flowSteps).execute(); // Delete flow steps first
+    await this.database.delete(flowStepConnections).execute(); // Delete connections first
+    await this.database.delete(flowSteps).execute(); // Delete flow steps next
     await this.database.delete(flows).execute(); // Then flows
     await this.database.delete(profiles).execute();
     await this.database.delete(users).execute();
+    await this.database.delete(organizations).execute();
   }
 
   /**
@@ -379,6 +383,89 @@ export class TestHarness {
       })
       .returning();
     return association;
+  }
+
+  /**
+   * Helper to create a flow for testing
+   */
+  public async createFlow(data: {
+    name: string;
+    description?: string;
+    version?: number;
+    isActive?: boolean;
+    createdBy: string;
+  }) {
+    const [flow] = await this.database
+      .insert(flows)
+      .values({
+        name: data.name,
+        description: data.description ?? "Test flow description",
+        version: data.version ?? 1,
+        isActive: data.isActive ?? true,
+        createdBy: data.createdBy,
+      })
+      .returning();
+    return flow;
+  }
+
+  /**
+   * Helper to create a flow step for testing
+   */
+  public async createFlowStep(data: {
+    flowId: string;
+    type: "INSTRUCTION" | "QUESTION" | "MEASUREMENT" | "ANALYSIS";
+    title: string;
+    description?: string;
+    position: { x: number; y: number };
+    stepSpecification?: unknown;
+    isStartNode?: boolean;
+    isEndNode?: boolean;
+  }) {
+    const [flowStep] = await this.database
+      .insert(flowSteps)
+      .values({
+        flowId: data.flowId,
+        type: data.type,
+        title: data.title,
+        description: data.description ?? null,
+        media: null,
+        position: data.position,
+        size: null,
+        isStartNode: data.isStartNode ?? false,
+        isEndNode: data.isEndNode ?? false,
+        stepSpecification: data.stepSpecification ?? {},
+      })
+      .returning();
+    return flowStep;
+  }
+
+  /**
+   * Helper to create a flow step connection for testing
+   */
+  public async createFlowStepConnection(data: {
+    flowId: string;
+    sourceStepId: string;
+    targetStepId: string;
+    type?: string;
+    animated?: boolean;
+    label?: string;
+    condition?: unknown;
+    priority?: number;
+  }) {
+    const [connection] = await this.database
+      .insert(flowStepConnections)
+      .values({
+        flowId: data.flowId,
+        sourceStepId: data.sourceStepId,
+        targetStepId: data.targetStepId,
+        type: data.type ?? "default",
+        animated: data.animated ?? false,
+        label: data.label ?? null,
+        condition: data.condition ?? null,
+        priority: data.priority ?? 0,
+      })
+      .returning();
+    return connection;
   }
 
   /**

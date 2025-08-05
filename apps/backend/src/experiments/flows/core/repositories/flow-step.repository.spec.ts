@@ -133,21 +133,23 @@ describe("FlowStepRepository", () => {
 
   describe("findByFlowId", () => {
     it("should return steps ordered by creation time", async () => {
+      const now = new Date();
       const step1 = {
         type: "INSTRUCTION" as const,
         position: { x: 100, y: 100 },
         title: "First Step",
         stepSpecification: {},
+        createdAt: new Date(now.getTime() - 1000), // 1 second earlier
       };
       const step2 = {
         type: "QUESTION" as const,
         position: { x: 200, y: 200 },
         title: "Second Step",
         stepSpecification: { required: false, answerType: "TEXT" as const },
+        createdAt: now,
       };
 
       await repository.create(testFlowId, step1);
-      await new Promise((resolve) => setTimeout(resolve, 10)); // Ensure different timestamps
       await repository.create(testFlowId, step2);
 
       const result = await repository.findByFlowId(testFlowId);

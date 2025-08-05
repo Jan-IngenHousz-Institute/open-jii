@@ -1,388 +1,327 @@
-import { Test } from "@nestjs/testing";
-
-import { success, failure, AppError } from "../../../../../common/utils/fp-utils";
-import type { UpdateFlowWithStepsDto, FlowWithGraphDto } from "../../../core/models/flow.model";
-import { FlowStepRepository } from "../../../core/repositories/flow-step.repository";
+import { assertFailure, assertSuccess } from "../../../../../common/utils/fp-utils";
+import { TestHarness } from "../../../../../test/test-harness";
+import type { UpdateFlowWithStepsDto } from "../../../core/models/flow.model";
 import { UpdateFlowWithStepsUseCase } from "./update-flow-with-steps";
 
 describe("UpdateFlowWithStepsUseCase", () => {
+  const testApp = TestHarness.App;
+  let testUserId: string;
   let useCase: UpdateFlowWithStepsUseCase;
-  let mockFlowStepRepository: jest.Mocked<FlowStepRepository>;
 
-  const mockFlowId = "550e8400-e29b-41d4-a716-446655440001";
-  const mockStepId1 = "550e8400-e29b-41d4-a716-446655440002";
-  const mockStepId2 = "550e8400-e29b-41d4-a716-446655440003";
-  const mockStepId3 = "550e8400-e29b-41d4-a716-446655440004";
-  const mockConnectionId = "550e8400-e29b-41d4-a716-446655440005";
-
-  beforeEach(async () => {
-    const mockRepository = {
-      updateFlowWithSteps: jest.fn(),
-    };
-
-    const module = await Test.createTestingModule({
-      providers: [
-        UpdateFlowWithStepsUseCase,
-        {
-          provide: FlowStepRepository,
-          useValue: mockRepository,
-        },
-      ],
-    }).compile();
-
-    useCase = module.get<UpdateFlowWithStepsUseCase>(UpdateFlowWithStepsUseCase);
-    mockFlowStepRepository = module.get(FlowStepRepository);
+  beforeAll(async () => {
+    await testApp.setup();
   });
 
-  describe("execute", () => {
-    it("should successfully update flow with bulk step operations", async () => {
-      // Arrange
-      const updateFlowWithStepsDto: UpdateFlowWithStepsDto = {
-        flow: {
-          name: "Updated Flow Name",
-          description: "Updated description",
-        },
-        steps: {
-          create: [
-            {
-              type: "INSTRUCTION",
-              title: "New Step",
-              position: { x: 300, y: 300 },
-              stepSpecification: {},
-            },
-          ],
-          update: [
-            {
-              id: mockStepId1,
-              title: "Updated Step Title",
-              description: "Updated description",
-            },
-          ],
-          delete: [mockStepId2],
-        },
-        connections: {
-          create: [
-            {
-              sourceStepId: mockStepId1,
-              targetStepId: mockStepId3,
-              type: "default",
-            },
-          ],
-          delete: [mockConnectionId],
-        },
-      };
+  beforeEach(async () => {
+    await testApp.beforeEach();
+    testUserId = await testApp.createTestUser({});
+    useCase = testApp.module.get(UpdateFlowWithStepsUseCase);
+  });
 
-      const expectedResult: FlowWithGraphDto = {
-        id: mockFlowId,
+  afterEach(() => {
+    testApp.afterEach();
+  });
+
+  afterAll(async () => {
+    await testApp.teardown();
+  });
+
+  it("should successfully update flow with bulk step operations", async () => {
+    // Create initial flow and steps
+    const flow = await testApp.createFlow({
+      name: "Original Flow Name",
+      description: "Original description",
+      createdBy: testUserId,
+    });
+
+    const step1 = await testApp.createFlowStep({
+      flowId: flow.id,
+      type: "INSTRUCTION",
+      title: "Original Step",
+      position: { x: 100, y: 100 },
+      isStartNode: true,
+    });
+
+    const step2 = await testApp.createFlowStep({
+      flowId: flow.id,
+      type: "INSTRUCTION",
+      title: "Step to Delete",
+      position: { x: 200, y: 200 },
+    });
+
+    const step3 = await testApp.createFlowStep({
+      flowId: flow.id,
+      type: "INSTRUCTION",
+      title: "Target Step",
+      position: { x: 300, y: 300 },
+      isEndNode: true,
+    });
+
+    const connection = await testApp.createFlowStepConnection({
+      flowId: flow.id,
+      sourceStepId: step2.id,
+      targetStepId: step3.id,
+      type: "default",
+    });
+
+    // Define update data
+    const updateFlowWithStepsDto: UpdateFlowWithStepsDto = {
+      flow: {
         name: "Updated Flow Name",
         description: "Updated description",
-        version: 1,
-        isActive: true,
-        createdBy: "user-123",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        steps: [
+      },
+      steps: {
+        create: [
           {
-            id: mockStepId1,
-            flowId: mockFlowId,
-            type: "INSTRUCTION",
-            title: "Updated Step Title",
-            description: "Updated description",
-            media: null,
-            position: { x: 100, y: 100 },
-            size: null,
-            isStartNode: true,
-            isEndNode: false,
-            stepSpecification: {},
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          {
-            id: mockStepId3,
-            flowId: mockFlowId,
             type: "INSTRUCTION",
             title: "New Step",
-            description: null,
-            media: null,
-            position: { x: 300, y: 300 },
-            size: null,
-            isStartNode: false,
-            isEndNode: true,
+            position: { x: 400, y: 400 },
             stepSpecification: {},
-            createdAt: new Date(),
-            updatedAt: new Date(),
           },
         ],
-        connections: [
+        update: [
           {
-            id: "new-connection-id",
-            flowId: mockFlowId,
-            sourceStepId: mockStepId1,
-            targetStepId: mockStepId3,
+            id: step1.id,
+            title: "Updated Step Title",
+            description: "Updated description",
+          },
+        ],
+        delete: [step2.id],
+      },
+      connections: {
+        create: [
+          {
+            sourceStepId: step1.id,
+            targetStepId: step3.id,
             type: "default",
-            animated: false,
-            label: null,
-            condition: null,
-            priority: 0,
-            createdAt: new Date(),
-            updatedAt: new Date(),
           },
         ],
-      };
+        delete: [connection.id],
+      },
+    };
 
-      mockFlowStepRepository.updateFlowWithSteps.mockResolvedValue(success(expectedResult));
+    // Execute the update
+    const result = await useCase.execute(flow.id, updateFlowWithStepsDto);
 
-      // Act
-      const result = await useCase.execute(mockFlowId, updateFlowWithStepsDto);
+    // Verify result is success
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    const updatedFlow = result.value;
 
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      expect(result.value).toEqual(expectedResult);
-      expect(mockFlowStepRepository.updateFlowWithSteps).toHaveBeenCalledWith(
-        mockFlowId,
-        updateFlowWithStepsDto,
-      );
-      expect(mockFlowStepRepository.updateFlowWithSteps).toHaveBeenCalledTimes(1);
+    // Verify flow metadata was updated
+    expect(updatedFlow.id).toBe(flow.id);
+    expect(updatedFlow.name).toBe("Updated Flow Name");
+    expect(updatedFlow.description).toBe("Updated description");
+
+    // Verify steps operations
+    expect(updatedFlow.steps).toHaveLength(3); // 1 updated + 1 new + 1 unchanged (step3)
+
+    // Find the updated step
+    const updatedStep = updatedFlow.steps.find((s) => s.id === step1.id);
+    expect(updatedStep).toBeDefined();
+    expect(updatedStep?.title).toBe("Updated Step Title");
+    expect(updatedStep?.description).toBe("Updated description");
+
+    // Verify new step was created
+    const newStep = updatedFlow.steps.find((s) => s.title === "New Step");
+    expect(newStep).toBeDefined();
+    expect(newStep?.position).toEqual({ x: 400, y: 400 });
+
+    // Verify step2 was deleted
+    const deletedStep = updatedFlow.steps.find((s) => s.id === step2.id);
+    expect(deletedStep).toBeUndefined();
+
+    // Verify connections operations
+    expect(updatedFlow.connections).toHaveLength(1); // 1 new connection (old one deleted)
+    const newConnection = updatedFlow.connections[0];
+    expect(newConnection.sourceStepId).toBe(step1.id);
+    expect(newConnection.targetStepId).toBe(step3.id);
+  });
+
+  it("should return failure when flow does not exist", async () => {
+    const nonExistentId = "00000000-0000-0000-0000-000000000000";
+    const updateFlowWithStepsDto: UpdateFlowWithStepsDto = {
+      flow: {
+        name: "Updated Flow",
+      },
+    };
+
+    const result = await useCase.execute(nonExistentId, updateFlowWithStepsDto);
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("NOT_FOUND");
+  });
+
+  it("should handle partial updates correctly", async () => {
+    // Create a flow
+    const flow = await testApp.createFlow({
+      name: "Original Flow Name",
+      description: "Original description",
+      createdBy: testUserId,
     });
 
-    it("should return failure when repository fails", async () => {
-      // Arrange
-      const updateFlowWithStepsDto: UpdateFlowWithStepsDto = {
-        flow: {
-          name: "Updated Flow",
-        },
-      };
-
-      const expectedError = AppError.notFound("Flow not found");
-      mockFlowStepRepository.updateFlowWithSteps.mockResolvedValue(failure(expectedError));
-
-      // Act
-      const result = await useCase.execute(mockFlowId, updateFlowWithStepsDto);
-
-      // Assert
-      expect(result.isFailure()).toBe(true);
-      expect(result.error).toEqual(expectedError);
-      expect(mockFlowStepRepository.updateFlowWithSteps).toHaveBeenCalledWith(
-        mockFlowId,
-        updateFlowWithStepsDto,
-      );
-    });
-
-    it("should handle partial updates correctly", async () => {
-      // Arrange - Only updating flow metadata
-      const updateFlowWithStepsDto: UpdateFlowWithStepsDto = {
-        flow: {
-          name: "New Flow Name",
-          isActive: false,
-        },
-      };
-
-      const expectedResult: FlowWithGraphDto = {
-        id: mockFlowId,
+    // Only update flow metadata
+    const updateFlowWithStepsDto: UpdateFlowWithStepsDto = {
+      flow: {
         name: "New Flow Name",
-        description: "Original description",
-        version: 1,
         isActive: false,
-        createdBy: "user-123",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        steps: [],
-        connections: [],
-      };
+      },
+    };
 
-      mockFlowStepRepository.updateFlowWithSteps.mockResolvedValue(success(expectedResult));
+    const result = await useCase.execute(flow.id, updateFlowWithStepsDto);
 
-      // Act
-      const result = await useCase.execute(mockFlowId, updateFlowWithStepsDto);
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    const updatedFlow = result.value;
 
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      expect(result.value.name).toBe("New Flow Name");
-      expect(result.value.isActive).toBe(false);
+    expect(updatedFlow.name).toBe("New Flow Name");
+    expect(updatedFlow.isActive).toBe(false);
+    expect(updatedFlow.description).toBe("Original description");
+  });
+
+  it("should handle step-only updates", async () => {
+    // Create a flow with a step
+    const flow = await testApp.createFlow({
+      name: "Original Flow Name",
+      createdBy: testUserId,
     });
 
-    it("should handle step-only updates", async () => {
-      // Arrange - Only updating steps
-      const updateFlowWithStepsDto: UpdateFlowWithStepsDto = {
-        steps: {
-          create: [
-            {
-              type: "QUESTION",
-              title: "New Question",
-              position: { x: 400, y: 400 },
-              stepSpecification: {
-                required: true,
-                answerType: "NUMBER",
-              },
-            },
-          ],
-          update: [
-            {
-              id: mockStepId1,
-              position: { x: 150, y: 150 },
-            },
-          ],
-        },
-      };
+    const step1 = await testApp.createFlowStep({
+      flowId: flow.id,
+      type: "INSTRUCTION",
+      title: "Original Title",
+      position: { x: 100, y: 100 },
+      isStartNode: true,
+    });
 
-      const expectedResult: FlowWithGraphDto = {
-        id: mockFlowId,
-        name: "Original Flow Name",
-        description: "Original description",
-        version: 1,
-        isActive: true,
-        createdBy: "user-123",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        steps: [
+    // Only update steps
+    const updateFlowWithStepsDto: UpdateFlowWithStepsDto = {
+      steps: {
+        create: [
           {
-            id: mockStepId1,
-            flowId: mockFlowId,
-            type: "INSTRUCTION",
-            title: "Original Title",
-            description: null,
-            media: null,
-            position: { x: 150, y: 150 },
-            size: null,
-            isStartNode: true,
-            isEndNode: false,
-            stepSpecification: {},
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          {
-            id: "new-step-id",
-            flowId: mockFlowId,
             type: "QUESTION",
             title: "New Question",
-            description: null,
-            media: null,
             position: { x: 400, y: 400 },
-            size: null,
-            isStartNode: false,
-            isEndNode: true,
             stepSpecification: {
               required: true,
               answerType: "NUMBER",
             },
-            createdAt: new Date(),
-            updatedAt: new Date(),
           },
         ],
-        connections: [],
-      };
+        update: [
+          {
+            id: step1.id,
+            position: { x: 150, y: 150 },
+          },
+        ],
+      },
+    };
 
-      mockFlowStepRepository.updateFlowWithSteps.mockResolvedValue(success(expectedResult));
+    const result = await useCase.execute(flow.id, updateFlowWithStepsDto);
 
-      // Act
-      const result = await useCase.execute(mockFlowId, updateFlowWithStepsDto);
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    const updatedFlow = result.value;
 
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      expect(result.value.steps).toHaveLength(2);
-      expect(result.value.steps[0].position).toEqual({ x: 150, y: 150 });
-      expect(result.value.steps[1].type).toBe("QUESTION");
+    // Verify flow metadata unchanged
+    expect(updatedFlow.name).toBe("Original Flow Name");
+
+    // Verify steps operations
+    expect(updatedFlow.steps).toHaveLength(2);
+
+    const updatedStep = updatedFlow.steps.find((s) => s.id === step1.id);
+    expect(updatedStep?.position).toEqual({ x: 150, y: 150 });
+
+    const newStep = updatedFlow.steps.find((s) => s.type === "QUESTION");
+    expect(newStep).toBeDefined();
+    expect(newStep?.title).toBe("New Question");
+  });
+
+  it("should handle connection-only updates", async () => {
+    // Create a flow with steps and a connection
+    const flow = await testApp.createFlow({
+      name: "Flow Name",
+      createdBy: testUserId,
     });
 
-    it("should handle connection-only updates", async () => {
-      // Arrange - Only updating connections
-      const updateFlowWithStepsDto: UpdateFlowWithStepsDto = {
-        connections: {
-          create: [
-            {
-              sourceStepId: mockStepId1,
-              targetStepId: mockStepId2,
-              type: "default",
-              label: "New Connection",
-            },
-          ],
-          update: [
-            {
-              id: mockConnectionId,
-              label: "Updated Connection Label",
-              priority: 1,
-            },
-          ],
-        },
-      };
+    const step1 = await testApp.createFlowStep({
+      flowId: flow.id,
+      type: "INSTRUCTION",
+      title: "Step 1",
+      position: { x: 100, y: 100 },
+    });
 
-      const expectedResult: FlowWithGraphDto = {
-        id: mockFlowId,
-        name: "Flow Name",
-        description: null,
-        version: 1,
-        isActive: true,
-        createdBy: "user-123",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        steps: [],
-        connections: [
+    const step2 = await testApp.createFlowStep({
+      flowId: flow.id,
+      type: "INSTRUCTION",
+      title: "Step 2",
+      position: { x: 200, y: 200 },
+    });
+
+    const connection = await testApp.createFlowStepConnection({
+      flowId: flow.id,
+      sourceStepId: step1.id,
+      targetStepId: step2.id,
+      type: "default",
+      label: "Original Label",
+    });
+
+    // Only update connections
+    const updateFlowWithStepsDto: UpdateFlowWithStepsDto = {
+      connections: {
+        create: [
           {
-            id: mockConnectionId,
-            flowId: mockFlowId,
-            sourceStepId: mockStepId1,
-            targetStepId: mockStepId2,
+            sourceStepId: step1.id,
+            targetStepId: step2.id,
             type: "default",
-            animated: false,
-            label: "Updated Connection Label",
-            condition: null,
-            priority: 1,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          {
-            id: "new-conn-id",
-            flowId: mockFlowId,
-            sourceStepId: mockStepId1,
-            targetStepId: mockStepId2,
-            type: "default",
-            animated: false,
             label: "New Connection",
-            condition: null,
-            priority: 0,
-            createdAt: new Date(),
-            updatedAt: new Date(),
           },
         ],
-      };
+        update: [
+          {
+            id: connection.id,
+            label: "Updated Connection Label",
+            priority: 1,
+          },
+        ],
+      },
+    };
 
-      mockFlowStepRepository.updateFlowWithSteps.mockResolvedValue(success(expectedResult));
+    const result = await useCase.execute(flow.id, updateFlowWithStepsDto);
 
-      // Act
-      const result = await useCase.execute(mockFlowId, updateFlowWithStepsDto);
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    const updatedFlow = result.value;
 
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      expect(result.value.connections).toHaveLength(2);
-      expect(result.value.connections[0].label).toBe("Updated Connection Label");
-      expect(result.value.connections[1].label).toBe("New Connection");
+    expect(updatedFlow.connections).toHaveLength(2);
+
+    const updatedConnection = updatedFlow.connections.find((c) => c.id === connection.id);
+    expect(updatedConnection?.label).toBe("Updated Connection Label");
+    expect(updatedConnection?.priority).toBe(1);
+
+    const newConnection = updatedFlow.connections.find((c) => c.label === "New Connection");
+    expect(newConnection).toBeDefined();
+  });
+
+  it("should handle empty update gracefully", async () => {
+    // Create a flow
+    const flow = await testApp.createFlow({
+      name: "Unchanged Flow",
+      createdBy: testUserId,
     });
 
-    it("should handle empty update gracefully", async () => {
-      // Arrange - Empty update
-      const updateFlowWithStepsDto: UpdateFlowWithStepsDto = {};
+    // Empty update
+    const updateFlowWithStepsDto: UpdateFlowWithStepsDto = {};
 
-      const expectedResult: FlowWithGraphDto = {
-        id: mockFlowId,
-        name: "Unchanged Flow",
-        description: null,
-        version: 1,
-        isActive: true,
-        createdBy: "user-123",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        steps: [],
-        connections: [],
-      };
+    const result = await useCase.execute(flow.id, updateFlowWithStepsDto);
 
-      mockFlowStepRepository.updateFlowWithSteps.mockResolvedValue(success(expectedResult));
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    const updatedFlow = result.value;
 
-      // Act
-      const result = await useCase.execute(mockFlowId, updateFlowWithStepsDto);
-
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      expect(result.value).toEqual(expectedResult);
-    });
+    expect(updatedFlow.name).toBe("Unchanged Flow");
+    expect(updatedFlow.steps).toHaveLength(0);
+    expect(updatedFlow.connections).toHaveLength(0);
   });
 });

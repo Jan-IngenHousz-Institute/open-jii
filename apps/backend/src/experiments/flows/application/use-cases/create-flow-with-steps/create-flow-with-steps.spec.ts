@@ -1,45 +1,29 @@
-import { Test } from "@nestjs/testing";
-
-import {
-  success,
-  failure,
-  AppError,
-  assertSuccess,
-  assertFailure,
-} from "../../../../../common/utils/fp-utils";
-import type { CreateFlowWithStepsDto, FlowWithGraphDto } from "../../../core/models/flow.model";
-import { FlowStepRepository } from "../../../core/repositories/flow-step.repository";
+import { assertFailure, assertSuccess } from "../../../../../common/utils/fp-utils";
+import { TestHarness } from "../../../../../test/test-harness";
+import type { CreateFlowWithStepsDto } from "../../../core/models/flow.model";
 import { CreateFlowWithStepsUseCase } from "./create-flow-with-steps";
 
 describe("CreateFlowWithStepsUseCase", () => {
+  const testApp = TestHarness.App;
+  let testUserId: string;
   let useCase: CreateFlowWithStepsUseCase;
-  let mockFlowStepRepository: jest.Mocked<FlowStepRepository>;
-  let createFlowWithStepsMock: jest.MockedFunction<FlowStepRepository["createFlowWithSteps"]>;
 
-  const mockUserId = "550e8400-e29b-41d4-a716-446655440000";
-  const mockFlowId = "550e8400-e29b-41d4-a716-446655440001";
-  const mockStepId1 = "550e8400-e29b-41d4-a716-446655440002";
-  const mockStepId2 = "550e8400-e29b-41d4-a716-446655440003";
-  const mockConnectionId = "550e8400-e29b-41d4-a716-446655440004";
+  beforeAll(async () => {
+    await testApp.setup();
+  });
 
   beforeEach(async () => {
-    createFlowWithStepsMock = jest.fn();
-    const mockRepository = {
-      createFlowWithSteps: createFlowWithStepsMock,
-    };
+    await testApp.beforeEach();
+    testUserId = await testApp.createTestUser({});
+    useCase = testApp.module.get(CreateFlowWithStepsUseCase);
+  });
 
-    const module = await Test.createTestingModule({
-      providers: [
-        CreateFlowWithStepsUseCase,
-        {
-          provide: FlowStepRepository,
-          useValue: mockRepository,
-        },
-      ],
-    }).compile();
+  afterEach(() => {
+    testApp.afterEach();
+  });
 
-    useCase = module.get<CreateFlowWithStepsUseCase>(CreateFlowWithStepsUseCase);
-    mockFlowStepRepository = module.get(FlowStepRepository);
+  afterAll(async () => {
+    await testApp.teardown();
   });
 
   describe("execute", () => {
@@ -75,90 +59,61 @@ describe("CreateFlowWithStepsUseCase", () => {
         ],
         connections: [
           {
-            sourceStepId: mockStepId1,
-            targetStepId: mockStepId2,
+            sourceStepId: "temp-step-1", // Will be mapped to actual step IDs
+            targetStepId: "temp-step-2",
             type: "default",
             animated: false,
             priority: 0,
           },
         ],
       };
-
-      const expectedResult: FlowWithGraphDto = {
-        id: mockFlowId,
-        name: "Test Flow",
-        description: "A test flow with steps",
-        version: 1,
-        isActive: true,
-        createdBy: mockUserId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        steps: [
-          {
-            id: mockStepId1,
-            flowId: mockFlowId,
-            type: "INSTRUCTION",
-            title: "Step 1",
-            description: "First step",
-            media: null,
-            position: { x: 100, y: 100 },
-            size: null,
-            isStartNode: true,
-            isEndNode: false,
-            stepSpecification: {},
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          {
-            id: mockStepId2,
-            flowId: mockFlowId,
-            type: "QUESTION",
-            title: "Step 2",
-            description: "Second step",
-            media: null,
-            position: { x: 200, y: 200 },
-            size: null,
-            isStartNode: false,
-            isEndNode: true,
-            stepSpecification: {
-              required: true,
-              answerType: "TEXT",
-            },
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        ],
-        connections: [
-          {
-            id: mockConnectionId,
-            flowId: mockFlowId,
-            sourceStepId: mockStepId1,
-            targetStepId: mockStepId2,
-            type: "default",
-            animated: false,
-            label: null,
-            condition: null,
-            priority: 0,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        ],
-      };
-
-      createFlowWithStepsMock.mockResolvedValue(success(expectedResult as any));
 
       // Act
-      const result = await useCase.execute(createFlowWithStepsDto, mockUserId);
+      const result = await useCase.execute(createFlowWithStepsDto, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toEqual(expectedResult);
-      expect(createFlowWithStepsMock).toHaveBeenCalledWith(createFlowWithStepsDto, mockUserId);
-      expect(createFlowWithStepsMock).toHaveBeenCalledTimes(1);
+      const flow = result.value;
+
+      expect(flow.name).toBe("Test Flow");
+      expect(flow.description).toBe("A test flow with steps");
+      expect(flow.version).toBe(1);
+      expect(flow.isActive).toBe(true);
+      expect(flow.createdBy).toBe(testUserId);
+      expect(flow.steps).toHaveLength(2);
+      expect(flow.connections).toHaveLength(1);
+
+      // Verify steps were created correctly
+      const step1 = flow.steps.find((s) => s.title === "Step 1");
+      const step2 = flow.steps.find((s) => s.title === "Step 2");
+
+      expect(step1).toMatchObject({
+        type: "INSTRUCTION",
+        title: "Step 1",
+        description: "First step",
+        position: { x: 100, y: 100 },
+        isStartNode: true,
+        isEndNode: false,
+      });
+
+      expect(step2).toMatchObject({
+        type: "QUESTION",
+        title: "Step 2",
+        description: "Second step",
+        position: { x: 200, y: 200 },
+        isStartNode: false,
+        isEndNode: true,
+      });
+
+      // Verify connection was created
+      const connection = flow.connections[0];
+      expect(connection.sourceStepId).toBe(step1?.id);
+      expect(connection.targetStepId).toBe(step2?.id);
+      expect(connection.type).toBe("default");
     });
 
-    it("should return failure when repository fails", async () => {
+    it("should return failure when user does not exist", async () => {
       // Arrange
       const createFlowWithStepsDto: CreateFlowWithStepsDto = {
         name: "Test Flow",
@@ -166,17 +121,14 @@ describe("CreateFlowWithStepsUseCase", () => {
         steps: [],
       };
 
-      const expectedError = AppError.internal("Database error");
-      mockFlowStepRepository.createFlowWithSteps.mockResolvedValue(failure(expectedError));
+      const invalidUserId = "00000000-0000-0000-0000-000000000000";
 
       // Act
-      const result = await useCase.execute(createFlowWithStepsDto, mockUserId);
+      const result = await useCase.execute(createFlowWithStepsDto, invalidUserId);
 
       // Assert
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
-      expect(result.error).toEqual(expectedError);
-      expect(createFlowWithStepsMock).toHaveBeenCalledWith(createFlowWithStepsDto, mockUserId);
     });
 
     it("should handle flow creation without connections", async () => {
@@ -191,49 +143,32 @@ describe("CreateFlowWithStepsUseCase", () => {
             position: { x: 100, y: 100 },
             isStartNode: true,
             isEndNode: true,
+            stepSpecification: {},
           },
         ],
       };
-
-      const expectedResult: FlowWithGraphDto = {
-        id: mockFlowId,
-        name: "Simple Flow",
-        description: "A flow without connections",
-        version: 1,
-        isActive: true,
-        createdBy: mockUserId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        steps: [
-          {
-            id: mockStepId1,
-            flowId: mockFlowId,
-            type: "INSTRUCTION",
-            title: "Only Step",
-            description: null,
-            media: null,
-            position: { x: 100, y: 100 },
-            size: null,
-            isStartNode: true,
-            isEndNode: true,
-            stepSpecification: null,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        ],
-        connections: [],
-      };
-
-      mockFlowStepRepository.createFlowWithSteps.mockResolvedValue(success(expectedResult as any));
 
       // Act
-      const result = await useCase.execute(createFlowWithStepsDto, mockUserId);
+      const result = await useCase.execute(createFlowWithStepsDto, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toEqual(expectedResult);
-      expect(result.value.connections).toHaveLength(0);
+      const flow = result.value;
+
+      expect(flow.name).toBe("Simple Flow");
+      expect(flow.description).toBe("A flow without connections");
+      expect(flow.steps).toHaveLength(1);
+      expect(flow.connections).toHaveLength(0);
+
+      const step = flow.steps[0];
+      expect(step).toMatchObject({
+        type: "INSTRUCTION",
+        title: "Only Step",
+        position: { x: 100, y: 100 },
+        isStartNode: true,
+        isEndNode: true,
+      });
     });
 
     it("should handle different step types correctly", async () => {
@@ -253,8 +188,7 @@ describe("CreateFlowWithStepsUseCase", () => {
             position: { x: 100, y: 0 },
             stepSpecification: {
               required: true,
-              answerType: "SELECT",
-              options: ["Option 1", "Option 2"],
+              answerType: "TEXT",
             },
           },
           {
@@ -264,7 +198,6 @@ describe("CreateFlowWithStepsUseCase", () => {
             stepSpecification: {
               protocolId: "proto-123",
               autoStart: true,
-              timeoutSeconds: 300,
             },
           },
           {
@@ -274,52 +207,153 @@ describe("CreateFlowWithStepsUseCase", () => {
             stepSpecification: {
               macroId: "macro-456",
               autoRun: false,
-              visualizationType: "chart",
             },
           },
         ],
       };
 
-      const expectedResult: FlowWithGraphDto = {
-        id: mockFlowId,
-        name: "Multi-Step Flow",
-        description: null,
-        version: 1,
-        isActive: true,
-        createdBy: mockUserId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        steps: createFlowWithStepsDto.steps.map((step, index) => ({
-          id: `step-${index}`,
-          flowId: mockFlowId,
-          type: step.type,
-          title: step.title ?? null,
-          description: null,
-          media: null,
-          position: step.position ?? { x: 0, y: 0 },
-          size: null,
-          isStartNode: index === 0,
-          isEndNode: index === createFlowWithStepsDto.steps.length - 1,
-          stepSpecification: step.stepSpecification ?? null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })),
-        connections: [],
-      };
-
-      mockFlowStepRepository.createFlowWithSteps.mockResolvedValue(success(expectedResult as any));
-
       // Act
-      const result = await useCase.execute(createFlowWithStepsDto, mockUserId);
+      const result = await useCase.execute(createFlowWithStepsDto, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value.steps).toHaveLength(4);
-      expect(result.value.steps[0].type).toBe("INSTRUCTION");
-      expect(result.value.steps[1].type).toBe("QUESTION");
-      expect(result.value.steps[2].type).toBe("MEASUREMENT");
-      expect(result.value.steps[3].type).toBe("ANALYSIS");
+      const flow = result.value;
+
+      expect(flow.name).toBe("Multi-Step Flow");
+      expect(flow.steps).toHaveLength(4);
+      expect(flow.connections).toHaveLength(0);
+
+      const instructionStep = flow.steps.find((s) => s.type === "INSTRUCTION");
+      const questionStep = flow.steps.find((s) => s.type === "QUESTION");
+      const measurementStep = flow.steps.find((s) => s.type === "MEASUREMENT");
+      const analysisStep = flow.steps.find((s) => s.type === "ANALYSIS");
+
+      expect(instructionStep?.title).toBe("Instruction Step");
+      expect(questionStep?.title).toBe("Question Step");
+      expect(measurementStep?.title).toBe("Measurement Step");
+      expect(analysisStep?.title).toBe("Analysis Step");
+
+      // Verify step specifications
+      expect(questionStep?.stepSpecification).toEqual({
+        required: true,
+        answerType: "TEXT",
+      });
+      expect(measurementStep?.stepSpecification).toEqual({
+        protocolId: "proto-123",
+        autoStart: true,
+      });
+      expect(analysisStep?.stepSpecification).toEqual({
+        macroId: "macro-456",
+        autoRun: false,
+      });
+    });
+
+    it("should handle minimal flow creation", async () => {
+      // Arrange
+      const createFlowWithStepsDto: CreateFlowWithStepsDto = {
+        name: "Minimal Flow",
+        steps: [
+          {
+            type: "INSTRUCTION",
+            position: { x: 0, y: 0 },
+          },
+        ],
+      };
+
+      // Act
+      const result = await useCase.execute(createFlowWithStepsDto, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const flow = result.value;
+
+      expect(flow.name).toBe("Minimal Flow");
+      expect(flow.description).toBeNull();
+      expect(flow.version).toBe(1);
+      expect(flow.isActive).toBe(true);
+      expect(flow.steps).toHaveLength(1);
+
+      const step = flow.steps[0];
+      expect(step.type).toBe("INSTRUCTION");
+      expect(step.title).toBeNull();
+      expect(step.position).toEqual({ x: 0, y: 0 });
+    });
+
+    it("should handle flow with complex connections", async () => {
+      // Arrange
+      const createFlowWithStepsDto: CreateFlowWithStepsDto = {
+        name: "Flow with Complex Connections",
+        steps: [
+          {
+            type: "INSTRUCTION",
+            title: "Start",
+            position: { x: 100, y: 100 },
+            stepSpecification: {},
+          },
+          {
+            type: "QUESTION",
+            title: "Question",
+            position: { x: 200, y: 200 },
+            stepSpecification: {
+              required: true,
+              answerType: "TEXT",
+            },
+          },
+          {
+            type: "MEASUREMENT",
+            title: "Measurement",
+            position: { x: 300, y: 300 },
+            stepSpecification: {},
+          },
+        ],
+        connections: [
+          {
+            sourceStepId: "temp-step-1",
+            targetStepId: "temp-step-2",
+            type: "default",
+            label: "Next",
+            priority: 1,
+          },
+          {
+            sourceStepId: "temp-step-2",
+            targetStepId: "temp-step-3",
+            type: "conditional",
+            label: "If answered",
+            animated: true,
+            priority: 2,
+          },
+        ],
+      };
+
+      // Act
+      const result = await useCase.execute(createFlowWithStepsDto, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const flow = result.value;
+
+      expect(flow.steps).toHaveLength(3);
+      expect(flow.connections).toHaveLength(2);
+
+      const connection1 = flow.connections.find((c) => c.label === "Next");
+      const connection2 = flow.connections.find((c) => c.label === "If answered");
+
+      expect(connection1).toMatchObject({
+        type: "default",
+        label: "Next",
+        priority: 1,
+        animated: false,
+      });
+
+      expect(connection2).toMatchObject({
+        type: "conditional",
+        label: "If answered",
+        animated: true,
+        priority: 2,
+      });
     });
   });
 });
