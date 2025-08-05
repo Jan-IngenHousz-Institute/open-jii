@@ -3,17 +3,14 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
-import type { SessionUser } from "@repo/auth/config";
+import type { User } from "@repo/auth/types";
 
 import { CurrentUser } from "../../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../../common/guards/auth.guard";
 import { formatDates, formatDatesList } from "../../../common/utils/date-formatter";
 import { handleFailure } from "../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../core/repositories/experiment.repository";
-import { CreateFlowStepUseCase } from "../application/use-cases/create-flow-step/create-flow-step";
 import { CreateFlowWithStepsUseCase } from "../application/use-cases/create-flow-with-steps/create-flow-with-steps";
-import { CreateFlowUseCase } from "../application/use-cases/create-flow/create-flow";
-import { GetFlowUseCase } from "../application/use-cases/get-flow/get-flow";
 import { ListFlowsUseCase } from "../application/use-cases/list-flows/list-flows";
 import { UpdateFlowWithStepsUseCase } from "../application/use-cases/update-flow-with-steps/update-flow-with-steps";
 
@@ -23,32 +20,11 @@ export class FlowController {
   private readonly logger = new Logger(FlowController.name);
 
   constructor(
-    private readonly createFlowUseCase: CreateFlowUseCase,
-    private readonly getFlowUseCase: GetFlowUseCase,
     private readonly listFlowsUseCase: ListFlowsUseCase,
-    private readonly createFlowStepUseCase: CreateFlowStepUseCase,
     private readonly createFlowWithStepsUseCase: CreateFlowWithStepsUseCase,
     private readonly updateFlowWithStepsUseCase: UpdateFlowWithStepsUseCase,
     private readonly experimentRepository: ExperimentRepository,
   ) {}
-
-  @TsRestHandler(contract.flows.createFlow)
-  createFlow(@CurrentUser() user: SessionUser) {
-    return tsRestHandler(contract.flows.createFlow, async ({ body }) => {
-      const result = await this.createFlowUseCase.execute(body, user.id);
-
-      if (result.isSuccess()) {
-        const flow = result.value;
-        this.logger.log(`Flow created: ${flow.id} by user ${user.id}`);
-        return {
-          status: StatusCodes.CREATED,
-          body: { id: flow.id },
-        };
-      }
-
-      return handleFailure(result, this.logger);
-    });
-  }
 
   @TsRestHandler(contract.flows.listFlows)
   listFlows() {
@@ -73,60 +49,8 @@ export class FlowController {
     });
   }
 
-  @TsRestHandler(contract.flows.getFlow)
-  getFlow(@CurrentUser() user: SessionUser) {
-    return tsRestHandler(contract.flows.getFlow, async ({ params }) => {
-      const result = await this.getFlowUseCase.execute(params.id);
-
-      if (result.isFailure()) {
-        return handleFailure(result, this.logger);
-      }
-
-      const flowWithSteps = result.value;
-      const { steps: _steps, ...flow } = flowWithSteps;
-
-      // Find experiment that owns this flow and check access
-      const experimentResult = await this.experimentRepository.findByFlowId(params.id);
-
-      if (experimentResult.isFailure()) {
-        return handleFailure(experimentResult, this.logger);
-      }
-
-      const experiment = experimentResult.value;
-
-      if (experiment) {
-        const accessResult = await this.experimentRepository.checkAccess(experiment.id, user.id);
-
-        if (accessResult.isFailure()) {
-          return handleFailure(accessResult, this.logger);
-        }
-
-        const { hasAccess } = accessResult.value;
-
-        if (!hasAccess) {
-          return {
-            status: StatusCodes.FORBIDDEN,
-            body: {
-              message: "Access denied to this experiment's flow",
-              code: "ACCESS_DENIED",
-            },
-          };
-        }
-      }
-
-      this.logger.log(`Retrieved flow: ${flow.id}`);
-      return {
-        status: StatusCodes.OK as const,
-        body: formatDates({
-          ...flow,
-          description: flow.description ?? undefined,
-        }),
-      };
-    });
-  }
-
   @TsRestHandler(contract.flows.createFlowStep)
-  createFlowStep(@CurrentUser() user: SessionUser) {
+  createFlowStep(@CurrentUser() user: User) {
     return tsRestHandler(contract.flows.createFlowStep, async ({ params, body }) => {
       // Find experiment that owns this flow and check admin access
       const experimentResult = await this.experimentRepository.findByFlowId(params.id);
@@ -183,7 +107,7 @@ export class FlowController {
   }
 
   @TsRestHandler(contract.flows.listFlowSteps)
-  getFlowSteps(@CurrentUser() user: SessionUser) {
+  getFlowSteps(@CurrentUser() user: User) {
     return tsRestHandler(contract.flows.listFlowSteps, async ({ params }) => {
       const result = await this.getFlowUseCase.execute(params.id);
 
@@ -247,7 +171,7 @@ export class FlowController {
   }
 
   @TsRestHandler(contract.flows.createFlowWithSteps)
-  createFlowWithSteps(@CurrentUser() user: SessionUser) {
+  createFlowWithSteps(@CurrentUser() user: User) {
     return tsRestHandler(contract.flows.createFlowWithSteps, async ({ body }) => {
       const result = await this.createFlowWithStepsUseCase.execute(body, user.id);
 
@@ -268,7 +192,7 @@ export class FlowController {
   }
 
   @TsRestHandler(contract.flows.updateFlowWithSteps)
-  updateFlowWithSteps(@CurrentUser() user: SessionUser) {
+  updateFlowWithSteps(@CurrentUser() user: User) {
     return tsRestHandler(contract.flows.updateFlowWithSteps, async ({ params, body }) => {
       // Find experiment that owns this flow and check admin access
       const experimentResult = await this.experimentRepository.findByFlowId(params.id);

@@ -10,7 +10,7 @@ import { CurrentUser } from "../../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../../common/guards/auth.guard";
 import { handleFailure, failure, success, AppError } from "../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../core/repositories/experiment.repository";
-import { GetFlowUseCase } from "../application/use-cases/get-flow/get-flow";
+import { GetFlowByExperimentUseCase } from "../application/use-cases/get-flow-by-experiment/get-flow-by-experiment";
 import { FlowStepRepository } from "../core/repositories/flow-step.repository";
 
 @Controller()
@@ -19,7 +19,7 @@ export class ExperimentFlowController {
   private readonly logger = new Logger(ExperimentFlowController.name);
 
   constructor(
-    private readonly getFlowUseCase: GetFlowUseCase,
+    private readonly getFlowByExperimentUseCase: GetFlowByExperimentUseCase,
     private readonly experimentRepository: ExperimentRepository,
     private readonly flowStepRepository: FlowStepRepository,
   ) {}
@@ -66,7 +66,7 @@ export class ExperimentFlowController {
             }
 
             // Get flow details and steps
-            const flowResult = await this.getFlowUseCase.execute(experiment.flowId);
+            const flowResult = await this.getFlowByExperimentUseCase.execute(params.id);
             if (flowResult.isFailure()) {
               return failure(AppError.internal("Failed to get flow details"));
             }

@@ -3,13 +3,14 @@ import { TestHarness } from "@/test/test-harness";
 import { assertSuccess, assertFailure } from "../../../../../common/utils/fp-utils";
 import { FlowStepRepository } from "../../../core/repositories/flow-step.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
-import { GetFlowUseCase, GetFlowError } from "./get-flow";
+import { GetFlowByExperimentUseCase, GetFlowByExperimentError } from "./get-flow-by-experiment";
 
-describe("GetFlowUseCase", () => {
+describe("GetFlowByExperimentUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let testFlowId: string;
-  let useCase: GetFlowUseCase;
+  let testExperimentId: string;
+  let useCase: GetFlowByExperimentUseCase;
   let flowRepository: FlowRepository;
   let flowStepRepository: FlowStepRepository;
 
@@ -20,7 +21,7 @@ describe("GetFlowUseCase", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
-    useCase = testApp.module.get(GetFlowUseCase);
+    useCase = testApp.module.get(GetFlowByExperimentUseCase);
     flowRepository = testApp.module.get(FlowRepository);
     flowStepRepository = testApp.module.get(FlowStepRepository);
 
@@ -31,6 +32,12 @@ describe("GetFlowUseCase", () => {
     );
     assertSuccess(flowResult);
     testFlowId = flowResult.value[0].id;
+
+    // Create a test experiment with the flow
+    testExperimentId = await testApp.createTestExperiment({
+      userId: testUserId,
+      flowId: testFlowId,
+    });
   });
 
   afterEach(() => {
@@ -57,7 +64,7 @@ describe("GetFlowUseCase", () => {
         stepSpecification: { required: true, answerType: "TEXT" },
       });
 
-      const result = await useCase.execute(testFlowId);
+      const result = await useCase.execute(testExperimentId);
 
       // Assert
       assertSuccess(result);
@@ -82,7 +89,7 @@ describe("GetFlowUseCase", () => {
       // Arrange - flow exists without steps from beforeEach
 
       // Act
-      const result = await useCase.execute(testFlowId);
+      const result = await useCase.execute(testExperimentId);
 
       // Assert
       assertSuccess(result);
@@ -95,7 +102,7 @@ describe("GetFlowUseCase", () => {
       expect(result.value.steps).toHaveLength(0);
     });
 
-    it("should return error when flow does not exist", async () => {
+    it("should return error when experiment does not exist", async () => {
       // Arrange
       const nonExistentId = "123e4567-e89b-12d3-a456-426614174000";
 
@@ -104,9 +111,9 @@ describe("GetFlowUseCase", () => {
 
       // Assert
       assertFailure(result);
-      expect(result.error).toBeInstanceOf(GetFlowError);
-      expect(result.error.message).toBe(`Flow with ID ${nonExistentId} not found`);
-      expect(result.error.code).toBe("GET_FLOW_ERROR");
+      expect(result.error).toBeInstanceOf(GetFlowByExperimentError);
+      expect(result.error.message).toBe(`No flow found for experiment ID ${nonExistentId}`);
+      expect(result.error.code).toBe("GET_FLOW_BY_EXPERIMENT_ERROR");
       expect(result.error.statusCode).toBe(404);
     });
 
@@ -139,7 +146,7 @@ describe("GetFlowUseCase", () => {
       await Promise.all(promises);
 
       // Act
-      const result = await useCase.execute(testFlowId);
+      const result = await useCase.execute(testExperimentId);
 
       // Assert
       assertSuccess(result);
@@ -173,7 +180,7 @@ describe("GetFlowUseCase", () => {
       });
 
       // Act
-      const result = await useCase.execute(testFlowId);
+      const result = await useCase.execute(testExperimentId);
 
       // Assert
       assertSuccess(result);
@@ -212,7 +219,12 @@ describe("GetFlowUseCase", () => {
       const specialFlowId = specialFlow.value[0].id;
 
       // Act
-      const result = await useCase.execute(specialFlowId);
+      const specialExperimentId = await testApp.createTestExperiment({
+        userId: testUserId,
+        flowId: specialFlowId,
+      });
+
+      const result = await useCase.execute(specialExperimentId);
 
       // Assert
       assertSuccess(result);
@@ -230,7 +242,12 @@ describe("GetFlowUseCase", () => {
       const nullDescFlowId = nullDescFlow.value[0].id;
 
       // Act
-      const result = await useCase.execute(nullDescFlowId);
+      const nullDescExperimentId = await testApp.createTestExperiment({
+        userId: testUserId,
+        flowId: nullDescFlowId,
+      });
+
+      const result = await useCase.execute(nullDescExperimentId);
 
       // Assert
       assertSuccess(result);
@@ -253,7 +270,7 @@ describe("GetFlowUseCase", () => {
       });
 
       // Act
-      const result = await useCase.execute(testFlowId);
+      const result = await useCase.execute(testExperimentId);
 
       // Assert
       assertSuccess(result);
@@ -286,7 +303,7 @@ describe("GetFlowUseCase", () => {
       });
 
       // Act
-      const result = await useCase.execute(testFlowId);
+      const result = await useCase.execute(testExperimentId);
 
       // Assert
       assertSuccess(result);
@@ -302,40 +319,40 @@ describe("GetFlowUseCase", () => {
     });
   });
 
-  describe("GetFlowError", () => {
+  describe("GetFlowByExperimentError", () => {
     it("should create error with message and default properties", () => {
-      const error = new GetFlowError("Test error message");
+      const error = new GetFlowByExperimentError("Test error message");
 
       expect(error.message).toBe("Test error message");
-      expect(error.code).toBe("GET_FLOW_ERROR");
+      expect(error.code).toBe("GET_FLOW_BY_EXPERIMENT_ERROR");
       expect(error.statusCode).toBe(404);
       expect(error.details).toEqual({});
     });
 
     it("should create error with message and cause", () => {
       const cause = new Error("Root cause");
-      const error = new GetFlowError("Test error message", cause);
+      const error = new GetFlowByExperimentError("Test error message", cause);
 
       expect(error.message).toBe("Test error message");
-      expect(error.code).toBe("GET_FLOW_ERROR");
+      expect(error.code).toBe("GET_FLOW_BY_EXPERIMENT_ERROR");
       expect(error.statusCode).toBe(404);
       expect(error.details).toEqual({ cause });
     });
 
     it("should create error with undefined cause", () => {
-      const error = new GetFlowError("Test error message", undefined);
+      const error = new GetFlowByExperimentError("Test error message", undefined);
 
       expect(error.message).toBe("Test error message");
-      expect(error.code).toBe("GET_FLOW_ERROR");
+      expect(error.code).toBe("GET_FLOW_BY_EXPERIMENT_ERROR");
       expect(error.statusCode).toBe(404);
       expect(error.details).toEqual({ cause: undefined });
     });
 
     it("should create error with null cause", () => {
-      const error = new GetFlowError("Test error message", null);
+      const error = new GetFlowByExperimentError("Test error message", null);
 
       expect(error.message).toBe("Test error message");
-      expect(error.code).toBe("GET_FLOW_ERROR");
+      expect(error.code).toBe("GET_FLOW_BY_EXPERIMENT_ERROR");
       expect(error.statusCode).toBe(404);
       expect(error.details).toEqual({ cause: null });
     });
@@ -345,10 +362,10 @@ describe("GetFlowUseCase", () => {
         type: "DatabaseError",
         details: { table: "flows", operation: "select" },
       };
-      const error = new GetFlowError("Database query failed", cause);
+      const error = new GetFlowByExperimentError("Database query failed", cause);
 
       expect(error.message).toBe("Database query failed");
-      expect(error.code).toBe("GET_FLOW_ERROR");
+      expect(error.code).toBe("GET_FLOW_BY_EXPERIMENT_ERROR");
       expect(error.statusCode).toBe(404);
       expect(error.details).toEqual({ cause });
     });
@@ -358,7 +375,7 @@ describe("GetFlowUseCase", () => {
     // Note: Removed spy-based repository edge case tests
     // These are better tested through real repository behavior
 
-    it("should handle very long flow ID", async () => {
+    it("should handle very long experiment ID", async () => {
       // Arrange
       const longId = "a".repeat(1000);
 
@@ -369,7 +386,7 @@ describe("GetFlowUseCase", () => {
       assertFailure(result);
     });
 
-    it("should handle empty string flow ID", async () => {
+    it("should handle empty string experiment ID", async () => {
       // Arrange - empty string ID
 
       // Act
@@ -387,9 +404,14 @@ describe("GetFlowUseCase", () => {
       );
       assertSuccess(maxVersionFlow);
       const maxVersionFlowId = maxVersionFlow.value[0].id;
+      
+      const maxVersionExperimentId = await testApp.createTestExperiment({
+        userId: testUserId,
+        flowId: maxVersionFlowId,
+      });
 
       // Act
-      const result = await useCase.execute(maxVersionFlowId);
+      const result = await useCase.execute(maxVersionExperimentId);
 
       // Assert
       assertSuccess(result);
@@ -402,9 +424,14 @@ describe("GetFlowUseCase", () => {
       const otherUserFlow = await flowRepository.create({ name: "Other User Flow" }, otherUserId);
       assertSuccess(otherUserFlow);
       const otherUserFlowId = otherUserFlow.value[0].id;
+      
+      const otherUserExperimentId = await testApp.createTestExperiment({
+        userId: otherUserId,
+        flowId: otherUserFlowId,
+      });
 
       // Act
-      const result = await useCase.execute(otherUserFlowId);
+      const result = await useCase.execute(otherUserExperimentId);
 
       // Assert
       assertSuccess(result);

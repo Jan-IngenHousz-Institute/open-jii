@@ -3,11 +3,9 @@ import { Module } from "@nestjs/common";
 import { DatabaseModule } from "../../common/database/database.module";
 // External dependencies
 import { ExperimentRepository } from "../core/repositories/experiment.repository";
-import { CreateFlowStepUseCase } from "./application/use-cases/create-flow-step/create-flow-step";
 import { CreateFlowWithStepsUseCase } from "./application/use-cases/create-flow-with-steps/create-flow-with-steps";
 // Use Cases
-import { CreateFlowUseCase } from "./application/use-cases/create-flow/create-flow";
-import { GetFlowUseCase } from "./application/use-cases/get-flow/get-flow";
+import { GetFlowByExperimentUseCase } from "./application/use-cases/get-flow-by-experiment/get-flow-by-experiment";
 import { ListFlowsUseCase } from "./application/use-cases/list-flows/list-flows";
 import { UpdateFlowWithStepsUseCase } from "./application/use-cases/update-flow-with-steps/update-flow-with-steps";
 import { FlowStepRepository } from "./core/repositories/flow-step.repository";
@@ -28,11 +26,9 @@ import { FlowController } from "./presentation/flow.controller";
     FlowStepRepository,
 
     // Use Cases
-    CreateFlowUseCase,
     CreateFlowWithStepsUseCase,
-    GetFlowUseCase,
+    GetFlowByExperimentUseCase,
     ListFlowsUseCase,
-    CreateFlowStepUseCase,
     UpdateFlowWithStepsUseCase,
   ],
   controllers: [FlowController, ExperimentFlowController],
@@ -40,7 +36,7 @@ import { FlowController } from "./presentation/flow.controller";
     FlowRepository,
     FlowStepRepository,
     // Export use cases that might be used by other modules
-    GetFlowUseCase,
+    GetFlowByExperimentUseCase,
   ],
 })
 export class FlowModule {}
