@@ -247,15 +247,15 @@ export class FlowStepRepository {
     });
   }
 
-  private async handleFlowUpdate(
-    tx: DatabaseInstance,
+  private async handleFlowUpdate<T extends Pick<DatabaseInstance, "select" | "update">>(
+    tx: T,
     flowId: string,
     flowUpdate?: Partial<typeof flows.$inferInsert>,
   ): Promise<typeof flows.$inferSelect> {
     if (flowUpdate) {
       const updatedFlows = await tx
         .update(flows)
-        .set({ ...flowUpdate, updatedAt: new Date() })
+        .set(flowUpdate)
         .where(eq(flows.id, flowId))
         .returning();
 
@@ -272,8 +272,10 @@ export class FlowStepRepository {
     return existingFlows[0];
   }
 
-  private async handleStepOperations(
-    tx: DatabaseInstance,
+  private async handleStepOperations<
+    T extends Pick<DatabaseInstance, "delete" | "insert" | "update">,
+  >(
+    tx: T,
     flowId: string,
     stepOperations: NonNullable<UpdateFlowWithStepsDto["steps"]>,
   ): Promise<Map<string, string>> {
@@ -323,8 +325,10 @@ export class FlowStepRepository {
     return stepIdMap;
   }
 
-  private async handleConnectionOperations(
-    tx: DatabaseInstance,
+  private async handleConnectionOperations<
+    T extends Pick<DatabaseInstance, "delete" | "insert" | "update">,
+  >(
+    tx: T,
     flowId: string,
     connectionOperations: NonNullable<UpdateFlowWithStepsDto["connections"]>,
     stepIdMap: Map<string, string>,
@@ -362,6 +366,7 @@ export class FlowStepRepository {
                 label: connectionData.label,
                 condition: connectionData.condition,
                 priority: connectionData.priority,
+                updatedAt: new Date(),
               })
               .where(
                 and(
@@ -387,8 +392,8 @@ export class FlowStepRepository {
     }
   }
 
-  private async getFinalFlowState(
-    tx: DatabaseInstance,
+  private async getFinalFlowState<T extends Pick<DatabaseInstance, "select">>(
+    tx: T,
     flowId: string,
     updatedFlow: typeof flows.$inferSelect,
   ) {

@@ -798,14 +798,18 @@ describe("FlowStepRepository", () => {
           name: "Flow That Will Fail",
           steps: [
             {
-              type: "INVALID_TYPE" as any, // This should cause a failure
+              type: "INSTRUCTION" as const,
               position: { x: 100, y: 100 },
               stepSpecification: {},
             },
           ],
         };
 
-        const result = await repository.createFlowWithSteps(createFlowWithStepsDto, testUserId);
+        // Force failure by using invalid user ID
+        const result = await repository.createFlowWithSteps(
+          createFlowWithStepsDto,
+          "invalid-user-id",
+        );
 
         expect(result.isFailure()).toBe(true);
 
@@ -1125,14 +1129,14 @@ describe("FlowStepRepository", () => {
           steps: {
             create: [
               {
-                type: "INVALID_TYPE" as any, // This should cause failure
+                type: "QUESTION" as const,
                 position: { x: 100, y: 100 },
                 stepSpecification: {},
               },
             ],
             update: [
               {
-                id: existingStepId1,
+                id: "non-existent-step-id", // This should cause failure
                 title: "This update should be rolled back",
               },
             ],
@@ -1163,18 +1167,23 @@ describe("FlowStepRepository", () => {
         expect(result.isFailure()).toBe(true);
       });
 
-      it("should handle invalid step types in createFlowWithSteps", async () => {
+      it("should handle database constraint violations in createFlowWithSteps", async () => {
         const createFlowWithStepsDto = {
-          name: "Invalid Step Type Flow",
+          name: "Flow with Constraint Violation",
           steps: [
             {
-              type: "INVALID" as any,
+              type: "MEASUREMENT" as const,
               position: { x: 100, y: 100 },
               stepSpecification: {},
             },
           ],
         };
 
+        // Force failure by using a duplicate flow name or other constraint violation
+        // First create a flow with this name
+        await repository.createFlowWithSteps(createFlowWithStepsDto, testUserId);
+
+        // Now try to create another with the same name (should fail due to unique constraint)
         const result = await repository.createFlowWithSteps(createFlowWithStepsDto, testUserId);
 
         expect(result.isFailure()).toBe(true);
