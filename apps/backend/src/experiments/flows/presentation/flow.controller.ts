@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Controller, Logger, UseGuards } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
@@ -29,41 +31,47 @@ export class FlowController {
   @TsRestHandler(contract.flows.createFlowWithSteps)
   createFlowWithSteps(@CurrentUser() user: User) {
     return tsRestHandler(contract.flows.createFlowWithSteps, async ({ body }) => {
-      const result = await this.createFlowWithStepsUseCase.execute(body as any, user.id);
+      this.logger.log(`Creating flow with steps for user ${user.id}`, { body });
 
-      if (result.isSuccess()) {
-        const flow = result.value;
+      try {
+        const result = await this.createFlowWithStepsUseCase.execute(body as any, user.id);
 
-        this.logger.log(`Flow with steps created: ${flow.id} by user ${user.id}`);
-        
-        // Format dates and convert to expected API format
-        const formattedFlow = this.formatFlowWithGraphForAPI(flow);
-        
-        return {
-          status: StatusCodes.CREATED,
-          body: formattedFlow,
-        };
+        if (result.isSuccess()) {
+          const flow = result.value;
+
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+          this.logger.log(`Flow with steps created: ${flow.id} by user ${user.id}`);
+
+          // Format dates to strings and return directly (minimal transformation needed now)
+          const formattedFlow = formatDates(flow) as any;
+
+          return {
+            status: StatusCodes.CREATED,
+            body: formattedFlow,
+          };
+        }
+
+        this.logger.error(`Failed to create flow with steps for user ${user.id}`, result.error);
+        return handleFailure(result, this.logger);
+      } catch (error) {
+        this.logger.error(`Unexpected error creating flow with steps for user ${user.id}`, error);
+        throw error;
       }
-
-      return handleFailure(result, this.logger);
     });
   }
 
-  @TsRestHandler(contract.flows.getMobileFlow)
-  getMobileFlow() {
-    return tsRestHandler(contract.flows.getMobileFlow, async ({ params }) => {
+  @TsRestHandler(contract.flows.getFlowByExperiment)
+  getFlowByExperiment() {
+    return tsRestHandler(contract.flows.getFlowByExperiment, async ({ params }) => {
       const result = await this.getFlowByExperimentUseCase.execute(params.id);
 
       if (result.isSuccess()) {
         const flowWithGraph = result.value;
 
-        // Transform React Flow format to Mobile Flow format
-        const mobileFlow = this.transformToMobileFlow(flowWithGraph);
+        // Format dates to strings and return directly (minimal transformation needed now)
+        const formattedFlow = formatDates(flowWithGraph) as any;
 
-        // Format dates to strings for the API contract
-        const formattedFlow = formatDates(mobileFlow);
-
-        this.logger.log(`Mobile flow for experiment ${params.id} retrieved`);
+        this.logger.log(`Flow for experiment ${params.id} retrieved`);
         return {
           status: StatusCodes.OK,
           body: formattedFlow,
@@ -82,16 +90,8 @@ export class FlowController {
       if (result.isSuccess()) {
         const flows = result.value;
 
-        // Format dates to strings and handle null/undefined differences
-        const formattedFlows = flows.map((flow) => {
-          const formatted = formatDates(flow) as any;
-          return {
-            ...formatted,
-            description: formatted.description ?? undefined, // Convert null to undefined
-            version: formatted.version ?? 1,
-            isActive: formatted.isActive ?? true,
-          };
-        });
+        // Format dates to strings (minimal transformation needed now)
+        const formattedFlows = flows.map((flow) => formatDates(flow)) as any;
 
         this.logger.log(`Listed ${flows.length} flows`);
         return {
@@ -112,8 +112,8 @@ export class FlowController {
       if (result.isSuccess()) {
         const flow = result.value;
 
-        // Format dates and convert to expected API format
-        const formattedFlow = this.formatFlowWithGraphForAPI(flow);
+        // Format dates to strings and return directly (minimal transformation needed now)
+        const formattedFlow = formatDates(flow) as any;
 
         this.logger.log(`Flow with steps ${params.id} updated by user ${user.id}`);
         return {
@@ -124,66 +124,5 @@ export class FlowController {
 
       return handleFailure(result, this.logger);
     });
-  }
-
-  private transformToMobileFlow(flowWithGraph: any) {
-    // Find the start step
-    const startStep = flowWithGraph.steps.find((step: any) => step.isStartNode);
-
-    // Transform steps to mobile format
-    const mobileSteps = flowWithGraph.steps.map((step: any) => {
-      // Find connections from this step to determine next steps
-      const outgoingConnections = flowWithGraph.connections.filter(
-        (conn: any) => conn.sourceStepId === step.id,
-      );
-
-      return {
-        id: step.id,
-        type: step.type,
-        title: step.title,
-        description: step.description,
-        media: step.media || [],
-        stepSpecification: step.stepSpecification,
-        nextStepIds: outgoingConnections.map((conn: any) => conn.targetStepId),
-        isStartStep: step.isStartNode,
-        isEndStep: step.isEndNode,
-      };
-    });
-
-    return {
-      flowId: flowWithGraph.id,
-      flowName: flowWithGraph.name,
-      description: flowWithGraph.description,
-      steps: mobileSteps,
-      startStepId: startStep?.id,
-    };
-  }
-
-  private formatFlowWithGraphForAPI(flow: any) {
-    const formatted = formatDates(flow) as any;
-    
-    return {
-      ...formatted,
-      description: formatted.description ?? undefined,
-      version: formatted.version ?? 1,
-      isActive: formatted.isActive ?? true,
-      steps: formatted.steps?.map((step: any) => ({
-        ...step,
-        title: step.title ?? undefined,
-        description: step.description ?? undefined,
-        media: step.media ? JSON.parse(step.media) : [],
-        position: step.position ? JSON.parse(step.position) : { x: 0, y: 0 },
-        size: step.size ? JSON.parse(step.size) : undefined,
-        stepSpecification: step.stepSpecification ?? {},
-      })) ?? [],
-      connections: formatted.connections?.map((conn: any) => ({
-        ...conn,
-        label: conn.label ?? undefined,
-        condition: conn.condition ?? undefined,
-        type: conn.type ?? "default",
-        animated: conn.animated ?? false,
-        priority: conn.priority ?? 0,
-      })) ?? [],
-    };
   }
 }

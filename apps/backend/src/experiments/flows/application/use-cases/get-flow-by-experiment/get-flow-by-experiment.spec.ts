@@ -34,10 +34,12 @@ describe("GetFlowByExperimentUseCase", () => {
     testFlowId = flowResult.value[0].id;
 
     // Create a test experiment with the flow
-    testExperimentId = await testApp.createTestExperiment({
+    const experimentResult = await testApp.createExperiment({
+      name: "Test Experiment",
       userId: testUserId,
       flowId: testFlowId,
     });
+    testExperimentId = experimentResult.experiment.id;
   });
 
   afterEach(() => {
@@ -193,9 +195,9 @@ describe("GetFlowByExperimentUseCase", () => {
 
       // Act
       const [result1, result2, result3] = await Promise.all([
-        useCase.execute(testFlowId),
-        useCase.execute(testFlowId),
-        useCase.execute(testFlowId),
+        useCase.execute(testExperimentId),
+        useCase.execute(testExperimentId),
+        useCase.execute(testExperimentId),
       ]);
 
       // Assert
@@ -219,10 +221,12 @@ describe("GetFlowByExperimentUseCase", () => {
       const specialFlowId = specialFlow.value[0].id;
 
       // Act
-      const specialExperimentId = await testApp.createTestExperiment({
+      const specialExperimentResult = await testApp.createExperiment({
+        name: "Special Experiment",
         userId: testUserId,
         flowId: specialFlowId,
       });
+      const specialExperimentId = specialExperimentResult.experiment.id;
 
       const result = await useCase.execute(specialExperimentId);
 
@@ -242,10 +246,12 @@ describe("GetFlowByExperimentUseCase", () => {
       const nullDescFlowId = nullDescFlow.value[0].id;
 
       // Act
-      const nullDescExperimentId = await testApp.createTestExperiment({
+      const nullDescExperimentResult = await testApp.createExperiment({
+        name: "Null Desc Experiment",
         userId: testUserId,
         flowId: nullDescFlowId,
       });
+      const nullDescExperimentId = nullDescExperimentResult.experiment.id;
 
       const result = await useCase.execute(nullDescExperimentId);
 
@@ -404,11 +410,13 @@ describe("GetFlowByExperimentUseCase", () => {
       );
       assertSuccess(maxVersionFlow);
       const maxVersionFlowId = maxVersionFlow.value[0].id;
-      
-      const maxVersionExperimentId = await testApp.createTestExperiment({
+
+      const maxVersionExperimentResult = await testApp.createExperiment({
+        name: "Max Version Experiment",
         userId: testUserId,
         flowId: maxVersionFlowId,
       });
+      const maxVersionExperimentId = maxVersionExperimentResult.experiment.id;
 
       // Act
       const result = await useCase.execute(maxVersionExperimentId);
@@ -424,11 +432,13 @@ describe("GetFlowByExperimentUseCase", () => {
       const otherUserFlow = await flowRepository.create({ name: "Other User Flow" }, otherUserId);
       assertSuccess(otherUserFlow);
       const otherUserFlowId = otherUserFlow.value[0].id;
-      
-      const otherUserExperimentId = await testApp.createTestExperiment({
+
+      const otherUserExperimentResult = await testApp.createExperiment({
+        name: "Other User Experiment",
         userId: otherUserId,
         flowId: otherUserFlowId,
       });
+      const otherUserExperimentId = otherUserExperimentResult.experiment.id;
 
       // Act
       const result = await useCase.execute(otherUserExperimentId);

@@ -106,7 +106,21 @@ export class FlowRepository {
         this.database
           .select({
             flowId: flowSteps.flowId,
-            stepsJson: sql<string>`json_agg(to_json(${flowSteps}))`.as("steps_json"),
+            stepsJson: sql<string>`json_agg(json_build_object(
+              'id', ${flowSteps.id},
+              'flowId', ${flowSteps.flowId},
+              'type', ${flowSteps.type},
+              'title', ${flowSteps.title},
+              'description', ${flowSteps.description},
+              'media', ${flowSteps.media},
+              'position', ${flowSteps.position},
+              'size', ${flowSteps.size},
+              'isStartNode', ${flowSteps.isStartNode},
+              'isEndNode', ${flowSteps.isEndNode},  
+              'stepSpecification', ${flowSteps.stepSpecification},
+              'createdAt', ${flowSteps.createdAt},
+              'updatedAt', ${flowSteps.updatedAt}
+            )) FILTER (WHERE ${flowSteps.id} IS NOT NULL)`.as("steps_json"),
           })
           .from(flowSteps)
           .groupBy(flowSteps.flowId),
@@ -116,9 +130,19 @@ export class FlowRepository {
         this.database
           .select({
             flowId: flowStepConnections.flowId,
-            connectionsJson: sql<string>`json_agg(to_json(${flowStepConnections}))`.as(
-              "connections_json",
-            ),
+            connectionsJson: sql<string>`json_agg(json_build_object(
+              'id', ${flowStepConnections.id},
+              'flowId', ${flowStepConnections.flowId},
+              'sourceStepId', ${flowStepConnections.sourceStepId},
+              'targetStepId', ${flowStepConnections.targetStepId},
+              'type', ${flowStepConnections.type},
+              'animated', ${flowStepConnections.animated},
+              'label', ${flowStepConnections.label},
+              'condition', ${flowStepConnections.condition},
+              'priority', ${flowStepConnections.priority},
+              'createdAt', ${flowStepConnections.createdAt},
+              'updatedAt', ${flowStepConnections.updatedAt}
+            )) FILTER (WHERE ${flowStepConnections.id} IS NOT NULL)`.as("connections_json"),
           })
           .from(flowStepConnections)
           .groupBy(flowStepConnections.flowId),

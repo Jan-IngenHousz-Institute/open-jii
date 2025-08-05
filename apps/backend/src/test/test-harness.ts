@@ -279,6 +279,7 @@ export class TestHarness {
         status: data.status ?? "provisioning",
         visibility: data.visibility ?? "private",
         embargoIntervalDays: data.embargoIntervalDays ?? 90,
+        flowId: data.flowId,
         createdBy: data.userId,
       })
       .returning();

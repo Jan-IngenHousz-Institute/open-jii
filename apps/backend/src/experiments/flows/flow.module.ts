@@ -11,7 +11,6 @@ import { UpdateFlowWithStepsUseCase } from "./application/use-cases/update-flow-
 import { FlowStepRepository } from "./core/repositories/flow-step.repository";
 // Repositories
 import { FlowRepository } from "./core/repositories/flow.repository";
-import { ExperimentFlowController } from "./presentation/experiment-flow.controller";
 // Controllers
 import { FlowController } from "./presentation/flow.controller";
 
@@ -31,7 +30,7 @@ import { FlowController } from "./presentation/flow.controller";
     ListFlowsUseCase,
     UpdateFlowWithStepsUseCase,
   ],
-  controllers: [FlowController, ExperimentFlowController],
+  controllers: [FlowController],
   exports: [
     FlowRepository,
     FlowStepRepository,

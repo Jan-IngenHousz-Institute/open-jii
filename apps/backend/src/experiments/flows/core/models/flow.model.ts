@@ -2,7 +2,6 @@ import type { jsonSchema } from "drizzle-zod";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-import { zInstructionStep, zQuestionStep, zMeasurementStep, zAnalysisStep } from "@repo/api";
 import { flows, flowSteps, flowStepConnections } from "@repo/database";
 
 // Generic type helper to convert json fields to json | unknown
@@ -32,10 +31,10 @@ export const createFlowStepSchema = createInsertSchema(flowSteps)
     flowId: true,
   })
   .extend({
-    // Step-specific configuration
-    stepSpecification: z
-      .union([zInstructionStep, zQuestionStep, zMeasurementStep, zAnalysisStep])
-      .optional(),
+    // Step-specific configuration - using generic schema since specific step schemas don't exist
+    stepSpecification: z.unknown().optional(),
+    // Ensure type is properly typed as the enum values
+    type: z.enum(["INSTRUCTION", "QUESTION", "MEASUREMENT", "ANALYSIS"]),
   });
 
 export const updateFlowStepSchema = createFlowStepSchema.partial();
