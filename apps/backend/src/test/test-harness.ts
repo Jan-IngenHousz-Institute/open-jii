@@ -20,6 +20,7 @@ import {
   profiles,
   protocols,
   experimentProtocols,
+  organizations,
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
@@ -125,6 +126,7 @@ export class TestHarness {
     await this.database.delete(experiments).execute();
     await this.database.delete(protocols).execute();
     await this.database.delete(profiles).execute();
+    await this.database.delete(organizations).execute();
     await this.database.delete(users).execute();
   }
 
