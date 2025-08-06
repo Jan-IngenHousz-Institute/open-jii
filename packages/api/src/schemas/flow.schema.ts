@@ -5,18 +5,20 @@ export const zFlow = z.object({
   id: z.string().uuid(),
   name: z.string(),
   description: z.string().nullable(),
-  experimentId: z.string().uuid(),
+  experimentId: z.string().uuid().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   createdBy: z.string().uuid(),
 });
+
+export const zFlowStepType = z.enum(["INSTRUCTION", "QUESTION", "MEASUREMENT", "ANALYSIS"]);
 
 // Flow step schema
 export const zFlowStep = z.object({
   id: z.string().uuid(),
   title: z.string().nullable(),
   description: z.string().nullable(),
-  type: z.enum(["INSTRUCTION", "QUESTION", "MEASUREMENT", "ANALYSIS"]),
+  type: zFlowStepType,
   media: z.unknown().nullable(),
   position: z.unknown().nullable(),
   size: z.unknown().nullable(),
@@ -44,14 +46,8 @@ export const zFlowStepConnection = z.object({
 });
 
 // Combined flow with steps and connections
-export const zFlowWithGraph = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  description: z.string().nullable(),
+export const zFlowWithGraph = zFlow.extend({
   experimentId: z.string().uuid(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  createdBy: z.string().uuid(),
   steps: z.array(zFlowStep),
   connections: z.array(zFlowStepConnection),
 });
@@ -65,7 +61,7 @@ export const zCreateFlowWithStepsBody = z.object({
     z.object({
       title: z.string().nullable().optional(),
       description: z.string().nullable().optional(),
-      type: z.enum(["INSTRUCTION", "QUESTION", "MEASUREMENT", "ANALYSIS"]),
+      type: zFlowStepType,
       media: z.unknown().optional(),
       position: z.unknown().optional(),
       size: z.unknown().optional(),
@@ -104,7 +100,7 @@ export const zUpdateFlowWithStepsBody = z.object({
           z.object({
             title: z.string().nullable().optional(),
             description: z.string().nullable().optional(),
-            type: z.enum(["INSTRUCTION", "QUESTION", "MEASUREMENT", "ANALYSIS"]),
+            type: zFlowStepType,
             media: z.unknown().optional(),
             position: z.unknown().optional(),
             size: z.unknown().optional(),
@@ -120,7 +116,7 @@ export const zUpdateFlowWithStepsBody = z.object({
             id: z.string().uuid(),
             title: z.string().nullable().optional(),
             description: z.string().nullable().optional(),
-            type: z.enum(["INSTRUCTION", "QUESTION", "MEASUREMENT", "ANALYSIS"]).optional(),
+            type: zFlowStepType.optional(),
             media: z.unknown().optional(),
             position: z.unknown().optional(),
             size: z.unknown().optional(),
