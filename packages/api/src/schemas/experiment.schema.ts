@@ -248,6 +248,17 @@ export const zExperimentWebhookErrorResponse = z.object({
   statusCode: z.number(),
 });
 
+// Upload Data Schemas
+export const zUploadDataBody = z.object({
+  sensorFamily: z.enum(["MultispeQ", "Ambyte"]),
+});
+
+export const zUploadDataResponse = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  jobId: z.string().optional(),
+});
+
 // Infer request and response types
 export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;
 export type UpdateExperimentBody = z.infer<typeof zUpdateExperimentBody>;
@@ -267,3 +278,7 @@ export type ExperimentProvisioningStatusWebhookPayload = z.infer<
 export type ExperimentProvisioningStatus = ExperimentProvisioningStatusWebhookPayload["status"];
 export type ExperimentWebhookSuccessResponse = z.infer<typeof zExperimentWebhookSuccessResponse>;
 export type ExperimentWebhookErrorResponse = z.infer<typeof zExperimentWebhookErrorResponse>;
+
+// Upload Data types
+export type UploadDataBody = z.infer<typeof zUploadDataBody>;
+export type UploadDataResponse = z.infer<typeof zUploadDataResponse>;

@@ -1,0 +1,22 @@
+{
+  "uploadData": {
+    "title": "Upload Data",
+    "description": "Upload sensor data files to your experiment for analysis.",
+    "sensorFamily": "Sensor Family",
+    "selectSensorFamily": "Select sensor family...",
+    "fileUpload": "File Upload",
+    "zipFileDescription": "Upload a .zip file containing your sensor data. Maximum file size: 100MB.",
+    "comingSoon": "Coming Soon",
+    "cancel": "Cancel",
+    "upload": "Upload",
+    "uploading": "Uploading...",
+    "success": "Upload Successful!",
+    "successDescription": "Your data has been uploaded and queued for processing.",
+    "error": "Upload Failed",
+    "retry": "Try Again",
+    "close": "Close",
+    "invalidFileType": "Invalid file type. Please upload a .zip file.",
+    "missingRequiredFields": "Please fill in all required fields.",
+    "genericError": "An error occurred while uploading your file. Please try again."
+  }
+}

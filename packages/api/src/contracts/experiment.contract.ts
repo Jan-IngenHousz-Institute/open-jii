@@ -18,6 +18,8 @@ import {
   zExperimentWebhookAuthHeader,
   zExperimentWebhookSuccessResponse,
   zExperimentWebhookErrorResponse,
+  zUploadDataBody,
+  zUploadDataResponse,
 } from "../schemas/experiment.schema";
 import {
   zExperimentProtocolList,
@@ -204,5 +206,22 @@ export const experimentContract = c.router({
     },
     summary: "Remove a protocol from an experiment",
     description: "Removes the association between a protocol and an experiment.",
+  },
+
+  uploadData: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/upload-data",
+    pathParams: zIdPathParam,
+    body: zUploadDataBody,
+    contentType: "multipart/form-data",
+    responses: {
+      200: zUploadDataResponse,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Upload sensor data to experiment",
+    description: "Uploads sensor data files (e.g., Ambyte zip archives) for processing and ingestion.",
   },
 });

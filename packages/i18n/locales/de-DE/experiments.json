@@ -47,5 +47,8 @@
     "protocolRequired": "Bitte wählen Sie ein Protokoll",
     "deviceRequired": "Bitte wählen Sie ein Gerät",
     "invalidDateRange": "Enddatum muss nach dem Startdatum liegen"
+  },
+  "experimentData": {
+    "uploadData": "Daten Hochladen"
   }
 }

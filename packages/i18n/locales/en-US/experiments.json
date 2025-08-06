@@ -47,5 +47,8 @@
     "protocolRequired": "Please select a protocol",
     "deviceRequired": "Please select a device",
     "invalidDateRange": "End date must be after start date"
+  },
+  "experimentData": {
+    "uploadData": "Upload Data"
   }
 }

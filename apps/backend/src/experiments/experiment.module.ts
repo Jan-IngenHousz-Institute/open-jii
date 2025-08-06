@@ -6,6 +6,7 @@ import { ChangeExperimentStatusUseCase } from "./application/use-cases/change-ex
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "./application/use-cases/delete-experiment/delete-experiment";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data";
+import { UploadDataUseCase } from "./application/use-cases/upload-data/upload-data";
 import { AddExperimentMembersUseCase } from "./application/use-cases/experiment-members/add-experiment-members";
 import { ListExperimentMembersUseCase } from "./application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "./application/use-cases/experiment-members/remove-experiment-member";
@@ -53,6 +54,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
 
     // Experiment data use cases
     GetExperimentDataUseCase,
+    UploadDataUseCase,
 
     // Experiment member use cases
     ListExperimentMembersUseCase,
