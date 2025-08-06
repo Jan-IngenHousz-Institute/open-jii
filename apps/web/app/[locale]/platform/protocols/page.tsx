@@ -1,5 +1,4 @@
 import { ListProtocols } from "@/components/list-protocols";
-import { auth } from "@/lib/auth";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -22,9 +21,6 @@ export default async function ProtocolPage({ params }: ProtocolPageProps) {
     namespaces: ["common"],
   });
 
-  const session = await auth();
-  const userId = session?.user.id;
-
   return (
     <div className="space-y-6">
       <div>
@@ -34,7 +30,7 @@ export default async function ProtocolPage({ params }: ProtocolPageProps) {
       <Link href={`/platform/protocols/new`} locale={locale}>
         <Button variant="outline">{t("protocols.create")}</Button>
       </Link>
-      <ListProtocols userId={userId ?? ""} />
+      <ListProtocols />
     </div>
   );
 }

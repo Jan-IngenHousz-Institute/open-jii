@@ -1,7 +1,7 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import { ProtocolFilter } from "@repo/api";
-import { eq, ilike, protocols, experimentProtocols } from "@repo/database";
+import { desc, eq, ilike, protocols, experimentProtocols, users } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -32,14 +32,22 @@ export class ProtocolRepository {
 
   async findAll(search?: ProtocolFilter): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
-      const query = this.database.select().from(protocols);
+      const query = this.database
+        .select()
+        .from(protocols)
+        .innerJoin(users, eq(protocols.createdBy, users.id))
+        .orderBy(desc(protocols.updatedAt));
 
       if (search) {
         query.where(ilike(protocols.name, `%${search}%`));
       }
 
       const results = await query;
-      return results as unknown as ProtocolDto[];
+      return results.map((result) => {
+        const augmentedResult = result.protocols as unknown as ProtocolDto;
+        augmentedResult.createdByName = result.users.name ?? undefined;
+        return augmentedResult;
+      });
     });
   }
 
@@ -48,6 +56,7 @@ export class ProtocolRepository {
       const result = await this.database
         .select()
         .from(protocols)
+        .innerJoin(users, eq(protocols.createdBy, users.id))
         .where(eq(protocols.id, id))
         .limit(1);
 
@@ -55,7 +64,9 @@ export class ProtocolRepository {
         return null;
       }
 
-      return result[0] as unknown as ProtocolDto;
+      const augmentedResult = result[0].protocols as unknown as ProtocolDto;
+      augmentedResult.createdByName = result[0].users.name ?? undefined;
+      return augmentedResult;
     });
   }
 
@@ -64,6 +75,7 @@ export class ProtocolRepository {
       const result = await this.database
         .select()
         .from(protocols)
+        .innerJoin(users, eq(protocols.createdBy, users.id))
         .where(eq(protocols.name, name))
         .limit(1);
 
@@ -71,7 +83,9 @@ export class ProtocolRepository {
         return null;
       }
 
-      return result[0] as unknown as ProtocolDto;
+      const augmentedResult = result[0].protocols as unknown as ProtocolDto;
+      augmentedResult.createdByName = result[0].users.name ?? undefined;
+      return augmentedResult;
     });
   }
 

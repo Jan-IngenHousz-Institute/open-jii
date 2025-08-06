@@ -10,6 +10,7 @@ describe("ProtocolRepository", () => {
   const testApp = TestHarness.App;
   let repository: ProtocolRepository;
   let testUserId: string;
+  const testUserName = "Test User";
 
   beforeAll(async () => {
     await testApp.setup();
@@ -17,7 +18,7 @@ describe("ProtocolRepository", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
-    testUserId = await testApp.createTestUser({});
+    testUserId = await testApp.createTestUser({ name: testUserName });
     repository = testApp.module.get(ProtocolRepository);
   });
 
@@ -104,6 +105,58 @@ describe("ProtocolRepository", () => {
       expect(protocols.some((p) => p.name === protocol2.name)).toBe(true);
     });
 
+    it("should return protocols in the correct order", async () => {
+      // Arrange
+      const protocol1 = await testApp.createProtocol({
+        name: "Protocol 1",
+        createdBy: testUserId,
+      });
+      const protocol2 = await testApp.createProtocol({
+        name: "Protocol 2",
+        createdBy: testUserId,
+      });
+      const protocol3 = await testApp.createProtocol({
+        name: "Protocol 3",
+        createdBy: testUserId,
+      });
+      const updateData = {
+        description: "Test",
+      };
+      await repository.update(protocol2.id, updateData);
+
+      // Act
+      const result = await repository.findAll();
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const protocols = result.value;
+
+      expect(protocols.length).toBeGreaterThanOrEqual(3);
+      expect(protocols).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: protocol2.id,
+            name: "Protocol 2",
+            createdBy: testUserId,
+            createdByName: testUserName,
+          }),
+          expect.objectContaining({
+            id: protocol1.id,
+            name: "Protocol 1",
+            createdBy: testUserId,
+            createdByName: testUserName,
+          }),
+          expect.objectContaining({
+            id: protocol3.id,
+            name: "Protocol 3",
+            createdBy: testUserId,
+            createdByName: testUserName,
+          }),
+        ]),
+      );
+    });
+
     it("should filter protocols by name search", async () => {
       // Arrange
       const uniquePrefix = "UniqueTest";
@@ -188,6 +241,7 @@ describe("ProtocolRepository", () => {
         description: createProtocolDto.description,
         code: createProtocolDto.code,
         createdBy: testUserId,
+        createdByName: testUserName,
       });
     });
 
@@ -228,6 +282,7 @@ describe("ProtocolRepository", () => {
         description: createProtocolDto.description,
         code: createProtocolDto.code,
         createdBy: testUserId,
+        createdByName: testUserName,
       });
     });
 

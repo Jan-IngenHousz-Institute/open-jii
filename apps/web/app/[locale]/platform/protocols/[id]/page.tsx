@@ -68,7 +68,7 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
               <h4 className="text-muted-foreground text-sm font-medium">
                 {t("experiments.createdBy")}
               </h4>
-              <p className="truncate font-mono text-xs">{protocol.createdBy}</p>
+              <p className="truncate">{protocol.createdByName}</p>
             </div>
           </div>
         </CardContent>
