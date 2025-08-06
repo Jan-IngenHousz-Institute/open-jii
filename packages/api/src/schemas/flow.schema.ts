@@ -5,8 +5,7 @@ export const zFlow = z.object({
   id: z.string().uuid(),
   name: z.string(),
   description: z.string().nullable(),
-  version: z.number(),
-  isActive: z.boolean(),
+  experimentId: z.string().uuid(),
   createdAt: z.string(),
   updatedAt: z.string(),
   createdBy: z.string().uuid(),
@@ -35,10 +34,10 @@ export const zFlowStepConnection = z.object({
   sourceStepId: z.string().uuid(),
   targetStepId: z.string().uuid(),
   type: z.string().nullable(),
-  animated: z.boolean(),
+  animated: z.boolean().nullable(),
   label: z.string().nullable(),
   condition: z.unknown().nullable(),
-  priority: z.number(),
+  priority: z.number().nullable(),
   flowId: z.string().uuid(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -49,8 +48,7 @@ export const zFlowWithGraph = z.object({
   id: z.string().uuid(),
   name: z.string(),
   description: z.string().nullable(),
-  version: z.number(),
-  isActive: z.boolean(),
+  experimentId: z.string().uuid(),
   createdAt: z.string(),
   updatedAt: z.string(),
   createdBy: z.string().uuid(),
@@ -62,8 +60,7 @@ export const zFlowWithGraph = z.object({
 export const zCreateFlowWithStepsBody = z.object({
   name: z.string(),
   description: z.string().nullable().optional(),
-  version: z.number().optional(),
-  isActive: z.boolean().optional(),
+  experimentId: z.string().uuid(),
   steps: z.array(
     z.object({
       title: z.string().nullable().optional(),
@@ -80,8 +77,8 @@ export const zCreateFlowWithStepsBody = z.object({
   connections: z
     .array(
       z.object({
-        sourceStepId: z.string(), // Allow temp IDs during creation
-        targetStepId: z.string(), // Allow temp IDs during creation
+        sourceStepId: z.string().uuid(),
+        targetStepId: z.string().uuid(),
         type: z.string().nullable().optional(),
         animated: z.boolean().optional(),
         label: z.string().nullable().optional(),

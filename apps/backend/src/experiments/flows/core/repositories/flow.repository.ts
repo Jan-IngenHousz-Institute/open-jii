@@ -1,15 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import {
-  eq,
-  and,
-  desc,
-  flows,
-  flowSteps,
-  flowStepConnections,
-  experiments,
-  sql,
-} from "@repo/database";
+import { eq, and, desc, flows, flowSteps, flowStepConnections, experiments } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, AppError, tryCatch } from "../../../../common/utils/fp-utils";
@@ -70,14 +61,7 @@ export class FlowRepository {
 
   async update(id: string, updateFlowDto: UpdateFlowDto): Promise<Result<FlowDto[]>> {
     return tryCatch(() =>
-      this.database
-        .update(flows)
-        .set({
-          ...updateFlowDto,
-          updatedAt: new Date(),
-        })
-        .where(eq(flows.id, id))
-        .returning(),
+      this.database.update(flows).set(updateFlowDto).where(eq(flows.id, id)).returning(),
     );
   }
 
@@ -101,75 +85,38 @@ export class FlowRepository {
 
   async findByExperimentId(experimentId: string): Promise<Result<FlowWithGraphDto | null>> {
     return tryCatch(async () => {
-      // Use WITH clause to create CTEs for steps and connections, then join everything in one query
-      const stepsArray = this.database.$with("steps_array").as(
-        this.database
-          .select({
-            flowId: flowSteps.flowId,
-            stepsJson: sql<string>`json_agg(json_build_object(
-              'id', ${flowSteps.id},
-              'flowId', ${flowSteps.flowId},
-              'type', ${flowSteps.type},
-              'title', ${flowSteps.title},
-              'description', ${flowSteps.description},
-              'media', ${flowSteps.media},
-              'position', ${flowSteps.position},
-              'size', ${flowSteps.size},
-              'isStartNode', ${flowSteps.isStartNode},
-              'isEndNode', ${flowSteps.isEndNode},  
-              'stepSpecification', ${flowSteps.stepSpecification},
-              'createdAt', ${flowSteps.createdAt},
-              'updatedAt', ${flowSteps.updatedAt}
-            )) FILTER (WHERE ${flowSteps.id} IS NOT NULL)`.as("steps_json"),
-          })
-          .from(flowSteps)
-          .groupBy(flowSteps.flowId),
-      );
-
-      const connectionsArray = this.database.$with("connections_array").as(
-        this.database
-          .select({
-            flowId: flowStepConnections.flowId,
-            connectionsJson: sql<string>`json_agg(json_build_object(
-              'id', ${flowStepConnections.id},
-              'flowId', ${flowStepConnections.flowId},
-              'sourceStepId', ${flowStepConnections.sourceStepId},
-              'targetStepId', ${flowStepConnections.targetStepId},
-              'type', ${flowStepConnections.type},
-              'animated', ${flowStepConnections.animated},
-              'label', ${flowStepConnections.label},
-              'condition', ${flowStepConnections.condition},
-              'priority', ${flowStepConnections.priority},
-              'createdAt', ${flowStepConnections.createdAt},
-              'updatedAt', ${flowStepConnections.updatedAt}
-            )) FILTER (WHERE ${flowStepConnections.id} IS NOT NULL)`.as("connections_json"),
-          })
-          .from(flowStepConnections)
-          .groupBy(flowStepConnections.flowId),
-      );
-
-      const result = await this.database
-        .with(stepsArray, connectionsArray)
-        .select({
-          id: flows.id,
-          name: flows.name,
-          description: flows.description,
-          version: flows.version,
-          isActive: flows.isActive,
-          createdBy: flows.createdBy,
-          createdAt: flows.createdAt,
-          updatedAt: flows.updatedAt,
-          steps: sql<any>`COALESCE(${stepsArray.stepsJson}, '[]'::json)`,
-          connections: sql<any>`COALESCE(${connectionsArray.connectionsJson}, '[]'::json)`,
-        })
+      // First, find the flow associated with the experiment
+      const flowResult = await this.database
+        .select()
         .from(flows)
         .innerJoin(experiments, eq(experiments.flowId, flows.id))
-        .leftJoin(stepsArray, eq(stepsArray.flowId, flows.id))
-        .leftJoin(connectionsArray, eq(connectionsArray.flowId, flows.id))
         .where(and(eq(experiments.id, experimentId), eq(flows.isActive, true)))
         .limit(1);
 
-      return result.length === 0 ? null : (result[0] as FlowWithGraphDto);
+      if (flowResult.length === 0) {
+        return null;
+      }
+
+      const flow = flowResult[0].flows;
+
+      // Get all steps for this flow
+      const steps = await this.database
+        .select()
+        .from(flowSteps)
+        .where(eq(flowSteps.flowId, flow.id))
+        .orderBy(flowSteps.createdAt);
+
+      const connections = await this.database
+        .select()
+        .from(flowStepConnections)
+        .where(eq(flowStepConnections.flowId, flow.id));
+
+      return {
+        ...flow,
+        experimentId,
+        steps,
+        connections,
+      } as FlowWithGraphDto;
     });
   }
 }

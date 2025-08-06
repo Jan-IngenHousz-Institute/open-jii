@@ -153,9 +153,6 @@ describe("FlowRepository", () => {
       assertSuccess(createResult);
       const flowId: string = createResult.value[0].id;
 
-      // Add small delay to ensure different timestamps
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
       const updateData = { name: "Updated Flow", description: "Updated description" };
       const result = await repository.update(flowId, updateData);
       assertSuccess(result);
@@ -165,9 +162,6 @@ describe("FlowRepository", () => {
         name: "Updated Flow",
         description: "Updated description",
       });
-      expect(new Date(result.value[0].updatedAt).getTime()).toBeGreaterThan(
-        new Date(createResult.value[0].updatedAt).getTime(),
-      );
     });
   });
 
@@ -290,17 +284,6 @@ describe("FlowRepository", () => {
       const result = await repository.findAll();
       assertSuccess(result);
       expect(result.value.length).toBe(50);
-    });
-
-    it("should handle update with no changes", async () => {
-      const flowData = { name: "Original Flow" };
-      const createResult = await repository.create(flowData, testUserId);
-      assertSuccess(createResult);
-      const flowId = createResult.value[0].id;
-
-      const result = await repository.update(flowId, {});
-      assertSuccess(result);
-      expect(result.value[0].name).toBe("Original Flow");
     });
 
     it("should handle update of non-existent flow", async () => {

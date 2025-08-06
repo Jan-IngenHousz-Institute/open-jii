@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Controller, Logger, UseGuards } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
@@ -31,32 +29,23 @@ export class FlowController {
   @TsRestHandler(contract.flows.createFlowWithSteps)
   createFlowWithSteps(@CurrentUser() user: User) {
     return tsRestHandler(contract.flows.createFlowWithSteps, async ({ body }) => {
-      this.logger.log(`Creating flow with steps for user ${user.id}`, { body });
+      const result = await this.createFlowWithStepsUseCase.execute(body, user.id);
 
-      try {
-        const result = await this.createFlowWithStepsUseCase.execute(body as any, user.id);
+      if (result.isSuccess()) {
+        const flow = result.value;
 
-        if (result.isSuccess()) {
-          const flow = result.value;
+        this.logger.log(`Flow with steps created: ${flow.id} by user ${user.id}`);
 
-          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-          this.logger.log(`Flow with steps created: ${flow.id} by user ${user.id}`);
+        // Format dates to strings and return directly (minimal transformation needed now)
+        const formattedFlow = formatDates(flow);
 
-          // Format dates to strings and return directly (minimal transformation needed now)
-          const formattedFlow = formatDates(flow) as any;
-
-          return {
-            status: StatusCodes.CREATED,
-            body: formattedFlow,
-          };
-        }
-
-        this.logger.error(`Failed to create flow with steps for user ${user.id}`, result.error);
-        return handleFailure(result, this.logger);
-      } catch (error) {
-        this.logger.error(`Unexpected error creating flow with steps for user ${user.id}`, error);
-        throw error;
+        return {
+          status: StatusCodes.CREATED,
+          body: formattedFlow,
+        };
       }
+
+      return handleFailure(result, this.logger);
     });
   }
 
@@ -69,7 +58,7 @@ export class FlowController {
         const flowWithGraph = result.value;
 
         // Format dates to strings and return directly (minimal transformation needed now)
-        const formattedFlow = formatDates(flowWithGraph) as any;
+        const formattedFlow = formatDates(flowWithGraph);
 
         this.logger.log(`Flow for experiment ${params.id} retrieved`);
         return {
@@ -91,7 +80,7 @@ export class FlowController {
         const flows = result.value;
 
         // Format dates to strings (minimal transformation needed now)
-        const formattedFlows = flows.map((flow) => formatDates(flow)) as any;
+        const formattedFlows = flows.map((flow) => formatDates(flow));
 
         this.logger.log(`Listed ${flows.length} flows`);
         return {
@@ -107,13 +96,13 @@ export class FlowController {
   @TsRestHandler(contract.flows.updateFlowWithSteps)
   updateFlowWithSteps(@CurrentUser() user: User) {
     return tsRestHandler(contract.flows.updateFlowWithSteps, async ({ params, body }) => {
-      const result = await this.updateFlowWithStepsUseCase.execute(params.id, body as any);
+      const result = await this.updateFlowWithStepsUseCase.execute(params.id, body);
 
       if (result.isSuccess()) {
         const flow = result.value;
 
         // Format dates to strings and return directly (minimal transformation needed now)
-        const formattedFlow = formatDates(flow) as any;
+        const formattedFlow = formatDates(flow);
 
         this.logger.log(`Flow with steps ${params.id} updated by user ${user.id}`);
         return {

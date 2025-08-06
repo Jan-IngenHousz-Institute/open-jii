@@ -263,7 +263,7 @@ export class TestHarness {
    * Helper to create an experiment for testing
    */
   public async createExperiment(data: {
-    name: string;
+    name?: string;
     userId: string;
     description?: string;
     status?: "provisioning" | "provisioning_failed" | "active" | "stale" | "archived" | "published";
@@ -274,13 +274,13 @@ export class TestHarness {
     const [experiment] = await this.database
       .insert(experiments)
       .values({
-        name: data.name,
+        name: data.name ?? faker.lorem.words(3),
         description: data.description ?? "Test description",
         status: data.status ?? "provisioning",
         visibility: data.visibility ?? "private",
         embargoIntervalDays: data.embargoIntervalDays ?? 90,
-        flowId: data.flowId,
         createdBy: data.userId,
+        flowId: data.flowId,
       })
       .returning();
 

@@ -1,6 +1,15 @@
-import { Injectable, Inject, Logger } from "@nestjs/common";
+import { Injectable, Inject } from "@nestjs/common";
 
-import { eq, and, asc, inArray, flows, flowSteps, flowStepConnections } from "@repo/database";
+import {
+  eq,
+  and,
+  asc,
+  inArray,
+  flows,
+  flowSteps,
+  flowStepConnections,
+  experiments,
+} from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, AppError, tryCatch, success } from "../../../../common/utils/fp-utils";
@@ -10,7 +19,6 @@ import {
   FlowStepDto,
   CreateFlowWithStepsDto,
   UpdateFlowWithStepsDto,
-  FlowWithGraphDto,
 } from "../models/flow.model";
 
 export class FlowStepRepositoryError extends AppError {
@@ -21,8 +29,6 @@ export class FlowStepRepositoryError extends AppError {
 
 @Injectable()
 export class FlowStepRepository {
-  private readonly logger = new Logger(FlowStepRepository.name);
-
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
@@ -37,6 +43,9 @@ export class FlowStepRepository {
           flowId,
           // Convert step-specific config to JSONB
           stepSpecification: createFlowStepDto.stepSpecification ?? null,
+          // Ensure boolean fields have default values if not provided
+          isStartNode: createFlowStepDto.isStartNode ?? false,
+          isEndNode: createFlowStepDto.isEndNode ?? false,
         })
         .returning();
 
@@ -158,17 +167,10 @@ export class FlowStepRepository {
 
   // Bulk operations for React Flow frontend integration
   async createFlowWithSteps(createFlowWithStepsDto: CreateFlowWithStepsDto, userId: string) {
-    this.logger.log(`Creating flow with steps: ${createFlowWithStepsDto.name}`, {
-      stepsCount: createFlowWithStepsDto.steps.length,
-      connectionsCount: createFlowWithStepsDto.connections?.length ?? 0,
-    });
-
     return tryCatch(async () => {
       return await this.database.transaction(async (tx) => {
-        this.logger.log("Starting database transaction for flow creation");
-
         // 1. Create the flow
-        const createdFlows = await tx
+        const [flow] = await tx
           .insert(flows)
           .values({
             name: createFlowWithStepsDto.name,
@@ -179,77 +181,62 @@ export class FlowStepRepository {
           })
           .returning();
 
-        this.logger.log(`Flow created with ID: ${createdFlows[0].id}`);
-
         // 2. Create all steps with temporary ID mapping
         const createdSteps = await tx
           .insert(flowSteps)
           .values(
             createFlowWithStepsDto.steps.map((step) => ({
-              flowId: createdFlows[0].id,
-              type: step.type,
-              title: step.title,
-              description: step.description,
-              media: step.media,
-              position: step.position,
-              size: step.size,
-              isStartNode: step.isStartNode ?? false,
-              isEndNode: step.isEndNode ?? false,
-              stepSpecification: step.stepSpecification,
+              ...step,
+              flowId: flow.id,
+              stepSpecification: step.stepSpecification ?? null,
             })),
           )
           .returning();
 
-        this.logger.log(`Created ${createdSteps.length} flow steps`);
-
-        // 3. Create connections if provided
-        const createdConnections: FlowWithGraphDto["connections"] = [];
-        if (createFlowWithStepsDto.connections && createFlowWithStepsDto.connections.length > 0) {
-          this.logger.log(`Creating ${createFlowWithStepsDto.connections.length} connections`);
-
-          // Create a mapping from temp step IDs to actual step IDs based on position in array
-          // This assumes the steps array order matches the creation order
-          // Support both temp-step-X and temp-id-X formats for backwards compatibility
-          const stepIdMapping = new Map<string, string>();
-          createFlowWithStepsDto.steps.forEach((step, index) => {
-            const tempStepId = `temp-step-${index + 1}`;
-            const tempId = `temp-id-${index + 1}`;
-            const realId = createdSteps[index].id;
-
-            stepIdMapping.set(tempStepId, realId);
-            stepIdMapping.set(tempId, realId);
-
-            this.logger.log(`Mapped temp IDs ${tempStepId} and ${tempId} to real ID ${realId}`);
-          });
-
-          // Map connections to use real step IDs
-          const connectionsToCreate = createFlowWithStepsDto.connections.map((conn) => ({
-            flowId: createdFlows[0].id,
-            sourceStepId: stepIdMapping.get(conn.sourceStepId) ?? conn.sourceStepId,
-            targetStepId: stepIdMapping.get(conn.targetStepId) ?? conn.targetStepId,
-            type: conn.type ?? "default",
-            animated: conn.animated ?? false,
-            label: conn.label ?? null,
-            condition: conn.condition ?? null,
-            priority: conn.priority ?? 0,
-          }));
-
-          const connections = (await tx
-            .insert(flowStepConnections)
-            .values(connectionsToCreate)
-            .returning()) as unknown as FlowWithGraphDto["connections"];
-
-          createdConnections.push(...connections);
-          this.logger.log(`Created ${connections.length} connections successfully`);
+        // 3. Update the experiment to point to the newly created flow (if experimentId provided)
+        if (createFlowWithStepsDto.experimentId) {
+          await tx
+            .update(experiments)
+            .set({ flowId: flow.id })
+            .where(eq(experiments.id, createFlowWithStepsDto.experimentId));
         }
 
-        this.logger.log("Transaction completed successfully");
-        // Return the complete flow structure
+        // 4. Create connections if provided, mapping temporary step IDs to real ones
+        let createdConnections: (typeof flowStepConnections.$inferSelect)[] = [];
+        if (createFlowWithStepsDto.connections && createFlowWithStepsDto.connections.length > 0) {
+          // Create a mapping from temporary step IDs (like "temp-step-1") to real step IDs
+          const stepIdMap = new Map<string, string>();
+          createFlowWithStepsDto.steps.forEach((step, index) => {
+            // Map temp-step-1, temp-step-2, etc. to actual step IDs
+            stepIdMap.set(`temp-step-${index + 1}`, createdSteps[index].id);
+            // Also map any custom step IDs that might be in the step data
+            if ("id" in step && typeof step.id === "string" && step.id.startsWith("temp-")) {
+              stepIdMap.set(step.id, createdSteps[index].id);
+            }
+          });
+
+          createdConnections = await tx
+            .insert(flowStepConnections)
+            .values(
+              createFlowWithStepsDto.connections.map((conn) => ({
+                flowId: flow.id,
+                sourceStepId: stepIdMap.get(conn.sourceStepId) ?? conn.sourceStepId,
+                targetStepId: stepIdMap.get(conn.targetStepId) ?? conn.targetStepId,
+                type: conn.type,
+                animated: conn.animated,
+                label: conn.label,
+                condition: conn.condition,
+                priority: conn.priority,
+              })),
+            )
+            .returning();
+        }
+
         return {
-          ...createdFlows[0],
+          ...flow,
           steps: createdSteps,
           connections: createdConnections,
-        } as FlowWithGraphDto;
+        };
       });
     });
   }
@@ -418,7 +405,10 @@ export class FlowStepRepository {
     // Update existing connections
     if (connectionOperations.update?.length) {
       for (const { id, ...updateData } of connectionOperations.update) {
-        await tx.update(flowStepConnections).set(updateData).where(eq(flowStepConnections.id, id));
+        await tx
+          .update(flowStepConnections)
+          .set({ ...updateData, updatedAt: new Date() })
+          .where(eq(flowStepConnections.id, id));
       }
     }
   }
@@ -428,21 +418,31 @@ export class FlowStepRepository {
     flowId: string,
     updatedFlow: typeof flows.$inferSelect,
   ) {
-    const finalSteps = await tx
+    const steps = await tx
       .select()
       .from(flowSteps)
       .where(eq(flowSteps.flowId, flowId))
       .orderBy(asc(flowSteps.createdAt));
 
-    const finalConnections = await tx
+    const connections = await tx
       .select()
       .from(flowStepConnections)
       .where(eq(flowStepConnections.flowId, flowId));
 
+    // Get the experimentId from the experiments table
+    const experimentResult = await tx
+      .select({ id: experiments.id })
+      .from(experiments)
+      .where(eq(experiments.flowId, flowId))
+      .limit(1);
+
+    const experimentId = experimentResult[0]?.id;
+
     return {
       ...updatedFlow,
-      steps: finalSteps,
-      connections: finalConnections,
+      experimentId,
+      steps,
+      connections,
     };
   }
 }

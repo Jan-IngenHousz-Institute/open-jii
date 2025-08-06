@@ -35,6 +35,9 @@ export const createFlowStepSchema = createInsertSchema(flowSteps)
     stepSpecification: z.unknown().optional(),
     // Ensure type is properly typed as the enum values
     type: z.enum(["INSTRUCTION", "QUESTION", "MEASUREMENT", "ANALYSIS"]),
+    // Ensure boolean fields are properly typed
+    isStartNode: z.boolean().default(false).optional(),
+    isEndNode: z.boolean().default(false).optional(),
   });
 
 export const updateFlowStepSchema = createFlowStepSchema.partial();
@@ -77,6 +80,7 @@ export type FlowWithGraphDto = WithJsonUnknown<z.infer<typeof flowWithGraphSchem
 
 // Bulk operations schemas
 export const createFlowWithStepsSchema = createFlowSchema.extend({
+  experimentId: z.string().uuid().optional(),
   steps: z.array(createFlowStepSchema),
   connections: z.array(createFlowStepConnectionSchema.omit({ flowId: true })).optional(),
 });

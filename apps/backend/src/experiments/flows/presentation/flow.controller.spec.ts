@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
@@ -29,11 +27,16 @@ describe("FlowController", () => {
 
   describe("createFlowWithSteps", () => {
     it("should successfully create a flow with steps", async () => {
+      // Create a test experiment first
+      const { experiment } = await testApp.createExperiment({
+        userId: testUserId,
+        name: "Test Experiment",
+      });
+
       const flowData = {
         name: "Test Flow",
         description: "Test Description",
-        version: 1,
-        isActive: true,
+        experimentId: experiment.id,
         steps: [
           {
             type: "INSTRUCTION" as const,
@@ -56,15 +59,7 @@ describe("FlowController", () => {
             },
           },
         ],
-        connections: [
-          {
-            sourceStepId: "temp-id-1",
-            targetStepId: "temp-id-2",
-            type: "default",
-            animated: false,
-            priority: 0,
-          },
-        ],
+        connections: [],
       };
 
       const response = await testApp
@@ -131,6 +126,7 @@ describe("FlowController", () => {
       const flowData = {
         name: "Mobile Test Flow",
         description: "Test Description",
+        experimentId: testExperimentId,
         steps: [
           {
             type: "INSTRUCTION" as const,
@@ -144,20 +140,10 @@ describe("FlowController", () => {
         connections: [],
       };
 
-      const flowResponse = await testApp
+      await testApp
         .post(contract.flows.createFlowWithSteps.path)
         .withAuth(testUserId)
-        .send(flowData)
-        .expect(StatusCodes.CREATED);
-
-      // Link the flow to the experiment
-      await testApp
-        .patch(contract.experiments.updateExperiment.path.replace(":id", testExperimentId))
-        .withAuth(testUserId)
-        .send({
-          flowId: flowResponse.body.id,
-        })
-        .expect(StatusCodes.OK);
+        .send(flowData);
 
       const response = await testApp
         .get(contract.flows.getFlowByExperiment.path.replace(":id", testExperimentId))
@@ -199,10 +185,22 @@ describe("FlowController", () => {
     });
 
     it("should return a list of flows", async () => {
+      // Create test experiments first
+      const { experiment: experiment1 } = await testApp.createExperiment({
+        userId: testUserId,
+        name: "Test Experiment 1",
+      });
+
+      const { experiment: experiment2 } = await testApp.createExperiment({
+        userId: testUserId,
+        name: "Test Experiment 2",
+      });
+
       // Create a few test flows
       const flowData1 = {
         name: "Test Flow 1",
         description: "First test flow",
+        experimentId: experiment1.id,
         steps: [
           {
             type: "INSTRUCTION" as const,
@@ -218,6 +216,7 @@ describe("FlowController", () => {
       const flowData2 = {
         name: "Test Flow 2",
         description: "Second test flow",
+        experimentId: experiment2.id,
         steps: [
           {
             type: "QUESTION" as const,
@@ -266,10 +265,17 @@ describe("FlowController", () => {
     let testFlowId: string;
 
     beforeEach(async () => {
+      // Create a test experiment first
+      const { experiment } = await testApp.createExperiment({
+        userId: testUserId,
+        name: "Test Experiment for Update",
+      });
+
       // Create a test flow first
       const flowData = {
         name: "Test Flow for Update",
         description: "Original description",
+        experimentId: experiment.id,
         steps: [
           {
             type: "INSTRUCTION" as const,
