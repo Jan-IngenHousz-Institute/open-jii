@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { experimentStatusEnum, experimentVisibilityEnum } from "@repo/database";
 import { experiments } from "@repo/database";
 
-import type { SchemaData } from "../../../common/services/databricks/databricks.types";
+import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 
 // Create schemas for database operations
 export const createExperimentSchema = createInsertSchema(experiments)

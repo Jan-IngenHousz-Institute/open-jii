@@ -1,8 +1,9 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import { DatabricksService } from "../../../../common/services/databricks/databricks.service";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { CreateExperimentDto, ExperimentDto } from "../../../core/models/experiment.model";
+import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
+import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentProtocolRepository } from "../../../core/repositories/experiment-protocol.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -15,7 +16,7 @@ export class CreateExperimentUseCase {
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentMemberRepository: ExperimentMemberRepository,
     private readonly experimentProtocolRepository: ExperimentProtocolRepository,
-    private readonly databricksService: DatabricksService,
+    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
 
   async execute(data: CreateExperimentDto, userId: string): Promise<Result<ExperimentDto>> {
@@ -92,7 +93,7 @@ export class CreateExperimentUseCase {
 
           this.logger.debug(`Triggering Databricks job for experiment ${experiment.id}`);
           // Trigger Databricks job for the new experiment
-          const databricksResult = await this.databricksService.triggerJob({
+          const databricksResult = await this.databricksPort.triggerJob({
             experimentId: experiment.id,
             experimentName: experiment.name,
             userId: userId,
