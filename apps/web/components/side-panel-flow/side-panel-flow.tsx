@@ -4,8 +4,10 @@ import React, { useState, useEffect } from "react";
 import type { QuestionStep } from "@repo/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
 
+import { AnalysisPanel } from "./analysis-panel";
 import { EdgeSidePanel } from "./edge-panel";
 import { InstructionPanel } from "./instruction-panel";
+import { MeasurementPanel } from "./measurement-panel";
 import { QuestionPanel } from "./question-panel";
 
 // Helper function to check if an object is a valid QuestionStep
@@ -252,6 +254,38 @@ export function ExperimentSidePanel({
                   onNodeDataChange(selectedNode.id, {
                     ...selectedNode.data,
                     stepSpecification: spec,
+                  });
+                }
+              }}
+            />
+          )}
+          {/* MeasurementPanel for measurement node */}
+          {displayNodeType === "MEASUREMENT" && selectedNode && (
+            <MeasurementPanel
+              selectedProtocolId={
+                typeof selectedNode.data.protocolId === "string" ? selectedNode.data.protocolId : ""
+              }
+              onChange={(protocolId) => {
+                if (onNodeDataChange) {
+                  onNodeDataChange(selectedNode.id, {
+                    ...selectedNode.data,
+                    protocolId,
+                  });
+                }
+              }}
+            />
+          )}
+          {/* AnalysisPanel for analysis node */}
+          {displayNodeType === "ANALYSIS" && selectedNode && (
+            <AnalysisPanel
+              selectedMeasurementOption={
+                typeof selectedNode.data.measurementOption === "string" ? selectedNode.data.measurementOption : ""
+              }
+              onChange={(measurementOption) => {
+                if (onNodeDataChange) {
+                  onNodeDataChange(selectedNode.id, {
+                    ...selectedNode.data,
+                    measurementOption,
                   });
                 }
               }}

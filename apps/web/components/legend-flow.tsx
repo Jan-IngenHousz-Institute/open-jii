@@ -16,8 +16,8 @@ export function LegendFlow() {
       <CardContent className="flex flex-wrap gap-3 md:flex md:flex-col md:gap-3">
         {nodeTypes.map((type) => {
           const colorClass = `${nodeTypeColorMap[type].border} ${nodeTypeColorMap[type].bg}`;
-          const isComingSoon = type === "MEASUREMENT" || type === "ANALYSIS";
-          const isDraggable = !isComingSoon;
+          const isComingSoon = false;
+          const isDraggable = true;
 
           return (
             <div
