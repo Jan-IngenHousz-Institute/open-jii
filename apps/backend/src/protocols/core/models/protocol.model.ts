@@ -1,5 +1,5 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import type { z } from "zod";
+import { z } from "zod";
 
 import { protocols } from "@repo/database";
 
@@ -17,7 +17,9 @@ export const updateProtocolSchema = createInsertSchema(protocols).partial().omit
   createdBy: true,
 });
 
-export const selectProtocolSchema = createSelectSchema(protocols);
+export const selectProtocolSchema = createSelectSchema(protocols).extend({
+  createdByName: z.string().optional(),
+});
 
 export type CreateProtocolDto = z.infer<typeof createProtocolSchema>;
 export type UpdateProtocolDto = z.infer<typeof updateProtocolSchema>;

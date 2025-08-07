@@ -10,6 +10,7 @@ export const zProtocol = z.object({
   code: z.record(z.unknown()).array(),
   family: zSensorFamily,
   createdBy: z.string().uuid(),
+  createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
