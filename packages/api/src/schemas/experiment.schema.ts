@@ -139,6 +139,8 @@ export const zFlowNode = z.object({
   type: zFlowNodeType,
   name: z.string().min(1),
   content: z.union([zQuestionContent, zInstructionContent, zMeasurementContent]),
+  // A node can be marked as a start node. Exactly one node must be the start node for any flow.
+  isStart: z.boolean().optional().default(false),
 });
 
 export const zFlowEdge = z.object({
@@ -148,10 +150,22 @@ export const zFlowEdge = z.object({
   label: z.string().optional().nullable(),
 });
 
-export const zFlowGraph = z.object({
-  nodes: z.array(zFlowNode),
-  edges: z.array(zFlowEdge),
-});
+export const zFlowGraph = z
+  .object({
+    nodes: z.array(zFlowNode).min(1),
+    edges: z.array(zFlowEdge),
+  })
+  .superRefine((graph, ctx) => {
+    // Require exactly one start node when nodes are present
+    const startCount = graph.nodes.reduce((acc, n) => (n.isStart === true ? acc + 1 : acc), 0);
+    if (graph.nodes.length > 0 && startCount !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Exactly one start node is required",
+        path: ["nodes"],
+      });
+    }
+  });
 
 export const zFlow = z.object({
   id: z.string().uuid(),

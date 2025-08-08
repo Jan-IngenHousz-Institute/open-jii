@@ -332,21 +332,40 @@ export class TestHarness {
           : { kind: "multi_choice" as const, text: "Q1", options: ["a", "b"] };
 
     const nodes: (
-      | { id: string; type: "question"; name: string; content: typeof questionContent }
-      | { id: string; type: "instruction"; name: string; content: { text: string } }
+      | {
+          id: string;
+          type: "question";
+          name: string;
+          content: typeof questionContent;
+          isStart?: boolean;
+        }
+      | {
+          id: string;
+          type: "instruction";
+          name: string;
+          content: { text: string };
+          isStart?: boolean;
+        }
     )[] = [
       {
         id: "n1",
         type: "question",
         name: "Q1",
         content: questionContent,
+        isStart: true,
       },
     ];
 
     const edges: { id: string; source: string; target: string; label?: string | null }[] = [];
 
     if (options?.includeInstruction) {
-      nodes.push({ id: "n2", type: "instruction", name: "Read this", content: { text: "Note" } });
+      nodes.push({
+        id: "n2",
+        type: "instruction",
+        name: "Read this",
+        content: { text: "Note" },
+        isStart: false,
+      });
       edges.push({ id: "e1", source: "n1", target: "n2", label: "next" });
     }
 

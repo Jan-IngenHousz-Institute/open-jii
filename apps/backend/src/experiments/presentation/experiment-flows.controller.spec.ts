@@ -103,6 +103,35 @@ describe("ExperimentFlowsController", () => {
       await testApp.post(path).withAuth(ownerId).send(invalidBody).expect(StatusCodes.BAD_REQUEST);
     });
 
+    it("returns 400 when no nodes are provided", async () => {
+      const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
+      const path = testApp.resolvePath(contract.experiments.createFlow.path, {
+        id: experiment.id,
+      });
+      const invalidGraph = { nodes: [] as unknown[], edges: [] as unknown[] };
+      await testApp.post(path).withAuth(ownerId).send(invalidGraph).expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("returns 400 when nodes exist but none is a start node", async () => {
+      const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
+      const path = testApp.resolvePath(contract.experiments.createFlow.path, {
+        id: experiment.id,
+      });
+      const badGraph = {
+        nodes: [
+          {
+            id: "n1",
+            type: "question" as const,
+            name: "Q1",
+            content: { kind: "yes_no" as const, text: "Q1" },
+            // isStart omitted -> false by default
+          },
+        ],
+        edges: [],
+      };
+      await testApp.post(path).withAuth(ownerId).send(badGraph).expect(StatusCodes.BAD_REQUEST);
+    });
+
     it("returns 404 when experiment does not exist", async () => {
       const nonExistentId = "00000000-0000-0000-0000-000000000000";
       const path = testApp.resolvePath(contract.experiments.createFlow.path, {
