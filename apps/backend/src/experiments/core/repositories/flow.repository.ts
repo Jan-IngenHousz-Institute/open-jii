@@ -4,7 +4,6 @@ import { eq, flows } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import { flowGraphSchema } from "../models/flow.model";
 import type { FlowDto, FlowGraphDto } from "../models/flow.model";
 
 @Injectable()
@@ -29,14 +28,12 @@ export class FlowRepository {
 
   async upsert(experimentId: string, graph: FlowGraphDto): Promise<Result<FlowDto>> {
     return tryCatch(async () => {
-      const validatedGraph = flowGraphSchema.parse(graph);
-
       const inserted = await this.database
         .insert(flows)
-        .values({ experimentId, graph: validatedGraph })
+        .values({ experimentId, graph })
         .onConflictDoUpdate({
           target: [flows.experimentId],
-          set: { graph: validatedGraph },
+          set: { graph },
         })
         .returning();
       const row = inserted[0];

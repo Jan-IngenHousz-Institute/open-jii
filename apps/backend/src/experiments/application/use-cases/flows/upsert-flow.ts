@@ -1,7 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { Result, failure, AppError, validate } from "../../../../common/utils/fp-utils";
-import { flowGraphSchema } from "../../../core/models/flow.model";
+import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import type { FlowDto, FlowGraphDto } from "../../../core/models/flow.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
@@ -20,10 +19,6 @@ export class UpsertFlowUseCase {
     userId: string,
     graph: FlowGraphDto,
   ): Promise<Result<FlowDto>> {
-    // Validate input
-    const validated = validate(flowGraphSchema, graph);
-    if (validated.isFailure()) return validated;
-
     // Check access and admin rights
     const access = await this.experimentRepository.checkAccess(experimentId, userId);
 
@@ -31,7 +26,7 @@ export class UpsertFlowUseCase {
       if (!experiment) return failure(AppError.notFound("Experiment not found"));
       if (!isAdmin) return failure(AppError.forbidden("Only admins can modify the flow"));
 
-      return this.flowRepository.upsert(experimentId, validated.value);
+      return this.flowRepository.upsert(experimentId, graph);
     });
   }
 }

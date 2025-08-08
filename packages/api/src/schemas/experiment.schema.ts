@@ -96,11 +96,34 @@ export const zFlowNodeType = z.enum(["question", "instruction", "measurement"]);
 
 export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice"]);
 
-export const zQuestionContent = z.object({
-  kind: zQuestionKind,
-  text: z.string().min(1),
-  options: z.array(z.string()).optional(),
-});
+// Question content is a strict discriminated union so invalid extra keys are rejected
+const zQuestionYesNo = z
+  .object({
+    kind: z.literal("yes_no"),
+    text: z.string().min(1),
+  })
+  .strict();
+
+const zQuestionOpenEnded = z
+  .object({
+    kind: z.literal("open_ended"),
+    text: z.string().min(1),
+  })
+  .strict();
+
+const zQuestionMultiChoice = z
+  .object({
+    kind: z.literal("multi_choice"),
+    text: z.string().min(1),
+    options: z.array(z.string()).min(1),
+  })
+  .strict();
+
+export const zQuestionContent = z.discriminatedUnion("kind", [
+  zQuestionYesNo,
+  zQuestionOpenEnded,
+  zQuestionMultiChoice,
+]);
 
 export const zInstructionContent = z.object({
   text: z.string().min(1),
