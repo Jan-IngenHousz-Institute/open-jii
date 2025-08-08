@@ -1,11 +1,10 @@
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { UpsertFlowUseCase } from "./upsert-flow";
+import { CreateFlowUseCase } from "./create-flow";
 
-describe("UpsertFlowUseCase", () => {
+describe("CreateFlowUseCase", () => {
   const testApp = TestHarness.App;
-  let useCase: UpsertFlowUseCase;
+  let useCase: CreateFlowUseCase;
   let ownerId: string;
   let memberId: string;
 
@@ -17,7 +16,7 @@ describe("UpsertFlowUseCase", () => {
     await testApp.beforeEach();
     ownerId = await testApp.createTestUser({});
     memberId = await testApp.createTestUser({});
-    useCase = testApp.module.get(UpsertFlowUseCase);
+    useCase = testApp.module.get(CreateFlowUseCase);
   });
 
   afterEach(() => {
@@ -54,24 +53,7 @@ describe("UpsertFlowUseCase", () => {
     expect(result.error.statusCode).toBe(403);
   });
 
-  it("still forbids non-admin even if experiment is public", async () => {
-    const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
-    // make public
-    const experimentsRepo = testApp.module.get(ExperimentRepository);
-    await experimentsRepo.update(experiment.id, { visibility: "public" });
-    // Add member without admin
-    await testApp.addExperimentMember(experiment.id, memberId, "member");
-    const result = await useCase.execute(
-      experiment.id,
-      memberId,
-      testApp.sampleFlowGraph({ questionKind: "multi_choice" }),
-    );
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(403);
-  });
-
-  it("upserts flow when user is admin", async () => {
+  it("creates flow when user is admin and no existing flow", async () => {
     const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
 
     const graph = testApp.sampleFlowGraph({ questionKind: "multi_choice" });
@@ -80,16 +62,18 @@ describe("UpsertFlowUseCase", () => {
     assertSuccess(result);
     const created = result.value;
     expect(created.graph).toEqual(graph);
+  });
 
-    // update path
-    const updatedGraph: ReturnType<typeof testApp.sampleFlowGraph> = {
-      ...graph,
-      edges: [{ id: "e1", source: "n1", target: "n1" }],
-    };
-    const result2 = await useCase.execute(experiment.id, ownerId, updatedGraph);
-    expect(result2.isSuccess()).toBe(true);
-    assertSuccess(result2);
-    expect(result2.value.id).toBe(created.id);
-    expect(result2.value.graph).toEqual(updatedGraph);
+  it("fails with 400 when flow already exists", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
+
+    const graph = testApp.sampleFlowGraph({ questionKind: "multi_choice" });
+    const first = await useCase.execute(experiment.id, ownerId, graph);
+    expect(first.isSuccess()).toBe(true);
+
+    const second = await useCase.execute(experiment.id, ownerId, graph);
+    expect(second.isSuccess()).toBe(false);
+    assertFailure(second);
+    expect(second.error.statusCode).toBe(400);
   });
 });

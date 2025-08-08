@@ -12,8 +12,9 @@ import { RemoveExperimentMemberUseCase } from "./application/use-cases/experimen
 import { AddExperimentProtocolsUseCase } from "./application/use-cases/experiment-protocols/add-experiment-protocols";
 import { ListExperimentProtocolsUseCase } from "./application/use-cases/experiment-protocols/list-experiment-protocols";
 import { RemoveExperimentProtocolUseCase } from "./application/use-cases/experiment-protocols/remove-experiment-protocol";
+import { CreateFlowUseCase } from "./application/use-cases/flows/create-flow";
 import { GetFlowUseCase } from "./application/use-cases/flows/get-flow";
-import { UpsertFlowUseCase } from "./application/use-cases/flows/upsert-flow";
+import { UpdateFlowUseCase } from "./application/use-cases/flows/update-flow";
 import { GetExperimentUseCase } from "./application/use-cases/get-experiment/get-experiment";
 import { ListExperimentsUseCase } from "./application/use-cases/list-experiments/list-experiments";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
@@ -72,7 +73,8 @@ import { ExperimentController } from "./presentation/experiment.controller";
 
     // Flow use cases
     GetFlowUseCase,
-    UpsertFlowUseCase,
+    CreateFlowUseCase,
+    UpdateFlowUseCase,
   ],
   exports: [ExperimentRepository, ExperimentMemberRepository],
 })

@@ -47,14 +47,14 @@ describe("ExperimentFlowsController", () => {
     });
   });
 
-  describe("PUT /api/v1/experiments/:id/flow", () => {
-    it("creates or updates flow for admin", async () => {
+  describe("POST /api/v1/experiments/:id/flow", () => {
+    it("creates flow for admin", async () => {
       const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
-      const path = testApp.resolvePath(contract.experiments.upsertFlow.path, {
+      const path = testApp.resolvePath(contract.experiments.createFlow.path, {
         id: experiment.id,
       });
       const body = testApp.sampleFlowGraph({ includeInstruction: true });
-      const res = await testApp.put(path).withAuth(ownerId).send(body).expect(StatusCodes.OK);
+      const res = await testApp.post(path).withAuth(ownerId).send(body).expect(StatusCodes.CREATED);
       const resBody = res.body as { graph: typeof body };
       expect(resBody.graph).toEqual(body);
 
@@ -72,11 +72,11 @@ describe("ExperimentFlowsController", () => {
       // Add non-admin member
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
-      const path = testApp.resolvePath(contract.experiments.upsertFlow.path, {
+      const path = testApp.resolvePath(contract.experiments.createFlow.path, {
         id: experiment.id,
       });
       await testApp
-        .put(path)
+        .post(path)
         .withAuth(memberId)
         .send(testApp.sampleFlowGraph({ includeInstruction: true }))
         .expect(StatusCodes.FORBIDDEN);
@@ -84,11 +84,11 @@ describe("ExperimentFlowsController", () => {
 
     it("requires auth", async () => {
       const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
-      const path = testApp.resolvePath(contract.experiments.upsertFlow.path, {
+      const path = testApp.resolvePath(contract.experiments.createFlow.path, {
         id: experiment.id,
       });
       await testApp
-        .put(path)
+        .post(path)
         .withoutAuth()
         .send(testApp.sampleFlowGraph({ includeInstruction: true }))
         .expect(StatusCodes.UNAUTHORIZED);
@@ -96,20 +96,56 @@ describe("ExperimentFlowsController", () => {
 
     it("returns 400 for invalid body", async () => {
       const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
-      const path = testApp.resolvePath(contract.experiments.upsertFlow.path, {
+      const path = testApp.resolvePath(contract.experiments.createFlow.path, {
         id: experiment.id,
       });
       const invalidBody = { nodes: [] }; // missing edges
-      await testApp.put(path).withAuth(ownerId).send(invalidBody).expect(StatusCodes.BAD_REQUEST);
+      await testApp.post(path).withAuth(ownerId).send(invalidBody).expect(StatusCodes.BAD_REQUEST);
     });
 
     it("returns 404 when experiment does not exist", async () => {
       const nonExistentId = "00000000-0000-0000-0000-000000000000";
-      const path = testApp.resolvePath(contract.experiments.upsertFlow.path, {
+      const path = testApp.resolvePath(contract.experiments.createFlow.path, {
         id: nonExistentId,
       });
       await testApp
-        .put(path)
+        .post(path)
+        .withAuth(ownerId)
+        .send(testApp.sampleFlowGraph({ includeInstruction: true }))
+        .expect(StatusCodes.NOT_FOUND);
+    });
+  });
+
+  describe("PUT /api/v1/experiments/:id/flow", () => {
+    it("updates flow for admin", async () => {
+      const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
+      // create first
+      const createPath = testApp.resolvePath(contract.experiments.createFlow.path, {
+        id: experiment.id,
+      });
+      const body = testApp.sampleFlowGraph({ includeInstruction: true });
+      await testApp.post(createPath).withAuth(ownerId).send(body).expect(StatusCodes.CREATED);
+
+      const updatePath = testApp.resolvePath(contract.experiments.updateFlow.path, {
+        id: experiment.id,
+      });
+      const updated = { ...body, edges: [{ id: "e1", source: "n1", target: "n1" }] } as typeof body;
+      const res = await testApp
+        .put(updatePath)
+        .withAuth(ownerId)
+        .send(updated)
+        .expect(StatusCodes.OK);
+      const resBody = res.body as { graph: typeof body };
+      expect(resBody.graph).toEqual(updated);
+    });
+
+    it("returns 404 when updating without existing flow", async () => {
+      const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
+      const updatePath = testApp.resolvePath(contract.experiments.updateFlow.path, {
+        id: experiment.id,
+      });
+      await testApp
+        .put(updatePath)
         .withAuth(ownerId)
         .send(testApp.sampleFlowGraph({ includeInstruction: true }))
         .expect(StatusCodes.NOT_FOUND);

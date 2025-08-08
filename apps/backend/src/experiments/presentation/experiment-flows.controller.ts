@@ -9,8 +9,9 @@ import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDates } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
+import { CreateFlowUseCase } from "../application/use-cases/flows/create-flow";
 import { GetFlowUseCase } from "../application/use-cases/flows/get-flow";
-import { UpsertFlowUseCase } from "../application/use-cases/flows/upsert-flow";
+import { UpdateFlowUseCase } from "../application/use-cases/flows/update-flow";
 
 @Controller()
 @UseGuards(AuthGuard)
@@ -19,7 +20,8 @@ export class ExperimentFlowsController {
 
   constructor(
     private readonly getFlowUseCase: GetFlowUseCase,
-    private readonly upsertFlowUseCase: UpsertFlowUseCase,
+    private readonly createFlowUseCase: CreateFlowUseCase,
+    private readonly updateFlowUseCase: UpdateFlowUseCase,
   ) {}
 
   @TsRestHandler(contract.experiments.getFlow)
@@ -38,14 +40,28 @@ export class ExperimentFlowsController {
     });
   }
 
-  @TsRestHandler(contract.experiments.upsertFlow)
-  upsertFlow(@CurrentUser() user: User) {
-    return tsRestHandler(contract.experiments.upsertFlow, async ({ params, body }) => {
-      const result = await this.upsertFlowUseCase.execute(params.id, user.id, body);
+  @TsRestHandler(contract.experiments.createFlow)
+  createFlow(@CurrentUser() user: User) {
+    return tsRestHandler(contract.experiments.createFlow, async ({ params, body }) => {
+      const result = await this.createFlowUseCase.execute(params.id, user.id, body);
 
       if (result.isSuccess()) {
-        // Decide 200 vs 201 based on whether it previously existed
-        // For simplicity, always return 200
+        return {
+          status: StatusCodes.CREATED as const,
+          body: formatDates(result.value),
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.experiments.updateFlow)
+  updateFlow(@CurrentUser() user: User) {
+    return tsRestHandler(contract.experiments.updateFlow, async ({ params, body }) => {
+      const result = await this.updateFlowUseCase.execute(params.id, user.id, body);
+
+      if (result.isSuccess()) {
         return {
           status: StatusCodes.OK as const,
           body: formatDates(result.value),

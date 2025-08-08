@@ -26,17 +26,25 @@ export class FlowRepository {
     });
   }
 
-  async upsert(experimentId: string, graph: FlowGraphDto): Promise<Result<FlowDto>> {
+  async create(experimentId: string, graph: FlowGraphDto): Promise<Result<FlowDto>> {
     return tryCatch(async () => {
       const inserted = await this.database
         .insert(flows)
         .values({ experimentId, graph })
-        .onConflictDoUpdate({
-          target: [flows.experimentId],
-          set: { graph },
-        })
         .returning();
       const row = inserted[0];
+      return row as FlowDto;
+    });
+  }
+
+  async update(experimentId: string, graph: FlowGraphDto): Promise<Result<FlowDto>> {
+    return tryCatch(async () => {
+      const updated = await this.database
+        .update(flows)
+        .set({ graph })
+        .where(eq(flows.experimentId, experimentId))
+        .returning();
+      const row = updated[0];
       return row as FlowDto;
     });
   }

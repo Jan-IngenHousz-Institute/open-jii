@@ -37,17 +37,17 @@ describe("FlowRepository", () => {
     expect(result.value).toBeNull();
   });
 
-  it("upsert should insert a new flow for an experiment", async () => {
+  it("create should insert a new flow for an experiment", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Insert Flow",
       userId: testUserId,
     });
 
     const graph = testApp.sampleFlowGraph({ includeInstruction: true });
-    const upsertResult = await repository.upsert(experiment.id, graph);
-    expect(upsertResult.isSuccess()).toBe(true);
-    assertSuccess(upsertResult);
-    const flow = upsertResult.value;
+    const createResult = await repository.create(experiment.id, graph);
+    expect(createResult.isSuccess()).toBe(true);
+    assertSuccess(createResult);
+    const flow = createResult.value;
 
     expect(flow).toMatchObject({
       id: expect.any(String) as string,
@@ -61,7 +61,7 @@ describe("FlowRepository", () => {
     expect(getResult.value?.graph).toEqual(graph);
   });
 
-  it("upsert should update the existing flow graph", async () => {
+  it("update should update the existing flow graph", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Update Flow",
       userId: testUserId,
@@ -82,11 +82,11 @@ describe("FlowRepository", () => {
       edges: [...graph1.edges, { id: "e2", source: "n2", target: "n3" }],
     };
 
-    const r1 = await repository.upsert(experiment.id, graph1);
+    const r1 = await repository.create(experiment.id, graph1);
     assertSuccess(r1);
     const created = r1.value;
 
-    const r2 = await repository.upsert(experiment.id, graph2);
+    const r2 = await repository.update(experiment.id, graph2);
     assertSuccess(r2);
     const updated = r2.value;
 

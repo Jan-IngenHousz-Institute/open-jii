@@ -221,20 +221,33 @@ export const experimentContract = c.router({
     description: "Returns the flow graph for the specified experiment.",
   },
 
-  upsertFlow: {
+  createFlow: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/flow",
+    pathParams: zIdPathParam,
+    body: zUpsertFlowBody,
+    responses: {
+      201: zFlow,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Create experiment flow",
+    description: "Creates a new flow for the experiment with the provided graph.",
+  },
+
+  updateFlow: {
     method: "PUT",
     path: "/api/v1/experiments/:id/flow",
     pathParams: zIdPathParam,
     body: zUpsertFlowBody,
     responses: {
       200: zFlow,
-      201: zFlow,
       400: zErrorResponse,
       403: zErrorResponse,
       404: zErrorResponse,
     },
-    summary: "Create or update experiment flow",
-    description:
-      "Creates a new flow for the experiment or updates the existing flow with the provided graph.",
+    summary: "Update experiment flow",
+    description: "Updates the existing flow for the experiment with the provided graph.",
   },
 });

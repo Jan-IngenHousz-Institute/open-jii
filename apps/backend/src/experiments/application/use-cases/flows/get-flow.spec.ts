@@ -63,7 +63,7 @@ describe("GetFlowUseCase", () => {
     const { experiment } = await testApp.createExperiment({ name: "Public", userId: ownerId });
     await experimentRepository.update(experiment.id, { visibility: "public" });
     const graph = testApp.sampleFlowGraph();
-    await flowRepository.upsert(experiment.id, graph);
+    await flowRepository.create(experiment.id, graph);
 
     const result = await useCase.execute(experiment.id, memberId);
     expect(result.isSuccess()).toBe(true);
@@ -76,7 +76,7 @@ describe("GetFlowUseCase", () => {
     // grant membership
     await testApp.addExperimentMember(experiment.id, memberId, "member");
     const graph = testApp.sampleFlowGraph();
-    await flowRepository.upsert(experiment.id, graph);
+    await flowRepository.create(experiment.id, graph);
 
     const result = await useCase.execute(experiment.id, memberId);
     expect(result.isSuccess()).toBe(true);
