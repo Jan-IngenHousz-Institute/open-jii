@@ -12,6 +12,8 @@ import { RemoveExperimentMemberUseCase } from "./application/use-cases/experimen
 import { AddExperimentProtocolsUseCase } from "./application/use-cases/experiment-protocols/add-experiment-protocols";
 import { ListExperimentProtocolsUseCase } from "./application/use-cases/experiment-protocols/list-experiment-protocols";
 import { RemoveExperimentProtocolUseCase } from "./application/use-cases/experiment-protocols/remove-experiment-protocol";
+import { GetFlowUseCase } from "./application/use-cases/flows/get-flow";
+import { UpsertFlowUseCase } from "./application/use-cases/flows/upsert-flow";
 import { GetExperimentUseCase } from "./application/use-cases/get-experiment/get-experiment";
 import { ListExperimentsUseCase } from "./application/use-cases/list-experiments/list-experiments";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
@@ -20,8 +22,10 @@ import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
 import { ExperimentProtocolRepository } from "./core/repositories/experiment-protocol.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
+import { FlowRepository } from "./core/repositories/flow.repository";
 // Controllers
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
+import { ExperimentFlowsController } from "./presentation/experiment-flows.controller";
 import { ExperimentMembersController } from "./presentation/experiment-members.controller";
 import { ExperimentProtocolsController } from "./presentation/experiment-protocols.controller";
 import { ExperimentWebhookController } from "./presentation/experiment-webhook.controller";
@@ -32,15 +36,17 @@ import { ExperimentController } from "./presentation/experiment.controller";
   controllers: [
     ExperimentController,
     ExperimentDataController,
+    ExperimentFlowsController,
     ExperimentMembersController,
-    ExperimentWebhookController,
     ExperimentProtocolsController,
+    ExperimentWebhookController,
   ],
   providers: [
     // Repositories
     ExperimentRepository,
     ExperimentMemberRepository,
     ExperimentProtocolRepository,
+    FlowRepository,
 
     // General experiment use cases
     CreateExperimentUseCase,
@@ -63,6 +69,10 @@ import { ExperimentController } from "./presentation/experiment.controller";
     AddExperimentProtocolsUseCase,
     ListExperimentProtocolsUseCase,
     RemoveExperimentProtocolUseCase,
+
+    // Flow use cases
+    GetFlowUseCase,
+    UpsertFlowUseCase,
   ],
   exports: [ExperimentRepository, ExperimentMemberRepository],
 })

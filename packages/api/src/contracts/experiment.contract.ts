@@ -19,6 +19,7 @@ import {
   zExperimentWebhookSuccessResponse,
   zExperimentWebhookErrorResponse,
 } from "../schemas/experiment.schema";
+import { zFlow, zUpsertFlowBody } from "../schemas/experiment.schema";
 import {
   zExperimentProtocolList,
   zAddExperimentProtocolsBody,
@@ -204,5 +205,36 @@ export const experimentContract = c.router({
     },
     summary: "Remove a protocol from an experiment",
     description: "Removes the association between a protocol and an experiment.",
+  },
+
+  // --- Flow Endpoints ---
+  getFlow: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/flow",
+    pathParams: zIdPathParam,
+    responses: {
+      200: zFlow,
+      404: zErrorResponse,
+      403: zErrorResponse,
+    },
+    summary: "Get experiment flow",
+    description: "Returns the flow graph for the specified experiment.",
+  },
+
+  upsertFlow: {
+    method: "PUT",
+    path: "/api/v1/experiments/:id/flow",
+    pathParams: zIdPathParam,
+    body: zUpsertFlowBody,
+    responses: {
+      200: zFlow,
+      201: zFlow,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Create or update experiment flow",
+    description:
+      "Creates a new flow for the experiment or updates the existing flow with the provided graph.",
   },
 });

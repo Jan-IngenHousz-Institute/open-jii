@@ -91,6 +91,55 @@ export const zErrorResponse = z.object({
   message: z.string(),
 });
 
+// --- Flow Schemas ---
+export const zFlowNodeType = z.enum(["question", "instruction", "measurement"]);
+
+export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice"]);
+
+export const zQuestionContent = z.object({
+  kind: zQuestionKind,
+  text: z.string().min(1),
+  options: z.array(z.string()).optional(),
+});
+
+export const zInstructionContent = z.object({
+  text: z.string().min(1),
+});
+
+export const zMeasurementContent = z.object({
+  protocolId: z.string().uuid(),
+  params: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const zFlowNode = z.object({
+  id: z.string().min(1),
+  type: zFlowNodeType,
+  name: z.string().min(1),
+  content: z.union([zQuestionContent, zInstructionContent, zMeasurementContent]),
+});
+
+export const zFlowEdge = z.object({
+  id: z.string().min(1),
+  source: z.string().min(1),
+  target: z.string().min(1),
+  label: z.string().optional().nullable(),
+});
+
+export const zFlowGraph = z.object({
+  nodes: z.array(zFlowNode),
+  edges: z.array(zFlowEdge),
+});
+
+export const zFlow = z.object({
+  id: z.string().uuid(),
+  experimentId: z.string().uuid(),
+  graph: zFlowGraph,
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const zUpsertFlowBody = zFlowGraph;
+
 // Infer types from Zod schemas
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
 export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
@@ -103,6 +152,10 @@ export type ExperimentMember = z.infer<typeof zExperimentMember>;
 export type ExperimentProtocol = z.infer<typeof zExperimentProtocol>;
 export type ExperimentMemberList = z.infer<typeof zExperimentMemberList>;
 export type ErrorResponse = z.infer<typeof zErrorResponse>;
+export type FlowNodeType = z.infer<typeof zFlowNodeType>;
+export type FlowGraph = z.infer<typeof zFlowGraph>;
+export type Flow = z.infer<typeof zFlow>;
+export type UpsertFlowBody = z.infer<typeof zUpsertFlowBody>;
 
 // Define request and response types
 export const zCreateExperimentBody = z.object({
