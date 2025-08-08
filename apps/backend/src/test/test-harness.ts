@@ -337,14 +337,14 @@ export class TestHarness {
           type: "question";
           name: string;
           content: typeof questionContent;
-          isStart?: boolean;
+          isStart: boolean;
         }
       | {
           id: string;
           type: "instruction";
           name: string;
           content: { text: string };
-          isStart?: boolean;
+          isStart: boolean;
         }
     )[] = [
       {

@@ -21,9 +21,9 @@ export class UpdateFlowUseCase {
   ): Promise<Result<FlowDto>> {
     const access = await this.experimentRepository.checkAccess(experimentId, userId);
 
-    return access.chain(async ({ experiment, isAdmin }) => {
+    return access.chain(async ({ experiment, hasAccess }) => {
       if (!experiment) return failure(AppError.notFound("Experiment not found"));
-      if (!isAdmin) return failure(AppError.forbidden("Only admins can modify the flow"));
+      if (!hasAccess) return failure(AppError.forbidden("Only members can modify the flow"));
 
       const existing = await this.flowRepository.getByExperimentId(experimentId);
       return existing.chain(async (flow) => {

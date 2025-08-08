@@ -38,11 +38,9 @@ describe("CreateFlowUseCase", () => {
     expect(result.error.statusCode).toBe(404);
   });
 
-  it("returns 403 if user is not admin of experiment", async () => {
+  it("returns 403 if user is not a member of experiment", async () => {
     const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
-    // Add member without admin rights
-    await testApp.addExperimentMember(experiment.id, memberId, "member");
-
+    // Do not add memberId as a member
     const result = await useCase.execute(
       experiment.id,
       memberId,
@@ -51,6 +49,18 @@ describe("CreateFlowUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.statusCode).toBe(403);
+  });
+
+  it("creates flow when user is a member and no existing flow", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
+    await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+    const graph = testApp.sampleFlowGraph({ questionKind: "multi_choice" });
+    const result = await useCase.execute(experiment.id, memberId, graph);
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    const created = result.value;
+    expect(created.graph).toEqual(graph);
   });
 
   it("creates flow when user is admin and no existing flow", async () => {

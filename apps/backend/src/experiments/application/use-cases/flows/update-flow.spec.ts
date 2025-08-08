@@ -40,11 +40,9 @@ describe("UpdateFlowUseCase", () => {
     expect(result.error.statusCode).toBe(404);
   });
 
-  it("returns 403 if user is not admin of experiment", async () => {
+  it("returns 403 if user is not a member of experiment", async () => {
     const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
-    // Add member without admin rights
-    await testApp.addExperimentMember(experiment.id, memberId, "member");
-
+    // memberId is NOT added as a member
     const result = await useCase.execute(
       experiment.id,
       memberId,
