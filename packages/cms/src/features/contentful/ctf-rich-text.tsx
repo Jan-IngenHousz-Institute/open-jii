@@ -1,5 +1,7 @@
-import { documentToReactComponents, Options } from "@contentful/rich-text-react-renderer";
-import { BLOCKS, Document } from "@contentful/rich-text-types";
+import type { Options } from "@contentful/rich-text-react-renderer";
+import { documentToReactComponents } from "@contentful/rich-text-react-renderer";
+import type { Document } from "@contentful/rich-text-types";
+import { BLOCKS } from "@contentful/rich-text-types";
 
 import type { ComponentRichImage } from "../../lib/__generated/sdk";
 import { ArticleImage } from "../article";
@@ -28,6 +30,7 @@ export const contentfulBaseRichTextOptions = ({ links }: ContentfulRichTextInter
   renderNode: {
     [BLOCKS.EMBEDDED_ENTRY]: (node) => {
       const entry = links?.entries.block.find(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         (item: EmbeddedEntryType) => item?.sys.id === node.data.target.sys.id,
       );
 

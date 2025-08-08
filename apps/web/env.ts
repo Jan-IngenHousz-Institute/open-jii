@@ -9,6 +9,7 @@ const envSchema = z.object({
   CONTENTFUL_PREVIEW_ACCESS_TOKEN: z.string().optional(),
   CONTENTFUL_PREVIEW_SECRET: z.string().optional(),
   CONTENTFUL_SPACE_ENVIRONMENT: z.string().optional().default("master"),
+  NEXT_PUBLIC_ENABLE_DEVTOOLS: z.enum(["true", "false"]).default("true"),
 });
 
 const parseEnv = () => {

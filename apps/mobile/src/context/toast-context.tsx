@@ -1,5 +1,5 @@
 import React, { ReactNode } from "react";
-import Toast, { ToastType } from "react-native-toast-message";
+import Toast from "react-native-toast-message";
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   return (

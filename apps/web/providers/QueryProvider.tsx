@@ -4,6 +4,7 @@ import { tsr } from "@/lib/tsr";
 import { parseApiError } from "@/util/apiError";
 import { QueryClient, QueryClientProvider, MutationCache } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { env } from "~/env";
 
 import { toast } from "@repo/ui/hooks";
 
@@ -25,9 +26,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <tsr.ReactQueryProvider>
         {children}
-        {process.env.NEXT_PUBLIC_ENABLE_DEVTOOLS === "true" && (
-          <ReactQueryDevtools initialIsOpen={false} />
-        )}
+        {env.NEXT_PUBLIC_ENABLE_DEVTOOLS === "true" && <ReactQueryDevtools initialIsOpen={false} />}
       </tsr.ReactQueryProvider>
     </QueryClientProvider>
   );

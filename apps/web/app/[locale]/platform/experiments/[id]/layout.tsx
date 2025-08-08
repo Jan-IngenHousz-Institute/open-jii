@@ -26,7 +26,6 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   };
 
   const activeTab = getActiveTab();
-
   return (
     <div className="space-y-6">
       <div>

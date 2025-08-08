@@ -44,7 +44,7 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview, loc
   const renderButtonList = (buttons: (ButtonFieldsFragment | null)[]) => (
     <ul className="space-y-3 text-center text-sm text-white md:text-left">
       {buttons.map((button, idx) => {
-        if (!button || !button.label || !button.url) return null;
+        if (!button?.label || !button.url) return null;
         const buttonInspectorProps = useContentfulInspectorMode({
           entryId: button.sys?.id,
           locale,

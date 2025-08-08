@@ -1,15 +1,10 @@
-import { createInstance, type i18n, type InitOptions } from "i18next";
+import { createInstance } from "i18next";
+import type { i18n, InitOptions } from "i18next";
 import resourcesToBackend from "i18next-resources-to-backend";
 import { initReactI18next } from "react-i18next/initReactI18next";
 
-import {
-  defaultNamespace,
-  fallbackLng,
-  fallbackNS,
-  i18nConfig,
-  type Locale,
-  type Namespace,
-} from "./config";
+import { defaultNamespace, fallbackLng, fallbackNS, i18nConfig } from "./config";
+import type { Locale, Namespace } from "./config";
 
 export interface InitTranslationsProps {
   i18nInstance?: i18n;
@@ -28,7 +23,7 @@ export default async function initTranslations({
   namespaces = [defaultNamespace],
   resources,
 }: InitTranslationsProps) {
-  i18nInstance = i18nInstance || createInstance();
+  i18nInstance = i18nInstance ?? createInstance();
 
   i18nInstance.use(initReactI18next);
 
@@ -43,7 +38,7 @@ export default async function initTranslations({
   // If resources are provided (client-side), initialize synchronously
   // Otherwise (server-side), initialize asynchronously
   if (resources) {
-    i18nInstance.init({
+    void i18nInstance.init({
       lng: locale,
       resources,
       fallbackLng,

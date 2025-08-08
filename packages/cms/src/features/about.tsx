@@ -5,6 +5,7 @@ import {
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
 import { documentToReactComponents } from "@contentful/rich-text-react-renderer";
+import type { Document } from "@contentful/rich-text-types";
 import Image from "next/image";
 import React from "react";
 
@@ -49,7 +50,7 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
           >
             <Image
               src={currentAbout.image.url}
-              alt={currentAbout.image.title || currentAbout.title || "About"}
+              alt={currentAbout.image.title ?? currentAbout.title ?? "About"}
               width={800}
               height={500}
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -82,7 +83,7 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
             }
             {...inspectorProps({ fieldId: "description" })}
           >
-            {documentToReactComponents(currentAbout.description.json)}
+            {documentToReactComponents(currentAbout.description.json as Document)}
           </div>
         ) : null}
       </div>

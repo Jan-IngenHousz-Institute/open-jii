@@ -1,6 +1,6 @@
 import z from "zod";
 
-import { zUpdateExperimentBody, zUpdateProtocolRequestBody, zSensorFamily } from "@repo/api";
+import { zUpdateExperimentBody, zUpdateProtocolRequestBody } from "@repo/api";
 
 export const editExperimentFormSchema = zUpdateExperimentBody
   .required({

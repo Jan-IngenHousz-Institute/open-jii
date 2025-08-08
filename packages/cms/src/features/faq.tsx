@@ -5,6 +5,7 @@ import {
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
 import { documentToReactComponents } from "@contentful/rich-text-react-renderer";
+import type { Document } from "@contentful/rich-text-types";
 import React from "react";
 
 import type { PageFaqFieldsFragment, FaqQuestionFieldsFragment } from "../lib/__generated/sdk";
@@ -32,7 +33,7 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
   if (!currentFaq) return <div>No content found.</div>;
 
   // Extract questions array once
-  const questions = currentFaq.questionsCollection?.items || [];
+  const questions = currentFaq.questionsCollection?.items ?? [];
 
   // Inspector mode tagging
   const inspectorProps = useContentfulInspectorMode({
@@ -66,7 +67,7 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
                 className="leading-relaxed text-gray-700"
                 {...questionInspectorProps({ fieldId: "answer" })}
               >
-                {documentToReactComponents(q.answer.json)}
+                {documentToReactComponents(q.answer.json as Document)}
               </div>
             )}
           </div>

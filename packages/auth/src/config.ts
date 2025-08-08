@@ -1,4 +1,3 @@
-/* eslint-disable turbo/no-undeclared-env-vars */
 import GitHub from "@auth/core/providers/github";
 import type { ExpressAuthConfig } from "@auth/express";
 import type { NextAuthConfig } from "next-auth";

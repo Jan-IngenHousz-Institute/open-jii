@@ -56,6 +56,7 @@ export default tseslint.config(
     ],
     rules: {
       ...turboPlugin.configs.recommended.rules,
+      "turbo/no-undeclared-env-vars": "off",
       "prettier/prettier": "error",
       "@typescript-eslint/no-unused-vars": [
         "error",
