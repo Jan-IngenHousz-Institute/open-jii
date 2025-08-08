@@ -1,4 +1,3 @@
-/* eslint-disable turbo/no-undeclared-env-vars */
 /* eslint-disable no-restricted-properties */
 import { env } from "~/env";
 

@@ -1,4 +1,3 @@
-/* eslint-disable turbo/no-undeclared-env-vars */
 /* eslint-disable no-restricted-properties */
 import { initAuth } from "@repo/auth/next";
 import type { NextAuth, NextAuthResult } from "@repo/auth/next";
