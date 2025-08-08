@@ -9,10 +9,11 @@ interface VisualMediaProps {
     title?: string | null;
     sys?: { id?: string | null };
   }[];
-  inspectorProps?: (args: any) => any;
+  inspectorProps?: (args: unknown) => unknown;
 }
 
 export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps }) => {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   const filteredImages = images?.filter((img) => !!img?.url) || [];
   const [currentIdx, setCurrentIdx] = useState(0);
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -20,7 +21,7 @@ export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps
   const scrollToIdx = (idx: number) => {
     setCurrentIdx(idx);
     if (carouselRef.current) {
-      const child = carouselRef.current.children[idx] as HTMLElement;
+      const child = carouselRef.current.children[idx] as HTMLElement | null;
       if (child) {
         let inline: ScrollLogicalPosition = "center";
         if (idx === 0) inline = "start";

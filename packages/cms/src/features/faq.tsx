@@ -27,8 +27,10 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
   });
 
   // Use fallback to original data
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   const currentFaq = liveFaq || faq;
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!currentFaq) return <div>No content found.</div>;
 
   // Extract questions array once

@@ -21,9 +21,11 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview, loc
     locale,
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   const currentFooter = liveFooter || footerData;
 
   // Early return if no footer data
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!currentFooter) return null;
 
   const inspectorProps = useContentfulInspectorMode({
@@ -46,6 +48,7 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({ footerData, preview, loc
       {buttons.map((button, idx) => {
         if (!button?.label || !button.url) return null;
         const buttonInspectorProps = useContentfulInspectorMode({
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           entryId: button.sys?.id,
           locale,
         });

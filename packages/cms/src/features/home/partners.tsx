@@ -25,8 +25,11 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
     skip: !preview,
     locale,
   });
+
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   const currentPartners = livePartners || partnersData;
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!currentPartners) return null;
 
   const inspectorProps = useContentfulInspectorMode({
@@ -38,12 +41,15 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
   const rawItems = currentPartners.partnersCollection?.items ?? [];
   const items = rawItems.filter(
     (partner): partner is PartnerFieldsFragment =>
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       !!partner && partner.__typename === "ComponentPartner",
   );
 
   // Visual media images
   const images =
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     currentPartners.imagesCollection?.items?.filter(
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       (img): img is ImageFieldsFragment => !!img && img.__typename === "Asset",
     ) ?? [];
 
