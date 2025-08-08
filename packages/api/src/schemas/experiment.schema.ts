@@ -91,6 +91,92 @@ export const zErrorResponse = z.object({
   message: z.string(),
 });
 
+// --- Flow Schemas ---
+export const zFlowNodeType = z.enum(["question", "instruction", "measurement"]);
+
+export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice"]);
+
+// Question content is a strict discriminated union so invalid extra keys are rejected
+const zQuestionYesNo = z
+  .object({
+    kind: z.literal("yes_no"),
+    text: z.string().min(1),
+  })
+  .strict();
+
+const zQuestionOpenEnded = z
+  .object({
+    kind: z.literal("open_ended"),
+    text: z.string().min(1),
+  })
+  .strict();
+
+const zQuestionMultiChoice = z
+  .object({
+    kind: z.literal("multi_choice"),
+    text: z.string().min(1),
+    options: z.array(z.string()).min(1),
+  })
+  .strict();
+
+export const zQuestionContent = z.discriminatedUnion("kind", [
+  zQuestionYesNo,
+  zQuestionOpenEnded,
+  zQuestionMultiChoice,
+]);
+
+export const zInstructionContent = z.object({
+  text: z.string().min(1),
+});
+
+export const zMeasurementContent = z.object({
+  protocolId: z.string().uuid(),
+  params: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const zFlowNode = z.object({
+  id: z.string().min(1),
+  type: zFlowNodeType,
+  name: z.string().min(1),
+  content: z.union([zQuestionContent, zInstructionContent, zMeasurementContent]),
+  // A node can be marked as a start node. Exactly one node must be the start node for any flow.
+  isStart: z.boolean().optional().default(false),
+});
+
+export const zFlowEdge = z.object({
+  id: z.string().min(1),
+  source: z.string().min(1),
+  target: z.string().min(1),
+  label: z.string().optional().nullable(),
+});
+
+export const zFlowGraph = z
+  .object({
+    nodes: z.array(zFlowNode).min(1),
+    edges: z.array(zFlowEdge),
+  })
+  .superRefine((graph, ctx) => {
+    // Require exactly one start node when nodes are present
+    const startCount = graph.nodes.reduce((acc, n) => (n.isStart === true ? acc + 1 : acc), 0);
+    if (graph.nodes.length > 0 && startCount !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Exactly one start node is required",
+        path: ["nodes"],
+      });
+    }
+  });
+
+export const zFlow = z.object({
+  id: z.string().uuid(),
+  experimentId: z.string().uuid(),
+  graph: zFlowGraph,
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const zUpsertFlowBody = zFlowGraph;
+
 // Infer types from Zod schemas
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
 export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
@@ -103,6 +189,10 @@ export type ExperimentMember = z.infer<typeof zExperimentMember>;
 export type ExperimentProtocol = z.infer<typeof zExperimentProtocol>;
 export type ExperimentMemberList = z.infer<typeof zExperimentMemberList>;
 export type ErrorResponse = z.infer<typeof zErrorResponse>;
+export type FlowNodeType = z.infer<typeof zFlowNodeType>;
+export type FlowGraph = z.infer<typeof zFlowGraph>;
+export type Flow = z.infer<typeof zFlow>;
+export type UpsertFlowBody = z.infer<typeof zUpsertFlowBody>;
 
 // Define request and response types
 export const zCreateExperimentBody = z.object({

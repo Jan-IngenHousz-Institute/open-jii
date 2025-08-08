@@ -154,19 +154,32 @@ describe("ExperimentMemberRepository", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       const members = result.value;
-      const member = members[0];
 
-      // Assert
-      expect(member).toMatchObject({
+      // Find the specific member instead of assuming array order
+      const member1 = members.find((m) => m.user.id === memberId1);
+      const member2 = members.find((m) => m.user.id === memberId2);
+
+      // Assert member1
+      expect(member1).toMatchObject({
         experimentId: experiment.id,
         role: "member",
         user: expect.objectContaining({
           id: memberId1,
         }) as Partial<UserDto>,
       });
-      // Assert name and email are present and correct
-      expect(member.user.name).toBe("Multi User 1");
-      expect(member.user.email).toBe("multi1@example.com");
+      expect(member1?.user.name).toBe("Multi User 1");
+      expect(member1?.user.email).toBe("multi1@example.com");
+
+      // Assert member2
+      expect(member2).toMatchObject({
+        experimentId: experiment.id,
+        role: "admin",
+        user: expect.objectContaining({
+          id: memberId2,
+        }) as Partial<UserDto>,
+      });
+      expect(member2?.user.name).toBe("Multi User 2");
+      expect(member2?.user.email).toBe("multi2@example.com");
 
       // Verify all members are present in the experiment
       const allMembersResult = await repository.getMembers(experiment.id);

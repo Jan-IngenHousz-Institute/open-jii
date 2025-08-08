@@ -22,6 +22,7 @@
     "dev": "tsc --watch",
     "lint": "eslint",
     "db:seed": "tsx scripts/seed.ts",
+    "db:reset": "tsx scripts/reset.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
@@ -31,7 +32,7 @@
     "db:stop": "pnpm db:compose down",
     "db:logs": "pnpm db:compose logs -f",
     "db:restart": "pnpm run db:stop && pnpm run db:start",
-    "db:setup": "pnpm db:start && pnpm run db:migrate",
+    "db:setup": "pnpm db:start && pnpm run db:reset && pnpm run db:migrate",
     "db:teardown": "pnpm db:stop"
   },
   "keywords": [],
