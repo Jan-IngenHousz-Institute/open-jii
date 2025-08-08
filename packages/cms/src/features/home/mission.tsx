@@ -5,6 +5,7 @@ import {
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
 import { documentToReactComponents } from "@contentful/rich-text-react-renderer";
+import type { Document } from "@contentful/rich-text-types";
 import { Globe } from "lucide-react";
 import Image from "next/image";
 import React from "react";
@@ -27,7 +28,7 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
     skip: !preview,
     locale,
   });
-  const currentMission = liveMission || missionData;
+  const currentMission = liveMission ?? missionData;
 
   if (!currentMission) return null;
 
@@ -49,7 +50,7 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
             className="mb-8 text-lg leading-relaxed text-gray-600"
             {...inspectorProps({ fieldId: "about" })}
           >
-            {documentToReactComponents(currentMission.about.json)}
+            {documentToReactComponents(currentMission.about.json as Document)}
           </div>
         ) : null}
         <div className="rounded-2xl border-l-4 border-emerald-400 bg-gradient-to-r from-emerald-50 to-blue-50 p-8">
@@ -65,7 +66,7 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
               className="font-medium leading-relaxed text-gray-700"
               {...inspectorProps({ fieldId: "mission" })}
             >
-              {documentToReactComponents(currentMission.mission.json)}
+              {documentToReactComponents(currentMission.mission.json as Document)}
             </div>
           ) : null}
         </div>
@@ -80,7 +81,7 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
             <div className="h-full w-full">
               <Image
                 src={currentMission.image.url}
-                alt={currentMission.image.title || "Scientific research and collaboration"}
+                alt={currentMission.image.title ?? "Scientific research and collaboration"}
                 width={600}
                 height={400}
                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"

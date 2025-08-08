@@ -9,11 +9,11 @@ interface VisualMediaProps {
     title?: string | null;
     sys?: { id?: string | null };
   }[];
-  inspectorProps?: (args: unknown) => unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  inspectorProps?: (args: any) => any;
 }
 
 export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps }) => {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   const filteredImages = images?.filter((img) => !!img?.url) || [];
   const [currentIdx, setCurrentIdx] = useState(0);
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -105,7 +105,7 @@ export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps
           {filteredImages.map((img, idx) =>
             img?.url ? (
               <div
-                key={img.sys?.id || idx}
+                key={img.sys?.id ?? idx}
                 className={`flex h-60 w-full min-w-[90vw] max-w-full snap-center items-center rounded-2xl md:h-96 md:min-w-[600px] md:max-w-2xl justify-center${
                   idx === currentIdx ? "ring-jii-dark-green ring-2" : ""
                 }`}
@@ -114,7 +114,7 @@ export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps
               >
                 <Image
                   src={img.url}
-                  alt={img.title || "Partner visual"}
+                  alt={img.title ?? "Partner visual"}
                   width={900}
                   height={400}
                   className="h-full w-full rounded-2xl object-cover shadow-sm"

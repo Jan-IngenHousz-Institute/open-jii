@@ -30,6 +30,7 @@ export const contentfulBaseRichTextOptions = ({ links }: ContentfulRichTextInter
   renderNode: {
     [BLOCKS.EMBEDDED_ENTRY]: (node) => {
       const entry = links?.entries.block.find(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         (item: EmbeddedEntryType) => item?.sys.id === node.data.target.sys.id,
       );
 

@@ -6,4 +6,9 @@ export default [
     ignores: ["dist/**", "**/__generated/**"],
   },
   ...baseConfig,
+  {
+    rules: {
+      "@typescript-eslint/no-unnecessary-condition": "off",
+    },
+  },
 ];
