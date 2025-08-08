@@ -16,7 +16,12 @@
     "active": "Active",
     "completed": "Completed",
     "paused": "Paused",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "provisioning": "Provisioning"
+  },
+  "visibility": {
+    "private": "Private",
+    "public": "Public"
   },
   "actions": {
     "start": "Start Experiment",

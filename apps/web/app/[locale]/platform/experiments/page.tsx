@@ -1,5 +1,4 @@
 import { ListExperiments } from "@/components/list-experiments";
-import { auth } from "@/lib/auth";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -22,9 +21,6 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
     namespaces: ["common"],
   });
 
-  const session = await auth();
-  const userId = session?.user.id;
-
   return (
     <div className="space-y-6">
       <div>
@@ -34,7 +30,7 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
       <Link href={`/platform/experiments/new`} locale={locale}>
         <Button variant="outline">{t("experiments.create")}</Button>
       </Link>
-      <ListExperiments userId={userId ?? ""} />
+      <ListExperiments />
     </div>
   );
 }

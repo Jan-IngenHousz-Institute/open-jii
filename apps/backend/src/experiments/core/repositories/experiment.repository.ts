@@ -1,7 +1,7 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import { ExperimentFilter, ExperimentStatus } from "@repo/api";
-import { eq, or, and, experiments, experimentMembers } from "@repo/database";
+import { desc, eq, or, and, experiments, experimentMembers } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -54,7 +54,10 @@ export class ExperimentRepository {
 
     return tryCatch(() => {
       // Start with a base query builder
-      const query = this.database.select(experimentFields).from(experiments);
+      const query = this.database
+        .select(experimentFields)
+        .from(experiments)
+        .orderBy(desc(experiments.updatedAt));
 
       // Apply filter and status conditions without nested conditionals
       if (filter === "my") {

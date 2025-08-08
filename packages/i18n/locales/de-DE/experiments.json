@@ -16,7 +16,12 @@
     "active": "Aktiv",
     "completed": "Abgeschlossen",
     "paused": "Pausiert",
-    "cancelled": "Abgebrochen"
+    "cancelled": "Abgebrochen",
+    "provisioning": "Bereitstellung"
+  },
+  "visibility": {
+    "private": "Privat",
+    "public": "Publik"
   },
   "actions": {
     "start": "Experiment starten",
