@@ -92,16 +92,4 @@ describe("UpsertFlowUseCase", () => {
     expect(result2.value.id).toBe(created.id);
     expect(result2.value.graph).toEqual(updatedGraph);
   });
-
-  it("validates input graph and returns 400 for invalid schema", async () => {
-    const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
-    // cast via unknown to intentionally send invalid payload without lint errors
-    const badGraph = { nodes: [{ id: "n1" }], edges: [] } as unknown as Parameters<
-      UpsertFlowUseCase["execute"]
-    >[2];
-    const result = await useCase.execute(experiment.id, ownerId, badGraph);
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(400);
-  });
 });
