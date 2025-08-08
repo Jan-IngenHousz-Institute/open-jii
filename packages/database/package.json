@@ -27,7 +27,7 @@
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:compose": "docker compose -f ./docker-compose.yml",
-    "db:start": "pnpm db:compose up -d",
+    "db:start": "pnpm db:compose up -d --wait",
     "db:stop": "pnpm db:compose down",
     "db:logs": "pnpm db:compose logs -f",
     "db:restart": "pnpm run db:stop && pnpm run db:start",
