@@ -10,29 +10,46 @@ export class DeleteExperimentUseCase {
 
   constructor(private readonly experimentRepository: ExperimentRepository) {}
 
-  async execute(id: string): Promise<Result<void>> {
-    this.logger.log(`Deleting experiment with ID ${id}`);
+  async execute(id: string, userId: string): Promise<Result<void>> {
+    this.logger.log(`Deleting experiment with ID ${id} by user ${userId}`);
 
-    // Check if experiment exists
-    const experimentResult = await this.experimentRepository.findOne(id);
+    // Check if experiment exists and user is a member
+    const accessCheckResult = await this.experimentRepository.checkAccess(id, userId);
 
-    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
-      if (!experiment) {
-        this.logger.warn(`Attempt to delete non-existent experiment with ID ${id}`);
-        return failure(AppError.notFound(`Experiment with ID ${id} not found`));
-      }
+    return accessCheckResult.chain(
+      async ({
+        experiment,
+        hasAccess,
+      }: {
+        experiment: ExperimentDto | null;
+        hasAccess: boolean;
+      }) => {
+        if (!experiment) {
+          this.logger.warn(`Attempt to delete non-existent experiment with ID ${id}`);
+          return failure(AppError.notFound(`Experiment with ID ${id} not found`));
+        }
 
-      this.logger.debug(`Deleting experiment "${experiment.name}" (ID: ${id})`);
-      // Delete the experiment
-      const deleteResult = await this.experimentRepository.delete(id);
+        if (!hasAccess) {
+          this.logger.warn(`User ${userId} is not a member of experiment ${id}`);
+          return failure(AppError.forbidden("Only experiment members can delete experiments"));
+        }
 
-      if (deleteResult.isSuccess()) {
-        this.logger.log(`Successfully deleted experiment "${experiment.name}" (ID: ${id})`);
-      } else {
-        this.logger.error(`Failed to delete experiment "${experiment.name}" (ID: ${id})`);
-      }
+        this.logger.debug(`Deleting experiment "${experiment.name}" (ID: ${id})`);
+        // Delete the experiment
+        const deleteResult = await this.experimentRepository.delete(id);
 
-      return deleteResult;
-    });
+        if (deleteResult.isSuccess()) {
+          this.logger.log(
+            `Successfully deleted experiment "${experiment.name}" (ID: ${id}) by user ${userId}`,
+          );
+        } else {
+          this.logger.error(
+            `Failed to delete experiment "${experiment.name}" (ID: ${id}) by user ${userId}`,
+          );
+        }
+
+        return deleteResult;
+      },
+    );
   }
 }

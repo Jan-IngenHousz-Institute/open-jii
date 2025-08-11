@@ -45,7 +45,7 @@ describe("UpdateExperimentUseCase", () => {
     };
 
     // Execute the update
-    const result = await useCase.execute(experiment.id, updateData);
+    const result = await useCase.execute(experiment.id, updateData, testUserId);
 
     // Verify result is success
     expect(result.isSuccess()).toBe(true);
@@ -79,7 +79,7 @@ describe("UpdateExperimentUseCase", () => {
       name: "Updated Name Only",
     };
 
-    const result = await useCase.execute(experiment.id, partialUpdate);
+    const result = await useCase.execute(experiment.id, partialUpdate, testUserId);
 
     // Verify result is success
     expect(result.isSuccess()).toBe(true);
@@ -97,11 +97,32 @@ describe("UpdateExperimentUseCase", () => {
     });
   });
 
+  it("should return FORBIDDEN error if user is not a member", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Access Control Test",
+      userId: testUserId,
+    });
+
+    // Create another user who is not a member
+    const otherUserId = await testApp.createTestUser({});
+
+    const updateData = { name: "Updated Name" };
+
+    // Try to update as non-member
+    const result = await useCase.execute(experiment.id, updateData, otherUserId);
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+    expect(result.error.message).toBe("Only experiment members can update experiments");
+  });
+
   it("should return NOT_FOUND error if experiment does not exist", async () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
     const updateData = { name: "Won't Update" };
 
-    const result = await useCase.execute(nonExistentId, updateData);
+    const result = await useCase.execute(nonExistentId, updateData, testUserId);
 
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);

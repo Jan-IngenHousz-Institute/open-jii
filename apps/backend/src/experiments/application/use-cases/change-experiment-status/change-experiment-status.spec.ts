@@ -34,7 +34,7 @@ describe("ChangeExperimentStatusUseCase", () => {
     });
 
     // Change the status to 'active'
-    const result = await useCase.execute(experiment.id, "active");
+    const result = await useCase.execute(experiment.id, "active", testUserId);
 
     expect(result.isSuccess()).toBe(true);
 
@@ -63,22 +63,26 @@ describe("ChangeExperimentStatusUseCase", () => {
     expect(result.error.code).toBe("NOT_FOUND");
   });
 
-  it("should return BAD_REQUEST error for invalid status", async () => {
+  it("should return FORBIDDEN error if user is not a member", async () => {
     // Create an experiment
     const { experiment } = await testApp.createExperiment({
-      name: "Invalid Status Test",
+      name: "Access Control Test",
       userId: testUserId,
     });
 
-    // @ts-expect-error - Testing invalid status
-    const result = await useCase.execute(experiment.id, "invalid_status");
+    // Create another user who is not a member
+    const otherUserId = await testApp.createTestUser({});
+
+    // Try to change status as non-member
+    const result = await useCase.execute(experiment.id, "active", otherUserId);
 
     expect(result.isSuccess()).toBe(false);
     expect(result._tag).toBe("failure");
 
     // Use the assertion function for cleaner tests
     assertFailure(result);
-    expect(result.error.code).toBe("BAD_REQUEST");
+    expect(result.error.code).toBe("FORBIDDEN");
+    expect(result.error.message).toBe("Only experiment members can change experiment status");
   });
 
   it("should support all valid status transitions", async () => {
@@ -90,28 +94,28 @@ describe("ChangeExperimentStatusUseCase", () => {
     });
 
     // Change to active
-    let result = await useCase.execute(experiment.id, "active");
+    let result = await useCase.execute(experiment.id, "active", testUserId);
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     let updatedExperiment = result.value;
     expect(updatedExperiment.status).toBe("active");
 
     // Change to archived
-    result = await useCase.execute(experiment.id, "archived");
+    result = await useCase.execute(experiment.id, "archived", testUserId);
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     updatedExperiment = result.value;
     expect(updatedExperiment.status).toBe("archived");
 
     // Change back to active
-    result = await useCase.execute(experiment.id, "active");
+    result = await useCase.execute(experiment.id, "active", testUserId);
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     updatedExperiment = result.value;
     expect(updatedExperiment.status).toBe("active");
 
     // Change back to provisioning
-    result = await useCase.execute(experiment.id, "provisioning");
+    result = await useCase.execute(experiment.id, "provisioning", testUserId);
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     updatedExperiment = result.value;

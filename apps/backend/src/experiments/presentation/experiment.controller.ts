@@ -98,7 +98,7 @@ export class ExperimentController {
   @TsRestHandler(contract.experiments.updateExperiment)
   updateExperiment(@CurrentUser() user: User) {
     return tsRestHandler(contract.experiments.updateExperiment, async ({ params, body }) => {
-      const result = await this.updateExperimentUseCase.execute(params.id, body);
+      const result = await this.updateExperimentUseCase.execute(params.id, body, user.id);
 
       if (result.isSuccess()) {
         const experiment = result.value;
@@ -118,9 +118,9 @@ export class ExperimentController {
   }
 
   @TsRestHandler(contract.experiments.deleteExperiment)
-  deleteExperiment() {
+  deleteExperiment(@CurrentUser() user: User) {
     return tsRestHandler(contract.experiments.deleteExperiment, async ({ params }) => {
-      const result = await this.deleteExperimentUseCase.execute(params.id);
+      const result = await this.deleteExperimentUseCase.execute(params.id, user.id);
 
       if (result.isSuccess()) {
         this.logger.log(`Experiment ${params.id} deleted`);
