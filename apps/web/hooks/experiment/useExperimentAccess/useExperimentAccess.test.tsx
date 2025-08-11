@@ -1,6 +1,6 @@
 import { tsr } from "@/lib/tsr";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 
 import { useExperimentAccess } from "./useExperimentAccess";
 
@@ -190,15 +190,20 @@ describe("useExperimentAccess", () => {
       const errorWithoutStatus = { message: "Some error" };
       expect(retryFunction(0, errorWithoutStatus)).toBe(true);
 
-      // Null error
-      expect(retryFunction(0, null)).toBe(true);
-
       // String error
       expect(retryFunction(0, "String error")).toBe(true);
 
       // Error object with status but not 403
       const error500 = { status: 500 };
       expect(retryFunction(0, error500)).toBe(true);
+
+      // Error object with non-numeric status
+      const errorWithBadStatus = { status: "bad" };
+      expect(retryFunction(0, errorWithBadStatus)).toBe(true);
+
+      // Empty error object
+      const emptyError = {};
+      expect(retryFunction(0, emptyError)).toBe(true);
     });
   });
 

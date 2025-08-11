@@ -11,7 +11,7 @@ export const useExperimentAccess = (experimentId: string) => {
     queryKey: ["experimentAccess", experimentId],
     retry: (failureCount, error) => {
       // Don't retry on 403 Forbidden - user definitely doesn't have access
-      if (error && typeof error === "object" && "status" in error && error.status === 403) {
+      if (typeof error === "object" && "status" in error && error.status === 403) {
         return false;
       }
       // Use default retry logic for other errors (up to 3 times)
