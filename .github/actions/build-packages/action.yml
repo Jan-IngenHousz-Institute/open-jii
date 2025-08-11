@@ -15,6 +15,12 @@ runs:
         echo "🔨 Building affected packages"
         AFFECTED_APPS='${{ inputs.affected_apps }}'
         
+        # Log the affected apps for debugging
+        echo "Affected apps value:"
+        echo "$AFFECTED_APPS"
+        echo "Affected apps parsed:"
+        echo "$AFFECTED_APPS" | jq '.'
+        
         # Build command with individual --filter flags for each package
         BUILD_CMD="pnpm turbo run build"
         echo $AFFECTED_APPS | jq -r '.[]' | while read -r APP; do
