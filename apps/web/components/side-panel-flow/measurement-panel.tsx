@@ -2,7 +2,7 @@
 
 import { useDebounce } from "@/hooks/useDebounce";
 import { useMemo, useState } from "react";
-import { useProtocolSearch } from "~/hooks/protocol/useProtocolSearch/useProtocolSearch.mock";
+import { useProtocolSearch } from "~/hooks/protocol/useProtocolSearch/useProtocolSearch";
 
 import type { Protocol } from "@repo/api";
 import { useTranslation } from "@repo/i18n";

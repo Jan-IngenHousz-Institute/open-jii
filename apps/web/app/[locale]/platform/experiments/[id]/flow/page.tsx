@@ -148,9 +148,7 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
     return <div>{t("notFound")}</div>;
   }
 
-  const isSaving =
-    createFlowMutation.isPending ||
-    updateFlowMutation.isPending;
+  const isSaving = createFlowMutation.isPending || updateFlowMutation.isPending;
 
   return (
     <div className="space-y-6">
