@@ -7,7 +7,8 @@ import type {
   InstructionStep,
   MeasurementStep,
   QuestionStep,
-} from "../../../../packages/api/src/schemas/flow.schema";
+} from "@repo/api";
+
 import type { NodeType } from "./node-config";
 import { nodeTypeColorMap } from "./node-config";
 
@@ -22,7 +23,7 @@ const initialFlowData: CreateFlowWithStepsBody = {
     {
       type: "INSTRUCTION",
       title: "Experiment Introduction",
-      description: 
+      description:
         "Welcome to the complete scientific workflow demonstration. This flow shows all available node types working together.",
       position: { x: 100, y: 100 },
       isStartNode: true,

@@ -13,6 +13,7 @@ interface BaseNodeProps extends NodeProps {
   nodes: Node[];
   onNodeSelect?: (node: Node | null) => void;
   onNodeDelete: (nodeId: string) => void;
+  isStatic?: boolean;
 }
 
 export const getHandlePositions = (src?: Position | string, tgt?: Position | string) => {
@@ -29,7 +30,7 @@ export const getHandlePositions = (src?: Position | string, tgt?: Position | str
 };
 
 export function BaseNode(props: BaseNodeProps) {
-  const { nodes, onNodeSelect, onNodeDelete, ...nodeProps } = props;
+  const { nodes, onNodeSelect, onNodeDelete, isStatic = false, ...nodeProps } = props;
   const { title, isStartNode, isEndNode } = nodeProps.data as {
     title: string;
     isStartNode?: boolean;
@@ -57,23 +58,25 @@ export function BaseNode(props: BaseNodeProps) {
   const borderColor = nodeTypeColorMap[nodeProps.type as NodeType].border;
 
   return (
-    <div onClick={handleSelect}>
+    <div onClick={isStatic ? undefined : handleSelect}>
       <div
         className={cn("group relative inline-block min-h-[60px] min-w-[120px] bg-transparent p-0")}
-        tabIndex={0}
+        tabIndex={isStatic ? undefined : 0}
       >
-        {/* Delete button removed for input type nodes */}
-        <button
-          className={cn(
-            "pointer-events-auto absolute right-1 top-1 z-20 h-5 w-5 cursor-pointer rounded-full p-0 text-center text-xs leading-[18px] opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100",
-            (nodeProps.selected || nodeProps.dragging) && "opacity-100",
-          )}
-          title="Delete node"
-          onClick={handleDelete}
-          aria-label="Delete node"
-        >
-          <span className="text-[18px] font-bold leading-[18px]">×</span>
-        </button>
+        {/* Delete button - only show if not static */}
+        {!isStatic && (
+          <button
+            className={cn(
+              "pointer-events-auto absolute right-1 top-1 z-20 h-5 w-5 cursor-pointer rounded-full p-0 text-center text-xs leading-[18px] opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100",
+              (nodeProps.selected || nodeProps.dragging) && "opacity-100",
+            )}
+            title="Delete node"
+            onClick={handleDelete}
+            aria-label="Delete node"
+          >
+            <span className="text-[18px] font-bold leading-[18px]">×</span>
+          </button>
+        )}
         <div className="node-hover-area absolute inset-0 z-[9] rounded-xl" />
         <div
           className={cn(

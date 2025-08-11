@@ -2,9 +2,12 @@
 
 import { ErrorDisplay } from "@/components/error-display";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
+import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
 import { formatDate } from "@/util/date";
 import { CalendarIcon } from "lucide-react";
-import { use } from "react";
+import { use, useMemo } from "react";
+import { StaticFlowViewer } from "@/components/static-flow-viewer";
+import type { Node, Edge } from "@xyflow/react";
 
 import { useTranslation } from "@repo/i18n";
 import {
@@ -16,6 +19,8 @@ import {
   RichTextRenderer,
 } from "@repo/ui/components";
 
+import { nodeTypeColorMap } from "~/components/react-flow/node-config";
+
 interface ExperimentOverviewPageProps {
   params: Promise<{ id: string }>;
 }
@@ -24,6 +29,54 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
   const { id } = use(params);
   const { data, isLoading, error } = useExperiment(id);
   const { t } = useTranslation();
+
+  // Get flow data for this experiment
+  const experiment = data?.body;
+  const { data: experimentFlow } = useExperimentFlow(id);
+
+  // Transform flow data to React Flow format for static display
+  const { nodes, edges } = useMemo(() => {
+    if (!experimentFlow?.body) {
+      return { nodes: [], edges: [] };
+    }
+
+    const flowData = experimentFlow.body;
+
+    // Convert API steps to React Flow nodes
+    const nodes: Node[] = flowData.steps.map((step) => {
+      const config = nodeTypeColorMap[step.type];
+      return {
+        id: step.id,
+        type: step.type,
+        position: step.position,
+        sourcePosition: config.defaultSourcePosition,
+        targetPosition: config.defaultTargetPosition,
+        data: {
+          title: step.title,
+          description: step.description,
+          stepSpecification: step.stepSpecification,
+          isStartNode: step.isStartNode,
+          isEndNode: step.isEndNode,
+        },
+        measured: step.size,
+      };
+    });
+
+    // Convert API connections to React Flow edges
+    const edges: Edge[] = flowData.connections.map((connection) => ({
+      id: connection.id,
+      source: connection.sourceStepId,
+      target: connection.targetStepId,
+      type: connection.type,
+      animated: connection.animated,
+      data: {
+        condition: connection.condition,
+        priority: connection.priority,
+      },
+    }));
+
+    return { nodes, edges };
+  }, [experimentFlow]);
   if (isLoading) {
     return <div>{t("common.loading")}</div>;
   }
@@ -35,8 +88,6 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
   if (!data) {
     return <div>{t("experiments.notFound")}</div>;
   }
-
-  const experiment = data.body;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -111,6 +162,14 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           <RichTextRenderer content={experiment.description ?? ""} />
         </CardContent>
       </Card>
+
+      {/* Static Flow Display */}
+      <StaticFlowViewer
+        nodes={nodes}
+        edges={edges}
+        title={t("experiments.flow.title")}
+        description={t("experiments.flow.staticDescription")}
+      />
     </div>
   );
 }

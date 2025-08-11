@@ -2,8 +2,9 @@
 
 import { ErrorDisplay } from "@/components/error-display";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
-import { useExperimentUpdate } from "@/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
-import { useCreateFlowWithSteps, useUpdateFlowWithSteps, useFlowWithGraph } from "@/hooks/flow";
+import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
+import { useExperimentFlowCreate } from "@/hooks/experiment/useExperimentFlowCreate/useExperimentFlowCreate";
+import { useExperimentFlowUpdate } from "@/hooks/experiment/useExperimentFlowUpdate/useExperimentFlowUpdate";
 import type { Node, Edge } from "@xyflow/react";
 import { use, useCallback, useState, useEffect } from "react";
 import { NewExperimentFlow } from "~/components/new-experiment/new-experiment-flow";
@@ -28,15 +29,14 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
   const [currentEdges, setCurrentEdges] = useState<Edge[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Get existing flow if experiment has one
+  // Get existing flow for this experiment
   const experimentData = experiment?.body;
-  const existingFlowId = experimentData?.flowId;
-  const { data: existingFlowWithGraph } = useFlowWithGraph(existingFlowId ?? "");
+  const { data: existingFlow } = useExperimentFlow(id);
 
   // Load existing flow data into React Flow editor
   useEffect(() => {
-    if (existingFlowWithGraph?.body && existingFlowId) {
-      const flowData = existingFlowWithGraph.body;
+    if (existingFlow?.body) {
+      const flowData = existingFlow.body;
 
       // Convert API steps to React Flow nodes
       const nodes: Node[] = flowData.steps.map((step) => {
@@ -77,22 +77,16 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
       setCurrentEdges(edges);
       setHasUnsavedChanges(false);
     }
-  }, [existingFlowWithGraph, existingFlowId]);
+  }, [existingFlow]);
 
   // Hooks for flow operations
-  const createFlowMutation = useCreateFlowWithSteps({
-    onSuccess: (flowData) => {
-      // Update experiment to reference the new flow
-      updateExperimentMutation.mutate({
-        params: { id },
-        body: { flowId: flowData.id },
-      });
+  const createFlowMutation = useExperimentFlowCreate({
+    onSuccess: () => {
       setHasUnsavedChanges(false);
     },
   });
 
-  const updateFlowMutation = useUpdateFlowWithSteps({
-    flowId: existingFlowId ?? "",
+  const updateFlowMutation = useExperimentFlowUpdate({
     onSuccess: () => {
       setHasUnsavedChanges(false);
     },
@@ -100,8 +94,6 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
       console.error("Failed to update flow:", error);
     },
   });
-
-  const updateExperimentMutation = useExperimentUpdate();
 
   const handleFlowStateChange = useCallback((nodes: Node[], edges: Edge[]) => {
     setCurrentNodes(nodes);
@@ -115,36 +107,31 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
     // Use the utility function to transform React Flow data to API format
     const { steps: flowSteps, connections } = transformFlowDataForAPI(currentNodes, currentEdges);
 
-    if (existingFlowId && existingFlowWithGraph?.body) {
+    if (existingFlow?.body) {
       // Update existing flow
       updateFlowMutation.mutate({
-        params: { id: existingFlowId },
+        params: { id },
         body: {
-          steps: {
-            create: flowSteps,
-          },
-          connections: {
-            create: connections,
-          },
+          steps: flowSteps,
+          connections,
         },
       });
     } else {
       // Create new flow
       createFlowMutation.mutate({
+        params: { id },
         body: {
-          name: `${experimentData.name} Flow`,
-          description: `Flow for experiment: ${experimentData.name}`,
           steps: flowSteps,
           connections,
         },
       });
     }
   }, [
+    id,
     experimentData,
     currentNodes,
     currentEdges,
-    existingFlowId,
-    existingFlowWithGraph?.body,
+    existingFlow?.body,
     createFlowMutation,
     updateFlowMutation,
   ]);
@@ -163,8 +150,7 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
 
   const isSaving =
     createFlowMutation.isPending ||
-    updateFlowMutation.isPending ||
-    updateExperimentMutation.isPending;
+    updateFlowMutation.isPending;
 
   return (
     <div className="space-y-6">

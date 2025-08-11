@@ -42,7 +42,6 @@ export const getPostgresError = (
     return null;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
   const cause = error.cause;
   if (!isPostgresError(cause)) {
     return null;
