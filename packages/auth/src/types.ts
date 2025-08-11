@@ -48,3 +48,21 @@ export interface User extends DefaultUser {
 export interface Session extends DefaultSession {
   user: User;
 }
+
+/**
+ * Type guard to check if the session is of type `Session`
+ *
+ * @param session - The session object to check
+ * @returns true if the session is of type `Session`, false otherwise
+ */
+export const isSession = (session: unknown): session is Session => {
+  return (
+    typeof session === "object" &&
+    session !== null &&
+    "user" in session &&
+    typeof session.user === "object" &&
+    session.user !== null &&
+    "id" in session.user &&
+    "registered" in session.user
+  );
+};

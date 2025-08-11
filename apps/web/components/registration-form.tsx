@@ -1,10 +1,11 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import React from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
-import { handleLogout } from "~/app/actions/auth";
+import { handleRegister } from "~/app/actions/auth";
 import { useCreateUserProfile } from "~/hooks/useCreateUserProfile";
 
 import { useTranslation } from "@repo/i18n";
@@ -25,18 +26,12 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-export function RegistrationForm() {
+export function RegistrationForm({ callbackUrl }: { callbackUrl?: string }) {
   const { t } = useTranslation();
-  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const router = useRouter();
 
   const registrationSchema = z
     .object({
@@ -67,15 +62,11 @@ export function RegistrationForm() {
     },
   });
 
-  const translations = {
-    title: t("registration.signOutTitle"),
-    description: t("registration.signOutDescription"),
-    confirm: t("registration.signOutConfirm"),
-  };
-
   const { mutate: createUserProfile } = useCreateUserProfile({
-    onSuccess: () => {
-      setDialogOpen(true);
+    onSuccess: async () => {
+      await handleRegister();
+      toast({ description: t("registration.successMessage") });
+      router.push(callbackUrl ?? "/");
     },
   });
 
@@ -87,7 +78,6 @@ export function RegistrationForm() {
         organization: data.organization,
       },
     });
-    toast({ description: t("registration.successMessage") });
   }
 
   return (
@@ -222,36 +212,6 @@ export function RegistrationForm() {
           </Form>
         </CardContent>
       </Card>
-      <MandatorySignOutDialog translations={translations} open={dialogOpen} />
     </div>
-  );
-}
-
-interface MandatorySignOutDialogProps {
-  translations: {
-    title: string;
-    description: string;
-    confirm: string;
-  };
-  open: boolean;
-}
-
-export function MandatorySignOutDialog({ translations, open }: MandatorySignOutDialogProps) {
-  return (
-    <Dialog open={open}>
-      <DialogContent className="[&>button:last-child]:hidden">
-        <DialogHeader>
-          <DialogTitle>{translations.title}</DialogTitle>
-          <DialogDescription>{translations.description}</DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="gap-2 sm:justify-end">
-          <form action={() => handleLogout()} className="inline-flex">
-            <Button type="submit" variant="default">
-              {translations.confirm}
-            </Button>
-          </form>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
