@@ -14,8 +14,8 @@ import { RemoveExperimentProtocolUseCase } from "./application/use-cases/experim
 import { CreateFlowUseCase } from "./application/use-cases/flows/create-flow";
 import { GetFlowUseCase } from "./application/use-cases/flows/get-flow";
 import { UpdateFlowUseCase } from "./application/use-cases/flows/update-flow";
-import { GetExperimentUseCase } from "./application/use-cases/get-experiment/get-experiment";
 import { GetExperimentAccessUseCase } from "./application/use-cases/get-experiment-access/get-experiment-access";
+import { GetExperimentUseCase } from "./application/use-cases/get-experiment/get-experiment";
 import { ListExperimentsUseCase } from "./application/use-cases/list-experiments/list-experiments";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
 import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-provisioning-status/update-provisioning-status";

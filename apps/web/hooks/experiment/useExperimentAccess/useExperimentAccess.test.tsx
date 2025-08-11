@@ -43,7 +43,9 @@ describe("useExperimentAccess", () => {
       error: null,
       isLoading: true,
     });
-    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery;
+    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
+      typeof mockTsr.experiments.getExperimentAccess.useQuery
+    >;
 
     renderHook(() => useExperimentAccess("experiment-123"), {
       wrapper: createWrapper(),
@@ -52,11 +54,11 @@ describe("useExperimentAccess", () => {
     expect(mockUseQuery).toHaveBeenCalledWith({
       queryData: { params: { id: "experiment-123" } },
       queryKey: ["experimentAccess", "experiment-123"],
-      retry: expect.any(Function),
+      retry: expect.any(Function) as (failureCount: number, error: unknown) => boolean,
     });
   });
 
-  it("should return successful experiment access data", async () => {
+  it("should return successful experiment access data", () => {
     const mockData = {
       status: 200,
       body: {
@@ -76,7 +78,9 @@ describe("useExperimentAccess", () => {
       error: null,
       isLoading: false,
     });
-    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery;
+    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
+      typeof mockTsr.experiments.getExperimentAccess.useQuery
+    >;
 
     const { result } = renderHook(() => useExperimentAccess("experiment-123"), {
       wrapper: createWrapper(),
@@ -87,7 +91,7 @@ describe("useExperimentAccess", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("should handle 404 error for non-existent experiment", async () => {
+  it("should handle 404 error for non-existent experiment", () => {
     const mockError = {
       status: 404,
       message: "Experiment not found",
@@ -98,7 +102,9 @@ describe("useExperimentAccess", () => {
       error: mockError,
       isLoading: false,
     });
-    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery;
+    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
+      typeof mockTsr.experiments.getExperimentAccess.useQuery
+    >;
 
     const { result } = renderHook(() => useExperimentAccess("non-existent"), {
       wrapper: createWrapper(),
@@ -109,7 +115,7 @@ describe("useExperimentAccess", () => {
     expect(result.current.isLoading).toBe(false);
   });
 
-  it("should handle 403 error for unauthorized access", async () => {
+  it("should handle 403 error for unauthorized access", () => {
     const mockError = {
       status: 403,
       message: "You do not have permission to access this experiment",
@@ -120,7 +126,9 @@ describe("useExperimentAccess", () => {
       error: mockError,
       isLoading: false,
     });
-    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery;
+    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
+      typeof mockTsr.experiments.getExperimentAccess.useQuery
+    >;
 
     const { result } = renderHook(() => useExperimentAccess("private-experiment"), {
       wrapper: createWrapper(),
@@ -135,15 +143,21 @@ describe("useExperimentAccess", () => {
     let retryFunction: (failureCount: number, error: unknown) => boolean;
 
     beforeEach(() => {
-      const mockUseQuery = jest.fn().mockImplementation((options) => {
-        retryFunction = options.retry;
-        return {
-          data: undefined,
-          error: null,
-          isLoading: true,
-        };
-      });
-      mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery;
+      const mockUseQuery = jest
+        .fn()
+        .mockImplementation(
+          (options: { retry: (failureCount: number, error: unknown) => boolean }) => {
+            retryFunction = options.retry;
+            return {
+              data: undefined,
+              error: null,
+              isLoading: true,
+            };
+          },
+        );
+      mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
+        typeof mockTsr.experiments.getExperimentAccess.useQuery
+      >;
 
       renderHook(() => useExperimentAccess("experiment-123"), {
         wrapper: createWrapper(),
@@ -227,7 +241,9 @@ describe("useExperimentAccess", () => {
       error: null,
       isLoading: false,
     });
-    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery;
+    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
+      typeof mockTsr.experiments.getExperimentAccess.useQuery
+    >;
 
     const { result } = renderHook(() => useExperimentAccess("public-experiment"), {
       wrapper: createWrapper(),
@@ -258,7 +274,9 @@ describe("useExperimentAccess", () => {
       error: null,
       isLoading: false,
     });
-    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery;
+    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
+      typeof mockTsr.experiments.getExperimentAccess.useQuery
+    >;
 
     const { result } = renderHook(() => useExperimentAccess("admin-experiment"), {
       wrapper: createWrapper(),
@@ -274,7 +292,9 @@ describe("useExperimentAccess", () => {
       error: null,
       isLoading: true,
     });
-    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery;
+    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
+      typeof mockTsr.experiments.getExperimentAccess.useQuery
+    >;
 
     const { result } = renderHook(() => useExperimentAccess("experiment-123"), {
       wrapper: createWrapper(),
@@ -291,7 +311,9 @@ describe("useExperimentAccess", () => {
       error: null,
       isLoading: false,
     });
-    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery;
+    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
+      typeof mockTsr.experiments.getExperimentAccess.useQuery
+    >;
 
     const wrapper = createWrapper();
 
