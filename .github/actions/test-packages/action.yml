@@ -13,12 +13,19 @@ runs:
       shell: bash
       run: |
         echo "🧪 Testing affected packages"
+
+        # Direct approach using the input
         AFFECTED_APPS='${{ inputs.affected_apps }}'
-        
-        # Test command with individual --filter flags for each package
+        echo "Affected apps: $AFFECTED_APPS"
+
+        # Parse apps into array to construct command
+        APPS=($(echo $AFFECTED_APPS | jq -r '.[]'))
+
+        # Test command string
         TEST_CMD="pnpm turbo run test"
-        echo $AFFECTED_APPS | jq -r '.[]' | while read -r APP; do
+        for APP in "${APPS[@]}"; do
           TEST_CMD="$TEST_CMD --filter=$APP"
         done
+
         echo "Running: $TEST_CMD"
         eval "$TEST_CMD"

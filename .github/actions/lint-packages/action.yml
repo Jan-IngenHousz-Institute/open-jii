@@ -13,12 +13,19 @@ runs:
       shell: bash
       run: |
         echo "🔎 Linting affected packages"
+
+        # Direct approach using the input
         AFFECTED_APPS='${{ inputs.affected_apps }}'
-        
-        # Lint command with individual --filter flags for each package
+        echo "Affected apps: $AFFECTED_APPS"
+
+        # Parse apps into array to construct command
+        APPS=($(echo $AFFECTED_APPS | jq -r '.[]'))
+
+        # Lint command string
         LINT_CMD="pnpm turbo run lint"
-        echo $AFFECTED_APPS | jq -r '.[]' | while read -r APP; do
+        for APP in "${APPS[@]}"; do
           LINT_CMD="$LINT_CMD --filter=$APP"
         done
+
         echo "Running: $LINT_CMD"
         eval "$LINT_CMD"
