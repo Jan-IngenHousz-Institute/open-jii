@@ -1,0 +1,17 @@
+name: "Lint Packages"
+description: "Lints affected packages"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Lint Code
+      shell: bash
+      run: |
+        echo "🔎 Linting affected packages"
+        # Lint command with individual --filter flags for each package
+        LINT_CMD="pnpm turbo run lint"
+        cat affected_apps.json | jq -r '.[]' | while read -r APP; do
+          LINT_CMD="$LINT_CMD --filter=$APP"
+        done
+        echo "Running: $LINT_CMD"
+        eval "$LINT_CMD"

@@ -25,22 +25,36 @@ jobs:
   build_lint_test:
     name: Build, Lint, Test & AsyncAPI
     runs-on: ubuntu-latest
+    env:
+      DO_NOT_TRACK: 1
+      TURBO_TELEMETRY_DISABLED: 1
+      environment: "dev"
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Build, Lint & Test
-        id: blt
-        uses: ./.github/actions/blt
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
         with:
           node-version: "22"
-          artifact_retention: "7"
-          environment: "dev"
-        env:
-          DO_NOT_TRACK: 1
-          TURBO_TELEMETRY_DISABLED: 1
+
+      - name: Detect Affected Packages
+        id: detect
+        uses: ./.github/actions/detect-affected-packages
+
+      - name: Build Packages
+        if: steps.detect.outputs.has_affected_apps == 'true'
+        uses: ./.github/actions/build-packages
+
+      - name: Lint Packages
+        if: steps.detect.outputs.has_affected_apps == 'true'
+        uses: ./.github/actions/lint-packages
+
+      - name: Test Packages
+        if: steps.detect.outputs.has_affected_apps == 'true'
+        uses: ./.github/actions/test-packages
 
   # tofu:
   #   name: OpenTofu
