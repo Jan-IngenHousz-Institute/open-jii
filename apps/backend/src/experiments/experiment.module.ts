@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
-import { DatabricksModule } from "../common/services/databricks/databricks.module";
+import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
+import { DatabricksModule } from "../common/modules/databricks/databricks.module";
 // Use Cases
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "./application/use-cases/delete-experiment/delete-experiment";
@@ -19,6 +20,7 @@ import { GetExperimentUseCase } from "./application/use-cases/get-experiment/get
 import { ListExperimentsUseCase } from "./application/use-cases/list-experiments/list-experiments";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
 import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-provisioning-status/update-provisioning-status";
+import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 // Repositories
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
 import { ExperimentProtocolRepository } from "./core/repositories/experiment-protocol.repository";
@@ -43,6 +45,12 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ExperimentWebhookController,
   ],
   providers: [
+    // Port implementations
+    {
+      provide: DATABRICKS_PORT,
+      useExisting: DatabricksAdapter,
+    },
+
     // Repositories
     ExperimentRepository,
     ExperimentMemberRepository,
