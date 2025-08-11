@@ -21,6 +21,7 @@ import {
   protocols,
   experimentProtocols,
   organizations,
+  flows,
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
@@ -123,6 +124,9 @@ export class TestHarness {
     // Clean up test data in correct order (respecting foreign key constraints)
     await this.database.delete(auditLogs).execute();
     await this.database.delete(experimentMembers).execute();
+    await this.database.delete(experimentProtocols).execute();
+    // Flows reference experiments, so delete flows before experiments
+    await this.database.delete(flows).execute();
     await this.database.delete(experiments).execute();
     await this.database.delete(protocols).execute();
     await this.database.delete(profiles).execute();
@@ -133,7 +137,7 @@ export class TestHarness {
   /**
    * Create helper functions for making HTTP requests with authentication support
    */
-  private request = (method: "get" | "post" | "patch" | "delete") => (url: string) => {
+  private request = (method: "get" | "post" | "put" | "patch" | "delete") => (url: string) => {
     if (!this._request) {
       throw new Error("Call setup() before making requests.");
     }
@@ -169,7 +173,12 @@ export class TestHarness {
   // Mock the auth session for testing
   private mockUserSession(userId: string) {
     jest.spyOn(authExpress, "getSession").mockResolvedValue({
-      user: { id: userId, name: "Test User", email: "test@example.com", registered: true },
+      user: {
+        id: userId,
+        name: "Test User",
+        email: "test@example.com",
+        registered: true,
+      },
       expires: new Date(Date.now() + 60 * 1000).toISOString(),
     });
   }
@@ -182,6 +191,7 @@ export class TestHarness {
   // HTTP request methods
   public get: ReturnType<typeof this.request> = this.request("get");
   public post: ReturnType<typeof this.request> = this.request("post");
+  public put: ReturnType<typeof this.request> = this.request("put");
   public patch: ReturnType<typeof this.request> = this.request("patch");
   public delete: ReturnType<typeof this.request> = this.request("delete");
 
@@ -301,5 +311,64 @@ export class TestHarness {
    */
   public resolvePath(path: string, params: Record<string, string>): string {
     return Object.entries(params).reduce((p, [key, value]) => p.replace(`:${key}`, value), path);
+  }
+
+  /**
+   * Build a minimal valid Flow graph for tests.
+   * Defaults to a single question node (yes_no) and no edges.
+   * Options allow changing question kind and adding an instruction node + edge.
+   */
+  public sampleFlowGraph(options?: {
+    questionKind?: "yes_no" | "open_ended" | "multi_choice";
+    includeInstruction?: boolean;
+  }) {
+    const kind = options?.questionKind ?? "yes_no";
+
+    const questionContent =
+      kind === "yes_no"
+        ? { kind: "yes_no" as const, text: "Q1" }
+        : kind === "open_ended"
+          ? { kind: "open_ended" as const, text: "Q1" }
+          : { kind: "multi_choice" as const, text: "Q1", options: ["a", "b"] };
+
+    const nodes: (
+      | {
+          id: string;
+          type: "question";
+          name: string;
+          content: typeof questionContent;
+          isStart: boolean;
+        }
+      | {
+          id: string;
+          type: "instruction";
+          name: string;
+          content: { text: string };
+          isStart: boolean;
+        }
+    )[] = [
+      {
+        id: "n1",
+        type: "question",
+        name: "Q1",
+        content: questionContent,
+        isStart: true,
+      },
+    ];
+
+    const edges: { id: string; source: string; target: string; label?: string | null }[] = [];
+
+    if (options?.includeInstruction) {
+      nodes.push({
+        id: "n2",
+        type: "instruction",
+        name: "Read this",
+        content: { text: "Note" },
+        isStart: false,
+      });
+      edges.push({ id: "e1", source: "n1", target: "n2", label: "next" });
+    }
+
+    return { nodes, edges };
   }
 }

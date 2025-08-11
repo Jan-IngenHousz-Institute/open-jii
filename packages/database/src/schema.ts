@@ -237,3 +237,18 @@ export const protocols = pgTable("protocols", {
     .$onUpdate(() => new Date())
     .notNull(),
 });
+
+// Flows Table - stores a single graph JSON per experiment (1:1)
+export const flows = pgTable("flows", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  experimentId: uuid("experiment_id")
+    .notNull()
+    .references(() => experiments.id, { onDelete: "cascade" })
+    .unique(),
+  graph: jsonb("graph").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
