@@ -147,6 +147,13 @@ export const zFlowNode = z.object({
   content: z.union([zQuestionContent, zInstructionContent, zMeasurementContent]),
   // A node can be marked as a start node. Exactly one node must be the start node for any flow.
   isStart: z.boolean().optional().default(false),
+  // Optional persisted layout position (added later for backwards compatibility)
+  position: z
+    .object({
+      x: z.number(),
+      y: z.number(),
+    })
+    .optional(),
 });
 
 export const zFlowEdge = z.object({

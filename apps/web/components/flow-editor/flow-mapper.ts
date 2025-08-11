@@ -65,7 +65,8 @@ export class FlowMapper {
       return {
         id: apiNode.id,
         type: reactFlowType,
-        position: { x: Math.random() * 400, y: Math.random() * 400 }, // TODO: replace with persisted layout when available
+        // Use persisted position when available, fallback to deterministic placement (0,0)
+        position: apiNode.position ?? { x: 0, y: 0 },
         sourcePosition: config.defaultSourcePosition,
         targetPosition: config.defaultTargetPosition,
         data: nodeData,
@@ -167,6 +168,7 @@ export class FlowMapper {
         name: nodeTitle || "Untitled",
         content,
         isStart: Boolean(data.isStartNode),
+        position: { x: node.position.x, y: node.position.y },
       };
     });
 

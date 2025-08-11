@@ -2,13 +2,14 @@
 
 import { ErrorDisplay } from "@/components/error-display";
 import { FlowEditor } from "@/components/flow-editor";
+import type { FlowEditorHandle } from "@/components/flow-editor";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
 import { useExperimentFlowCreate } from "@/hooks/experiment/useExperimentFlowCreate/useExperimentFlowCreate";
 import { useExperimentFlowUpdate } from "@/hooks/experiment/useExperimentFlowUpdate/useExperimentFlowUpdate";
-import { use, useState, useCallback } from "react";
+import { use, useState, useRef, useCallback } from "react";
 
-import type { UpsertFlowBody } from "@repo/api";
+// UpsertFlowBody type no longer needed directly (constructed on-demand by editor)
 import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components";
@@ -27,8 +28,8 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
   const experimentData = experiment?.body;
   const { data: existingFlow, refetch } = useExperimentFlow(id);
 
-  // Flow state
-  const [currentFlowData, setCurrentFlowData] = useState<UpsertFlowBody | null>(null);
+  // Flow state / editor ref
+  const flowEditorRef = useRef<FlowEditorHandle | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const createFlowMutation = useExperimentFlowCreate({
@@ -55,28 +56,15 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
     },
   });
 
-  const handleFlowChange = useCallback((flowData: UpsertFlowBody) => {
-    setCurrentFlowData(flowData);
-    setHasUnsavedChanges(true);
-  }, []);
-
-  const handleSave = () => {
-    if (!currentFlowData) return;
-
+  const handleSave = useCallback(() => {
+    const data = flowEditorRef.current ? flowEditorRef.current.getFlowData() : null;
+    if (!data) return; // not ready
     if (existingFlow?.body) {
-      // Update existing flow
-      updateFlowMutation.mutate({
-        params: { id },
-        body: currentFlowData,
-      });
+      updateFlowMutation.mutate({ params: { id }, body: data });
     } else {
-      // Create new flow
-      createFlowMutation.mutate({
-        params: { id },
-        body: currentFlowData,
-      });
+      createFlowMutation.mutate({ params: { id }, body: data });
     }
-  };
+  }, [createFlowMutation, updateFlowMutation, existingFlow, id]);
 
   if (isLoading) {
     return <div>{t("loading")}</div>;
@@ -106,11 +94,9 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
       </div>
 
       <FlowEditor
+        ref={flowEditorRef}
         initialFlow={existingFlow?.body}
-        onFlowChange={handleFlowChange}
-        onNodeSelect={() => {
-          // Handle node selection if needed
-        }}
+        onDirtyChange={() => setHasUnsavedChanges(true)}
       />
     </div>
   );
