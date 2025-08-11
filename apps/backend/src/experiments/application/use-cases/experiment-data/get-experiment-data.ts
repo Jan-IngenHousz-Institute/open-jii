@@ -3,6 +3,7 @@ import { Injectable, Logger, Inject } from "@nestjs/common";
 import { ExperimentDataQuery } from "@repo/api";
 
 import type { SchemaData } from "../../../../common/modules/databricks/services/sql/sql.types";
+import type { Table } from "../../../../common/modules/databricks/services/tables/tables.types";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
@@ -112,7 +113,7 @@ export class GetExperimentDataUseCase {
 
             // Check if the specified table exists
             const tableExists = tablesResult.value.tables.some(
-              (table: TableDataDto) => table.name === query.tableName,
+              (table: Table) => table.name === query.tableName,
             );
 
             if (!tableExists) {
@@ -197,7 +198,7 @@ export class GetExperimentDataUseCase {
                 schema_name: table.schema_name,
                 page,
                 pageSize,
-                totalPages: 1, // Sample data is just 1 page
+                totalPages: 1,
                 totalRows: dataResult.isSuccess() ? dataResult.value.totalRows : 0,
               };
 

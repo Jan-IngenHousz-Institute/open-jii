@@ -31,7 +31,7 @@ export interface StatementResponse {
     truncated?: boolean;
   };
   result?: {
-    data_array: any[][];
+    data_array: (string | null)[][];
     chunk_index: number;
     row_count: number;
     row_offset: number;
@@ -44,7 +44,7 @@ export interface SchemaData {
     type_name: string;
     type_text: string;
   }[];
-  rows: any[][];
+  rows: (string | null)[][];
   totalRows: number;
   truncated: boolean;
 }

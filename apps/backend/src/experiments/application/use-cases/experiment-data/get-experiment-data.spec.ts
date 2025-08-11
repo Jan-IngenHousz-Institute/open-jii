@@ -754,6 +754,8 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
-    expect(result.error.message).toContain("Table 'non_existent_table' not found in this experiment");
+    expect(result.error.message).toContain(
+      "Table 'non_existent_table' not found in this experiment",
+    );
   });
 });
