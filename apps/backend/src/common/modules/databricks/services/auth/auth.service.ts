@@ -99,7 +99,8 @@ export class DatabricksAuthService {
   }
 
   private validateTokenResponse(accessToken: string, expiresIn: number): void {
-    if (!accessToken.trim()) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (!accessToken?.trim()) {
       throw AppError.internal("Invalid token response: missing access_token");
     }
     if (!expiresIn || expiresIn <= 0) {
