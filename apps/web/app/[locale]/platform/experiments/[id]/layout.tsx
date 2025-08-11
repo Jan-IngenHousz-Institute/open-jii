@@ -85,6 +85,14 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   };
 
   const activeTab = getActiveTab();
+  // Reusable renderer for tabs requiring member access
+  function renderAccessControlledLink(href: string, label: string) {
+    return hasAccess ? (
+      <Link href={href}>{label}</Link>
+    ) : (
+      <span className="cursor-not-allowed opacity-50">{label}</span>
+    );
+  }
   return (
     <div className="space-y-6">
       <div>
@@ -97,14 +105,10 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
       <Tabs value={activeTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview" asChild>
-            <Link href={`/platform/experiments/${id}`} locale={locale}>
-              {t("experiments.overview")}
-            </Link>
+            <Link href={`/platform/experiments/${id}`}>{t("experiments.overview")}</Link>
           </TabsTrigger>
           <TabsTrigger value="data" asChild>
-            <Link href={`/platform/experiments/${id}/data`} locale={locale}>
-              {t("experiments.data")}
-            </Link>
+            <Link href={`/platform/experiments/${id}/data`}>{t("experiments.data")}</Link>
           </TabsTrigger>
           <TabsTrigger
             value="settings"
@@ -112,23 +116,21 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
             aria-label={!hasAccess ? t("experiments.needMemberAccess") : undefined}
             asChild={hasAccess}
           >
-            {hasAccess ? (
-              <Link href={`/platform/experiments/${id}/settings`} locale={locale}>
-                {t("navigation.settings")}
-              </Link>
-            ) : (
-              <span className="cursor-not-allowed opacity-50">{t("navigation.settings")}</span>
+            {renderAccessControlledLink(
+              `/platform/experiments/${id}/settings`,
+              t("navigation.settings"),
             )}
           </TabsTrigger>
-          <TabsTrigger value="flow" asChild>
-            <Link href={`/platform/experiments/${id}/flow`} locale={locale}>
-              {t("experiments.flow.tabLabel")}
-            </Link>
-          </TabsTrigger>
-          <TabsTrigger value="settings" asChild>
-            <Link href={`/platform/experiments/${id}/settings`} locale={locale}>
-              {t("navigation.settings")}
-            </Link>
+          <TabsTrigger
+            value="flow"
+            disabled={!hasAccess}
+            aria-label={!hasAccess ? t("experiments.needMemberAccess") : undefined}
+            asChild={hasAccess}
+          >
+            {renderAccessControlledLink(
+              `/platform/experiments/${id}/flow`,
+              t("experiments.flow.tabLabel"),
+            )}
           </TabsTrigger>
         </TabsList>
 
