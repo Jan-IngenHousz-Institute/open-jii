@@ -1,0 +1,29 @@
+name: "Build Packages"
+description: "Builds affected packages"
+
+inputs:
+  affected_apps:
+    description: "JSON array of affected app names"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Build Apps
+      shell: bash
+      run: |
+        echo "🔨 Building affected packages"
+
+        AFFECTED_APPS='${{ inputs.affected_apps }}'
+
+        # Parse apps into array to construct command
+        APPS=($(echo $AFFECTED_APPS | jq -r '.[]'))
+
+        # Build command string
+        BUILD_CMD="pnpm turbo run build"
+        for APP in "${APPS[@]}"; do
+          BUILD_CMD="$BUILD_CMD --filter=$APP"
+        done
+
+        echo "Running: $BUILD_CMD"
+        eval "$BUILD_CMD"

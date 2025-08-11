@@ -1,0 +1,29 @@
+name: "Lint Packages"
+description: "Lints affected packages"
+
+inputs:
+  affected_apps:
+    description: "JSON array of affected app names"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Lint Code
+      shell: bash
+      run: |
+        echo "🔎 Linting affected packages"
+
+        AFFECTED_APPS='${{ inputs.affected_apps }}'
+
+        # Parse apps into array to construct command
+        APPS=($(echo $AFFECTED_APPS | jq -r '.[]'))
+
+        # Lint command string
+        LINT_CMD="pnpm turbo run lint"
+        for APP in "${APPS[@]}"; do
+          LINT_CMD="$LINT_CMD --filter=$APP"
+        done
+
+        echo "Running: $LINT_CMD"
+        eval "$LINT_CMD"
