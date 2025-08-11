@@ -1,9 +1,8 @@
-import type { UseMutationOptions } from "@tanstack/react-query";
 import { tsr } from "@/lib/tsr";
 
 interface UseExperimentFlowCreateOptions {
-  onSuccess?: (data: any) => void;
-  onError?: (error: any) => void;
+  onSuccess?: (data: unknown) => void;
+  onError?: (error: unknown) => void;
 }
 
 /**
@@ -13,7 +12,7 @@ interface UseExperimentFlowCreateOptions {
  */
 export const useExperimentFlowCreate = (options?: UseExperimentFlowCreateOptions) => {
   return tsr.experiments.createFlow.useMutation({
-    onSuccess: options?.onSuccess,
-    onError: options?.onError,
-  } as UseMutationOptions);
+    onSuccess: (data) => options?.onSuccess?.(data),
+    onError: (error) => options?.onError?.(error),
+  });
 };

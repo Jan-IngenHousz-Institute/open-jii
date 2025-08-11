@@ -1,19 +1,18 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { FlowEditor } from "@/components/flow-editor";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
 import { useExperimentFlowCreate } from "@/hooks/experiment/useExperimentFlowCreate/useExperimentFlowCreate";
 import { useExperimentFlowUpdate } from "@/hooks/experiment/useExperimentFlowUpdate/useExperimentFlowUpdate";
-import type { Node, Edge } from "@xyflow/react";
-import { use, useCallback, useState, useEffect } from "react";
-import { NewExperimentFlow } from "~/components/new-experiment/new-experiment-flow";
-import { transformFlowDataForAPI } from "~/components/react-flow/flow-utils";
-import { nodeTypeColorMap } from "~/components/react-flow/node-config";
+import { use, useState, useCallback } from "react";
 
+import type { UpsertFlowBody } from "@repo/api";
 import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components";
+import { toast } from "@repo/ui/hooks";
 
 interface ExperimentFlowPageProps {
   params: Promise<{ id: string; locale: Locale }>;
@@ -24,117 +23,60 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
   const { data: experiment, isLoading, error } = useExperiment(id);
   const { t } = useTranslation("experiments");
 
-  // State for current flow data
-  const [currentNodes, setCurrentNodes] = useState<Node[]>([]);
-  const [currentEdges, setCurrentEdges] = useState<Edge[]>([]);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
   // Get existing flow for this experiment
   const experimentData = experiment?.body;
-  const { data: existingFlow } = useExperimentFlow(id);
+  const { data: existingFlow, refetch } = useExperimentFlow(id);
 
-  // Load existing flow data into React Flow editor
-  useEffect(() => {
-    if (existingFlow?.body) {
-      const flowData = existingFlow.body;
+  // Flow state
+  const [currentFlowData, setCurrentFlowData] = useState<UpsertFlowBody | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-      // Convert API steps to React Flow nodes
-      const nodes: Node[] = flowData.steps.map((step) => {
-        // Get the configuration for this step type
-        const config = nodeTypeColorMap[step.type];
-
-        return {
-          id: step.id,
-          type: step.type,
-          position: step.position,
-          sourcePosition: config.defaultSourcePosition,
-          targetPosition: config.defaultTargetPosition,
-          data: {
-            title: step.title,
-            description: step.description,
-            stepSpecification: step.stepSpecification,
-            isStartNode: step.isStartNode,
-            isEndNode: step.isEndNode,
-          },
-          measured: step.size,
-        };
-      });
-
-      // Convert API connections to React Flow edges
-      const edges: Edge[] = flowData.connections.map((connection) => ({
-        id: connection.id,
-        source: connection.sourceStepId,
-        target: connection.targetStepId,
-        type: connection.type,
-        animated: connection.animated,
-        data: {
-          condition: connection.condition,
-          priority: connection.priority,
-        },
-      }));
-
-      setCurrentNodes(nodes);
-      setCurrentEdges(edges);
-      setHasUnsavedChanges(false);
-    }
-  }, [existingFlow]);
-
-  // Hooks for flow operations
   const createFlowMutation = useExperimentFlowCreate({
     onSuccess: () => {
+      toast({ description: "Flow created successfully" });
       setHasUnsavedChanges(false);
+      void refetch();
+    },
+    onError: (error) => {
+      console.error("Create flow error:", error);
+      toast({ description: "Failed to create flow", variant: "destructive" });
     },
   });
 
   const updateFlowMutation = useExperimentFlowUpdate({
     onSuccess: () => {
+      toast({ description: "Flow updated successfully" });
       setHasUnsavedChanges(false);
+      void refetch();
     },
     onError: (error) => {
-      console.error("Failed to update flow:", error);
+      console.error("Update flow error:", error);
+      toast({ description: "Failed to update flow", variant: "destructive" });
     },
   });
 
-  const handleFlowStateChange = useCallback((nodes: Node[], edges: Edge[]) => {
-    setCurrentNodes(nodes);
-    setCurrentEdges(edges);
+  const handleFlowChange = useCallback((flowData: UpsertFlowBody) => {
+    setCurrentFlowData(flowData);
     setHasUnsavedChanges(true);
   }, []);
 
-  const handleSaveFlow = useCallback(() => {
-    if (!experimentData) return;
-
-    // Use the utility function to transform React Flow data to API format
-    const { steps: flowSteps, connections } = transformFlowDataForAPI(currentNodes, currentEdges);
+  const handleSave = () => {
+    if (!currentFlowData) return;
 
     if (existingFlow?.body) {
       // Update existing flow
       updateFlowMutation.mutate({
         params: { id },
-        body: {
-          steps: flowSteps,
-          connections,
-        },
+        body: currentFlowData,
       });
     } else {
       // Create new flow
       createFlowMutation.mutate({
         params: { id },
-        body: {
-          steps: flowSteps,
-          connections,
-        },
+        body: currentFlowData,
       });
     }
-  }, [
-    id,
-    experimentData,
-    currentNodes,
-    currentEdges,
-    existingFlow?.body,
-    createFlowMutation,
-    updateFlowMutation,
-  ]);
+  };
 
   if (isLoading) {
     return <div>{t("loading")}</div>;
@@ -158,18 +100,15 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
           <p className="text-muted-foreground text-sm">{t("flow.description")}</p>
         </div>
 
-        {hasUnsavedChanges && (
-          <Button onClick={handleSaveFlow} disabled={isSaving} className="ml-auto">
-            {isSaving ? t("common.saving") : t("common.save")}
-          </Button>
-        )}
+        <Button onClick={handleSave} disabled={!hasUnsavedChanges || isSaving} className="ml-auto">
+          {isSaving ? "Saving..." : "Save Flow"}
+        </Button>
       </div>
 
-      <NewExperimentFlow
-        initialNodes={currentNodes}
-        initialEdges={currentEdges}
-        onFlowStateChange={handleFlowStateChange}
-        onNodeSelect={(_node) => {
+      <FlowEditor
+        initialFlow={existingFlow?.body}
+        onFlowChange={handleFlowChange}
+        onNodeSelect={() => {
           // Handle node selection if needed
         }}
       />

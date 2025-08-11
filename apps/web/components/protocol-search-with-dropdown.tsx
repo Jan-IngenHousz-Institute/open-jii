@@ -5,7 +5,7 @@ import React, { useState } from "react";
 
 import type { Protocol } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components";
+import { Button, Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components";
 import { Popover, PopoverTrigger } from "@repo/ui/components";
 
 import { ProtocolSearchPopover } from "./protocol-search-popover";
@@ -45,18 +45,29 @@ export function ProtocolSearchWithDropdown({
           aria-expanded={open}
           className="w-full max-w-60 justify-between p-0"
         >
-          <div className="flex w-full items-center justify-between px-3 py-2">
+          <div className="flex w-full items-center gap-3 px-3 py-2">
             {selectedProtocol ? (
-              <div className="flex flex-col">
-                <span className="overflow-hidden text-ellipsis whitespace-nowrap">
-                  {selectedProtocol.name}
-                </span>
-                <span className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
-                  {selectedProtocol.family}
-                </span>
-              </div>
+              <>
+                {selectedProtocol.createdByName && (
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src="" alt={selectedProtocol.createdByName} />
+                    <AvatarFallback className="text-xs">
+                      {selectedProtocol.createdByName.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+                <div className="flex flex-1 flex-col">
+                  <span className="overflow-hidden text-ellipsis whitespace-nowrap font-medium">
+                    Protocol: {selectedProtocol.name}
+                  </span>
+                  <span className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
+                    #{selectedProtocol.family}
+                    {selectedProtocol.createdByName && <> • by {selectedProtocol.createdByName}</>}
+                  </span>
+                </div>
+              </>
             ) : (
-              (placeholder ?? t("experiments.searchProtocols"))
+              <div className="flex-1">{placeholder ?? t("experiments.searchProtocols")}</div>
             )}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </div>

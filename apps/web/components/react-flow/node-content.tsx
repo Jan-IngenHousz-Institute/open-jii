@@ -17,7 +17,6 @@ interface NodeContentProps {
   selected?: boolean;
   dragging?: boolean;
   isStartNode?: boolean;
-  isEndNode?: boolean;
 }
 
 export function NodeContent({
@@ -30,7 +29,6 @@ export function NodeContent({
   selected,
   dragging,
   isStartNode = false,
-  isEndNode = false,
 }: NodeContentProps) {
   return (
     <>
@@ -46,18 +44,11 @@ export function NodeContent({
       <div className={cn("flex flex-col gap-y-2 p-3")}>
         <div className="flex flex-col items-center justify-center p-3">
           {/* Start/End Node Indicators */}
-          {(isStartNode || isEndNode) && (
-            <div className="mb-2 flex gap-1">
-              {isStartNode && (
-                <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
-                  START
-                </span>
-              )}
-              {isEndNode && (
-                <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
-                  END
-                </span>
-              )}
+          {isStartNode && (
+            <div className="mb-2 flex">
+              <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                START
+              </span>
             </div>
           )}
 

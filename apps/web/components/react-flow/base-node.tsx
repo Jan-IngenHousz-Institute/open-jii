@@ -31,10 +31,9 @@ export const getHandlePositions = (src?: Position | string, tgt?: Position | str
 
 export function BaseNode(props: BaseNodeProps) {
   const { nodes, onNodeSelect, onNodeDelete, isStatic = false, ...nodeProps } = props;
-  const { title, isStartNode, isEndNode } = nodeProps.data as {
+  const { title, isStartNode } = nodeProps.data as {
     title: string;
     isStartNode?: boolean;
-    isEndNode?: boolean;
   };
   const { sourcePosition, targetPosition } = nodeProps;
 
@@ -96,7 +95,6 @@ export function BaseNode(props: BaseNodeProps) {
             selected={nodeProps.selected}
             dragging={nodeProps.dragging}
             isStartNode={isStartNode}
-            isEndNode={isEndNode}
           />
         </div>
       </div>

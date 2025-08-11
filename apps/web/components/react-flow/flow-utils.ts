@@ -27,7 +27,6 @@ const initialFlowData: CreateFlowWithStepsBody = {
         "Welcome to the complete scientific workflow demonstration. This flow shows all available node types working together.",
       position: { x: 100, y: 100 },
       isStartNode: true,
-      isEndNode: false,
       stepSpecification: {},
     },
     {
@@ -36,7 +35,6 @@ const initialFlowData: CreateFlowWithStepsBody = {
       description: "Please provide your basic information for this experiment",
       position: { x: 400, y: 100 },
       isStartNode: false,
-      isEndNode: false,
       stepSpecification: {
         required: true,
         answerType: "TEXT",
@@ -50,7 +48,6 @@ const initialFlowData: CreateFlowWithStepsBody = {
         "Please ensure your device is connected and calibrated. Check that samples are properly positioned.",
       position: { x: 700, y: 100 },
       isStartNode: false,
-      isEndNode: false,
       stepSpecification: {},
     },
     {
@@ -59,7 +56,6 @@ const initialFlowData: CreateFlowWithStepsBody = {
       description: "Collect measurement data using the selected protocol",
       position: { x: 1000, y: 100 },
       isStartNode: false,
-      isEndNode: false,
       stepSpecification: {
         protocolId: "protocol-photosynthesis-v2",
         autoStart: false,
@@ -73,7 +69,6 @@ const initialFlowData: CreateFlowWithStepsBody = {
       description: "Analyze the collected data using statistical methods",
       position: { x: 1300, y: 100 },
       isStartNode: false,
-      isEndNode: false,
       stepSpecification: {
         macroId: "analysis-statistical-summary",
         autoRun: true,
@@ -86,7 +81,6 @@ const initialFlowData: CreateFlowWithStepsBody = {
       description: "Review the analysis results and provide your observations",
       position: { x: 1600, y: 100 },
       isStartNode: false,
-      isEndNode: false,
       stepSpecification: {
         required: true,
         answerType: "SELECT",
@@ -106,7 +100,6 @@ const initialFlowData: CreateFlowWithStepsBody = {
         "Thank you for completing the workflow demonstration. All data has been saved and processed.",
       position: { x: 1900, y: 100 },
       isStartNode: false,
-      isEndNode: true,
       stepSpecification: {},
     },
   ],
@@ -204,7 +197,6 @@ export function getInitialFlowData() {
         description: step.description,
         stepSpecification: step.stepSpecification,
         isStartNode: step.isStartNode,
-        isEndNode: step.isEndNode,
       },
     };
   });
@@ -238,29 +230,19 @@ export function createNewNode(
   const config = nodeTypeColorMap[type as keyof typeof nodeTypeColorMap];
 
   // Create appropriate default stepSpecification based on node type
-  let defaultStepSpecification = {};
+  let defaultStepSpecification: Record<string, unknown> | undefined;
   if (type === "INSTRUCTION") {
-    defaultStepSpecification = {};
+    // Minimal valid instruction will be constructed later with text; keep undefined here.
+    defaultStepSpecification = undefined;
   } else if (type === "QUESTION") {
-    defaultStepSpecification = {
-      required: false,
-      answerType: "TEXT" as const,
-      options: [],
-      validationMessage: "",
-    };
+    // Provide a minimal valid question content (will be validated in mapper)
+    defaultStepSpecification = { kind: "open_ended", text: "" };
   } else if (type === "MEASUREMENT") {
-    defaultStepSpecification = {
-      protocolId: "", // This would need to be selected by user
-      autoStart: false,
-      timeoutSeconds: undefined,
-      retryAttempts: 3,
-    };
+    // Leave protocol unset; mapper will demand it before save
+    defaultStepSpecification = { protocolId: undefined } as unknown as Record<string, unknown>;
   } else if (type === "ANALYSIS") {
-    defaultStepSpecification = {
-      macroId: "", // This would need to be selected by user
-      autoRun: true,
-      visualizationType: undefined,
-    };
+    // Not yet supported by backend flow schema; placeholder only
+    defaultStepSpecification = undefined;
   }
 
   return {
@@ -274,7 +256,6 @@ export function createNewNode(
       description: type === "INSTRUCTION" ? "" : undefined, // Initialize description for instructions
       stepSpecification: defaultStepSpecification,
       isStartNode: false,
-      isEndNode: false,
     },
   };
 }
@@ -292,7 +273,6 @@ export function transformFlowDataForAPI(nodes: Node[], edges: Edge[]) {
         height: node.measured?.height,
       },
       isStartNode: Boolean(node.data.isStartNode),
-      isEndNode: Boolean(node.data.isEndNode),
     };
 
     // Handle stepSpecification based on node type to match discriminated union

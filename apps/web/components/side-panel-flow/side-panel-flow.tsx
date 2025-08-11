@@ -1,7 +1,6 @@
 import type { Edge, Node } from "@xyflow/react";
 import React, { useState, useEffect } from "react";
 
-import type { QuestionStep } from "@repo/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
 
 import { AnalysisPanel } from "./analysis-panel";
@@ -10,17 +9,15 @@ import { InstructionPanel } from "./instruction-panel";
 import { MeasurementPanel } from "./measurement-panel";
 import { QuestionPanel } from "./question-panel";
 
-// Helper function to check if an object is a valid QuestionStep
-function isQuestionStep(obj: unknown): obj is QuestionStep {
+// Helper to detect new question spec (discriminated union by kind + text)
+interface BasicQuestionSpec {
+  kind: string;
+  text: string;
+}
+function isQuestionSpec(obj: unknown): obj is BasicQuestionSpec {
   if (typeof obj !== "object" || obj === null) return false;
-
-  const step = obj as Record<string, unknown>;
-  return (
-    "answerType" in step &&
-    "required" in step &&
-    typeof step.answerType === "string" &&
-    typeof step.required === "boolean"
-  );
+  const rec = obj as Record<string, unknown>;
+  return typeof rec.kind === "string" && typeof rec.text === "string";
 }
 
 export interface ExperimentSidePanelProps {
@@ -174,46 +171,6 @@ export function ExperimentSidePanel({
                     <div className="peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-disabled:bg-gray-300"></div>
                   </label>
                 </div>
-
-                {/* End Node Toggle */}
-                <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">End Node</p>
-                    <p className="text-xs text-gray-500">Limited to one per flow</p>
-                  </div>
-                  <label className="relative inline-flex cursor-pointer items-center">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(selectedNode.data.isEndNode)}
-                      onChange={() => {
-                        const currentIsEnd = selectedNode.data.isEndNode;
-                        const hasOtherEndNode = nodes.some(
-                          (node) => node.id !== selectedNode.id && node.data.isEndNode,
-                        );
-
-                        // Only allow toggling on if there's no other end node
-                        if (!currentIsEnd && hasOtherEndNode) {
-                          return; // Don't allow multiple end nodes
-                        }
-
-                        if (onNodeDataChange) {
-                          onNodeDataChange(selectedNode.id, {
-                            ...selectedNode.data,
-                            isEndNode: !currentIsEnd,
-                            // Clear start node if setting as end node
-                            isStartNode: !currentIsEnd ? false : selectedNode.data.isStartNode,
-                          });
-                        }
-                      }}
-                      className="peer sr-only"
-                      disabled={
-                        !selectedNode.data.isEndNode &&
-                        nodes.some((node) => node.id !== selectedNode.id && node.data.isEndNode)
-                      }
-                    />
-                    <div className="peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-disabled:bg-gray-300"></div>
-                  </label>
-                </div>
               </CardContent>
             </Card>
           )}
@@ -240,14 +197,9 @@ export function ExperimentSidePanel({
           {displayNodeType === "QUESTION" && selectedNode && (
             <QuestionPanel
               stepSpecification={
-                isQuestionStep(selectedNode.data.stepSpecification)
+                isQuestionSpec(selectedNode.data.stepSpecification)
                   ? selectedNode.data.stepSpecification
-                  : {
-                      required: false,
-                      answerType: "TEXT" as const,
-                      options: [],
-                      validationMessage: "",
-                    }
+                  : { kind: "open_ended", text: currentTitle || "" }
               }
               onChange={(spec) => {
                 if (onNodeDataChange) {
@@ -279,7 +231,9 @@ export function ExperimentSidePanel({
           {displayNodeType === "ANALYSIS" && selectedNode && (
             <AnalysisPanel
               selectedMeasurementOption={
-                typeof selectedNode.data.measurementOption === "string" ? selectedNode.data.measurementOption : ""
+                typeof selectedNode.data.measurementOption === "string"
+                  ? selectedNode.data.measurementOption
+                  : ""
               }
               onChange={(measurementOption) => {
                 if (onNodeDataChange) {

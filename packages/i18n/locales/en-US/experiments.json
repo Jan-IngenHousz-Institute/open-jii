@@ -43,6 +43,7 @@
   "flow": {
     "title": "Experiment Flow",
     "description": "Design and visualize your experiment workflow by connecting different steps and operations.",
+    "staticDescription": "Visual overview of the experiment workflow",
     "tabLabel": "Flow"
   },
   "overview": "Overview",
