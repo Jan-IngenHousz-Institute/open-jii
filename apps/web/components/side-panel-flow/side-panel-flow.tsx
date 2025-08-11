@@ -9,15 +9,23 @@ import { InstructionPanel } from "./instruction-panel";
 import { MeasurementPanel } from "./measurement-panel";
 import { QuestionPanel } from "./question-panel";
 
-// Helper to detect new question spec (discriminated union by kind + text)
-interface BasicQuestionSpec {
-  kind: string;
-  text: string;
+// Local mirror of QuestionUI (not exported from question-panel)
+interface QuestionUI {
+  answerType: "TEXT" | "SELECT" | "NUMBER" | "BOOLEAN";
+  validationMessage?: string;
+  options?: string[];
+  required: boolean;
 }
-function isQuestionSpec(obj: unknown): obj is BasicQuestionSpec {
+
+// Helper to detect QuestionUI spec shape
+function isQuestionUI(obj: unknown): obj is QuestionUI {
   if (typeof obj !== "object" || obj === null) return false;
   const rec = obj as Record<string, unknown>;
-  return typeof rec.kind === "string" && typeof rec.text === "string";
+  return (
+    typeof rec.answerType === "string" &&
+    typeof rec.required === "boolean" &&
+    (rec.options === undefined || Array.isArray(rec.options))
+  );
 }
 
 export interface ExperimentSidePanelProps {
@@ -193,13 +201,16 @@ export function ExperimentSidePanel({
               }}
             />
           )}
-          {/* QuestionPanel for question node */}
           {displayNodeType === "QUESTION" && selectedNode && (
             <QuestionPanel
               stepSpecification={
-                isQuestionSpec(selectedNode.data.stepSpecification)
+                isQuestionUI(selectedNode.data.stepSpecification)
                   ? selectedNode.data.stepSpecification
-                  : { kind: "open_ended", text: currentTitle || "" }
+                  : ({
+                      answerType: "TEXT",
+                      required: false,
+                      validationMessage: currentTitle || "",
+                    } satisfies QuestionUI)
               }
               onChange={(spec) => {
                 if (onNodeDataChange) {
@@ -211,6 +222,7 @@ export function ExperimentSidePanel({
               }}
             />
           )}
+
           {/* MeasurementPanel for measurement node */}
           {displayNodeType === "MEASUREMENT" && selectedNode && (
             <MeasurementPanel

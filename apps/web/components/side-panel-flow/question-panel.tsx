@@ -1,46 +1,34 @@
 import React from "react";
 
-import type { QuestionStep } from "@repo/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components";
 
+import type { QuestionUI } from "../question-card";
 import { QuestionCard } from "../question-card";
 
 interface QuestionPanelProps {
-  stepSpecification: QuestionStep;
-  onChange: (spec: QuestionStep) => void;
+  stepSpecification: QuestionUI;
+  onChange: (spec: QuestionUI) => void;
 }
 
 export function QuestionPanel({ stepSpecification, onChange }: QuestionPanelProps) {
   // Handler functions for the step specification
   const updateQuestionText = (text: string) => {
-    onChange({
-      ...stepSpecification,
-      validationMessage: text,
-    });
+    onChange({ ...stepSpecification, validationMessage: text });
   };
 
-  const updateAnswerType = (answerType: QuestionStep["answerType"]) => {
-    const updatedSpec: QuestionStep = {
-      ...stepSpecification,
-      answerType,
-    };
-
-    // Clear options if not SELECT type
+  const updateAnswerType = (answerType: QuestionUI["answerType"]) => {
+    const updatedSpec: QuestionUI = { ...stepSpecification, answerType };
     if (answerType !== "SELECT") {
-      delete updatedSpec.options;
+      // remove options if switching away
+      if (updatedSpec.options) delete updatedSpec.options;
     } else {
-      // Initialize with empty options for SELECT type
       updatedSpec.options = stepSpecification.options ?? [];
     }
-
     onChange(updatedSpec);
   };
 
   const toggleRequired = () => {
-    onChange({
-      ...stepSpecification,
-      required: !stepSpecification.required,
-    });
+    onChange({ ...stepSpecification, required: !stepSpecification.required });
   };
 
   const addOption = () => {

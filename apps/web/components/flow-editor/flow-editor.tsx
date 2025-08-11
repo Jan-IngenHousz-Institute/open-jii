@@ -52,7 +52,7 @@ export function FlowEditor({ initialFlow, onFlowChange, onNodeSelect }: FlowEdit
     try {
       const stored = window.localStorage.getItem(layoutKey);
       if (stored) {
-        const posMap = JSON.parse(stored) as Record<string, { x: number; y: number }>;
+        const posMap = JSON.parse(stored) as Partial<Record<string, { x: number; y: number }>>;
         initialData = {
           ...initialDataRaw,
           nodes: initialDataRaw.nodes.map((n) => {
@@ -81,7 +81,7 @@ export function FlowEditor({ initialFlow, onFlowChange, onNodeSelect }: FlowEdit
         try {
           const stored = window.localStorage.getItem(layoutKey);
           if (stored) {
-            const posMap = JSON.parse(stored) as Record<string, { x: number; y: number }>;
+            const posMap = JSON.parse(stored) as Partial<Record<string, { x: number; y: number }>>;
             converted.nodes = converted.nodes.map((n) => {
               const storedPos = posMap[n.id];
               if (storedPos !== undefined) {

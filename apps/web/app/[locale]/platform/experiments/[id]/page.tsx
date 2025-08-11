@@ -42,6 +42,11 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
     return <div>{t("experiments.notFound")}</div>;
   }
 
+  // Body may still be undefined even if data exists; guard explicitly
+  if (!experiment) {
+    return <div>{t("experiments.notFound")}</div>;
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":

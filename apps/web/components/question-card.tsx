@@ -1,12 +1,19 @@
 import React from "react";
 
-import type { QuestionStep } from "@repo/api";
 import { Card, CardContent } from "@repo/ui/components";
 
+// Local UI-focused question spec (legacy bridge). Replace with backend question content mapping later.
+export interface QuestionUI {
+  answerType: "TEXT" | "SELECT" | "NUMBER" | "BOOLEAN";
+  validationMessage?: string;
+  options?: string[];
+  required: boolean;
+}
+
 interface QuestionCardProps {
-  stepSpecification: QuestionStep;
+  stepSpecification: QuestionUI;
   onUpdateText: (text: string) => void;
-  onUpdateAnswerType: (answerType: QuestionStep["answerType"]) => void;
+  onUpdateAnswerType: (answerType: QuestionUI["answerType"]) => void;
   onToggleRequired: () => void;
   onAddOption: () => void;
   onUpdateOption: (optionIndex: number, text: string) => void;
@@ -75,7 +82,7 @@ export function QuestionCard({
                   type="radio"
                   name="answer-type"
                   checked={answerType === type}
-                  onChange={() => onUpdateAnswerType(type as QuestionStep["answerType"])}
+                  onChange={() => onUpdateAnswerType(type as QuestionUI["answerType"])}
                   className="peer sr-only"
                 />
                 <div className="peer-checked:border-jii-dark-green peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 relative h-4 w-4 rounded-full border-2 border-gray-300 bg-white transition-all peer-focus:ring-2">
