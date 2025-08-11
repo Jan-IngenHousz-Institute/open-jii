@@ -47,14 +47,20 @@ jobs:
       - name: Build Packages
         if: steps.detect.outputs.has_affected_apps == 'true'
         uses: ./.github/actions/build-packages
+        with:
+          affected_apps: ${{ steps.detect.outputs.affected_apps }}
 
       - name: Lint Packages
         if: steps.detect.outputs.has_affected_apps == 'true'
         uses: ./.github/actions/lint-packages
+        with:
+          affected_apps: ${{ steps.detect.outputs.affected_apps }}
 
       - name: Test Packages
         if: steps.detect.outputs.has_affected_apps == 'true'
         uses: ./.github/actions/test-packages
+        with:
+          affected_apps: ${{ steps.detect.outputs.affected_apps }}
 
   # tofu:
   #   name: OpenTofu
