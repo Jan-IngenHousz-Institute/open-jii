@@ -13,10 +13,11 @@ runs:
       shell: bash
       run: |
         echo "🔎 Linting affected packages"
-
+        AFFECTED_APPS='${{ inputs.affected_apps }}'
+        
         # Lint command with individual --filter flags for each package
         LINT_CMD="pnpm turbo run lint"
-        echo '${{ inputs.affected_apps }}' | jq -r '.[]' | while read -r APP; do
+        echo $AFFECTED_APPS | jq -r '.[]' | while read -r APP; do
           LINT_CMD="$LINT_CMD --filter=$APP"
         done
         echo "Running: $LINT_CMD"

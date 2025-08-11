@@ -13,10 +13,11 @@ runs:
       shell: bash
       run: |
         echo "🔨 Building affected packages"
-
+        AFFECTED_APPS='${{ inputs.affected_apps }}'
+        
         # Build command with individual --filter flags for each package
         BUILD_CMD="pnpm turbo run build"
-        echo '${{ inputs.affected_apps }}' | jq -r '.[]' | while read -r APP; do
+        echo $AFFECTED_APPS | jq -r '.[]' | while read -r APP; do
           BUILD_CMD="$BUILD_CMD --filter=$APP"
         done
         echo "Running: $BUILD_CMD"
