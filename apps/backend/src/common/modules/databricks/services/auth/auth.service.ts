@@ -99,7 +99,7 @@ export class DatabricksAuthService {
   }
 
   private validateTokenResponse(accessToken: string, expiresIn: number): void {
-    if (!accessToken?.trim()) {
+    if (!accessToken.trim()) {
       throw AppError.internal("Invalid token response: missing access_token");
     }
     if (!expiresIn || expiresIn <= 0) {
