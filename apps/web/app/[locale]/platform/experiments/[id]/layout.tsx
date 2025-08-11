@@ -1,5 +1,7 @@
 "use client";
 
+import { ErrorDisplay } from "@/components/error-display";
+import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
@@ -16,6 +18,62 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const locale = useLocale();
+
+  // Check user access to this experiment
+  const { data: accessData, error, isLoading } = useExperimentAccess(id);
+
+  const experiment = accessData?.body;
+  const hasAccess = accessData?.body.hasAccess;
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-muted-foreground">{t("common.loading")}</div>
+      </div>
+    );
+  }
+
+  // Show error if access is denied or other error
+  if (error) {
+    // Check if it's a 403 Forbidden error
+    const is403Error = typeof error === "object" && "status" in error && error.status === 403;
+
+    if (is403Error) {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-lg font-medium">{t("errors.accessDenied")}</h3>
+            <p className="text-muted-foreground text-sm">{t("experiments.noPermissionToAccess")}</p>
+          </div>
+          <ErrorDisplay error={error} title={t("errors.forbidden")} />
+        </div>
+      );
+    }
+
+    // Show generic error for other types (404, etc.)
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-medium">{t("errors.error")}</h3>
+          <p className="text-muted-foreground text-sm">{t("experiments.errorLoadingExperiment")}</p>
+        </div>
+        <ErrorDisplay error={error} />
+      </div>
+    );
+  }
+
+  // If no experiment data, show not found
+  if (!experiment) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-medium">{t("errors.notFound")}</h3>
+          <p className="text-muted-foreground text-sm">{t("experiments.experimentNotFound")}</p>
+        </div>
+      </div>
+    );
+  }
 
   // Determine active tab from URL
   const getActiveTab = () => {
@@ -47,10 +105,19 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
               {t("experiments.data")}
             </Link>
           </TabsTrigger>
-          <TabsTrigger value="settings" asChild>
-            <Link href={`/platform/experiments/${id}/settings`} locale={locale}>
-              {t("navigation.settings")}
-            </Link>
+          <TabsTrigger
+            value="settings"
+            disabled={!hasAccess}
+            aria-label={!hasAccess ? t("experiments.needMemberAccess") : undefined}
+            asChild={hasAccess}
+          >
+            {hasAccess ? (
+              <Link href={`/platform/experiments/${id}/settings`} locale={locale}>
+                {t("navigation.settings")}
+              </Link>
+            ) : (
+              <span className="cursor-not-allowed opacity-50">{t("navigation.settings")}</span>
+            )}
           </TabsTrigger>
         </TabsList>
 

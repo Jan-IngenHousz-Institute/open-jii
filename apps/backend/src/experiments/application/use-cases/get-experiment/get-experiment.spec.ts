@@ -38,7 +38,7 @@ describe("GetExperimentUseCase", () => {
     });
 
     // Act
-    const result = await useCase.execute(experiment.id);
+    const result = await useCase.execute(experiment.id, testUserId);
 
     // Assert result is success
     expect(result.isSuccess()).toBe(true);
@@ -58,11 +58,30 @@ describe("GetExperimentUseCase", () => {
     });
   });
 
+  it("should return FORBIDDEN error if user is not a member", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Access Control Test",
+      userId: testUserId,
+    });
+
+    // Create another user who is not a member
+    const otherUserId = await testApp.createTestUser({});
+
+    // Try to get experiment as non-member
+    const result = await useCase.execute(experiment.id, otherUserId);
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+    expect(result.error.message).toBe("You do not have permission to access this experiment");
+  });
+
   it("should return not found error when experiment does not exist", async () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
 
     // Act
-    const result = await useCase.execute(nonExistentId);
+    const result = await useCase.execute(nonExistentId, testUserId);
 
     // Assert result is failure
     expect(result.isSuccess()).toBe(false);

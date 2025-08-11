@@ -87,6 +87,12 @@ export const zExperimentMember = z.object({
 
 export const zExperimentMemberList = z.array(zExperimentMember);
 
+export const zExperimentAccess = z.object({
+  experiment: zExperiment,
+  hasAccess: z.boolean(),
+  isAdmin: z.boolean(),
+});
+
 export const zErrorResponse = z.object({
   message: z.string(),
 });
