@@ -14,7 +14,7 @@ Example of advanced topic structure implementation:
 
 ```python
 def generate_dynamic_topic(experiment_type, location_id, protocol_type):
-    """Generate a topik with hierarchical organization"""
+    """Generate a topic with hierarchical organization"""
     return (
         f"experiment/data_ingest/v1/{experiment_type}/"
         f"location/{location_id}/multispeq/v1.0/{get_device_id()}/{protocol_type}"

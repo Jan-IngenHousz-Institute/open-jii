@@ -14,9 +14,7 @@ runs:
       run: |
         echo "🔨 Building affected packages"
 
-        # Direct approach using the input
         AFFECTED_APPS='${{ inputs.affected_apps }}'
-        echo "Affected apps: $AFFECTED_APPS"
 
         # Parse apps into array to construct command
         APPS=($(echo $AFFECTED_APPS | jq -r '.[]'))
