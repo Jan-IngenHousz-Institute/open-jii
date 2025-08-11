@@ -31,7 +31,7 @@ export interface StatementResponse {
     truncated?: boolean;
   };
   result?: {
-    data_array: (string | null)[][];
+    data_array?: (string | null)[][];
     chunk_index: number;
     row_count: number;
     row_offset: number;

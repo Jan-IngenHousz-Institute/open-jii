@@ -174,7 +174,7 @@ export class DatabricksSqlService {
 
     return {
       columns,
-      rows: response.result.data_array,
+      rows: response.result.data_array ?? [],
       totalRows: response.manifest.total_row_count ?? response.result.row_count,
       truncated: response.manifest.truncated ?? false,
     };
