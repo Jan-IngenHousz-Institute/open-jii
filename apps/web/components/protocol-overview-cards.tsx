@@ -27,8 +27,8 @@ export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | u
               <Card className="bg-white transition-shadow hover:shadow-md">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="mb-2 max-w-72 overflow-hidden truncate whitespace-nowrap font-semibold text-gray-900">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="mb-2 overflow-hidden truncate whitespace-nowrap font-semibold text-gray-900">
                         {protocol.name}
                       </h3>
                     </div>
