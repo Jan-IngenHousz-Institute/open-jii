@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common";
 
 import { DatabricksModule } from "../common/services/databricks/databricks.module";
 // Use Cases
-import { ChangeExperimentStatusUseCase } from "./application/use-cases/change-experiment-status/change-experiment-status";
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "./application/use-cases/delete-experiment/delete-experiment";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data";
@@ -15,6 +14,7 @@ import { RemoveExperimentProtocolUseCase } from "./application/use-cases/experim
 import { CreateFlowUseCase } from "./application/use-cases/flows/create-flow";
 import { GetFlowUseCase } from "./application/use-cases/flows/get-flow";
 import { UpdateFlowUseCase } from "./application/use-cases/flows/update-flow";
+import { GetExperimentAccessUseCase } from "./application/use-cases/get-experiment-access/get-experiment-access";
 import { GetExperimentUseCase } from "./application/use-cases/get-experiment/get-experiment";
 import { ListExperimentsUseCase } from "./application/use-cases/list-experiments/list-experiments";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
@@ -52,10 +52,10 @@ import { ExperimentController } from "./presentation/experiment.controller";
     // General experiment use cases
     CreateExperimentUseCase,
     GetExperimentUseCase,
+    GetExperimentAccessUseCase,
     ListExperimentsUseCase,
     UpdateExperimentUseCase,
     DeleteExperimentUseCase,
-    ChangeExperimentStatusUseCase,
     UpdateProvisioningStatusUseCase,
 
     // Experiment data use cases

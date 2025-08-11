@@ -11,6 +11,7 @@ import { formatDates, formatDatesList } from "../../common/utils/date-formatter"
 import { handleFailure } from "../../common/utils/fp-utils";
 import { CreateExperimentUseCase } from "../application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "../application/use-cases/delete-experiment/delete-experiment";
+import { GetExperimentAccessUseCase } from "../application/use-cases/get-experiment-access/get-experiment-access";
 import { GetExperimentUseCase } from "../application/use-cases/get-experiment/get-experiment";
 import { ListExperimentsUseCase } from "../application/use-cases/list-experiments/list-experiments";
 import { UpdateExperimentUseCase } from "../application/use-cases/update-experiment/update-experiment";
@@ -23,6 +24,7 @@ export class ExperimentController {
   constructor(
     private readonly createExperimentUseCase: CreateExperimentUseCase,
     private readonly getExperimentUseCase: GetExperimentUseCase,
+    private readonly getExperimentAccessUseCase: GetExperimentAccessUseCase,
     private readonly listExperimentsUseCase: ListExperimentsUseCase,
     private readonly updateExperimentUseCase: UpdateExperimentUseCase,
     private readonly deleteExperimentUseCase: DeleteExperimentUseCase,
@@ -48,9 +50,9 @@ export class ExperimentController {
   }
 
   @TsRestHandler(contract.experiments.getExperiment)
-  getExperiment() {
+  getExperiment(@CurrentUser() user: User) {
     return tsRestHandler(contract.experiments.getExperiment, async ({ params }) => {
-      const result = await this.getExperimentUseCase.execute(params.id);
+      const result = await this.getExperimentUseCase.execute(params.id, user.id);
 
       if (result.isSuccess()) {
         const experiment = result.value;
@@ -62,6 +64,31 @@ export class ExperimentController {
         return {
           status: StatusCodes.OK,
           body: formattedExperiment,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.experiments.getExperimentAccess)
+  getExperimentAccess(@CurrentUser() user: User) {
+    return tsRestHandler(contract.experiments.getExperimentAccess, async ({ params }) => {
+      const result = await this.getExperimentAccessUseCase.execute(params.id, user.id);
+
+      if (result.isSuccess()) {
+        const accessInfo = result.value;
+
+        // Format dates to strings for the API contract
+        const formattedAccessInfo = {
+          ...accessInfo,
+          experiment: formatDates(accessInfo.experiment),
+        };
+
+        this.logger.log(`Experiment access info for ${params.id} retrieved for user ${user.id}`);
+        return {
+          status: StatusCodes.OK,
+          body: formattedAccessInfo,
         };
       }
 
@@ -98,7 +125,7 @@ export class ExperimentController {
   @TsRestHandler(contract.experiments.updateExperiment)
   updateExperiment(@CurrentUser() user: User) {
     return tsRestHandler(contract.experiments.updateExperiment, async ({ params, body }) => {
-      const result = await this.updateExperimentUseCase.execute(params.id, body);
+      const result = await this.updateExperimentUseCase.execute(params.id, body, user.id);
 
       if (result.isSuccess()) {
         const experiment = result.value;
@@ -118,9 +145,9 @@ export class ExperimentController {
   }
 
   @TsRestHandler(contract.experiments.deleteExperiment)
-  deleteExperiment() {
+  deleteExperiment(@CurrentUser() user: User) {
     return tsRestHandler(contract.experiments.deleteExperiment, async ({ params }) => {
-      const result = await this.deleteExperimentUseCase.execute(params.id);
+      const result = await this.deleteExperimentUseCase.execute(params.id, user.id);
 
       if (result.isSuccess()) {
         this.logger.log(`Experiment ${params.id} deleted`);

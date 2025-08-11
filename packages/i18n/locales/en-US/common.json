@@ -69,7 +69,11 @@
     "addProtocol": "Add protocol",
     "seeProtocolDetails": "See protocol details",
     "family": "Family:",
-    "createdBy": "Created by:"
+    "createdBy": "Created by:",
+    "noPermissionToAccess": "You do not have permission to access this experiment.",
+    "errorLoadingExperiment": "There was an error loading the experiment.",
+    "experimentNotFound": "The experiment you are looking for could not be found.",
+    "needMemberAccess": "You need to be a member to access experiment settings"
   },
   "newExperiment": {
     "description": "Set up a new experiment (project).",
@@ -227,6 +231,8 @@
     "validationError": "Validation error",
     "unauthorized": "Unauthorized access",
     "forbidden": "Access forbidden",
+    "accessDenied": "Access Denied",
+    "notFound": "Not Found",
     "failedToLoadProtocol": "Failed to load protocol",
     "loginRequired": "Please log in to access this page"
   },

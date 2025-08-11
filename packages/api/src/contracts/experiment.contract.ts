@@ -18,6 +18,7 @@ import {
   zExperimentWebhookAuthHeader,
   zExperimentWebhookSuccessResponse,
   zExperimentWebhookErrorResponse,
+  zExperimentAccess,
 } from "../schemas/experiment.schema";
 import { zFlow, zUpsertFlowBody } from "../schemas/experiment.schema";
 import {
@@ -63,6 +64,19 @@ export const experimentContract = c.router({
     },
     summary: "Get experiment details",
     description: "Returns detailed information about a specific experiment",
+  },
+
+  getExperimentAccess: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/access",
+    pathParams: zIdPathParam,
+    responses: {
+      200: zExperimentAccess,
+      404: zErrorResponse,
+      403: zErrorResponse,
+    },
+    summary: "Get experiment details with access information",
+    description: "Returns experiment details along with user access and admin status",
   },
 
   updateExperiment: {
