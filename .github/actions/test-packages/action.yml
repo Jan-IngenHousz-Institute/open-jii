@@ -1,0 +1,9 @@
+name: Run Tests
+description: Runs tests across the monorepo
+
+runs:
+  using: composite
+  steps:
+    - name: Run Tests
+      shell: bash
+      run: pnpm test

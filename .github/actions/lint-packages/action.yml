@@ -1,0 +1,9 @@
+name: Lint Code
+description: Runs linting across the monorepo
+
+runs:
+  using: composite
+  steps:
+    - name: Run Linters
+      shell: bash
+      run: pnpm lint

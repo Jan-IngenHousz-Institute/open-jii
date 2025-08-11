@@ -1,0 +1,9 @@
+name: Build Packages
+description: Builds packages and applications in the monorepo
+
+runs:
+  using: composite
+  steps:
+    - name: Build Packages
+      shell: bash
+      run: pnpm build

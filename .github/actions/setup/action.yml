@@ -1,0 +1,27 @@
+name: Setup Environment
+description: Sets up Node.js and installs dependencies for the monorepo
+
+inputs:
+  node-version:
+    description: "Node.js version to use"
+    required: true
+    default: "22"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: "pnpm"
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: 8
+        run_install: false
+
+    - name: Install Dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile

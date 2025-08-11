@@ -1,0 +1,24 @@
+name: Determine Affected Packages
+description: Identifies affected packages in the monorepo based on changes
+
+outputs:
+  affected-packages:
+    description: "JSON string of affected packages"
+    value: ${{ steps.affected.outputs.packages }}
+  affected-apps:
+    description: "JSON string of affected apps"
+    value: ${{ steps.affected.outputs.apps }}
+
+runs:
+  using: composite
+  steps:
+    - name: Determine Affected Packages/Apps
+      id: affected
+      shell: bash
+      run: |
+        # Use turbo to detect affected packages
+        AFFECTED_PACKAGES=$(pnpm turbo run build --dry-run=json | jq -r '.tasks | map(select(.task == "build")) | map(.package) | tostring')
+        AFFECTED_APPS=$(pnpm turbo run build --dry-run=json | jq -r '.tasks | map(select(.task == "build" and (.package | startswith("@jii/") | not))) | map(.package) | tostring')
+
+        echo "packages=${AFFECTED_PACKAGES}" >> $GITHUB_OUTPUT
+        echo "apps=${AFFECTED_APPS}" >> $GITHUB_OUTPUT

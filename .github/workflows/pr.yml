@@ -25,22 +25,33 @@ jobs:
   build_lint_test:
     name: Build, Lint, Test & AsyncAPI
     runs-on: ubuntu-latest
+    env:
+      DO_NOT_TRACK: 1
+      TURBO_TELEMETRY_DISABLED: 1
+      ENVIRONMENT: "dev"
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Build, Lint & Test
-        id: blt
-        uses: ./.github/actions/blt
+      - name: Setup Environment
+        uses: ./.github/actions/setup
         with:
           node-version: "22"
-          artifact_retention: "7"
-          environment: "dev"
-        env:
-          DO_NOT_TRACK: 1
-          TURBO_TELEMETRY_DISABLED: 1
+
+      - name: Determine Affected Packages
+        id: affected
+        uses: ./.github/actions/detect-affected-packages
+
+      - name: Build Packages
+        uses: ./.github/actions/build-packages
+
+      - name: Lint Code
+        uses: ./.github/actions/lint-packages
+
+      - name: Run Tests
+        uses: ./.github/actions/test-package
 
   # tofu:
   #   name: OpenTofu
