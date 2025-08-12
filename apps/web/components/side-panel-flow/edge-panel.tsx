@@ -20,26 +20,13 @@ export function EdgeSidePanel({
 }: EdgeSidePanelProps) {
   // Keep previous content during transition
   const [displayEdge, setDisplayEdge] = useState<Edge | null>(selectedEdge);
-  const [currentLabel, setCurrentLabel] = useState("");
-
-  const getEditableLabelString = (edge: Edge): string => {
-    if (edge.label == null) return "";
-    if (typeof edge.label === "string") return edge.label;
-    if (typeof edge.label === "number") return edge.label.toString();
-    return "";
-  };
 
   const handleLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newLabel = e.target.value;
-    setCurrentLabel(newLabel);
     if (displayEdge) {
-      onEdgeUpdate(displayEdge.id, { label: newLabel });
-    }
-  };
-
-  const handleAnimationToggle = (checked: boolean) => {
-    if (displayEdge) {
-      onEdgeUpdate(displayEdge.id, { animated: checked });
+      const updatedEdge = { ...displayEdge, data: { ...displayEdge.data, label: newLabel } };
+      setDisplayEdge(updatedEdge);
+      onEdgeUpdate(displayEdge.id, { data: { ...displayEdge.data, label: newLabel } });
     }
   };
 
@@ -50,13 +37,17 @@ export function EdgeSidePanel({
     }
   };
 
+  // Helper to get the label string for the input
+  const getEdgeLabel = (edge: Edge | null): string => {
+    if (!edge) return "";
+    const label = edge.data?.label ?? edge.label;
+    return typeof label === "string" || typeof label === "number" ? String(label) : "";
+  };
+
   useEffect(() => {
     if (open && selectedEdge) {
       // Immediately update content when opening
       setDisplayEdge(selectedEdge);
-      // Get the editable label string
-      const labelStr = getEditableLabelString(selectedEdge);
-      setCurrentLabel(labelStr);
     } else if (!open) {
       // Delay clearing content until transition ends (300ms)
       const timeout = setTimeout(() => {
@@ -71,7 +62,7 @@ export function EdgeSidePanel({
       {/* Always render backdrop for fade animation */}
       <div
         className={
-          "fixed inset-0 top-[-33] z-40 bg-black transition-opacity duration-300 " +
+          "fixed inset-0 top-[-25] z-[80] bg-black transition-opacity duration-300 " +
           (open && selectedEdge
             ? "pointer-events-auto bg-opacity-60 opacity-100"
             : "pointer-events-none bg-opacity-0 opacity-0")
@@ -81,7 +72,7 @@ export function EdgeSidePanel({
       />
       <div
         className={
-          "fixed right-0 top-[-33] z-50 flex h-screen w-[30vw] flex-col rounded-bl-2xl rounded-tl-2xl border-l border-gray-200 bg-white shadow-[-8px_0_30px_-8px_rgba(0,0,0,0.3)] transition-transform duration-300 ease-in-out " +
+          "fixed right-0 top-[-25] z-[90] flex h-screen w-[30vw] flex-col rounded-bl-2xl rounded-tl-2xl border-l border-gray-200 bg-white shadow-[-8px_0_30px_-8px_rgba(0,0,0,0.3)] transition-transform duration-300 ease-in-out " +
           (open && selectedEdge ? "translate-x-0" : "translate-x-full")
         }
       >
@@ -104,35 +95,11 @@ export function EdgeSidePanel({
               <input
                 id="edge-label"
                 type="text"
-                value={currentLabel}
+                value={getEdgeLabel(displayEdge)}
                 onChange={handleLabelChange}
                 placeholder="Enter edge label..."
                 className="focus:border-jii-dark-green focus:ring-jii-dark-green w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-opacity-50"
               />
-            </CardContent>
-          </Card>
-
-          {/* Animation Settings */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-jii-dark-green">Animation</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-800">Animate this edge</span>
-                <label className="relative inline-flex cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!!displayEdge?.animated}
-                    onChange={(e) => handleAnimationToggle(e.target.checked)}
-                    className="peer sr-only"
-                  />
-                  {/* track */}
-                  <div className="peer-checked:bg-jii-dark-green h-5 w-10 rounded-full bg-gray-200 transition-colors" />
-                  {/* thumb */}
-                  <div className="absolute left-0.5 top-0.5 h-4 w-4 transform rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
-                </label>
-              </div>
             </CardContent>
           </Card>
 

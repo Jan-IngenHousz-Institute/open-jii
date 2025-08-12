@@ -86,7 +86,7 @@ export function ExperimentSidePanel({
       {/* Node Side Panel */}
       <div
         className={
-          "fixed inset-0 top-[-33] z-40 bg-black transition-opacity duration-300 " +
+          "fixed inset-0 top-[-25] z-[80] bg-black transition-opacity duration-300 " +
           (open && nodeType
             ? "pointer-events-auto bg-opacity-60 opacity-100"
             : "pointer-events-none bg-opacity-0 opacity-0")
@@ -96,7 +96,7 @@ export function ExperimentSidePanel({
       />
       <div
         className={
-          "fixed right-0 top-[-33] z-50 flex h-screen w-full flex-col rounded-none border-none bg-white shadow-none transition-transform duration-300 ease-in-out " +
+          "fixed right-0 top-[-25] z-[90] flex h-screen w-full flex-col rounded-none border-none bg-white shadow-none transition-transform duration-300 ease-in-out " +
           "md:w-[30vw] md:rounded-bl-xl md:rounded-tl-xl md:border-l md:border-gray-200 md:bg-white md:shadow-[-8px_0_30px_-8px_rgba(0,0,0,0.3)]" +
           (open && nodeType ? " translate-x-0" : " translate-x-full")
         }

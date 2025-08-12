@@ -1,6 +1,6 @@
-import type { Node, Edge, Connection } from "@xyflow/react";
-import { MarkerType } from "@xyflow/react";
+import type { Node, Edge, Connection, NodeProps } from "@xyflow/react";
 import {
+  MarkerType,
   ReactFlow,
   addEdge,
   useNodesState,
@@ -9,11 +9,18 @@ import {
   getOutgoers,
   getConnectedEdges,
 } from "@xyflow/react";
-import type { NodeProps } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useCallback, useState, useEffect } from "react";
+import { Maximize2, Minimize2 } from "lucide-react";
+import { useCallback, useState, useEffect, useRef } from "react";
 
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  Button,
+} from "@repo/ui/components";
 
 import { LegendFlow } from "../legend-flow";
 import { BaseNode } from "../react-flow/base-node";
@@ -36,6 +43,23 @@ export function NewExperimentFlow({
   // State for selected edge and node
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Ref for flow area container used by LegendFlow overlay
+  const flowAreaRef = useRef<HTMLDivElement | null>(null);
+
+  // Prevent body scroll when fullscreen is active; restore on exit
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevBodyOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
+    };
+  }, [isFullscreen]);
 
   // Initialize nodes and edges from provided data or default data
   const { nodes: defaultInitialNodes, edges: defaultInitialEdges } = getInitialFlowData();
@@ -256,6 +280,102 @@ export function NewExperimentFlow({
 
   return (
     <>
+      <div
+        className={
+          isFullscreen
+            ? "fixed inset-0 z-50 flex h-screen w-screen flex-col overflow-hidden overscroll-contain bg-white p-0"
+            : undefined
+        }
+      >
+        <Card
+          className={
+            isFullscreen ? "flex h-full flex-col rounded-none border-0 shadow-none" : undefined
+          }
+        >
+          {!isFullscreen && (
+            <CardHeader>
+              <CardTitle>Experiment Flow</CardTitle>
+              <CardDescription>
+                Visualize and connect your experiment flow nodes below. Drag from the legend to add
+                new nodes.
+              </CardDescription>
+              {/* Fullscreen button removed from here */}
+            </CardHeader>
+          )}
+          <CardContent className={isFullscreen ? "min-h-0 flex-1 overflow-auto p-6" : undefined}>
+            <div
+              className={
+                isFullscreen
+                  ? "flex h-full min-h-0 flex-col gap-4 md:flex-row"
+                  : "flex flex-col gap-4 md:flex-row"
+              }
+            >
+              {/* Flow Area */}
+              <Card className={isFullscreen ? "flex h-full min-h-0 flex-1 flex-col" : "flex-1"}>
+                <CardContent className={isFullscreen ? "min-h-0 flex-1 p-0" : "p-0"}>
+                  <div
+                    ref={flowAreaRef}
+                    className={
+                      isFullscreen ? "relative h-full w-full" : "relative h-[700px] w-full"
+                    }
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={handleDrop}
+                  >
+                    {/* Fullscreen controls overlay */}
+                    <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                        onClick={() => setIsFullscreen((v) => !v)}
+                      >
+                        {isFullscreen ? (
+                          <Minimize2 className="h-4 w-4" />
+                        ) : (
+                          <Maximize2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+
+                    {/* ReactFlow canvas */}
+                    <ReactFlow
+                      nodes={nodes}
+                      edges={styledEdges}
+                      onNodesChange={onNodesChange}
+                      onNodesDelete={onNodesDelete}
+                      onEdgesChange={onEdgesChange}
+                      onConnect={onConnect}
+                      onEdgeClick={onEdgeClick}
+                      onPaneClick={onPaneClick}
+                      nodeTypes={nodeTypes}
+                      fitView
+                      deleteKeyCode={[]}
+                      defaultEdgeOptions={{
+                        markerEnd: { type: MarkerType.ArrowClosed },
+                      }}
+                    />
+
+                    {/* Legend overlay (inside ReactFlow on md+ for all states) */}
+                    <LegendFlow
+                      overlay
+                      dragHandle
+                      containerRef={flowAreaRef}
+                      initialCorner="bottom-right"
+                      cardClassName="cursor-grab bg-white/70 backdrop-blur supports-[backdrop-filter]:bg-white/50 border border-slate-200"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Legend below on small screens (both fullscreen and normal) */}
+              <div className="md:hidden">
+                <LegendFlow />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       {/* Side panel for nodes and edges */}
       <ExperimentSidePanel
         open={!!selectedNode || !!selectedEdgeId}
@@ -275,50 +395,6 @@ export function NewExperimentFlow({
         onEdgeDelete={handleEdgeDelete}
         nodes={nodes}
       />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Experiment Flow</CardTitle>
-          <CardDescription>
-            Visualize and connect your experiment flow nodes below. Drag from the legend to add new
-            nodes.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-4 md:flex-row">
-            {/* Flow Area */}
-            <Card className="flex-1">
-              <CardContent className="p-0">
-                <div
-                  className="h-[700px]"
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={handleDrop}
-                >
-                  <ReactFlow
-                    nodes={nodes}
-                    edges={styledEdges}
-                    onNodesChange={onNodesChange}
-                    onNodesDelete={onNodesDelete}
-                    onEdgesChange={onEdgesChange}
-                    onConnect={onConnect}
-                    onEdgeClick={onEdgeClick}
-                    onPaneClick={onPaneClick}
-                    nodeTypes={nodeTypes}
-                    deleteKeyCode={[]}
-                    defaultViewport={{ x: 50, y: 150, zoom: 1 }}
-                    defaultEdgeOptions={{
-                      markerEnd: { type: MarkerType.ArrowClosed },
-                    }}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Legend */}
-            <LegendFlow />
-          </div>
-        </CardContent>
-      </Card>
     </>
   );
 }

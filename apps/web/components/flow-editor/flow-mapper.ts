@@ -235,10 +235,10 @@ export class FlowMapper {
   ): QuestionUI | StepSpecification {
     if (nodeType === "question" && isObject(apiContent)) {
       const content = apiContent as QuestionContent;
-      
+
       // Convert QuestionContent back to QuestionUI format
       let answerType: QuestionUI["answerType"] = "TEXT";
-      
+
       if (content.kind === "yes_no") {
         answerType = "BOOLEAN";
       } else if (content.kind === "multi_choice") {
@@ -248,17 +248,17 @@ export class FlowMapper {
       } else {
         answerType = "TEXT"; // open_ended or default
       }
-      
+
       const questionUI: QuestionUI = {
         answerType,
         validationMessage: content.text,
         required: false, // Default value, this might need to be stored in API if required
         ...(content.kind === "multi_choice" && { options: content.options }),
       };
-      
+
       return questionUI;
     }
-    
+
     // For non-question nodes or invalid content, return as-is
     return apiContent as StepSpecification;
   }
