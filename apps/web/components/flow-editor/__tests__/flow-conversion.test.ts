@@ -31,8 +31,10 @@ describe("Flow Conversion", () => {
         content: {
           kind: "open_ended",
           text: "Please enter your full name",
+          required: false,
         },
         isStart: true,
+        position: { x: 0, y: 0 },
       });
 
       // Validate with backend schema
@@ -58,6 +60,7 @@ describe("Flow Conversion", () => {
       expect(result.nodes[0].content).toEqual({
         kind: "open_ended",
         text: "Age Question",
+        required: false,
       });
     });
   });
@@ -88,6 +91,7 @@ describe("Flow Conversion", () => {
           text: "Please prepare your equipment",
         },
         isStart: true,
+        position: { x: 0, y: 0 },
       });
 
       // Validate with backend schema
@@ -123,6 +127,7 @@ describe("Flow Conversion", () => {
           params: {},
         },
         isStart: true,
+        position: { x: 0, y: 0 },
       });
 
       // Validate with backend schema

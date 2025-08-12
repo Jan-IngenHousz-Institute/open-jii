@@ -12,7 +12,7 @@ function buildApiFlow(overrides: Partial<Flow["graph"]> = {}): Flow {
         id: "start-node",
         type: "question" as const,
         name: "Start",
-        content: { kind: "open_ended", text: "Welcome" },
+        content: { kind: "open_ended", text: "Welcome", required: false },
         isStart: true,
       },
     ],
@@ -49,7 +49,7 @@ describe("FlowMapper.toReactFlow", () => {
           id: "number-node",
           type: "question" as const,
           name: "Age Question",
-          content: { kind: "number", text: "What is your age?" },
+          content: { kind: "number", text: "What is your age?", required: false },
           isStart: true,
         },
       ],
@@ -75,7 +75,7 @@ describe("FlowMapper.toReactFlow", () => {
           id: "bool-node",
           type: "question" as const,
           name: "Consent Question",
-          content: { kind: "yes_no", text: "Do you agree?" },
+          content: { kind: "yes_no", text: "Do you agree?", required: false },
           isStart: true,
         },
       ],
@@ -100,6 +100,7 @@ describe("FlowMapper.toReactFlow", () => {
             kind: "multi_choice",
             text: "Pick your favorite",
             options: ["Option A", "Option B"],
+            required: false,
           },
           isStart: true,
         },
@@ -124,7 +125,7 @@ describe("FlowMapper round-trip", () => {
           id: "start-node",
           type: "question" as const,
           name: "Question 1",
-          content: { kind: "open_ended", text: "Q1" },
+          content: { kind: "open_ended", text: "Q1", required: false },
           isStart: true,
         },
         {
@@ -186,6 +187,7 @@ describe("FlowMapper.toApiGraph validation", () => {
     expect(result.nodes[0].content).toEqual({
       kind: "number",
       text: "Enter your age",
+      required: false,
     });
   });
 
@@ -204,6 +206,7 @@ describe("FlowMapper.toApiGraph validation", () => {
     expect(result.nodes[0].content).toEqual({
       kind: "yes_no",
       text: "Do you agree?",
+      required: false,
     });
   });
 
@@ -224,6 +227,7 @@ describe("FlowMapper.toApiGraph validation", () => {
       kind: "multi_choice",
       text: "Pick one",
       options: ["A", "B"],
+      required: false,
     });
   });
 
@@ -242,6 +246,7 @@ describe("FlowMapper.toApiGraph validation", () => {
     expect(result.nodes[0].content).toEqual({
       kind: "open_ended",
       text: "Tell us more",
+      required: false,
     });
   });
 
@@ -252,7 +257,7 @@ describe("FlowMapper.toApiGraph validation", () => {
           id: "s1",
           type: "question" as const,
           name: "S1",
-          content: { kind: "open_ended", text: "t" },
+          content: { kind: "open_ended", text: "t", required: false },
           isStart: true,
         },
         {
