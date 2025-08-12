@@ -1,0 +1,58 @@
+# Codecov configuration
+codecov:
+  require_ci_to_pass: true
+
+# Coverage configuration
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        base: auto
+      backend:
+        target: 90% # 90% lines coverage for backend
+        threshold: 1% # Allow 1% variance
+        flags:
+          - backend
+        paths:
+          - apps/backend/
+      web:
+        # No minimum coverage requirement for web (for now)
+        target: auto
+        threshold: 100% # Very lenient threshold essentially disables blocking
+        informational: true # Make it non-blocking
+        flags:
+          - web
+        paths:
+          - apps/web/
+    patch:
+      default:
+        target: 75% # 75% branch coverage requirement for new code
+        threshold: 5%
+        base: auto
+
+# Comment configuration for PR
+comment:
+  layout: "diff, flags, files"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+  hide_project_coverage: false
+
+# Flag configuration to isolate coverage by project
+flags:
+  backend:
+    paths:
+      - apps/backend/
+    # For branches coverage target
+    carryforward: true
+  web:
+    paths:
+      - apps/web/
+    carryforward: true
+
+# Disable GitHub annotations to reduce visual clutter
+github_checks:
+  annotations: false
