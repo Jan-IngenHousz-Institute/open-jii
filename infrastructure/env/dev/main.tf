@@ -1,6 +1,6 @@
 module "terraform_state_s3" {
   source      = "../../modules/s3"
-  bucket_name = var.terraform_state_s3_bucket_name
+  bucket_name = "open-jii-terraform-state-${var.environment}"
 }
 
 module "terraform_state_lock" {
@@ -20,8 +20,8 @@ module "cloudwatch" {
   source                 = "../../modules/cloudwatch"
   aws_region             = var.aws_region
   log_retention_days     = 60
-  cloudwatch_role_name   = var.iot_logging_role_name
-  cloudwatch_policy_name = var.iot_logging_policy_name
+  cloudwatch_role_name   = "open_jii_${var.environment}_iot_logging_role"
+  cloudwatch_policy_name = "open_jii_${var.environment}_iot_logging_policy"
 }
 
 # Access logs bucket
@@ -43,19 +43,19 @@ module "logs_bucket" {
 module "docusaurus_s3" {
   source                      = "../../modules/s3"
   enable_versioning           = false
-  bucket_name                 = var.docusaurus_s3_bucket_name
+  bucket_name                 = "open-jii-docs-public-${var.environment}"
   cloudfront_distribution_arn = module.docs_cloudfront.cloudfront_distribution_arn
 }
 
 module "timestream" {
   source        = "../../modules/timestream"
-  database_name = var.timestream_database_name
-  table_name    = var.timestream_table_name
+  database_name = "open_jii_${var.environment}_data_ingest_db"
+  table_name    = "measurements"
 }
 
 module "kinesis" {
   source      = "../../modules/kinesis"
-  stream_name = var.kinesis_stream_name
+  stream_name = "open-jii-${var.environment}-data-ingest-stream"
 
   workspace_kinesis_credential_id = var.kinesis_credential_id
 }
@@ -63,13 +63,13 @@ module "kinesis" {
 module "iot_core" {
   source = "../../modules/iot-core"
 
-  timestream_table           = var.timestream_table_name
-  timestream_database        = var.timestream_database_name
-  iot_timestream_role_name   = var.iot_timestream_role_name
-  iot_timestream_policy_name = var.iot_timestream_policy_name
+  timestream_table           = "measurements"
+  timestream_database        = "open_jii_${var.environment}_data_ingest_db"
+  iot_timestream_role_name   = "open_jii_${var.environment}_iot_timestream_role"
+  iot_timestream_policy_name = "open_jii_${var.environment}_iot_timestream_policy"
 
-  iot_kinesis_role_name   = var.iot_kinesis_role_name
-  iot_kinesis_policy_name = var.iot_kinesis_policy_name
+  iot_kinesis_role_name   = "open_jii_${var.environment}_iot_kinesis_role"
+  iot_kinesis_policy_name = "open_jii_${var.environment}_iot_kinesis_policy"
   kinesis_stream_name     = module.kinesis.kinesis_stream_name
   kinesis_stream_arn      = module.kinesis.kinesis_stream_arn
 
@@ -79,7 +79,7 @@ module "iot_core" {
 module "cognito" {
   source             = "../../modules/cognito"
   region             = var.aws_region
-  identity_pool_name = var.iot_cognito_identity_pool_name
+  identity_pool_name = "open-jii-${var.environment}-iot-identity-pool"
 }
 
 module "vpc" {
@@ -98,19 +98,19 @@ module "vpc_endpoints" {
 
 module "databricks_workspace_s3_policy" {
   source      = "../../modules/databricks/workspace-s3-policy"
-  bucket_name = var.databricks_bucket_name
+  bucket_name = "open-jii-databricks-root-bucket-${var.environment}"
 }
 
 module "databricks_workspace_s3" {
   source             = "../../modules/s3"
-  bucket_name        = var.databricks_bucket_name
+  bucket_name        = "open-jii-databricks-root-bucket-${var.environment}"
   enable_versioning  = false
   custom_policy_json = module.databricks_workspace_s3_policy.policy_json
 }
 
 module "metastore_s3" {
   source      = "../../modules/metastore-s3"
-  bucket_name = var.unity_catalog_bucket_name
+  bucket_name = "open-jii-databricks-uc-root-bucket"
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -181,7 +181,7 @@ module "experiment_secret_scope" {
 
 module "databricks_catalog" {
   source             = "../../modules/databricks/catalog"
-  catalog_name       = var.databricks_catalog_name
+  catalog_name       = "open_jii_${var.environment}"
   external_bucket_id = module.metastore_s3.bucket_name
 
   grants = {
@@ -903,8 +903,8 @@ module "docs_waf" {
 
 module "docs_cloudfront" {
   source          = "../../modules/cloudfront"
-  bucket_name     = var.docusaurus_s3_bucket_name
   aws_region      = var.aws_region
+  bucket_name     = module.docusaurus_s3.bucket_name
   certificate_arn = module.route53.cloudfront_certificate_arns["docs"]
   custom_domain   = module.route53.docs_domain
   waf_acl_id      = module.docs_waf.cloudfront_web_acl_arn
