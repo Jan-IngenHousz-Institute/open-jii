@@ -7,8 +7,9 @@ export interface EdgeSidePanelProps {
   open: boolean;
   selectedEdge: Edge | null;
   onClose: () => void;
-  onEdgeUpdate: (edgeId: string, updates: Partial<Edge>) => void;
-  onEdgeDelete: (edgeId: string) => void;
+  onEdgeUpdate?: (edgeId: string, updates: Partial<Edge>) => void;
+  onEdgeDelete?: (edgeId: string) => void;
+  isDisabled?: boolean;
 }
 
 export function EdgeSidePanel({
@@ -17,23 +18,35 @@ export function EdgeSidePanel({
   onClose,
   onEdgeUpdate,
   onEdgeDelete,
+  isDisabled = false,
 }: EdgeSidePanelProps) {
   // Keep previous content during transition
   const [displayEdge, setDisplayEdge] = useState<Edge | null>(selectedEdge);
 
   const handleLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isDisabled) return;
     const newLabel = e.target.value;
     if (displayEdge) {
       const updatedEdge = { ...displayEdge, data: { ...displayEdge.data, label: newLabel } };
       setDisplayEdge(updatedEdge);
-      onEdgeUpdate(displayEdge.id, { data: { ...displayEdge.data, label: newLabel } });
+      onEdgeUpdate?.(displayEdge.id, { data: { ...displayEdge.data, label: newLabel } });
     }
   };
 
   const handleDeleteEdge = () => {
-    if (displayEdge) {
+    if (isDisabled) return;
+    if (displayEdge && onEdgeDelete) {
       onEdgeDelete(displayEdge.id);
       onClose();
+    }
+  };
+
+  const handleAnimationToggle = (animated: boolean) => {
+    if (isDisabled) return;
+    if (displayEdge && onEdgeUpdate) {
+      const updatedEdge = { ...displayEdge, animated };
+      setDisplayEdge(updatedEdge);
+      onEdgeUpdate(displayEdge.id, { animated });
     }
   };
 
@@ -62,7 +75,7 @@ export function EdgeSidePanel({
       {/* Always render backdrop for fade animation */}
       <div
         className={
-          "fixed inset-0 top-[-25] z-[80] bg-black transition-opacity duration-300 " +
+          "fixed inset-0 z-40 bg-black transition-opacity duration-300 " +
           (open && selectedEdge
             ? "pointer-events-auto bg-opacity-60 opacity-100"
             : "pointer-events-none bg-opacity-0 opacity-0")
@@ -72,7 +85,7 @@ export function EdgeSidePanel({
       />
       <div
         className={
-          "fixed right-0 top-[-25] z-[90] flex h-screen w-[30vw] flex-col rounded-bl-2xl rounded-tl-2xl border-l border-gray-200 bg-white shadow-[-8px_0_30px_-8px_rgba(0,0,0,0.3)] transition-transform duration-300 ease-in-out " +
+          "fixed bottom-0 right-0 top-0 z-50 flex w-[30vw] flex-col rounded-bl-2xl rounded-tl-2xl border-l border-gray-200 bg-white shadow-[-8px_0_30px_-8px_rgba(0,0,0,0.3)] transition-transform duration-300 ease-in-out " +
           (open && selectedEdge ? "translate-x-0" : "translate-x-full")
         }
       >
@@ -98,11 +111,36 @@ export function EdgeSidePanel({
                 value={getEdgeLabel(displayEdge)}
                 onChange={handleLabelChange}
                 placeholder="Enter edge label..."
-                className="focus:border-jii-dark-green focus:ring-jii-dark-green w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-opacity-50"
+                disabled={isDisabled}
+                className="focus:border-jii-dark-green focus:ring-jii-dark-green w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
               />
             </CardContent>
           </Card>
 
+          {/* Animation Settings */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-jii-dark-green">Animation</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-slate-800">Animate this edge</span>
+                <label className="relative inline-flex cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!displayEdge?.animated}
+                    onChange={(e) => handleAnimationToggle(e.target.checked)}
+                    disabled={isDisabled}
+                    className="peer sr-only"
+                  />
+                  {/* track */}
+                  <div className="peer-checked:bg-jii-dark-green h-5 w-10 rounded-full bg-gray-200 transition-colors" />
+                  {/* thumb */}
+                  <div className="absolute left-0.5 top-0.5 h-4 w-4 transform rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
+                </label>
+              </div>
+            </CardContent>
+          </Card>
           {/* Edge Actions */}
           <Card>
             <CardHeader>
@@ -112,8 +150,9 @@ export function EdgeSidePanel({
               <div className="flex justify-center">
                 <button
                   type="button"
-                  className="rounded bg-red-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-600"
+                  className="rounded bg-red-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-gray-400"
                   onClick={handleDeleteEdge}
+                  disabled={isDisabled}
                 >
                   Remove Edge
                 </button>

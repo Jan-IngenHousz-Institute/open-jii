@@ -12,10 +12,11 @@ import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 
 interface MeasurementPanelProps {
   selectedProtocolId?: string;
-  onChange?: (protocolId: string) => void;
+  onChange: (protocolId: string) => void;
+  disabled?: boolean;
 }
 
-export function MeasurementPanel({ selectedProtocolId = "", onChange }: MeasurementPanelProps) {
+export function MeasurementPanel({ selectedProtocolId = "", onChange, disabled = false }: MeasurementPanelProps) {
   const { t } = useTranslation("common");
 
   // Protocol search state
@@ -29,9 +30,8 @@ export function MeasurementPanel({ selectedProtocolId = "", onChange }: Measurem
   }, [protocolList]);
 
   const handleAddProtocol = (protocolId: string) => {
-    if (onChange) {
-      onChange(protocolId);
-    }
+    if (disabled) return;
+    onChange(protocolId);
     setProtocolSearch("");
   };
 

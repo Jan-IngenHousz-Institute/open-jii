@@ -17,6 +17,8 @@
     "completed": "Completed",
     "paused": "Paused",
     "cancelled": "Cancelled",
+    "archived": "Archived",
+    "stale": "Stale",
     "provisioning": "Provisioning"
   },
   "visibility": {
@@ -43,16 +45,27 @@
   "flow": {
     "title": "Experiment Flow",
     "description": "Design and visualize your experiment workflow by connecting different steps and operations.",
+    "editDescription": "Design and visualize your experiment workflow by connecting different steps and operations.",
     "staticDescription": "Visual overview of the experiment workflow",
-    "tabLabel": "Flow"
+    "tabLabel": "Flow",
+    "saving": "Saving...",
+    "saveFlow": "Save Flow"
   },
   "overview": "Overview",
   "data": "Data",
   "experiment": "Experiment",
+  "experimentId": "Experiment ID",
+  "created": "Created",
+  "updated": "Updated",
+  "descriptionTitle": "Description",
   "manageExperimentDescription": "View and manage experiment details, data, flow, and settings.",
   "loading": "Loading...",
   "failedToLoad": "Failed to load experiment",
   "notFound": "Experiment not found",
+  "noPermissionToAccess": "You do not have permission to access this experiment",
+  "errorLoadingExperiment": "An error occurred while loading the experiment",
+  "experimentNotFound": "The experiment you're looking for could not be found",
+  "needMemberAccess": "You need member access to perform this action",
   "validation": {
     "nameRequired": "Experiment name is required",
     "nameMinLength": "Name must be at least 3 characters",

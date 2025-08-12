@@ -4,6 +4,7 @@ import { ErrorDisplay } from "@/components/error-display";
 import { FlowEditor } from "@/components/flow-editor";
 import type { FlowEditorHandle } from "@/components/flow-editor";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
+import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
 import { useExperimentFlowCreate } from "@/hooks/experiment/useExperimentFlowCreate/useExperimentFlowCreate";
 import { useExperimentFlowUpdate } from "@/hooks/experiment/useExperimentFlowUpdate/useExperimentFlowUpdate";
@@ -22,11 +23,19 @@ interface ExperimentFlowPageProps {
 export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) {
   const { id } = use(params);
   const { data: experiment, isLoading, error } = useExperiment(id);
+  const {
+    data: accessData,
+    isLoading: accessLoading,
+    error: accessError,
+  } = useExperimentAccess(id);
   const { t } = useTranslation("experiments");
 
   // Get existing flow for this experiment
   const experimentData = experiment?.body;
   const { data: existingFlow, refetch } = useExperimentFlow(id);
+
+  // Determine if user has access to edit
+  const hasAccess = accessData?.body.hasAccess ?? false;
 
   // Flow state / editor ref
   const flowEditorRef = useRef<FlowEditorHandle | null>(null);
@@ -66,15 +75,15 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
     }
   }, [createFlowMutation, updateFlowMutation, existingFlow, id]);
 
-  if (isLoading) {
+  if (isLoading || accessLoading) {
     return <div>{t("loading")}</div>;
   }
 
-  if (error) {
-    return <ErrorDisplay error={error} title={t("failedToLoad")} />;
+  if (error ?? accessError) {
+    return <ErrorDisplay error={error ?? accessError} title={t("failedToLoad")} />;
   }
 
-  if (!experimentData) {
+  if (!experimentData || !accessData?.body.experiment) {
     return <div>{t("notFound")}</div>;
   }
 
@@ -84,20 +93,41 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="text-lg font-medium">{t("flow.title")}</h4>
-          <p className="text-muted-foreground text-sm">{t("flow.description")}</p>
+          <h2 className="text-2xl font-bold">{t("flow.title")}</h2>
+          <p className="text-muted-foreground text-sm">
+            {hasAccess ? t("flow.editDescription") : t("flow.staticDescription")}
+          </p>
         </div>
-
-        <Button onClick={handleSave} disabled={!hasUnsavedChanges || isSaving} className="ml-auto">
-          {isSaving ? "Saving..." : "Save Flow"}
-        </Button>
+        <div
+          className={`flex items-center gap-2 rounded-md px-3 py-1.5 ${hasAccess ? "bg-green-50" : "bg-blue-50"}`}
+        >
+          <div
+            className={`h-2 w-2 rounded-full ${hasAccess ? "bg-green-500" : "bg-blue-500"}`}
+          ></div>
+          <span className={`text-sm font-medium ${hasAccess ? "text-green-700" : "text-blue-700"}`}>
+            {hasAccess ? "Editing Mode" : "Preview Mode"}
+          </span>
+        </div>
       </div>
 
       <FlowEditor
         ref={flowEditorRef}
         initialFlow={existingFlow?.body}
-        onDirtyChange={() => setHasUnsavedChanges(true)}
+        isDisabled={!hasAccess}
+        onDirtyChange={hasAccess ? () => setHasUnsavedChanges(true) : undefined}
       />
+
+      {hasAccess && (
+        <div className="flex items-center justify-end gap-4">
+          <Button
+            onClick={handleSave}
+            disabled={isSaving || !hasUnsavedChanges}
+            className="bg-jii-dark-green hover:bg-jii-medium-green"
+          >
+            {isSaving ? t("flow.saving") : t("flow.saveFlow")}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

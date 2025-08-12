@@ -37,9 +37,10 @@ export interface ExperimentSidePanelProps {
   onTitleChange?: (newTitle: string) => void;
   onNodeDataChange?: (nodeId: string, data: Record<string, unknown>) => void;
   selectedEdge?: Edge | null;
-  onEdgeUpdate: (edgeId: string, updates: Partial<Edge>) => void;
-  onEdgeDelete: (edgeId: string) => void;
+  onEdgeUpdate?: (edgeId: string, updates: Partial<Edge>) => void;
+  onEdgeDelete?: (edgeId: string) => void;
   nodes?: Node[]; // Add nodes to check for existing start/end nodes
+  isDisabled?: boolean; // Whether the panel is read-only
 }
 
 export function ExperimentSidePanel({
@@ -54,12 +55,14 @@ export function ExperimentSidePanel({
   onEdgeUpdate,
   onEdgeDelete,
   nodes = [],
+  isDisabled = false,
 }: ExperimentSidePanelProps) {
   // Keep previous content during transition
   const [displayNodeType, setDisplayNodeType] = useState(nodeType);
   const [currentTitle, setCurrentTitle] = useState(nodeTitle ?? "");
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isDisabled) return;
     const newTitle = e.target.value;
     setCurrentTitle(newTitle);
     if (onTitleChange) {
@@ -86,7 +89,7 @@ export function ExperimentSidePanel({
       {/* Node Side Panel */}
       <div
         className={
-          "fixed inset-0 top-[-25] z-[80] bg-black transition-opacity duration-300 " +
+          "fixed inset-0 z-40 bg-black transition-opacity duration-300 " +
           (open && nodeType
             ? "pointer-events-auto bg-opacity-60 opacity-100"
             : "pointer-events-none bg-opacity-0 opacity-0")
@@ -96,7 +99,7 @@ export function ExperimentSidePanel({
       />
       <div
         className={
-          "fixed right-0 top-[-25] z-[90] flex h-screen w-full flex-col rounded-none border-none bg-white shadow-none transition-transform duration-300 ease-in-out " +
+          "fixed bottom-0 right-0 top-0 z-[9999] flex w-full flex-col rounded-none border-none bg-white shadow-none transition-transform duration-300 ease-in-out " +
           "md:w-[30vw] md:rounded-bl-xl md:rounded-tl-xl md:border-l md:border-gray-200 md:bg-white md:shadow-[-8px_0_30px_-8px_rgba(0,0,0,0.3)]" +
           (open && nodeType ? " translate-x-0" : " translate-x-full")
         }
@@ -128,7 +131,8 @@ export function ExperimentSidePanel({
                 value={currentTitle}
                 onChange={handleTitleChange}
                 placeholder="Enter node title..."
-                className="focus:border-jii-dark-green focus:ring-jii-dark-green w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-opacity-50"
+                disabled={isDisabled}
+                className="focus:border-jii-dark-green focus:ring-jii-dark-green w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
               />
             </CardContent>
           </Card>
@@ -151,6 +155,7 @@ export function ExperimentSidePanel({
                       type="checkbox"
                       checked={Boolean(selectedNode.data.isStartNode)}
                       onChange={() => {
+                        if (isDisabled) return;
                         const currentIsStart = selectedNode.data.isStartNode;
                         const hasOtherStartNode = nodes.some(
                           (node) => node.id !== selectedNode.id && node.data.isStartNode,
@@ -172,8 +177,11 @@ export function ExperimentSidePanel({
                       }}
                       className="peer sr-only"
                       disabled={
-                        !selectedNode.data.isStartNode &&
-                        nodes.some((node) => node.id !== selectedNode.id && node.data.isStartNode)
+                        isDisabled ||
+                        (!selectedNode.data.isStartNode &&
+                          nodes.some(
+                            (node) => node.id !== selectedNode.id && node.data.isStartNode,
+                          ))
                       }
                     />
                     <div className="peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-disabled:bg-gray-300"></div>
@@ -199,6 +207,7 @@ export function ExperimentSidePanel({
                   });
                 }
               }}
+              disabled={isDisabled}
             />
           )}
           {displayNodeType === "QUESTION" && selectedNode && (
@@ -220,6 +229,7 @@ export function ExperimentSidePanel({
                   });
                 }
               }}
+              disabled={isDisabled}
             />
           )}
 
@@ -237,6 +247,7 @@ export function ExperimentSidePanel({
                   });
                 }
               }}
+              disabled={isDisabled}
             />
           )}
           {/* AnalysisPanel for analysis node */}
@@ -255,6 +266,7 @@ export function ExperimentSidePanel({
                   });
                 }
               }}
+              disabled={isDisabled}
             />
           )}
         </div>
@@ -267,6 +279,7 @@ export function ExperimentSidePanel({
         onClose={onClose}
         onEdgeUpdate={onEdgeUpdate}
         onEdgeDelete={onEdgeDelete}
+        isDisabled={isDisabled}
       />
     </>
   );

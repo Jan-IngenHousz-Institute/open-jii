@@ -1,7 +1,7 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-import { StaticFlowViewer } from "@/components/static-flow-viewer";
+import { FlowEditor } from "@/components/flow-editor";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
 import { formatDate } from "@/util/date";
@@ -25,40 +25,40 @@ interface ExperimentOverviewPageProps {
 export default function ExperimentOverviewPage({ params }: ExperimentOverviewPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useExperiment(id);
-  const { t } = useTranslation();
+  const { t } = useTranslation("experiments");
 
   // Get flow data for this experiment
   const experiment = data?.body;
   const { data: experimentFlow } = useExperimentFlow(id);
   if (isLoading) {
-    return <div>{t("common.loading")}</div>;
+    return <div>{t("loading")}</div>;
   }
 
   if (error) {
-    return <ErrorDisplay error={error} title={t("errors.failedToLoadExperiment")} />;
+    return <ErrorDisplay error={error} title={t("failedToLoad")} />;
   }
 
   if (!data) {
-    return <div>{t("experiments.notFound")}</div>;
+    return <div>{t("notFound")}</div>;
   }
 
   // Body may still be undefined even if data exists; guard explicitly
   if (!experiment) {
-    return <div>{t("experiments.notFound")}</div>;
+    return <div>{t("notFound")}</div>;
   }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-secondary">{t("experiments.status.active")}</Badge>;
+        return <Badge className="bg-secondary">{t("status.active")}</Badge>;
       case "provisioning":
         return (
-          <Badge className="bg-highlight text-black">{t("experiments.status.provisioning")}</Badge>
+          <Badge className="bg-highlight text-black">{t("status.provisioning")}</Badge>
         );
       case "archived":
-        return <Badge className="bg-muted">{t("experiments.status.archived")}</Badge>;
+        return <Badge className="bg-muted">{t("status.archived")}</Badge>;
       case "stale":
-        return <Badge className="bg-tertiary">{t("experiments.status.stale")}</Badge>;
+        return <Badge className="bg-tertiary">{t("status.stale")}</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -83,7 +83,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <div>
               <h4 className="text-muted-foreground text-sm font-medium">
-                {t("experimentSettings.created")}
+                {t("created")}
               </h4>
               <p className="flex items-center gap-1">
                 <CalendarIcon className="text-muted-foreground h-4 w-4" aria-hidden="true" />
@@ -92,7 +92,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
             </div>
             <div>
               <h4 className="text-muted-foreground text-sm font-medium">
-                {t("experimentSettings.updated")}
+                {t("updated")}
               </h4>
               <p>{formatDate(experiment.updatedAt)}</p>
             </div>
@@ -107,7 +107,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
             {/*</div>*/}
             <div>
               <h4 className="text-muted-foreground text-sm font-medium">
-                {t("experiments.experimentId")}
+                {t("experimentId")}
               </h4>
               <p className="truncate font-mono text-xs">{experiment.id}</p>
             </div>
@@ -115,19 +115,29 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
         </CardContent>
       </Card>
       <Card>
-        <CardHeader>{t("experiments.descriptionTitle")}</CardHeader>
+        <CardHeader>{t("descriptionTitle")}</CardHeader>
         <CardContent>
           <RichTextRenderer content={experiment.description ?? ""} />
         </CardContent>
       </Card>
 
-      {/* Static Flow Display */}
+      {/* Flow Display */}
       {experimentFlow?.body && (
-        <StaticFlowViewer
-          flow={experimentFlow.body}
-          title={t("experiments.flow.title")}
-          description={t("experiments.flow.staticDescription")}
-        />
+        <div>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">{t("flow.title")}</h3>
+              <p className="text-sm text-muted-foreground">
+                {t("flow.staticDescription")}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 rounded-md bg-blue-50 px-3 py-1.5">
+              <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+              <span className="text-sm font-medium text-blue-700">Preview Mode</span>
+            </div>
+          </div>
+          <FlowEditor initialFlow={experimentFlow.body} isDisabled={true} />
+        </div>
       )}
     </div>
   );

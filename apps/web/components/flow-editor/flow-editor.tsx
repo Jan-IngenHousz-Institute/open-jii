@@ -27,14 +27,7 @@ import {
 
 import type { Flow } from "@repo/api";
 import type { UpsertFlowBody } from "@repo/api";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  Button,
-} from "@repo/ui/components";
+import { Card, CardContent, Button } from "@repo/ui/components";
 
 import { LegendFlow } from "../legend-flow";
 import { BaseNode } from "../react-flow/base-node";
@@ -99,10 +92,11 @@ interface FlowEditorProps {
   initialFlow?: Flow;
   onNodeSelect?: (node: Node | null) => void;
   onDirtyChange?: (dirty: boolean) => void; // notify parent that there are unsaved changes
+  isDisabled?: boolean; // whether the flow is read-only
 }
 
 export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
-  ({ initialFlow, onNodeSelect, onDirtyChange }, ref) => {
+  ({ initialFlow, onNodeSelect, onDirtyChange, isDisabled = false }, ref) => {
     // State for selected edge and node
     const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
     const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -326,6 +320,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     // Edge creation
     const onConnect = useCallback(
       (params: Connection) => {
+        if (isDisabled) return; // No connections in disabled mode
         if (params.source === params.target) return;
 
         const id = `e-${params.source}-${params.target}-${Date.now()}`;
@@ -340,7 +335,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
         };
         setEdges((eds) => addEdge(newEdge, eds));
       },
-      [setEdges],
+      [setEdges, isDisabled],
     );
 
     // Edge selection
@@ -359,6 +354,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     // Handle drag and drop for new nodes
     const handleDrop = useCallback(
       (e: React.DragEvent) => {
+        if (isDisabled) return; // No drag and drop in disabled mode
         e.preventDefault();
         const type = e.dataTransfer.getData("application/reactflow");
         if (!type) return;
@@ -375,7 +371,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
           return [...nds, newNode];
         });
       },
-      [setNodes],
+      [setNodes, isDisabled],
     );
 
     // Apply edge styles based on selection
@@ -410,7 +406,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     }, [nodes, setNodes]);
 
     return (
-      <>
+      <div>
         {/* Side panel for nodes and edges */}
         <ExperimentSidePanel
           open={!!selectedNode || !!selectedEdgeId}
@@ -423,12 +419,13 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
             setSelectedNode(null);
             setSelectedEdgeId(null);
           }}
-          onTitleChange={handleTitleChange}
-          onNodeDataChange={handleNodeDataChange}
+          onTitleChange={isDisabled ? undefined : handleTitleChange}
+          onNodeDataChange={isDisabled ? undefined : handleNodeDataChange}
           selectedEdge={edges.find((edge) => edge.id === selectedEdgeId) ?? null}
-          onEdgeUpdate={handleEdgeUpdate}
-          onEdgeDelete={handleEdgeDelete}
+          onEdgeUpdate={isDisabled ? undefined : handleEdgeUpdate}
+          onEdgeDelete={isDisabled ? undefined : handleEdgeDelete}
           nodes={nodes}
+          isDisabled={isDisabled}
         />
 
         {/* Fullscreen wrapper */}
@@ -440,38 +437,28 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
           }
         >
           <Card
-            className={
-              isFullscreen ? "flex h-full flex-col rounded-none border-0 shadow-none" : undefined
-            }
+            className={isFullscreen ? "flex h-full flex-col rounded-none border-0" : "shadow-none"}
           >
-            {!isFullscreen && (
-              <CardHeader>
-                <CardTitle>Experiment Flow Editor</CardTitle>
-                <CardDescription>
-                  Design your experiment flow by dragging nodes from the legend and connecting them.
-                </CardDescription>
-              </CardHeader>
-            )}
-            <CardContent className={isFullscreen ? "min-h-0 flex-1 overflow-auto p-6" : undefined}>
-              <div
-                className={
-                  isFullscreen
-                    ? "flex h-full min-h-0 flex-col gap-4 md:flex-row"
-                    : "flex flex-col gap-4 md:flex-row"
-                }
-              >
-                {/* Flow Area */}
-                <Card className={isFullscreen ? "flex h-full min-h-0 flex-1 flex-col" : "flex-1"}>
-                  <CardContent className={isFullscreen ? "min-h-0 flex-1 p-0" : "p-0"}>
-                    <div
-                      ref={flowAreaRef}
-                      className={
-                        isFullscreen ? "relative h-full w-full" : "relative h-[700px] w-full"
-                      }
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={handleDrop}
-                    >
-                      {/* Fullscreen controls overlay */}
+            <div
+              className={
+                isFullscreen
+                  ? "flex h-full min-h-0 flex-col gap-4 md:flex-row"
+                  : "flex flex-col gap-4 md:flex-row"
+              }
+            >
+              {/* Flow Area */}
+              <Card className={isFullscreen ? "flex h-full min-h-0 flex-1 flex-col" : "flex-1"}>
+                <CardContent className={isFullscreen ? "min-h-0 flex-1 p-0" : "p-0"}>
+                  <div
+                    ref={flowAreaRef}
+                    className={
+                      isFullscreen ? "relative h-full w-full" : "relative h-[700px] w-full"
+                    }
+                    onDragOver={isDisabled ? undefined : (e) => e.preventDefault()}
+                    onDrop={isDisabled ? undefined : handleDrop}
+                  >
+                    {/* Fullscreen controls overlay - hide in disabled mode */}
+                    {!isDisabled && (
                       <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
                         <Button
                           type="button"
@@ -487,56 +474,63 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                           )}
                         </Button>
                       </div>
+                    )}
 
-                      {/* ReactFlow canvas */}
-                      <FlowContextProvider
+                    {/* ReactFlow canvas */}
+                    <FlowContextProvider
+                      nodes={nodes}
+                      onNodeSelect={handleNodeSelect}
+                      onNodeDelete={handleNodeDelete}
+                      onNodeDataChange={handleNodeDataChange}
+                    >
+                      <ReactFlow
+                        attributionPosition="bottom-left"
                         nodes={nodes}
-                        onNodeSelect={handleNodeSelect}
-                        onNodeDelete={handleNodeDelete}
-                        onNodeDataChange={handleNodeDataChange}
-                      >
-                        <ReactFlow
-                          nodes={nodes}
-                          edges={styledEdges}
-                          onNodesChange={onNodesChange}
-                          onNodesDelete={onNodesDelete}
-                          onEdgesChange={onEdgesChange}
-                          onConnect={onConnect}
-                          onEdgeClick={onEdgeClick}
-                          onPaneClick={onPaneClick}
-                          nodeTypes={nodeTypes}
-                          deleteKeyCode={[]}
-                          fitView
-                          defaultEdgeOptions={{
-                            markerEnd: { type: MarkerType.ArrowClosed },
-                          }}
-                        />
-                      </FlowContextProvider>
+                        edges={styledEdges}
+                        onNodesChange={isDisabled ? undefined : onNodesChange}
+                        onNodesDelete={isDisabled ? undefined : onNodesDelete}
+                        onEdgesChange={isDisabled ? undefined : onEdgesChange}
+                        onConnect={isDisabled ? undefined : onConnect}
+                        onEdgeClick={onEdgeClick}
+                        onPaneClick={onPaneClick}
+                        nodeTypes={nodeTypes}
+                        deleteKeyCode={[]}
+                        nodesDraggable={!isDisabled}
+                        nodesConnectable={!isDisabled}
+                        elementsSelectable={true}
+                        fitView={isFullscreen}
+                        defaultViewport={{ x: 50, y: 150, zoom: 1 }}
+                        defaultEdgeOptions={{
+                          markerEnd: { type: MarkerType.ArrowClosed },
+                        }}
+                      />
+                    </FlowContextProvider>
 
-                      {/* Overlay legend always, except on small screens */}
+                    {/* Overlay legend always, except on small screens and when disabled */}
+                    {!isDisabled && (
                       <div className="hidden md:block">
                         <LegendFlow
                           overlay
-                          dragHandle
                           containerRef={flowAreaRef}
                           initialCorner="bottom-right"
-                          cardClassName="cursor-grab bg-white/70 backdrop-blur supports-[backdrop-filter]:bg-white/50 border border-slate-200"
+                          cardClassName="bg-white/70 backdrop-blur supports-[backdrop-filter]:bg-white/50 border border-slate-200"
                         />
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
-                {/* Remove side legend in normal mode */}
-                {/* Legend below on small screens */}
+              {/* Legend below on small screens - hide in disabled mode */}
+              {!isDisabled && (
                 <div className="md:hidden">
                   <LegendFlow />
                 </div>
-              </div>
-            </CardContent>
+              )}
+            </div>
           </Card>
         </div>
-      </>
+      </div>
     );
   },
 );

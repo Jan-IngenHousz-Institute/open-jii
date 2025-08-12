@@ -17,7 +17,8 @@ import { Popover, PopoverTrigger, PopoverContent } from "@repo/ui/components";
 
 interface AnalysisPanelProps {
   selectedMeasurementOption?: string;
-  onChange?: (measurementOption: string) => void;
+  onChange: (measurementOption: string) => void;
+  disabled?: boolean;
 }
 
 // Mock measurement options for analysis
@@ -80,7 +81,7 @@ const MEASUREMENT_OPTIONS = [
   },
 ];
 
-export function AnalysisPanel({ selectedMeasurementOption = "", onChange }: AnalysisPanelProps) {
+export function AnalysisPanel({ selectedMeasurementOption = "", onChange, disabled = false }: AnalysisPanelProps) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -96,9 +97,8 @@ export function AnalysisPanel({ selectedMeasurementOption = "", onChange }: Anal
   );
 
   const handleSelectOption = (optionId: string) => {
-    if (onChange) {
-      onChange(optionId);
-    }
+    if (disabled) return;
+    onChange(optionId);
     setOpen(false);
     setSearchTerm("");
   };
@@ -115,6 +115,7 @@ export function AnalysisPanel({ selectedMeasurementOption = "", onChange }: Anal
               variant="outline"
               role="combobox"
               aria-expanded={open}
+              disabled={disabled}
               className="w-full justify-between p-0"
             >
               <div className="flex w-full items-center gap-3 px-3 py-2">
@@ -149,8 +150,9 @@ export function AnalysisPanel({ selectedMeasurementOption = "", onChange }: Anal
                 type="text"
                 placeholder="Search analysis options..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => disabled ? undefined : setSearchTerm(e.target.value)}
+                disabled={disabled}
+                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
             </div>
             <div className="max-h-60 overflow-y-auto">
@@ -158,7 +160,8 @@ export function AnalysisPanel({ selectedMeasurementOption = "", onChange }: Anal
                 <button
                   key={option.id}
                   onClick={() => handleSelectOption(option.id)}
-                  className="w-full px-3 py-3 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                  disabled={disabled}
+                  className="w-full px-3 py-3 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <div className="flex items-start gap-3">
                     {option.createdBy && (

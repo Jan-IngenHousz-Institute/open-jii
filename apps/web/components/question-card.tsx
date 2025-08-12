@@ -12,12 +12,13 @@ export interface QuestionUI {
 
 interface QuestionCardProps {
   stepSpecification: QuestionUI;
-  onUpdateText: (text: string) => void;
-  onUpdateAnswerType: (answerType: QuestionUI["answerType"]) => void;
-  onToggleRequired: () => void;
-  onAddOption: () => void;
-  onUpdateOption: (optionIndex: number, text: string) => void;
-  onDeleteOption: (optionIndex: number) => void;
+  onUpdateText?: (text: string) => void;
+  onUpdateAnswerType?: (answerType: QuestionUI["answerType"]) => void;
+  onToggleRequired?: () => void;
+  onAddOption?: () => void;
+  onUpdateOption?: (optionIndex: number, text: string) => void;
+  onDeleteOption?: (optionIndex: number) => void;
+  disabled?: boolean;
 }
 
 export function QuestionCard({
@@ -28,6 +29,7 @@ export function QuestionCard({
   onAddOption,
   onUpdateOption,
   onDeleteOption,
+  disabled = false,
 }: QuestionCardProps) {
   const { answerType, validationMessage, options, required } = stepSpecification;
 
@@ -42,9 +44,10 @@ export function QuestionCard({
           <input
             type="text"
             value={validationMessage ?? ""}
-            onChange={(e) => onUpdateText(e.target.value)}
+            onChange={(e) => onUpdateText?.(e.target.value)}
             placeholder="What would you like to ask?"
-            className="focus:border-jii-dark-green w-full border-0 border-b-2 border-gray-100 bg-transparent px-0 py-3 text-lg font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-0"
+            disabled={disabled}
+            className="focus:border-jii-dark-green w-full border-0 border-b-2 border-gray-100 bg-transparent px-0 py-3 text-lg font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:bg-gray-50"
           />
         </div>
 
@@ -62,6 +65,7 @@ export function QuestionCard({
                 type="checkbox"
                 checked={required}
                 onChange={onToggleRequired}
+                disabled={disabled}
                 className="peer sr-only"
               />
               <div className="peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4"></div>
@@ -82,7 +86,8 @@ export function QuestionCard({
                   type="radio"
                   name="answer-type"
                   checked={answerType === type}
-                  onChange={() => onUpdateAnswerType(type as QuestionUI["answerType"])}
+                  onChange={() => onUpdateAnswerType?.(type as QuestionUI["answerType"])}
+                  disabled={disabled}
                   className="peer sr-only"
                 />
                 <div className="peer-checked:border-jii-dark-green peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 relative h-4 w-4 rounded-full border-2 border-gray-300 bg-white transition-all peer-focus:ring-2">
@@ -119,14 +124,16 @@ export function QuestionCard({
                     <input
                       type="text"
                       value={option}
-                      onChange={(e) => onUpdateOption(optionIndex, e.target.value)}
+                      onChange={(e) => onUpdateOption?.(optionIndex, e.target.value)}
                       placeholder="Enter an answer option"
-                      className="focus:border-jii-dark-green focus:ring-jii-dark-green/20 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 transition-colors focus:bg-white focus:outline-none focus:ring-2"
+                      disabled={disabled}
+                      className="focus:border-jii-dark-green focus:ring-jii-dark-green/20 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 transition-colors focus:bg-white focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"
                     />
                     <button
                       type="button"
-                      onClick={() => onDeleteOption(optionIndex)}
-                      className="rounded-lg p-2 text-gray-400 opacity-100 transition-all hover:bg-red-50 hover:text-red-500 md:opacity-0 md:group-hover/option:opacity-100"
+                      onClick={() => onDeleteOption?.(optionIndex)}
+                      disabled={disabled}
+                      className="rounded-lg p-2 text-gray-400 opacity-100 transition-all hover:bg-red-50 hover:text-red-500 md:opacity-0 md:group-hover/option:opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
                       title="Remove option"
                     >
                       <svg
@@ -170,7 +177,8 @@ export function QuestionCard({
             <button
               type="button"
               onClick={onAddOption}
-              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50"
+              disabled={disabled}
+              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path

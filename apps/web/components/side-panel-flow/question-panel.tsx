@@ -8,15 +8,22 @@ import { QuestionCard } from "../question-card";
 interface QuestionPanelProps {
   stepSpecification: QuestionUI;
   onChange: (spec: QuestionUI) => void;
+  disabled?: boolean;
 }
 
-export function QuestionPanel({ stepSpecification, onChange }: QuestionPanelProps) {
+export function QuestionPanel({
+  stepSpecification,
+  onChange,
+  disabled = false,
+}: QuestionPanelProps) {
   // Handler functions for the step specification
   const updateQuestionText = (text: string) => {
+    if (disabled) return;
     onChange({ ...stepSpecification, validationMessage: text });
   };
 
   const updateAnswerType = (answerType: QuestionUI["answerType"]) => {
+    if (disabled) return;
     const updatedSpec: QuestionUI = { ...stepSpecification, answerType };
     if (answerType !== "SELECT") {
       // remove options if switching away
@@ -28,10 +35,12 @@ export function QuestionPanel({ stepSpecification, onChange }: QuestionPanelProp
   };
 
   const toggleRequired = () => {
+    if (disabled) return;
     onChange({ ...stepSpecification, required: !stepSpecification.required });
   };
 
   const addOption = () => {
+    if (disabled) return;
     if (stepSpecification.answerType === "SELECT") {
       onChange({
         ...stepSpecification,
@@ -41,6 +50,7 @@ export function QuestionPanel({ stepSpecification, onChange }: QuestionPanelProp
   };
 
   const updateOption = (optionIndex: number, text: string) => {
+    if (disabled) return;
     if (stepSpecification.answerType === "SELECT" && stepSpecification.options) {
       onChange({
         ...stepSpecification,
@@ -50,6 +60,7 @@ export function QuestionPanel({ stepSpecification, onChange }: QuestionPanelProp
   };
 
   const deleteOption = (optionIndex: number) => {
+    if (disabled) return;
     if (stepSpecification.answerType === "SELECT" && stepSpecification.options) {
       onChange({
         ...stepSpecification,
@@ -75,6 +86,7 @@ export function QuestionPanel({ stepSpecification, onChange }: QuestionPanelProp
             onAddOption={addOption}
             onUpdateOption={updateOption}
             onDeleteOption={deleteOption}
+            disabled={disabled}
           />
         </div>
       </CardContent>
