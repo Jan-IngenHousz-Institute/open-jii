@@ -16,7 +16,7 @@ resource "databricks_secret_scope" "this" {
   backend_type = "DATABRICKS"
 }
 
-# Add secrets to the scope - using dynamic blocks instead of for_each
+# Add secrets to the scope
 resource "databricks_secret" "secret" {
   count = length(keys(var.secrets))
 

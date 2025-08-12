@@ -171,7 +171,7 @@ module "experiment_secret_scope" {
     webhook_secret     = var.backend_webhook_secret
   }
 
-  acl_principals  = [module.node_service_principal.service_principal_display_name]
+  acl_principals  = [module.node_service_principal.service_principal_application_id]
   acl_permissions = ["READ"]
 
   providers = {
