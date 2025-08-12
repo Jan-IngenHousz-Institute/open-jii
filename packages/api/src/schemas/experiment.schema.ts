@@ -125,10 +125,18 @@ const zQuestionMultiChoice = z
   })
   .strict();
 
+const zQuestionNumber = z
+  .object({
+    kind: z.literal("number"),
+    text: z.string().min(1),
+  })
+  .strict();
+
 export const zQuestionContent = z.discriminatedUnion("kind", [
   zQuestionYesNo,
   zQuestionOpenEnded,
   zQuestionMultiChoice,
+  zQuestionNumber,
 ]);
 
 export const zInstructionContent = z.object({

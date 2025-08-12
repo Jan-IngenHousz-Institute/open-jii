@@ -41,6 +41,79 @@ describe("FlowMapper.toReactFlow", () => {
     expect(data.isStartNode).toBe(true);
     expect(edges).toHaveLength(0);
   });
+
+  it("maps API number question to React Flow with NUMBER answer type", () => {
+    const flow = buildApiFlow({
+      nodes: [
+        {
+          id: "number-node",
+          type: "question" as const,
+          name: "Age Question",
+          content: { kind: "number", text: "What is your age?" },
+          isStart: true,
+        },
+      ],
+    });
+    const { nodes } = FlowMapper.toReactFlow(flow);
+    expect(nodes).toHaveLength(1);
+    const n = nodes[0];
+    expect(n.id).toBe("number-node");
+    expect(n.type).toBe("QUESTION");
+    const data = n.data as FlowNodeDataWithSpec;
+    expect(data.title).toBe("Age Question");
+    expect(data.stepSpecification).toEqual({
+      answerType: "NUMBER",
+      validationMessage: "What is your age?",
+      required: false,
+    });
+  });
+
+  it("maps API yes_no question to React Flow with BOOLEAN answer type", () => {
+    const flow = buildApiFlow({
+      nodes: [
+        {
+          id: "bool-node",
+          type: "question" as const,
+          name: "Consent Question",
+          content: { kind: "yes_no", text: "Do you agree?" },
+          isStart: true,
+        },
+      ],
+    });
+    const { nodes } = FlowMapper.toReactFlow(flow);
+    const data = nodes[0].data as FlowNodeDataWithSpec;
+    expect(data.stepSpecification).toEqual({
+      answerType: "BOOLEAN",
+      validationMessage: "Do you agree?",
+      required: false,
+    });
+  });
+
+  it("maps API multi_choice question to React Flow with SELECT answer type", () => {
+    const flow = buildApiFlow({
+      nodes: [
+        {
+          id: "multi-node",
+          type: "question" as const,
+          name: "Choice Question",
+          content: {
+            kind: "multi_choice",
+            text: "Pick your favorite",
+            options: ["Option A", "Option B"],
+          },
+          isStart: true,
+        },
+      ],
+    });
+    const { nodes } = FlowMapper.toReactFlow(flow);
+    const data = nodes[0].data as FlowNodeDataWithSpec;
+    expect(data.stepSpecification).toEqual({
+      answerType: "SELECT",
+      validationMessage: "Pick your favorite",
+      required: false,
+      options: ["Option A", "Option B"],
+    });
+  });
 });
 
 describe("FlowMapper round-trip", () => {
@@ -97,6 +170,81 @@ describe("FlowMapper round-trip", () => {
 });
 
 describe("FlowMapper.toApiGraph validation", () => {
+  it("converts NUMBER answer type to number kind", () => {
+    const flow = buildApiFlow();
+    const { nodes } = FlowMapper.toReactFlow(flow);
+
+    // Simulate user selecting NUMBER answer type
+    const data = nodes[0].data as FlowNodeDataWithSpec;
+    data.stepSpecification = {
+      answerType: "NUMBER",
+      validationMessage: "Enter your age",
+      required: false,
+    };
+
+    const result = FlowMapper.toApiGraph(nodes, []);
+    expect(result.nodes[0].content).toEqual({
+      kind: "number",
+      text: "Enter your age",
+    });
+  });
+
+  it("converts BOOLEAN answer type to yes_no kind", () => {
+    const flow = buildApiFlow();
+    const { nodes } = FlowMapper.toReactFlow(flow);
+
+    const data = nodes[0].data as FlowNodeDataWithSpec;
+    data.stepSpecification = {
+      answerType: "BOOLEAN",
+      validationMessage: "Do you agree?",
+      required: false,
+    };
+
+    const result = FlowMapper.toApiGraph(nodes, []);
+    expect(result.nodes[0].content).toEqual({
+      kind: "yes_no",
+      text: "Do you agree?",
+    });
+  });
+
+  it("converts SELECT answer type to multi_choice kind", () => {
+    const flow = buildApiFlow();
+    const { nodes } = FlowMapper.toReactFlow(flow);
+
+    const data = nodes[0].data as FlowNodeDataWithSpec;
+    data.stepSpecification = {
+      answerType: "SELECT",
+      validationMessage: "Pick one",
+      required: false,
+      options: ["A", "B"],
+    };
+
+    const result = FlowMapper.toApiGraph(nodes, []);
+    expect(result.nodes[0].content).toEqual({
+      kind: "multi_choice",
+      text: "Pick one",
+      options: ["A", "B"],
+    });
+  });
+
+  it("converts TEXT answer type to open_ended kind", () => {
+    const flow = buildApiFlow();
+    const { nodes } = FlowMapper.toReactFlow(flow);
+
+    const data = nodes[0].data as FlowNodeDataWithSpec;
+    data.stepSpecification = {
+      answerType: "TEXT",
+      validationMessage: "Tell us more",
+      required: false,
+    };
+
+    const result = FlowMapper.toApiGraph(nodes, []);
+    expect(result.nodes[0].content).toEqual({
+      kind: "open_ended",
+      text: "Tell us more",
+    });
+  });
+
   it("errors when multiple start nodes exist", () => {
     const flow = buildApiFlow({
       nodes: [

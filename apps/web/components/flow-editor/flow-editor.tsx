@@ -17,10 +17,11 @@ import {
   useCallback,
   useState,
   useEffect,
-  useMemo,
   useRef,
   useImperativeHandle,
   forwardRef,
+  createContext,
+  useContext,
 } from "react";
 
 import type { Flow } from "@repo/api";
@@ -34,6 +35,53 @@ import type { NodeType } from "../react-flow/node-config";
 import { ALL_NODE_TYPES, getStyledEdges } from "../react-flow/node-config";
 import { ExperimentSidePanel } from "../side-panel-flow/side-panel-flow";
 import { FlowMapper } from "./flow-mapper";
+
+// Context for sharing node management functions
+interface FlowContextType {
+  nodes: Node[];
+  onNodeSelect: (node: Node | null) => void;
+  onNodeDelete: (nodeId: string) => void;
+  onNodeDataChange: (nodeId: string, newData: Record<string, unknown>) => void;
+}
+
+const FlowContext = createContext<FlowContextType | null>(null);
+
+// BaseNode wrapper that uses context
+const BaseNodeWrapper = (props: NodeProps) => {
+  const context = useContext(FlowContext);
+  if (!context) {
+    throw new Error("BaseNodeWrapper must be used within FlowContext.Provider");
+  }
+  return (
+    <BaseNode
+      {...props}
+      nodes={context.nodes}
+      onNodeSelect={context.onNodeSelect}
+      onNodeDelete={context.onNodeDelete}
+    />
+  );
+};
+
+// FlowContextProvider component
+const FlowContextProvider: React.FC<{
+  children: React.ReactNode;
+  nodes: Node[];
+  onNodeSelect: (node: Node | null) => void;
+  onNodeDelete: (nodeId: string) => void;
+  onNodeDataChange: (nodeId: string, newData: Record<string, unknown>) => void;
+}> = ({ children, nodes, onNodeSelect, onNodeDelete, onNodeDataChange }) => {
+  const value = { nodes, onNodeSelect, onNodeDelete, onNodeDataChange };
+  return <FlowContext.Provider value={value}>{children}</FlowContext.Provider>;
+};
+
+// Define nodeTypes outside the component to avoid re-creation
+const nodeTypes = ALL_NODE_TYPES.reduce(
+  (map, type) => {
+    map[type] = BaseNodeWrapper;
+    return map;
+  },
+  {} as Record<NodeType, React.ComponentType<NodeProps>>,
+);
 
 export interface FlowEditorHandle {
   getFlowData: () => UpsertFlowBody | null; // null when not ready
@@ -240,37 +288,14 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
         setNodes((nds) =>
           nds.map((node) => (node.id === nodeId ? { ...node, data: newData } : node)),
         );
-        if (selectedNode && selectedNode.id === nodeId) {
-          setSelectedNode({ ...selectedNode, data: newData });
-        }
+        // Update selected node if it's the same node being changed
+        setSelectedNode((prevSelected) =>
+          prevSelected && prevSelected.id === nodeId
+            ? { ...prevSelected, data: newData }
+            : prevSelected,
+        );
       },
-      [setNodes, selectedNode],
-    );
-
-    // Create node wrapper component
-    const NodeWrapper = useCallback(
-      (props: NodeProps) => (
-        <BaseNode
-          {...props}
-          nodes={nodes}
-          onNodeSelect={handleNodeSelect}
-          onNodeDelete={handleNodeDelete}
-        />
-      ),
-      [nodes, handleNodeSelect, handleNodeDelete],
-    );
-
-    // Node types configuration (memoized to avoid React Flow warning)
-    const nodeTypes = useMemo(
-      () =>
-        ALL_NODE_TYPES.reduce(
-          (map, type) => {
-            map[type] = NodeWrapper;
-            return map;
-          },
-          {} as Record<NodeType, React.ComponentType<NodeProps>>,
-        ),
-      [NodeWrapper],
+      [setNodes],
     );
 
     // Edge creation
@@ -389,22 +414,29 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={handleDrop}
                   >
-                    <ReactFlow
+                    <FlowContextProvider
                       nodes={nodes}
-                      edges={styledEdges}
-                      onNodesChange={onNodesChange}
-                      onNodesDelete={onNodesDelete}
-                      onEdgesChange={onEdgesChange}
-                      onConnect={onConnect}
-                      onEdgeClick={onEdgeClick}
-                      onPaneClick={onPaneClick}
-                      nodeTypes={nodeTypes}
-                      deleteKeyCode={[]}
-                      defaultViewport={{ x: 50, y: 150, zoom: 1 }}
-                      defaultEdgeOptions={{
-                        markerEnd: { type: MarkerType.ArrowClosed },
-                      }}
-                    />
+                      onNodeSelect={handleNodeSelect}
+                      onNodeDelete={handleNodeDelete}
+                      onNodeDataChange={handleNodeDataChange}
+                    >
+                      <ReactFlow
+                        nodes={nodes}
+                        edges={styledEdges}
+                        onNodesChange={onNodesChange}
+                        onNodesDelete={onNodesDelete}
+                        onEdgesChange={onEdgesChange}
+                        onConnect={onConnect}
+                        onEdgeClick={onEdgeClick}
+                        onPaneClick={onPaneClick}
+                        nodeTypes={nodeTypes}
+                        deleteKeyCode={[]}
+                        defaultViewport={{ x: 50, y: 150, zoom: 1 }}
+                        defaultEdgeOptions={{
+                          markerEnd: { type: MarkerType.ArrowClosed },
+                        }}
+                      />
+                    </FlowContextProvider>
                   </div>
                 </CardContent>
               </Card>

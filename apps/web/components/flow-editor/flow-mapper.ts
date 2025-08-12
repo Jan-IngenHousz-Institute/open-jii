@@ -13,6 +13,14 @@ type QuestionContent = z.infer<typeof zQuestionContent>;
 type InstructionContent = z.infer<typeof zInstructionContent>;
 type MeasurementContent = z.infer<typeof zMeasurementContent>;
 
+// UI-focused question spec interface (matches the one in question-card.tsx)
+interface QuestionUI {
+  answerType: "TEXT" | "SELECT" | "NUMBER" | "BOOLEAN";
+  validationMessage?: string;
+  options?: string[];
+  required: boolean;
+}
+
 type StepSpecification = QuestionContent | InstructionContent | MeasurementContent;
 
 export interface FlowNodeDataBase extends Record<string, unknown> {
@@ -22,7 +30,7 @@ export interface FlowNodeDataBase extends Record<string, unknown> {
 }
 
 export interface FlowNodeDataWithSpec extends FlowNodeDataBase {
-  stepSpecification?: StepSpecification; // existing backend content when editing
+  stepSpecification?: StepSpecification | QuestionUI; // UI format for questions, API format for others
   protocolId?: string; // measurement convenience field (when not yet set in stepSpecification)
 }
 
@@ -59,7 +67,7 @@ export class FlowMapper {
             ? ((apiNode.content as { text?: string }).text ?? "")
             : "",
         isStartNode: apiNode.isStart,
-        stepSpecification: apiNode.content as StepSpecification,
+        stepSpecification: FlowMapper.convertApiContentToUISpec(apiNode.type, apiNode.content),
       };
 
       return {
@@ -111,16 +119,57 @@ export class FlowMapper {
       };
 
       if (nodeType === "question") {
-        // Accept existing spec only if it matches the discriminated union
-        const existing =
-          data.stepSpecification && parseIfValid(zQuestionContent, data.stepSpecification);
-        if (existing) {
-          content = existing;
+        // For questions, convert from QuestionUI format to QuestionContent format
+        const stepSpec = data.stepSpecification as QuestionUI | undefined;
+
+        if (stepSpec) {
+          // Convert QuestionUI to QuestionContent format
+          let candidate: QuestionContent;
+          const questionText = stepSpec.validationMessage ?? text;
+
+          if (
+            stepSpec.answerType === "SELECT" &&
+            stepSpec.options &&
+            Array.isArray(stepSpec.options)
+          ) {
+            candidate = {
+              kind: "multi_choice",
+              text: questionText,
+              options: stepSpec.options,
+            };
+          } else if (stepSpec.answerType === "BOOLEAN") {
+            candidate = {
+              kind: "yes_no",
+              text: questionText,
+            };
+          } else if (stepSpec.answerType === "NUMBER") {
+            candidate = {
+              kind: "number",
+              text: questionText,
+            };
+          } else {
+            // Handle TEXT as open_ended
+            candidate = {
+              kind: "open_ended",
+              text: questionText,
+            };
+          }
+
+          const valid = parseIfValid(zQuestionContent, candidate);
+          if (valid) {
+            content = valid;
+          } else {
+            // Fallback
+            content = {
+              kind: "open_ended",
+              text: questionText,
+            };
+          }
         } else {
-          // Fallback default minimal valid question
+          // No stepSpecification, create default
           const candidate: QuestionContent = {
             kind: "open_ended",
-            text: text || "Question",
+            text: text,
           };
           content = parseIfValid(zQuestionContent, candidate) ?? {
             kind: "open_ended",
@@ -151,15 +200,9 @@ export class FlowMapper {
         }
         content = valid;
       } else {
-        // instruction
-        const existing =
-          data.stepSpecification && parseIfValid(zInstructionContent, data.stepSpecification);
-        if (existing) {
-          content = existing;
-        } else {
-          const candidate: InstructionContent = { text: text || "Instruction" } as const;
-          content = parseIfValid(zInstructionContent, candidate) ?? { text: "Instruction" };
-        }
+        // instruction - prioritize current description over existing stepSpecification
+        const candidate: InstructionContent = { text: text || "Instruction" } as const;
+        content = parseIfValid(zInstructionContent, candidate) ?? { text: "Instruction" };
       }
 
       return {
@@ -183,6 +226,41 @@ export class FlowMapper {
       throw new Error(`Flow validation failed: ${result.error.message}`);
     }
     return result.data;
+  }
+
+  /** Convert API content format to UI specification format */
+  private static convertApiContentToUISpec(
+    nodeType: string,
+    apiContent: unknown,
+  ): QuestionUI | StepSpecification {
+    if (nodeType === "question" && isObject(apiContent)) {
+      const content = apiContent as QuestionContent;
+      
+      // Convert QuestionContent back to QuestionUI format
+      let answerType: QuestionUI["answerType"] = "TEXT";
+      
+      if (content.kind === "yes_no") {
+        answerType = "BOOLEAN";
+      } else if (content.kind === "multi_choice") {
+        answerType = "SELECT";
+      } else if (content.kind === "number") {
+        answerType = "NUMBER";
+      } else {
+        answerType = "TEXT"; // open_ended or default
+      }
+      
+      const questionUI: QuestionUI = {
+        answerType,
+        validationMessage: content.text,
+        required: false, // Default value, this might need to be stored in API if required
+        ...(content.kind === "multi_choice" && { options: content.options }),
+      };
+      
+      return questionUI;
+    }
+    
+    // For non-question nodes or invalid content, return as-is
+    return apiContent as StepSpecification;
   }
 }
 
