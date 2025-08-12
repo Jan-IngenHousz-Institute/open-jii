@@ -4,65 +4,10 @@ variable "aws_region" {
   default     = "eu-central-1"
 }
 
-variable "terraform_state_s3_bucket_name" {
-  description = "Terraform state S3 Bucket name"
+variable "environment" {
+  description = "Environment of the deployment (e.g., 'dev')"
   type        = string
-}
-
-variable "docusaurus_s3_bucket_name" {
-  description = "Docusaurus S3 Bucket name"
-  type        = string
-}
-
-variable "timestream_database_name" {
-  description = "Timestream database name"
-  type        = string
-}
-
-variable "timestream_table_name" {
-  description = "Timestream table name"
-  type        = string
-}
-
-variable "iot_timestream_role_name" {
-  description = "Name for the IAM role for IoT to write to Timestream"
-  type        = string
-}
-
-variable "iot_timestream_policy_name" {
-  description = "Name for the IAM policy for IoT to write to Timestream"
-  type        = string
-}
-
-variable "kinesis_stream_name" {
-  description = "Name of the Kinesis Data Stream"
-  type        = string
-}
-
-variable "iot_kinesis_role_name" {
-  description = "Name for the IoT Kinesis IAM Role"
-  type        = string
-}
-
-variable "iot_kinesis_policy_name" {
-  description = "Name for the IoT Kinesis IAM Policy"
-  type        = string
-}
-
-variable "iot_logging_role_name" {
-  description = "Name of the IAM role for IoT Core logging"
-  type        = string
-}
-
-variable "iot_logging_policy_name" {
-  description = "Name of the IAM policy for IoT Core logging"
-  type        = string
-}
-
-variable "iot_cognito_identity_pool_name" {
-  description = "Name for the Cognito Identity Pool"
-  type        = string
-  default     = "open-jii-dev-iot-identity-pool"
+  default     = "dev"
 }
 
 variable "databricks_account_id" {
@@ -83,26 +28,10 @@ variable "databricks_client_secret" {
   sensitive   = true
 }
 
-variable "databricks_bucket_name" {
-  description = "Root Databricks configuration S3 Bucket name"
-  type        = string
-}
-
-variable "databricks_catalog_name" {
-  description = "Databricks catalog name for backend service"
-  type        = string
-  default     = "open_jii_dev"
-}
-
 variable "databricks_host" {
   description = "Databricks workspace URL"
   type        = string
   sensitive   = true
-}
-
-variable "unity_catalog_bucket_name" {
-  description = "S3 bucket name for Unity Catalog metastore storage"
-  type        = string
 }
 
 variable "kinesis_credential_id" {
@@ -162,12 +91,6 @@ variable "opennext_price_class" {
 variable "domain_name" {
   description = "Base domain name (e.g., my-company.com)"
   type        = string
-}
-
-variable "environment" {
-  description = "Environment name (e.g., 'dev' for dev.my-company.com)"
-  type        = string
-  default     = "dev"
 }
 
 variable "backend_ecr_max_images" {
