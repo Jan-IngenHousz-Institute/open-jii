@@ -207,7 +207,7 @@ variable "enable_container_healthcheck" {
 variable "health_check_path" {
   description = "The path for container health check endpoint"
   type        = string
-  default     = "/health"
+  default     = null
 }
 
 variable "enable_circuit_breaker" {

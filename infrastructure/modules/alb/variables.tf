@@ -6,7 +6,6 @@ variable "public_subnet_ids" {
 variable "container_port" {
   description = "Port exposed by the container"
   type        = number
-  default     = 3020
 }
 
 variable "service_name" {

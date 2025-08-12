@@ -474,8 +474,8 @@ module "opennext_waf" {
 module "opennext" {
   source = "../../modules/opennext"
 
-  project_name = var.opennext_project_name
-  environment  = var.opennext_environment
+  project_name = "open-jii"
+  environment  = var.environment
   region       = var.aws_region
 
   # Domain configuration - now uncommented and connected
@@ -511,8 +511,8 @@ module "opennext" {
   }
 
   # Performance configuration
-  enable_lambda_warming = var.opennext_enable_warming
-  price_class           = var.opennext_price_class
+  enable_lambda_warming = true
+  price_class           = "PriceClass_100"
 
   # Monitoring configuration
   enable_cloudwatch_logs = true
@@ -635,7 +635,7 @@ module "backend_ecr" {
   environment                   = "dev"
   repository_name               = "open-jii-backend"
   service_name                  = "backend"
-  max_image_count               = var.backend_ecr_max_images
+  max_image_count               = 10
   enable_vulnerability_scanning = true
   encryption_type               = "KMS"
   image_tag_mutability          = "MUTABLE" # Set to MUTABLE for dev, but should be IMMUTABLE for prod
@@ -717,9 +717,9 @@ module "backend_ecs" {
 
   # Auto-scaling settings
   enable_autoscaling = true
-  min_capacity       = var.backend_min_capacity  # Scale down to 1 task
-  max_capacity       = var.backend_max_capacity  # Scale up to 3 tasks
-  cpu_threshold      = var.backend_cpu_threshold # Scale out at 80% CPU usage
+  min_capacity       = 1  # Scale down to 1 task
+  max_capacity       = 3  # Scale up to 3 tasks
+  cpu_threshold      = 80 # Scale out at 80% CPU usage
 
   # Mixed capacity strategy for cost optimization and stability
   enable_mixed_capacity = true
@@ -729,7 +729,7 @@ module "backend_ecs" {
 
   # Container health checks
   enable_container_healthcheck = true
-  health_check_path            = var.backend_health_check_path
+  health_check_path            = "/health"
 
   # Deployment configuration
   enable_circuit_breaker               = true
