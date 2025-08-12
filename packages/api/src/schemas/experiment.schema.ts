@@ -107,6 +107,7 @@ const zQuestionYesNo = z
   .object({
     kind: z.literal("yes_no"),
     text: z.string().min(1),
+    required: z.boolean().optional().default(false),
   })
   .strict();
 
@@ -114,6 +115,7 @@ const zQuestionOpenEnded = z
   .object({
     kind: z.literal("open_ended"),
     text: z.string().min(1),
+    required: z.boolean().optional().default(false),
   })
   .strict();
 
@@ -122,6 +124,7 @@ const zQuestionMultiChoice = z
     kind: z.literal("multi_choice"),
     text: z.string().min(1),
     options: z.array(z.string()).min(1),
+    required: z.boolean().optional().default(false),
   })
   .strict();
 
@@ -129,6 +132,7 @@ const zQuestionNumber = z
   .object({
     kind: z.literal("number"),
     text: z.string().min(1),
+    required: z.boolean().optional().default(false),
   })
   .strict();
 

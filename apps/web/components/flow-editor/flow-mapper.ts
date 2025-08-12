@@ -136,22 +136,26 @@ export class FlowMapper {
               kind: "multi_choice",
               text: questionText,
               options: stepSpec.options,
+              required: stepSpec.required,
             };
           } else if (stepSpec.answerType === "BOOLEAN") {
             candidate = {
               kind: "yes_no",
               text: questionText,
+              required: stepSpec.required,
             };
           } else if (stepSpec.answerType === "NUMBER") {
             candidate = {
               kind: "number",
               text: questionText,
+              required: stepSpec.required,
             };
           } else {
             // Handle TEXT as open_ended
             candidate = {
               kind: "open_ended",
               text: questionText,
+              required: stepSpec.required,
             };
           }
 
@@ -163,6 +167,7 @@ export class FlowMapper {
             content = {
               kind: "open_ended",
               text: questionText,
+              required: false,
             };
           }
         } else {
@@ -170,10 +175,12 @@ export class FlowMapper {
           const candidate: QuestionContent = {
             kind: "open_ended",
             text: text,
+            required: false,
           };
           content = parseIfValid(zQuestionContent, candidate) ?? {
             kind: "open_ended",
             text: "Question",
+            required: false,
           };
         }
       } else if (nodeType === "measurement") {
@@ -252,7 +259,7 @@ export class FlowMapper {
       const questionUI: QuestionUI = {
         answerType,
         validationMessage: content.text,
-        required: false, // Default value, this might need to be stored in API if required
+        required: content.required ?? false, // Use the API value or default to false
         ...(content.kind === "multi_choice" && { options: content.options }),
       };
 
