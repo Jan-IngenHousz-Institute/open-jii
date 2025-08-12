@@ -81,7 +81,11 @@ const MEASUREMENT_OPTIONS = [
   },
 ];
 
-export function AnalysisPanel({ selectedMeasurementOption = "", onChange, disabled = false }: AnalysisPanelProps) {
+export function AnalysisPanel({
+  selectedMeasurementOption = "",
+  onChange,
+  disabled = false,
+}: AnalysisPanelProps) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -150,9 +154,9 @@ export function AnalysisPanel({ selectedMeasurementOption = "", onChange, disabl
                 type="text"
                 placeholder="Search analysis options..."
                 value={searchTerm}
-                onChange={(e) => disabled ? undefined : setSearchTerm(e.target.value)}
+                onChange={(e) => (disabled ? undefined : setSearchTerm(e.target.value))}
                 disabled={disabled}
-                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100"
               />
             </div>
             <div className="max-h-60 overflow-y-auto">

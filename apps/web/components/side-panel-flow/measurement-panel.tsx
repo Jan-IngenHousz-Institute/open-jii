@@ -16,7 +16,11 @@ interface MeasurementPanelProps {
   disabled?: boolean;
 }
 
-export function MeasurementPanel({ selectedProtocolId = "", onChange, disabled = false }: MeasurementPanelProps) {
+export function MeasurementPanel({
+  selectedProtocolId = "",
+  onChange,
+  disabled = false,
+}: MeasurementPanelProps) {
   const { t } = useTranslation("common");
 
   // Protocol search state

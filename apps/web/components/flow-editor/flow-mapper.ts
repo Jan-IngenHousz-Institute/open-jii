@@ -259,7 +259,7 @@ export class FlowMapper {
       const questionUI: QuestionUI = {
         answerType,
         validationMessage: content.text,
-        required: content.required ?? false, // Use the API value or default to false
+        required: content.required, // API schema guarantees this field exists with default false
         ...(content.kind === "multi_choice" && { options: content.options }),
       };
 

@@ -52,9 +52,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
       case "active":
         return <Badge className="bg-secondary">{t("status.active")}</Badge>;
       case "provisioning":
-        return (
-          <Badge className="bg-highlight text-black">{t("status.provisioning")}</Badge>
-        );
+        return <Badge className="bg-highlight text-black">{t("status.provisioning")}</Badge>;
       case "archived":
         return <Badge className="bg-muted">{t("status.archived")}</Badge>;
       case "stale":
@@ -82,18 +80,14 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
         <CardContent>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <div>
-              <h4 className="text-muted-foreground text-sm font-medium">
-                {t("created")}
-              </h4>
+              <h4 className="text-muted-foreground text-sm font-medium">{t("created")}</h4>
               <p className="flex items-center gap-1">
                 <CalendarIcon className="text-muted-foreground h-4 w-4" aria-hidden="true" />
                 {formatDate(experiment.createdAt)}
               </p>
             </div>
             <div>
-              <h4 className="text-muted-foreground text-sm font-medium">
-                {t("updated")}
-              </h4>
+              <h4 className="text-muted-foreground text-sm font-medium">{t("updated")}</h4>
               <p>{formatDate(experiment.updatedAt)}</p>
             </div>
             {/* TODO: Temporary removed as the implementation is pending on the backend */}
@@ -106,9 +100,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
             {/*  </p>*/}
             {/*</div>*/}
             <div>
-              <h4 className="text-muted-foreground text-sm font-medium">
-                {t("experimentId")}
-              </h4>
+              <h4 className="text-muted-foreground text-sm font-medium">{t("experimentId")}</h4>
               <p className="truncate font-mono text-xs">{experiment.id}</p>
             </div>
           </div>
@@ -127,9 +119,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold">{t("flow.title")}</h3>
-              <p className="text-sm text-muted-foreground">
-                {t("flow.staticDescription")}
-              </p>
+              <p className="text-muted-foreground text-sm">{t("flow.staticDescription")}</p>
             </div>
             <div className="flex items-center gap-2 rounded-md bg-blue-50 px-3 py-1.5">
               <div className="h-2 w-2 rounded-full bg-blue-500"></div>

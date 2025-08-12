@@ -133,7 +133,7 @@ export function QuestionCard({
                       type="button"
                       onClick={() => onDeleteOption?.(optionIndex)}
                       disabled={disabled}
-                      className="rounded-lg p-2 text-gray-400 opacity-100 transition-all hover:bg-red-50 hover:text-red-500 md:opacity-0 md:group-hover/option:opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-lg p-2 text-gray-400 opacity-100 transition-all hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50 md:opacity-0 md:group-hover/option:opacity-100"
                       title="Remove option"
                     >
                       <svg
