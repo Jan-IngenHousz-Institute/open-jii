@@ -432,7 +432,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
         <div
           className={
             isFullscreen
-              ? "fixed inset-0 -top-6 z-50 flex h-screen w-screen flex-col overflow-hidden overscroll-contain bg-white p-0"
+              ? "fixed inset-0 z-50 flex h-screen w-screen flex-col overflow-hidden overscroll-contain bg-white p-0"
               : undefined
           }
         >
