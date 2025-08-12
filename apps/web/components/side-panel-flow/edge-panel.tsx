@@ -41,15 +41,6 @@ export function EdgeSidePanel({
     }
   };
 
-  const handleAnimationToggle = (animated: boolean) => {
-    if (isDisabled) return;
-    if (displayEdge && onEdgeUpdate) {
-      const updatedEdge = { ...displayEdge, animated };
-      setDisplayEdge(updatedEdge);
-      onEdgeUpdate(displayEdge.id, { animated });
-    }
-  };
-
   // Helper to get the label string for the input
   const getEdgeLabel = (edge: Edge | null): string => {
     if (!edge) return "";
@@ -117,30 +108,6 @@ export function EdgeSidePanel({
             </CardContent>
           </Card>
 
-          {/* Animation Settings */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-jii-dark-green">Animation</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-800">Animate this edge</span>
-                <label className="relative inline-flex cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!!displayEdge?.animated}
-                    onChange={(e) => handleAnimationToggle(e.target.checked)}
-                    disabled={isDisabled}
-                    className="peer sr-only"
-                  />
-                  {/* track */}
-                  <div className="peer-checked:bg-jii-dark-green h-5 w-10 rounded-full bg-gray-200 transition-colors" />
-                  {/* thumb */}
-                  <div className="absolute left-0.5 top-0.5 h-4 w-4 transform rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
-                </label>
-              </div>
-            </CardContent>
-          </Card>
           {/* Edge Actions */}
           <Card>
             <CardHeader>

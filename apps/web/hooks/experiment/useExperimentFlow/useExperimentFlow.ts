@@ -11,7 +11,7 @@ export const useExperimentFlow = (experimentId: string) => {
     queryKey: ["experimentFlow", experimentId],
     enabled: !!experimentId,
     // React Query options (tsr wrapper spreads these into useQuery)
-    retry(failureCount, error: unknown) {
+    retry(failureCount: number, error: unknown) {
       interface StatusError {
         status: number;
       }

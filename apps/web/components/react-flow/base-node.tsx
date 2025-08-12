@@ -4,10 +4,10 @@ import React from "react";
 
 import { cn } from "@repo/ui/lib/utils";
 
-import { toPosition } from "./flow-utils";
 import { nodeTypeColorMap } from "./node-config";
 import type { NodeType } from "./node-config";
 import { NodeContent } from "./node-content";
+import { toPosition } from "./node-utils";
 
 interface BaseNodeProps extends NodeProps {
   nodes: Node[];
@@ -57,10 +57,10 @@ export function BaseNode(props: BaseNodeProps) {
   const borderColor = nodeTypeColorMap[nodeProps.type as NodeType].border;
 
   return (
-    <div onClick={isStatic ? undefined : handleSelect}>
+    <div onClick={handleSelect}>
       <div
         className={cn("group relative inline-block min-h-[60px] min-w-[120px] bg-transparent p-0")}
-        tabIndex={isStatic ? undefined : 0}
+        tabIndex={0}
       >
         {/* Delete button - only show if not static */}
         {!isStatic && (

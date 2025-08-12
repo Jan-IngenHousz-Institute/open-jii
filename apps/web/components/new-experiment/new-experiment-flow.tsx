@@ -24,9 +24,10 @@ import {
 
 import { LegendFlow } from "../legend-flow";
 import { BaseNode } from "../react-flow/base-node";
-import { getInitialFlowData, createNewNode } from "../react-flow/flow-utils";
+import { getInitialFlowData } from "../react-flow/flow-utils";
 import type { NodeType } from "../react-flow/node-config";
 import { ALL_NODE_TYPES, getStyledEdges } from "../react-flow/node-config";
+import { createNewNode } from "../react-flow/node-utils";
 import { ExperimentSidePanel } from "../side-panel-flow/side-panel-flow";
 
 export function NewExperimentFlow({

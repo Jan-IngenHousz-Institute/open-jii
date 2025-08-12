@@ -2,78 +2,27 @@
 
 import type { Node, Edge, Connection } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
-import {
-  ReactFlow,
-  addEdge,
-  useNodesState,
-  useEdgesState,
-  getIncomers,
-  getOutgoers,
-  getConnectedEdges,
-} from "@xyflow/react";
+import { ReactFlow, addEdge, useNodesState, useEdgesState } from "@xyflow/react";
 import type { NodeProps } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Maximize2, Minimize2 } from "lucide-react";
-import {
-  useCallback,
-  useState,
-  useEffect,
-  useRef,
-  useImperativeHandle,
-  forwardRef,
-  createContext,
-  useContext,
-} from "react";
+import { useCallback, useState, useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 
 import type { Flow } from "@repo/api";
 import type { UpsertFlowBody } from "@repo/api";
 import { Card, CardContent, Button } from "@repo/ui/components";
 
 import { LegendFlow } from "../legend-flow";
-import { BaseNode } from "../react-flow/base-node";
-import { createNewNode } from "../react-flow/flow-utils";
+import {
+  getFlowData,
+  handleNodesDeleteWithReconnection,
+  handleNodeDrop,
+} from "../react-flow/flow-utils";
 import type { NodeType } from "../react-flow/node-config";
 import { ALL_NODE_TYPES, getStyledEdges } from "../react-flow/node-config";
+import { FlowContextProvider, BaseNodeWrapper, ensureOneStartNode } from "../react-flow/node-utils";
 import { ExperimentSidePanel } from "../side-panel-flow/side-panel-flow";
 import { FlowMapper } from "./flow-mapper";
-
-// Context for sharing node management functions
-interface FlowContextType {
-  nodes: Node[];
-  onNodeSelect: (node: Node | null) => void;
-  onNodeDelete: (nodeId: string) => void;
-  onNodeDataChange: (nodeId: string, newData: Record<string, unknown>) => void;
-}
-
-const FlowContext = createContext<FlowContextType | null>(null);
-
-// BaseNode wrapper that uses context
-const BaseNodeWrapper = (props: NodeProps) => {
-  const context = useContext(FlowContext);
-  if (!context) {
-    throw new Error("BaseNodeWrapper must be used within FlowContext.Provider");
-  }
-  return (
-    <BaseNode
-      {...props}
-      nodes={context.nodes}
-      onNodeSelect={context.onNodeSelect}
-      onNodeDelete={context.onNodeDelete}
-    />
-  );
-};
-
-// FlowContextProvider component
-const FlowContextProvider: React.FC<{
-  children: React.ReactNode;
-  nodes: Node[];
-  onNodeSelect: (node: Node | null) => void;
-  onNodeDelete: (nodeId: string) => void;
-  onNodeDataChange: (nodeId: string, newData: Record<string, unknown>) => void;
-}> = ({ children, nodes, onNodeSelect, onNodeDelete, onNodeDataChange }) => {
-  const value = { nodes, onNodeSelect, onNodeDelete, onNodeDataChange };
-  return <FlowContext.Provider value={value}>{children}</FlowContext.Provider>;
-};
 
 // Define nodeTypes outside the component to avoid re-creation
 const nodeTypes = ALL_NODE_TYPES.reduce(
@@ -149,50 +98,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     useImperativeHandle(
       ref,
       () => ({
-        getFlowData: () => {
-          if (nodes.length === 0) return null;
-          const isObject = (v: unknown): v is Record<string, unknown> =>
-            typeof v === "object" && v !== null;
-          const allReady = nodes.every((n) => {
-            const data = n.data;
-            if (n.type === "MEASUREMENT") {
-              const spec = data.stepSpecification as { protocolId?: unknown } | undefined;
-              const proto =
-                (data.protocolId as string | undefined) ??
-                (isObject(spec) ? (spec.protocolId as string | undefined) : undefined);
-              return typeof proto === "string" && proto.length > 0;
-            }
-            if (n.type === "QUESTION") {
-              const spec = data.stepSpecification as { kind?: unknown; text?: unknown } | undefined;
-              if (
-                isObject(spec) &&
-                typeof spec.kind === "string" &&
-                typeof spec.text === "string" &&
-                spec.text.length > 0
-              ) {
-                return true;
-              }
-              const title = data.title as string | undefined;
-              return typeof title === "string" && title.length > 0;
-            }
-            if (n.type === "INSTRUCTION") {
-              const spec = data.stepSpecification as { text?: unknown } | undefined;
-              if (isObject(spec) && typeof spec.text === "string" && spec.text.length > 0) {
-                return true;
-              }
-              const title = data.title as string | undefined;
-              return typeof title === "string" && title.length > 0;
-            }
-            return true;
-          });
-          if (!allReady) return null;
-          try {
-            return FlowMapper.toApiGraph(nodes, edges);
-          } catch (e) {
-            console.warn("Flow conversion error: ", e);
-            return null;
-          }
-        },
+        getFlowData: () => getFlowData(nodes, edges),
       }),
       [nodes, edges],
     );
@@ -202,43 +108,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     // Delete logic and reconnection
     const onNodesDelete = useCallback(
       (deleted: Node[]) => {
-        setEdges((eds) => {
-          const updatedEdges = deleted.reduce<Edge[]>((acc, node) => {
-            const incomers = getIncomers(node, nodes, acc);
-            const outgoers = getOutgoers(node, nodes, acc);
-            const connected = getConnectedEdges([node], acc);
-
-            // Drop edges touching this node
-            const filtered = acc.filter((e) => !connected.includes(e));
-
-            // Reconnect incomers to outgoers
-            const reconnected = incomers.flatMap(({ id: s }) =>
-              outgoers.flatMap(({ id: t }) => {
-                const alreadyExists = filtered.some((e) => e.source === s && e.target === t);
-                if (alreadyExists) return [];
-
-                const wasAnimated = connected.some((e) =>
-                  (e.source === s && e.target === node.id) ||
-                  (e.source === node.id && e.target === t)
-                    ? e.animated
-                    : false,
-                );
-                return [
-                  {
-                    id: `${s}->${t}`,
-                    source: s,
-                    target: t,
-                    markerEnd: { type: MarkerType.ArrowClosed },
-                    animated: wasAnimated,
-                  },
-                ];
-              }),
-            );
-
-            return [...filtered, ...reconnected];
-          }, eds);
-          return updatedEdges;
-        });
+        setEdges((eds) => handleNodesDeleteWithReconnection(deleted, nodes, eds));
       },
       [nodes, setEdges],
     );
@@ -354,24 +224,12 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     // Handle drag and drop for new nodes
     const handleDrop = useCallback(
       (e: React.DragEvent) => {
-        if (isDisabled) return; // No drag and drop in disabled mode
-        e.preventDefault();
-        const type = e.dataTransfer.getData("application/reactflow");
-        if (!type) return;
-
-        const bounds = e.currentTarget.getBoundingClientRect();
-        const position = { x: e.clientX - bounds.left, y: e.clientY - bounds.top };
-
-        const newNode = createNewNode(type, position);
-        setNodes((nds) => {
-          // If this is the very first node, mark it as the start node automatically
-          if (nds.length === 0) {
-            newNode.data = { ...newNode.data, isStartNode: true };
-          }
-          return [...nds, newNode];
-        });
+        const result = handleNodeDrop(e, nodes, isDisabled);
+        if (result) {
+          setNodes((nds) => [...nds, result.newNode]);
+        }
       },
-      [setNodes, isDisabled],
+      [nodes, isDisabled, setNodes],
     );
 
     // Apply edge styles based on selection
@@ -388,21 +246,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
 
     // Ensure exactly one start node (auto-heal) so validation passes and save button can appear
     useEffect(() => {
-      if (nodes.length === 0) return;
-      const startNodes = nodes.filter((n) => n.data.isStartNode === true);
-      if (startNodes.length === 1) return; // already valid
-      setNodes((nds) => {
-        if (nds.length === 0) return nds;
-        // Pick the first node in list to be start
-        const firstId = nds[0].id;
-        return nds.map((n) => ({
-          ...n,
-          data: {
-            ...n.data,
-            isStartNode: n.id === firstId,
-          },
-        }));
-      });
+      setNodes((nds) => ensureOneStartNode(nds));
     }, [nodes, setNodes]);
 
     return (
@@ -457,24 +301,22 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                     onDragOver={isDisabled ? undefined : (e) => e.preventDefault()}
                     onDrop={isDisabled ? undefined : handleDrop}
                   >
-                    {/* Fullscreen controls overlay - hide in disabled mode */}
-                    {!isDisabled && (
-                      <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-                          onClick={() => setIsFullscreen((v) => !v)}
-                        >
-                          {isFullscreen ? (
-                            <Minimize2 className="h-4 w-4" />
-                          ) : (
-                            <Maximize2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    )}
+                    {/* Fullscreen controls overlay */}
+                    <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                        onClick={() => setIsFullscreen((v) => !v)}
+                      >
+                        {isFullscreen ? (
+                          <Minimize2 className="h-4 w-4" />
+                        ) : (
+                          <Maximize2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
 
                     {/* ReactFlow canvas */}
                     <FlowContextProvider
@@ -482,6 +324,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                       onNodeSelect={handleNodeSelect}
                       onNodeDelete={handleNodeDelete}
                       onNodeDataChange={handleNodeDataChange}
+                      isDisabled={isDisabled}
                     >
                       <ReactFlow
                         attributionPosition="bottom-left"
@@ -498,8 +341,8 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                         nodesDraggable={!isDisabled}
                         nodesConnectable={!isDisabled}
                         elementsSelectable={true}
-                        fitView={isFullscreen}
-                        defaultViewport={{ x: 50, y: 150, zoom: 1 }}
+                        fitView={isFullscreen || isDisabled}
+                        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
                         defaultEdgeOptions={{
                           markerEnd: { type: MarkerType.ArrowClosed },
                         }}

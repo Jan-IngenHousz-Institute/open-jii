@@ -12,7 +12,7 @@ interface UseExperimentFlowUpdateOptions {
  */
 export const useExperimentFlowUpdate = (options?: UseExperimentFlowUpdateOptions) => {
   return tsr.experiments.updateFlow.useMutation({
-    onSuccess: (data) => options?.onSuccess?.(data),
-    onError: (error) => options?.onError?.(error),
+    onSuccess: (data: unknown) => options?.onSuccess?.(data),
+    onError: (error: unknown) => options?.onError?.(error),
   });
 };
