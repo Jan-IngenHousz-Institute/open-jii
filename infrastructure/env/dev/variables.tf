@@ -201,12 +201,13 @@ variable "backend_cpu_threshold" {
 }
 
 variable "backend_health_check_path" {
-  description = "Path for ALB health checks on the backend service"
+  description = "Path for health checks on the backend service"
   type        = string
   default     = "/health"
 }
 
-# Backend authentication secrets
+
+# Authentication secrets
 variable "auth_secret" {
   description = "Authentication secret token"
   type        = string
@@ -225,24 +226,30 @@ variable "github_oauth_client_secret" {
   type        = string
   sensitive   = true
 }
+# Backend Databricks webhook secrets
 
-# Backend Databricks connection secrets
-variable "backend_databricks_client_id" {
-  description = "Databricks client ID for backend service (separate from workspace client ID)"
+variable "backend_webhook_api_key_id" {
+  description = "Databricks webhook API key ID"
   type        = string
   sensitive   = true
 }
 
-variable "backend_databricks_client_secret" {
-  description = "Databricks client secret for backend service (separate from workspace client secret)"
+variable "backend_webhook_api_key" {
+  description = "Databricks webhook API key"
   type        = string
   sensitive   = true
 }
 
-variable "backend_databricks_job_id" {
-  description = "Databricks job ID for backend service"
+variable "backend_webhook_secret" {
+  description = "Databricks webhook secret (HMAC)"
   type        = string
   sensitive   = true
+}
+
+variable "backend_status_update_webhook_path" {
+  description = "Path for status update webhooks on the backend service"
+  type        = string
+  default     = "/api/v1/experiments/:id/provisioning-status"
 }
 
 variable "backend_databricks_warehouse_id" {
