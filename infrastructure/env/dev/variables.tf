@@ -39,96 +39,17 @@ variable "kinesis_credential_id" {
   type        = string
 }
 
-# OpenNext Configuration
-variable "opennext_project_name" {
-  description = "Project name for OpenNext deployment"
-  type        = string
-  default     = "open-jii"
-}
-
-variable "opennext_environment" {
-  description = "Environment name for OpenNext deployment"
-  type        = string
-  default     = "dev"
-}
-
-variable "opennext_domain_name" {
-  description = "Custom domain name for the Next.js application (optional)"
-  type        = string
-  default     = ""
-}
-
-variable "opennext_subdomain" {
-  description = "Subdomain for the Next.js application (optional)"
-  type        = string
-  default     = "app"
-}
-
-variable "opennext_certificate_arn" {
-  description = "ACM certificate ARN for HTTPS (required if using custom domain)"
-  type        = string
-  default     = ""
-}
-
-variable "opennext_hosted_zone_id" {
-  description = "Route53 hosted zone ID for DNS records (optional)"
-  type        = string
-  default     = ""
-}
-
-variable "opennext_enable_warming" {
-  description = "Enable Lambda warming for better performance"
-  type        = bool
-  default     = true
-}
-
-variable "opennext_price_class" {
-  description = "CloudFront price class (PriceClass_All, PriceClass_200, PriceClass_100)"
-  type        = string
-  default     = "PriceClass_100"
-}
-
 variable "domain_name" {
   description = "Base domain name (e.g., my-company.com)"
   type        = string
-}
-
-variable "backend_ecr_max_images" {
-  description = "Maximum number of images to keep in the backend ECR repository"
-  type        = number
-  default     = 10
+  default     = "openjii.org"
 }
 
 variable "backend_container_port" {
-  description = "The port on which the backend container will listen"
+  description = "Backend container port"
   type        = number
   default     = 3020
 }
-
-variable "backend_min_capacity" {
-  description = "Minimum number of backend tasks to run"
-  type        = number
-  default     = 1
-}
-
-variable "backend_max_capacity" {
-  description = "Maximum number of backend tasks to run"
-  type        = number
-  default     = 3
-}
-
-variable "backend_cpu_threshold" {
-  description = "CPU threshold for backend autoscaling"
-  type        = number
-  default     = 80
-}
-
-variable "backend_health_check_path" {
-  description = "Path for health checks on the backend service"
-  type        = string
-  default     = "/health"
-}
-
 
 # Authentication secrets
 variable "auth_secret" {
@@ -149,8 +70,8 @@ variable "github_oauth_client_secret" {
   type        = string
   sensitive   = true
 }
-# Backend Databricks webhook secrets
 
+# Backend x Databricks webhook secrets
 variable "backend_webhook_api_key_id" {
   description = "Databricks webhook API key ID"
   type        = string

@@ -1,0 +1,9 @@
+name: "OpenTofu Plan"
+description: "Runs OpenTofu plan"
+runs:
+  using: "composite"
+  steps:
+    - name: OpenTofu Plan
+      shell: bash
+      working-directory: infrastructure/env/${{ env.environment }}
+      run: tofu plan -no-color
