@@ -5,6 +5,9 @@ inputs:
   affected_apps:
     description: "JSON array of affected app names"
     required: true
+  codecov-token:
+    description: "Codecov token for uploading coverage"
+    required: true
 
 runs:
   using: "composite"
@@ -27,3 +30,12 @@ runs:
 
         echo "Running: $TEST_CMD"
         eval "$TEST_CMD"
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ inputs.codecov-token }}
+        files: apps/*/coverage/lcov.info
+        flags: affected
+        fail_ci_if_error: true
+        verbose: true

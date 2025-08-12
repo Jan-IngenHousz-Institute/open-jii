@@ -39,7 +39,6 @@ jobs:
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
           node-version: "22"
-
       - name: Detect Affected Packages
         id: detect
         uses: ./.github/actions/detect-affected-packages
@@ -61,6 +60,7 @@ jobs:
         uses: ./.github/actions/test-packages
         with:
           affected_apps: ${{ steps.detect.outputs.affected_apps }}
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   # tofu:
   #   name: OpenTofu
