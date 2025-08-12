@@ -2,7 +2,44 @@
 codecov:
   require_ci_to_pass: true
 
-# Coverage configuration
+# Recommended: Automatic Flag Management
+flag_management:
+  default_rules:
+    carryforward: true
+    statuses:
+      - type: project
+        target: auto
+        threshold: 1%
+      - type: patch
+        target: 75%  # 75% branch coverage for new code
+        threshold: 5%
+  individual_flags:
+    - name: backend
+      paths:
+        - apps/backend/**
+      carryforward: true
+      statuses:
+        - type: project
+          target: 90%  # 90% lines coverage for backend
+          threshold: 1%
+        - type: patch
+          target: 75%  # 75% branch coverage for new backend code
+          threshold: 5%
+    - name: web
+      paths:
+        - apps/web/**
+      carryforward: true
+      statuses:
+        - type: project
+          target: auto  # No minimum for web (for now)
+          threshold: 100%  # Very lenient - essentially non-blocking
+          informational: true
+        - type: patch
+          target: auto  # No minimum for new web code
+          threshold: 100%
+          informational: true
+
+# Coverage status configuration (works with flag management)
 coverage:
   status:
     project:
@@ -11,26 +48,12 @@ coverage:
         threshold: 1%
         base: auto
       backend:
-        target: 90% # 90% lines coverage for backend
-        threshold: 1% # Allow 1% variance
         flags:
           - backend
-        paths:
-          - apps/backend/
       web:
-        # No minimum coverage requirement for web (for now)
-        target: auto
-        threshold: 100% # Very lenient threshold essentially disables blocking
-        informational: true # Make it non-blocking
         flags:
           - web
-        paths:
-          - apps/web/
-    patch:
-      default:
-        target: 75% # 75% branch coverage requirement for new code
-        threshold: 5%
-        base: auto
+        informational: true  # Non-blocking for web
 
 # Comment configuration for PR
 comment:
@@ -40,18 +63,6 @@ comment:
   require_base: false
   require_head: true
   hide_project_coverage: false
-
-# Flag configuration to isolate coverage by project
-flags:
-  backend:
-    paths:
-      - apps/backend/
-    # For branches coverage target
-    carryforward: true
-  web:
-    paths:
-      - apps/web/
-    carryforward: true
 
 # Disable GitHub annotations to reduce visual clutter
 github_checks:
