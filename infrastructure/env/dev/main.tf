@@ -129,6 +129,8 @@ module "databricks_workspace" {
   kinesis_role_arn  = module.kinesis.role_arn
   kinesis_role_name = module.kinesis.role_name
 
+  principal_ids = [module.node_service_principal.service_principal_id]
+
   providers = {
     databricks.mws       = databricks.mws
     databricks.workspace = databricks.workspace
@@ -149,16 +151,63 @@ module "databricks_metastore" {
   depends_on = [module.databricks_workspace]
 }
 
+module "node_service_principal" {
+  source = "../../modules/databricks/service_principal"
+
+  display_name  = "node-service-principal-${var.environment}"
+  create_secret = true
+
+  providers = {
+    databricks.mws = databricks.mws
+  }
+}
+
+module "experiment_secret_scope" {
+  source = "../../modules/databricks/secret_scope"
+
+  scope_name = "node-webhook-secret-scope-${var.environment}"
+  secrets = {
+    webhook_api_key_id = var.backend_webhook_api_key_id
+    webhook_secret     = var.backend_webhook_secret
+  }
+
+  acl_principals  = [module.node_service_principal.service_principal_application_id]
+  acl_permissions = ["READ"]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
 module "databricks_catalog" {
   source             = "../../modules/databricks/catalog"
   catalog_name       = var.databricks_catalog_name
   external_bucket_id = module.metastore_s3.bucket_name
 
+  grants = {
+    node_service_principal = {
+      principal = module.node_service_principal.service_principal_application_id
+      privileges = [
+        "BROWSE",
+        "CREATE_FUNCTION",
+        "CREATE_MATERIALIZED_VIEW",
+        "CREATE_MODEL",
+        "CREATE_MODEL_VERSION",
+        "CREATE_SCHEMA",
+        "CREATE_TABLE",
+        "CREATE_VOLUME",
+        "SELECT",
+        "USE_CATALOG",
+        "USE_SCHEMA"
+      ]
+    }
+  }
+
   providers = {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.databricks_metastore]
+  depends_on = [module.databricks_metastore, module.node_service_principal]
 }
 
 module "central_schema" {
@@ -192,12 +241,9 @@ module "centrum_pipeline" {
     "RAW_KINESIS_TABLE" = "raw_kinesis_data"
   }
 
-  continuous_mode  = true
+  continuous_mode  = false
   development_mode = true
-  autoscale        = true
-  min_workers      = 1
-  max_workers      = 2
-  node_type_id     = "m5d.large"
+  serverless       = true
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -210,20 +256,6 @@ module "kinesis_ingest_cluster" {
   source = "../../modules/databricks/cluster"
 
   name             = "Kinesis-Ingest-Cluster"
-  single_node      = true
-  single_user      = true
-  single_user_name = var.databricks_client_id
-  spark_version    = "16.2.x-scala2.12"
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-}
-
-module "experiment_orchestrator_cluster" {
-  source = "../../modules/databricks/cluster"
-
-  name             = "Experiment-Orchestrator-Cluster"
   single_node      = true
   single_user      = true
   single_user_name = var.databricks_client_id
@@ -267,41 +299,64 @@ module "kinesis_ingest_job" {
   }
 }
 
-module "experiment_orchestrator_job" {
+module "experiment_provisioning_job" {
   source = "../../modules/databricks/job"
 
-  name        = "Experiment-Pipeline-Orchestrator-Job-DEV"
-  description = "Orchestrates the experiment pipelines (if neccessary) and monitors the experiment state"
+  name        = "Experiment-Provisioning-Job-DEV"
+  description = "Creates Delta Live Tables pipelines for experiments and reports status to backend webhook"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 3
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
 
   tasks = [
     {
-      key           = "experiment_pipeline_orchestrator"
+      key           = "experiment_pipeline_create"
       task_type     = "notebook"
-      compute_type  = "existing_cluster"
-      cluster_id    = module.experiment_orchestrator_cluster.cluster_id
-      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_orchestrator_task"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipeline_create_task"
+
       parameters = {
+        "experiment_id"            = "{{experiment_id}}"
+        "experiment_name"          = "{{experiment_name}}"
+        "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
         "catalog_name"             = module.databricks_catalog.catalog_name
         "central_schema"           = "centrum"
-        "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
       }
     },
     {
-      key           = "experiment_pipeline_monitor"
+      key           = "experiment_status_update"
       task_type     = "notebook"
-      compute_type  = "existing_cluster"
-      cluster_id    = module.experiment_orchestrator_cluster.cluster_id
-      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_monitor_task"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_status_update_task"
+
       parameters = {
-        "catalog_name"   = module.databricks_catalog.catalog_name
-        "central_schema" = "centrum"
+        "experiment_id"       = "{{experiment_id}}"
+        "job_run_id"          = "{{job.run_id}}"
+        "task_run_id"         = "{{task.run_id}}"
+        "create_result_state" = "{{tasks.experiment_pipeline_create.result_state}}"
+        "webhook_url"         = "https://${module.route53.api_domain}${var.backend_status_update_webhook_path}"
+        "key_scope"           = module.experiment_secret_scope.scope_name
       }
 
-      depends_on = "experiment_pipeline_orchestrator"
+      depends_on = "experiment_pipeline_create"
     },
   ]
 
-  depends_on = [module.experiment_orchestrator_cluster]
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -355,11 +410,14 @@ module "databricks_secrets" {
 
   # Store secrets as JSON using variables
   secret_string = jsonencode({
-    DATABRICKS_HOST          = var.databricks_host
-    DATABRICKS_CLIENT_ID     = var.backend_databricks_client_id
-    DATABRICKS_CLIENT_SECRET = var.backend_databricks_client_secret
-    DATABRICKS_JOB_ID        = var.backend_databricks_job_id
-    DATABRICKS_WAREHOUSE_ID  = var.backend_databricks_warehouse_id
+    DATABRICKS_HOST               = module.databricks_workspace.workspace_url
+    DATABRICKS_CLIENT_ID          = module.node_service_principal.service_principal_application_id
+    DATABRICKS_CLIENT_SECRET      = module.node_service_principal.service_principal_secret_value
+    DATABRICKS_JOB_ID             = module.experiment_provisioning_job.job_id
+    DATABRICKS_WAREHOUSE_ID       = var.backend_databricks_warehouse_id
+    DATABRICKS_WEBHOOK_API_KEY_ID = var.backend_webhook_api_key_id
+    DATABRICKS_WEBHOOK_SECRET     = var.backend_webhook_secret
+    DATABRICKS_WEBHOOK_API_KEY    = var.backend_webhook_api_key
   })
 
   tags = {
@@ -401,7 +459,7 @@ module "opennext_waf" {
 
   service_name       = "opennext"
   environment        = "dev"
-  rate_limit         = 2000
+  rate_limit         = 500
   log_retention_days = 30
 
   tags = {
@@ -716,6 +774,18 @@ module "backend_ecs" {
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WAREHOUSE_ID::"
     },
     {
+      name      = "DATABRICKS_WEBHOOK_API_KEY_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_API_KEY_ID::"
+    },
+    {
+      name      = "DATABRICKS_WEBHOOK_API_KEY"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_API_KEY::"
+    },
+    {
+      name      = "DATABRICKS_WEBHOOK_SECRET"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_SECRET::"
+    },
+    {
       name      = "DB_CREDENTIALS"
       valueFrom = module.aurora_db.master_user_secret_arn
     },
@@ -770,7 +840,7 @@ module "backend_waf" {
 
   service_name       = "backend"
   environment        = "dev"
-  rate_limit         = 2000
+  rate_limit         = 500
   log_retention_days = 30
 
   tags = {

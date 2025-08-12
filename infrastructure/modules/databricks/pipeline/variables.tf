@@ -67,6 +67,12 @@ variable "num_workers" {
   default     = 1
 }
 
+variable "serverless" {
+  description = "Whether to use serverless compute for the pipeline. If true, cluster block is omitted."
+  type        = bool
+  default     = false
+}
+
 variable "log_level" {
   description = "Log level for the pipeline"
   type        = string
