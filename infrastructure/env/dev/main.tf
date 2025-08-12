@@ -325,10 +325,11 @@ module "experiment_provisioning_job" {
       notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipeline_create_task"
 
       parameters = {
-        "experiment_id"   = "{{experiment_id}}"
-        "experiment_name" = "{{experiment_name}}"
-        "catalog_name"    = module.databricks_catalog.catalog_name
-        "central_schema"  = "centrum"
+        "experiment_id"            = "{{experiment_id}}"
+        "experiment_name"          = "{{experiment_name}}"
+        "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
+        "catalog_name"             = module.databricks_catalog.catalog_name
+        "central_schema"           = "centrum"
       }
     },
     {
@@ -338,9 +339,12 @@ module "experiment_provisioning_job" {
       notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_status_update_task"
 
       parameters = {
-        "experiment_id" = "{{experiment_id}}"
-        "webhook_url"   = "https://${module.route53.api_domain}${var.backend_status_update_webhook_path}"
-        "key_scope"     = module.experiment_secret_scope.scope_name
+        "experiment_id"       = "{{experiment_id}}"
+        "job_run_id"          = "{{job.run_id}}"
+        "task_run_id"         = "{{task.run_id}}"
+        "create_result_state" = "{{tasks.experiment_pipeline_create.result_state}}"
+        "webhook_url"         = "https://${module.route53.api_domain}${var.backend_status_update_webhook_path}"
+        "key_scope"           = module.experiment_secret_scope.scope_name
       }
 
       depends_on = "experiment_pipeline_create"

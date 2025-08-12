@@ -10,12 +10,14 @@ terraform {
 
 # Find smallest available node type
 data "databricks_node_type" "smallest" {
+  count      = var.use_serverless ? 0 : 1
   local_disk = true
   provider   = databricks.workspace
 }
 
 # Find latest Spark version
 data "databricks_spark_version" "latest_lts" {
+  count             = var.use_serverless ? 0 : 1
   long_term_support = true
   provider          = databricks.workspace
 }
@@ -94,9 +96,9 @@ resource "databricks_job" "this" {
       }
 
       # Add retry configuration
-      retry_on_timeout          = var.task_retry_config.retry_on_timeout
-      max_retries               = var.task_retry_config.retries
-      min_retry_interval_millis = var.task_retry_config.min_retry_interval_millis
+      retry_on_timeout          = var.continuous ? false : var.task_retry_config.retry_on_timeout
+      max_retries               = var.continuous ? 0 : var.task_retry_config.retries
+      min_retry_interval_millis = var.continuous ? 0 : var.task_retry_config.min_retry_interval_millis
     }
   }
 
