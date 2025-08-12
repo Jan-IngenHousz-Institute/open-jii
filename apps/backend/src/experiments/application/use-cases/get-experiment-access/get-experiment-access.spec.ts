@@ -1,6 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Logger } from "@nestjs/common";
-
 import { assertFailure, assertSuccess, AppError, failure } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
