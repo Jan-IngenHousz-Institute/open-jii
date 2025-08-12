@@ -1,0 +1,69 @@
+# Codecov configuration
+codecov:
+  require_ci_to_pass: true
+
+# Recommended: Automatic Flag Management
+flag_management:
+  default_rules:
+    carryforward: true
+    statuses:
+      - type: project
+        target: auto
+        threshold: 1%
+      - type: patch
+        target: 75%  # 75% branch coverage for new code
+        threshold: 5%
+  individual_flags:
+    - name: backend
+      paths:
+        - apps/backend/**
+      carryforward: true
+      statuses:
+        - type: project
+          target: 90%  # 90% lines coverage for backend
+          threshold: 1%
+        - type: patch
+          target: 75%  # 75% branch coverage for new backend code
+          threshold: 5%
+    - name: web
+      paths:
+        - apps/web/**
+      carryforward: true
+      statuses:
+        - type: project
+          target: auto  # No minimum for web (for now)
+          threshold: 100%  # Very lenient - essentially non-blocking
+          informational: true
+        - type: patch
+          target: auto  # No minimum for new web code
+          threshold: 100%
+          informational: true
+
+# Coverage status configuration (works with flag management)
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        base: auto
+      backend:
+        flags:
+          - backend
+      web:
+        flags:
+          - web
+        informational: true  # Non-blocking for web
+
+# Comment configuration for PR
+comment:
+  layout: "diff, flags, files"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+  hide_project_coverage: false
+
+# Disable GitHub annotations to reduce visual clutter
+github_checks:
+  annotations: false
