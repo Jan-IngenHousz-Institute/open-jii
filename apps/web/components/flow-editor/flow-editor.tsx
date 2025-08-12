@@ -341,7 +341,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                         nodesDraggable={!isDisabled}
                         nodesConnectable={!isDisabled}
                         elementsSelectable={true}
-                        fitView={isFullscreen || isDisabled}
+                        fitView={isDisabled}
                         defaultViewport={{ x: 0, y: 0, zoom: 1 }}
                         defaultEdgeOptions={{
                           markerEnd: { type: MarkerType.ArrowClosed },
