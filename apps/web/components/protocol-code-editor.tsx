@@ -1,10 +1,12 @@
 "use client";
 
+import type { Monaco, OnMount } from "@monaco-editor/react";
 import Editor from "@monaco-editor/react";
 import { Copy, Check } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FC } from "react";
 
+import { validateProtocolJson } from "@repo/api";
 import { Button, Label } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -15,6 +17,7 @@ interface ProtocolCodeEditorProps {
   placeholder?: string;
   error?: string;
 }
+type IStandaloneCodeEditor = Parameters<OnMount>[0];
 
 const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   value,
@@ -25,9 +28,34 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [isValidJson, setIsValidJson] = useState(true);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const monacoRef = useRef<Monaco | null>(null);
+  const editorRef = useRef<IStandaloneCodeEditor | null>(null);
 
   // Convert array to JSON string for editor if needed
   const editorValue = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+
+  // Set Monaco error markers
+  const setMarkers = (errors: string[], errorDetails?: { line: number; message: string }[]) => {
+    if (monacoRef.current && editorRef.current) {
+      const markerSeverityError = monacoRef.current.MarkerSeverity.Error;
+      const model = editorRef.current.getModel();
+      if (model) {
+        monacoRef.current.editor.setModelMarkers(
+          model,
+          "owner",
+          (errorDetails ?? []).map((e) => ({
+            startLineNumber: e.line,
+            endLineNumber: e.line,
+            startColumn: 1,
+            endColumn: 1,
+            message: e.message,
+            severity: markerSeverityError,
+          })),
+        );
+      }
+    }
+  };
 
   const handleCopy = async () => {
     try {
@@ -64,6 +92,26 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
       const parsedValue = JSON.parse(newValue) as unknown;
       setIsValidJson(true);
 
+      // Validate with Zod
+      const result = validateProtocolJson(parsedValue);
+      if (!result.success && result.error) {
+        setValidationErrors(result.error.map((e) => e.message));
+        // Try to extract line numbers from Zod errors (if possible)
+        const errorDetails = result.error.map((e) => {
+          // Try to find the line number of the error path in the JSON
+          // This is a best-effort guess, as Zod does not provide line numbers
+          // We'll just mark line 1 for all errors as a fallback
+          return { line: 1, message: e.message };
+        });
+        setMarkers(
+          result.error.map((e) => e.message),
+          errorDetails,
+        );
+      } else {
+        setValidationErrors([]);
+        setMarkers([]);
+      }
+
       if (Array.isArray(parsedValue)) {
         onChange(parsedValue as Record<string, unknown>[]);
       } else {
@@ -71,9 +119,23 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
       }
     } catch {
       setIsValidJson(false);
+      setValidationErrors(["Invalid JSON syntax"]);
+      setMarkers(["Invalid JSON syntax"], [{ line: 1, message: "Invalid JSON syntax" }]);
       onChange(newValue); // Keep the invalid JSON for editing
     }
   };
+
+  const handleEditorMount: OnMount = (editor, monaco) => {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+  };
+
+  useEffect(() => {
+    // Clear markers if error prop changes
+    if (!error && monacoRef.current && editorRef.current) {
+      setMarkers([]);
+    }
+  }, [error]);
 
   return (
     <div className="grid w-full gap-1.5">
@@ -92,6 +154,12 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
               {stats.lines} lines • {stats.size}
             </span>
             {!isValidJson && <span className="text-xs text-red-600">Invalid JSON</span>}
+            {validationErrors.length > 0 && (
+              <span className="text-xs text-red-600">
+                {validationErrors[0]}
+                {validationErrors.length > 1 && ` (+${validationErrors.length - 1} more)`}
+              </span>
+            )}
           </div>
           <Button
             variant="ghost"
@@ -112,10 +180,11 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
             </div>
           )}
           <Editor
-            height="359px"
+            height={700}
             language="json"
             value={editorValue}
             onChange={handleEditorChange}
+            onMount={handleEditorMount}
             loading={
               <div className="flex h-full items-center justify-center bg-slate-50">
                 <div className="animate-pulse text-sm text-slate-600">Loading code editor...</div>
