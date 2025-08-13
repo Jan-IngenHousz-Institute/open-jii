@@ -362,13 +362,7 @@ export function NewExperimentFlow({
                     />
 
                     {/* Legend overlay (inside ReactFlow on md+ for all states) */}
-                    <LegendFlow
-                      overlay
-                      dragHandle
-                      containerRef={flowAreaRef}
-                      initialCorner="bottom-right"
-                      cardClassName="cursor-grab bg-white/70 backdrop-blur supports-[backdrop-filter]:bg-white/50 border border-slate-200"
-                    />
+                    <LegendFlow overlay />
                   </div>
                 </CardContent>
               </Card>

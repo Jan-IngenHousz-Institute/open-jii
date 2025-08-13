@@ -352,12 +352,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                     {/* Overlay legend always, except on small screens and when disabled */}
                     {!isDisabled && (
                       <div className="hidden md:block">
-                        <LegendFlow
-                          overlay
-                          containerRef={flowAreaRef}
-                          initialCorner="bottom-right"
-                          cardClassName="bg-white/70 backdrop-blur supports-[backdrop-filter]:bg-white/50 border border-slate-200"
-                        />
+                        <LegendFlow overlay />
                       </div>
                     )}
                   </div>
