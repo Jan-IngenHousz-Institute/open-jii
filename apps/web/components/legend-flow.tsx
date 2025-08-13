@@ -30,6 +30,8 @@ export function LegendFlow({
             <div
               key={type}
               role="button"
+              draggable
+              onDragStart={(e) => e.dataTransfer.setData("application/reactflow", type)}
               tabIndex={0}
               className={`flex items-center rounded-lg border md:gap-2 ${colorClass} gap-1 px-2 py-1 shadow-md transition-transform hover:scale-105 md:py-2`}
             >
