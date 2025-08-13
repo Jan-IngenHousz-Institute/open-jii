@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 
+import { useTranslation } from "@repo/i18n/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
 
 import type { NodeType } from "./react-flow/node-config";
@@ -20,6 +21,8 @@ export function LegendFlow({
   initialCorner?: "top-left" | "bottom-left" | "bottom-right";
 }) {
   const nodeTypes = Object.keys(nodeTypeColorMap) as NodeType[];
+
+  const { t } = useTranslation(["experiments"]);
 
   // Drag state only used in overlay mode
   type LegendCorner = "top-left" | "bottom-left" | "bottom-right";
@@ -128,7 +131,7 @@ export function LegendFlow({
         data-legend-drag-handle={dragHandle ? "true" : undefined}
         className={dragHandle ? "cursor-grab select-none active:cursor-grabbing" : undefined}
       >
-        <CardTitle>Legend</CardTitle>
+        <CardTitle>{t("flow.legend")}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-3 md:flex md:flex-col md:gap-3">
         {nodeTypes.map((type) => {
@@ -149,9 +152,7 @@ export function LegendFlow({
                 )}
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-medium">
-                  {type.charAt(0) + type.slice(1).toLowerCase()}
-                </span>
+                <span className="text-sm font-medium">{t(`flow.nodeTypes.${type}`)}</span>
               </div>
             </div>
           );

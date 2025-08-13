@@ -58,11 +58,15 @@ export function ProtocolSearchWithDropdown({
                 )}
                 <div className="flex flex-1 flex-col">
                   <span className="overflow-hidden text-ellipsis whitespace-nowrap font-medium">
-                    Protocol: {selectedProtocol.name}
+                    {t("common.protocolLabel")}: {selectedProtocol.name}
                   </span>
                   <span className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
                     #{selectedProtocol.family}
-                    {selectedProtocol.createdByName && <> • by {selectedProtocol.createdByName}</>}
+                    {selectedProtocol.createdByName && (
+                      <>
+                        • {t("common.by")} {selectedProtocol.createdByName}
+                      </>
+                    )}
                   </span>
                 </div>
               </>

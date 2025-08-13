@@ -1,6 +1,7 @@
 import type { Edge } from "@xyflow/react";
 import React, { useState, useEffect } from "react";
 
+import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
 
 export interface EdgeSidePanelProps {
@@ -61,6 +62,7 @@ export function EdgeSidePanel({
     }
   }, [open, selectedEdge]);
 
+  const { t } = useTranslation("experiments");
   return (
     <>
       {/* Always render backdrop for fade animation */}
@@ -72,12 +74,13 @@ export function EdgeSidePanel({
             : "pointer-events-none bg-opacity-0 opacity-0")
         }
         onClick={onClose}
-        aria-label="Close edge panel backdrop"
+        aria-label={t("edgePanel.closeBackdrop")}
       />
       <div
         className={
-          "fixed bottom-0 right-0 top-0 z-50 flex w-[30vw] flex-col rounded-bl-2xl rounded-tl-2xl border-l border-gray-200 bg-white shadow-[-8px_0_30px_-8px_rgba(0,0,0,0.3)] transition-transform duration-300 ease-in-out " +
-          (open && selectedEdge ? "translate-x-0" : "translate-x-full")
+          "fixed bottom-0 right-0 top-0 z-50 flex w-full flex-col rounded-none border-none bg-white shadow-none transition-transform duration-300 ease-in-out " +
+          "md:w-[480px] md:rounded-bl-xl md:rounded-tl-xl md:border-l md:border-gray-200 md:bg-white md:shadow-[-8px_0_30px_-8px_rgba(0,0,0,0.3)]" +
+          (open && selectedEdge ? " translate-x-0" : " translate-x-full")
         }
       >
         <div className="flex-1 overflow-y-auto p-6">
@@ -88,12 +91,12 @@ export function EdgeSidePanel({
           >
             &times;
           </button>
-          <h2 className="text-jii-dark-green mb-4 text-xl font-bold">Edge Settings</h2>
+          <h2 className="text-jii-dark-green mb-4 text-xl font-bold">{t("edgePanel.settings")}</h2>
 
           {/* Edge Label */}
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle className="text-jii-dark-green">Label</CardTitle>
+              <CardTitle className="text-jii-dark-green">{t("edgePanel.label")}</CardTitle>
             </CardHeader>
             <CardContent>
               <input
@@ -101,7 +104,7 @@ export function EdgeSidePanel({
                 type="text"
                 value={getEdgeLabel(displayEdge)}
                 onChange={handleLabelChange}
-                placeholder="Enter edge label..."
+                placeholder={t("edgePanel.labelPlaceholder")}
                 disabled={isDisabled}
                 className="focus:border-jii-dark-green focus:ring-jii-dark-green w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
               />
@@ -111,7 +114,7 @@ export function EdgeSidePanel({
           {/* Edge Actions */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-jii-dark-green">Actions</CardTitle>
+              <CardTitle className="text-jii-dark-green">{t("edgePanel.actions")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex justify-center">
@@ -121,7 +124,7 @@ export function EdgeSidePanel({
                   onClick={handleDeleteEdge}
                   disabled={isDisabled}
                 >
-                  Remove Edge
+                  {t("edgePanel.remove")}
                 </button>
               </div>
             </CardContent>

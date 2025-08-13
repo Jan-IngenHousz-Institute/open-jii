@@ -3,6 +3,7 @@
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 
+import { useTranslation } from "@repo/i18n";
 import {
   Card,
   CardHeader,
@@ -88,6 +89,7 @@ export function AnalysisPanel({
 }: AnalysisPanelProps) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const { t } = useTranslation("experiments");
 
   const selectedOption = MEASUREMENT_OPTIONS.find(
     (option) => option.id === selectedMeasurementOption,
@@ -110,7 +112,7 @@ export function AnalysisPanel({
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle className="text-jii-dark-green">Analysis Options</CardTitle>
+        <CardTitle className="text-jii-dark-green">{t("analysisPanel.title")}</CardTitle>
       </CardHeader>
       <CardContent>
         <Popover open={open} onOpenChange={setOpen}>
@@ -134,15 +136,21 @@ export function AnalysisPanel({
                       </Avatar>
                     )}
                     <div className="flex flex-1 flex-col items-start">
-                      <span className="font-medium">Analysis: {selectedOption.name}</span>
+                      <span className="font-medium">
+                        {t("analysisPanel.analysis")}: {selectedOption.name}
+                      </span>
                       <span className="text-muted-foreground text-xs">
                         #{selectedOption.category}
-                        {selectedOption.createdBy && <> • by {selectedOption.createdBy}</>}
+                        {selectedOption.createdBy && (
+                          <>
+                            • {t("analysisPanel.by")} {selectedOption.createdBy}
+                          </>
+                        )}
                       </span>
                     </div>
                   </>
                 ) : (
-                  <div className="flex-1 text-left">Select measurement analysis...</div>
+                  <div className="flex-1 text-left">{t("analysisPanel.select")}</div>
                 )}
                 <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </div>
@@ -152,7 +160,7 @@ export function AnalysisPanel({
             <div className="p-2">
               <input
                 type="text"
-                placeholder="Search analysis options..."
+                placeholder={t("analysisPanel.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(e) => (disabled ? undefined : setSearchTerm(e.target.value))}
                 disabled={disabled}
@@ -181,7 +189,11 @@ export function AnalysisPanel({
                       <span className="text-muted-foreground text-xs">{option.description}</span>
                       <span className="mt-1 text-xs text-blue-600">
                         #{option.category}
-                        {option.createdBy && <> • by {option.createdBy}</>}
+                        {option.createdBy && (
+                          <>
+                            • {t("analysisPanel.by")} {option.createdBy}
+                          </>
+                        )}
                       </span>
                     </div>
                   </div>
@@ -189,7 +201,7 @@ export function AnalysisPanel({
               ))}
               {filteredOptions.length === 0 && (
                 <div className="text-muted-foreground px-3 py-2 text-sm">
-                  No analysis options found.
+                  {t("analysisPanel.noOptions")}
                 </div>
               )}
             </div>

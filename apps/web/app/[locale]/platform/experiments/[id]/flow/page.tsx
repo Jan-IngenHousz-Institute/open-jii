@@ -105,7 +105,7 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
             className={`h-2 w-2 rounded-full ${hasAccess ? "bg-green-500" : "bg-blue-500"}`}
           ></div>
           <span className={`text-sm font-medium ${hasAccess ? "text-green-700" : "text-blue-700"}`}>
-            {hasAccess ? "Editing Mode" : "Preview Mode"}
+            {hasAccess ? t("editingMode") : t("previewMode")}
           </span>
         </div>
       </div>

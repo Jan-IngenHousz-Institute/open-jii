@@ -42,7 +42,9 @@ export function MeasurementPanel({
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle className="text-jii-dark-green">Measurement Protocol</CardTitle>
+        <CardTitle className="text-jii-dark-green">
+          {t("experiments.measurementPanelTitle")}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <ProtocolSearchWithDropdown

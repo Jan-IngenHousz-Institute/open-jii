@@ -105,10 +105,10 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
       <Tabs value={activeTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview" asChild>
-            <Link href={`/platform/experiments/${id}`}>{t("overview")}</Link>
+            <Link href={`/${locale}/platform/experiments/${id}`}>{t("overview")}</Link>
           </TabsTrigger>
           <TabsTrigger value="data" asChild>
-            <Link href={`/platform/experiments/${id}/data`}>{t("data")}</Link>
+            <Link href={`/${locale}/platform/experiments/${id}/data`}>{t("data")}</Link>
           </TabsTrigger>
           <TabsTrigger
             value="settings"
@@ -116,10 +116,13 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
             aria-label={!hasAccess ? t("needMemberAccess") : undefined}
             asChild={hasAccess}
           >
-            {renderAccessControlledLink(`/platform/experiments/${id}/settings`, tNav("settings"))}
+            {renderAccessControlledLink(
+              `/${locale}/platform/experiments/${id}/settings`,
+              tNav("main.settings"),
+            )}
           </TabsTrigger>
           <TabsTrigger value="flow" asChild>
-            <Link href={`/platform/experiments/${id}/flow`}>{t("flow.tabLabel")}</Link>
+            <Link href={`/${locale}/platform/experiments/${id}/flow`}>{t("flow.tabLabel")}</Link>
           </TabsTrigger>
         </TabsList>
 

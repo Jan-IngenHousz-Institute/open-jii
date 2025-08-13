@@ -1,6 +1,7 @@
 import type { Position } from "@xyflow/react";
 import React from "react";
 
+import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
 import { nodeTypeColorMap } from "../react-flow/node-config";
@@ -30,6 +31,7 @@ export function NodeContent({
   dragging,
   isStartNode = false,
 }: NodeContentProps) {
+  const { t } = useTranslation("experiments");
   return (
     <>
       <NodeHandles
@@ -47,7 +49,7 @@ export function NodeContent({
           {isStartNode && (
             <div className="mb-2 flex">
               <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
-                START
+                {t("start")}
               </span>
             </div>
           )}

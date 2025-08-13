@@ -123,7 +123,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
             </div>
             <div className="flex items-center gap-2 rounded-md bg-blue-50 px-3 py-1.5">
               <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-              <span className="text-sm font-medium text-blue-700">Preview Mode</span>
+              <span className="text-sm font-medium text-blue-700">{t("previewMode")}</span>
             </div>
           </div>
           <FlowEditor initialFlow={experimentFlow.body} isDisabled={true} />

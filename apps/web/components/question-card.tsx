@@ -1,5 +1,6 @@
 import React from "react";
 
+import { useTranslation } from "@repo/i18n";
 import { Card, CardContent } from "@repo/ui/components";
 
 // Local UI-focused question spec (legacy bridge). Replace with backend question content mapping later.
@@ -32,6 +33,7 @@ export function QuestionCard({
   disabled = false,
 }: QuestionCardProps) {
   const { answerType, validationMessage, options, required } = stepSpecification;
+  const { t } = useTranslation(["experiments"]);
 
   return (
     <Card className="group relative overflow-hidden border border-gray-200 bg-white shadow-sm transition-all hover:border-gray-300 hover:shadow-lg">
@@ -45,7 +47,7 @@ export function QuestionCard({
             type="text"
             value={validationMessage ?? ""}
             onChange={(e) => onUpdateText?.(e.target.value)}
-            placeholder="What would you like to ask?"
+            placeholder={t("questionCard.placeholder")}
             disabled={disabled}
             className="focus:border-jii-dark-green w-full border-0 border-b-2 border-gray-100 bg-transparent px-0 py-3 text-lg font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:bg-gray-50"
           />
@@ -55,10 +57,8 @@ export function QuestionCard({
         <div className="mb-6">
           <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4">
             <div>
-              <p className="text-sm font-medium text-gray-900">Required Question</p>
-              <p className="text-xs text-gray-500">
-                Participants must answer this question to continue
-              </p>
+              <p className="text-sm font-medium text-gray-900">{t("questionCard.requiredLabel")}</p>
+              <p className="text-xs text-gray-500">{t("questionCard.requiredDescription")}</p>
             </div>
             <label className="relative inline-flex cursor-pointer items-center">
               <input
@@ -77,7 +77,9 @@ export function QuestionCard({
         <div className="mb-6">
           <div className="mb-3 flex items-center gap-2">
             <div className="h-1 w-1 rounded-full bg-gray-400"></div>
-            <span className="text-sm font-medium text-gray-600">Answer Type</span>
+            <span className="text-sm font-medium text-gray-600">
+              {t("questionCard.answerTypeLabel")}
+            </span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {["TEXT", "SELECT", "NUMBER", "BOOLEAN"].map((type) => (
@@ -90,16 +92,13 @@ export function QuestionCard({
                   disabled={disabled}
                   className="peer sr-only"
                 />
-                <div className="peer-checked:border-jii-dark-green peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 relative h-4 w-4 rounded-full border-2 border-gray-300 bg-white transition-all peer-focus:ring-2">
+                <div className="peer-checked:border-jii-dark-green peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 relative h-4 w-4 shrink-0 rounded-full border-2 border-gray-300 bg-white transition-all peer-focus:ring-2">
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="h-1.5 w-1.5 rounded-full bg-white opacity-0 transition-opacity peer-checked:opacity-100"></div>
                   </div>
                 </div>
                 <span className="text-sm font-medium text-gray-700">
-                  {type === "TEXT" && "Text"}
-                  {type === "SELECT" && "Multiple Choice"}
-                  {type === "NUMBER" && "Number"}
-                  {type === "BOOLEAN" && "Yes/No"}
+                  {t(`questionCard.answerTypes.${type}`)}
                 </span>
               </label>
             ))}
@@ -111,7 +110,9 @@ export function QuestionCard({
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <div className="h-1 w-1 rounded-full bg-gray-400"></div>
-              <span className="text-sm font-medium text-gray-600">Answer Options</span>
+              <span className="text-sm font-medium text-gray-600">
+                {t("questionCard.answerOptionsLabel")}
+              </span>
             </div>
 
             {options && options.length > 0 ? (
@@ -125,7 +126,7 @@ export function QuestionCard({
                       type="text"
                       value={option}
                       onChange={(e) => onUpdateOption?.(optionIndex, e.target.value)}
-                      placeholder="Enter an answer option"
+                      placeholder={t("questionCard.answerOptionPlaceholder")}
                       disabled={disabled}
                       className="focus:border-jii-dark-green focus:ring-jii-dark-green/20 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 transition-colors focus:bg-white focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"
                     />
@@ -134,7 +135,7 @@ export function QuestionCard({
                       onClick={() => onDeleteOption?.(optionIndex)}
                       disabled={disabled}
                       className="rounded-lg p-2 text-gray-400 opacity-100 transition-all hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50 md:opacity-0 md:group-hover/option:opacity-100"
-                      title="Remove option"
+                      title={t("questionCard.removeOption")}
                     >
                       <svg
                         className="h-4 w-4"
@@ -170,7 +171,7 @@ export function QuestionCard({
                     />
                   </svg>
                 </div>
-                <p className="text-sm text-gray-500">No answer options yet</p>
+                <p className="text-sm text-gray-500">{t("questionCard.noAnswerOptions")}</p>
               </div>
             )}
 
@@ -188,7 +189,7 @@ export function QuestionCard({
                   d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                 />
               </svg>
-              Add Option
+              {t("questionCard.addOption")}
             </button>
           </div>
         )}
@@ -211,8 +212,8 @@ export function QuestionCard({
                 />
               </svg>
             </div>
-            <p className="mb-1 font-medium text-gray-900">Text Response</p>
-            <p className="text-sm text-gray-600">Participants can write their own answer</p>
+            <p className="mb-1 font-medium text-gray-900">{t("questionCard.textResponseLabel")}</p>
+            <p className="text-sm text-gray-600">{t("questionCard.textResponseDescription")}</p>
           </div>
         )}
 
@@ -234,8 +235,10 @@ export function QuestionCard({
                 />
               </svg>
             </div>
-            <p className="mb-1 font-medium text-gray-900">Number Response</p>
-            <p className="text-sm text-gray-600">Participants will enter a numeric value</p>
+            <p className="mb-1 font-medium text-gray-900">
+              {t("questionCard.numberResponseLabel")}
+            </p>
+            <p className="text-sm text-gray-600">{t("questionCard.numberResponseDescription")}</p>
           </div>
         )}
 
@@ -257,8 +260,10 @@ export function QuestionCard({
                 />
               </svg>
             </div>
-            <p className="mb-1 font-medium text-gray-900">Yes/No Response</p>
-            <p className="text-sm text-gray-600">Participants will choose Yes or No</p>
+            <p className="mb-1 font-medium text-gray-900">
+              {t("questionCard.booleanResponseLabel")}
+            </p>
+            <p className="text-sm text-gray-600">{t("questionCard.booleanResponseDescription")}</p>
           </div>
         )}
       </CardContent>

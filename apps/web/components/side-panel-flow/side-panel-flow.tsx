@@ -1,6 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
 import React, { useState, useEffect } from "react";
 
+import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
 
 import { AnalysisPanel } from "./analysis-panel";
@@ -70,6 +71,8 @@ export function ExperimentSidePanel({
     }
   };
 
+  const { t } = useTranslation("experiments");
+
   useEffect(() => {
     if (open && nodeType) {
       // Immediately update content when opening
@@ -100,7 +103,7 @@ export function ExperimentSidePanel({
       <div
         className={
           "fixed bottom-0 right-0 top-0 z-[80] flex w-full flex-col rounded-none border-none bg-white shadow-none transition-transform duration-300 ease-in-out " +
-          "md:w-[30vw] md:rounded-bl-xl md:rounded-tl-xl md:border-l md:border-gray-200 md:bg-white md:shadow-[-8px_0_30px_-8px_rgba(0,0,0,0.3)]" +
+          "md:w-[480px] md:rounded-bl-xl md:rounded-tl-xl md:border-l md:border-gray-200 md:bg-white md:shadow-[-8px_0_30px_-8px_rgba(0,0,0,0.3)]" +
           (open && nodeType ? " translate-x-0" : " translate-x-full")
         }
       >
@@ -116,13 +119,13 @@ export function ExperimentSidePanel({
             {displayNodeType
               ? displayNodeType.charAt(0) + displayNodeType.slice(1).toLowerCase()
               : ""}{" "}
-            Node Panel
+            {t("sidePanelFlow.nodePanel")}
           </h2>
 
           {/* Label input field wrapped in Card */}
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle className="text-jii-dark-green">Label</CardTitle>
+              <CardTitle className="text-jii-dark-green">{t("sidePanelFlow.label")}</CardTitle>
             </CardHeader>
             <CardContent>
               <input
@@ -130,7 +133,7 @@ export function ExperimentSidePanel({
                 type="text"
                 value={currentTitle}
                 onChange={handleTitleChange}
-                placeholder="Enter node title..."
+                placeholder={t("sidePanelFlow.labelPlaceholder")}
                 disabled={isDisabled}
                 className="focus:border-jii-dark-green focus:ring-jii-dark-green w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
               />
@@ -141,14 +144,18 @@ export function ExperimentSidePanel({
           {selectedNode && (
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle className="text-jii-dark-green">Node Properties</CardTitle>
+                <CardTitle className="text-jii-dark-green">
+                  {t("sidePanelFlow.nodeProperties")}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Start Node Toggle */}
                 <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Start Node</p>
-                    <p className="text-xs text-gray-500">Limited to one per flow</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {t("sidePanelFlow.startNode")}
+                    </p>
+                    <p className="text-xs text-gray-500">{t("sidePanelFlow.startNodeLimit")}</p>
                   </div>
                   <label className="relative inline-flex cursor-pointer items-center">
                     <input

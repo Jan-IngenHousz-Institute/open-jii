@@ -1,5 +1,6 @@
 import React from "react";
 
+import { useTranslation } from "@repo/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components";
 
 import type { QuestionUI } from "../question-card";
@@ -69,11 +70,12 @@ export function QuestionPanel({
     }
   };
 
+  const { t } = useTranslation("experiments");
   return (
     <Card className="mt-6">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-jii-dark-green">Question</CardTitle>
+          <CardTitle className="text-jii-dark-green">{t("questionPanel.title")}</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
