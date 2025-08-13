@@ -2,13 +2,13 @@ import { Controller, Logger, UseGuards } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
-import { contract } from "@repo/api";
+import { contract, validateProtocolJson } from "@repo/api";
 import type { User } from "@repo/auth/types";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
-import { handleFailure } from "../../common/utils/fp-utils";
+import { AppError, failure, handleFailure, success } from "../../common/utils/fp-utils";
 import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
 import { DeleteProtocolUseCase } from "../application/use-cases/delete-protocol/delete-protocol";
 import { GetProtocolUseCase } from "../application/use-cases/get-protocol/get-protocol";
@@ -19,6 +19,7 @@ import { CreateProtocolDto } from "../core/models/protocol.model";
 /**
  * Safely parses the protocol code field, ensuring it's a proper Record<string, unknown>
  * @param code The code field from the protocol, which could be a string, object, or null/undefined
+ * @param logger Logger function
  * @returns Parsed code as an object or empty object if input is null/undefined or if parsing fails
  */
 function parseProtocolCode(code: unknown, logger: Logger): Record<string, unknown>[] {
@@ -41,6 +42,20 @@ function parseProtocolCode(code: unknown, logger: Logger): Record<string, unknow
   }
 
   return [{}];
+}
+
+/**
+ * Validates the protocol code fields
+ * @param code The code field from the protocol, which could be a string, object, or null/undefined
+ * @param logger Logger function
+ */
+function validateProtocolCode(code: unknown, logger: Logger) {
+  const validationResult = validateProtocolJson(code);
+  if (!validationResult.success) {
+    logger.warn("Protocol validation failed", validationResult.error);
+    return failure(AppError.badRequest("Protocol validation failed"));
+  }
+  return success(validationResult.data);
 }
 
 @Controller()
@@ -103,6 +118,11 @@ export class ProtocolController {
   @TsRestHandler(contract.protocols.createProtocol)
   createProtocol(@CurrentUser() user: User) {
     return tsRestHandler(contract.protocols.createProtocol, async ({ body }) => {
+      const validationResult = validateProtocolCode(body.code, this.logger);
+      if (validationResult.isFailure()) {
+        return handleFailure(validationResult, this.logger);
+      }
+
       // Convert the code from Record<string, unknown> to a JSON string for database storage
       const createDto: CreateProtocolDto = {
         name: body.name,
@@ -148,6 +168,11 @@ export class ProtocolController {
           status: StatusCodes.FORBIDDEN,
           body: { message: "Only the protocol creator can update this protocol" },
         };
+      }
+
+      const validationResult = validateProtocolCode(body.code, this.logger);
+      if (validationResult.isFailure()) {
+        return handleFailure(validationResult, this.logger);
       }
 
       // Convert API contract body to DTO with proper JSON handling

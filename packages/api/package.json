@@ -14,6 +14,9 @@
     "dev": "tsc --watch",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
+    "test": "jest --runInBand --coverage",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
     "typecheck": "tsc --noEmit",
     "generate:openapi": "ts-node src/openapi.ts"
   },
@@ -25,8 +28,10 @@
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@types/jest": "^29.5.14",
     "@types/node": "catalog:",
     "eslint": "catalog:",
+    "jest": "^29.7.0",
     "ts-node": "^10.9.2",
     "typescript": "catalog:"
   }
