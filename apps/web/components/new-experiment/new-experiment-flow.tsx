@@ -1,3 +1,7 @@
+/*
+  NOTE: This component is currently not used in the application but is kept
+  for potential future use as part of the experiment creation wizard.
+*/
 import type { Node, Edge, Connection, NodeProps } from "@xyflow/react";
 import {
   MarkerType,
