@@ -216,7 +216,6 @@ export function validateProtocolJson(json: unknown): ValidationResult<ProtocolJs
             code: z.ZodIssueCode.custom,
             message: `Invalid JSON syntax: ${error.message}`,
             path: [],
-            //input: jsonString,
           },
         ],
       };
