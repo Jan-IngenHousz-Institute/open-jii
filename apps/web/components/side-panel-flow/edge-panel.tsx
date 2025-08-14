@@ -68,7 +68,7 @@ export function EdgeSidePanel({
       {/* Always render backdrop for fade animation */}
       <div
         className={
-          "fixed inset-0 z-40 bg-black transition-opacity duration-300 " +
+          "fixed inset-0 z-[80] bg-black transition-opacity duration-300 " +
           (open && selectedEdge
             ? "pointer-events-auto bg-opacity-60 opacity-100"
             : "pointer-events-none bg-opacity-0 opacity-0")
@@ -78,7 +78,7 @@ export function EdgeSidePanel({
       />
       <div
         className={
-          "fixed bottom-0 right-0 top-0 z-50 flex w-full flex-col rounded-none border-none bg-white shadow-none transition-transform duration-300 ease-in-out " +
+          "fixed bottom-0 right-0 top-0 z-[80] flex w-full flex-col rounded-none border-none bg-white shadow-none transition-transform duration-300 ease-in-out " +
           "md:w-[480px] md:rounded-bl-xl md:rounded-tl-xl md:border-l md:border-gray-200 md:bg-white md:shadow-[-8px_0_30px_-8px_rgba(0,0,0,0.3)]" +
           (open && selectedEdge ? " translate-x-0" : " translate-x-full")
         }
