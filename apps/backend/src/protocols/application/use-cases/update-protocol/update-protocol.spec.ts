@@ -165,4 +165,47 @@ describe("UpdateProtocolUseCase", () => {
       statusCode: 404,
     });
   });
+
+  it("should trim leading and trailing whitespace in name update", async () => {
+    // Arrange
+    const protocolData = {
+      name: "Original Protocol",
+      description: "desc",
+      code: JSON.stringify({ steps: [{ name: "s", action: "a" }] }),
+      family: "multispeq" as const,
+    };
+    const createResult = await protocolRepository.create(protocolData, testUserId);
+    assertSuccess(createResult);
+    const createdProtocol = createResult.value[0];
+
+    // Act
+    const result = await useCase.execute(createdProtocol.id, { name: "   Trimmed Protocol   " });
+
+    // Assert
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value.name).toBe("Trimmed Protocol");
+  });
+
+  it("should return BAD_REQUEST when updating with whitespace-only name", async () => {
+    // Arrange
+    const protocolData = {
+      name: "Another Protocol",
+      description: "desc",
+      code: JSON.stringify({ steps: [{ name: "s", action: "a" }] }),
+      family: "multispeq" as const,
+    };
+    const createResult = await protocolRepository.create(protocolData, testUserId);
+    assertSuccess(createResult);
+    const createdProtocol = createResult.value[0];
+
+    // Act
+    const result = await useCase.execute(createdProtocol.id, { name: "   \t  \n  " });
+
+    // Assert
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("BAD_REQUEST");
+    expect(result.error.message).toContain("Protocol name is required");
+  });
 });

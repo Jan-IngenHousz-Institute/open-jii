@@ -88,7 +88,19 @@ export function ProtocolDetailsCard({
                 <FormItem>
                   <FormLabel>{t("protocolSettings.name")}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder={t("protocolSettings.name")} />
+                    <Input
+                      {...field}
+                      value={field.value}
+                      onBlur={(e) => {
+                        // Trim whitespace from the input value
+                        const trimmed = e.target.value.trim();
+                        if (trimmed !== e.target.value) {
+                          field.onChange(trimmed);
+                        }
+                        field.onBlur();
+                      }}
+                      placeholder={t("protocolSettings.name")}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

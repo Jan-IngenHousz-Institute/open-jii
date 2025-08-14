@@ -129,4 +129,31 @@ describe("UpdateExperimentUseCase", () => {
     expect(result.error.code).toBe("NOT_FOUND");
     expect(result.error.message).toContain(`Experiment with ID ${nonExistentId} not found`);
   });
+
+  it("should trim leading and trailing whitespace in updated name", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Original Name",
+      userId: testUserId,
+    });
+
+    const result = await useCase.execute(experiment.id, { name: "   Trimmed Name   " }, testUserId);
+
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value.name).toBe("Trimmed Name");
+  });
+
+  it("should return BAD_REQUEST when updating with whitespace-only name", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Valid Name",
+      userId: testUserId,
+    });
+
+    const result = await useCase.execute(experiment.id, { name: "   \t  \n  " }, testUserId);
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("BAD_REQUEST");
+    expect(result.error.message).toContain("Experiment name is required");
+  });
 });

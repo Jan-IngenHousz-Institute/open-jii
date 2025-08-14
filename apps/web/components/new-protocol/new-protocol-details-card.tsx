@@ -43,7 +43,18 @@ export function NewProtocolDetailsCard({ form }: NewProtocolDetailsCardProps) {
             <FormItem>
               <FormLabel>{t("newProtocol.name")}</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input
+                  {...field}
+                  value={field.value}
+                  onBlur={(e) => {
+                    // Trim whitespace from the input value
+                    const trimmed = e.target.value.trim();
+                    if (trimmed !== e.target.value) {
+                      field.onChange(trimmed);
+                    }
+                    field.onBlur();
+                  }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
