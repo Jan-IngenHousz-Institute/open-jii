@@ -1,8 +1,10 @@
+import type { UploadFileResponse } from "../../../common/modules/databricks/services/files/files.types";
 import type {
   DatabricksHealthCheck,
   DatabricksJobTriggerParams,
   DatabricksJobRunResponse,
 } from "../../../common/modules/databricks/services/jobs/jobs.types";
+import type { DatabricksPipelineStartUpdateResponse } from "../../../common/modules/databricks/services/pipelines/pipelines.types";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import type { ListTablesResponse } from "../../../common/modules/databricks/services/tables/tables.types";
 import type { Result } from "../../../common/utils/fp-utils";
@@ -36,4 +38,35 @@ export interface DatabricksPort {
    * List tables in the schema for a specific experiment
    */
   listTables(experimentName: string, experimentId: string): Promise<Result<ListTablesResponse>>;
+
+  /**
+   * Upload a file to Databricks for a specific experiment.
+   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}/{fileName}
+   *
+   * @param experimentId - ID of the experiment
+   * @param experimentName - Name of the experiment for schema construction
+   * @param sourceType - Type of data source (e.g., 'ambyte')
+   * @param fileName - Name of the file
+   * @param fileBuffer - File contents as a buffer
+   * @returns Result containing the upload response
+   */
+  uploadFile(
+    experimentId: string,
+    experimentName: string,
+    sourceType: string,
+    fileName: string,
+    fileBuffer: Buffer,
+  ): Promise<Result<UploadFileResponse>>;
+
+  /**
+   * Trigger an experiment pipeline by name
+   * Looks up a pipeline by name and starts an update
+   *
+   * @param experimentName - Name of the experiment
+   * @param experimentId - ID of the experiment for logging purposes
+   */
+  triggerExperimentPipeline(
+    experimentName: string,
+    experimentId: string,
+  ): Promise<Result<DatabricksPipelineStartUpdateResponse>>;
 }
