@@ -17,8 +17,6 @@ export class UpdateExperimentUseCase {
   ): Promise<Result<ExperimentDto>> {
     this.logger.log(`Updating experiment with ID ${id} by user ${userId}`);
 
-    const accessCheckResult = await this.experimentRepository.checkAccess(id, userId);
-
     // Normalize & validate name
     const normalizedName = (data.name ?? "").trim();
     if (!normalizedName) {
@@ -26,6 +24,8 @@ export class UpdateExperimentUseCase {
       return failure(AppError.badRequest("Experiment name is required"));
     }
     data = { ...data, name: normalizedName };
+
+    const accessCheckResult = await this.experimentRepository.checkAccess(id, userId);
 
     return accessCheckResult.chain(
       async ({
