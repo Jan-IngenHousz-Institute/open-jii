@@ -37,6 +37,247 @@ describe("ExperimentDataController", () => {
     await testApp.teardown();
   });
 
+  describe("uploadExperimentData", () => {
+    it("should upload ambyte data file successfully", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Ambyte Data",
+        userId: testUserId,
+      });
+
+      // Mock successful response from uploadFile
+      const mockUploadResponse = {
+        fileId: faker.string.uuid(),
+        filePath: `/Volumes/${experiment.name}/ambyte/test_file.zip`,
+      };
+
+      // Mock successful response from triggerExperimentPipeline
+      const mockPipelineResponse = {
+        update_id: faker.string.uuid(),
+        status: "RUNNING",
+      };
+
+      // Spy on databricksAdapter methods
+      jest.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(success(mockUploadResponse));
+      jest
+        .spyOn(databricksAdapter, "triggerExperimentPipeline")
+        .mockResolvedValue(success(mockPipelineResponse));
+
+      // Get the path
+      const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      // Create mock file data as Buffer
+      const fileBuffer = Buffer.from("mock ambyte data content");
+      const fileName = "Ambyte_1.zip";
+
+      // Make the request
+      const response = await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({
+          sourceType: "ambyte",
+          file: {
+            name: fileName,
+            data: fileBuffer,
+          },
+        })
+        .expect(StatusCodes.CREATED);
+
+      // Verify response
+      expect(response.body).toMatchObject({
+        success: true,
+        message: expect.stringContaining("Successfully uploaded Ambyte data file") as string,
+        uploadId: mockUploadResponse.fileId,
+      });
+
+      // Verify the databricksAdapter methods were called
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksAdapter.uploadFile).toHaveBeenCalledWith(
+        experiment.id,
+        experiment.name,
+        "ambyte",
+        fileName,
+        fileBuffer,
+      );
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksAdapter.triggerExperimentPipeline).toHaveBeenCalledWith(
+        experiment.name,
+        experiment.id,
+      );
+    });
+
+    it("should return 400 when uploaded file is not a Buffer", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Invalid File",
+        userId: testUserId,
+      });
+
+      // Get the path
+      const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      // Make the request with a non-Buffer file data
+      const response = await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({
+          sourceType: "ambyte",
+          file: {
+            name: "Ambyte_1.zip",
+            data: "This is a string, not a buffer", // Invalid file data type
+          },
+        })
+        .expect(StatusCodes.BAD_REQUEST);
+
+      // Verify error response
+      expect(response.body).toMatchObject({
+        success: false,
+        message: expect.stringContaining("Invalid file format") as string,
+      });
+
+      // Verify that the upload method was not called
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksAdapter.uploadFile).not.toHaveBeenCalled();
+    });
+
+    it("should return 404 when experiment does not exist", async () => {
+      const nonExistentId = faker.string.uuid();
+
+      // Mock repository to return no experiment found
+      jest
+        .spyOn(testApp.module.get("ExperimentRepository"), "findOne")
+        .mockResolvedValue(
+          failure(AppError.notFound(`Experiment with ID ${nonExistentId} not found`)),
+        );
+
+      // Get the path
+      const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
+        id: nonExistentId,
+      });
+
+      // Create mock file data
+      const fileBuffer = Buffer.from("mock ambyte data content");
+
+      // Make the request
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({
+          sourceType: "ambyte",
+          file: {
+            name: "Ambyte_1.zip",
+            data: fileBuffer,
+          },
+        })
+        .expect(StatusCodes.NOT_FOUND);
+    });
+
+    it("should return 403 when user does not have access to the experiment", async () => {
+      // Create an experiment owned by another user with private visibility
+      const otherUserId = await testApp.createTestUser({});
+      const { experiment } = await testApp.createExperiment({
+        name: "Private Experiment",
+        userId: otherUserId,
+        visibility: "private",
+      });
+
+      // Get the path
+      const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      // Create mock file data
+      const fileBuffer = Buffer.from("mock ambyte data content");
+
+      // Make the request
+      await testApp
+        .post(path)
+        .withAuth(testUserId) // Use the test user who doesn't have access
+        .send({
+          sourceType: "ambyte",
+          file: {
+            name: "Ambyte_1.zip",
+            data: fileBuffer,
+          },
+        })
+        .expect(StatusCodes.FORBIDDEN);
+    });
+
+    it("should return 400 when file name is invalid", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Invalid Filename",
+        userId: testUserId,
+      });
+
+      // Get the path
+      const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      // Create mock file data with invalid name
+      const fileBuffer = Buffer.from("mock ambyte data content");
+      const invalidFileName = "invalid_file_name.zip"; // Not matching the expected pattern
+
+      // Make the request
+      const response = await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({
+          sourceType: "ambyte",
+          file: {
+            name: invalidFileName,
+            data: fileBuffer,
+          },
+        })
+        .expect(StatusCodes.BAD_REQUEST);
+
+      // Verify error response mentions invalid file name
+      expect(response.body).toMatchObject({
+        message: expect.stringContaining("Invalid Ambyte data file") as string,
+      });
+    });
+
+    it("should handle failure in databricks file upload", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Upload Error",
+        userId: testUserId,
+      });
+
+      // Mock databricksAdapter to simulate upload failure
+      jest
+        .spyOn(databricksAdapter, "uploadFile")
+        .mockResolvedValue(failure(AppError.internal("Failed to upload file to Databricks")));
+
+      // Get the path
+      const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      // Create mock file data
+      const fileBuffer = Buffer.from("mock ambyte data content");
+
+      // Make the request
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({
+          sourceType: "ambyte",
+          file: {
+            name: "Ambyte_1.zip",
+            data: fileBuffer,
+          },
+        })
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+    });
+  });
+
   describe("getExperimentData", () => {
     it("should return experiment data successfully when table name is specified", async () => {
       // Create an experiment
