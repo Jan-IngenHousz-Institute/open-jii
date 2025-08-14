@@ -1,0 +1,77 @@
+import { HttpService } from "@nestjs/axios";
+import { Injectable, Logger } from "@nestjs/common";
+
+import { getAxiosErrorMessage } from "../../../../utils/axios-error";
+import { Result, tryCatch, apiErrorMapper, AppError } from "../../../../utils/fp-utils";
+import { DatabricksAuthService } from "../auth/auth.service";
+import { DatabricksConfigService } from "../config/config.service";
+import { UploadFileResponse } from "./files.types";
+
+@Injectable()
+export class DatabricksFilesService {
+  private readonly logger = new Logger(DatabricksFilesService.name);
+
+  public static readonly FILES_ENDPOINT = "/api/2.0/fs/files";
+
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: DatabricksConfigService,
+    private readonly authService: DatabricksAuthService,
+  ) {}
+
+  /**
+   * Upload a file to a specified path in Databricks workspace.
+   * The caller is responsible for constructing the full path.
+   *
+   * @param filePath - The full destination path for the file in Databricks.
+   * @param fileBuffer - File contents as a buffer.
+   * @returns Result containing file ID and path.
+   */
+  async upload(filePath: string, fileBuffer: Buffer): Promise<Result<UploadFileResponse>> {
+    return await tryCatch(
+      async () => {
+        const tokenResult = await this.authService.getAccessToken();
+        if (tokenResult.isFailure()) {
+          throw tokenResult.error;
+        }
+
+        const token = tokenResult.value;
+        const host = this.configService.getHost();
+        const apiUrl = `${host}${DatabricksFilesService.FILES_ENDPOINT}`;
+
+        this.logger.debug(`Uploading file to Databricks at path ${filePath}`);
+
+        const response = await this.httpService.axiosRef.post(apiUrl, fileBuffer, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/octet-stream",
+          },
+          params: {
+            path: filePath,
+            overwrite: "true",
+          },
+          timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
+        });
+
+        // Safely cast the response data
+        const responseData = response.data as { file_id?: string };
+        if (!responseData.file_id) {
+          throw AppError.internal("Databricks file upload response missing file_id");
+        }
+
+        this.logger.log(`Successfully uploaded file to Databricks at path ${filePath}`);
+
+        return {
+          fileId: responseData.file_id,
+          filePath,
+        };
+      },
+      (error) => {
+        this.logger.error(`Failed to upload file to Databricks: ${getAxiosErrorMessage(error)}`);
+        return apiErrorMapper(
+          `Failed to upload file to Databricks: ${getAxiosErrorMessage(error)}`,
+        );
+      },
+    );
+  }
+}

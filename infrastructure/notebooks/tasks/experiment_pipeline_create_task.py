@@ -4,7 +4,7 @@
 This notebook creates a cost-optimized Delta Live Tables pipeline for a specific experiment 
 and triggers its initial execution with comprehensive error handling and monitoring.
 """
-import re
+
 import logging
 from datetime import datetime
 from typing import Optional, Dict, Any, Tuple
@@ -35,28 +35,17 @@ class PipelineConfig:
     central_schema: str
     experiment_pipeline_path: str
     
-    # todo
     @property
     def experiment_schema(self) -> str:
         """Derived schema name for the experiment."""
-        clean_name = self._sanitize_name(self.experiment_name)
-        return f"exp_{clean_name}"
-
+        clean_name = self.experiment_name.lower().strip().replace(' ', '_')
+        return f"exp_{clean_name}_{self.experiment_id}"
+    
     @property
     def pipeline_name(self) -> str:
         """Standardized pipeline name."""
-        clean_name = self._sanitize_name(self.experiment_name)
-        return f"exp_{clean_name}_pipeline_dev"
-
-    def _sanitize_name(self, name: str) -> str:
-        """Sanitize name for use in identifiers."""
-        # Convert to lowercase, replace spaces and special chars with underscores
-        clean = re.sub(r'[^\w\s-]', '', name.lower().strip())
-        clean = re.sub(r'[-\s]+', '_', clean)
-        # Remove multiple consecutive underscores
-        clean = re.sub(r'_+', '_', clean)
-        # Remove leading/trailing underscores
-        return clean.strip('_')
+        clean_name = self.experiment_name.lower().strip().replace(' ', '_')
+        return f"exp-{clean_name}-DLT-Pipeline-DEV"
     
     def validate(self) -> None:
         """Validate required configuration parameters."""
@@ -106,7 +95,6 @@ def extract_parameters() -> PipelineConfig:
 # COMMAND ----------
 
 # DBTITLE 1,Pipeline Management Class
-
 class ExperimentPipelineManager:
     """Manages Delta Live Tables pipelines for experiments with cost optimization."""
     
@@ -171,8 +159,8 @@ class ExperimentPipelineManager:
                 configuration=pipeline_configuration,
                 continuous=False,          # Cost optimization: manual triggering
                 development=True,          # Cost optimization: development mode
-                serverless=True,           # Cost optimization: serverless compute
-                edition="ADVANCED",        # Required for serverless
+                serverless=True,          # Cost optimization: serverless compute
+                edition="ADVANCED",       # Required for serverless
                 channel="CURRENT"
             )
             
@@ -333,5 +321,3 @@ def main() -> None:
 # Execute main function
 if __name__ == "__main__":
     main()
-
-# COMMAND ----------
