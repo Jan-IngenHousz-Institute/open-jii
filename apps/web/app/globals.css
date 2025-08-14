@@ -1,3 +1,9 @@
+/* Force remove border and shadow from React Flow nodes (strongest override) */
+.react-flow__node, .react-flow__node-default {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

@@ -8,10 +8,12 @@ export function RichTextarea({
   value,
   onChange,
   placeholder,
+  isDisabled,
 }: {
   value: string;
   onChange: (val: string) => void;
   placeholder?: string;
+  isDisabled?: boolean;
 }) {
   const { quill, quillRef } = useQuill({
     theme: "snow",
@@ -37,7 +39,7 @@ export function RichTextarea({
       "code-block",
       "blockquote",
     ],
-    placeholder: placeholder ?? "Write something awesome...",
+    placeholder: isDisabled ? "" : (placeholder ?? "Write something awesome..."),
   });
 
   useEffect(() => {
@@ -53,6 +55,7 @@ export function RichTextarea({
           onChange(html);
         }
       };
+      quill.enable(!isDisabled);
 
       quill.on("text-change", handleTextChange);
 
@@ -61,7 +64,7 @@ export function RichTextarea({
         quill.off("text-change", handleTextChange);
       };
     }
-  }, [quill, onChange, value]);
+  }, [quill, onChange, value, isDisabled]);
 
   return (
     <div className="border-input focus-visible:ring-ring flex w-full flex-col rounded-md border bg-transparent text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm">

@@ -17,6 +17,8 @@
     "completed": "Completed",
     "paused": "Paused",
     "cancelled": "Cancelled",
+    "archived": "Archived",
+    "stale": "Stale",
     "provisioning": "Provisioning"
   },
   "visibility": {
@@ -40,6 +42,39 @@
     "downloadData": "Download Data",
     "noMeasurements": "No measurements recorded yet"
   },
+  "flow": {
+    "title": "Experiment Flow",
+    "legend": "Legend",
+    "description": "Design and visualize your experiment workflow by connecting different steps and operations.",
+    "editDescription": "Design and visualize your experiment workflow by connecting different steps and operations.",
+    "staticDescription": "Visual overview of the experiment workflow",
+    "tabLabel": "Flow",
+    "saving": "Saving...",
+    "saveFlow": "Save Flow",
+    "nodeTypes": {
+      "INSTRUCTION": "Instruction",
+      "QUESTION": "Question",
+      "MEASUREMENT": "Measurement",
+      "ANALYSIS": "Analysis"
+    }
+  },
+  "overview": "Overview",
+  "data": "Data",
+  "experiment": "Experiment",
+  "experimentId": "Experiment ID",
+  "created": "Created",
+  "updated": "Updated",
+  "descriptionTitle": "Description",
+  "manageExperimentDescription": "View and manage experiment details, data, flow, and settings.",
+  "loading": "Loading...",
+  "failedToLoad": "Failed to load experiment",
+  "notFound": "Experiment not found",
+  "noPermissionToAccess": "You do not have permission to access this experiment",
+  "errorLoadingExperiment": "An error occurred while loading the experiment",
+  "experimentNotFound": "The experiment you're looking for could not be found",
+  "needMemberAccess": "You need member access to perform this action",
+  "previewMode": "Preview Mode",
+  "editingMode": "Editing Mode",
   "validation": {
     "nameRequired": "Experiment name is required",
     "nameMinLength": "Name must be at least 3 characters",
@@ -47,5 +82,61 @@
     "protocolRequired": "Please select a protocol",
     "deviceRequired": "Please select a device",
     "invalidDateRange": "End date must be after start date"
+  },
+  "start": "START",
+  "analysisPanel": {
+    "title": "Analysis Options",
+    "select": "Select measurement analysis...",
+    "searchPlaceholder": "Search analysis options...",
+    "analysis": "Analysis",
+    "by": "by",
+    "noOptions": "No analysis options found."
+  },
+  "edgePanel": {
+    "settings": "Edge Settings",
+    "label": "Label",
+    "labelPlaceholder": "Enter edge label...",
+    "actions": "Actions",
+    "remove": "Remove Edge",
+    "closeBackdrop": "Close edge panel backdrop"
+  },
+  "instructionPanel": {
+    "title": "Instruction Details",
+    "placeholder": "Enter instruction details..."
+  },
+  "questionPanel": {
+    "title": "Question"
+  },
+  "sidePanelFlow": {
+    "nodePanel": "Node Panel",
+    "label": "Label",
+    "labelPlaceholder": "Enter node title...",
+    "nodeProperties": "Node Properties",
+    "startNode": "Start Node",
+    "startNodeLimit": "Limited to one per flow",
+    "closeBackdrop": "Close side panel backdrop"
+  },
+  "questionCard": {
+    "placeholder": "What would you like to ask?",
+    "requiredLabel": "Required Question",
+    "requiredDescription": "Participants must answer this question to continue",
+    "answerTypeLabel": "Answer Type",
+    "answerTypes": {
+      "TEXT": "Text",
+      "SELECT": "Multiple Choice",
+      "NUMBER": "Number",
+      "BOOLEAN": "Yes/No"
+    },
+    "answerOptionsLabel": "Answer Options",
+    "answerOptionPlaceholder": "Enter an answer option",
+    "noAnswerOptions": "No answer options yet",
+    "addOption": "Add Option",
+    "removeOption": "Remove option",
+    "textResponseLabel": "Text Response",
+    "textResponseDescription": "Participants can write their own answer",
+    "numberResponseLabel": "Number Response",
+    "numberResponseDescription": "Participants will enter a numeric value",
+    "booleanResponseLabel": "Yes/No Response",
+    "booleanResponseDescription": "Participants will choose Yes or No"
   }
 }
