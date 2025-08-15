@@ -22,11 +22,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup-nodejs-pnpm
-        with:
-          node-version: "22"
-
       - name: Get original PR commit SHA
         id: get-pr-sha
         run: |
@@ -42,6 +37,12 @@ jobs:
         with:
           name: coverage-reports-${{ steps.get-pr-sha.outputs.pr_sha }}
           path: ./coverage-artifacts
+
+      - name: Setup Node.js and pnpm (only if regenerating coverage)
+        if: steps.download.outcome == 'failure'
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
 
       - name: Regenerate coverage if artifacts not found
         if: steps.download.outcome == 'failure'
