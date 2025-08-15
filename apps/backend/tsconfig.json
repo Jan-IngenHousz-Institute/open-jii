@@ -18,6 +18,7 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
-    "moduleResolution": "node16"
+    "moduleResolution": "node16",
+    "types": ["vitest/globals"]
   }
 }

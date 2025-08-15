@@ -20,7 +20,7 @@ describe("UserController", () => {
     testUserId = await testApp.createTestUser({});
 
     // Reset any mocks before each test
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   afterEach(() => {

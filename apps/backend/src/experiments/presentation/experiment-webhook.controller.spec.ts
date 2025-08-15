@@ -31,7 +31,7 @@ describe("ExperimentWebhookController", () => {
     experimentRepository = testApp.module.get(ExperimentRepository);
 
     // Reset any mocks before each test
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   afterEach(() => {

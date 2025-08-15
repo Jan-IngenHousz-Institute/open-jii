@@ -26,7 +26,7 @@ describe("UpdateProtocolUseCase", () => {
 
   afterEach(() => {
     testApp.afterEach();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   afterAll(async () => {

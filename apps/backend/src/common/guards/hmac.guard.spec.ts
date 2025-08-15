@@ -22,7 +22,7 @@ describe("HmacGuard", () => {
   beforeEach(async () => {
     // Create mock configService
     const configServiceMock = {
-      getOrThrow: jest.fn((key: string) => {
+      getOrThrow: vi.fn((key: string) => {
         if (key === "databricks.webhookApiKeys") return { [mockApiKeyId]: mockApiKey };
         if (key === "databricks.webhookSecret") return mockWebhookSecret;
         throw new Error(`Unexpected key: ${key}`);
@@ -48,6 +48,9 @@ describe("HmacGuard", () => {
   });
 
   it("should pass validation with valid signature", () => {
+    // Create spy before the call
+    const getOrThrowMethod = vi.spyOn(configService, "getOrThrow");
+
     // Create a valid signature
     const payload = `${mockTimestamp}:${mockBodyString}`;
     const signature = crypto.createHmac("sha256", mockWebhookSecret).update(payload).digest("hex");
@@ -70,12 +73,14 @@ describe("HmacGuard", () => {
     expect(guard.canActivate(mockContext)).toBe(true);
 
     // Verify the configService was called with the expected keys
-    const getOrThrowMethod = jest.spyOn(configService, "getOrThrow");
     expect(getOrThrowMethod).toHaveBeenCalledWith("databricks.webhookApiKeys");
     expect(getOrThrowMethod).toHaveBeenCalledWith("databricks.webhookSecret");
   });
 
   it("should reject with invalid API key ID", () => {
+    // Create spy before the call
+    const getOrThrowMethod = vi.spyOn(configService, "getOrThrow");
+
     // Mock the execution context with invalid API key ID
     const mockContext = {
       switchToHttp: () => ({
@@ -92,7 +97,6 @@ describe("HmacGuard", () => {
 
     // Expect the guard to throw UnauthorizedException
     expect(() => guard.canActivate(mockContext)).toThrow(UnauthorizedException);
-    const getOrThrowMethod = jest.spyOn(configService, "getOrThrow");
     expect(getOrThrowMethod).toHaveBeenCalledWith("databricks.webhookApiKeys");
   });
 

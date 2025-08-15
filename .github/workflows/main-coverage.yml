@@ -1,0 +1,76 @@
+name: Main Branch Coverage Upload
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  upload_coverage:
+    name: Upload Coverage to Codecov
+    runs-on: ubuntu-latest
+    env:
+      DO_NOT_TRACK: 1
+      TURBO_TELEMETRY_DISABLED: 1
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get original PR commit SHA
+        id: get-pr-sha
+        run: |
+          # Get the merge commit's first parent (the original PR head)
+          PR_SHA=$(git rev-parse HEAD^2 2>/dev/null || git rev-parse HEAD)
+          echo "pr_sha=$PR_SHA" >> $GITHUB_OUTPUT
+          echo "Found PR SHA: $PR_SHA"
+
+      - name: Try to download coverage artifacts
+        id: download
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: coverage-reports-${{ steps.get-pr-sha.outputs.pr_sha }}
+          path: ./coverage-artifacts
+
+      - name: Setup Node.js and pnpm (only if regenerating coverage)
+        if: steps.download.outcome == 'failure'
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
+
+      - name: Regenerate coverage if artifacts not found
+        if: steps.download.outcome == 'failure'
+        run: |
+          echo "Coverage artifacts not found, regenerating coverage..."
+          pnpm install --frozen-lockfile
+          pnpm run test
+
+      - name: Use downloaded coverage artifacts
+        if: steps.download.outcome == 'success'
+        run: |
+          echo "Using downloaded coverage artifacts"
+          ls -la ./coverage-artifacts
+
+      - name: Upload coverage to Codecov for main branch
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: apps/*/coverage.json,tooling/*/coverage.json,packages/*/coverage.json
+          flags: main
+          fail_ci_if_error: false
+          verbose: true
+          override_branch: main
+          override_commit: ${{ github.sha }}
+
+      - name: Clean up artifacts
+        if: steps.download.outcome == 'success'
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: coverage-reports-${{ steps.get-pr-sha.outputs.pr_sha }}
+          failOnError: false
