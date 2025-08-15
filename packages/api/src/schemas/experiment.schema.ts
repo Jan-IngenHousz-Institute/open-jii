@@ -296,6 +296,26 @@ export const zExperimentDataTableList = z.array(zExperimentDataTableInfo);
 
 export const zExperimentDataResponse = zExperimentDataTableList;
 
+// --- Data Upload Types ---
+export const zDataSourceType = z.enum(["ambyte"]);
+
+export const zUploadExperimentDataBody = z.object({
+  sourceType: zDataSourceType,
+  // file will be handled by multer/FileInterceptor, not by zod directly
+  // so we remove the file field from here
+});
+
+export const zUploadExperimentDataResponse = z.object({
+  uploadId: z.string().optional(),
+  files: z.array(
+    z.object({
+      fileName: z.string(),
+      fileId: z.string(),
+      filePath: z.string(),
+    }),
+  ),
+});
+
 export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
 
 // Webhook Schemas
@@ -355,6 +375,9 @@ export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
 export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
 export type IdPathParam = z.infer<typeof zIdPathParam>;
 export type ExperimentMemberPathParam = z.infer<typeof zExperimentMemberPathParam>;
+export type DataSourceType = z.infer<typeof zDataSourceType>;
+export type UploadExperimentDataBody = z.infer<typeof zUploadExperimentDataBody>;
+export type UploadExperimentDataResponse = z.infer<typeof zUploadExperimentDataResponse>;
 
 // Webhook types
 export type ExperimentProvisioningStatusWebhookPayload = z.infer<
