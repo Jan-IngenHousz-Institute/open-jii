@@ -85,7 +85,6 @@ describe("GetExperimentAccessUseCase", () => {
 
       const accessInfo = result.value;
       expect(accessInfo).toEqual({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         experiment: expect.objectContaining({
           id: experiment.id,
           name: "Creator Test",
@@ -117,7 +116,6 @@ describe("GetExperimentAccessUseCase", () => {
 
       const accessInfo = result.value;
       expect(accessInfo).toEqual({
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         experiment: expect.objectContaining({
           id: experiment.id,
           name: "Admin Test",

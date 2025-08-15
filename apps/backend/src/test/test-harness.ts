@@ -61,7 +61,7 @@ export class TestHarness {
       }).compile();
 
       this.app = this._module.createNestApplication<INestApplication<App>>({
-        logger: false,
+        logger: [ "debug", "error", "warn", "log", "verbose", "fatal"],
       });
       await this.app.init();
       this._request = request(this.app.getHttpServer());

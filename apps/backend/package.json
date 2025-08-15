@@ -55,6 +55,7 @@
     "@types/cookie-parser": "^1.4.8",
     "@types/express": "^5.0.1",
     "@types/jest": "^29.5.14",
+    "@types/multer": "^2.0.0",
     "@types/nock": "^11.1.0",
     "@types/node": "catalog:",
     "@types/supertest": "^6.0.3",
