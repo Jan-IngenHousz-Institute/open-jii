@@ -13,14 +13,6 @@ export class CreateProtocolUseCase {
   async execute(data: CreateProtocolDto, userId: string): Promise<Result<ProtocolDto>> {
     this.logger.log(`Creating protocol "${data.name}" for user ${userId}`);
 
-    // Normalize & validate name
-    const normalizedName = data.name.trim();
-    if (!normalizedName) {
-      this.logger.warn(`Invalid protocol name provided by user ${userId}`);
-      return failure(AppError.badRequest("Protocol name is required"));
-    }
-    data = { ...data, name: normalizedName };
-
     const protocolResult = await this.protocolRepository.create(data, userId);
 
     if (protocolResult.isSuccess()) {

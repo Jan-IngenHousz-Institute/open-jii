@@ -13,14 +13,6 @@ export class UpdateProtocolUseCase {
   async execute(id: string, updateProtocolDto: UpdateProtocolDto): Promise<Result<ProtocolDto>> {
     this.logger.log(`Updating protocol with ID "${id}"`);
 
-    // Normalize & validate name
-    const normalizedName = (updateProtocolDto.name ?? "").trim();
-    if (!normalizedName) {
-      this.logger.warn(`Invalid protocol name provided for update (ID: ${id})`);
-      return failure(AppError.badRequest("Protocol name is required"));
-    }
-    updateProtocolDto = { ...updateProtocolDto, name: normalizedName };
-
     // Check if protocol exists
     const existingProtocolResult = await this.protocolRepository.findOne(id);
 

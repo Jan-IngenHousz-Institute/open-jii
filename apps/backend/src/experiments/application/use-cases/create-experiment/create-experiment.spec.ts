@@ -226,23 +226,4 @@ describe("CreateExperimentUseCase", () => {
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(databricksAdapter.triggerJob).not.toHaveBeenCalled();
   });
-
-  it("should trim leading and trailing whitespace from name", async () => {
-    const rawName = "   Spaced Experiment   ";
-    const result = await useCase.execute({ name: rawName, description: "trim test" }, testUserId);
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    expect(result.value.name).toBe("Spaced Experiment");
-  });
-
-  it("should return BAD_REQUEST if name is only whitespace", async () => {
-    const result = await useCase.execute(
-      { name: "   \t  \n  ", description: "invalid" },
-      testUserId,
-    );
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("BAD_REQUEST");
-    expect(result.error.message).toContain("Experiment name is required");
-  });
 });

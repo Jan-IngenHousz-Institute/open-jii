@@ -28,17 +28,14 @@ export class CreateExperimentUseCase {
       return failure(AppError.badRequest("User ID is required to create an experiment"));
     }
 
-    // Normalize & validate name
-    const normalizedName = data.name.trim();
-    if (!normalizedName) {
+    // Validate that name is provided
+    if (!data.name || data.name.trim() === "") {
       this.logger.warn(`Invalid experiment name provided by user ${userId}`);
       return failure(AppError.badRequest("Experiment name is required"));
     }
 
-    data = { ...data, name: normalizedName };
-
     // Check if an experiment with the same name already exists
-    const existingExperimentResult = await this.experimentRepository.findByName(normalizedName);
+    const existingExperimentResult = await this.experimentRepository.findByName(data.name);
 
     return existingExperimentResult.chain(async (existingExperiment) => {
       if (existingExperiment) {

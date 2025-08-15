@@ -1,4 +1,4 @@
-import { assertSuccess, assertFailure } from "../../../../common/utils/fp-utils";
+import { assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { CreateProtocolUseCase } from "./create-protocol";
 
@@ -51,26 +51,5 @@ describe("CreateProtocolUseCase", () => {
       code: protocolData.code,
       createdBy: testUserId,
     });
-  });
-
-  it("should trim leading and trailing whitespace from name", async () => {
-    const result = await useCase.execute(
-      { name: "   Spaced Protocol   ", description: "trim", code: [], family: "multispeq" },
-      testUserId,
-    );
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    expect(result.value.name).toBe("Spaced Protocol");
-  });
-
-  it("should return BAD_REQUEST if name is only whitespace", async () => {
-    const result = await useCase.execute(
-      { name: "   \t  \n  ", description: "invalid", code: [], family: "multispeq" },
-      testUserId,
-    );
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("BAD_REQUEST");
-    expect(result.error.message).toContain("Protocol name is required");
   });
 });

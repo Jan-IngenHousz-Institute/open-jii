@@ -17,14 +17,7 @@ export class UpdateExperimentUseCase {
   ): Promise<Result<ExperimentDto>> {
     this.logger.log(`Updating experiment with ID ${id} by user ${userId}`);
 
-    // Normalize & validate name
-    const normalizedName = (data.name ?? "").trim();
-    if (!normalizedName) {
-      this.logger.warn(`Invalid experiment name provided by user ${userId}`);
-      return failure(AppError.badRequest("Experiment name is required"));
-    }
-    data = { ...data, name: normalizedName };
-
+    // Check if experiment exists and user is a member
     const accessCheckResult = await this.experimentRepository.checkAccess(id, userId);
 
     return accessCheckResult.chain(

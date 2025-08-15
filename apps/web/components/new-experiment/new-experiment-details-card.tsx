@@ -37,17 +37,7 @@ export function NewExperimentDetailsCard({ form }: NewExperimentDetailsCardProps
             <FormItem>
               <FormLabel>{t("newExperiment.name")}</FormLabel>
               <FormControl>
-                <Input
-                  {...field}
-                  onBlur={(e) => {
-                    // Trim whitespace from the input value
-                    const trimmed = e.target.value.trim();
-                    if (trimmed !== e.target.value) {
-                      field.onChange(trimmed);
-                    }
-                    field.onBlur();
-                  }}
-                />
+                <Input {...field} trim />
               </FormControl>
               <FormMessage />
             </FormItem>

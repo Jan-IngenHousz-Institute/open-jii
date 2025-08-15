@@ -71,18 +71,7 @@ export function ExperimentDetailsCard({
                 <FormItem>
                   <FormLabel>{t("experimentSettings.name")}</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      onBlur={(e) => {
-                        // Trim whitespace from the input value
-                        const trimmed = e.target.value.trim();
-                        if (trimmed !== e.target.value) {
-                          field.onChange(trimmed);
-                        }
-                        field.onBlur();
-                      }}
-                      placeholder={t("experimentSettings.name")}
-                    />
+                    <Input {...field} trim placeholder={t("experimentSettings.name")} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
