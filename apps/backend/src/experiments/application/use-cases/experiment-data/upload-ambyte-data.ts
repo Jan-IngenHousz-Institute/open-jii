@@ -1,10 +1,15 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import { z } from "zod";
 
-import { UploadFileResponse } from "../../../../common/modules/databricks/services/files/files.types";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+
+export interface UploadAmbyteFilesResponse {
+  uploadId?: string;
+  files: { fileName: string; fileId: string; filePath: string }[];
+}
 
 @Injectable()
 export class UploadAmbyteDataUseCase {
@@ -16,29 +21,47 @@ export class UploadAmbyteDataUseCase {
   ) {}
 
   /**
-   * Upload Ambyte data file to Databricks
+   * Upload multiple Ambyte data files to Databricks
    *
    * Accepts data files that follow the Ambyte folder structure:
    * - An "Ambyte_X" folder containing numbered subfolders (1, 2, 3, 4)
    * - OR one of the individual numbered subfolders (1, 2, 3, 4)
+   * - OR individual data files in the format YYYYMMDD-HHMMSS_.txt
    *
-   * Each numbered subfolder contains date-formatted text files with readings.
+   * The expected folder structure is:
+   * Ambyte_X/
+   * ├── 1/
+   * │   ├── YYYYMMDD-HHMMSS_.txt
+   * │   └── ...
+   * ├── 2/
+   * │   ├── YYYYMMDD-HHMMSS_.txt
+   * │   └── ...
+   * ├── 3/
+   * │   ├── YYYYMMDD-HHMMSS_.txt
+   * │   └── ...
+   * ├── 4/
+   * │   ├── YYYYMMDD-HHMMSS_.txt
+   * │   └── ...
+   *
+   * Note: Configuration files and .DS_Store files are ignored.
    *
    * @param experimentId - ID of the experiment
    * @param userId - ID of the user uploading the data
-   * @param fileName - Name of the file
-   * @param fileBuffer - File contents as a buffer
-   * @returns Result containing information about the uploaded file
+   * @param files - Array of files with name and buffer
+   * @returns Result containing information about the uploaded files
    */
   async execute(
     experimentId: string,
     userId: string,
-    fileName: string,
-    fileBuffer: Buffer,
-  ): Promise<Result<UploadFileResponse>> {
+    files: { originalname: string; buffer: Buffer }[],
+  ): Promise<Result<UploadAmbyteFilesResponse>> {
     this.logger.log(
-      `Uploading Ambyte data file "${fileName}" to experiment ${experimentId} by user ${userId}`,
+      `Uploading ${files.length} Ambyte data files to experiment ${experimentId} by user ${userId}`,
     );
+
+    if (files.length === 0) {
+      return failure(AppError.badRequest("No files uploaded"));
+    }
 
     // Check if the experiment exists
     const experimentResult = await this.experimentRepository.findOne(experimentId);
@@ -48,7 +71,7 @@ export class UploadAmbyteDataUseCase {
 
     const experiment = experimentResult.value;
     if (!experiment) {
-      return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+      return failure(AppError.badRequest(`Experiment with ID ${experimentId} not found`));
     }
 
     // Check if the user has access to the experiment
@@ -65,85 +88,122 @@ export class UploadAmbyteDataUseCase {
       );
     }
 
-    // Validate file name
-    if (!this.validateFileName(fileName)) {
-      return failure(
-        AppError.badRequest(
-          `Invalid Ambyte data file. Expected either an "Ambyte_X" folder or one of the numbered subfolders (1, 2, 3, 4).`,
-        ),
-      );
-    }
+    // Process each file in sequence
+    const results: { fileName: string; fileId: string; filePath: string }[] = [];
+    const errors: { fileName: string; error: string }[] = [];
 
-    // Upload the file to Databricks - using 'ambyte' as the source type
-    const uploadResult = await this.databricksPort.uploadFile(
-      experimentId,
-      experiment.name,
-      "ambyte",
-      fileName,
-      fileBuffer,
-    );
+    for (const file of files) {
+      // Validate file name
+      if (!this.validateFileName(file.originalname)) {
+        errors.push({
+          fileName: file.originalname,
+          error:
+            'Invalid Ambyte data file. Expected either an "Ambyte_X" folder, a numbered subfolder (1, 2, 3, 4), or a data file in the format YYYYMMDD-HHMMSS_.txt.',
+        });
+        continue;
+      }
 
-    if (uploadResult.isFailure()) {
-      return uploadResult;
-    }
-
-    this.logger.log(
-      `Successfully uploaded Ambyte data file "${fileName}" to experiment ${experiment.name} (${experimentId})`,
-    );
-
-    // Trigger pipeline update after successful file upload
-    try {
-      this.logger.log(
-        `Triggering pipeline update for experiment ${experiment.name} (${experimentId})`,
-      );
-      const pipelineResult = await this.databricksPort.triggerExperimentPipeline(
-        experiment.name,
+      // Upload the file to Databricks - using 'ambyte' as the source type
+      const uploadResult = await this.databricksPort.uploadFile(
         experimentId,
+        experiment.name,
+        "ambyte",
+        file.originalname,
+        file.buffer,
       );
 
-      if (pipelineResult.isSuccess()) {
+      if (uploadResult.isSuccess()) {
+        results.push({
+          fileName: file.originalname,
+          fileId: uploadResult.value.fileId,
+          filePath: uploadResult.value.filePath,
+        });
+
         this.logger.log(
-          `Successfully triggered pipeline update for experiment ${experiment.name} (${experimentId}). Update ID: ${pipelineResult.value.update_id}`,
+          `Successfully uploaded Ambyte data file "${file.originalname}" to experiment ${experiment.name} (${experimentId})`,
         );
       } else {
-        this.logger.warn(
-          `Failed to trigger pipeline update for experiment ${experimentId}: ${pipelineResult.error.message}`,
-        );
+        errors.push({
+          fileName: file.originalname,
+          error: uploadResult.error.message,
+        });
       }
-    } catch (error) {
-      // Log but don't fail the file upload if pipeline update fails
-      this.logger.error(
-        `Error triggering pipeline update for experiment ${experimentId}: ${error instanceof Error ? error.message : String(error)}`,
-      );
     }
 
-    return success(uploadResult.value);
+    // Log the results
+    this.logger.log(`Successfully processed ${results.length} files, with ${errors.length} errors`);
+
+    // Trigger pipeline update after successful file upload
+    if (results.length > 0) {
+      try {
+        this.logger.log(
+          `Triggering pipeline update for experiment ${experiment.name} (${experimentId})`,
+        );
+        const pipelineResult = await this.databricksPort.triggerExperimentPipeline(
+          experiment.name,
+          experimentId,
+        );
+
+        if (pipelineResult.isSuccess()) {
+          this.logger.log(
+            `Successfully triggered pipeline update for experiment ${experiment.name} (${experimentId}). Update ID: ${pipelineResult.value.update_id}`,
+          );
+        } else {
+          this.logger.warn(
+            `Failed to trigger pipeline update for experiment ${experimentId}: ${pipelineResult.error.message}`,
+          );
+        }
+      } catch (error) {
+        // Log but don't fail the file upload if pipeline update fails
+        this.logger.error(
+          `Error triggering pipeline update for experiment ${experimentId}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
+    if (results.length > 0) {
+      return success({
+        files: results,
+      });
+    }
+
+    // All files failed
+    return failure(
+      AppError.badRequest(
+        `Failed to upload Ambyte data files: ${errors.map((e) => `${e.fileName}: ${e.error}`).join(", ")}`,
+      ),
+    );
   }
 
   /**
-   * Validate the Ambyte file name
+   * Validate the Ambyte file name using Zod
    * Validates that the file is either:
-   * 1. An "Ambyte_X" folder
+   * 1. An "Ambyte_X" folder (e.g., Ambyte_1, Ambyte_2)
    * 2. One of the numbered subfolders (1, 2, 3, 4)
+   * 3. Individual text files with the expected date format (YYYYMMDD-HHMMSS_.txt)
    */
   private validateFileName(fileName: string): boolean {
-    if (!fileName || fileName.trim().length === 0) {
-      return false;
-    }
+    // Create a schema that combines all the validation rules
+    const fileNameSchema = z
+      .string()
+      // Basic validation
+      .min(1, "File name cannot be empty")
+      .refine((name) => !name.includes(".DS_Store"), "DS_Store files are not allowed")
+      // Pattern validation
+      .refine((name) => {
+        // Ambyte_X folder pattern
+        const isAmbyteFolder = /^Ambyte_\d{1,3}$/i.test(name);
 
-    // Remove any file extension (like .zip if it was compressed)
-    const nameWithoutExtension = fileName.split(".").shift() ?? "";
+        // Numbered folder pattern (1, 2, 3, 4)
+        const isNumberedFolder = /^[1-4]$/.test(name);
 
-    // Check if it's an Ambyte_X folder
-    if (/^Ambyte_\d+$/i.test(nameWithoutExtension)) {
-      return true;
-    }
+        // Data file pattern (with or without folder prefix)
+        const isDataFile = /^(?:([1-4])\/)?20\d{6}-\d{6}_\.txt$/.test(name);
 
-    // Check if it's one of the numbered subfolders (1, 2, 3, 4)
-    if (/^[1-4]$/.test(nameWithoutExtension)) {
-      return true;
-    }
+        return isAmbyteFolder || isNumberedFolder || isDataFile;
+      }, "Invalid Ambyte file name format");
 
-    return false;
+    // Perform validation and return result
+    return fileNameSchema.safeParse(fileName).success;
   }
 }

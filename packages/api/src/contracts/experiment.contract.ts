@@ -1,5 +1,4 @@
 import { initContract } from "@ts-rest/core";
-import { z } from "zod";
 
 import {
   zExperiment,
@@ -20,7 +19,6 @@ import {
   zExperimentWebhookSuccessResponse,
   zExperimentWebhookErrorResponse,
   zExperimentAccess,
-  zDataSourceType,
   zUploadExperimentDataBody,
   zUploadExperimentDataResponse,
 } from "../schemas/experiment.schema";
