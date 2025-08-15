@@ -15,6 +15,14 @@ export default defineConfig({
         },
       },
       {
+        root: "./tooling",
+        test: {
+          ...sharedConfig.test,
+          // Project-specific configuration for packages
+          // ...
+        },
+      },
+      { 
         root: "./apps/web",
         test: {
           ...sharedConfig.test,

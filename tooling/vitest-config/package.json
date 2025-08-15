@@ -24,7 +24,7 @@
     "@repo/typescript-config": "workspace:*",
     "@testing-library/jest-dom": "catalog:testing",
     "@testing-library/react": "catalog:testing",
-    "@vitest/coverage-istanbul": "catalog:testing",
+    "@vitest/coverage-v8": "catalog:testing",
     "@vitest/ui": "catalog:testing",
     "glob": "^11.0.1",
     "jsdom": "catalog:testing",

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { tsr } from "@/lib/tsr";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
@@ -157,7 +158,7 @@ describe("useExperimentAccess", () => {
             };
           },
         );
-      mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as any;
+      mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as unknown;
 
       renderHook(() => useExperimentAccess("experiment-123"), {
         wrapper: createWrapper(),

@@ -2,7 +2,7 @@ export const sharedConfig = {
   test: {
     globals: true,
     coverage: {
-      provider: "istanbul" as const,
+      provider: "v8" as const,
       reporter: [
         [
           "json",
@@ -10,6 +10,13 @@ export const sharedConfig = {
             file: `../coverage.json`,
           },
         ],
+        [
+          "lcov",
+          {
+            file: `../coverage/lcov.info`,
+          },
+        ],
+        ["text"],
       ] as const,
       enabled: true,
     },
@@ -17,5 +24,5 @@ export const sharedConfig = {
 };
 
 // Re-export specific configs for backwards compatibility
-export { baseConfig } from './configs/base-config.js';
-export { uiConfig } from './configs/ui-config.js';
+export { baseConfig } from "./configs/base-config.js";
+export { uiConfig } from "./configs/ui-config.js";

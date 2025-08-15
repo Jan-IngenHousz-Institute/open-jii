@@ -16,6 +16,7 @@
     "ui-add": "pnpm dlx shadcn@latest add && prettier src --write --list-different",
     "test": "vitest",
     "test:ui": "vitest --ui",
+    "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
@@ -47,7 +48,7 @@
     "@testing-library/jest-dom": "catalog:testing",
     "@testing-library/react": "catalog:testing",
     "@types/react": "catalog:react19",
-    "@vitest/coverage-istanbul": "catalog:testing",
+    "@vitest/coverage-v8": "catalog:testing",
     "eslint": "catalog:",
     "jsdom": "catalog:testing",
     "prettier": "catalog:",

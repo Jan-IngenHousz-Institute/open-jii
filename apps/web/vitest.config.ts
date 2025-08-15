@@ -13,4 +13,19 @@ const aliasConfig = defineConfig({
   },
 });
 
-export default mergeConfig(aliasConfig, uiConfig);
+// Web-specific configuration
+const webConfig = defineConfig({
+  test: {
+    coverage: {
+      exclude: [
+        // Web-specific exclusions (extends base config)
+        ".next/**", // Next.js build artifacts
+      ],
+    },
+  },
+});
+
+export default mergeConfig(
+  mergeConfig(aliasConfig, uiConfig),
+  webConfig
+);
