@@ -118,8 +118,6 @@ export class DatabricksAdapter implements DatabricksPort {
     // Start the pipeline update
     return this.pipelinesService.startPipelineUpdate({
       pipelineId,
-      // Set to true to ensure fresh data processing
-      fullRefresh: true,
     });
   }
 }
