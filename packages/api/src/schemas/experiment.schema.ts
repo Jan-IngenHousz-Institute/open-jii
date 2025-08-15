@@ -353,20 +353,21 @@ export const zExperimentDataResponse = zExperimentDataTableList;
 // --- Data Upload Types ---
 export const zDataSourceType = z.enum(["ambyte"]);
 
-export const zUploadExperimentDataFile = z.object({
-  name: z.string(),
-  data: z.instanceof(Buffer),
-});
-
 export const zUploadExperimentDataBody = z.object({
   sourceType: zDataSourceType,
-  file: zUploadExperimentDataFile,
+  // file will be handled by multer/FileInterceptor, not by zod directly
+  // so we remove the file field from here
 });
 
 export const zUploadExperimentDataResponse = z.object({
-  success: z.boolean(),
-  message: z.string(),
   uploadId: z.string().optional(),
+  files: z.array(
+    z.object({
+      fileName: z.string(),
+      fileId: z.string(),
+      filePath: z.string(),
+    }),
+  ),
 });
 
 export const zCreateExperimentResponse = z.object({ id: z.string().uuid() });
@@ -429,7 +430,6 @@ export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
 export type IdPathParam = z.infer<typeof zIdPathParam>;
 export type ExperimentMemberPathParam = z.infer<typeof zExperimentMemberPathParam>;
 export type DataSourceType = z.infer<typeof zDataSourceType>;
-export type UploadExperimentDataFile = z.infer<typeof zUploadExperimentDataFile>;
 export type UploadExperimentDataBody = z.infer<typeof zUploadExperimentDataBody>;
 export type UploadExperimentDataResponse = z.infer<typeof zUploadExperimentDataResponse>;
 
