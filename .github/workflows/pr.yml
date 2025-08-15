@@ -1,4 +1,4 @@
-name: PR Workflow; Build, Lint, Test & Tofu Validation
+name: PR Workflow
 
 on:
   pull_request:
