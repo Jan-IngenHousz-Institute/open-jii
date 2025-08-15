@@ -53,6 +53,8 @@
     "jsdom": "catalog:testing",
     "prettier": "catalog:",
     "react": "catalog:react19",
+    "react-dom": "catalog:react19",
+    "ts-jest": "^29.3.2",
     "typescript": "catalog:",
     "vitest": "catalog:testing",
     "zod": "catalog:"
