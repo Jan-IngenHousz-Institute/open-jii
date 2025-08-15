@@ -71,7 +71,7 @@ export function ExperimentDetailsCard({
                 <FormItem>
                   <FormLabel>{t("experimentSettings.name")}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder={t("experimentSettings.name")} />
+                    <Input {...field} trim placeholder={t("experimentSettings.name")} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
