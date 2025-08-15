@@ -50,7 +50,14 @@ async function collectCoverageFiles() {
     }
 
     // Create clean patterns for display (without any "../" prefixes)
-    const replaceDotPatterns = (str: string) => str.replace(/\.\.\//g, "");
+    const replaceDotPatterns = (str: string) => {
+      let prev;
+      do {
+        prev = str;
+        str = str.replace(/\.\.\//g, "");
+      } while (str !== prev);
+      return str;
+    };
 
     if (directoriesWithCoverage.length > 0) {
       console.log(
