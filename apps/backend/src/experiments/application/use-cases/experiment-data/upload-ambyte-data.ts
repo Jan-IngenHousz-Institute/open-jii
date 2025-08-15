@@ -43,7 +43,7 @@ export class UploadAmbyteDataUseCase {
    * │   ├── YYYYMMDD-HHMMSS_.txt
    * │   └── ...
    *
-   * Note: Configuration files and .DS_Store files are ignored.
+   * Note: Configuration filesd are ignored.
    *
    * @param experimentId - ID of the experiment
    * @param userId - ID of the user uploading the data
@@ -188,7 +188,6 @@ export class UploadAmbyteDataUseCase {
       .string()
       // Basic validation
       .min(1, "File name cannot be empty")
-      .refine((name) => !name.includes(".DS_Store"), "DS_Store files are not allowed")
       // Pattern validation
       .refine((name) => {
         // Ambyte_X folder pattern
