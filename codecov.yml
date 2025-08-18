@@ -5,6 +5,7 @@ codecov:
 # Ignore paths from coverage (type-only files)
 ignore:
   - "apps/backend/**/models/**"  # Backend model files (type definitions only)
+  - "apps/backend/src/test/test-harness.ts"  # Test harness utility
 
 # Recommended: Automatic Flag Management
 flag_management:

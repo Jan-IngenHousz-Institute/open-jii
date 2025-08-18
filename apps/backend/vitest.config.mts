@@ -27,6 +27,7 @@ export default mergeConfig(
           "src/main.ts", // Application entry point
           "src/**/models/**", // Model files (type definitions only)
           "src/app.e2e-spec.ts", // End-to-end test file
+          "src/test/test-harness.ts", // Test harness utility
         ],
       },
     },
