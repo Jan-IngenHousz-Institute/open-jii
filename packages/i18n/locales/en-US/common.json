@@ -37,6 +37,12 @@
     "openJII": "openJII"
   },
   "experiments": {
+    "filterMy": "My Experiments",
+    "filterMember": "Member Experiments",
+    "filterRelated": "All Related Experiments",
+    "filterAll": "All Experiments",
+    "filterStatusAll": "All Statuses",
+    "clearSearch": "Clear search",
     "title": "Experiments",
     "newExperiment": "New Experiment",
     "overview": "Overview",
@@ -61,6 +67,7 @@
     "experimentId": "Experiment ID",
     "descriptionTitle": "Description",
     "searchUsers": "Search users",
+    "searchExperiments": "Search experiments...",
     "startTypingToSearch": "Start typing to search",
     "searchProtocols": "Search protocols",
     "loadingProtocols": "Loading...",

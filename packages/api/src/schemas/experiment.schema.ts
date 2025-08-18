@@ -255,6 +255,7 @@ export const zExperimentFilterQuery = z.object({
     .optional()
     .describe("Filter experiments by relationship to the user"),
   status: zExperimentStatus.optional().describe("Filter experiments by their status"),
+  search: z.string().optional().describe("Search term for experiment name"),
 });
 
 export const zExperimentDataQuery = z.object({
