@@ -148,6 +148,13 @@ export function FileUpload({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    // For directory mode, don't allow drag over since drag-drop doesn't work properly
+    if (directory) {
+      return;
+    }
+    
     if (!disabled) {
       setIsDragOver(true);
     }
@@ -155,29 +162,28 @@ export function FileUpload({
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    // For directory mode, don't process drag events
+    if (directory) {
+      return;
+    }
+    
     setIsDragOver(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    // For directory mode, show error message and don't process the drop
+    if (directory) {
+      setValidationErrors(["Folder drag and drop is not supported - please click to select"]);
+      return;
+    }
+    
     setIsDragOver(false);
     if (!disabled) {
-      // For folder drops, we need to use webkitGetAsEntry if available
-      if (directory && e.dataTransfer.items) {
-        const items = Array.from(e.dataTransfer.items);
-        const entries = items.map(item => item.webkitGetAsEntry?.());
-        
-        // Check if we have directory entries
-        const hasDirectories = entries.some(entry => entry?.isDirectory);
-        
-        if (hasDirectories) {
-          // For directories, we need to let the user know to use click selection
-          // as drag and drop doesn't properly support folder traversal
-          alert("Please use the 'click to browse' option for folder selection. Drag and drop doesn't fully support folder structures.");
-          return;
-        }
-      }
-      
       handleFileSelection(e.dataTransfer.files);
     }
   };
@@ -272,9 +278,11 @@ export function FileUpload({
     <div className={cn("space-y-4", className)} {...props}>
       <div
         className={fileUploadVariants({ state: currentState as any, size })}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
+        {...(!directory && {
+          onDragOver: handleDragOver,
+          onDragLeave: handleDragLeave,
+          onDrop: handleDrop,
+        })}
         onClick={handleClick}
       >
         <input
