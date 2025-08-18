@@ -99,64 +99,151 @@ const SENSOR_FAMILIES: SensorFamily[] = [
     id: "ambyte",
     label: "Ambyte",
     disabled: false,
-    description: "Upload Ambyte sensor folder or individual Ambit subfolders",
+    description: "Upload Ambyte sensor folders containing measurement data",
   },
 ];
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
 function validateAmbyteStructure(files: FileList): ValidationResult {
+  console.log("=== Ambyte Validation Debug ===");
+  console.log("Files received:", files);
+  console.log("Files length:", files.length);
+
   if (files.length === 0) {
-    return { isValid: false, errors: ["Please select files"] };
+    return { isValid: false, errors: ["Please select a folder to upload"] };
   }
+
+  // Log each file in detail
+  Array.from(files).forEach((file, index) => {
+    console.log(`File ${index}:`, {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      webkitRelativePath: file.webkitRelativePath,
+      lastModified: file.lastModified,
+    });
+  });
 
   const filePaths = Array.from(files).map((f) => f.webkitRelativePath || f.name);
+  console.log("File paths extracted:", filePaths);
 
-  // Check for Ambyte_X pattern
-  const hasAmbyteRoot = filePaths.some((path) => /^Ambyte_\d+\//.test(path));
+  const errors: string[] = [];
 
-  // Check for numbered folder pattern (any number)
-  const hasNumberedRoot = filePaths.some((path) => /^\d+\//.test(path));
+  // Check for Ambyte_X pattern (main folder structure)
+  const ambyteRootPaths = filePaths.filter((path) => /^Ambyte_\d+\//.test(path));
+  const hasAmbyteRoot = ambyteRootPaths.length > 0;
+  console.log("Ambyte root check:", { ambyteRootPaths, hasAmbyteRoot });
 
-  // Check if it's a zip file with valid name
-  const isValidZip =
-    files.length === 1 &&
-    files[0].name.endsWith(".zip") &&
-    (/^Ambyte_\d+\.zip$/i.test(files[0].name) || /^\d+\.zip$/i.test(files[0].name));
+  // Check for numbered folder pattern (individual ambit subfolders: 1/, 2/, 3/, 4/)
+  const numberedRootPaths = filePaths.filter((path) => /^\d+\//.test(path));
+  const hasNumberedRoot = numberedRootPaths.length > 0;
+  console.log("Numbered root check:", { numberedRootPaths, hasNumberedRoot });
 
-  if (!hasAmbyteRoot && !hasNumberedRoot && !isValidZip) {
-    return {
-      isValid: false,
-      errors: [
-        "Invalid folder structure. Expected Ambyte_X folder, numbered subfolder, or valid zip file.",
-      ],
-    };
+  if (!hasAmbyteRoot && !hasNumberedRoot) {
+    console.log("No valid structure found, checking for folder-only names...");
+
+    // Check if we're getting folder names without webkitRelativePath
+    const folderOnlyNames = filePaths.filter(
+      (path) => /^Ambyte_\d+$/.test(path) || /^\d+$/.test(path),
+    );
+    console.log("Folder-only names detected:", folderOnlyNames);
+
+    if (folderOnlyNames.length > 0) {
+      errors.push(
+        `Folder detected but contents not accessible. This might be a browser limitation. Detected: ${folderOnlyNames.join(", ")}`,
+      );
+    } else {
+      errors.push(
+        "Please select an Ambyte folder (e.g., 'Ambyte_10') or individual ambit subfolders (e.g., '1', '2', '3', '4')",
+      );
+    }
+    console.log("Validation failed, errors:", errors);
+    return { isValid: false, errors };
   }
 
-  // Validate file types if it's a folder structure
-  if (!isValidZip) {
-    const invalidFiles = filePaths.filter((path) => {
-      const fileName = path.split("/").pop() ?? "";
-      return (
-        !fileName.endsWith(".txt") &&
-        fileName !== "ambyte_log.txt" &&
-        fileName !== "config.txt" &&
-        fileName !== "run.txt" &&
-        !/^\d{8}-\d{6}_\.txt$/.test(fileName)
-      );
-    });
+  // Validate Ambyte_X folder structure
+  if (hasAmbyteRoot) {
+    const ambyteFolder = ambyteRootPaths[0].split("/")[0];
 
-    if (invalidFiles.length > 0) {
-      return {
-        isValid: false,
-        errors: [
-          `Invalid files detected: ${invalidFiles.slice(0, 3).join(", ")}${invalidFiles.length > 3 ? "..." : ""}`,
-        ],
-      };
+    // Check for required root files
+    const requiredRootFiles = ["ambyte_log.txt", "config.txt", "run.txt"];
+    const missingRootFiles = requiredRootFiles.filter(
+      (file) => !filePaths.includes(`${ambyteFolder}/${file}`),
+    );
+
+    if (missingRootFiles.length > 0) {
+      errors.push(`Missing required files in ${ambyteFolder}: ${missingRootFiles.join(", ")}`);
+    }
+
+    // Check for numbered subfolders
+    const numberedSubfolders = filePaths
+      .filter((path) => path.startsWith(`${ambyteFolder}/`) && /\/\d+\//.test(path))
+      .map((path) => path.split("/")[1])
+      .filter((folder, index, arr) => arr.indexOf(folder) === index);
+
+    if (numberedSubfolders.length === 0) {
+      errors.push(
+        `No ambit subfolders found in ${ambyteFolder}. Expected numbered folders like '1', '2', '3', '4'`,
+      );
     }
   }
 
-  return { isValid: true, errors: [] };
+  // Validate numbered folder structure (individual ambit folders)
+  if (hasNumberedRoot && !hasAmbyteRoot) {
+    const numberedFolders = numberedRootPaths
+      .map((path) => path.split("/")[0])
+      .filter((folder, index, arr) => arr.indexOf(folder) === index);
+
+    // Check if folders are valid numbers (1-4 typically)
+    const invalidNumbers = numberedFolders.filter((folder) => !/^\d+$/.test(folder));
+    if (invalidNumbers.length > 0) {
+      errors.push(
+        `Invalid ambit folder names: ${invalidNumbers.join(", ")}. Expected numbered folders like '1', '2', '3', '4'`,
+      );
+    }
+  }
+
+  // Validate file types and structure
+  const invalidFiles = filePaths.filter((path) => {
+    const fileName = path.split("/").pop() ?? "";
+    const isValidTxtFile =
+      fileName.endsWith(".txt") &&
+      (fileName === "ambyte_log.txt" ||
+        fileName === "config.txt" ||
+        fileName === "run.txt" ||
+        fileName.startsWith("LOG_") ||
+        /^\d{8}-\d{6}_\.txt$/.test(fileName)); // Timestamp files like 20250604-192743_.txt
+
+    return !isValidTxtFile;
+  });
+
+  if (invalidFiles.length > 0) {
+    const sampleInvalidFiles = invalidFiles.slice(0, 3);
+    errors.push(
+      `Invalid files detected: ${sampleInvalidFiles.join(", ")}${invalidFiles.length > 3 ? ` and ${invalidFiles.length - 3} more` : ""}. Only .txt files are allowed.`,
+    );
+  }
+
+  // Check for measurement files in numbered folders
+  if (hasAmbyteRoot || hasNumberedRoot) {
+    const measurementFiles = filePaths.filter((path) => {
+      const fileName = path.split("/").pop() ?? "";
+      return /^\d{8}-\d{6}_\.txt$/.test(fileName);
+    });
+
+    if (measurementFiles.length === 0) {
+      errors.push(
+        "No measurement data files found. Expected timestamped files like '20250604-192743_.txt'",
+      );
+    }
+  }
+
+  console.log("Final validation result:", { isValid: errors.length === 0, errors });
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
 }
 
 // Step Components
@@ -244,7 +331,8 @@ const FileUploadStep: React.FC<FileUploadStepProps> = ({
           {t("experimentData.uploadModal.fileUpload.title", "Upload Ambyte Data")}
         </Label>
         <p className="text-muted-foreground mt-1 text-sm">
-          {t("experimentData.uploadModal.fileUpload.supportedFormats")}
+          Select an Ambyte folder (e.g., "Ambyte_10") or individual ambit subfolders (e.g., "1",
+          "2", "3", "4"). The folder should contain .txt measurement files.
         </p>
       </div>
 
@@ -253,7 +341,6 @@ const FileUploadStep: React.FC<FileUploadStepProps> = ({
         onFileSelect={onFileSelect}
         validator={validateAmbyteStructure}
         maxSize={MAX_FILE_SIZE}
-        accept=".txt,.zip"
         className="w-full"
       />
 
