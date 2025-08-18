@@ -1,20 +1,23 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { tsr } from "@/lib/tsr";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
+import React from "react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
 import { useExperimentAccess } from "./useExperimentAccess";
 
-jest.mock("@/lib/tsr", () => ({
+vi.mock("@/lib/tsr", () => ({
   tsr: {
     experiments: {
       getExperimentAccess: {
-        useQuery: jest.fn(),
+        useQuery: vi.fn(),
       },
     },
   },
 }));
 
-const mockTsr = tsr as jest.Mocked<typeof tsr>;
+const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
 
 describe("useExperimentAccess", () => {
   let queryClient: QueryClient;
@@ -34,16 +37,16 @@ describe("useExperimentAccess", () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("should call useQuery with correct parameters", () => {
-    const mockUseQuery = jest.fn().mockReturnValue({
+    const mockUseQuery = vi.fn().mockReturnValue({
       data: undefined,
       error: null,
       isLoading: true,
     });
-    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
+    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as vi.MockedFunction<
       typeof mockTsr.experiments.getExperimentAccess.useQuery
     >;
 
@@ -73,12 +76,12 @@ describe("useExperimentAccess", () => {
       },
     };
 
-    const mockUseQuery = jest.fn().mockReturnValue({
+    const mockUseQuery = vi.fn().mockReturnValue({
       data: mockData,
       error: null,
       isLoading: false,
     });
-    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
+    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as vi.MockedFunction<
       typeof mockTsr.experiments.getExperimentAccess.useQuery
     >;
 
@@ -97,12 +100,12 @@ describe("useExperimentAccess", () => {
       message: "Experiment not found",
     };
 
-    const mockUseQuery = jest.fn().mockReturnValue({
+    const mockUseQuery = vi.fn().mockReturnValue({
       data: undefined,
       error: mockError,
       isLoading: false,
     });
-    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
+    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as vi.MockedFunction<
       typeof mockTsr.experiments.getExperimentAccess.useQuery
     >;
 
@@ -121,12 +124,12 @@ describe("useExperimentAccess", () => {
       message: "You do not have permission to access this experiment",
     };
 
-    const mockUseQuery = jest.fn().mockReturnValue({
+    const mockUseQuery = vi.fn().mockReturnValue({
       data: undefined,
       error: mockError,
       isLoading: false,
     });
-    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
+    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as vi.MockedFunction<
       typeof mockTsr.experiments.getExperimentAccess.useQuery
     >;
 
@@ -143,7 +146,7 @@ describe("useExperimentAccess", () => {
     let retryFunction: (failureCount: number, error: unknown) => boolean;
 
     beforeEach(() => {
-      const mockUseQuery = jest
+      const mockUseQuery = vi
         .fn()
         .mockImplementation(
           (options: { retry: (failureCount: number, error: unknown) => boolean }) => {
@@ -155,9 +158,7 @@ describe("useExperimentAccess", () => {
             };
           },
         );
-      mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
-        typeof mockTsr.experiments.getExperimentAccess.useQuery
-      >;
+      mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as unknown;
 
       renderHook(() => useExperimentAccess("experiment-123"), {
         wrapper: createWrapper(),
@@ -236,12 +237,12 @@ describe("useExperimentAccess", () => {
       },
     };
 
-    const mockUseQuery = jest.fn().mockReturnValue({
+    const mockUseQuery = vi.fn().mockReturnValue({
       data: mockData,
       error: null,
       isLoading: false,
     });
-    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
+    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as vi.MockedFunction<
       typeof mockTsr.experiments.getExperimentAccess.useQuery
     >;
 
@@ -269,12 +270,12 @@ describe("useExperimentAccess", () => {
       },
     };
 
-    const mockUseQuery = jest.fn().mockReturnValue({
+    const mockUseQuery = vi.fn().mockReturnValue({
       data: mockData,
       error: null,
       isLoading: false,
     });
-    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
+    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as vi.MockedFunction<
       typeof mockTsr.experiments.getExperimentAccess.useQuery
     >;
 
@@ -287,12 +288,12 @@ describe("useExperimentAccess", () => {
   });
 
   it("should handle loading state", () => {
-    const mockUseQuery = jest.fn().mockReturnValue({
+    const mockUseQuery = vi.fn().mockReturnValue({
       data: undefined,
       error: null,
       isLoading: true,
     });
-    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
+    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as vi.MockedFunction<
       typeof mockTsr.experiments.getExperimentAccess.useQuery
     >;
 
@@ -306,12 +307,12 @@ describe("useExperimentAccess", () => {
   });
 
   it("should use different query keys for different experiment IDs", () => {
-    const mockUseQuery = jest.fn().mockReturnValue({
+    const mockUseQuery = vi.fn().mockReturnValue({
       data: undefined,
       error: null,
       isLoading: false,
     });
-    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as jest.MockedFunction<
+    mockTsr.experiments.getExperimentAccess.useQuery = mockUseQuery as vi.MockedFunction<
       typeof mockTsr.experiments.getExperimentAccess.useQuery
     >;
 
