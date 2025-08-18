@@ -306,7 +306,8 @@ export const zUploadExperimentDataFile = z.object({
 
 export const zUploadExperimentDataBody = z.object({
   sourceType: zDataSourceType,
-  file: zUploadExperimentDataFile,
+  files: z.array(zUploadExperimentDataFile),
+  folderName: z.string().optional(),
 });
 
 export const zUploadExperimentDataResponse = z.object({
