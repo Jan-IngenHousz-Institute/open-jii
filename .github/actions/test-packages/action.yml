@@ -35,7 +35,10 @@ runs:
       uses: codecov/codecov-action@v5
       with:
         token: ${{ inputs.codecov-token }}
-        files: apps/*/coverage/lcov.info
+        files: apps/*/coverage.json,tooling/*/coverage.json,packages/*/coverage.json
         flags: affected
         fail_ci_if_error: true
         verbose: true
+        override_branch: ${{ github.head_ref }}
+        override_commit: ${{ github.event.pull_request.head.sha }}
+        override_pr: ${{ github.event.number }}

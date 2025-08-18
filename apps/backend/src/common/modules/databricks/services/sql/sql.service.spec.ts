@@ -9,7 +9,7 @@ import { DatabricksSqlService } from "./sql.service";
 const MOCK_ACCESS_TOKEN = "mock-token";
 const MOCK_EXPIRES_IN = 3600;
 
-describe.only("DatabricksSqlService", () => {
+describe("DatabricksSqlService", () => {
   const testApp = TestHarness.App;
   const databricksHost = `${process.env.DATABRICKS_HOST}`;
 
