@@ -5,36 +5,18 @@ interface UploadAmbyteDataParams {
   files: FileList;
 }
 
-// Helper function to convert FileList to a zip buffer
-async function createZipFromFiles(files: FileList): Promise<ArrayBuffer> {
-  // For now, we'll just send the first file or create a simple structure
-  // In a real implementation, you'd use a library like JSZip
-  if (files.length === 0) {
-    throw new Error("No files to upload");
+// Helper function to extract folder name from FileList
+function extractAmbyteRootFolder(files: FileList): string {
+  // From "Ambyte_10/1/file.txt" → "Ambyte_10"
+  // From "1/file.txt" → "1"
+  for (const file of files) {
+    if (file.webkitRelativePath) {
+      const parts = file.webkitRelativePath.split("/");
+      if (/^Ambyte_\d+$/.exec(parts[0])) return parts[0];
+      if (/^[1-4]$/.exec(parts[0])) return parts[0];
+    }
   }
-  const file = files[0];
-  return file.arrayBuffer();
-}
-
-// Helper function to prepare file data for upload
-async function prepareFileForUpload(files: FileList) {
-  if (files.length === 1 && files[0].name.endsWith(".zip")) {
-    // Direct zip file upload
-    const file = files[0];
-    const data = Buffer.from(await file.arrayBuffer());
-    return {
-      name: file.name,
-      data,
-    };
-  } else {
-    // Multiple files - need to zip them
-    const zipBuffer = await createZipFromFiles(files);
-    const data = Buffer.from(zipBuffer);
-    return {
-      name: "ambyte-data.zip",
-      data,
-    };
-  }
+  throw new Error("No valid Ambyte folder structure detected");
 }
 
 export function useAmbyteUpload() {
@@ -74,20 +56,47 @@ export function useAmbyteUpload() {
   });
 }
 
-// Export a wrapper function that handles the file preparation and tsrest call
+// Export a wrapper function that handles file upload using FormData
 export function useAmbyteUploadWrapper() {
   const mutation = useAmbyteUpload();
 
   const upload = async ({ experimentId, files }: UploadAmbyteDataParams) => {
-    const fileData = await prepareFileForUpload(files);
+    try {
+      // Check if we have files
+      if (files.length === 0) {
+        throw new Error("No files to upload");
+      }
 
-    return mutation.mutateAsync({
-      params: { id: experimentId },
-      body: {
-        sourceType: "ambyte",
-        file: fileData,
-      },
-    });
+      // Extract folder name for identification
+      const folderName = extractAmbyteRootFolder(files);
+
+      // Convert files to the format expected by the API schema
+      const filesData = await Promise.all(
+        Array.from(files).map(async (file) => {
+          const arrayBuffer = await file.arrayBuffer();
+          return {
+            name: file.webkitRelativePath || file.name,
+            data: Buffer.from(arrayBuffer),
+          };
+        }),
+      );
+
+      // Create the request body that matches the API schema
+      const requestBody = {
+        sourceType: "ambyte" as const,
+        files: filesData,
+        folderName,
+      };
+
+      // Use ts-rest mutation
+      return mutation.mutateAsync({
+        params: { id: experimentId },
+        body: requestBody,
+      });
+    } catch (error) {
+      const uploadError = error instanceof Error ? error : new Error("Upload failed");
+      throw uploadError;
+    }
   };
 
   return {
@@ -95,7 +104,7 @@ export function useAmbyteUploadWrapper() {
     uploadAsync: upload,
     isLoading: mutation.isPending,
     error: mutation.error,
-    data: mutation.data,
+    data: mutation.data?.body,
     reset: mutation.reset,
     isError: mutation.isError,
     isSuccess: mutation.isSuccess,
