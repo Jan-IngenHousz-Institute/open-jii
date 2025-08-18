@@ -19,15 +19,15 @@ export const zSearchUsersQuery = z.object({
     .int()
     .min(1)
     .max(100)
-    .default(50)
     .optional()
+    .default(50)
     .describe("Maximum number of users to return"),
   offset: z.coerce
     .number()
     .int()
     .min(0)
-    .default(0)
     .optional()
+    .default(0)
     .describe("Number of users to skip for pagination"),
 });
 
