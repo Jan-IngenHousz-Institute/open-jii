@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-// Add jest-dom import for custom matchers
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
