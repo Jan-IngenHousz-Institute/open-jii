@@ -654,9 +654,15 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../../tooling/typescript-config
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../../tooling/vitest-config
       '@types/node':
         specifier: 'catalog:'
         version: 22.15.30
+      '@vitest/coverage-v8':
+        specifier: catalog:testing
+        version: 3.2.4(vitest@3.2.4)
       eslint:
         specifier: 'catalog:'
         version: 9.26.0(jiti@2.4.2)
@@ -666,6 +672,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.8.3
+      vitest:
+        specifier: catalog:testing
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.15.30)(@vitest/ui@3.2.4)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.30.0)(terser@5.39.1)(tsx@4.19.4)(yaml@2.7.1)
 
   packages/auth:
     dependencies:

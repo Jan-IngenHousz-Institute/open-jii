@@ -4,8 +4,8 @@ codecov:
 
 # Ignore paths from coverage (type-only files)
 ignore:
-  - "apps/backend/**/models/**"  # Backend model files (type definitions only)
-  - "apps/backend/src/test/test-harness.ts"  # Test harness utility
+  - "apps/backend/**/models/**" # Backend model files (type definitions only)
+  - "apps/backend/src/test/test-harness.ts" # Test harness utility
 
 # Recommended: Automatic Flag Management
 flag_management:
@@ -56,6 +56,19 @@ flag_management:
           target: 75% # 75% branch coverage for new UI code
           threshold: 5%
           informational: false
+    - name: api
+      paths:
+        - packages/api/**
+      carryforward: true
+      statuses:
+        - type: project
+          target: 75% # 75% lines coverage for API package
+          threshold: 5% # 5% wiggle room for API
+          informational: false # Make it blocking but lenient
+        - type: patch
+          target: 75% # 75% branch coverage for new API code
+          threshold: 5%
+          informational: false
 
 # Coverage status configuration (works with flag management)
 coverage:
@@ -75,6 +88,10 @@ coverage:
       ui:
         flags:
           - ui
+        informational: false # Now blocking with 75% target
+      api:
+        flags:
+          - api
         informational: false # Now blocking with 75% target
 
 # Comment configuration for PR
