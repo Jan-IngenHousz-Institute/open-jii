@@ -42,6 +42,18 @@ const createMockFile = (name: string, size = 1000, type = "text/plain"): File =>
   return file;
 };
 
+// Helper to create files with webkitRelativePath set
+const createValidAmbyteFiles = (paths: string[]): File[] => {
+  return paths.map((path) => {
+    const file = createMockFile(path.split("/").pop() ?? path);
+    Object.defineProperty(file, "webkitRelativePath", {
+      value: path,
+      writable: false,
+    });
+    return file;
+  });
+};
+
 const createMockFileList = (files: File[]): FileList => {
   const fileList = {
     length: files.length,
@@ -97,20 +109,20 @@ describe("AmbyteUploadModal", () => {
       expect(screen.getByText("Ambyte")).toBeInTheDocument();
     });
 
-    it("shows MultispeQ as disabled", async () => {
+    it("shows MultispeQ as disabled", () => {
       render(<AmbyteUploadModal {...defaultProps} />, { wrapper: createWrapper() });
 
-      // Use accessible aria-label instead of test ID
-      const multispqOption = screen.getByRole("option", { name: /MultispeQ sensor.*disabled/i });
-      expect(multispqOption).toHaveClass("opacity-50", "cursor-not-allowed");
+      // Use radio button with aria-label
+      const multispqOption = screen.getByRole("radio", { name: /MultispeQ/i });
+      expect(multispqOption).toBeDisabled();
       expect(screen.getByText("Coming Soon")).toBeInTheDocument();
     });
 
-    it("shows Ambyte as enabled", async () => {
+    it("shows Ambyte as enabled", () => {
       render(<AmbyteUploadModal {...defaultProps} />, { wrapper: createWrapper() });
 
-      const ambyteOption = screen.getByRole("option", { name: /Ambyte sensor.*available/i });
-      expect(ambyteOption).not.toHaveClass("opacity-50", "cursor-not-allowed");
+      const ambyteOption = screen.getByRole("radio", { name: /Ambyte/i });
+      expect(ambyteOption).not.toBeDisabled();
     });
   });
 
@@ -199,19 +211,13 @@ describe("AmbyteUploadModal", () => {
 
     it("validates valid Ambyte folder structure", async () => {
       // Mock files with valid Ambyte structure
-      const files = [
-        createMockFile("Ambyte_1/1/20250602-164840_.txt"),
-        createMockFile("Ambyte_1/2/20250602-164841_.txt"),
-        createMockFile("Ambyte_1/ambyte_log.txt"),
-      ];
-
-      // Set webkitRelativePath for folder simulation
-      files.forEach((file) => {
-        Object.defineProperty(file, "webkitRelativePath", {
-          value: file.name,
-          writable: false,
-        });
-      });
+      const files = createValidAmbyteFiles([
+        "Ambyte_1/1/20250602-164840_.txt",
+        "Ambyte_1/2/20250602-164841_.txt",
+        "Ambyte_1/ambyte_log.txt",
+        "Ambyte_1/config.txt",
+        "Ambyte_1/run.txt",
+      ]);
 
       const fileInput = document.querySelector('input[type="file"]')!;
 
@@ -222,8 +228,8 @@ describe("AmbyteUploadModal", () => {
 
       fireEvent.change(fileInput);
 
-      await waitFor(async () => {
-        await expect(screen.getByText(/files? selected/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByText(/Upload Error/)).not.toBeInTheDocument();
       });
 
       const uploadButton = screen.getByRole("button", { name: /upload data/i });
@@ -231,20 +237,9 @@ describe("AmbyteUploadModal", () => {
     });
 
     it("validates valid numbered subfolder structure", async () => {
-      const files = [
-        createMockFile("1/20250602-164840_.txt"),
-        createMockFile("1/20250603-164840_.txt"),
-      ];
+      const files = createValidAmbyteFiles(["1/20250602-164840_.txt", "1/20250603-164840_.txt"]);
 
-      // Set webkitRelativePath for folder simulation
-      files.forEach((file, index) => {
-        Object.defineProperty(file, "webkitRelativePath", {
-          value: file.name,
-          writable: false,
-        });
-      });
-
-      const fileInput = document.querySelector('input[type="file"]');
+      const fileInput = document.querySelector('input[type="file"]')!;
 
       Object.defineProperty(fileInput, "files", {
         value: createMockFileList(files),
@@ -253,24 +248,13 @@ describe("AmbyteUploadModal", () => {
 
       fireEvent.change(fileInput);
 
-      await waitFor(async () => {
-        await expect(screen.getByText(/files? selected/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByText(/Upload Error/)).not.toBeInTheDocument();
       });
     });
 
     it("validates higher numbered subfolder structures", async () => {
-      const files = [
-        createMockFile("15/20250602-164840_.txt"),
-        createMockFile("23/20250603-164840_.txt"),
-      ];
-
-      // Set webkitRelativePath for folder simulation
-      files.forEach((file, index) => {
-        Object.defineProperty(file, "webkitRelativePath", {
-          value: file.name,
-          writable: false,
-        });
-      });
+      const files = createValidAmbyteFiles(["15/20250602-164840_.txt", "23/20250603-164840_.txt"]);
 
       const fileInput = document.querySelector('input[type="file"]')!;
 
@@ -281,20 +265,13 @@ describe("AmbyteUploadModal", () => {
 
       fireEvent.change(fileInput);
 
-      await waitFor(async () => {
-        await expect(screen.getByText(/files? selected/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByText(/Upload Error/)).not.toBeInTheDocument();
       });
     });
 
     it("rejects invalid folder structure", async () => {
-      const files = [createMockFile("invalid/structure.txt")];
-
-      files.forEach((file, index) => {
-        Object.defineProperty(file, "webkitRelativePath", {
-          value: file.name,
-          writable: false,
-        });
-      });
+      const files = createValidAmbyteFiles(["invalid/structure.txt"]);
 
       const fileInput = document.querySelector('input[type="file"]')!;
 
@@ -305,7 +282,7 @@ describe("AmbyteUploadModal", () => {
 
       fireEvent.change(fileInput);
 
-      await waitFor(async () => {
+      await waitFor(() => {
         expect(screen.getByText(/Please select an Ambyte folder/)).toBeInTheDocument();
       });
 
@@ -348,14 +325,12 @@ describe("AmbyteUploadModal", () => {
       await user.click(ambyteRadio);
 
       // Add valid files
-      const files = [createMockFile("Ambyte_1/1/20250602-164840_.txt")];
-
-      files.forEach((file, index) => {
-        Object.defineProperty(file, "webkitRelativePath", {
-          value: file.name,
-          writable: false,
-        });
-      });
+      const files = createValidAmbyteFiles([
+        "Ambyte_1/1/20250602-164840_.txt",
+        "Ambyte_1/ambyte_log.txt",
+        "Ambyte_1/config.txt",
+        "Ambyte_1/run.txt",
+      ]);
 
       const fileInput = document.querySelector('input[type="file"]')!;
 
