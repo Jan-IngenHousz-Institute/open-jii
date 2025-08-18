@@ -1,17 +1,16 @@
 import { renderHook, act } from "@testing-library/react";
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 import { useDebounce } from "./useDebounce";
 
 describe("useDebounce", () => {
   beforeEach(() => {
-    vi.clearAllTimers();
-    vi.useFakeTimers();
+    jest.clearAllTimers();
+    jest.useFakeTimers();
   });
 
   afterEach(() => {
-    vi.runOnlyPendingTimers();
-    vi.useRealTimers();
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
   });
 
   it("should return initial value immediately", () => {
@@ -22,7 +21,7 @@ describe("useDebounce", () => {
 
     // Complete the initial debounce
     act(() => {
-      vi.advanceTimersByTime(300);
+      jest.advanceTimersByTime(300);
     });
 
     expect(result.current[0]).toBe("initial");
@@ -46,7 +45,7 @@ describe("useDebounce", () => {
 
     // Fast-forward time by less than delay
     act(() => {
-      vi.advanceTimersByTime(200);
+      jest.advanceTimersByTime(200);
     });
 
     expect(result.current[0]).toBe("initial"); // Still old value
@@ -54,7 +53,7 @@ describe("useDebounce", () => {
 
     // Fast-forward time to complete delay
     act(() => {
-      vi.advanceTimersByTime(100);
+      jest.advanceTimersByTime(100);
     });
 
     expect(result.current[0]).toBe("updated"); // Value updated
@@ -72,7 +71,7 @@ describe("useDebounce", () => {
 
     // Fast-forward by 300ms (less than custom delay)
     act(() => {
-      vi.advanceTimersByTime(300);
+      jest.advanceTimersByTime(300);
     });
 
     expect(result.current[0]).toBe("initial");
@@ -80,7 +79,7 @@ describe("useDebounce", () => {
 
     // Fast-forward to complete custom delay
     act(() => {
-      vi.advanceTimersByTime(200);
+      jest.advanceTimersByTime(200);
     });
 
     expect(result.current[0]).toBe("updated");
@@ -98,7 +97,7 @@ describe("useDebounce", () => {
 
     // Advance time partially
     act(() => {
-      vi.advanceTimersByTime(100);
+      jest.advanceTimersByTime(100);
     });
 
     // Second change before first debounce completes
@@ -108,7 +107,7 @@ describe("useDebounce", () => {
 
     // Advance time partially again
     act(() => {
-      vi.advanceTimersByTime(200);
+      jest.advanceTimersByTime(200);
     });
 
     expect(result.current[0]).toBe("initial"); // Still initial
@@ -116,7 +115,7 @@ describe("useDebounce", () => {
 
     // Complete the second debounce
     act(() => {
-      vi.advanceTimersByTime(100);
+      jest.advanceTimersByTime(100);
     });
 
     expect(result.current[0]).toBe("second"); // Should be second, not first
@@ -135,7 +134,7 @@ describe("useDebounce", () => {
 
     // Advance by original delay (300ms) - should not complete
     act(() => {
-      vi.advanceTimersByTime(300);
+      jest.advanceTimersByTime(300);
     });
 
     expect(result.current[0]).toBe("initial");
@@ -143,7 +142,7 @@ describe("useDebounce", () => {
 
     // Advance by remaining time for new delay
     act(() => {
-      vi.advanceTimersByTime(200);
+      jest.advanceTimersByTime(200);
     });
 
     expect(result.current[0]).toBe("updated");
@@ -161,7 +160,7 @@ describe("useDebounce", () => {
 
     numberRerender({ value: 84 });
     act(() => {
-      vi.advanceTimersByTime(100);
+      jest.advanceTimersByTime(100);
     });
 
     expect(numberResult.current[0]).toBe(84);
@@ -177,7 +176,7 @@ describe("useDebounce", () => {
     const newObj = { id: 2, name: "updated" };
     objectRerender({ value: newObj });
     act(() => {
-      vi.advanceTimersByTime(100);
+      jest.advanceTimersByTime(100);
     });
 
     expect(objectResult.current[0]).toBe(newObj);
@@ -193,7 +192,7 @@ describe("useDebounce", () => {
     const newArray = [4, 5, 6];
     arrayRerender({ value: newArray });
     act(() => {
-      vi.advanceTimersByTime(100);
+      jest.advanceTimersByTime(100);
     });
 
     expect(arrayResult.current[0]).toBe(newArray);
@@ -209,7 +208,7 @@ describe("useDebounce", () => {
     expect(result.current[1]).toBe(false);
 
     act(() => {
-      vi.advanceTimersByTime(0);
+      jest.advanceTimersByTime(0);
     });
 
     expect(result.current[0]).toBe("updated");
@@ -217,7 +216,7 @@ describe("useDebounce", () => {
   });
 
   it("should cleanup timer on unmount", () => {
-    const clearTimeoutSpy = vi.spyOn(global, "clearTimeout");
+    const clearTimeoutSpy = jest.spyOn(global, "clearTimeout");
     const { result, rerender, unmount } = renderHook(({ value }) => useDebounce(value, 300), {
       initialProps: { value: "initial" },
     });
@@ -244,7 +243,7 @@ describe("useDebounce", () => {
     expect(result.current[1]).toBe(false);
 
     act(() => {
-      vi.advanceTimersByTime(100);
+      jest.advanceTimersByTime(100);
     });
 
     expect(result.current[0]).toBe(false);
@@ -260,14 +259,14 @@ describe("useDebounce", () => {
 
     rerender({ value: "not null" });
     act(() => {
-      vi.advanceTimersByTime(100);
+      jest.advanceTimersByTime(100);
     });
 
     expect(result.current[0]).toBe("not null");
 
     rerender({ value: undefined });
     act(() => {
-      vi.advanceTimersByTime(100);
+      jest.advanceTimersByTime(100);
     });
 
     expect(result.current[0]).toBe(undefined);
@@ -292,7 +291,7 @@ describe("useDebounce", () => {
 
     // Complete debounce
     act(() => {
-      vi.advanceTimersByTime(300);
+      jest.advanceTimersByTime(300);
     });
 
     expect(result.current[0]).toBe("change3");

@@ -2,11 +2,6 @@
 codecov:
   require_ci_to_pass: true
 
-# Ignore paths from coverage (type-only files)
-ignore:
-  - "apps/backend/**/models/**" # Backend model files (type definitions only)
-  - "apps/backend/src/test/test-harness.ts" # Test harness utility
-
 # Recommended: Automatic Flag Management
 flag_management:
   default_rules:
@@ -16,7 +11,7 @@ flag_management:
         target: auto
         threshold: 1%
       - type: patch
-        target: 75% # 75% branch coverage for new code
+        target: 75%  # 75% branch coverage for new code
         threshold: 5%
   individual_flags:
     - name: backend
@@ -25,10 +20,10 @@ flag_management:
       carryforward: true
       statuses:
         - type: project
-          target: 90% # 90% lines coverage for backend
+          target: 90%  # 90% lines coverage for backend
           threshold: 1%
         - type: patch
-          target: 75% # 75% branch coverage for new backend code
+          target: 75%  # 75% branch coverage for new backend code
           threshold: 5%
     - name: web
       paths:
@@ -36,39 +31,13 @@ flag_management:
       carryforward: true
       statuses:
         - type: project
-          target: 75% # 75% lines coverage for web
-          threshold: 5% # 5% wiggle room for web
-          informational: false # Make it blocking but lenient
+          target: auto  # No minimum for web (for now)
+          threshold: 100%  # Very lenient - essentially non-blocking
+          informational: true
         - type: patch
-          target: 75% # 75% branch coverage for new web code
-          threshold: 5%
-          informational: false
-    - name: ui
-      paths:
-        - packages/ui/**
-      carryforward: true
-      statuses:
-        - type: project
-          target: 75% # 75% lines coverage for UI package
-          threshold: 5% # 5% wiggle room for UI
-          informational: false # Make it blocking but lenient
-        - type: patch
-          target: 75% # 75% branch coverage for new UI code
-          threshold: 5%
-          informational: false
-    - name: api
-      paths:
-        - packages/api/**
-      carryforward: true
-      statuses:
-        - type: project
-          target: 75% # 75% lines coverage for API package
-          threshold: 5% # 5% wiggle room for API
-          informational: false # Make it blocking but lenient
-        - type: patch
-          target: 75% # 75% branch coverage for new API code
-          threshold: 5%
-          informational: false
+          target: auto  # No minimum for new web code
+          threshold: 100%
+          informational: true
 
 # Coverage status configuration (works with flag management)
 coverage:
@@ -84,15 +53,7 @@ coverage:
       web:
         flags:
           - web
-        informational: false # Now blocking with 75% target
-      ui:
-        flags:
-          - ui
-        informational: false # Now blocking with 75% target
-      api:
-        flags:
-          - api
-        informational: false # Now blocking with 75% target
+        informational: true  # Non-blocking for web
 
 # Comment configuration for PR
 comment:

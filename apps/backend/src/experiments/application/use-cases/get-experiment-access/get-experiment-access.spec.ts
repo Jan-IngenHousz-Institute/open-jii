@@ -27,7 +27,7 @@ describe("GetExperimentAccessUseCase", () => {
   afterEach(() => {
     testApp.afterEach();
     // Reset any mocks
-    vi.restoreAllMocks();
+    jest.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -85,6 +85,7 @@ describe("GetExperimentAccessUseCase", () => {
 
       const accessInfo = result.value;
       expect(accessInfo).toEqual({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         experiment: expect.objectContaining({
           id: experiment.id,
           name: "Creator Test",
@@ -116,6 +117,7 @@ describe("GetExperimentAccessUseCase", () => {
 
       const accessInfo = result.value;
       expect(accessInfo).toEqual({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         experiment: expect.objectContaining({
           id: experiment.id,
           name: "Admin Test",
@@ -227,7 +229,7 @@ describe("GetExperimentAccessUseCase", () => {
       const mockError = AppError.internal("Database connection failed");
       // Mock repository to return failure - save original
       const originalCheckAccess = experimentRepository.checkAccess.bind(experimentRepository);
-      experimentRepository.checkAccess = vi.fn().mockResolvedValue(failure(mockError));
+      experimentRepository.checkAccess = jest.fn().mockResolvedValue(failure(mockError));
 
       // Act
       const result = await useCase.execute("test-id", testUserId);
@@ -248,7 +250,7 @@ describe("GetExperimentAccessUseCase", () => {
 
       // Mock repository to return success but with null experiment - save original
       const originalCheckAccess = experimentRepository.checkAccess.bind(experimentRepository);
-      experimentRepository.checkAccess = vi.fn().mockImplementation(() => {
+      experimentRepository.checkAccess = jest.fn().mockImplementation(() => {
         const mockResult = {
           isSuccess: () => true,
           isFailure: () => false,
@@ -282,7 +284,7 @@ describe("GetExperimentAccessUseCase", () => {
 
     it("should correctly identify public vs private experiment access scenarios", async () => {
       // Reset any mocks to use real repository
-      vi.restoreAllMocks();
+      jest.restoreAllMocks();
       experimentRepository = testApp.module.get(ExperimentRepository);
 
       // Arrange - Create both public and private experiments
@@ -318,7 +320,7 @@ describe("GetExperimentAccessUseCase", () => {
 
     it("should return correct access info structure with all required fields", async () => {
       // Reset any mocks to use real repository
-      vi.restoreAllMocks();
+      jest.restoreAllMocks();
       experimentRepository = testApp.module.get(ExperimentRepository);
 
       const { experiment } = await testApp.createExperiment({

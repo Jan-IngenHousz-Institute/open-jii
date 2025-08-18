@@ -1,4 +1,4 @@
-name: PR Workflow
+name: PR Workflow; Build, Lint, Test & Tofu Validation
 
 on:
   pull_request:
@@ -61,16 +61,6 @@ jobs:
         with:
           affected_apps: ${{ steps.detect.outputs.affected_apps }}
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Save coverage artifacts for main branch upload
-        if: steps.detect.outputs.has_affected_apps == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-reports-${{ github.event.pull_request.head.sha }}
-          path: |
-            apps/*/coverage/lcov.info
-            apps/*/coverage.json
-          retention-days: 1
 
   # tofu:
   #   name: OpenTofu

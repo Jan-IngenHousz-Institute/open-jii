@@ -25,7 +25,7 @@ describe("ProtocolController", () => {
     getProtocolUseCase = testApp.module.get(GetProtocolUseCase);
 
     // Reset any mocks before each test
-    vi.restoreAllMocks();
+    jest.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -592,7 +592,7 @@ describe("ProtocolController", () => {
         updatedAt: new Date(),
       };
 
-      vi.spyOn(getProtocolUseCase, "execute").mockResolvedValue(success(mockProtocol));
+      jest.spyOn(getProtocolUseCase, "execute").mockResolvedValue(success(mockProtocol));
 
       // Act
       const path = testApp.resolvePath(contract.protocols.getProtocol.path, {
@@ -620,7 +620,7 @@ describe("ProtocolController", () => {
         updatedAt: new Date(),
       };
 
-      vi.spyOn(getProtocolUseCase, "execute").mockResolvedValue(success(mockProtocol));
+      jest.spyOn(getProtocolUseCase, "execute").mockResolvedValue(success(mockProtocol));
 
       // Act
       const path = testApp.resolvePath(contract.protocols.getProtocol.path, {

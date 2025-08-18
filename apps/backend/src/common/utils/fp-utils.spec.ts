@@ -1,7 +1,5 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import type { Logger } from "@nestjs/common";
 import { StatusCodes } from "http-status-codes";
-import { vi } from "vitest";
 import { z } from "zod";
 
 import {
@@ -192,21 +190,16 @@ describe("Functional Programming Utilities", () => {
   });
 
   describe("handleFailure", () => {
-    let mockLogger: Logger;
+    let mockLogger: jest.Mocked<Logger>;
 
     beforeEach(() => {
       mockLogger = {
-        error: vi.fn(),
-        warn: vi.fn(),
-        log: vi.fn(),
-        debug: vi.fn(),
-        verbose: vi.fn(),
-        fatal: vi.fn(),
-        setContext: vi.fn(),
-        options: {},
-        localInstance: undefined,
-        registerLocalInstanceRef: vi.fn(),
-      } as Logger;
+        error: jest.fn(),
+        warn: jest.fn(),
+        log: jest.fn(),
+        debug: jest.fn(),
+        verbose: jest.fn(),
+      } as unknown as jest.Mocked<Logger>;
     });
 
     it("should handle server errors properly", () => {
@@ -224,11 +217,11 @@ describe("Functional Programming Utilities", () => {
           details: { detail: "test" },
         },
       });
-
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.error).toHaveBeenCalledWith("SERVER_ERROR: Server error", {
         detail: "test",
       });
-
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });
 
@@ -247,9 +240,9 @@ describe("Functional Programming Utilities", () => {
           details: { detail: "test" },
         },
       });
-
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.error).not.toHaveBeenCalled();
-
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.warn).toHaveBeenCalledWith("BAD_REQUEST: Bad request", {
         detail: "test",
       });
@@ -277,10 +270,11 @@ describe("Functional Programming Utilities", () => {
       const failureResult = failure(error) as Failure<AppError>;
       handleFailure(failureResult, mockLogger);
 
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.error).toHaveBeenCalledWith("CRITICAL_ERROR: Critical error", {
         service: "external",
       });
-
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });
 
@@ -291,10 +285,11 @@ describe("Functional Programming Utilities", () => {
       const failureResult = failure(error) as Failure<AppError>;
       handleFailure(failureResult, mockLogger);
 
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.warn).toHaveBeenCalledWith("UNAUTHORIZED: Access denied", {
         userId: "123",
       });
-
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.error).not.toHaveBeenCalled();
     });
 
@@ -310,7 +305,7 @@ describe("Functional Programming Utilities", () => {
           code: "NOT_FOUND",
         },
       });
-
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(mockLogger.warn).toHaveBeenCalledWith("NOT_FOUND: Resource not found", undefined);
     });
 
@@ -348,7 +343,7 @@ describe("Functional Programming Utilities", () => {
 
   describe("tryCatch", () => {
     it("should return success result when function succeeds", async () => {
-      const fn = vi.fn().mockResolvedValue("success");
+      const fn = jest.fn().mockResolvedValue("success");
       const result = await tryCatch(fn);
 
       expect(result.isSuccess()).toBe(true);
@@ -357,7 +352,7 @@ describe("Functional Programming Utilities", () => {
 
     it("should return failure result when function throws", async () => {
       const error = new Error("Test error");
-      const fn = vi.fn().mockRejectedValue(error);
+      const fn = jest.fn().mockRejectedValue(error);
       const result = await tryCatch(fn);
 
       expect(result.isFailure()).toBe(true);
@@ -367,8 +362,8 @@ describe("Functional Programming Utilities", () => {
 
     it("should use custom error mapper when provided", async () => {
       const error = new Error("Test error");
-      const fn = vi.fn().mockRejectedValue(error);
-      const customMapper = vi.fn().mockReturnValue(AppError.badRequest("Custom error"));
+      const fn = jest.fn().mockRejectedValue(error);
+      const customMapper = jest.fn().mockReturnValue(AppError.badRequest("Custom error"));
 
       const result = await tryCatch(fn, customMapper);
 

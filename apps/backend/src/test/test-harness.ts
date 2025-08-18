@@ -95,19 +95,12 @@ export class TestHarness {
       this.app = null;
     }
 
+    // Close database connections
+    await this.database.$client.end();
+
     // Clean up nock
     nock.cleanAll();
     nock.enableNetConnect();
-  }
-
-  /**
-   * Global teardown that closes database connections - only call this once at the very end
-   */
-  public async globalTeardown() {
-    await this.teardown();
-
-    // Close database connections
-    await this.database.$client.end();
   }
 
   /**
@@ -181,7 +174,7 @@ export class TestHarness {
 
   // Mock the auth session for testing
   private mockUserSession(userId: string) {
-    vi.spyOn(authExpress, "getSession").mockResolvedValue({
+    jest.spyOn(authExpress, "getSession").mockResolvedValue({
       user: {
         id: userId,
         name: "Test User",
@@ -194,7 +187,7 @@ export class TestHarness {
 
   // Mock no session for unauthorized tests
   private mockNoSession() {
-    vi.spyOn(authExpress, "getSession").mockResolvedValue(null);
+    jest.spyOn(authExpress, "getSession").mockResolvedValue(null);
   }
 
   // HTTP request methods

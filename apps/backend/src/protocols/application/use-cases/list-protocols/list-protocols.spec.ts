@@ -22,7 +22,7 @@ describe("ListProtocolsUseCase", () => {
 
   afterEach(() => {
     testApp.afterEach();
-    vi.restoreAllMocks();
+    jest.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -100,7 +100,7 @@ describe("ListProtocolsUseCase", () => {
   it("should handle repository failures", async () => {
     // Arrange
     // Mock repository to fail
-    vi.spyOn(protocolRepository, "findAll").mockResolvedValue(
+    jest.spyOn(protocolRepository, "findAll").mockResolvedValue(
       failure({
         name: "RepositoryError",
         code: "INTERNAL_ERROR",

@@ -28,10 +28,10 @@ describe("ExperimentController", () => {
     databricksAdapter = testApp.module.get(DatabricksAdapter);
 
     // Reset any mocks before each test
-    vi.restoreAllMocks();
+    jest.restoreAllMocks();
 
     // Set up default mocks for databricks service (only needed for create experiment)
-    vi.spyOn(databricksAdapter, "triggerJob").mockResolvedValue(
+    jest.spyOn(databricksAdapter, "triggerJob").mockResolvedValue(
       success({
         run_id: 12345,
         number_in_job: 1,
@@ -79,7 +79,7 @@ describe("ExperimentController", () => {
 
     it("should successfully create an experiment even if Databricks fails", async () => {
       // Mock Databricks to fail
-      vi.spyOn(databricksAdapter, "triggerJob").mockResolvedValue(
+      jest.spyOn(databricksAdapter, "triggerJob").mockResolvedValue(
         failure({
           name: "DatabricksError",
           code: "INTERNAL_ERROR",

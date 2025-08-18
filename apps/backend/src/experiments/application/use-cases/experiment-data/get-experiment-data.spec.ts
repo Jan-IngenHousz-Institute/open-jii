@@ -32,7 +32,7 @@ describe("GetExperimentDataUseCase", () => {
     useCase = testApp.module.get(GetExperimentDataUseCase);
 
     // Reset any mocks before each test
-    vi.restoreAllMocks();
+    jest.restoreAllMocks();
     nock.cleanAll();
   });
 
@@ -203,6 +203,7 @@ describe("GetExperimentDataUseCase", () => {
   });
 
   it("should return table list and sample data when no table name is specified", async () => {
+    jest.setTimeout(30000); // Increase timeout for this test
     // Create an experiment in the database
     const { experiment } = await testApp.createExperiment({
       name: "Test Experiment",

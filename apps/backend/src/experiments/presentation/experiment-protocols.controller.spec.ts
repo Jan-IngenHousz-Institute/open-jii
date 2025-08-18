@@ -16,7 +16,7 @@ describe("ExperimentProtocolsController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
-    vi.restoreAllMocks();
+    jest.restoreAllMocks();
   });
 
   afterEach(() => {

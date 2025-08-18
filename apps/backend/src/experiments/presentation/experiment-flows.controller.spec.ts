@@ -17,7 +17,7 @@ describe("ExperimentFlowsController", () => {
     await testApp.beforeEach();
     ownerId = await testApp.createTestUser({});
     memberId = await testApp.createTestUser({});
-    vi.restoreAllMocks();
+    jest.restoreAllMocks();
   });
 
   afterEach(() => {

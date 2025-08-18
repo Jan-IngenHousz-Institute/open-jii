@@ -26,7 +26,7 @@ describe("ExperimentDataController", () => {
     databricksAdapter = testApp.module.get(DatabricksAdapter);
 
     // Reset any mocks before each test
-    vi.restoreAllMocks();
+    jest.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -90,9 +90,10 @@ describe("ExperimentDataController", () => {
         ],
       };
 
-      vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
+      jest.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
 
-      vi.spyOn(databricksAdapter, "executeSqlQuery")
+      jest
+        .spyOn(databricksAdapter, "executeSqlQuery")
         .mockResolvedValueOnce(success(mockCountData)) // First call for count
         .mockResolvedValueOnce(success(mockTableData)); // Second call for actual data
 
@@ -199,9 +200,10 @@ describe("ExperimentDataController", () => {
       };
 
       // Setup mocks
-      vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
+      jest.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
 
-      vi.spyOn(databricksAdapter, "executeSqlQuery")
+      jest
+        .spyOn(databricksAdapter, "executeSqlQuery")
         .mockResolvedValueOnce(success(mockBronzeTableData))
         .mockResolvedValueOnce(success(mockSilverTableData));
 
@@ -335,9 +337,9 @@ describe("ExperimentDataController", () => {
       });
 
       // Mock the DatabricksAdapter to return an error
-      vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(
-        failure(AppError.internal("Error retrieving data from Databricks")),
-      );
+      jest
+        .spyOn(databricksAdapter, "listTables")
+        .mockResolvedValue(failure(AppError.internal("Error retrieving data from Databricks")));
 
       const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
         id: experiment.id,
@@ -370,12 +372,12 @@ describe("ExperimentDataController", () => {
         ],
       };
 
-      vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
+      jest.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
 
       // Mock the DatabricksAdapter to fail on SQL execution
-      vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValue(
-        failure(AppError.internal("SQL execution failed: table not found")),
-      );
+      jest
+        .spyOn(databricksAdapter, "executeSqlQuery")
+        .mockResolvedValue(failure(AppError.internal("SQL execution failed: table not found")));
 
       const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
         id: experiment.id,
@@ -434,9 +436,10 @@ describe("ExperimentDataController", () => {
         ],
       };
 
-      vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
+      jest.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
 
-      vi.spyOn(databricksAdapter, "executeSqlQuery")
+      jest
+        .spyOn(databricksAdapter, "executeSqlQuery")
         .mockResolvedValueOnce(success(mockCountData)) // First call for count
         .mockResolvedValueOnce(success(mockTableData)); // Second call for actual data
 
@@ -493,7 +496,7 @@ describe("ExperimentDataController", () => {
         ],
       };
 
-      vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
+      jest.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
 
       const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
         id: experiment.id,

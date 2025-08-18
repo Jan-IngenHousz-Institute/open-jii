@@ -43,7 +43,7 @@ describe("DatabricksConfigService", () => {
     it("should throw an error if the config is invalid", () => {
       // Mock the ConfigService to return an empty string for a required value
       const configService = testApp.module.get(ConfigService);
-      const getOrThrowSpy = vi
+      const getOrThrowSpy = jest
         .spyOn(configService, "getOrThrow")
         .mockImplementation((key: string) => {
           if (key === "databricks.jobId") {

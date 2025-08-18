@@ -24,14 +24,14 @@ describe("CreateExperimentUseCase", () => {
     databricksAdapter = testApp.module.get(DatabricksAdapter);
 
     // Mock the Databricks service
-    vi.spyOn(databricksAdapter, "triggerJob").mockResolvedValue(
-      success({ run_id: 12345, number_in_job: 1 }),
-    );
+    jest
+      .spyOn(databricksAdapter, "triggerJob")
+      .mockResolvedValue(success({ run_id: 12345, number_in_job: 1 }));
   });
 
   afterEach(() => {
     testApp.afterEach();
-    vi.restoreAllMocks();
+    jest.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -106,7 +106,7 @@ describe("CreateExperimentUseCase", () => {
 
   it("should create an experiment even if Databricks job trigger fails", async () => {
     // Mock Databricks job trigger failure
-    vi.spyOn(databricksAdapter, "triggerJob").mockResolvedValue(
+    jest.spyOn(databricksAdapter, "triggerJob").mockResolvedValue(
       failure({
         name: "DatabricksError",
         code: "INTERNAL_ERROR",

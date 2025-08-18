@@ -11,10 +11,7 @@
     "start": "next start",
     "lint": "eslint",
     "check-types": "tsc --noEmit",
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "test:watch": "vitest --watch",
-    "test:coverage": "vitest run --coverage"
+    "test": "jest --coverage"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
@@ -41,19 +38,16 @@
     "@repo/eslint-config": "workspace:*",
     "@repo/tailwind-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@repo/vitest-config": "workspace:*",
     "@tanstack/react-query-devtools": "catalog:react-query",
-    "@testing-library/jest-dom": "catalog:testing",
-    "@testing-library/react": "catalog:testing",
+    "@testing-library/react": "^16.3.0",
+    "@types/jest": "^29.5.14",
     "@types/node": "catalog:",
     "@types/react": "catalog:react19",
     "@types/react-dom": "catalog:react19",
-    "@vitejs/plugin-react": "^4.3.4",
-    "@vitest/coverage-v8": "catalog:testing",
     "eslint": "catalog:",
-    "jsdom": "catalog:testing",
+    "jest": "^29.7.0",
     "tailwindcss": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:testing"
+    "ts-jest": "^29.3.2",
+    "typescript": "catalog:"
   }
 }

@@ -20,10 +20,6 @@
     "./contentful": {
       "types": "./dist/features/contentful/index.d.ts",
       "default": "./dist/features/contentful/index.js"
-    },
-    "./lib/__generated/sdk": {
-      "types": "./dist/lib/__generated/sdk.d.ts",
-      "default": "./dist/lib/__generated/sdk.js"
     }
   },
   "scripts": {

@@ -1,20 +1,17 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment */
 import { tsr } from "@/lib/tsr";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
-import React from "react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
 
 import type { ExperimentProtocol } from "@repo/api";
 
 import { useExperimentProtocolAdd } from "./useExperimentProtocolAdd";
 
-vi.mock("@/lib/tsr", () => ({
+jest.mock("@/lib/tsr", () => ({
   tsr: {
-    useQueryClient: vi.fn(),
+    useQueryClient: jest.fn(),
     experiments: {
       addExperimentProtocols: {
-        useMutation: vi.fn(),
+        useMutation: jest.fn(),
       },
     },
   },
@@ -25,23 +22,23 @@ interface MutateVariables {
   body: { protocols: { protocolId: string; order?: number }[] };
 }
 
-const mockTsr = tsr;
+const mockTsr = tsr as jest.Mocked<typeof tsr>;
 
 describe("useExperimentProtocolAdd", () => {
   it("should optimistically update cache in onMutate", async () => {
-    const setQueryData = vi.fn();
+    const setQueryData = jest.fn();
     const previousProtocols = { body: [{ protocolId: "protocol-1", order: 0 }] };
-    const cancelQueries = vi.fn();
+    const cancelQueries = jest.fn();
     mockTsr.useQueryClient.mockReturnValue({
-      getQueryData: vi.fn(() => previousProtocols),
+      getQueryData: jest.fn(() => previousProtocols),
       setQueryData,
       cancelQueries,
-      invalidateQueries: vi.fn(),
+      invalidateQueries: jest.fn(),
     } as unknown as ReturnType<typeof tsr.useQueryClient>);
     let onMutate:
       | ((variables: MutateVariables) => Promise<{ previousProtocols: typeof previousProtocols }>)
       | undefined;
-    (mockTsr.experiments.addExperimentProtocols.useMutation as unknown) = vi.fn(
+    (mockTsr.experiments.addExperimentProtocols.useMutation as unknown) = jest.fn(
       (opts: {
         onMutate: (
           variables: MutateVariables,
@@ -49,7 +46,7 @@ describe("useExperimentProtocolAdd", () => {
       }) => {
         onMutate = opts.onMutate;
         return {
-          mutateAsync: vi.fn(),
+          mutateAsync: jest.fn(),
           isPending: false,
           isError: false,
           isSuccess: false,
@@ -124,12 +121,12 @@ describe("useExperimentProtocolAdd", () => {
       ],
     };
     mockTsr.useQueryClient.mockReturnValue({
-      getQueryData: vi.fn(() => existingProtocols),
-      setQueryData: vi.fn(),
-      cancelQueries: vi.fn(),
-      invalidateQueries: vi.fn(),
+      getQueryData: jest.fn(() => existingProtocols),
+      setQueryData: jest.fn(),
+      cancelQueries: jest.fn(),
+      invalidateQueries: jest.fn(),
     } as unknown as ReturnType<typeof tsr.useQueryClient>);
-    (mockTsr.experiments.addExperimentProtocols.useMutation as unknown) = vi.fn(() => ({
+    (mockTsr.experiments.addExperimentProtocols.useMutation as unknown) = jest.fn(() => ({
       mutateAsync: mutateAsyncMock,
       isPending: false,
       isError: false,
@@ -152,12 +149,12 @@ describe("useExperimentProtocolAdd", () => {
 
   it("should assign order 0 if no protocols exist in cache", async () => {
     mockTsr.useQueryClient.mockReturnValue({
-      getQueryData: vi.fn(() => undefined),
-      setQueryData: vi.fn(),
-      cancelQueries: vi.fn(),
-      invalidateQueries: vi.fn(),
+      getQueryData: jest.fn(() => undefined),
+      setQueryData: jest.fn(),
+      cancelQueries: jest.fn(),
+      invalidateQueries: jest.fn(),
     } as unknown as ReturnType<typeof tsr.useQueryClient>);
-    (mockTsr.experiments.addExperimentProtocols.useMutation as unknown) = vi.fn(() => ({
+    (mockTsr.experiments.addExperimentProtocols.useMutation as unknown) = jest.fn(() => ({
       mutateAsync: mutateAsyncMock,
       isPending: false,
       isError: false,
@@ -177,17 +174,17 @@ describe("useExperimentProtocolAdd", () => {
   });
 
   it("should optimistically update cache and rollback on error", () => {
-    const setQueryData = vi.fn();
+    const setQueryData = jest.fn();
     const previousProtocols = { body: [] };
     mockTsr.useQueryClient.mockReturnValue({
-      getQueryData: vi.fn(() => previousProtocols),
+      getQueryData: jest.fn(() => previousProtocols),
       setQueryData,
-      cancelQueries: vi.fn(),
-      invalidateQueries: vi.fn(),
+      cancelQueries: jest.fn(),
+      invalidateQueries: jest.fn(),
     } as unknown as ReturnType<typeof tsr.useQueryClient>);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let onError: ((err: Error, variables: any, context: any) => void) | undefined;
-    (mockTsr.experiments.addExperimentProtocols.useMutation as unknown) = vi.fn(
+    (mockTsr.experiments.addExperimentProtocols.useMutation as unknown) = jest.fn(
       (opts: { onError: (err: Error, variables: unknown, context: unknown) => void }) => {
         onError = opts.onError;
         return {
@@ -213,19 +210,19 @@ describe("useExperimentProtocolAdd", () => {
   });
 
   it("should invalidate queries onSettled", async () => {
-    const invalidateQueries = vi.fn();
+    const invalidateQueries = jest.fn();
     mockTsr.useQueryClient.mockReturnValue({
-      getQueryData: vi.fn(() => undefined),
-      setQueryData: vi.fn(),
-      cancelQueries: vi.fn(),
+      getQueryData: jest.fn(() => undefined),
+      setQueryData: jest.fn(),
+      cancelQueries: jest.fn(),
       invalidateQueries,
     } as unknown as ReturnType<typeof tsr.useQueryClient>);
     let onSettled: (() => Promise<void>) | undefined;
-    (mockTsr.experiments.addExperimentProtocols.useMutation as unknown) = vi.fn(
+    (mockTsr.experiments.addExperimentProtocols.useMutation as unknown) = jest.fn(
       (opts: { onSettled: () => Promise<void> }) => {
         onSettled = opts.onSettled;
         return {
-          mutateAsync: vi.fn(),
+          mutateAsync: jest.fn(),
           isPending: false,
           isError: false,
           isSuccess: false,
@@ -244,16 +241,16 @@ describe("useExperimentProtocolAdd", () => {
       queryKey: ["experiment-protocols", "experiment-1"],
     });
   });
-  let mutateAsyncMock: vi.Mock;
+  let mutateAsyncMock: jest.Mock;
   beforeEach(() => {
-    mutateAsyncMock = vi.fn().mockResolvedValue({});
+    mutateAsyncMock = jest.fn().mockResolvedValue({});
     mockTsr.useQueryClient.mockReturnValue({
-      getQueryData: vi.fn(() => undefined),
-      setQueryData: vi.fn(),
-      cancelQueries: vi.fn(),
-      invalidateQueries: vi.fn(),
+      getQueryData: jest.fn(() => undefined),
+      setQueryData: jest.fn(),
+      cancelQueries: jest.fn(),
+      invalidateQueries: jest.fn(),
     } as unknown as ReturnType<typeof tsr.useQueryClient>);
-    (mockTsr.experiments.addExperimentProtocols.useMutation as unknown) = vi.fn(() => ({
+    (mockTsr.experiments.addExperimentProtocols.useMutation as unknown) = jest.fn(() => ({
       mutateAsync: mutateAsyncMock,
       isPending: false,
       isError: false,
