@@ -5,9 +5,8 @@ import Editor from "@monaco-editor/react";
 import { Copy, Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FC } from "react";
-import type { ZodIssue } from "zod";
 
-import { validateProtocolJson } from "@repo/api";
+import { findProtocolErrorLine, validateProtocolJson } from "@repo/api";
 import { Button, Label } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -19,22 +18,6 @@ interface ProtocolCodeEditorProps {
   error?: string;
 }
 type IStandaloneCodeEditor = Parameters<OnMount>[0];
-
-function findLine(text: string, e: ZodIssue) {
-  // Try to find the line number of the error path in the JSON
-  // This is a best-effort guess, as Zod does not provide line numbers
-  const codeLines = text.split("\n");
-  let lineNumber = 0;
-  let pathItem = e.path.pop();
-  for (const codeLine of codeLines) {
-    if (pathItem === undefined || typeof pathItem == "number") return lineNumber;
-    if (codeLine.includes(`"${pathItem}"`)) {
-      pathItem = e.path.pop();
-    }
-    lineNumber++;
-  }
-  return lineNumber;
-}
 
 const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   value,
@@ -114,7 +97,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
       if (!result.success && result.error) {
         setValidationErrors(result.error.map((e) => e.message));
         const errorDetails = result.error.map((e) => {
-          return { line: findLine(newValue, e), message: e.message };
+          return findProtocolErrorLine(newValue, e);
         });
         setMarkers(
           result.error.map((e) => e.message),

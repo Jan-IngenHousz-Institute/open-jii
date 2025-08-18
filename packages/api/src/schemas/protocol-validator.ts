@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ZodIssue } from "zod";
 
 // Hardware pin numbers for MultispeQ devices (expanded based on real data)
 const VALID_PINS = [
@@ -20,7 +21,9 @@ const PinNumberSchema = z
 // Variable references used in protocols (expanded based on real data)
 const VariableReferenceSchema = z
   .string()
-  .regex(/^(a_[a-z0-9_]+|light_intensity|auto_bright[0-9]*|auto_duration[0-9]*|@s[0-9]+|p_light)$/);
+  .regex(
+    /^(a_[a-z0-9_]+|light_intensity|auto_bright[0-9]*|auto_duration[0-9]*|@s[0-9]+|p_light|@[a-z][0-9]+|@[a-z][0-9]+:[0-9]+)$/,
+  );
 
 // Environmental sensor types - more flexible approach
 const KNOWN_SENSORS = [
@@ -67,7 +70,7 @@ export const ProtocolSetSchema = z.object({
   measurements_delay: z.number().int().nonnegative().optional(),
 
   // Light pulse configuration
-  pulses: z.array(z.number().int().positive()).optional(),
+  pulses: z.array(z.union([z.number().int().positive(), VariableReferenceSchema])).optional(),
   pulsesize: z.number().int().positive().optional(),
   pulsedistance: z.number().int().positive().optional(),
   pulse_distance: z.array(z.number().int().positive()).optional(),
@@ -165,16 +168,11 @@ const ProtocolSetWithLabelSchema = ProtocolSetSchema.extend({
   label: z.string(), // Required for multi-protocol sets
 });
 
-// Multi-protocol set schema
+// Single and multi-protocol set schema
 export const ProtocolJsonSchema = z.array(
-  z.union([
-    // Multi-protocol configuration
-    z.object({
-      _protocol_set_: z.array(ProtocolSetWithLabelSchema).min(1),
-    }),
-    // Single protocol configuration (label optional)
-    ProtocolSetSchema,
-  ]),
+  ProtocolSetSchema.extend({
+    _protocol_set_: z.array(ProtocolSetWithLabelSchema).min(1).optional(),
+  }),
 );
 
 export type ProtocolSet = z.infer<typeof ProtocolSetSchema>;
@@ -260,7 +258,7 @@ export function extractProtocolSets(protocolJson: ProtocolJson): ProtocolSet[] {
   const sets: ProtocolSet[] = [];
 
   for (const protocol of protocolJson) {
-    if (isMultiProtocolSet(protocol)) {
+    if ("_protocol_set_" in protocol && protocol._protocol_set_) {
       sets.push(...protocol._protocol_set_);
     } else {
       sets.push(protocol);
@@ -302,4 +300,73 @@ export function getDetectorPins(protocolSet: ProtocolSet): number[] {
   protocolSet.detectors.forEach((detectorArray) => detectorArray.forEach((pin) => pins.add(pin)));
 
   return Array.from(pins).sort();
+}
+
+interface PathItem {
+  item: string;
+  arrayIndex?: number;
+}
+
+export function getPathItem(path: (string | number)[]): PathItem | undefined {
+  const item = path.shift();
+  if (item === undefined) {
+    return undefined;
+  }
+  if (typeof item === "string") {
+    return { item };
+  }
+  const arrayIndex = item;
+  const nextItem = path.shift();
+  if (typeof nextItem === "string") {
+    return { item: nextItem, arrayIndex };
+  }
+  return undefined;
+}
+
+export function findProtocolErrorLine(text: string, e: ZodIssue) {
+  // Try to find the line number of the error path in the JSON
+  // This is a best-effort guess, as Zod does not provide line numbers
+  if (e.path.length == 0) return { line: 1, message: e.message };
+  const message = `Item '${e.path[e.path.length - 1]}': ${e.message}`;
+  const codeLines = text.split("\n");
+  let lineNumber = 0;
+  const insideProtocolSet = e.path.includes("_protocol_set_");
+  const missingItem = e.message === "Required";
+
+  if (insideProtocolSet && missingItem) {
+    let pathItem = getPathItem(e.path);
+    let protocolSetArrayFound = false;
+    for (const codeLine of codeLines) {
+      if (codeLine.includes(`"_protocol_set_"`)) {
+        protocolSetArrayFound = true;
+        pathItem = getPathItem(e.path);
+      }
+      if (protocolSetArrayFound && (codeLine.endsWith("}") || codeLine.endsWith("},"))) {
+        if (pathItem?.arrayIndex && pathItem.arrayIndex > 0) {
+          pathItem.arrayIndex--;
+        } else {
+          return { line: lineNumber + 1, message };
+        }
+      }
+      lineNumber++;
+    }
+  } else {
+    let pathItem = getPathItem(e.path);
+    for (const codeLine of codeLines) {
+      if (pathItem === undefined) return { line: lineNumber, message };
+      if (codeLine.includes(`"${pathItem.item}"`)) {
+        if (pathItem.arrayIndex === undefined) {
+          pathItem = getPathItem(e.path);
+        } else {
+          if (pathItem.arrayIndex > 1) {
+            pathItem.arrayIndex--;
+          } else {
+            pathItem = getPathItem(e.path);
+          }
+        }
+      }
+      lineNumber++;
+    }
+  }
+  return { line: lineNumber, message };
 }

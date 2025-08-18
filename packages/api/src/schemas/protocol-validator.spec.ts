@@ -6,6 +6,7 @@ import {
   getEnvironmentalSensors,
   getLightPins,
   getDetectorPins,
+  findProtocolErrorLine,
 } from "./protocol-validator";
 import type { ProtocolSet } from "./protocol-validator";
 
@@ -345,7 +346,7 @@ describe("Comprehensive Protocol JSON Validator", () => {
         expect(isMultiProtocolSet(result.data[0])).toBe(true);
 
         if (isMultiProtocolSet(result.data[0])) {
-          const protocolSet = result.data[0]._protocol_set_;
+          const protocolSet = result.data[0]._protocol_set_ as ProtocolSet[];
           expect(protocolSet).toHaveLength(4);
           expect(protocolSet[0].label).toBe("no_leaf_baseline");
           expect(protocolSet[1].label).toBe("DIRK_ECS");
@@ -374,6 +375,53 @@ describe("Comprehensive Protocol JSON Validator", () => {
       if (result.data?.length === 2) {
         expect(isMultiProtocolSet(result.data[1])).toBe(true);
       }
+    });
+
+    it("should fail to validate complex multi-protocol configuration with errors", () => {
+      const multiProtocol = [
+        {
+          _protocol_set_: [
+            {
+              label: "no_leaf_baseline",
+              environmental: [["light_intensity"], ["temperature_humidity_pressure"]],
+              averages: -1,
+            },
+            {
+              label: "DIRK_ECS",
+              autogain: [
+                [2, 1, 3, 12, 50000],
+                [3, 8, 1, 80, 50000],
+              ],
+              pulse_distance: [1500, 1500, 1500],
+              pulse_length: [["a_d2"], ["a_d2"], ["a_d2"]],
+              nonpulsed_lights_brightness: [["light_intensity"], [0], ["light_intensity"]],
+              environmental: [["thickness"]],
+              averages: 1,
+            },
+            {
+              label: "PAM",
+              pulses: [150, 20, 20, 50, 20],
+              act_intensities: [0, 125, 0, 750, 0],
+              detectors: [[34], [34], [34], [34], [34]],
+              pulsed_lights: [[1], [1], [1], [1], [1]],
+              environmental: [
+                ["light_intensity", 0],
+                ["temperature", 0],
+              ],
+              averages: 1,
+            },
+            {
+              spad: [1],
+              environmental: [["light_intensity"]],
+              averages: 1,
+            },
+          ],
+        },
+      ];
+
+      const result = validateProtocolJson(multiProtocol);
+
+      expect(result.success).toBe(false);
     });
   });
 
@@ -501,7 +549,7 @@ describe("Comprehensive Protocol JSON Validator", () => {
 
       expect(result.success).toBe(true);
 
-      if (result.data?.[0] && isMultiProtocolSet(result.data[0])) {
+      if (result.data?.[0]._protocol_set_) {
         const protocols = result.data[0]._protocol_set_;
         expect(protocols[0].energy_save_timeout).toBe(300000);
         expect(protocols[1].autogain).toHaveLength(2);
@@ -535,5 +583,448 @@ describe("Comprehensive Protocol JSON Validator", () => {
 
       expect(result.success).toBe(true);
     });
+
+    it("should validate corrected UNZA PIRK DIRK LightPotential14 protocol", () => {
+      const protocol = [
+        {
+          // "Share":1 this tells the old PhotosynQ platform to let people share the protocol. This was a workaround to deal with the problem that the platform downloaded the entire set of thousands of of protocols to the App.
+
+          share: 1,
+
+          // "v_arrays" is a list of variables that can be used in the maing part of the code. they are zero-indexes and can be accessed with various indexing pointers, as describved int he following,.
+
+          v_arrays: [
+            [100, 2, 100, 100, 100], // 0: pulses, 5 groups of 100,2,100,100,100 (every group has different pulse rate and/or different intensity (e.g. background light))
+
+            [30, 50, 50, 50, 50, 100],
+
+            [6000, 5000, 4000, 3000],
+
+            ["p_light", 2500],
+
+            [2000, 10000],
+
+            [2000, 2000],
+
+            [40, 320, 320, 320, 2, 320, 200, 200, 200, 200],
+
+            [2000, 2000, 2000],
+          ],
+
+          set_repeats: "#l3",
+
+          // The protocol contains a set of sub-protocols.
+          // set_repeats sets the number of repeats for tthe entire set
+
+          //  "#l3" tells the find the length of the 3rd array in v_arrays
+          //  and set the number of repeats of the entire set of sub-protocols
+
+          // A list containing the set of sub-protocols
+
+          _protocol_set_:
+            // In general, it is a good idea to have a label for each
+            // sub-protocol so that the macro can find the results using
+            // the GetProtocolByLabel command.
+            // Note that if the subprotocol is repeated, the GetProtocolByLabel
+            // command will return a list with all repeats.
+            [
+              { label: "start_time", e_time: 0 },
+
+              // start time sets reports the innitial time
+              // e_time reports the elapsed time.
+              // label is important because it allows the macro to find the data from each
+              // sub-protocols
+
+              { label: "capture_PAR", par_led_start_on_open: 2, averages: 1, do_once: 1 },
+
+              // "par_led_start_on_open": 2 tells instrument to wait until the clamp is opened. While waiting, continuously meaured PAR and reproduce the same value in the clamp using LED #2
+
+              // "do_once":1 tells to perform this sub_protocol only on the first repeat of the set_repeats. (Note this is not zero indexed)
+
+              // "averages": 1, repeat and average only one time (this is the defaul value for "averages" so it is not required.
+
+              { label: "Missing", par_led_start_on_close: 2, do_once: 1 },
+
+              // "par_led_start_on_close": 2 tells instrument to wait until the clamp is closed. While waiting, continuously meaured PAR and reproduce the same value in the clamp using LED #2
+
+              {
+                label: "env",
+                environmental: [
+                  ["light_intensity"],
+                  ["temperature_humidity_pressure"],
+                  ["temperature_humidity_pressure2"],
+                  ["contactless_temp"],
+                  ["compass_and_angle"],
+                ],
+                do_once: 1,
+              },
+
+              // perform a series of environmental sensing measurements
+
+              // [ "light_intensity" ], PAR or
+
+              // [ "temperature_humidity_pressure" ], The first THP sensor
+
+              // [ "temperature_humidity_pressure2" ], The second TMP sensor
+
+              // [ "contactless_temp" ],  Leaf tmperature
+
+              // [ "compass_and_angle" ]  compass and angle
+
+              {
+                label: "autogain",
+                autogain: [
+                  [0, 3, 1, 10, 1200],
+                  [1, 10, 1, 20, 50000],
+                  [2, 1, 3, 20, 50000],
+                ],
+                do_once: 1,
+              },
+
+              // This sub-protocol performs three autogain settings
+              //
+              // "autogain" accepts a list of lists, each sub-list setting up an autogain
+              // process:
+              // [auto_gain_index, led#, detector#, pulse duraction, target ADC value]
+
+              // auto_gain_index is used to insert autogain values infor use in a sub-protocol
+
+              // led#: which measuring led to use
+              // detector# to use
+              // pulse duration in microseconds
+              // attempt to set the amplitude of the led current to give an ADC signal of this amplitude.
+
+              // example:
+
+              // [ 0, 3, 1, 10, 1200 ]
+              // auto_gain_index = 0
+              // led#3 (orange)
+              // detector #1 (top IR)
+              //
+
+              // In the following protocol are defined 3 different sub-protocol: PIRKS, PAM-ABS and PAM-ABS-FR
+              // A sub-protocol is composed of:
+              // 							- a measuring ligh, a pulsed light that will probe the photosynthetic state of the leaf.
+              //							- an actinic light (or background light), a light that will be set to a fix intensity and induce photosynthesis.
+              // A sub-protocol is organized as a serie of measuring pulses with usually a constant intensity and duration,
+              // but often with a variable distance between them (defining the sampling speed) and changes in the background light intensity.
+              // // The pulses can be detected either by:
+              // 								- a detector with a long-pass filter that detect in the infrared,
+              // 								- or a dector detecting in the visible range.
+
+              // We are going to take for example the PIRK sub-protocol that is defined here below with label "PIRK"
+              // The sub-protocol start with a period of pre-illumination, which is a period in which a background light is applied and where NO pulses for measurments are applied,
+              // In this example the PIRK sub-protocol is composed of 5 pulses "block".
+              // Each pulse block tells the instrument:
+              // - which LED to use for the pulsed light ,
+              // - how many pulses are in the block
+              // - what intensity and duration is the measuring pulse,
+              // - the distance between measuring pulses (setting sampling speed)
+              // - which detector to use to measure the pulse
+              // - which LED to use for the background light (actinic light)
+              // - to which intensity the backround light is set
+              // For example, the command "pulses": [ "@n0:0", "@n0:1", "@n0:2", "@n0:3", "@n0:4" ] tells the instrument that there are 5 group of pulses, with an ammount defined in the
+              // v_array 0, at index number 0.
+              // You might notice that the v_array is sometimes called as "@n" or "@s" or "@p", these decorators indicate which indexing to use.
+              // taking an example with v_array = [ [0,1,2,3], [4,5,6] ]
+              // In the case of @n, the indexing is "rigid" and do not change. For example "@n1:0" will refer to the v_array[1][0] which will return: 4.
+              // In the case of @p, the indexing change according the protocol repeat index.
+              // For example "@p0" will refer to the v_array[0][#protocol_repeat] and at the first time the protocol is repeated it will call v_array[0][0] and return 0
+              // In the case @s, the indexing refers to the "set_repeat" which refers to how many time we have looped through the set (main protocol).
+
+              // Another type of indexing is "a_bX", which refers to the intensity values stored in the autogain number X to achieve the desirable brightness
+              // and "a_bX", which refers to the duration of stored in the autogain number X.
+
+              {
+                label: "PIRK",
+                // pre-illumination( [ LED#, intensity, duration ms)
+                pre_illumination: [2, "@s3", "@s4"],
+                // Pulse group identifiers: 5 blocks referencing v_array0 at indices 0–4
+                pulses: ["@n0:0", "@n0:1", "@n0:2", "@n0:3", "@n0:4"],
+                // LED channel(s) for pulsed measuring light (here LED 1 = green)
+                pulsed_lights: [[1], [1], [1], [1], [1]],
+                // Interval between pulses (µs) sets sampling rate
+                pulse_distance: [1000, 1000, 1000, 1000, 1000],
+                // Pulse brightness via autogain2
+                pulsed_lights_brightness: [["a_b2"], ["a_b2"], ["a_b2"], ["a_b2"], ["a_b2"]],
+                // Pulse duration via autogain2
+                pulse_length: [["a_d2"], ["a_d2"], ["a_d2"], ["a_d2"], ["a_d2"]],
+                // Use visible-range detector 3 for each block
+                detectors: [[3], [3], [3], [3], [3]],
+                // Background LEDs during pulses: channels 2 (red) and 4 (blue)
+                nonpulsed_lights: [
+                  [2, 4],
+                  [2, 4],
+                  [2, 4],
+                  [2, 4],
+                  [2, 4],
+                ],
+                // Background brightness: dynamic via set-repeat and autogain
+                nonpulsed_lights_brightness: [
+                  ["@s3", 0],
+                  ["@s3", "@s7"],
+                  ["@s3", 0],
+                  [0, 0],
+                  ["@s3" + "" + "" + "", 0],
+                ],
+                // Number of signal averages per block
+                averages: 1,
+                // How many times to repeat the entire PIRK series
+                protocol_repeats: 1,
+              },
+
+              // This sub-protocol is a bit more complex, it will measure two spectroscopic signal almost simultaneously.
+              // To do this we define two measuring lights and two detectors.
+              // The instrument will pulse first with one light and detect with one detector, and after the "pulse_distance" time
+              // pulse with the other light and detect with the other (or same) dector.
+              // Note that therefore the total elapsed time will double.
+              // For example
+              {
+                label: "PAM-ABS",
+                pre_illumination: [2, "@s3", "@s5"],
+                // Six pulse blocks referencing v_array1
+                pulses: ["@n1:0", "@n1:1", "@n1:2", "@n1:3", "@n1:4", "@n1:5"],
+                // Background LED2 during all pulses
+                nonpulsed_lights: [[2], [2], [2], [2], [2], [2]],
+                // Background brightness: mix of static and dynamic values
+                nonpulsed_lights_brightness: [
+                  ["@s3"],
+                  ["@n2:0"],
+                  ["@n2:1"],
+                  ["@n2:2"],
+                  ["@n2:3"],
+                  ["@s3"],
+                ],
+                // Constant 1ms spacing between pulses
+                pulse_distance: [1000, 1000, 1000, 1000, 1000, 1000],
+                // Dual-channel pulsed brightness from autogain0 and autogain1
+                pulsed_lights_brightness: [
+                  ["a_b0", "a_b1"],
+                  ["a_b0", "a_b1"],
+                  ["a_b0", "a_b1"],
+                  ["a_b0", "a_b1"],
+                  ["a_b0", "a_b1"],
+                  ["a_b0", "a_b1"],
+                ],
+                // Dual-channel pulse durations
+                pulse_length: [
+                  ["a_d0", "a_d1"],
+                  ["a_d0", "a_d1"],
+                  ["a_d0", "a_d1"],
+                  ["a_d0", "a_d1"],
+                  ["a_d0", "a_d1"],
+                  ["a_d0", "a_d1"],
+                ],
+                // Use detector channels 1 & 1 (two measurements per pulse)
+                detectors: [
+                  [1, 1],
+                  [1, 1],
+                  [1, 1],
+                  [1, 1],
+                  [1, 1],
+                  [1, 1],
+                ],
+                // LEDs 3 (amber) & 10 (far-red) for pulses
+                pulsed_lights: [
+                  [3, 10],
+                  [3, 10],
+                  [3, 10],
+                  [3, 10],
+                  [3, 10],
+                  [3, 10],
+                ],
+                averages: 1,
+                protocol_repeats: 1,
+              },
+              {
+                label: "PAM-ABS-FR",
+                // Ten pulse blocks referencing v_array6
+                pulses: [
+                  "@n6:0",
+                  "@n6:1",
+                  "@n6:2",
+                  "@n6:3",
+                  "@n6:4",
+                  "@n6:5",
+                  "@n6:6",
+                  "@n6:7",
+                  "@n6:8",
+                  "@n6:9",
+                ],
+                // Background LEDs 2 (red) & 9 (far-red) during each block
+                nonpulsed_lights: [
+                  [2, 9],
+                  [2, 9],
+                  [2, 9],
+                  [2, 9],
+                  [2, 9],
+                  [2, 9],
+                  [2, 9],
+                  [2, 9],
+                  [2, 9],
+                  [2, 9],
+                ],
+                nonpulsed_lights_brightness: [
+                  ["@s3", 0],
+                  [0, 200],
+                  [0, 400],
+                  [0, 800],
+                  [2500, 800],
+                  [0, 200],
+                  [0, 1600],
+                  [0, 0],
+                  [5000, 500],
+                  [0, 0],
+                ],
+                pulse_distance: [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000],
+                // Dual-channel pulsed brightness same for every block
+                pulsed_lights_brightness: [
+                  ["a_b0", "a_b1"],
+                  ["a_b0", "a_b1"],
+                  ["a_b0", "a_b1"],
+                  ["a_b0", "a_b1"],
+                  ["a_b0", "a_b1"],
+                  ["a_b0", "a_b1"],
+                  ["a_b0", "a_b1"],
+                  ["a_b0", "a_b1"],
+                  ["a_b0", "a_b1"],
+                  ["a_b0", "a_b1"],
+                ],
+                // Dual-channel pulse duration same for each block
+                pulse_length: [
+                  ["a_d0", "a_d1"],
+                  ["a_d0", "a_d1"],
+                  ["a_d0", "a_d1"],
+                  ["a_d0", "a_d1"],
+                  ["a_d0", "a_d1"],
+                  ["a_d0", "a_d1"],
+                  ["a_d0", "a_d1"],
+                  ["a_d0", "a_d1"],
+                  ["a_d0", "a_d1"],
+                  ["a_d0", "a_d1"],
+                ],
+                // Use detectors 1 & 1
+                detectors: [
+                  [1, 1],
+                  [1, 1],
+                  [1, 1],
+                  [1, 1],
+                  [1, 1],
+                  [1, 1],
+                  [1, 1],
+                  [1, 1],
+                  [1, 1],
+                  [1, 1],
+                ],
+                pulsed_lights: [
+                  [3, 10],
+                  [3, 10],
+                  [3, 10],
+                  [3, 10],
+                  [3, 10],
+                  [3, 10],
+                  [3, 10],
+                  [3, 10],
+                  [3, 10],
+                  [3, 10],
+                ],
+                averages: 1,
+                protocol_repeats: 1,
+                do_once: -1,
+              },
+              // Measure SPAD
+              { label: "SPAD", spad: [1], averages: 1, dw: [14, 0], do_once: -1 },
+              // Measure elapsed time
+              { label: "end_time", e_time: 0 },
+              // Notify end measurements through LED
+              { label: "measuring_light", hello: [1] },
+              // Print the calibration values stored in memory
+              { label: "print_memory", recall: ["settings"] },
+            ],
+        },
+      ];
+
+      const result = validateProtocolJson(protocol);
+
+      expect(result.success).toBe(true);
+    });
   });
+});
+
+it("findProtocolErrorLine", () => {
+  const code =
+    "[\n" +
+    "  {\n" +
+    '    "share": 1,\n' +
+    '    "v_arrays": [\n' +
+    "      [\n" +
+    "        100\n" +
+    "      ],\n" +
+    "      [\n" +
+    "        200\n" +
+    "      ],\n" +
+    "      [\n" +
+    "        2000\n" +
+    "      ]\n" +
+    "    ],\n" +
+    '    "set_repeats": "#l3",\n' +
+    '    "_protocol_set_": [\n' +
+    "      {\n" +
+    '        "label": "start_time",\n' +
+    '        "e_time": 0\n' +
+    "      },\n" +
+    "      {\n" +
+    '        "label": "capture_PAR",\n' +
+    '        "par_led_start_on_open": 2,\n' +
+    '        "averages": -21,\n' +
+    '        "do_once": 1\n' +
+    "      },\n" +
+    "      {\n" +
+    '        "par_led_start_on_close": 2,\n' +
+    '        "do_once": 1,\n' +
+    '        "averages": -1\n' +
+    "      },\n" +
+    "      {\n" +
+    '        "label": "env",\n' +
+    '        "environmental": [\n' +
+    "          [\n" +
+    '            "light_intensity"\n' +
+    "          ],\n" +
+    "          [\n" +
+    '            "temperature_humidity_pressure"\n' +
+    "          ],\n" +
+    "          [\n" +
+    '            "temperature_humidity_pressure2"\n' +
+    "          ],\n" +
+    "          [\n" +
+    '            "contactless_temp"\n' +
+    "          ],\n" +
+    "          [\n" +
+    '            "compass_and_angle"\n' +
+    "          ]\n" +
+    "        ],\n" +
+    '        "do_once": 1\n' +
+    "      }\n" +
+    "    ]\n" +
+    "  }\n" +
+    "]";
+
+  const protocol: unknown = JSON.parse(code);
+  const result = validateProtocolJson(protocol);
+  expect(result.success).toBe(false);
+  expect(result.error?.length).toBe(3);
+  if (result.error !== undefined) {
+    const errorInfo1 = findProtocolErrorLine(code, result.error[0]);
+    expect(errorInfo1).toStrictEqual({
+      line: 24,
+      message: "Item 'averages': Number must be greater than 0",
+    });
+    const errorInfo2 = findProtocolErrorLine(code, result.error[1]);
+    expect(errorInfo2).toStrictEqual({ line: 31, message: "Item 'label': Required" });
+    const errorInfo3 = findProtocolErrorLine(code, result.error[2]);
+    expect(errorInfo3).toStrictEqual({
+      line: 30,
+      message: "Item 'averages': Number must be greater than 0",
+    });
+  }
 });
