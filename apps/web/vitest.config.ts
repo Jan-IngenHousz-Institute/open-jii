@@ -9,6 +9,8 @@ const aliasConfig = defineConfig({
     alias: {
       "@": resolve(__dirname, "."),
       "@/": resolve(__dirname, ".") + "/",
+      "~": resolve(__dirname, "."),
+      "~/": resolve(__dirname, ".") + "/",
     },
   },
 });

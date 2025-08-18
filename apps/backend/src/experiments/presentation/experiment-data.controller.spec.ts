@@ -58,10 +58,10 @@ describe("ExperimentDataController", () => {
       };
 
       // Spy on databricksAdapter methods
-      jest.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(success(mockUploadResponse));
-      jest
-        .spyOn(databricksAdapter, "triggerExperimentPipeline")
-        .mockResolvedValue(success(mockPipelineResponse));
+      vi.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(success(mockUploadResponse));
+      vi.spyOn(databricksAdapter, "triggerExperimentPipeline").mockResolvedValue(
+        success(mockPipelineResponse),
+      );
 
       // Get the path
       const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
@@ -149,11 +149,9 @@ describe("ExperimentDataController", () => {
       const nonExistentId = faker.string.uuid();
 
       // Mock repository to return no experiment found
-      jest
-        .spyOn(testApp.module.get("ExperimentRepository"), "findOne")
-        .mockResolvedValue(
-          failure(AppError.notFound(`Experiment with ID ${nonExistentId} not found`)),
-        );
+      vi.spyOn(testApp.module.get("ExperimentRepository"), "findOne").mockResolvedValue(
+        failure(AppError.notFound(`Experiment with ID ${nonExistentId} not found`)),
+      );
 
       // Get the path
       const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
@@ -251,9 +249,9 @@ describe("ExperimentDataController", () => {
       });
 
       // Mock databricksAdapter to simulate upload failure
-      jest
-        .spyOn(databricksAdapter, "uploadFile")
-        .mockResolvedValue(failure(AppError.internal("Failed to upload file to Databricks")));
+      vi.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(
+        failure(AppError.internal("Failed to upload file to Databricks")),
+      );
 
       // Get the path
       const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {

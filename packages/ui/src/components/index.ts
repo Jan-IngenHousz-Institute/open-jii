@@ -43,6 +43,7 @@ export * from "./slider";
 export * from "./switch";
 export * from "./table";
 export * from "./tabs";
+export * from "./rich-textarea";
 export * from "./textarea";
 export * from "./theme";
 export * from "./toast";

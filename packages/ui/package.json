@@ -47,6 +47,7 @@
     "@repo/vitest-config": "workspace:*",
     "@testing-library/jest-dom": "catalog:testing",
     "@testing-library/react": "catalog:testing",
+    "@testing-library/user-event": "catalog:testing",
     "@types/react": "catalog:react19",
     "@vitest/coverage-v8": "catalog:testing",
     "eslint": "catalog:",
@@ -54,7 +55,6 @@
     "prettier": "catalog:",
     "react": "catalog:react19",
     "react-dom": "catalog:react19",
-    "ts-jest": "^29.3.2",
     "typescript": "catalog:",
     "vitest": "catalog:testing",
     "zod": "catalog:"

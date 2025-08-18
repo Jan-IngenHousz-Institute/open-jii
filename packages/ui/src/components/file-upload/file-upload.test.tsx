@@ -1,5 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { vi, describe, it, expect, beforeEach } from "vitest";
+import React from "react";
 
 import { FileUpload } from "./file-upload";
 import type { ValidationResult } from "./file-upload";
@@ -32,7 +34,7 @@ const createMockFileList = (files: File[]): FileList => {
 };
 
 describe("FileUpload", () => {
-  const mockOnFileSelect = jest.fn();
+  const mockOnFileSelect = vi.fn();
 
   beforeEach(() => {
     mockOnFileSelect.mockClear();
@@ -74,7 +76,6 @@ describe("FileUpload", () => {
       render(<FileUpload onFileSelect={mockOnFileSelect} />);
 
       const file = createMockFile("test.txt", 1000);
-      const fileList = createMockFileList([file]);
 
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
       await user.upload(fileInput, file);
@@ -95,7 +96,6 @@ describe("FileUpload", () => {
     });
 
     it("shows selected files count", async () => {
-      const user = userEvent.setup();
       render(<FileUpload onFileSelect={mockOnFileSelect} multiple />);
 
       const files = [createMockFile("test1.txt", 1000), createMockFile("test2.txt", 2000)];
@@ -240,8 +240,8 @@ describe("FileUpload", () => {
     });
 
     it("runs custom validator", async () => {
-      const mockValidator = jest.fn(
-        (files: FileList): ValidationResult => ({
+      const mockValidator = vi.fn(
+        (): ValidationResult => ({
           isValid: false,
           errors: ["Custom validation error"],
         }),
@@ -268,8 +268,8 @@ describe("FileUpload", () => {
     });
 
     it("passes validation with valid files", async () => {
-      const mockValidator = jest.fn(
-        (files: FileList): ValidationResult => ({
+      const mockValidator = vi.fn(
+        (): ValidationResult => ({
           isValid: true,
           errors: [],
         }),
