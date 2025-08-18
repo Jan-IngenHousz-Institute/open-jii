@@ -71,9 +71,6 @@ export function FileUpload({
   children,
   ...props
 }: FileUploadProps) {
-  console.log("=== FileUpload Component Loaded ===");
-  console.log("Props:", { directory, accept, multiple });
-  
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = React.useState(false);
   const [selectedFiles, setSelectedFiles] = React.useState<FileList | null>(null);
@@ -90,14 +87,9 @@ export function FileUpload({
 
   // Debug effect to check browser support
   React.useEffect(() => {
-    console.log("🚀 EFFECT RUNNING");
-    console.log("webkitdirectory support:", "webkitdirectory" in document.createElement("input"));
-    console.log("directory prop:", directory);
-
-    if (fileInputRef.current) {
-      console.log("🔧 Input element found");
-      console.log("webkitdirectory attr:", fileInputRef.current.getAttribute("webkitdirectory"));
-      console.log("multiple attr:", fileInputRef.current.getAttribute("multiple"));
+    if (fileInputRef.current && directory) {
+      // Ensure webkitdirectory is properly set for folder selection
+      fileInputRef.current.setAttribute("webkitdirectory", "");
     }
   }, [directory]);
 
@@ -151,30 +143,6 @@ export function FileUpload({
   );
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("🔥 CHANGE EVENT FIRED!");
-    console.log("Files count:", e.target.files?.length);
-    console.log("Directory mode:", directory);
-    
-    if (e.target.files && e.target.files.length > 0) {
-      console.log("Files detail:");
-      for (let i = 0; i < Math.min(5, e.target.files.length); i++) {
-        const file = e.target.files[i];
-        if (file) {
-          console.log(`File ${i}:`, {
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            webkitRelativePath: file.webkitRelativePath,
-            lastModified: file.lastModified
-          });
-        }
-      }
-      
-      if (e.target.files.length > 5) {
-        console.log(`... and ${e.target.files.length - 5} more files`);
-      }
-    }
-    
     handleFileSelection(e.target.files);
   };
 
@@ -194,14 +162,28 @@ export function FileUpload({
     e.preventDefault();
     setIsDragOver(false);
     if (!disabled) {
+      // For folder drops, we need to use webkitGetAsEntry if available
+      if (directory && e.dataTransfer.items) {
+        const items = Array.from(e.dataTransfer.items);
+        const entries = items.map(item => item.webkitGetAsEntry?.());
+        
+        // Check if we have directory entries
+        const hasDirectories = entries.some(entry => entry?.isDirectory);
+        
+        if (hasDirectories) {
+          // For directories, we need to let the user know to use click selection
+          // as drag and drop doesn't properly support folder traversal
+          alert("Please use the 'click to browse' option for folder selection. Drag and drop doesn't fully support folder structures.");
+          return;
+        }
+      }
+      
       handleFileSelection(e.dataTransfer.files);
     }
   };
 
   const handleClick = () => {
-    console.log("🎯 CLICK EVENT!");
     if (!disabled && fileInputRef.current) {
-      console.log("📁 Triggering folder selection");
       fileInputRef.current.click();
     }
   };
@@ -275,9 +257,11 @@ export function FileUpload({
       <div className="text-center">
         <Upload className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
         <h3 className="mb-2 text-lg font-medium">
-          Drag and drop your {directory ? "folder" : "files"} here
+          {directory ? "Click to browse for a folder" : "Drag and drop your files here"}
         </h3>
-        <p className="text-muted-foreground text-sm">or click to browse</p>
+        <p className="text-muted-foreground text-sm">
+          {directory ? "Folder drag and drop is not supported - please click to select" : "or click to browse"}
+        </p>
       </div>
     );
   };
