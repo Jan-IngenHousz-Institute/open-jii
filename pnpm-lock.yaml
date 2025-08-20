@@ -67,6 +67,9 @@ catalogs:
     '@testing-library/react':
       specifier: ^16.3.0
       version: 16.3.0
+    '@testing-library/user-event':
+      specifier: ^14.5.2
+      version: 14.6.1
     '@vitest/coverage-v8':
       specifier: ^3.2.4
       version: 3.2.4
@@ -611,6 +614,9 @@ importers:
       '@testing-library/react':
         specifier: catalog:testing
         version: 16.3.0(@testing-library/dom@10.4.0)(@types/react-dom@19.1.5(@types/react@19.1.4))(@types/react@19.1.4)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@testing-library/user-event':
+        specifier: catalog:testing
+        version: 14.6.1(@testing-library/dom@10.4.0)
       '@types/node':
         specifier: 'catalog:'
         version: 22.15.30
@@ -7512,6 +7518,12 @@ packages:
         optional: true
       '@types/react-dom':
         optional: true
+
+  '@testing-library/user-event@14.6.1':
+    resolution: {integrity: sha512-vq7fv0rnt+QTXgPxr5Hjc210p6YKq2kmdziLgnsZGgLJ9e6VAShx1pACLuRjd/AS/sr7phAR58OIIpf0LlmQNw==}
+    engines: {node: '>=12', npm: '>=6'}
+    peerDependencies:
+      '@testing-library/dom': '>=7.21.4'
 
   '@tippyjs/react@4.2.6':
     resolution: {integrity: sha512-91RicDR+H7oDSyPycI13q3b7o4O60wa2oRbjlz2fyRLmHImc4vyDwuUP8NtZaN0VARJY5hybvDYrFzhY9+Lbyw==}
@@ -20217,7 +20229,7 @@ snapshots:
       '@babel/helper-compilation-targets': 7.27.2
       '@babel/helper-plugin-utils': 7.27.1
       '@babel/plugin-syntax-object-rest-spread': 7.8.3(@babel/core@7.27.1)
-      '@babel/plugin-transform-parameters': 7.27.1(@babel/core@7.27.1)
+      '@babel/plugin-transform-parameters': 7.27.7(@babel/core@7.27.1)
 
   '@babel/plugin-proposal-private-property-in-object@7.21.0-placeholder-for-preset-env.2(@babel/core@7.12.9)':
     dependencies:
@@ -20894,6 +20906,11 @@ snapshots:
   '@babel/plugin-transform-parameters@7.27.7(@babel/core@7.12.9)':
     dependencies:
       '@babel/core': 7.12.9
+      '@babel/helper-plugin-utils': 7.27.1
+
+  '@babel/plugin-transform-parameters@7.27.7(@babel/core@7.27.1)':
+    dependencies:
+      '@babel/core': 7.27.1
       '@babel/helper-plugin-utils': 7.27.1
 
   '@babel/plugin-transform-private-methods@7.27.1(@babel/core@7.12.9)':
@@ -21951,7 +21968,7 @@ snapshots:
       '@babel/preset-env': 7.27.2(@babel/core@7.27.1)
       '@babel/preset-react': 7.27.1(@babel/core@7.27.1)
       '@babel/preset-typescript': 7.27.1(@babel/core@7.27.1)
-      '@babel/runtime': 7.27.1
+      '@babel/runtime': 7.28.3
       '@babel/runtime-corejs3': 7.27.1
       '@babel/traverse': 7.27.1
       '@docusaurus/logger': 3.8.1
@@ -28882,6 +28899,10 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.1.4
       '@types/react-dom': 19.1.5(@types/react@19.1.4)
+
+  '@testing-library/user-event@14.6.1(@testing-library/dom@10.4.0)':
+    dependencies:
+      '@testing-library/dom': 10.4.0
 
   '@tippyjs/react@4.2.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
     dependencies:
@@ -38779,7 +38800,7 @@ snapshots:
 
   react-loadable-ssr-addon-v5-slorber@1.0.1(@docusaurus/react-loadable@6.0.0(react@19.1.0))(webpack@5.99.8(@swc/core@1.11.24)):
     dependencies:
-      '@babel/runtime': 7.27.1
+      '@babel/runtime': 7.28.3
       react-loadable: '@docusaurus/react-loadable@6.0.0(react@19.1.0)'
       webpack: 5.99.8(@swc/core@1.11.24)
 
@@ -39016,13 +39037,13 @@ snapshots:
 
   react-router-config@5.1.1(react-router@5.3.4(react@19.1.0))(react@19.1.0):
     dependencies:
-      '@babel/runtime': 7.27.1
+      '@babel/runtime': 7.28.3
       react: 19.1.0
       react-router: 5.3.4(react@19.1.0)
 
   react-router-dom@5.3.4(react@19.1.0):
     dependencies:
-      '@babel/runtime': 7.27.1
+      '@babel/runtime': 7.28.3
       history: 4.10.1
       loose-envify: 1.4.0
       prop-types: 15.8.1
@@ -39033,7 +39054,7 @@ snapshots:
 
   react-router@5.3.4(react@19.1.0):
     dependencies:
-      '@babel/runtime': 7.27.1
+      '@babel/runtime': 7.28.3
       history: 4.10.1
       hoist-non-react-statics: 3.3.2
       loose-envify: 1.4.0
