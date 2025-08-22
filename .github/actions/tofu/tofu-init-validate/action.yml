@@ -1,0 +1,14 @@
+name: "OpenTofu Init and Validate"
+description: "Initializes OpenTofu and validates the configuration"
+runs:
+  using: "composite"
+  steps:
+    - name: OpenTofu Init
+      shell: bash
+      working-directory: infrastructure/env/${{ env.environment }}
+      run: tofu init
+
+    - name: OpenTofu Validate
+      shell: bash
+      working-directory: infrastructure/env/${{ env.environment }}
+      run: tofu validate
