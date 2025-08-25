@@ -28,14 +28,23 @@ export const zProtocolIdPathParam = z.object({
 
 // Request body schemas
 export const zCreateProtocolRequestBody = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .max(255, "Name must be at most 255 characters"),
   description: z.string().optional(),
   code: z.record(z.unknown()).array(),
   family: zSensorFamily,
 });
 
 export const zUpdateProtocolRequestBody = z.object({
-  name: z.string().optional(),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .max(255, "Name must be at most 255 characters")
+    .optional(),
   description: z.string().optional(),
   code: z.record(z.unknown()).array().optional(),
   family: zSensorFamily.optional(),

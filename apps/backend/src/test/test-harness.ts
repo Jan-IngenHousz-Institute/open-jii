@@ -60,7 +60,9 @@ export class TestHarness {
         imports: this._imports,
       }).compile();
 
-      this.app = this._module.createNestApplication<INestApplication<App>>();
+      this.app = this._module.createNestApplication<INestApplication<App>>({
+        logger: false,
+      });
       await this.app.init();
       this._request = request(this.app.getHttpServer());
     }
@@ -93,12 +95,19 @@ export class TestHarness {
       this.app = null;
     }
 
-    // Close database connections
-    await this.database.$client.end();
-
     // Clean up nock
     nock.cleanAll();
     nock.enableNetConnect();
+  }
+
+  /**
+   * Global teardown that closes database connections - only call this once at the very end
+   */
+  public async globalTeardown() {
+    await this.teardown();
+
+    // Close database connections
+    await this.database.$client.end();
   }
 
   /**
@@ -172,7 +181,7 @@ export class TestHarness {
 
   // Mock the auth session for testing
   private mockUserSession(userId: string) {
-    jest.spyOn(authExpress, "getSession").mockResolvedValue({
+    vi.spyOn(authExpress, "getSession").mockResolvedValue({
       user: {
         id: userId,
         name: "Test User",
@@ -185,7 +194,7 @@ export class TestHarness {
 
   // Mock no session for unauthorized tests
   private mockNoSession() {
-    jest.spyOn(authExpress, "getSession").mockResolvedValue(null);
+    vi.spyOn(authExpress, "getSession").mockResolvedValue(null);
   }
 
   // HTTP request methods

@@ -2,10 +2,32 @@ import * as React from "react";
 
 import { cn } from "../lib/utils";
 
-export type InputProps = React.ComponentProps<"input">;
+export type InputProps = React.ComponentProps<"input"> & {
+  trim?: boolean;
+};
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, trim, onBlur, ...props }, ref) => {
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+      if (trim) {
+        const value = e.target.value.trim();
+        if (e.target.value !== value) {
+          e.target.value = value;
+          if (props.onChange) {
+            // Create a synthetic event with the trimmed value
+            const event = {
+              ...e,
+              target: { ...e.target, value },
+            };
+            props.onChange(event);
+          }
+        }
+      }
+      if (onBlur) {
+        onBlur(e);
+      }
+    };
+
     return (
       <input
         type={type}
@@ -14,6 +36,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           className,
         )}
         ref={ref}
+        onBlur={trim ? handleBlur : onBlur}
         {...props}
       />
     );

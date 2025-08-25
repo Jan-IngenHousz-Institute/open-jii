@@ -29,6 +29,10 @@ NestJS API with Drizzle ORM for databases and Zod for validation.
 
 AWS infrastructure managed with OpenTofu (formerly Terraform) and Databricks for data processing pipelines.
 
+## Codecov
+
+[![codecov](https://codecov.io/gh/Jan-IngenHousz-Institute/open-jii/graph/badge.svg?token=RG5R4PUU88)](https://codecov.io/gh/Jan-IngenHousz-Institute/open-jii)
+
 ## Getting Started
 
 ### Prerequisites

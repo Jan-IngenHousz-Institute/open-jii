@@ -1,6 +1,7 @@
-import type { ExecutionContext } from "@nestjs/common";
 import { UnauthorizedException } from "@nestjs/common";
+import type { ExecutionContext } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
+import type { MockInstance } from "vitest";
 
 import * as authExpress from "@repo/auth/express";
 
@@ -8,7 +9,7 @@ import { AuthGuard } from "./auth.guard";
 
 describe("AuthGuard", () => {
   let authGuard: AuthGuard;
-  let mockGetSession: jest.SpyInstance;
+  let mockGetSession: MockInstance;
 
   beforeEach(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -18,11 +19,11 @@ describe("AuthGuard", () => {
     authGuard = moduleRef.get<AuthGuard>(AuthGuard);
 
     // Mock the getSession function from @repo/auth/express
-    mockGetSession = jest.spyOn(authExpress, "getSession") as jest.SpyInstance;
+    mockGetSession = vi.spyOn(authExpress, "getSession");
   });
 
   afterEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
   });
 
   it("should be defined", () => {
@@ -39,10 +40,10 @@ describe("AuthGuard", () => {
       };
       const mockRequest = { user: null };
       const mockHttpContext = {
-        getRequest: jest.fn().mockReturnValue(mockRequest),
+        getRequest: vi.fn().mockReturnValue(mockRequest),
       };
       const mockContext = {
-        switchToHttp: jest.fn().mockReturnValue(mockHttpContext),
+        switchToHttp: vi.fn().mockReturnValue(mockHttpContext),
       } as unknown as ExecutionContext;
 
       // Mock the session to return a valid session
@@ -61,10 +62,10 @@ describe("AuthGuard", () => {
       // Arrange
       const mockRequest = {};
       const mockHttpContext = {
-        getRequest: jest.fn().mockReturnValue(mockRequest),
+        getRequest: vi.fn().mockReturnValue(mockRequest),
       };
       const mockContext = {
-        switchToHttp: jest.fn().mockReturnValue(mockHttpContext),
+        switchToHttp: vi.fn().mockReturnValue(mockHttpContext),
       } as unknown as ExecutionContext;
 
       // Mock the session to return null (no session)

@@ -13,7 +13,11 @@
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false",
-    "ui-add": "pnpm dlx shadcn@latest add && prettier src --write --list-different"
+    "ui-add": "pnpm dlx shadcn@latest add && prettier src --write --list-different",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
@@ -40,11 +44,19 @@
     "@repo/eslint-config": "workspace:*",
     "@repo/tailwind-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
+    "@testing-library/jest-dom": "catalog:testing",
+    "@testing-library/react": "catalog:testing",
+    "@testing-library/user-event": "catalog:testing",
     "@types/react": "catalog:react19",
+    "@vitest/coverage-v8": "catalog:testing",
     "eslint": "catalog:",
+    "jsdom": "catalog:testing",
     "prettier": "catalog:",
     "react": "catalog:react19",
+    "react-dom": "catalog:react19",
     "typescript": "catalog:",
+    "vitest": "catalog:testing",
     "zod": "catalog:"
   },
   "peerDependencies": {
