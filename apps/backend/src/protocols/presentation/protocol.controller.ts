@@ -170,9 +170,11 @@ export class ProtocolController {
         };
       }
 
-      const validationResult = validateProtocolCode(body.code, this.logger);
-      if (validationResult.isFailure()) {
-        return handleFailure(validationResult, this.logger);
+      if (body.code !== undefined) {
+        const validationResult = validateProtocolCode(body.code, this.logger);
+        if (validationResult.isFailure()) {
+          return handleFailure(validationResult, this.logger);
+        }
       }
 
       // Convert API contract body to DTO with proper JSON handling
