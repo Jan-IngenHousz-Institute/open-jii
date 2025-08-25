@@ -16,7 +16,14 @@
     "active": "Actief",
     "completed": "Voltooid",
     "paused": "Gepauzeerd",
-    "cancelled": "Geannuleerd"
+    "cancelled": "Geannuleerd",
+    "archived": "Gearchiveerd",
+    "stale": "Verlopen",
+    "provisioning": "Inrichten"
+  },
+  "visibility": {
+    "private": "Privé",
+    "public": "Publiek"
   },
   "actions": {
     "start": "Experiment starten",
@@ -35,6 +42,30 @@
     "downloadData": "Gegevens downloaden",
     "noMeasurements": "Nog geen metingen geregistreerd"
   },
+  "flow": {
+    "title": "Experiment Flow",
+    "description": "Ontwerp en visualiseer uw experimentworkflow door verschillende stappen en bewerkingen te verbinden.",
+    "editDescription": "Ontwerp en visualiseer uw experimentworkflow door verschillende stappen en bewerkingen te verbinden.",
+    "staticDescription": "Visueel overzicht van de experimentworkflow",
+    "tabLabel": "Flow",
+    "saving": "Opslaan...",
+    "saveFlow": "Flow opslaan"
+  },
+  "overview": "Overzicht",
+  "data": "Gegevens",
+  "experiment": "Experiment",
+  "experimentId": "Experiment-ID",
+  "created": "Gemaakt",
+  "updated": "Bijgewerkt",
+  "descriptionTitle": "Beschrijving",
+  "manageExperimentDescription": "Bekijk en beheer experimentdetails, gegevens, flow en instellingen.",
+  "loading": "Laden...",
+  "failedToLoad": "Experiment laden mislukt",
+  "notFound": "Experiment niet gevonden",
+  "noPermissionToAccess": "U heeft geen toestemming om dit experiment te bekijken",
+  "errorLoadingExperiment": "Er is een fout opgetreden bij het laden van het experiment",
+  "experimentNotFound": "Het experiment dat u zoekt kon niet worden gevonden",
+  "needMemberAccess": "U heeft leden toegang nodig voor deze actie",
   "validation": {
     "nameRequired": "Experimentnaam is verplicht",
     "nameMinLength": "Naam moet minimaal 3 tekens bevatten",

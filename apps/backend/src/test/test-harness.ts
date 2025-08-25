@@ -335,10 +335,10 @@ export class TestHarness {
 
     const questionContent =
       kind === "yes_no"
-        ? { kind: "yes_no" as const, text: "Q1" }
+        ? { kind: "yes_no" as const, text: "Q1", required: false }
         : kind === "open_ended"
-          ? { kind: "open_ended" as const, text: "Q1" }
-          : { kind: "multi_choice" as const, text: "Q1", options: ["a", "b"] };
+          ? { kind: "open_ended" as const, text: "Q1", required: false }
+          : { kind: "multi_choice" as const, text: "Q1", options: ["a", "b"], required: false };
 
     const nodes: (
       | {
