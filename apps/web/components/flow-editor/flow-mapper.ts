@@ -42,6 +42,44 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+// Object maps for type conversions
+const REACT_FLOW_TO_API_NODE_TYPE = {
+  QUESTION: "question",
+  INSTRUCTION: "instruction",
+  MEASUREMENT: "measurement",
+} as const;
+
+const QUESTION_KIND_TO_ANSWER_TYPE = {
+  yes_no: "BOOLEAN",
+  multi_choice: "SELECT",
+  number: "NUMBER",
+  open_ended: "TEXT",
+} as const;
+
+const ANSWER_TYPE_TO_QUESTION_CONTENT = {
+  SELECT: (text: string, required: boolean, options?: string[]): QuestionContent => ({
+    kind: "multi_choice",
+    text,
+    options: options ?? [],
+    required,
+  }),
+  BOOLEAN: (text: string, required: boolean): QuestionContent => ({
+    kind: "yes_no",
+    text,
+    required,
+  }),
+  NUMBER: (text: string, required: boolean): QuestionContent => ({
+    kind: "number",
+    text,
+    required,
+  }),
+  TEXT: (text: string, required: boolean): QuestionContent => ({
+    kind: "open_ended",
+    text,
+    required,
+  }),
+} as const;
+
 /**
  * FlowMapper centralizes conversion between API flow representations and React Flow graph structures.
  * toReactFlow: API -> React Flow (adds ephemeral layout info)
@@ -99,13 +137,7 @@ export class FlowMapper {
     const apiNodes = nodes.map((node) => {
       const data = node.data as unknown as FlowNodeDataWithSpec;
       const nodeType =
-        node.type === "QUESTION"
-          ? ("question" as const)
-          : node.type === "INSTRUCTION"
-            ? ("instruction" as const)
-            : node.type === "MEASUREMENT"
-              ? ("measurement" as const)
-              : ("instruction" as const);
+        REACT_FLOW_TO_API_NODE_TYPE[node.type as keyof typeof REACT_FLOW_TO_API_NODE_TYPE];
 
       const nodeTitle = typeof data.title === "string" ? data.title : "";
       const nodeDescription = typeof data.description === "string" ? data.description : "";
@@ -123,41 +155,15 @@ export class FlowMapper {
         const stepSpec = data.stepSpecification as QuestionUI | undefined;
 
         if (stepSpec) {
-          // Convert QuestionUI to QuestionContent format
-          let candidate: QuestionContent;
+          // Convert QuestionUI to QuestionContent format using object map
           const questionText = stepSpec.validationMessage ?? text;
 
-          if (
-            stepSpec.answerType === "SELECT" &&
-            stepSpec.options &&
-            Array.isArray(stepSpec.options)
-          ) {
-            candidate = {
-              kind: "multi_choice",
-              text: questionText,
-              options: stepSpec.options,
-              required: stepSpec.required,
-            };
-          } else if (stepSpec.answerType === "BOOLEAN") {
-            candidate = {
-              kind: "yes_no",
-              text: questionText,
-              required: stepSpec.required,
-            };
-          } else if (stepSpec.answerType === "NUMBER") {
-            candidate = {
-              kind: "number",
-              text: questionText,
-              required: stepSpec.required,
-            };
-          } else {
-            // Handle TEXT as open_ended
-            candidate = {
-              kind: "open_ended",
-              text: questionText,
-              required: stepSpec.required,
-            };
-          }
+          const contentGenerator = ANSWER_TYPE_TO_QUESTION_CONTENT[stepSpec.answerType];
+          const candidate = contentGenerator(
+            questionText,
+            stepSpec.required,
+            stepSpec.answerType === "SELECT" ? stepSpec.options : undefined,
+          );
 
           const valid = parseIfValid(zQuestionContent, candidate);
           if (valid) {
@@ -244,17 +250,7 @@ export class FlowMapper {
       const content = apiContent as QuestionContent;
 
       // Convert QuestionContent back to QuestionUI format
-      let answerType: QuestionUI["answerType"] = "TEXT";
-
-      if (content.kind === "yes_no") {
-        answerType = "BOOLEAN";
-      } else if (content.kind === "multi_choice") {
-        answerType = "SELECT";
-      } else if (content.kind === "number") {
-        answerType = "NUMBER";
-      } else {
-        answerType = "TEXT"; // open_ended or default
-      }
+      const answerType = QUESTION_KIND_TO_ANSWER_TYPE[content.kind];
 
       const questionUI: QuestionUI = {
         answerType,

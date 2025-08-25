@@ -53,12 +53,6 @@ export function EdgeSidePanel({
     if (open && selectedEdge) {
       // Immediately update content when opening
       setDisplayEdge(selectedEdge);
-    } else if (!open) {
-      // Delay clearing content until transition ends (300ms)
-      const timeout = setTimeout(() => {
-        setDisplayEdge(null);
-      }, 300);
-      return () => clearTimeout(timeout);
     }
   }, [open, selectedEdge]);
 

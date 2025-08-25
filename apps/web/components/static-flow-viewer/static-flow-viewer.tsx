@@ -1,5 +1,7 @@
 "use client";
 
+import { ArrowRight } from "lucide-react";
+
 import type { Flow } from "@repo/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
 
@@ -66,8 +68,10 @@ export function StaticFlowViewer({
           <div className="space-y-2">
             <h4 className="text-sm font-medium">Flow Connections:</h4>
             {flow.graph.edges.map((edge) => (
-              <div key={edge.id} className="text-muted-foreground text-sm">
-                {edge.source} → {edge.target}
+              <div key={edge.id} className="text-muted-foreground flex items-center gap-1 text-sm">
+                {edge.source}
+                <ArrowRight className="inline h-4 w-4" />
+                {edge.target}
                 {edge.label && ` (${edge.label})`}
               </div>
             ))}

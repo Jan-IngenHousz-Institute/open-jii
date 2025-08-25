@@ -1,7 +1,7 @@
 "use client";
 
 import { useDebounce } from "@/hooks/useDebounce";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useProtocolSearch } from "~/hooks/protocol/useProtocolSearch/useProtocolSearch";
 
 import type { Protocol } from "@repo/api";
@@ -29,9 +29,7 @@ export function MeasurementPanel({
   const { protocols: protocolList, isLoading: isFetchingProtocols } =
     useProtocolSearch(debouncedProtocolSearch);
 
-  const availableProtocols = useMemo<Protocol[]>(() => {
-    return protocolList ?? [];
-  }, [protocolList]);
+  const availableProtocols: Protocol[] = protocolList ?? [];
 
   const handleAddProtocol = (protocolId: string) => {
     if (disabled) return;

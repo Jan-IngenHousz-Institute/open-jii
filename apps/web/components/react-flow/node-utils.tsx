@@ -6,6 +6,13 @@ import { createContext, useContext } from "react";
 import { BaseNode } from "./base-node";
 import { nodeTypeColorMap } from "./node-config";
 
+// Object map for default step specifications by node type
+const DEFAULT_STEP_SPECIFICATIONS = {
+  QUESTION: { kind: "open_ended", text: "" },
+  MEASUREMENT: { protocolId: undefined },
+  ANALYSIS: {},
+} as const;
+
 // Utility: map a possibly persisted string to a Position enum
 export function toPosition(pos?: string | Position): Position | undefined {
   if (!pos) return undefined;
@@ -32,10 +39,8 @@ export function createNewNode(
 ): Node {
   const cfg = nodeTypeColorMap[type as keyof typeof nodeTypeColorMap];
   const displayTitle = title ?? `${type.charAt(0)}${type.slice(1).toLowerCase()} Node`;
-  let stepSpecification: Record<string, unknown> | undefined;
-  if (type === "QUESTION") stepSpecification = { kind: "open_ended", text: "" };
-  else if (type === "MEASUREMENT") stepSpecification = { protocolId: undefined };
-  else if (type === "ANALYSIS") stepSpecification = {};
+  const stepSpecification =
+    DEFAULT_STEP_SPECIFICATIONS[type as keyof typeof DEFAULT_STEP_SPECIFICATIONS];
   return {
     id: `node_${Date.now()}`,
     type,

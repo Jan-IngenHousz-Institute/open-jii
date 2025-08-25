@@ -1,7 +1,6 @@
 // apps/web/components/side-panel-flow/__tests__/edge-side-panel.test.tsx
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
-import { act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Edge } from "@xyflow/react";
 import React from "react";
@@ -123,46 +122,5 @@ describe("<EdgeSidePanel />", () => {
 
     await userEvent.click(screen.getByLabelText("edgePanel.closeBackdrop"));
     expect(onClose).toHaveBeenCalled();
-  });
-
-  it("clears retained content 300ms after closing", () => {
-    vi.useFakeTimers();
-
-    try {
-      const edge = makeEdge();
-      const { rerender } = render(
-        <EdgeSidePanel open selectedEdge={edge} onClose={() => void 0} isDisabled={false} />,
-      );
-
-      // initial value
-      expect(
-        screen.getByPlaceholderText<HTMLInputElement>("edgePanel.labelPlaceholder"),
-      ).toHaveValue("init");
-
-      // close (content retained briefly)
-      rerender(
-        <EdgeSidePanel
-          open={false}
-          selectedEdge={edge}
-          onClose={() => void 0}
-          isDisabled={false}
-        />,
-      );
-      expect(
-        screen.getByPlaceholderText<HTMLInputElement>("edgePanel.labelPlaceholder"),
-      ).toHaveValue("init");
-
-      // advance the 300ms timeout and flush React updates
-      act(() => {
-        vi.advanceTimersByTime(300);
-      });
-
-      // re-query after React commit and assert cleared value
-      expect(
-        screen.getByPlaceholderText<HTMLInputElement>("edgePanel.labelPlaceholder"),
-      ).toHaveValue("");
-    } finally {
-      vi.useRealTimers();
-    }
   });
 });

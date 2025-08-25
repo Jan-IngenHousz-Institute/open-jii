@@ -78,12 +78,6 @@ export function ExperimentSidePanel({
       // Immediately update content when opening
       setDisplayNodeType(nodeType);
       setCurrentTitle(nodeTitle ?? "");
-    } else if (!open) {
-      // Delay clearing content until transition ends (300ms)
-      const timeout = setTimeout(() => {
-        setDisplayNodeType(undefined);
-      }, 300);
-      return () => clearTimeout(timeout);
     }
   }, [open, nodeType, nodeTitle]);
 

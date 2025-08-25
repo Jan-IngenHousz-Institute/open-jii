@@ -95,11 +95,10 @@ export function AnalysisPanel({
     (option) => option.id === selectedMeasurementOption,
   );
 
-  const filteredOptions = MEASUREMENT_OPTIONS.filter(
-    (option) =>
-      option.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      option.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      option.category.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredOptions = MEASUREMENT_OPTIONS.filter(({ name, description, category }) =>
+    [name, description, category].some((field) =>
+      field.toLowerCase().includes(searchTerm.toLowerCase()),
+    ),
   );
 
   const handleSelectOption = (optionId: string) => {
