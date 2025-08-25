@@ -98,9 +98,9 @@ export const zErrorResponse = z.object({
 });
 
 // --- Flow Schemas ---
-export const zFlowNodeType = z.enum(["question", "instruction", "measurement"]);
+export const zFlowNodeType = z.enum(["question", "instruction", "measurement", "analysis"]);
 
-export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice"]);
+export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice", "number"]);
 
 // Question content is a strict discriminated union so invalid extra keys are rejected
 const zQuestionYesNo = z
