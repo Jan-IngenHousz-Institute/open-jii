@@ -37,7 +37,7 @@ export function NewExperimentDetailsCard({ form }: NewExperimentDetailsCardProps
             <FormItem>
               <FormLabel>{t("newExperiment.name")}</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input {...field} trim />
               </FormControl>
               <FormMessage />
             </FormItem>

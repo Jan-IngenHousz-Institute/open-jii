@@ -221,7 +221,12 @@ export type UpsertFlowBody = z.infer<typeof zUpsertFlowBody>;
 
 // Define request and response types
 export const zCreateExperimentBody = z.object({
-  name: z.string().min(1).max(255).describe("The name of the experiment"),
+  name: z
+    .string()
+    .trim()
+    .min(1, "The name of the experiment is required")
+    .max(255, "The name must be at most 255 characters")
+    .describe("The name of the experiment"),
   description: z.string().optional().describe("Optional description of the experiment"),
   status: zExperimentStatus.optional().describe("Initial status of the experiment"),
   visibility: zExperimentVisibility.optional().describe("Experiment visibility setting"),
@@ -249,7 +254,13 @@ export const zCreateExperimentBody = z.object({
 });
 
 export const zUpdateExperimentBody = z.object({
-  name: z.string().min(1).max(255).optional().describe("Updated experiment name"),
+  name: z
+    .string()
+    .trim()
+    .min(1, "The name of the experiment is required")
+    .max(255, "The name must be at most 255 characters")
+    .optional()
+    .describe("Updated experiment name"),
   description: z.string().optional().describe("Updated experiment description"),
   status: zExperimentStatus.optional().describe("Updated experiment status"),
   visibility: zExperimentVisibility.optional().describe("Updated visibility setting"),

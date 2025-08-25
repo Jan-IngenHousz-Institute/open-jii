@@ -43,7 +43,7 @@ export function NewProtocolDetailsCard({ form }: NewProtocolDetailsCardProps) {
             <FormItem>
               <FormLabel>{t("newProtocol.name")}</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input {...field} trim />
               </FormControl>
               <FormMessage />
             </FormItem>
