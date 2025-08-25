@@ -98,7 +98,7 @@ export const zErrorResponse = z.object({
 });
 
 // --- Flow Schemas ---
-export const zFlowNodeType = z.enum(["question", "instruction", "measurement", "analysis"]);
+export const zFlowNodeType = z.enum(["question", "instruction", "measurement"]);
 
 export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice", "number"]);
 

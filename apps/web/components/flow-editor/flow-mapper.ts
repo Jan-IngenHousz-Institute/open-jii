@@ -4,7 +4,7 @@ import type { z } from "zod";
 
 import type { Flow, UpsertFlowBody } from "@repo/api";
 import { zFlowGraph, zQuestionContent, zInstructionContent, zMeasurementContent } from "@repo/api";
-import type { zFlowNodeType, zQuestionKind } from "@repo/api";
+import type { zQuestionKind } from "@repo/api";
 
 import type { NodeType } from "../react-flow/node-config";
 import { nodeTypeColorMap } from "../react-flow/node-config";
@@ -13,7 +13,6 @@ import { nodeTypeColorMap } from "../react-flow/node-config";
 type QuestionContent = z.infer<typeof zQuestionContent>;
 type InstructionContent = z.infer<typeof zInstructionContent>;
 type MeasurementContent = z.infer<typeof zMeasurementContent>;
-type FlowNodeType = z.infer<typeof zFlowNodeType>;
 type QuestionKind = z.infer<typeof zQuestionKind>;
 
 // UI-focused question spec interface (matches the one in question-card.tsx)
@@ -46,12 +45,11 @@ function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 // Object maps for type conversions
-const REACT_FLOW_TO_API_NODE_TYPE: Record<NodeType, FlowNodeType> = {
+const REACT_FLOW_TO_API_NODE_TYPE = {
   QUESTION: "question",
   INSTRUCTION: "instruction",
   MEASUREMENT: "measurement",
-  ANALYSIS: "analysis",
-};
+} as const;
 
 const QUESTION_KIND_TO_ANSWER_TYPE: Record<QuestionKind, QuestionUI["answerType"]> = {
   yes_no: "BOOLEAN",
