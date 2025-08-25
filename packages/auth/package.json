@@ -42,7 +42,7 @@
     "@auth/express": "^0.11.0",
     "@react-email/components": "catalog:react-email",
     "@repo/database": "workspace:*",
-    "next": "^15.3.3",
+    "next": "^15.3.5",
     "next-auth": "5.0.0-beta.29",
     "nodemailer": "catalog:",
     "react": "catalog:react19",
