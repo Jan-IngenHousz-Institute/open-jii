@@ -330,7 +330,8 @@ export function getPathItem(path: (string | number)[]): PathItem | undefined {
 export function getErrorMessage(e: ZodIssue) {
   if (e.path.length == 0) return e.message;
   switch (e.code) {
-      return `Item: '${e.keys[0]}': Unrecognized`;
+    case "unrecognized_keys":
+      return `Item: '${e.keys[0]}': Unrecognized"`;
     default: {
       for (let i = e.path.length - 1; i >= 0; i--) {
         const pathEnd = e.path[i];
