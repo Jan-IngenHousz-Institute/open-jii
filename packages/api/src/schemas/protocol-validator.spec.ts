@@ -953,80 +953,199 @@ describe("Comprehensive Protocol JSON Validator", () => {
   });
 });
 
-it("findProtocolErrorLine", () => {
-  const code =
-    "[\n" +
-    "  {\n" +
-    '    "share": 1,\n' +
-    '    "v_arrays": [\n' +
-    "      [\n" +
-    "        100\n" +
-    "      ],\n" +
-    "      [\n" +
-    "        200\n" +
-    "      ],\n" +
-    "      [\n" +
-    "        2000\n" +
-    "      ]\n" +
-    "    ],\n" +
-    '    "set_repeats": "#l3",\n' +
-    '    "_protocol_set_": [\n' +
-    "      {\n" +
-    '        "label": "start_time",\n' +
-    '        "e_time": 0\n' +
-    "      },\n" +
-    "      {\n" +
-    '        "label": "capture_PAR",\n' +
-    '        "par_led_start_on_open": 2,\n' +
-    '        "averages": -21,\n' +
-    '        "do_once": 1\n' +
-    "      },\n" +
-    "      {\n" +
-    '        "par_led_start_on_close": 2,\n' +
-    '        "do_once": 1,\n' +
-    '        "averages": -1\n' +
-    "      },\n" +
-    "      {\n" +
-    '        "label": "env",\n' +
-    '        "environmental": [\n' +
-    "          [\n" +
-    '            "light_intensity"\n' +
-    "          ],\n" +
-    "          [\n" +
-    '            "temperature_humidity_pressure"\n' +
-    "          ],\n" +
-    "          [\n" +
-    '            "temperature_humidity_pressure2"\n' +
-    "          ],\n" +
-    "          [\n" +
-    '            "contactless_temp"\n' +
-    "          ],\n" +
-    "          [\n" +
-    '            "compass_and_angle"\n' +
-    "          ]\n" +
-    "        ],\n" +
-    '        "do_once": 1\n' +
-    "      }\n" +
-    "    ]\n" +
-    "  }\n" +
-    "]";
+describe("Code to determine error line numbers", () => {
+  it("should return correct line numbers for protocol set", () => {
+    const code =
+      "[\n" + // line 1
+      "  {\n" +
+      '    "share": 1,\n' +
+      '    "v_arrays": [\n' +
+      "      [\n" +
+      "        100\n" +
+      "      ],\n" +
+      "      [\n" +
+      "        200\n" +
+      "      ],\n" + // line 10
+      "      [\n" +
+      "        2000\n" +
+      "      ]\n" +
+      "    ],\n" +
+      '    "set_repeats": "#l3",\n' +
+      '    "_protocol_set_": [\n' +
+      "      {\n" +
+      '        "label": "start_time",\n' +
+      '        "e_time": 0\n' +
+      "      },\n" + // line 20
+      "      {\n" +
+      '        "label": "capture_PAR",\n' +
+      '        "par_led_start_on_open": 2,\n' +
+      '        "averages": -21,\n' +
+      '        "do_once": 1\n' +
+      "      },\n" +
+      "      {\n" +
+      '        "par_led_start_on_close": 2,\n' +
+      '        "do_once": 1,\n' +
+      '        "averages": -1\n' + // line 30
+      "      },\n" +
+      "      {\n" +
+      '        "label": "env",\n' +
+      '        "environmental": [\n' +
+      "          [\n" +
+      '            "light_intensity"\n' +
+      "          ],\n" +
+      "          [\n" +
+      '            "temperature_humidity_pressure"\n' +
+      "          ],\n" + // line 40
+      "          [\n" +
+      '            "temperature_humidity_pressure2"\n' +
+      "          ],\n" +
+      "          [\n" +
+      '            "contactless_temp"\n' +
+      "          ],\n" +
+      "          [\n" +
+      '            "compass_and_angle"\n' +
+      "          ]\n" +
+      "        ],\n" + // line 40
+      '        "do_once": 1\n' +
+      "      }\n" +
+      "    ]\n" +
+      "  }\n" +
+      "]"; // line 45
 
-  const protocol: unknown = JSON.parse(code);
-  const result = validateProtocolJson(protocol);
-  expect(result.success).toBe(false);
-  expect(result.error?.length).toBe(3);
-  if (result.error !== undefined) {
-    const errorInfo1 = findProtocolErrorLine(code, result.error[0]);
-    expect(errorInfo1).toStrictEqual({
-      line: 24,
-      message: "Item 'averages': Number must be greater than 0",
-    });
-    const errorInfo2 = findProtocolErrorLine(code, result.error[1]);
-    expect(errorInfo2).toStrictEqual({ line: 31, message: "Item 'label': Required" });
-    const errorInfo3 = findProtocolErrorLine(code, result.error[2]);
-    expect(errorInfo3).toStrictEqual({
-      line: 30,
-      message: "Item 'averages': Number must be greater than 0",
-    });
-  }
+    const protocol: unknown = JSON.parse(code);
+    const result = validateProtocolJson(protocol);
+    expect(result.success).toBe(false);
+    expect(result.error?.length).toBe(3);
+    if (result.error !== undefined) {
+      const errorInfo1 = findProtocolErrorLine(code, result.error[0]);
+      expect(errorInfo1).toStrictEqual({
+        line: 24,
+        message: "Item 'averages': Number must be greater than 0",
+      });
+      const errorInfo2 = findProtocolErrorLine(code, result.error[1]);
+      expect(errorInfo2).toStrictEqual({ line: 31, message: "Item 'label': Required" });
+      const errorInfo3 = findProtocolErrorLine(code, result.error[2]);
+      expect(errorInfo3).toStrictEqual({
+        line: 30,
+        message: "Item 'averages': Number must be greater than 0",
+      });
+    }
+  });
+
+  it("should return correct line numbers for simple protocol", () => {
+    const code =
+      "[\n" + // Line 1
+      "  {\n" +
+      '    "act_background_light": 20,\n' +
+      '    "environmental": [\n' +
+      "      [\n" +
+      '        "light_intensity",\n' +
+      "        0\n" +
+      "      ],\n" +
+      "      [\n" +
+      '        "relative_humidity",\n' + // Line 10
+      "        0\n" +
+      "      ],\n" +
+      "      [\n" +
+      '        "temperature",\n' +
+      "        0\n" +
+      "      ]\n" +
+      "    ],\n" +
+      '    "get_ir_baseline": [\n' +
+      "      -15,\n" +
+      "      14\n" + // Line 20
+      "    ],\n" +
+      '    "pulses": [\n' +
+      "      500,\n" +
+      "      20,\n" +
+      "      20,\n" +
+      "      50,\n" +
+      "      20\n" +
+      "    ],\n" +
+      '    "protocols_delay": 4,\n' +
+      '    "tcs_to_act": 100,\n' + // Line 30
+      '    "act1_lights": [\n' +
+      "      20,\n" +
+      "      20,\n" +
+      "      20,\n" +
+      "      20,\n" +
+      "      20\n" +
+      "    ],\n" +
+      '    "act_intensities": [\n' +
+      "      -1,\n" +
+      "      -1,\n" + // Line 40
+      "      -1,\n" +
+      "      692,\n" +
+      "      -1\n" +
+      "    ],\n" +
+      '    "cal_intensities": [\n' +
+      "      0,\n" +
+      "      4095,\n" +
+      "      0,\n" +
+      "      0,\n" +
+      "      0\n" + // Line 50
+      "    ],\n" +
+      '    "meas_intensities": [\n' +
+      "      0,\n" +
+      "      0,\n" +
+      "      4095,\n" +
+      "      4095,\n" +
+      "      4095\n" +
+      "    ],\n" +
+      '    "pulsedistance": 10000,\n' +
+      '    "pulsesize": -10,\n' + // Line 60
+      '    "detectors": [\n' +
+      "      [\n" +
+      "        34\n" +
+      "      ],\n" +
+      "      [\n" +
+      "        34\n" +
+      "      ],\n" +
+      "      [\n" +
+      "        34\n" +
+      "      ],\n" + // Line 70
+      "      [\n" +
+      "        34\n" +
+      "      ],\n" +
+      "      [\n" +
+      "        34\n" +
+      "      ]\n" +
+      "    ],\n" +
+      '    "meas_lights": [\n' +
+      "      [\n" +
+      "        0\n" + // Line 80
+      "      ],\n" +
+      "      [\n" +
+      "        14\n" +
+      "      ],\n" +
+      "      [\n" +
+      "        15\n" +
+      "      ],\n" +
+      "      [\n" +
+      "        15\n" +
+      "      ],\n" + // Line 90
+      "      [\n" +
+      "        15\n" +
+      "      ]\n" +
+      "    ]\n" +
+      "  }\n" +
+      "]"; // Line 96
+
+    const protocol: unknown = JSON.parse(code);
+    const result = validateProtocolJson(protocol);
+    expect(result.success).toBe(false);
+    expect(result.error?.length).toBe(2);
+    if (result.error !== undefined) {
+      const errorInfo1 = findProtocolErrorLine(code, result.error[0]);
+      expect(errorInfo1).toStrictEqual({
+        line: 60,
+        message: "Item 'pulsesize': Number must be greater than 0",
+      });
+      const errorInfo2 = findProtocolErrorLine(code, result.error[1]);
+      expect(errorInfo2).toStrictEqual({
+        line: 18,
+        message: "Item 'get_ir_baseline': Invalid pin number",
+      });
+    }
+  });
 });

@@ -6,7 +6,7 @@ import { Copy, Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FC } from "react";
 
-import { findProtocolErrorLine, validateProtocolJson } from "@repo/api";
+import { findProtocolErrorLine, getErrorMessage, validateProtocolJson } from "@repo/api";
 import { Button, Label } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -95,7 +95,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
       // Validate with Zod
       const result = validateProtocolJson(parsedValue);
       if (!result.success && result.error) {
-        setValidationErrors(result.error.map((e) => e.message));
+        setValidationErrors(result.error.map((e) => getErrorMessage(e)));
         const errorDetails = result.error.map((e) => {
           return findProtocolErrorLine(newValue, e);
         });

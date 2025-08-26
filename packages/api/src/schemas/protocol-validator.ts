@@ -126,7 +126,9 @@ export const ProtocolSetSchema = z.object({
     .array(
       z.union([
         z.number().int(),
-        z.string().regex(/^@s[0-9]+$/), // Variable reference like "@s2"
+        z.string().regex(/^@s[0-9]+$/), // Variable reference like "@s2",
+        z.array(z.number().int()),
+        z.array(z.string().regex(/^@s[0-9]+$/)),
       ]),
     )
     .optional(),
@@ -161,12 +163,14 @@ export const ProtocolSetSchema = z.object({
   share: z.number().int().optional(), // Share flag
   set_led_delay: z.array(z.array(z.number().int())).optional(), // LED delay configuration
   message: z.array(z.array(z.string())).optional(), // User messages/prompts
+  e_time: z.number().int().optional(),
+  hello: z.array(z.number().int()).optional(),
 });
 
 // Schema for protocols within a multi-protocol set (requires label)
 const ProtocolSetWithLabelSchema = ProtocolSetSchema.extend({
   label: z.string(), // Required for multi-protocol sets
-});
+}).strict();
 
 // Single and multi-protocol set schema
 export const ProtocolJsonSchema = z.array(
@@ -323,17 +327,34 @@ export function getPathItem(path: (string | number)[]): PathItem | undefined {
   return undefined;
 }
 
+export function getErrorMessage(e: ZodIssue) {
+  if (e.path.length == 0) return e.message;
+  switch (e.code) {
+    case "unrecognized_keys":
+      return `Item: '${e.keys[0]}': Unrecognized"`;
+    default: {
+      for (let i = e.path.length - 1; i >= 0; i--) {
+        const pathEnd = e.path[i];
+        if (typeof pathEnd === "string") {
+          return `Item '${pathEnd}': ${e.message}`;
+        }
+      }
+      return "-";
+    }
+  }
+}
+
 export function findProtocolErrorLine(text: string, e: ZodIssue) {
   // Try to find the line number of the error path in the JSON
   // This is a best-effort guess, as Zod does not provide line numbers
-  if (e.path.length == 0) return { line: 1, message: e.message };
-  const message = `Item '${e.path[e.path.length - 1]}': ${e.message}`;
+  const message = getErrorMessage(e);
+  let line = 1;
+  if (e.path.length == 0) return { line, message };
   const codeLines = text.split("\n");
-  let lineNumber = 0;
-  const insideProtocolSet = e.path.includes("_protocol_set_");
+  const containsProtocolSet = e.path.includes("_protocol_set_");
   const missingItem = e.message === "Required";
 
-  if (insideProtocolSet && missingItem) {
+  if (containsProtocolSet) {
     let pathItem = getPathItem(e.path);
     let protocolSetArrayFound = false;
     for (const codeLine of codeLines) {
@@ -341,32 +362,32 @@ export function findProtocolErrorLine(text: string, e: ZodIssue) {
         protocolSetArrayFound = true;
         pathItem = getPathItem(e.path);
       }
-      if (protocolSetArrayFound && (codeLine.endsWith("}") || codeLine.endsWith("},"))) {
-        if (pathItem?.arrayIndex && pathItem.arrayIndex > 0) {
-          pathItem.arrayIndex--;
-        } else {
-          return { line: lineNumber + 1, message };
-        }
-      }
-      lineNumber++;
-    }
-  } else {
-    let pathItem = getPathItem(e.path);
-    for (const codeLine of codeLines) {
-      if (pathItem === undefined) return { line: lineNumber, message };
-      if (codeLine.includes(`"${pathItem.item}"`)) {
-        if (pathItem.arrayIndex === undefined) {
-          pathItem = getPathItem(e.path);
-        } else {
-          if (pathItem.arrayIndex > 1) {
+      if (protocolSetArrayFound) {
+        if (codeLine.endsWith("}") || codeLine.endsWith("},")) {
+          if (pathItem?.arrayIndex == 0 && missingItem) {
+            return { line, message };
+          }
+          if (pathItem?.arrayIndex && pathItem.arrayIndex > 0) {
             pathItem.arrayIndex--;
-          } else {
-            pathItem = getPathItem(e.path);
+            line++;
+            continue;
           }
         }
+        if (pathItem?.arrayIndex == 0 && !missingItem && codeLine.includes(`"${pathItem.item}"`)) {
+          return { line, message };
+        }
       }
-      lineNumber++;
+      line++;
+    }
+  } else {
+    const pathItem = getPathItem(e.path);
+    for (const codeLine of codeLines) {
+      if (pathItem === undefined) return { line, message };
+      if (codeLine.includes(`"${pathItem.item}"`)) {
+        return { line, message };
+      }
+      line++;
     }
   }
-  return { line: lineNumber, message };
+  return { line, message };
 }
