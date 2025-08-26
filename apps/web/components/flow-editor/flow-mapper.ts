@@ -156,15 +156,16 @@ export class FlowMapper {
         // For questions, convert from QuestionUI format to QuestionContent format
         const stepSpec = data.stepSpecification as QuestionUI | undefined;
 
-        if (stepSpec) {
+        if (stepSpec?.answerType) {
           // Convert QuestionUI to QuestionContent format using object map
           const questionText = stepSpec.validationMessage ?? text;
+          const answerType = stepSpec.answerType;
 
-          const contentGenerator = ANSWER_TYPE_TO_QUESTION_CONTENT[stepSpec.answerType];
+          const contentGenerator = ANSWER_TYPE_TO_QUESTION_CONTENT[answerType];
           const candidate = contentGenerator(
             questionText,
             stepSpec.required,
-            stepSpec.answerType === "SELECT" ? stepSpec.options : undefined,
+            answerType === "SELECT" ? stepSpec.options : undefined,
           );
 
           const valid = parseIfValid(zQuestionContent, candidate);
@@ -179,7 +180,7 @@ export class FlowMapper {
             };
           }
         } else {
-          // No stepSpecification, create default
+          // No stepSpecification or no answerType, create default
           const candidate: QuestionContent = {
             kind: "open_ended",
             text: text,

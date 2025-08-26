@@ -247,7 +247,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     // Ensure exactly one start node (auto-heal) so validation passes and save button can appear
     useEffect(() => {
       setNodes((nds) => ensureOneStartNode(nds));
-    }, [nodes, setNodes]);
+    }, [nodes.length, setNodes]);
 
     return (
       <div>
