@@ -68,14 +68,14 @@ describe("ExperimentDataController", () => {
 
       // Set up the proper mock based on whether the test should succeed
       if (willSucceed) {
-        jest.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(success(mockUploadResponse));
-        jest
-          .spyOn(databricksAdapter, "triggerExperimentPipeline")
-          .mockResolvedValue(success(mockPipelineResponse));
+        vi.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(success(mockUploadResponse));
+        vi.spyOn(databricksAdapter, "triggerExperimentPipeline").mockResolvedValue(
+          success(mockPipelineResponse),
+        );
       } else {
-        jest
-          .spyOn(databricksAdapter, "uploadFile")
-          .mockResolvedValue(failure(AppError.internal("Failed to upload file to Databricks")));
+        vi.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(
+          failure(AppError.internal("Failed to upload file to Databricks")),
+        );
       }
 
       // Get the path
@@ -138,7 +138,7 @@ describe("ExperimentDataController", () => {
       });
 
       // Mock the uploadFile method to ensure we can check if it's called
-      const uploadFileSpy = jest.spyOn(databricksAdapter, "uploadFile");
+      const uploadFileSpy = vi.spyOn(databricksAdapter, "uploadFile");
 
       // Get the path
       const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
@@ -154,7 +154,7 @@ describe("ExperimentDataController", () => {
         .expect(StatusCodes.BAD_REQUEST);
 
       // Verify that the upload method was not called
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(uploadFileSpy).not.toHaveBeenCalled();
     });
 
@@ -189,9 +189,9 @@ describe("ExperimentDataController", () => {
       });
 
       // Mock the DatabricksAdapter uploadFile method to return forbidden error
-      jest
-        .spyOn(databricksAdapter, "uploadFile")
-        .mockResolvedValue(failure(AppError.forbidden(`User does not have access to experiment`)));
+      vi.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(
+        failure(AppError.forbidden(`User does not have access to experiment`)),
+      );
 
       // Get the path
       const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
@@ -240,9 +240,9 @@ describe("ExperimentDataController", () => {
       const { path, fileBuffer } = await setupFileUploadTest("Ambyte_1", "Upload Error", false);
 
       // Override the mock to simulate upload failure
-      jest
-        .spyOn(databricksAdapter, "uploadFile")
-        .mockResolvedValue(failure(AppError.internal("Failed to upload file to Databricks")));
+      vi.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(
+        failure(AppError.internal("Failed to upload file to Databricks")),
+      );
 
       // Make the request
       await testApp
@@ -278,15 +278,15 @@ describe("ExperimentDataController", () => {
 
       // Setup upload mocks for each file
       let uploadCallCount = 0;
-      jest.spyOn(databricksAdapter, "uploadFile").mockImplementation(() => {
+      vi.spyOn(databricksAdapter, "uploadFile").mockImplementation(() => {
         const response = success(mockUploadResponses[uploadCallCount]);
         uploadCallCount++;
         return Promise.resolve(response);
       });
 
-      jest
-        .spyOn(databricksAdapter, "triggerExperimentPipeline")
-        .mockResolvedValue(success(mockPipelineResponse));
+      vi.spyOn(databricksAdapter, "triggerExperimentPipeline").mockResolvedValue(
+        success(mockPipelineResponse),
+      );
 
       // Get the path
       const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {

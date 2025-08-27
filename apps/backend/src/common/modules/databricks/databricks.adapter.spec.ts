@@ -227,7 +227,7 @@ describe("DatabricksAdapter", () => {
     it("should correctly format the file path and upload the file", async () => {
       // Get the actual config service for mocking
       const configService = testApp.module.get(DatabricksConfigService);
-      jest.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
+      vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
 
       // Calculate expected schema name and file path based on adapter implementation
       const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
@@ -272,7 +272,7 @@ describe("DatabricksAdapter", () => {
 
       // Get the actual config service for mocking
       const configService = testApp.module.get(DatabricksConfigService);
-      jest.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
+      vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
 
       // Calculate expected schema name and file path based on adapter implementation
       const cleanName = specialExperimentName.toLowerCase().trim().replace(/ /g, "_");
