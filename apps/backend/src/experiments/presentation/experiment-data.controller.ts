@@ -1,14 +1,7 @@
-import {
-  Controller,
-  HttpStatus,
-  Logger,
-  ParseFilePipeBuilder,
-  UploadedFiles,
-  UseGuards,
-  UseInterceptors,
-} from "@nestjs/common";
-import { FilesInterceptor } from "@nestjs/platform-express";
+import { Controller, Logger, Req, UseGuards } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
+import busboy from "busboy";
+import type { Request } from "express";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api";
@@ -59,42 +52,175 @@ export class ExperimentDataController {
   }
 
   @TsRestHandler(contract.experiments.uploadExperimentData)
-  @UseInterceptors(
-    FilesInterceptor("files", 100, {
-      limits: {
-        fileSize: 50 * 1024 * 1024, // 50MB limit per file
-      },
-    }),
-  )
-  uploadExperimentData(
-    @CurrentUser() user: { id: string },
-    @UploadedFiles(
-      new ParseFilePipeBuilder().build({
-        errorHttpStatusCode: HttpStatus.BAD_REQUEST,
-        fileIsRequired: true,
-      }),
-    )
-    files: Express.Multer.File[],
-  ) {
-    return tsRestHandler(contract.experiments.uploadExperimentData, async ({ params, body }) => {
+  uploadExperimentData(@CurrentUser() user: { id: string }, @Req() request: Request) {
+    return tsRestHandler(contract.experiments.uploadExperimentData, async ({ params }) => {
       const { id: experimentId } = params;
-      const { sourceType } = body;
 
-      if (files.length === 0) {
+      // Log headers for debugging
+      console.log("Request headers:", request.headers);
+
+      const contentType = request.headers["content-type"];
+      if (!contentType?.includes("multipart/form-data")) {
+        this.logger.error("Request is not multipart/form-data");
         return {
           status: StatusCodes.BAD_REQUEST,
-          body: {
-            message: "No files uploaded",
-          },
+          body: { message: "Request must be multipart/form-data" },
         };
       }
 
-      this.logger.log(
-        `Processing ${sourceType} data upload for experiment ${experimentId} by user ${user.id} (${files.length} files)`,
+      this.logger.log(`Starting data upload for experiment ${experimentId} by user ${user.id}`);
+
+      // Check experiment access directly
+      const experimentResult = await this.uploadAmbyteDataUseCase.checkExperimentAccess(
+        experimentId,
+        user.id,
       );
 
-      // Call the use case with all files
-      const result = await this.uploadAmbyteDataUseCase.execute(experimentId, user.id, files);
+      if (experimentResult.isFailure()) {
+        return handleFailure(experimentResult, this.logger);
+      }
+
+      const experiment = experimentResult.value;
+
+      // Initialize arrays to collect results
+      const successfulUploads: { fileName: string; fileId: string; filePath: string }[] = [];
+      const errors: { fileName: string; error: string }[] = [];
+
+      // Process the multipart/form-data request directly with busboy
+      let sourceType: string | undefined;
+
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const bb = busboy({
+            headers: request.headers,
+            limits: {
+              files: 100,
+              fileSize: 50 * 1024 * 1024, // 50MB limit per file
+            },
+          });
+
+          // Track ongoing file processing promises
+          const processingPromises: Promise<void>[] = [];
+
+          // Handle files
+          bb.on("file", (fieldname, fileStream, info) => {
+            const { filename, encoding, mimeType } = info;
+
+            console.log(`Received file: ${filename}, fieldname: ${fieldname}`);
+
+            if (fieldname !== "files") {
+              console.log(`Skipping file with non-matching fieldname: ${fieldname}`);
+              fileStream.resume(); // Skip non-matching field names
+              return;
+            }
+
+            console.log(`Processing file: ${filename} (${processingPromises.length + 1})`);
+
+            // Add each file processing promise to our tracking array
+            const processPromise = this.uploadAmbyteDataUseCase
+              .processFileStream(
+                {
+                  filename,
+                  encoding,
+                  mimetype: mimeType,
+                  stream: fileStream,
+                },
+                experimentId,
+                experiment.name,
+                successfulUploads,
+                errors,
+              )
+              .then(() => {
+                console.log(`Completed processing file: ${filename}`);
+              })
+              .catch((error) => {
+                console.error(`Error processing file ${filename}:`, error);
+                errors.push({
+                  fileName: filename,
+                  error: String(error),
+                });
+              });
+
+            processingPromises.push(processPromise);
+            console.log(
+              `Added promise for ${filename}, total promises: ${processingPromises.length}`,
+            );
+          });
+
+          // Handle regular form fields
+          bb.on("field", (fieldname, value) => {
+            console.log(`Received field: ${fieldname}`);
+            if (fieldname === "sourceType") {
+              sourceType = value;
+              this.logger.log(`Source type: ${sourceType}`);
+            }
+          });
+
+          // Handle errors
+          bb.on("error", (err) => {
+            console.error("Error during file upload:", err);
+            reject(err instanceof Error ? err : new Error(String(err)));
+          });
+
+          // Handle completion
+          bb.on("close", () => {
+            console.log(
+              "Busboy finished parsing the form, waiting for file processing to complete...",
+            );
+
+            // Log memory usage
+            console.log("Memory usage before file processing completion:", process.memoryUsage());
+
+            // Set a timeout to prevent hanging indefinitely
+            const timeoutId = setTimeout(() => {
+              console.warn(
+                "File processing timeout after 30 seconds, some files may not have completed processing",
+              );
+              // Log memory usage on timeout
+              console.log("Memory usage on timeout:", process.memoryUsage());
+              resolve();
+            }, 30000); // 30 second timeout
+
+            // Wait for all file processing to complete
+            Promise.all(processingPromises)
+              .then(() => {
+                clearTimeout(timeoutId);
+                console.log("Finished processing multipart request");
+                // Log memory usage after processing
+                console.log("Memory usage after processing:", process.memoryUsage());
+                resolve();
+              })
+              .catch((err) => {
+                clearTimeout(timeoutId);
+                console.error("Error while waiting for file processing to complete:", err);
+                // Log memory usage on error
+                console.log("Memory usage on error:", process.memoryUsage());
+                reject(err instanceof Error ? err : new Error(String(err)));
+              });
+          });
+
+          // Pipe the request to busboy
+          console.log("Piping request to busboy");
+          request.pipe(bb);
+        });
+
+        this.logger.log(`Processed all files for experiment ${experimentId}`);
+      } catch (error) {
+        this.logger.error(
+          `Error processing files for experiment ${experimentId}: ${String(error)}`,
+        );
+        return {
+          status: StatusCodes.INTERNAL_SERVER_ERROR,
+          body: { message: "Error processing files" },
+        };
+      }
+
+      // Complete the upload process once all files have been processed
+      const result = await this.uploadAmbyteDataUseCase.completeUpload(
+        successfulUploads,
+        errors,
+        experiment,
+      );
 
       if (result.isSuccess()) {
         return {
