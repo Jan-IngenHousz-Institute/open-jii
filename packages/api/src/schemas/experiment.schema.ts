@@ -100,13 +100,14 @@ export const zErrorResponse = z.object({
 // --- Flow Schemas ---
 export const zFlowNodeType = z.enum(["question", "instruction", "measurement"]);
 
-export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice"]);
+export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice", "number"]);
 
 // Question content is a strict discriminated union so invalid extra keys are rejected
 const zQuestionYesNo = z
   .object({
     kind: z.literal("yes_no"),
     text: z.string().min(1),
+    required: z.boolean().optional().default(false),
   })
   .strict();
 
@@ -114,6 +115,7 @@ const zQuestionOpenEnded = z
   .object({
     kind: z.literal("open_ended"),
     text: z.string().min(1),
+    required: z.boolean().optional().default(false),
   })
   .strict();
 
@@ -122,6 +124,15 @@ const zQuestionMultiChoice = z
     kind: z.literal("multi_choice"),
     text: z.string().min(1),
     options: z.array(z.string()).min(1),
+    required: z.boolean().optional().default(false),
+  })
+  .strict();
+
+const zQuestionNumber = z
+  .object({
+    kind: z.literal("number"),
+    text: z.string().min(1),
+    required: z.boolean().optional().default(false),
   })
   .strict();
 
@@ -129,6 +140,7 @@ export const zQuestionContent = z.discriminatedUnion("kind", [
   zQuestionYesNo,
   zQuestionOpenEnded,
   zQuestionMultiChoice,
+  zQuestionNumber,
 ]);
 
 export const zInstructionContent = z.object({
@@ -147,6 +159,13 @@ export const zFlowNode = z.object({
   content: z.union([zQuestionContent, zInstructionContent, zMeasurementContent]),
   // A node can be marked as a start node. Exactly one node must be the start node for any flow.
   isStart: z.boolean().optional().default(false),
+  // Optional persisted layout position (added later for backwards compatibility)
+  position: z
+    .object({
+      x: z.number(),
+      y: z.number(),
+    })
+    .optional(),
 });
 
 export const zFlowEdge = z.object({
