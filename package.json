@@ -5,7 +5,7 @@
     "build": "turbo build",
     "clean": "git clean -xdf node_modules .turbo",
     "clean:workspaces": "turbo run clean && pnpm run clean",
-    "dev": "turbo dev db:studio --concurrency 13",
+    "dev": "turbo dev --concurrency 13",
     "build:affected": "turbo build --affected",
     "check:affected": "turbo ls --affected",
     "format": "prettier --write \"**/*.{ts,tsx,js,md,mdx,css,yaml,yml,json}\"",
