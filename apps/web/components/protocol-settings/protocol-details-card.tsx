@@ -88,7 +88,7 @@ export function ProtocolDetailsCard({
                 <FormItem>
                   <FormLabel>{t("protocolSettings.name")}</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder={t("protocolSettings.name")} />
+                    <Input {...field} trim placeholder={t("protocolSettings.name")} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
