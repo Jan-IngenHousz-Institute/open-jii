@@ -351,13 +351,10 @@ export const zExperimentDataTableList = z.array(zExperimentDataTableInfo);
 export const zExperimentDataResponse = zExperimentDataTableList;
 
 // --- Data Upload Types ---
-export const zDataSourceType = z.enum(["ambyte"]);
+export const zDataSourceType = z.enum(["ambyte"]).describe("Data source type for the upload");
 
-export const zUploadExperimentDataBody = z.object({
-  sourceType: zDataSourceType,
-  // file will be handled by multer/FileInterceptor, not by zod directly
-  // so we remove the file field from here
-});
+// TODO - find way to validate form data
+export const zUploadExperimentDataBody = z.any();
 
 export const zUploadExperimentDataResponse = z.object({
   uploadId: z.string().optional(),
