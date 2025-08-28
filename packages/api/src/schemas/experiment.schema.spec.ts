@@ -398,9 +398,41 @@ describe("Experiment Schema", () => {
     });
 
     it("zExperimentFilterQuery valid and optional", () => {
+      // Test empty object (all fields optional)
       expect(zExperimentFilterQuery.parse({})).toEqual({});
+
+      // Test filter field
       expect(zExperimentFilterQuery.parse({ filter: "my" })).toEqual({ filter: "my" });
+      expect(zExperimentFilterQuery.parse({ filter: "member" })).toEqual({ filter: "member" });
+      expect(zExperimentFilterQuery.parse({ filter: "related" })).toEqual({ filter: "related" });
       expect(() => zExperimentFilterQuery.parse({ filter: "unknown" })).toThrow();
+
+      // Test status field
+      expect(zExperimentFilterQuery.parse({ status: "active" })).toEqual({ status: "active" });
+      expect(zExperimentFilterQuery.parse({ status: "archived" })).toEqual({ status: "archived" });
+      expect(() => zExperimentFilterQuery.parse({ status: "invalid_status" })).toThrow();
+
+      // Test search field
+      expect(zExperimentFilterQuery.parse({ search: "test experiment" })).toEqual({
+        search: "test experiment",
+      });
+      expect(zExperimentFilterQuery.parse({ search: "" })).toEqual({ search: "" });
+      expect(zExperimentFilterQuery.parse({ search: "special chars !@#$%" })).toEqual({
+        search: "special chars !@#$%",
+      });
+
+      // Test combinations
+      expect(
+        zExperimentFilterQuery.parse({
+          filter: "my",
+          status: "active",
+          search: "my experiment",
+        }),
+      ).toEqual({
+        filter: "my",
+        status: "active",
+        search: "my experiment",
+      });
     });
   });
 
