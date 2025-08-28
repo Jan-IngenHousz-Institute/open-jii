@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { ExperimentOverviewCards } from "~/components/experiment-overview-cards";
 import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments";
 
@@ -35,23 +36,9 @@ export function ListExperiments() {
               type="button"
               aria-label={t("experiments.clearSearch")}
               onClick={() => setSearch("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              style={{ padding: 0, background: "none", border: "none", cursor: "pointer" }}
+              className="absolute right-2 top-1/2 flex -translate-y-1/2 cursor-pointer items-center justify-center border-none bg-transparent p-0 text-gray-400 hover:text-gray-600"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M4 4L12 12M12 4L4 12"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
+              <X className="h-4 w-4" />
             </button>
           )}
         </div>
