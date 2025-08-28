@@ -11,6 +11,7 @@ import { AuthGuard } from "../../common/guards/auth.guard";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data";
 import { UploadAmbyteDataUseCase } from "../application/use-cases/experiment-data/upload-ambyte-data";
+import { GetExperimentAccessUseCase } from "../application/use-cases/get-experiment-access/get-experiment-access";
 
 @Controller()
 @UseGuards(AuthGuard)
@@ -19,6 +20,7 @@ export class ExperimentDataController {
 
   constructor(
     private readonly getExperimentDataUseCase: GetExperimentDataUseCase,
+    private readonly getExperimentAccessUseCase: GetExperimentAccessUseCase,
     private readonly uploadAmbyteDataUseCase: UploadAmbyteDataUseCase,
   ) {}
 
@@ -56,9 +58,6 @@ export class ExperimentDataController {
     return tsRestHandler(contract.experiments.uploadExperimentData, async ({ params }) => {
       const { id: experimentId } = params;
 
-      // Log headers for debugging
-      console.log("Request headers:", request.headers);
-
       const contentType = request.headers["content-type"];
       if (!contentType?.includes("multipart/form-data")) {
         this.logger.error("Request is not multipart/form-data");
@@ -70,17 +69,16 @@ export class ExperimentDataController {
 
       this.logger.log(`Starting data upload for experiment ${experimentId} by user ${user.id}`);
 
-      // Check experiment access directly
-      const experimentResult = await this.uploadAmbyteDataUseCase.checkExperimentAccess(
+      const experimentAccessResult = await this.getExperimentAccessUseCase.execute(
         experimentId,
         user.id,
       );
 
-      if (experimentResult.isFailure()) {
-        return handleFailure(experimentResult, this.logger);
+      if (experimentAccessResult.isFailure()) {
+        return handleFailure(experimentAccessResult, this.logger);
       }
 
-      const experiment = experimentResult.value;
+      const { experiment } = experimentAccessResult.value;
 
       // Initialize arrays to collect results
       const successfulUploads: { fileName: string; fileId: string; filePath: string }[] = [];
@@ -94,8 +92,8 @@ export class ExperimentDataController {
           const bb = busboy({
             headers: request.headers,
             limits: {
-              files: 100,
-              fileSize: 50 * 1024 * 1024, // 50MB limit per file
+              files: UploadAmbyteDataUseCase.MAX_FILE_COUNT,
+              fileSize: UploadAmbyteDataUseCase.MAX_FILE_SIZE,
             },
           });
 
@@ -118,7 +116,7 @@ export class ExperimentDataController {
 
             // Add each file processing promise to our tracking array
             const processPromise = this.uploadAmbyteDataUseCase
-              .processFileStream(
+              .execute(
                 {
                   filename,
                   encoding,
@@ -168,9 +166,6 @@ export class ExperimentDataController {
               "Busboy finished parsing the form, waiting for file processing to complete...",
             );
 
-            // Log memory usage
-            console.log("Memory usage before file processing completion:", process.memoryUsage());
-
             // Set a timeout to prevent hanging indefinitely
             const timeoutId = setTimeout(() => {
               console.warn(
@@ -216,7 +211,7 @@ export class ExperimentDataController {
       }
 
       // Complete the upload process once all files have been processed
-      const result = await this.uploadAmbyteDataUseCase.completeUpload(
+      const result = await this.uploadAmbyteDataUseCase.postexecute(
         successfulUploads,
         errors,
         experiment,

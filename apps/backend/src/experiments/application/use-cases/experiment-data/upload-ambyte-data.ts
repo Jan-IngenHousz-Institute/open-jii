@@ -2,9 +2,9 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { z } from "zod";
 
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
-import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 export interface UploadAmbyteFilesResponse {
   uploadId?: string;
@@ -15,55 +15,15 @@ export interface UploadAmbyteFilesResponse {
 export class UploadAmbyteDataUseCase {
   private readonly logger = new Logger(UploadAmbyteDataUseCase.name);
 
-  constructor(
-    private readonly experimentRepository: ExperimentRepository,
-    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
-  ) {}
+  static readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  static readonly MAX_FILE_COUNT = 1000;
 
-  /**
-   * Check experiment access rights
-   *
-   * @param experimentId - ID of the experiment
-   * @param userId - ID of the user requesting access
-   * @returns Result with the experiment information or an error
-   */
-  async checkExperimentAccess(
-    experimentId: string,
-    userId: string,
-  ): Promise<Result<{ id: string; name: string }>> {
-    this.logger.log(`Checking access for experiment ${experimentId} by user ${userId}`);
-
-    // Check if the experiment exists
-    const experimentResult = await this.experimentRepository.findOne(experimentId);
-    if (experimentResult.isFailure()) {
-      return experimentResult;
-    }
-
-    const experiment = experimentResult.value;
-    if (!experiment) {
-      return failure(AppError.badRequest(`Experiment with ID ${experimentId} not found`));
-    }
-
-    // Check if the user has access to the experiment
-    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
-    if (accessResult.isFailure()) {
-      return accessResult;
-    }
-
-    const access = accessResult.value;
-    if (!access.hasAccess) {
-      return failure(
-        AppError.forbidden(`User ${userId} does not have access to experiment ${experimentId}`),
-      );
-    }
-
-    return success({ id: experimentId, name: experiment.name });
-  }
+  constructor(@Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort) {}
 
   /**
    * Process a single file upload by streaming it directly
    */
-  async processFileStream(
+  async execute(
     file: { filename: string; encoding: string; mimetype: string; stream: NodeJS.ReadableStream },
     experimentId: string,
     experimentName: string,
@@ -144,10 +104,10 @@ export class UploadAmbyteDataUseCase {
   /**
    * Complete the upload process by triggering the pipeline and returning results
    */
-  async completeUpload(
+  async postexecute(
     successfulUploads: { fileName: string; fileId: string; filePath: string }[],
     errors: { fileName: string; error: string }[],
-    experiment: { id: string; name: string },
+    experiment: ExperimentDto,
   ): Promise<Result<UploadAmbyteFilesResponse>> {
     this.logger.log(
       `Completing upload. ${successfulUploads.length} successful, ${errors.length} errors.`,
@@ -164,42 +124,28 @@ export class UploadAmbyteDataUseCase {
     }
 
     // Trigger pipeline update after successful file upload
-    await this.triggerPipeline(experiment.name, experiment.id);
+    this.logger.log(
+      `Triggering pipeline update for experiment ${experiment.name} (${experiment.id})`,
+    );
+
+    const pipelineResult = await this.databricksPort.triggerExperimentPipeline(
+      experiment.name,
+      experiment.id,
+    );
+
+    if (pipelineResult.isSuccess()) {
+      this.logger.log(
+        `Successfully triggered pipeline update for experiment ${experiment.name} (${experiment.id}). Update ID: ${pipelineResult.value.update_id}`,
+      );
+    } else {
+      this.logger.warn(
+        `Failed to trigger pipeline update for experiment ${experiment.id}: ${pipelineResult.error.message}`,
+      );
+    }
 
     return success({
       files: successfulUploads,
     });
-  }
-
-  /**
-   * Trigger the Databricks pipeline update
-   */
-  private async triggerPipeline(experimentName: string, experimentId: string): Promise<void> {
-    try {
-      this.logger.log(
-        `Triggering pipeline update for experiment ${experimentName} (${experimentId})`,
-      );
-
-      const pipelineResult = await this.databricksPort.triggerExperimentPipeline(
-        experimentName,
-        experimentId,
-      );
-
-      if (pipelineResult.isSuccess()) {
-        this.logger.log(
-          `Successfully triggered pipeline update for experiment ${experimentName} (${experimentId}). Update ID: ${pipelineResult.value.update_id}`,
-        );
-      } else {
-        this.logger.warn(
-          `Failed to trigger pipeline update for experiment ${experimentId}: ${pipelineResult.error.message}`,
-        );
-      }
-    } catch (error) {
-      // Log but don't fail the file upload if pipeline update fails
-      this.logger.error(
-        `Error triggering pipeline update for experiment ${experimentId}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
   }
 
   /**
