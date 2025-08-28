@@ -19,6 +19,10 @@ import {
   zExperimentWebhookSuccessResponse,
   zExperimentWebhookErrorResponse,
   zExperimentAccess,
+  zExperimentDataCommentsPathParam,
+  zCreateExperimentDataCommentsBody,
+  zExperimentDataComments,
+  zDeleteExperimentDataCommentsBody,
 } from "../schemas/experiment.schema";
 import { zFlow, zUpsertFlowBody } from "../schemas/experiment.schema";
 import {
@@ -157,6 +161,34 @@ export const experimentContract = c.router({
     },
     summary: "Get experiment data",
     description: "Retrieves data tables from the experiment with pagination support",
+  },
+
+  createExperimentDataComments: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/data/:tableName/comments",
+    pathParams: zExperimentDataCommentsPathParam,
+    body: zCreateExperimentDataCommentsBody,
+    responses: {
+      201: zExperimentDataComments,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Create experiment data table row comments",
+    description: "Creates comments on the specified experiment and data table row(s)",
+  },
+
+  deleteExperimentDataComments: {
+    method: "DELETE",
+    path: "/api/v1/experiments/:id/data/:tableName/comments",
+    pathParams: zExperimentDataCommentsPathParam,
+    body: zDeleteExperimentDataCommentsBody,
+    responses: {
+      204: null,
+      404: zErrorResponse,
+    },
+    summary: "Delete experiment data table row comments",
+    description: "Deletes comments on the specified experiment and data table row(s)",
   },
 
   updateProvisioningStatus: {

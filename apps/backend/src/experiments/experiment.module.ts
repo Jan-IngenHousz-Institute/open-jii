@@ -5,6 +5,8 @@ import { DatabricksModule } from "../common/modules/databricks/databricks.module
 // Use Cases
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "./application/use-cases/delete-experiment/delete-experiment";
+import { CreateExperimentDataCommentsUseCase } from "./application/use-cases/experiment-data-comments/create-experiment-data-comments";
+import { DeleteExperimentDataCommentsUseCase } from "./application/use-cases/experiment-data-comments/delete-experiment-data-comments";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data";
 import { AddExperimentMembersUseCase } from "./application/use-cases/experiment-members/add-experiment-members";
 import { ListExperimentMembersUseCase } from "./application/use-cases/experiment-members/list-experiment-members";
@@ -21,11 +23,13 @@ import { ListExperimentsUseCase } from "./application/use-cases/list-experiments
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
 import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-provisioning-status/update-provisioning-status";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
+import { ExperimentDataCommentsRepository } from "./core/repositories/experiment-data-comments.repository";
 // Repositories
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
 import { ExperimentProtocolRepository } from "./core/repositories/experiment-protocol.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
 import { FlowRepository } from "./core/repositories/flow.repository";
+import { ExperimentCommentsController } from "./presentation/experiment-comments.controller";
 // Controllers
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
 import { ExperimentFlowsController } from "./presentation/experiment-flows.controller";
@@ -43,6 +47,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ExperimentMembersController,
     ExperimentProtocolsController,
     ExperimentWebhookController,
+    ExperimentCommentsController,
   ],
   providers: [
     // Port implementations
@@ -55,6 +60,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ExperimentRepository,
     ExperimentMemberRepository,
     ExperimentProtocolRepository,
+    ExperimentDataCommentsRepository,
     FlowRepository,
 
     // General experiment use cases
@@ -68,6 +74,10 @@ import { ExperimentController } from "./presentation/experiment.controller";
 
     // Experiment data use cases
     GetExperimentDataUseCase,
+
+    // Experiment data comment use cases
+    CreateExperimentDataCommentsUseCase,
+    DeleteExperimentDataCommentsUseCase,
 
     // Experiment member use cases
     ListExperimentMembersUseCase,

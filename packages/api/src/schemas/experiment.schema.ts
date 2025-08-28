@@ -202,6 +202,34 @@ export const zFlow = z.object({
 
 export const zUpsertFlowBody = zFlowGraph;
 
+// Schema for data table comments
+export const zExperimentDataCommentFlag = z.enum(["outlier", "needs_review"]);
+
+export const zExperimentDataComment = z.object({
+  rowId: z.string().uuid().optional(),
+  text: z.string().min(1),
+  flag: zExperimentDataCommentFlag.optional(),
+  createdBy: z.string().uuid(),
+  createdAt: z.string().datetime(),
+});
+
+export const zExperimentDataComments = z.array(zExperimentDataComment);
+
+export const zCreateExperimentDataCommentsBody = z.object({
+  rowId: z.array(z.string().uuid()).min(1),
+  text: z.string().min(1),
+  flag: zExperimentDataCommentFlag.optional(),
+});
+
+export const zExperimentDataCommentsPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+  tableName: z.string().describe("Table name"),
+});
+
+export const zDeleteExperimentDataCommentsBody = z.object({
+  rowId: z.array(z.string().uuid()).min(1),
+});
+
 // Infer types from Zod schemas
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
 export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
@@ -218,6 +246,8 @@ export type FlowNodeType = z.infer<typeof zFlowNodeType>;
 export type FlowGraph = z.infer<typeof zFlowGraph>;
 export type Flow = z.infer<typeof zFlow>;
 export type UpsertFlowBody = z.infer<typeof zUpsertFlowBody>;
+export type ExperimentDataComment = z.infer<typeof zExperimentDataComment>;
+export type CreateExperimentDataComments = z.infer<typeof zCreateExperimentDataCommentsBody>;
 
 // Define request and response types
 export const zCreateExperimentBody = z.object({
