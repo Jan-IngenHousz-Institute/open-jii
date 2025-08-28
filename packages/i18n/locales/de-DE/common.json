@@ -1,5 +1,7 @@
 {
   "common": {
+    "protocolLabel": "Protokoll",
+    "by": "von",
     "homepage": "Startseite",
     "language": "Sprache",
     "languageDrawer": "Sprachschublade umschalten",
@@ -76,7 +78,8 @@
     "addProtocol": "Protokoll hinzufügen",
     "seeProtocolDetails": "Protokolldetails anzeigen",
     "family": "Familie:",
-    "createdBy": "Erstellt von:"
+    "createdBy": "Erstellt von:",
+    "measurementPanelTitle": "Messprotokoll"
   },
   "experimentSettings": {
     "loading": "Experimenteinstellungen werden geladen...",

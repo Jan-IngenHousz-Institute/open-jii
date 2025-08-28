@@ -1,5 +1,7 @@
 {
   "common": {
+    "protocolLabel": "Protocol",
+    "by": "by",
     "homepage": "Homepage",
     "language": "Language",
     "languageDrawer": "Toggle language drawer",
@@ -80,7 +82,8 @@
     "noPermissionToAccess": "You do not have permission to access this experiment.",
     "errorLoadingExperiment": "There was an error loading the experiment.",
     "experimentNotFound": "The experiment you are looking for could not be found.",
-    "needMemberAccess": "You need to be a member to access experiment settings"
+    "needMemberAccess": "You need to be a member to access experiment settings",
+    "measurementPanelTitle": "Measurement Protocol"
   },
   "newExperiment": {
     "description": "Set up a new experiment (project).",
