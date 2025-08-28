@@ -99,7 +99,12 @@ export class ExperimentController {
   @TsRestHandler(contract.experiments.listExperiments)
   listExperiments(@CurrentUser() user: User) {
     return tsRestHandler(contract.experiments.listExperiments, async ({ query }) => {
-      const result = await this.listExperimentsUseCase.execute(user.id, query.filter, query.status);
+      const result = await this.listExperimentsUseCase.execute(
+        user.id,
+        query.filter,
+        query.status,
+        query.search,
+      );
 
       if (result.isSuccess()) {
         const experiments = result.value;
@@ -110,7 +115,7 @@ export class ExperimentController {
         this.logger.log(
           `Listed experiments for user ${user.id} with filter: ${JSON.stringify(
             query.filter,
-          )}, status: ${query.status}`,
+          )}, status: ${query.status}, search: ${query.search}`,
         );
         return {
           status: StatusCodes.OK,
