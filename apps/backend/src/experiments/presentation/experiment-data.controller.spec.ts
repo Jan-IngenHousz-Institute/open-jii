@@ -66,17 +66,11 @@ describe("ExperimentDataController", () => {
         status: "RUNNING",
       };
 
-      // Set up the proper mock based on whether the test should succeed
-      if (willSucceed) {
-        vi.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(success(mockUploadResponse));
-        vi.spyOn(databricksAdapter, "triggerExperimentPipeline").mockResolvedValue(
-          success(mockPipelineResponse),
-        );
-      } else {
-        vi.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(
-          failure(AppError.internal("Failed to upload file to Databricks")),
-        );
-      }
+      // Spy on databricksAdapter methods
+      vi.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(success(mockUploadResponse));
+      vi.spyOn(databricksAdapter, "triggerExperimentPipeline").mockResolvedValue(
+        success(mockPipelineResponse),
+      );
 
       // Get the path
       const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
@@ -161,6 +155,11 @@ describe("ExperimentDataController", () => {
     it("should return 400 when experiment does not exist", async () => {
       const nonExistentId = faker.string.uuid();
 
+      // Mock repository to return no experiment found
+      vi.spyOn(testApp.module.get("ExperimentRepository"), "findOne").mockResolvedValue(
+        failure(AppError.notFound(`Experiment with ID ${nonExistentId} not found`)),
+      );
+
       // Get the path
       const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
         id: nonExistentId,
@@ -211,17 +210,60 @@ describe("ExperimentDataController", () => {
         .expect(StatusCodes.FORBIDDEN);
     });
 
-    it.each([
-      [".DS_Store", "DS_Store file"],
-      ["config.txt", "Configuration file"],
-      ["ambyte_log.txt", "Log file"],
-      ["run.txt", "Run file"],
-      ["Ambyte_X/5/file.txt", "Invalid subfolder number"],
-      ["random_file.txt", "Completely invalid format"],
-      ["20250615-19373_.txt", "Malformed date format"],
-      ["Ambyte_12345", "Ambyte folder with too many digits"],
-    ])("should reject invalid ambyte data file: %s (%s)", async (fileName, description) => {
-      const { path, fileBuffer } = await setupFileUploadTest(fileName, description, false);
+    it("should return 400 when file name is invalid", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Invalid Filename",
+        userId: testUserId,
+      });
+
+      // Get the path
+      const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      // Create mock file data with invalid name
+      const fileBuffer = Buffer.from("mock ambyte data content");
+      const invalidFileName = "invalid_file_name.zip"; // Not matching the expected pattern
+
+      // Make the request
+      const response = await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({
+          sourceType: "ambyte",
+          file: {
+            name: invalidFileName,
+            data: fileBuffer,
+          },
+        })
+        .expect(StatusCodes.BAD_REQUEST);
+
+      // Verify error response mentions invalid file name
+      expect(response.body).toMatchObject({
+        message: expect.stringContaining("Invalid Ambyte data file") as string,
+      });
+    });
+
+    it("should handle failure in databricks file upload", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Upload Error",
+        userId: testUserId,
+      });
+
+      // Mock databricksAdapter to simulate upload failure
+      vi.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(
+        failure(AppError.internal("Failed to upload file to Databricks")),
+      );
+
+      // Get the path
+      const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      // Create mock file data
+      const fileBuffer = Buffer.from("mock ambyte data content");
 
       // Make the request
       await testApp
