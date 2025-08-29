@@ -6,7 +6,7 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
 import { handleRegister } from "~/app/actions/auth";
-import { useCreateUserProfile } from "~/hooks/useCreateUserProfile";
+import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 
 import { useTranslation } from "@repo/i18n";
 import {

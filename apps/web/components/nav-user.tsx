@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronsUpDown, LogOut } from "lucide-react";
+import { User as UserIcon } from "lucide-react";
 import Link from "next/link";
 
 import type { Locale } from "@repo/i18n";
@@ -78,6 +79,19 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/${locale}/platform/account/settings`}
+                className="flex w-full cursor-default items-center"
+              >
+                <Avatar className="bg-muted mr-2 h-4 w-4">
+                  <AvatarFallback className="rounded-lg">
+                    <UserIcon className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+                {t("auth.accountSettings", "Account")}
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link
                 href={`/${locale}/platform/signout`}

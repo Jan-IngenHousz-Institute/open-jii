@@ -93,6 +93,20 @@ function UserMenu({
           </div>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        {/* Account link */}
+        <DropdownMenuItem asChild>
+          <Link
+            href={`/${locale}/platform/account/settings`}
+            className="flex w-full cursor-default items-center"
+          >
+            <Avatar className="bg-muted mr-2 h-4 w-4">
+              <AvatarFallback className="rounded-lg">
+                <User className="h-4 w-4" />
+              </AvatarFallback>
+            </Avatar>
+            {t("auth.accountSettings", "Account")}
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <form action={onSignOut} className="w-full">
             <button type="submit" className="flex w-full cursor-pointer items-center">
@@ -261,6 +275,20 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
                           </span>
                         </div>
                       </div>
+                    </DropdownMenuItem>
+                    {/* Account link for mobile */}
+                    <DropdownMenuItem asChild>
+                      <Link
+                        href={`/${locale}/platform/account/settings`}
+                        className="flex w-full cursor-default items-center"
+                      >
+                        <Avatar className="bg-muted mr-2 h-4 w-4">
+                          <AvatarFallback className="rounded-lg">
+                            <User className="h-4 w-4" />
+                          </AvatarFallback>
+                        </Avatar>
+                        {t("auth.accountSettings", "Account")}
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <form action={handleSignOut} className="w-full">

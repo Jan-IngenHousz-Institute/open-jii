@@ -16,7 +16,6 @@ export const selectUserSchema = createSelectSchema(users);
 export const createUserProfileSchema = createInsertSchema(profiles)
   .omit({
     id: true,
-    bio: true,
     avatarUrl: true,
     userId: true,
     organizationId: true,

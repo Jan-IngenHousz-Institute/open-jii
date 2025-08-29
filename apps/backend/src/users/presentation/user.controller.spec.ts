@@ -278,6 +278,21 @@ describe("UserController", () => {
       expect(response.body).toEqual({});
     });
 
+    it("should successfully create a user profile with bio", async () => {
+      const response = await testApp
+        .post(contract.users.createUserProfile.path)
+        .withAuth(testUserId)
+        .send({
+          firstName: "Test",
+          lastName: "User",
+          bio: "Software developer with experience in Node.js and React.",
+          organization: "Test Organization",
+        })
+        .expect(StatusCodes.CREATED);
+
+      expect(response.body).toEqual({});
+    });
+
     it("should return 400 on invalid input", async () => {
       await testApp
         .post(contract.users.createUserProfile.path)

@@ -38,10 +38,18 @@ export const zCreateUserResponse = z.object({
 export const zCreateUserProfileBody = z.object({
   firstName: z.string().min(2).describe("First name"),
   lastName: z.string().min(2).describe("Last name"),
+  bio: z.string().optional().describe("Bio"),
   organization: z.string().optional().describe("Organization"),
 });
 
 export const zCreateUserProfileResponse = z.object({});
+
+export const zUserProfile = z.object({
+  firstName: z.string(),
+  lastName: z.string(),
+  bio: z.string().nullable(),
+  organization: z.string().nullable(),
+});
 
 // Path parameters
 export const zUserIdPathParam = z.object({
@@ -53,3 +61,4 @@ export type User = z.infer<typeof zUser>;
 export type UserList = z.infer<typeof zUserList>;
 export type SearchUsersQuery = z.infer<typeof zSearchUsersQuery>;
 export type UserIdPathParam = z.infer<typeof zUserIdPathParam>;
+export type UserProfile = z.infer<typeof zUserProfile>;
