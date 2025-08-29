@@ -129,7 +129,11 @@ export function RegistrationForm({ callbackUrl }: { callbackUrl?: string }) {
                     <FormItem>
                       <FormLabel>{t("registration.organization")}</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder={t("registration.organizationPlaceholder")} />
+                        <Input
+                          {...field}
+                          placeholder={t("registration.organizationPlaceholder")}
+                          trim
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

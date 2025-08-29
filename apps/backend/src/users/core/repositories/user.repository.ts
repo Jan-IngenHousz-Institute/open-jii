@@ -112,7 +112,7 @@ export class UserRepository {
     });
   }
 
-  private async createOrReturnOrganization(organization?: string): Promise<string | undefined> {
+  private async createOrReturnOrganization(organization?: string): Promise<string | null> {
     if (organization) {
       // Check if organization already exists with this name
       const organizationResult = await this.database
@@ -133,7 +133,7 @@ export class UserRepository {
         return newOrganization[0].id;
       }
     }
-    return undefined;
+    return null;
   }
 
   async createOrUpdateUserProfile(

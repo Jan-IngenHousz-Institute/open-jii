@@ -2,6 +2,7 @@
 
 import type { UseFormReturn } from "react-hook-form";
 
+import type { CreateUserProfileBody } from "@repo/api";
 import {
   Card,
   CardHeader,
@@ -16,15 +17,8 @@ import {
   Textarea,
 } from "@repo/ui/components";
 
-interface AccountSettingsValues {
-  firstName: string;
-  lastName: string;
-  bio: string;
-  organization: string;
-}
-
 interface ProfileCardProps {
-  form: UseFormReturn<AccountSettingsValues>;
+  form: UseFormReturn<CreateUserProfileBody>;
 }
 
 export function ProfileCard({ form }: ProfileCardProps) {
@@ -90,7 +84,12 @@ export function ProfileCard({ form }: ProfileCardProps) {
             <FormItem>
               <FormLabel>Bio</FormLabel>
               <FormControl>
-                <Textarea placeholder="Tell us about yourself" rows={3} {...field} />
+                <Textarea
+                  placeholder="Tell us about yourself"
+                  rows={3}
+                  {...field}
+                  value={field.value}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -105,7 +104,12 @@ export function ProfileCard({ form }: ProfileCardProps) {
             <FormItem>
               <FormLabel>Institution/Organization</FormLabel>
               <FormControl>
-                <Input placeholder="Search or create organization" {...field} />
+                <Input
+                  placeholder="Search or create organization"
+                  {...field}
+                  value={field.value}
+                  trim
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

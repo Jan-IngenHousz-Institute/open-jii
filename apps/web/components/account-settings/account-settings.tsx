@@ -1,10 +1,14 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
+// ***** ONLY USING EXISTING SCHEMAS *****
+import { zCreateUserProfileBody } from "@repo/api";
+import type { CreateUserProfileBody } from "@repo/api";
 import type { Session } from "@repo/auth/types";
 import { Form, Button } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
@@ -12,13 +16,6 @@ import { toast } from "@repo/ui/hooks";
 import { ErrorDisplay } from "../error-display";
 import { ProfileCard } from "./profile-card";
 import { ProfilePictureCard } from "./profile-picture-card";
-
-interface AccountSettingsValues {
-  firstName: string;
-  lastName: string;
-  bio: string;
-  organization: string;
-}
 
 export function AccountSettings({ session }: { session: Session | null }) {
   const user = session?.user as
@@ -42,30 +39,25 @@ export function AccountSettings({ session }: { session: Session | null }) {
     return <ErrorDisplay error={error} title="Error loading account settings" />;
   }
 
-  // 3) Compute initial values once (profile -> fallback to auth name -> empty)
-  const initialValues: AccountSettingsValues = userProfile?.body
+  const initialValues: CreateUserProfileBody = userProfile?.body
     ? {
         firstName: userProfile.body.firstName,
         lastName: userProfile.body.lastName,
         bio: userProfile.body.bio ?? "",
         organization: userProfile.body.organization ?? "",
       }
-    : (() => {
-        const nameParts = (user?.name ?? "").trim().split(/\s+/).filter(Boolean);
-        return {
-          firstName: nameParts[0] ?? "",
-          lastName: nameParts.slice(1).join(" "),
-          bio: "",
-          organization: "",
-        };
-      })();
+    : {
+        firstName: "",
+        lastName: "",
+        bio: "",
+        organization: "",
+      };
 
   return <AccountSettingsInner initialValues={initialValues} />;
 }
 
-// A pure, dumb form component that never fetches nor resets.
-// It mounts once with the right defaults and composes the new cards.
-function AccountSettingsInner({ initialValues }: { initialValues: AccountSettingsValues }) {
+// A pure form component that mounts once with the right defaults.
+function AccountSettingsInner({ initialValues }: { initialValues: CreateUserProfileBody }) {
   const router = useRouter();
 
   const { mutate: createUserProfile, isPending } = useCreateUserProfile({
@@ -74,31 +66,18 @@ function AccountSettingsInner({ initialValues }: { initialValues: AccountSetting
     },
   });
 
-  const form = useForm<AccountSettingsValues>({
+  const form = useForm<CreateUserProfileBody>({
+    resolver: zodResolver(zCreateUserProfileBody),
     defaultValues: initialValues,
+    mode: "onSubmit",
   });
 
   function onCancel() {
     router.back();
   }
 
-  function isEmptyOrWhitespace(str: string | undefined | null): boolean {
-    return !str || str.trim().length === 0;
-  }
-
-  function onSubmit(values: AccountSettingsValues) {
-    if (isEmptyOrWhitespace(values.firstName) || isEmptyOrWhitespace(values.lastName)) {
-      toast({ description: "First name and last name are required.", variant: "destructive" });
-      return;
-    }
-    createUserProfile({
-      body: {
-        firstName: values.firstName,
-        lastName: values.lastName,
-        bio: values.bio,
-        organization: values.organization,
-      },
-    });
+  function onSubmit(values: CreateUserProfileBody) {
+    createUserProfile({ body: values });
   }
 
   return (

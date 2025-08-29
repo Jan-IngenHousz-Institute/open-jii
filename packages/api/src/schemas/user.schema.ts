@@ -39,7 +39,7 @@ export const zCreateUserProfileBody = z.object({
   firstName: z.string().min(2).describe("First name"),
   lastName: z.string().min(2).describe("Last name"),
   bio: z.string().optional().describe("Bio"),
-  organization: z.string().optional().describe("Organization"),
+  organization: z.string().trim().optional().describe("Organization"),
 });
 
 export const zCreateUserProfileResponse = z.object({});
@@ -62,3 +62,4 @@ export type UserList = z.infer<typeof zUserList>;
 export type SearchUsersQuery = z.infer<typeof zSearchUsersQuery>;
 export type UserIdPathParam = z.infer<typeof zUserIdPathParam>;
 export type UserProfile = z.infer<typeof zUserProfile>;
+export type CreateUserProfileBody = z.infer<typeof zCreateUserProfileBody>;
