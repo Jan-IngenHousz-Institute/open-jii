@@ -51,7 +51,8 @@ export const experimentContract = c.router({
       400: zErrorResponse,
     },
     summary: "List experiments",
-    description: "Returns a list of experiments based on the specified filter criteria",
+    description:
+      "Returns a list of experiments based on the specified filter criteria, including search.",
   },
 
   getExperiment: {

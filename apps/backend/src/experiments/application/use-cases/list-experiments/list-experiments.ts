@@ -16,12 +16,13 @@ export class ListExperimentsUseCase {
     userId: string,
     filter?: ExperimentFilter,
     status?: ExperimentStatus,
+    search?: string,
   ): Promise<Result<ExperimentDto[]>> {
     this.logger.log(
-      `Listing experiments for user ${userId}${filter ? ` with filter "${filter}"` : ""}${status ? ` and status "${status}"` : ""}`,
+      `Listing experiments for user ${userId}${filter ? ` with filter "${filter}"` : ""}${status ? ` and status "${status}"` : ""}${search ? ` and search "${search}"` : ""}`,
     );
 
-    const result = await this.experimentRepository.findAll(userId, filter, status);
+    const result = await this.experimentRepository.findAll(userId, filter, status, search);
 
     result.fold(
       (experiments: ExperimentDto[]) => {

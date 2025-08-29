@@ -1,8 +1,8 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import { ExperimentFilter, ExperimentStatus } from "@repo/api";
-import { desc, eq, or, and, experiments, experimentMembers } from "@repo/database";
-import type { DatabaseInstance } from "@repo/database";
+import { desc, eq, or, and, ilike, experiments, experimentMembers } from "@repo/database";
+import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
@@ -37,9 +37,8 @@ export class ExperimentRepository {
     userId: string,
     filter?: ExperimentFilter,
     status?: ExperimentStatus,
+    search?: string,
   ): Promise<Result<ExperimentDto[]>> {
-    // Common experiment fields to select
-    // Todo: type this thing properly
     const experimentFields = {
       id: experiments.id,
       name: experiments.name,
@@ -53,61 +52,41 @@ export class ExperimentRepository {
     };
 
     return tryCatch(() => {
-      // Start with a base query builder
-      const query = this.database
+      let query = this.database
         .select(experimentFields)
         .from(experiments)
         .orderBy(desc(experiments.updatedAt));
 
-      // Apply filter and status conditions without nested conditionals
+      const conditions: (SQL | undefined)[] = [];
+
       if (filter === "my") {
-        if (status) {
-          return query.where(
-            and(eq(experiments.createdBy, userId), eq(experiments.status, status)),
-          );
-        }
-        return query.where(eq(experiments.createdBy, userId));
-      }
-
-      if (filter === "member") {
-        const joinedQuery = query.innerJoin(
+        conditions.push(eq(experiments.createdBy, userId));
+      } else if (filter === "member") {
+        query = query.innerJoin(
           experimentMembers,
           eq(experiments.id, experimentMembers.experimentId),
         );
-
-        if (status) {
-          return joinedQuery.where(
-            and(eq(experimentMembers.userId, userId), eq(experiments.status, status)),
-          );
-        }
-        return joinedQuery.where(eq(experimentMembers.userId, userId));
-      }
-
-      if (filter === "related") {
-        const joinedQuery = query.leftJoin(
+        conditions.push(eq(experimentMembers.userId, userId));
+      } else if (filter === "related") {
+        query = query.leftJoin(
           experimentMembers,
           eq(experiments.id, experimentMembers.experimentId),
         );
-
-        if (status) {
-          return joinedQuery.where(
-            and(
-              or(eq(experiments.createdBy, userId), eq(experimentMembers.userId, userId)),
-              eq(experiments.status, status),
-            ),
-          );
-        }
-        return joinedQuery.where(
+        conditions.push(
           or(eq(experiments.createdBy, userId), eq(experimentMembers.userId, userId)),
         );
       }
 
-      // Default cases (no filter or unrecognized filter)
       if (status) {
-        return query.where(eq(experiments.status, status));
+        conditions.push(eq(experiments.status, status));
       }
 
-      return query;
+      if (search) {
+        conditions.push(ilike(experiments.name, `%${search}%`));
+      }
+
+      const where = and(...conditions);
+      return where ? query.where(where) : query;
     });
   }
 

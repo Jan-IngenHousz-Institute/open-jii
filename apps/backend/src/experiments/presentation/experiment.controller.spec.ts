@@ -198,6 +198,94 @@ describe("ExperimentController", () => {
       expect(response.body).toEqual([]);
     });
 
+    it("should filter experiments by search term in name", async () => {
+      // Create experiments
+      await testApp.createExperiment({ name: "Alpha Experiment", userId: testUserId });
+      await testApp.createExperiment({ name: "Beta Experiment", userId: testUserId });
+      await testApp.createExperiment({ name: "Gamma", userId: testUserId });
+
+      // Act
+      const response = await testApp
+        .get(contract.experiments.listExperiments.path)
+        .withAuth(testUserId)
+        .query({ search: "Experiment" })
+        .expect(StatusCodes.OK);
+
+      // Assert
+      expect(response.body).toHaveLength(2);
+      expect(response.body).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: "Alpha Experiment" }),
+          expect.objectContaining({ name: "Beta Experiment" }),
+        ]),
+      );
+      const experiments = response.body as { name: string }[];
+      expect(experiments.some((e) => e.name === "Gamma")).toBe(false);
+    });
+
+    it("should filter experiments by search term with other filters", async () => {
+      // Create users
+      const mainUserId = await testApp.createTestUser({ email: "search-ctrl@example.com" });
+      const otherUserId = await testApp.createTestUser({ email: "search-ctrl-other@example.com" });
+
+      // Create experiments
+      await testApp.createExperiment({
+        name: "My Searchable Active",
+        userId: mainUserId,
+        status: "active",
+      });
+      await testApp.createExperiment({
+        name: "My Searchable Archived",
+        userId: mainUserId,
+        status: "archived",
+      });
+      await testApp.createExperiment({
+        name: "My Unrelated",
+        userId: mainUserId,
+        status: "active",
+      });
+      const { experiment: memberExpActive } = await testApp.createExperiment({
+        name: "Member Searchable Active",
+        userId: otherUserId,
+        status: "active",
+      });
+      const { experiment: memberExpArchived } = await testApp.createExperiment({
+        name: "Member Searchable Archived",
+        userId: otherUserId,
+        status: "archived",
+      });
+      await testApp.addExperimentMember(memberExpActive.id, mainUserId, "member");
+      await testApp.addExperimentMember(memberExpArchived.id, mainUserId, "member");
+      await testApp.createExperiment({
+        name: "Other Experiment",
+        userId: otherUserId,
+        status: "active",
+      });
+
+      // Act
+      const response = await testApp
+        .get(contract.experiments.listExperiments.path)
+        .withAuth(mainUserId)
+        .query({ filter: "related", status: "active", search: "Searchable" })
+        .expect(StatusCodes.OK);
+
+      // Assert
+      expect(response.body).toHaveLength(2);
+      expect(response.body).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: "My Searchable Active", status: "active" }),
+          expect.objectContaining({ name: "Member Searchable Active", status: "active" }),
+        ]),
+      );
+      const experiments = response.body as { name: string; status: string }[];
+      expect(
+        experiments.some(
+          (e) =>
+            e.status === "archived" || e.name === "My Unrelated" || e.name === "Other Experiment",
+        ),
+      ).toBe(false);
+    });
+
     it("should return a list of experiments", async () => {
       // Create some experiments first
       const { experiment: experiment1 } = await testApp.createExperiment({

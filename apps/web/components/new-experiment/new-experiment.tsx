@@ -24,7 +24,10 @@ export function NewExperimentForm() {
   const locale = useLocale();
 
   const { mutate: createExperiment, isPending } = useExperimentCreate({
-    onSuccess: (id: string) => router.push(`/${locale}/platform/experiments/${id}`),
+    onSuccess: (experimentId: string) => {
+      toast({ description: t("experiments.experimentCreated") });
+      router.push(`/${locale}/platform/experiments/${experimentId}`);
+    },
   });
 
   const form = useForm<CreateExperimentBody>({
@@ -46,7 +49,6 @@ export function NewExperimentForm() {
     createExperiment({
       body: data,
     });
-    toast({ description: t("experiments.experimentCreated") });
   }
 
   return (
