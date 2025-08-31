@@ -39,3 +39,4 @@ yarn-error.*
 android
 ios
 .cache
+*.aab
