@@ -1,6 +1,7 @@
 name: Build Android App Bundle (AAB)
 
 on:
+  push:
   workflow_dispatch:
 
 jobs:
