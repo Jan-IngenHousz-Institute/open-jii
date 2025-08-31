@@ -1,0 +1,44 @@
+name: "Test Packages"
+description: "Tests affected packages"
+
+inputs:
+  affected_apps:
+    description: "JSON array of affected app names"
+    required: true
+  codecov-token:
+    description: "Codecov token for uploading coverage"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run Tests
+      shell: bash
+      run: |
+        echo "🧪 Testing affected packages"
+
+        AFFECTED_APPS='${{ inputs.affected_apps }}'
+
+        # Parse apps into array to construct command
+        APPS=($(echo $AFFECTED_APPS | jq -r '.[]'))
+
+        # Test command string
+        TEST_CMD="pnpm turbo run test"
+        for APP in "${APPS[@]}"; do
+          TEST_CMD="$TEST_CMD --filter=$APP"
+        done
+
+        echo "Running: $TEST_CMD"
+        eval "$TEST_CMD"
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ inputs.codecov-token }}
+        files: apps/*/coverage.json,tooling/*/coverage.json,packages/*/coverage.json
+        flags: affected
+        fail_ci_if_error: true
+        verbose: true
+        override_branch: ${{ github.head_ref }}
+        override_commit: ${{ github.event.pull_request.head.sha }}
+        override_pr: ${{ github.event.number }}

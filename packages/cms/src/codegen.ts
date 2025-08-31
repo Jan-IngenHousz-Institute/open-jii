@@ -10,7 +10,7 @@ const productionEndpoint = "https://graphql.contentful.com/content/v1/spaces";
  */
 export function getContentfulEndpoint(config: ContentfulConfig): string {
   const baseEndpoint = endpointOverride ?? productionEndpoint;
-  return `${baseEndpoint}/${config.spaceId}/environments/${config.environment || "master"}`;
+  return `${baseEndpoint}/${config.spaceId}/environments/${config.environment ?? "master"}`;
 }
 
 export const endpoint = getContentfulEndpoint({
@@ -18,7 +18,7 @@ export const endpoint = getContentfulEndpoint({
   accessToken: process.env.CONTENTFUL_ACCESS_TOKEN ?? "",
   previewAccessToken: process.env.CONTENTFUL_PREVIEW_ACCESS_TOKEN ?? "",
   previewSecret: process.env.CONTENTFUL_PREVIEW_SECRET ?? "",
-  environment: process.env.CONTENTFUL_SPACE_ENVIRONMENT || "master",
+  environment: process.env.CONTENTFUL_SPACE_ENVIRONMENT ?? "master",
 });
 
 export const config: CodegenConfig = {

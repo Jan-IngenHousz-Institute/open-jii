@@ -1,0 +1,39 @@
+name: "Setup OpenTofu"
+description: "Sets up OpenTofu and configures AWS credentials via OIDC"
+inputs:
+  tofu_version:
+    description: "OpenTofu version to use"
+    required: false
+    default: "1.6.0"
+  aws_role_arn:
+    description: "AWS Role ARN"
+    required: true
+  aws_region:
+    description: "AWS Region"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup OpenTofu
+      uses: opentofu/setup-opentofu@v1
+      with:
+        tofu_version: ${{ inputs.tofu_version }}
+
+    - name: Cache OpenTofu Plugins
+      uses: actions/cache@v4
+      with:
+        path: ~/.terraform.d/plugin-cache
+        key: ${{ runner.os }}-tofu-${{ hashFiles('**/*.tf') }}
+        restore-keys: |
+          ${{ runner.os }}-tofu-
+
+    - name: Configure AWS Credentials via OIDC
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.aws_role_arn }}
+        aws-region: ${{ inputs.aws_region }}
+
+    - name: Check AWS Credentials
+      shell: bash
+      run: aws sts get-caller-identity

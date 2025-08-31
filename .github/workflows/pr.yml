@@ -1,4 +1,4 @@
-name: PR Workflow; Build, Lint, Test & Tofu Validation
+name: PR Workflow
 
 on:
   pull_request:
@@ -8,6 +8,11 @@ on:
       - synchronize
       - reopened
   workflow_dispatch:
+
+# Cancel in-progress runs on the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -23,54 +28,99 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build_lint_test:
-    name: Build, Lint, Test & AsyncAPI
+    name: Build, Lint, & Test
     runs-on: ubuntu-latest
+    env:
+      DO_NOT_TRACK: 1
+      TURBO_TELEMETRY_DISABLED: 1
+      environment: "dev"
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Build, Lint & Test
-        id: blt
-        uses: ./.github/actions/blt
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
         with:
           node-version: "22"
-          artifact_retention: "7"
-          environment: "dev"
-        env:
-          DO_NOT_TRACK: 1
-          TURBO_TELEMETRY_DISABLED: 1
+      - name: Detect Affected Packages
+        id: detect
+        uses: ./.github/actions/detect-affected-packages
+
+      - name: Build Packages
+        if: steps.detect.outputs.has_affected_apps == 'true'
+        uses: ./.github/actions/build-packages
+        with:
+          affected_apps: ${{ steps.detect.outputs.affected_apps }}
+
+      - name: Lint Packages
+        if: steps.detect.outputs.has_affected_apps == 'true'
+        uses: ./.github/actions/lint-packages
+        with:
+          affected_apps: ${{ steps.detect.outputs.affected_apps }}
+
+      - name: Test Packages
+        if: steps.detect.outputs.has_affected_apps == 'true'
+        uses: ./.github/actions/test-packages
+        with:
+          affected_apps: ${{ steps.detect.outputs.affected_apps }}
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Save coverage artifacts for main branch upload
+        if: steps.detect.outputs.has_affected_apps == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports-${{ github.event.pull_request.head.sha }}
+          path: |
+            apps/*/coverage/lcov.info
+            apps/*/coverage.json
+          retention-days: 1
 
   # tofu:
   #   name: OpenTofu
   #   needs: build_lint_test
   #   runs-on: ubuntu-latest
+  #   concurrency:
+  #     group: opentofu-dev
+  #     cancel-in-progress: false
   #   permissions:
   #     id-token: write
   #     contents: read
   #   env:
-  #     TF_VAR_terraform_state_s3_bucket_name: ${{ secrets.TERRAFORM_STATE_S3_BUCKET_NAME }}
-  #     TF_VAR_docusaurus_s3_bucket_name: ${{ secrets.DOCUSAURUS_S3_BUCKET_NAME }}
-  #     TF_VAR_databricks_bucket_name: ${{ secrets.DATABRICKS_S3_BUCKET_NAME }}
-  #     TF_VAR_timestream_database_name: ${{ secrets.TIMESTREAM_DB_NAME }}
-  #     TF_VAR_timestream_table_name: ${{ secrets.TIMESTREAM_TABLE_NAME }}
-  #     TF_VAR_iot_timestream_policy_name: ${{ secrets.IOT_TIMESTREAM_POLICY_NAME }}
-  #     TF_VAR_iot_timestream_role_name: ${{ secrets.IOT_TIMESTREAM_ROLE_NAME }}
-  #     TF_VAR_iot_kinesis_policy_name: ${{ secrets.IOT_KINESIS_POLICY_NAME }}
-  #     TF_VAR_iot_kinesis_role_name: ${{ secrets.IOT_KINESIS_ROLE_NAME }}
-  #     TF_VAR_kinesis_stream_name: ${{ secrets.KINESIS_STREAM_NAME }}
+  #     environment: "dev"
   #     TF_VAR_databricks_account_id: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
   #     TF_VAR_databricks_client_id: ${{ secrets.DATABRICKS_CLIENT_ID }}
   #     TF_VAR_databricks_client_secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+  #     TF_VAR_databricks_host: ${{ secrets.DATABRICKS_HOST }}
+  #     TF_VAR_auth_secret: ${{ secrets.AUTH_SECRET }}
+  #     TF_VAR_github_oauth_client_id: ${{ secrets.GITHUB_OAUTH_CLIENT_ID }}
+  #     TF_VAR_github_oauth_client_secret: ${{ secrets.GITHUB_OAUTH_CLIENT_SECRET }}
+  #     TF_VAR_backend_webhook_api_key_id: ${{ secrets.BACKEND_WEBHOOK_API_KEY_ID }}
+  #     TF_VAR_backend_webhook_api_key: ${{ secrets.BACKEND_WEBHOOK_API_KEY }}
+  #     TF_VAR_backend_webhook_secret: ${{ secrets.BACKEND_WEBHOOK_SECRET }}
+  #     TF_VAR_contentful_space_id: ${{ secrets.CONTENTFUL_SPACE_ID }}
+  #     TF_VAR_contentful_access_token: ${{ secrets.CONTENTFUL_ACCESS_TOKEN }}
+  #     TF_VAR_contentful_preview_access_token: ${{ secrets.CONTENTFUL_PREVIEW_ACCESS_TOKEN }}
+  #     TF_VAR_contentful_preview_secret: ${{ secrets.CONTENTFUL_PREVIEW_SECRET }}
+  #     TF_VAR_api_cloudfront_header_value: ${{ secrets.API_CLOUDFRONT_HEADER_VALUE }}
+
   #   steps:
   #     - name: Checkout Repository
   #       uses: actions/checkout@v4
 
-  #     - name: Run OpenTofu Operations
-  #       uses: ./.github/actions/tofu
+  #     - name: Setup OpenTofu and AWS Credentials
+  #       uses: ./.github/actions/tofu/tofu-setup
   #       with:
   #         aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
   #         aws_region: ${{ secrets.AWS_REGION }}
   #         tofu_version: "1.9.0"
-  #         environment: "dev"
+
+  #     - name: OpenTofu Format Check
+  #       uses: ./.github/actions/tofu/tofu-fmt-check
+
+  #     - name: OpenTofu Init and Validate
+  #       uses: ./.github/actions/tofu/tofu-init-validate
+
+  #     - name: OpenTofu Plan
+  #       uses: ./.github/actions/tofu/tofu-plan

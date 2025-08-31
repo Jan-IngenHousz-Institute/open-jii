@@ -1,6 +1,6 @@
 module "terraform_state_s3" {
   source      = "../../modules/s3"
-  bucket_name = var.terraform_state_s3_bucket_name
+  bucket_name = "open-jii-terraform-state-${var.environment}"
 }
 
 module "terraform_state_lock" {
@@ -20,8 +20,8 @@ module "cloudwatch" {
   source                 = "../../modules/cloudwatch"
   aws_region             = var.aws_region
   log_retention_days     = 60
-  cloudwatch_role_name   = var.iot_logging_role_name
-  cloudwatch_policy_name = var.iot_logging_policy_name
+  cloudwatch_role_name   = "open_jii_${var.environment}_iot_logging_role"
+  cloudwatch_policy_name = "open_jii_${var.environment}_iot_logging_policy"
 }
 
 # Access logs bucket
@@ -43,19 +43,19 @@ module "logs_bucket" {
 module "docusaurus_s3" {
   source                      = "../../modules/s3"
   enable_versioning           = false
-  bucket_name                 = var.docusaurus_s3_bucket_name
+  bucket_name                 = "open-jii-docs-public-${var.environment}"
   cloudfront_distribution_arn = module.docs_cloudfront.cloudfront_distribution_arn
 }
 
 module "timestream" {
   source        = "../../modules/timestream"
-  database_name = var.timestream_database_name
-  table_name    = var.timestream_table_name
+  database_name = "open_jii_${var.environment}_data_ingest_db"
+  table_name    = "measurements"
 }
 
 module "kinesis" {
   source      = "../../modules/kinesis"
-  stream_name = var.kinesis_stream_name
+  stream_name = "open-jii-${var.environment}-data-ingest-stream"
 
   workspace_kinesis_credential_id = var.kinesis_credential_id
 }
@@ -63,13 +63,13 @@ module "kinesis" {
 module "iot_core" {
   source = "../../modules/iot-core"
 
-  timestream_table           = var.timestream_table_name
-  timestream_database        = var.timestream_database_name
-  iot_timestream_role_name   = var.iot_timestream_role_name
-  iot_timestream_policy_name = var.iot_timestream_policy_name
+  timestream_table           = "measurements"
+  timestream_database        = "open_jii_${var.environment}_data_ingest_db"
+  iot_timestream_role_name   = "open_jii_${var.environment}_iot_timestream_role"
+  iot_timestream_policy_name = "open_jii_${var.environment}_iot_timestream_policy"
 
-  iot_kinesis_role_name   = var.iot_kinesis_role_name
-  iot_kinesis_policy_name = var.iot_kinesis_policy_name
+  iot_kinesis_role_name   = "open_jii_${var.environment}_iot_kinesis_role"
+  iot_kinesis_policy_name = "open_jii_${var.environment}_iot_kinesis_policy"
   kinesis_stream_name     = module.kinesis.kinesis_stream_name
   kinesis_stream_arn      = module.kinesis.kinesis_stream_arn
 
@@ -79,7 +79,7 @@ module "iot_core" {
 module "cognito" {
   source             = "../../modules/cognito"
   region             = var.aws_region
-  identity_pool_name = var.iot_cognito_identity_pool_name
+  identity_pool_name = "open-jii-${var.environment}-iot-identity-pool"
 }
 
 module "vpc" {
@@ -98,19 +98,19 @@ module "vpc_endpoints" {
 
 module "databricks_workspace_s3_policy" {
   source      = "../../modules/databricks/workspace-s3-policy"
-  bucket_name = var.databricks_bucket_name
+  bucket_name = "open-jii-databricks-root-bucket-${var.environment}"
 }
 
 module "databricks_workspace_s3" {
   source             = "../../modules/s3"
-  bucket_name        = var.databricks_bucket_name
+  bucket_name        = "open-jii-databricks-root-bucket-${var.environment}"
   enable_versioning  = false
   custom_policy_json = module.databricks_workspace_s3_policy.policy_json
 }
 
 module "metastore_s3" {
   source      = "../../modules/metastore-s3"
-  bucket_name = var.unity_catalog_bucket_name
+  bucket_name = "open-jii-databricks-uc-root-bucket"
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -128,6 +128,8 @@ module "databricks_workspace" {
 
   kinesis_role_arn  = module.kinesis.role_arn
   kinesis_role_name = module.kinesis.role_name
+
+  principal_ids = [module.node_service_principal.service_principal_id]
 
   providers = {
     databricks.mws       = databricks.mws
@@ -149,16 +151,63 @@ module "databricks_metastore" {
   depends_on = [module.databricks_workspace]
 }
 
+module "node_service_principal" {
+  source = "../../modules/databricks/service_principal"
+
+  display_name  = "node-service-principal-${var.environment}"
+  create_secret = true
+
+  providers = {
+    databricks.mws = databricks.mws
+  }
+}
+
+module "experiment_secret_scope" {
+  source = "../../modules/databricks/secret_scope"
+
+  scope_name = "node-webhook-secret-scope-${var.environment}"
+  secrets = {
+    webhook_api_key_id = var.backend_webhook_api_key_id
+    webhook_secret     = var.backend_webhook_secret
+  }
+
+  acl_principals  = [module.node_service_principal.service_principal_application_id]
+  acl_permissions = ["READ"]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
 module "databricks_catalog" {
   source             = "../../modules/databricks/catalog"
-  catalog_name       = var.databricks_catalog_name
+  catalog_name       = "open_jii_${var.environment}"
   external_bucket_id = module.metastore_s3.bucket_name
+
+  grants = {
+    node_service_principal = {
+      principal = module.node_service_principal.service_principal_application_id
+      privileges = [
+        "BROWSE",
+        "CREATE_FUNCTION",
+        "CREATE_MATERIALIZED_VIEW",
+        "CREATE_MODEL",
+        "CREATE_MODEL_VERSION",
+        "CREATE_SCHEMA",
+        "CREATE_TABLE",
+        "CREATE_VOLUME",
+        "SELECT",
+        "USE_CATALOG",
+        "USE_SCHEMA"
+      ]
+    }
+  }
 
   providers = {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.databricks_metastore]
+  depends_on = [module.databricks_metastore, module.node_service_principal]
 }
 
 module "central_schema" {
@@ -192,12 +241,9 @@ module "centrum_pipeline" {
     "RAW_KINESIS_TABLE" = "raw_kinesis_data"
   }
 
-  continuous_mode  = true
+  continuous_mode  = false
   development_mode = true
-  autoscale        = true
-  min_workers      = 1
-  max_workers      = 2
-  node_type_id     = "m5d.large"
+  serverless       = true
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -210,20 +256,6 @@ module "kinesis_ingest_cluster" {
   source = "../../modules/databricks/cluster"
 
   name             = "Kinesis-Ingest-Cluster"
-  single_node      = true
-  single_user      = true
-  single_user_name = var.databricks_client_id
-  spark_version    = "16.2.x-scala2.12"
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-}
-
-module "experiment_orchestrator_cluster" {
-  source = "../../modules/databricks/cluster"
-
-  name             = "Experiment-Orchestrator-Cluster"
   single_node      = true
   single_user      = true
   single_user_name = var.databricks_client_id
@@ -267,41 +299,64 @@ module "kinesis_ingest_job" {
   }
 }
 
-module "experiment_orchestrator_job" {
+module "experiment_provisioning_job" {
   source = "../../modules/databricks/job"
 
-  name        = "Experiment-Pipeline-Orchestrator-Job-DEV"
-  description = "Orchestrates the experiment pipelines (if neccessary) and monitors the experiment state"
+  name        = "Experiment-Provisioning-Job-DEV"
+  description = "Creates Delta Live Tables pipelines for experiments and reports status to backend webhook"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 3
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
 
   tasks = [
     {
-      key           = "experiment_pipeline_orchestrator"
+      key           = "experiment_pipeline_create"
       task_type     = "notebook"
-      compute_type  = "existing_cluster"
-      cluster_id    = module.experiment_orchestrator_cluster.cluster_id
-      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_orchestrator_task"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipeline_create_task"
+
       parameters = {
+        "experiment_id"            = "{{experiment_id}}"
+        "experiment_name"          = "{{experiment_name}}"
+        "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
         "catalog_name"             = module.databricks_catalog.catalog_name
         "central_schema"           = "centrum"
-        "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
       }
     },
     {
-      key           = "experiment_pipeline_monitor"
+      key           = "experiment_status_update"
       task_type     = "notebook"
-      compute_type  = "existing_cluster"
-      cluster_id    = module.experiment_orchestrator_cluster.cluster_id
-      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_monitor_task"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_status_update_task"
+
       parameters = {
-        "catalog_name"   = module.databricks_catalog.catalog_name
-        "central_schema" = "centrum"
+        "experiment_id"       = "{{experiment_id}}"
+        "job_run_id"          = "{{job.run_id}}"
+        "task_run_id"         = "{{task.run_id}}"
+        "create_result_state" = "{{tasks.experiment_pipeline_create.result_state}}"
+        "webhook_url"         = "https://${module.route53.api_domain}${var.backend_status_update_webhook_path}"
+        "key_scope"           = module.experiment_secret_scope.scope_name
       }
 
-      depends_on = "experiment_pipeline_orchestrator"
+      depends_on = "experiment_pipeline_create"
     },
   ]
 
-  depends_on = [module.experiment_orchestrator_cluster]
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -355,11 +410,14 @@ module "databricks_secrets" {
 
   # Store secrets as JSON using variables
   secret_string = jsonencode({
-    DATABRICKS_HOST          = var.databricks_host
-    DATABRICKS_CLIENT_ID     = var.backend_databricks_client_id
-    DATABRICKS_CLIENT_SECRET = var.backend_databricks_client_secret
-    DATABRICKS_JOB_ID        = var.backend_databricks_job_id
-    DATABRICKS_WAREHOUSE_ID  = var.backend_databricks_warehouse_id
+    DATABRICKS_HOST               = module.databricks_workspace.workspace_url
+    DATABRICKS_CLIENT_ID          = module.node_service_principal.service_principal_application_id
+    DATABRICKS_CLIENT_SECRET      = module.node_service_principal.service_principal_secret_value
+    DATABRICKS_JOB_ID             = module.experiment_provisioning_job.job_id
+    DATABRICKS_WAREHOUSE_ID       = var.backend_databricks_warehouse_id
+    DATABRICKS_WEBHOOK_API_KEY_ID = var.backend_webhook_api_key_id
+    DATABRICKS_WEBHOOK_SECRET     = var.backend_webhook_secret
+    DATABRICKS_WEBHOOK_API_KEY    = var.backend_webhook_api_key
   })
 
   tags = {
@@ -401,7 +459,7 @@ module "opennext_waf" {
 
   service_name       = "opennext"
   environment        = "dev"
-  rate_limit         = 2000
+  rate_limit         = 500
   log_retention_days = 30
 
   tags = {
@@ -416,8 +474,8 @@ module "opennext_waf" {
 module "opennext" {
   source = "../../modules/opennext"
 
-  project_name = var.opennext_project_name
-  environment  = var.opennext_environment
+  project_name = "open-jii"
+  environment  = var.environment
   region       = var.aws_region
 
   # Domain configuration - now uncommented and connected
@@ -453,8 +511,8 @@ module "opennext" {
   }
 
   # Performance configuration
-  enable_lambda_warming = var.opennext_enable_warming
-  price_class           = var.opennext_price_class
+  enable_lambda_warming = true
+  price_class           = "PriceClass_100"
 
   # Monitoring configuration
   enable_cloudwatch_logs = true
@@ -577,7 +635,7 @@ module "backend_ecr" {
   environment                   = "dev"
   repository_name               = "open-jii-backend"
   service_name                  = "backend"
-  max_image_count               = var.backend_ecr_max_images
+  max_image_count               = 10
   enable_vulnerability_scanning = true
   encryption_type               = "KMS"
   image_tag_mutability          = "MUTABLE" # Set to MUTABLE for dev, but should be IMMUTABLE for prod
@@ -659,9 +717,9 @@ module "backend_ecs" {
 
   # Auto-scaling settings
   enable_autoscaling = true
-  min_capacity       = var.backend_min_capacity  # Scale down to 1 task
-  max_capacity       = var.backend_max_capacity  # Scale up to 3 tasks
-  cpu_threshold      = var.backend_cpu_threshold # Scale out at 80% CPU usage
+  min_capacity       = 1  # Scale down to 1 task
+  max_capacity       = 3  # Scale up to 3 tasks
+  cpu_threshold      = 80 # Scale out at 80% CPU usage
 
   # Mixed capacity strategy for cost optimization and stability
   enable_mixed_capacity = true
@@ -671,7 +729,7 @@ module "backend_ecs" {
 
   # Container health checks
   enable_container_healthcheck = true
-  health_check_path            = var.backend_health_check_path
+  health_check_path            = "/health"
 
   # Deployment configuration
   enable_circuit_breaker               = true
@@ -714,6 +772,18 @@ module "backend_ecs" {
     {
       name      = "DATABRICKS_WAREHOUSE_ID"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WAREHOUSE_ID::"
+    },
+    {
+      name      = "DATABRICKS_WEBHOOK_API_KEY_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_API_KEY_ID::"
+    },
+    {
+      name      = "DATABRICKS_WEBHOOK_API_KEY"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_API_KEY::"
+    },
+    {
+      name      = "DATABRICKS_WEBHOOK_SECRET"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_SECRET::"
     },
     {
       name      = "DB_CREDENTIALS"
@@ -770,7 +840,7 @@ module "backend_waf" {
 
   service_name       = "backend"
   environment        = "dev"
-  rate_limit         = 2000
+  rate_limit         = 500
   log_retention_days = 30
 
   tags = {
@@ -833,8 +903,8 @@ module "docs_waf" {
 
 module "docs_cloudfront" {
   source          = "../../modules/cloudfront"
-  bucket_name     = var.docusaurus_s3_bucket_name
   aws_region      = var.aws_region
+  bucket_name     = module.docusaurus_s3.bucket_name
   certificate_arn = module.route53.cloudfront_certificate_arns["docs"]
   custom_domain   = module.route53.docs_domain
   waf_acl_id      = module.docs_waf.cloudfront_web_acl_arn

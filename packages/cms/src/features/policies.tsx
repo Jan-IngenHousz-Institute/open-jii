@@ -5,6 +5,7 @@ import {
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
 import { documentToReactComponents } from "@contentful/rich-text-react-renderer";
+import type { Document } from "@contentful/rich-text-types";
 import React from "react";
 
 import type { PagePoliciesFieldsFragment } from "../lib/__generated/sdk";
@@ -46,7 +47,7 @@ export const PoliciesContent: React.FC<PoliciesContentProps> = ({ policies, loca
           className="prose prose-lg w-full text-gray-700"
           {...inspectorProps({ fieldId: "content" })}
         >
-          {documentToReactComponents(currentPolicies.content.json)}
+          {documentToReactComponents(currentPolicies.content.json as Document)}
         </div>
       ) : null}
     </div>

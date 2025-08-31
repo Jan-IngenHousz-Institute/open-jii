@@ -1,0 +1,31 @@
+name: "Setup Node.js and pnpm"
+description: "Sets up Node.js and pnpm with caching"
+inputs:
+  node-version:
+    description: "Node.js version"
+    required: true
+    default: "22"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: "pnpm"
+
+    - name: Cache pnpm Store
+      uses: actions/cache@v4
+      with:
+        path: ~/.pnpm-store
+        key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-
+
+    - name: Install Dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile

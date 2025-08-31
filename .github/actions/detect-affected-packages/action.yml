@@ -1,0 +1,43 @@
+name: "Detect Affected Packages"
+description: "Identifies affected projects based on changes"
+
+outputs:
+  affected_apps:
+    description: "JSON array of affected app names"
+    value: ${{ steps.check.outputs.affected_apps }}
+  has_affected_apps:
+    description: "Whether there are any affected apps"
+    value: ${{ steps.check.outputs.has_affected_apps }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Identify Affected Projects
+      id: check
+      shell: bash
+      env:
+        TURBO_REF_FILTER: ${{ (github.event_name == 'pull_request' && github.event.pull_request.base.sha) || github.event.before || 'HEAD~1' }}
+
+      run: |
+        echo "Using base for change detection: $TURBO_REF_FILTER"
+
+        # Get list of affected projects using provided base
+        pnpm turbo run build --dry-run=json --filter=...[$TURBO_REF_FILTER] --output-logs=none > affected.json
+
+        # Extract project names from packages array and filter out "//" entry
+        AFFECTED_APPS=$(jq -c '[.packages[] | select(. != "//")]' affected.json)
+                
+        # Store the affected apps for output
+        echo "affected_apps=$(echo $AFFECTED_APPS | jq -c .)" >> $GITHUB_OUTPUT
+
+        # Check if we have any affected apps
+        if [ "$(echo $AFFECTED_APPS | jq 'length')" -gt 0 ]; then
+          echo "has_affected_apps=true" >> $GITHUB_OUTPUT
+
+          # Print the affected apps in a more readable format (like the shell script)
+          echo "✅ Found affected packages:"
+          echo "$AFFECTED_APPS" | jq '.'
+        else
+          echo "has_affected_apps=false" >> $GITHUB_OUTPUT
+          echo "No affected packages found"
+        fi

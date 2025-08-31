@@ -5,7 +5,7 @@ import type { ErrorResponse, Experiment, ExperimentMemberList } from "@repo/api"
 import type { ExperimentList } from "@repo/api";
 import { contract } from "@repo/api";
 
-import { DatabricksService } from "../../common/services/databricks/databricks.service";
+import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { success, failure } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
@@ -14,7 +14,7 @@ import type { UserDto } from "../../users/core/models/user.model";
 describe("ExperimentController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
-  let databricksService: DatabricksService;
+  let databricksAdapter: DatabricksAdapter;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -25,13 +25,13 @@ describe("ExperimentController", () => {
     testUserId = await testApp.createTestUser({});
 
     // Get the databricks service instance for create experiment tests
-    databricksService = testApp.module.get(DatabricksService);
+    databricksAdapter = testApp.module.get(DatabricksAdapter);
 
     // Reset any mocks before each test
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
 
     // Set up default mocks for databricks service (only needed for create experiment)
-    jest.spyOn(databricksService, "triggerJob").mockResolvedValue(
+    vi.spyOn(databricksAdapter, "triggerJob").mockResolvedValue(
       success({
         run_id: 12345,
         number_in_job: 1,
@@ -70,7 +70,7 @@ describe("ExperimentController", () => {
 
       // Verify that Databricks job was triggered
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.triggerJob).toHaveBeenCalledWith({
+      expect(databricksAdapter.triggerJob).toHaveBeenCalledWith({
         experimentId: responseBody.id,
         experimentName: experimentData.name,
         userId: testUserId,
@@ -79,7 +79,7 @@ describe("ExperimentController", () => {
 
     it("should successfully create an experiment even if Databricks fails", async () => {
       // Mock Databricks to fail
-      jest.spyOn(databricksService, "triggerJob").mockResolvedValue(
+      vi.spyOn(databricksAdapter, "triggerJob").mockResolvedValue(
         failure({
           name: "DatabricksError",
           code: "INTERNAL_ERROR",
@@ -109,7 +109,7 @@ describe("ExperimentController", () => {
 
       // Verify that Databricks job was attempted
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.triggerJob).toHaveBeenCalledWith({
+      expect(databricksAdapter.triggerJob).toHaveBeenCalledWith({
         experimentId: responseBody.id,
         experimentName: experimentData.name,
         userId: testUserId,
@@ -129,7 +129,7 @@ describe("ExperimentController", () => {
 
       // Verify that Databricks was not called for invalid requests
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.triggerJob).not.toHaveBeenCalled();
+      expect(databricksAdapter.triggerJob).not.toHaveBeenCalled();
     });
 
     it("should return 401 if not authenticated", async () => {
@@ -146,7 +146,7 @@ describe("ExperimentController", () => {
 
       // Verify that Databricks was not called for unauthenticated requests
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.triggerJob).not.toHaveBeenCalled();
+      expect(databricksAdapter.triggerJob).not.toHaveBeenCalled();
     });
 
     it("should return 400 if name is too long", async () => {
@@ -166,7 +166,7 @@ describe("ExperimentController", () => {
 
       // Verify that Databricks was not called for invalid requests
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.triggerJob).not.toHaveBeenCalled();
+      expect(databricksAdapter.triggerJob).not.toHaveBeenCalled();
     });
 
     it("should return 400 if embargoIntervalDays is negative", async () => {
@@ -184,7 +184,7 @@ describe("ExperimentController", () => {
 
       // Verify that Databricks was not called for invalid requests
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksService.triggerJob).not.toHaveBeenCalled();
+      expect(databricksAdapter.triggerJob).not.toHaveBeenCalled();
     });
   });
 
@@ -196,6 +196,94 @@ describe("ExperimentController", () => {
         .expect(StatusCodes.OK);
 
       expect(response.body).toEqual([]);
+    });
+
+    it("should filter experiments by search term in name", async () => {
+      // Create experiments
+      await testApp.createExperiment({ name: "Alpha Experiment", userId: testUserId });
+      await testApp.createExperiment({ name: "Beta Experiment", userId: testUserId });
+      await testApp.createExperiment({ name: "Gamma", userId: testUserId });
+
+      // Act
+      const response = await testApp
+        .get(contract.experiments.listExperiments.path)
+        .withAuth(testUserId)
+        .query({ search: "Experiment" })
+        .expect(StatusCodes.OK);
+
+      // Assert
+      expect(response.body).toHaveLength(2);
+      expect(response.body).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: "Alpha Experiment" }),
+          expect.objectContaining({ name: "Beta Experiment" }),
+        ]),
+      );
+      const experiments = response.body as { name: string }[];
+      expect(experiments.some((e) => e.name === "Gamma")).toBe(false);
+    });
+
+    it("should filter experiments by search term with other filters", async () => {
+      // Create users
+      const mainUserId = await testApp.createTestUser({ email: "search-ctrl@example.com" });
+      const otherUserId = await testApp.createTestUser({ email: "search-ctrl-other@example.com" });
+
+      // Create experiments
+      await testApp.createExperiment({
+        name: "My Searchable Active",
+        userId: mainUserId,
+        status: "active",
+      });
+      await testApp.createExperiment({
+        name: "My Searchable Archived",
+        userId: mainUserId,
+        status: "archived",
+      });
+      await testApp.createExperiment({
+        name: "My Unrelated",
+        userId: mainUserId,
+        status: "active",
+      });
+      const { experiment: memberExpActive } = await testApp.createExperiment({
+        name: "Member Searchable Active",
+        userId: otherUserId,
+        status: "active",
+      });
+      const { experiment: memberExpArchived } = await testApp.createExperiment({
+        name: "Member Searchable Archived",
+        userId: otherUserId,
+        status: "archived",
+      });
+      await testApp.addExperimentMember(memberExpActive.id, mainUserId, "member");
+      await testApp.addExperimentMember(memberExpArchived.id, mainUserId, "member");
+      await testApp.createExperiment({
+        name: "Other Experiment",
+        userId: otherUserId,
+        status: "active",
+      });
+
+      // Act
+      const response = await testApp
+        .get(contract.experiments.listExperiments.path)
+        .withAuth(mainUserId)
+        .query({ filter: "related", status: "active", search: "Searchable" })
+        .expect(StatusCodes.OK);
+
+      // Assert
+      expect(response.body).toHaveLength(2);
+      expect(response.body).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: "My Searchable Active", status: "active" }),
+          expect.objectContaining({ name: "Member Searchable Active", status: "active" }),
+        ]),
+      );
+      const experiments = response.body as { name: string; status: string }[];
+      expect(
+        experiments.some(
+          (e) =>
+            e.status === "archived" || e.name === "My Unrelated" || e.name === "Other Experiment",
+        ),
+      ).toBe(false);
     });
 
     it("should return a list of experiments", async () => {
@@ -542,10 +630,11 @@ describe("ExperimentController", () => {
         .withAuth(testUserId)
         .send({ members: [{ userId: newMemberId, role: "member" }] })
         .expect(StatusCodes.CREATED)
-        .expect(({ body }) => {
+        .expect(({ body }: { body: ExperimentMemberList }) => {
           expect(body).toHaveLength(1);
           expect(body[0]).toMatchObject({
             experimentId: experiment.id,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             joinedAt: expect.any(String),
             role: "member",
             user: expect.objectContaining({

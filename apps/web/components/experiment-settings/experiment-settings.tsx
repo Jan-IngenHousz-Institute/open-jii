@@ -1,8 +1,10 @@
 "use client";
 
 import { useTranslation } from "@repo/i18n";
+import { Alert, AlertDescription } from "@repo/ui/components";
 
-import { useExperiment } from "../../hooks/experiment/useExperiment/useExperiment";
+import { useExperimentAccess } from "../../hooks/experiment/useExperimentAccess/useExperimentAccess";
+import { ErrorDisplay } from "../error-display";
 import { ExperimentDetailsCard } from "./experiment-details-card";
 import { ExperimentInfoCard } from "./experiment-info-card";
 import { ExperimentMemberManagement } from "./experiment-member-management-card";
@@ -14,18 +16,31 @@ interface ExperimentSettingsProps {
 }
 
 export function ExperimentSettings({ experimentId }: ExperimentSettingsProps) {
-  const { data, isLoading } = useExperiment(experimentId);
+  const { data: accessData, error, isLoading } = useExperimentAccess(experimentId);
   const { t } = useTranslation();
 
   if (isLoading) {
     return <div>{t("experimentSettings.loading")}</div>;
   }
 
-  if (!data) {
+  if (error) {
+    return <ErrorDisplay error={error} title={t("errors.error")} />;
+  }
+
+  if (!accessData?.body.experiment) {
     return <div>{t("experimentSettings.notFound")}</div>;
   }
 
-  const experiment = data.body;
+  const { experiment, hasAccess } = accessData.body;
+
+  // Only members can access settings
+  if (!hasAccess) {
+    return (
+      <Alert>
+        <AlertDescription>{t("experiments.needMemberAccess")}</AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="space-y-6">

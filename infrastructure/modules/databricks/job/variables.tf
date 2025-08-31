@@ -43,6 +43,9 @@ variable "tasks" {
     num_workers  = optional(number, 1)
     single_node  = optional(bool, false)
 
+    # Spark configurations for this task
+    spark_conf = optional(map(string), {})
+
     # Dependencies
     depends_on = optional(string)
   }))
@@ -53,4 +56,52 @@ variable "max_concurrent_runs" {
   description = "Maximum number of concurrent runs"
   type        = number
   default     = 1
+}
+
+variable "use_serverless" {
+  description = "Whether to use serverless compute for all tasks (no cluster configuration)"
+  type        = bool
+  default     = false
+}
+
+
+variable "serverless_performance_target" {
+  description = "The performance mode for serverless jobs. PERFORMANCE_OPTIMIZED prioritizes fast startup and execution, STANDARD is more cost-efficient."
+  type        = string
+  default     = "PERFORMANCE_OPTIMIZED"
+  validation {
+    condition     = contains(["PERFORMANCE_OPTIMIZED", "STANDARD"], var.serverless_performance_target)
+    error_message = "serverless_performance_target must be one of: PERFORMANCE_OPTIMIZED, STANDARD"
+  }
+}
+
+variable "task_retry_config" {
+  description = "Task retry configuration"
+  type = object({
+    retries                   = optional(number, 3)
+    min_retry_interval_millis = optional(number, 60000)
+    retry_on_timeout          = optional(bool, true)
+  })
+  default = {}
+}
+
+variable "spark_conf" {
+  description = "Global Spark configurations to apply to all tasks (Only applicable if not using serverless compute)."
+  type        = map(string)
+  default     = {}
+}
+
+variable "permissions" {
+  description = "List of permissions to grant on the job. Each object should have principal_application_id and permission_level."
+  type = list(object({
+    principal_application_id = string
+    permission_level         = string
+  }))
+  default = []
+  validation {
+    condition = alltrue([
+      for p in var.permissions : contains(["CAN_VIEW", "CAN_MANAGE_RUN", "IS_OWNER", "CAN_MANAGE"], p.permission_level)
+    ])
+    error_message = "permission_level must be one of: CAN_VIEW, CAN_MANAGE_RUN, IS_OWNER, CAN_MANAGE"
+  }
 }

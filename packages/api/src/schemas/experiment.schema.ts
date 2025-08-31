@@ -87,9 +87,120 @@ export const zExperimentMember = z.object({
 
 export const zExperimentMemberList = z.array(zExperimentMember);
 
+export const zExperimentAccess = z.object({
+  experiment: zExperiment,
+  hasAccess: z.boolean(),
+  isAdmin: z.boolean(),
+});
+
 export const zErrorResponse = z.object({
   message: z.string(),
 });
+
+// --- Flow Schemas ---
+export const zFlowNodeType = z.enum(["question", "instruction", "measurement"]);
+
+export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice", "number"]);
+
+// Question content is a strict discriminated union so invalid extra keys are rejected
+const zQuestionYesNo = z
+  .object({
+    kind: z.literal("yes_no"),
+    text: z.string().min(1),
+    required: z.boolean().optional().default(false),
+  })
+  .strict();
+
+const zQuestionOpenEnded = z
+  .object({
+    kind: z.literal("open_ended"),
+    text: z.string().min(1),
+    required: z.boolean().optional().default(false),
+  })
+  .strict();
+
+const zQuestionMultiChoice = z
+  .object({
+    kind: z.literal("multi_choice"),
+    text: z.string().min(1),
+    options: z.array(z.string()).min(1),
+    required: z.boolean().optional().default(false),
+  })
+  .strict();
+
+const zQuestionNumber = z
+  .object({
+    kind: z.literal("number"),
+    text: z.string().min(1),
+    required: z.boolean().optional().default(false),
+  })
+  .strict();
+
+export const zQuestionContent = z.discriminatedUnion("kind", [
+  zQuestionYesNo,
+  zQuestionOpenEnded,
+  zQuestionMultiChoice,
+  zQuestionNumber,
+]);
+
+export const zInstructionContent = z.object({
+  text: z.string().min(1),
+});
+
+export const zMeasurementContent = z.object({
+  protocolId: z.string().uuid(),
+  params: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const zFlowNode = z.object({
+  id: z.string().min(1),
+  type: zFlowNodeType,
+  name: z.string().min(1),
+  content: z.union([zQuestionContent, zInstructionContent, zMeasurementContent]),
+  // A node can be marked as a start node. Exactly one node must be the start node for any flow.
+  isStart: z.boolean().optional().default(false),
+  // Optional persisted layout position (added later for backwards compatibility)
+  position: z
+    .object({
+      x: z.number(),
+      y: z.number(),
+    })
+    .optional(),
+});
+
+export const zFlowEdge = z.object({
+  id: z.string().min(1),
+  source: z.string().min(1),
+  target: z.string().min(1),
+  label: z.string().optional().nullable(),
+});
+
+export const zFlowGraph = z
+  .object({
+    nodes: z.array(zFlowNode).min(1),
+    edges: z.array(zFlowEdge),
+  })
+  .superRefine((graph, ctx) => {
+    // Require exactly one start node when nodes are present
+    const startCount = graph.nodes.reduce((acc, n) => (n.isStart === true ? acc + 1 : acc), 0);
+    if (graph.nodes.length > 0 && startCount !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Exactly one start node is required",
+        path: ["nodes"],
+      });
+    }
+  });
+
+export const zFlow = z.object({
+  id: z.string().uuid(),
+  experimentId: z.string().uuid(),
+  graph: zFlowGraph,
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const zUpsertFlowBody = zFlowGraph;
 
 // Infer types from Zod schemas
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
@@ -103,10 +214,19 @@ export type ExperimentMember = z.infer<typeof zExperimentMember>;
 export type ExperimentProtocol = z.infer<typeof zExperimentProtocol>;
 export type ExperimentMemberList = z.infer<typeof zExperimentMemberList>;
 export type ErrorResponse = z.infer<typeof zErrorResponse>;
+export type FlowNodeType = z.infer<typeof zFlowNodeType>;
+export type FlowGraph = z.infer<typeof zFlowGraph>;
+export type Flow = z.infer<typeof zFlow>;
+export type UpsertFlowBody = z.infer<typeof zUpsertFlowBody>;
 
 // Define request and response types
 export const zCreateExperimentBody = z.object({
-  name: z.string().min(1).max(255).describe("The name of the experiment"),
+  name: z
+    .string()
+    .trim()
+    .min(1, "The name of the experiment is required")
+    .max(255, "The name must be at most 255 characters")
+    .describe("The name of the experiment"),
   description: z.string().optional().describe("Optional description of the experiment"),
   status: zExperimentStatus.optional().describe("Initial status of the experiment"),
   visibility: zExperimentVisibility.optional().describe("Experiment visibility setting"),
@@ -134,7 +254,13 @@ export const zCreateExperimentBody = z.object({
 });
 
 export const zUpdateExperimentBody = z.object({
-  name: z.string().min(1).max(255).optional().describe("Updated experiment name"),
+  name: z
+    .string()
+    .trim()
+    .min(1, "The name of the experiment is required")
+    .max(255, "The name must be at most 255 characters")
+    .optional()
+    .describe("Updated experiment name"),
   description: z.string().optional().describe("Updated experiment description"),
   status: zExperimentStatus.optional().describe("Updated experiment status"),
   visibility: zExperimentVisibility.optional().describe("Updated visibility setting"),
@@ -159,6 +285,7 @@ export const zExperimentFilterQuery = z.object({
     .optional()
     .describe("Filter experiments by relationship to the user"),
   status: zExperimentStatus.optional().describe("Filter experiments by their status"),
+  search: z.string().optional().describe("Search term for experiment name"),
 });
 
 export const zExperimentDataQuery = z.object({

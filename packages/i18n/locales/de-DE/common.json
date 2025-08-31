@@ -1,5 +1,7 @@
 {
   "common": {
+    "protocolLabel": "Protokoll",
+    "by": "von",
     "homepage": "Startseite",
     "language": "Sprache",
     "languageDrawer": "Sprachschublade umschalten",
@@ -37,6 +39,12 @@
     "openJII": "openJII"
   },
   "experiments": {
+    "filterMy": "Meine Experimente",
+    "filterMember": "Mitglied-Experimente",
+    "filterRelated": "Alle verwandten Experimente",
+    "filterAll": "Alle Experimente",
+    "filterStatusAll": "Alle Status",
+    "clearSearch": "Suche löschen",
     "title": "Experimente",
     "newExperiment": "Neues Experiment",
     "overview": "Übersicht",
@@ -61,6 +69,7 @@
     "experimentId": "Experiment-ID",
     "descriptionTitle": "Beschreibung",
     "searchUsers": "Benutzer suchen",
+    "searchExperiments": "Experimente suchen...",
     "startTypingToSearch": "Tippen Sie, um zu suchen",
     "searchProtocols": "Protokolle suchen",
     "loadingProtocols": "Laden...",
@@ -69,7 +78,8 @@
     "addProtocol": "Protokoll hinzufügen",
     "seeProtocolDetails": "Protokolldetails anzeigen",
     "family": "Familie:",
-    "createdBy": "Erstellt von:"
+    "createdBy": "Erstellt von:",
+    "measurementPanelTitle": "Messprotokoll"
   },
   "experimentSettings": {
     "loading": "Experimenteinstellungen werden geladen...",

@@ -1,5 +1,4 @@
 /* eslint-disable no-restricted-properties */
-/* eslint-disable turbo/no-undeclared-env-vars */
 import http from "http";
 
 export type SecretMap = Record<string, string>;

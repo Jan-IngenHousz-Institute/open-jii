@@ -24,7 +24,7 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
     skip: !preview,
     locale,
   });
-  const currentFeatures = liveFeatures || featuresData;
+  const currentFeatures = liveFeatures ?? featuresData;
 
   if (!currentFeatures) return null;
 
@@ -34,7 +34,7 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
   });
 
   // Extract features array once
-  const features = currentFeatures.featuresCollection?.items || [];
+  const features = currentFeatures.featuresCollection?.items ?? [];
 
   // Helper to render the features list
   const renderFeaturesList = (featuresArr: typeof features) =>
@@ -62,7 +62,7 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
                   {feature.icon?.url ? (
                     <Image
                       src={feature.icon.url}
-                      alt={feature.icon.title || "Feature icon"}
+                      alt={feature.icon.title ?? "Feature icon"}
                       width={32}
                       height={32}
                       className="h-8 w-8 object-contain"

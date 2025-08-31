@@ -1,4 +1,3 @@
-/* eslint-disable turbo/no-undeclared-env-vars */
 /* eslint-disable no-restricted-properties */
 import { initAuth } from "@repo/auth/next";
 import type { NextAuth, NextAuthResult } from "@repo/auth/next";
@@ -26,10 +25,11 @@ const {
   signIn: _signIn,
   signOut: _signOut,
   providerMap,
+  unstable_update: unstableUpdate,
 }: NextAuth = await nextAuth;
 
 const auth: NextAuthResult["auth"] = _auth;
 const signIn: NextAuthResult["signIn"] = _signIn;
 const signOut: NextAuthResult["signOut"] = _signOut;
 
-export { handlers, auth, signIn, signOut, providerMap };
+export { handlers, auth, signIn, signOut, providerMap, unstableUpdate };

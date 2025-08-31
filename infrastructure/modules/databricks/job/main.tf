@@ -10,12 +10,14 @@ terraform {
 
 # Find smallest available node type
 data "databricks_node_type" "smallest" {
+  count      = var.use_serverless ? 0 : 1
   local_disk = true
   provider   = databricks.workspace
 }
 
 # Find latest Spark version
 data "databricks_spark_version" "latest_lts" {
+  count             = var.use_serverless ? 0 : 1
   long_term_support = true
   provider          = databricks.workspace
 }
@@ -25,6 +27,9 @@ resource "databricks_job" "this" {
   description         = var.description
   provider            = databricks.workspace
   max_concurrent_runs = var.max_concurrent_runs
+
+  # Set performance target for serverless compute at the job level
+  performance_target = var.use_serverless ? var.serverless_performance_target : null
 
   dynamic "continuous" {
     for_each = var.continuous ? [1] : []
@@ -39,29 +44,32 @@ resource "databricks_job" "this" {
     ]
   }
 
-
   dynamic "task" {
     for_each = var.tasks
     content {
       task_key = task.value.key
 
-      # Only add cluster configuration for notebook tasks
       dynamic "new_cluster" {
-        for_each = task.value.task_type == "notebook" && task.value.compute_type == "new_cluster" ? [1] : []
+        for_each = (!var.use_serverless && task.value.task_type == "notebook" && task.value.compute_type == "new_cluster") ? [1] : []
         content {
           num_workers   = task.value.single_node ? 0 : task.value.num_workers
           spark_version = data.databricks_spark_version.latest_lts.id
           node_type_id  = task.value.node_type_id != null ? task.value.node_type_id : data.databricks_node_type.smallest.id
 
-          spark_conf = task.value.single_node ? {
-            "spark.databricks.cluster.profile" = "singleNode"
-            "spark.master"                     = "local[*]"
-          } : {}
+          # Merge global spark configs with task-specific configs, with task configs taking precedence
+          spark_conf = merge(
+            # Base configuration for single node if applicable
+            task.value.single_node ? {
+              "spark.databricks.cluster.profile" = "singleNode"
+              "spark.master"                     = "local[*]"
+            } : {},
+            var.spark_conf,
+          )
         }
       }
 
-      # Only set existing_cluster_id for notebook tasks
-      existing_cluster_id = task.value.task_type == "notebook" && task.value.compute_type == "existing_cluster" ? task.value.cluster_id : null
+      # Only set existing_cluster_id if not using serverless and compute_type is existing_cluster
+      existing_cluster_id = (!var.use_serverless && task.value.task_type == "notebook" && task.value.compute_type == "existing_cluster") ? task.value.cluster_id : null
 
       # Handle task type: notebook or pipeline
       dynamic "notebook_task" {
@@ -86,6 +94,11 @@ resource "databricks_job" "this" {
           task_key = task.value.depends_on
         }
       }
+
+      # Add retry configuration
+      retry_on_timeout          = var.continuous ? false : var.task_retry_config.retry_on_timeout
+      max_retries               = var.continuous ? 0 : var.task_retry_config.retries
+      min_retry_interval_millis = var.continuous ? 0 : var.task_retry_config.min_retry_interval_millis
     }
   }
 
@@ -95,6 +108,21 @@ resource "databricks_job" "this" {
     content {
       quartz_cron_expression = var.schedule
       timezone_id            = "UTC"
+    }
+  }
+}
+
+# Grant job permissions to principals if provided
+resource "databricks_permissions" "job" {
+  count    = length(var.permissions)
+  provider = databricks.workspace
+  job_id   = databricks_job.this.id
+
+  dynamic "access_control" {
+    for_each = [var.permissions[count.index]]
+    content {
+      service_principal_name = access_control.value.principal_application_id
+      permission_level       = access_control.value.permission_level
     }
   }
 }

@@ -1,8 +1,8 @@
 import { Module } from "@nestjs/common";
 
-import { DatabricksModule } from "../common/services/databricks/databricks.module";
+import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
+import { DatabricksModule } from "../common/modules/databricks/databricks.module";
 // Use Cases
-import { ChangeExperimentStatusUseCase } from "./application/use-cases/change-experiment-status/change-experiment-status";
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "./application/use-cases/delete-experiment/delete-experiment";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data";
@@ -12,16 +12,23 @@ import { RemoveExperimentMemberUseCase } from "./application/use-cases/experimen
 import { AddExperimentProtocolsUseCase } from "./application/use-cases/experiment-protocols/add-experiment-protocols";
 import { ListExperimentProtocolsUseCase } from "./application/use-cases/experiment-protocols/list-experiment-protocols";
 import { RemoveExperimentProtocolUseCase } from "./application/use-cases/experiment-protocols/remove-experiment-protocol";
+import { CreateFlowUseCase } from "./application/use-cases/flows/create-flow";
+import { GetFlowUseCase } from "./application/use-cases/flows/get-flow";
+import { UpdateFlowUseCase } from "./application/use-cases/flows/update-flow";
+import { GetExperimentAccessUseCase } from "./application/use-cases/get-experiment-access/get-experiment-access";
 import { GetExperimentUseCase } from "./application/use-cases/get-experiment/get-experiment";
 import { ListExperimentsUseCase } from "./application/use-cases/list-experiments/list-experiments";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
 import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-provisioning-status/update-provisioning-status";
+import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 // Repositories
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
 import { ExperimentProtocolRepository } from "./core/repositories/experiment-protocol.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
+import { FlowRepository } from "./core/repositories/flow.repository";
 // Controllers
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
+import { ExperimentFlowsController } from "./presentation/experiment-flows.controller";
 import { ExperimentMembersController } from "./presentation/experiment-members.controller";
 import { ExperimentProtocolsController } from "./presentation/experiment-protocols.controller";
 import { ExperimentWebhookController } from "./presentation/experiment-webhook.controller";
@@ -32,23 +39,31 @@ import { ExperimentController } from "./presentation/experiment.controller";
   controllers: [
     ExperimentController,
     ExperimentDataController,
+    ExperimentFlowsController,
     ExperimentMembersController,
-    ExperimentWebhookController,
     ExperimentProtocolsController,
+    ExperimentWebhookController,
   ],
   providers: [
+    // Port implementations
+    {
+      provide: DATABRICKS_PORT,
+      useExisting: DatabricksAdapter,
+    },
+
     // Repositories
     ExperimentRepository,
     ExperimentMemberRepository,
     ExperimentProtocolRepository,
+    FlowRepository,
 
     // General experiment use cases
     CreateExperimentUseCase,
     GetExperimentUseCase,
+    GetExperimentAccessUseCase,
     ListExperimentsUseCase,
     UpdateExperimentUseCase,
     DeleteExperimentUseCase,
-    ChangeExperimentStatusUseCase,
     UpdateProvisioningStatusUseCase,
 
     // Experiment data use cases
@@ -63,6 +78,11 @@ import { ExperimentController } from "./presentation/experiment.controller";
     AddExperimentProtocolsUseCase,
     ListExperimentProtocolsUseCase,
     RemoveExperimentProtocolUseCase,
+
+    // Flow use cases
+    GetFlowUseCase,
+    CreateFlowUseCase,
+    UpdateFlowUseCase,
   ],
   exports: [ExperimentRepository, ExperimentMemberRepository],
 })

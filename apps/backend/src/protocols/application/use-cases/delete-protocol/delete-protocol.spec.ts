@@ -24,7 +24,7 @@ describe("DeleteProtocolUseCase", () => {
 
   afterEach(() => {
     testApp.afterEach();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   afterAll(async () => {

@@ -1,11 +1,13 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Inject } from "@nestjs/common";
 
 import { ExperimentDataQuery } from "@repo/api";
 
-import { DatabricksService } from "../../../../common/services/databricks/databricks.service";
-import { SchemaData } from "../../../../common/services/databricks/databricks.types";
+import type { SchemaData } from "../../../../common/modules/databricks/services/sql/sql.types";
+import type { Table } from "../../../../common/modules/databricks/services/tables/tables.types";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
+import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
+import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 /**
@@ -47,7 +49,7 @@ export class GetExperimentDataUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly databricksService: DatabricksService,
+    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
 
   async execute(
@@ -97,12 +99,36 @@ export class GetExperimentDataUseCase {
               `Fetching data for table ${query.tableName} in experiment ${experimentId}`,
             );
 
+            // First, validate that the table exists by listing all tables
+            const tablesResult = await this.databricksPort.listTables(
+              experiment.name,
+              experimentId,
+            );
+
+            if (tablesResult.isFailure()) {
+              return failure(
+                AppError.internal(`Failed to list tables: ${tablesResult.error.message}`),
+              );
+            }
+
+            // Check if the specified table exists
+            const tableExists = tablesResult.value.tables.some(
+              (table: Table) => table.name === query.tableName,
+            );
+
+            if (!tableExists) {
+              this.logger.warn(`Table ${query.tableName} not found in experiment ${experimentId}`);
+              return failure(
+                AppError.notFound(`Table '${query.tableName}' not found in this experiment`),
+              );
+            }
+
             // Execute SQL query to get experiment data with pagination
             const offset = (page - 1) * pageSize;
             const sqlQuery = `SELECT * FROM ${query.tableName} LIMIT ${pageSize} OFFSET ${offset}`;
 
             // Get row count first for pagination metadata
-            const countResult = await this.databricksService.executeSqlQuery(
+            const countResult = await this.databricksPort.executeSqlQuery(
               schemaName,
               `SELECT COUNT(*) as count FROM ${query.tableName}`,
             );
@@ -118,7 +144,7 @@ export class GetExperimentDataUseCase {
             const totalPages = Math.ceil(totalRows / pageSize);
 
             // Execute the actual data query
-            const dataResult = await this.databricksService.executeSqlQuery(schemaName, sqlQuery);
+            const dataResult = await this.databricksPort.executeSqlQuery(schemaName, sqlQuery);
 
             if (dataResult.isFailure()) {
               return failure(
@@ -146,7 +172,7 @@ export class GetExperimentDataUseCase {
           else {
             this.logger.debug(`Listing all tables for experiment ${experimentId}`);
 
-            const tablesResult = await this.databricksService.listTables(
+            const tablesResult = await this.databricksPort.listTables(
               experiment.name,
               experimentId,
             );
@@ -164,7 +190,7 @@ export class GetExperimentDataUseCase {
             for (const table of tablesResult.value.tables) {
               // Get sample data
               const sqlQuery = `SELECT * FROM ${table.name} LIMIT ${pageSize}`;
-              const dataResult = await this.databricksService.executeSqlQuery(schemaName, sqlQuery);
+              const dataResult = await this.databricksPort.executeSqlQuery(schemaName, sqlQuery);
 
               const tableInfo: TableDataDto = {
                 name: table.name,
@@ -172,7 +198,7 @@ export class GetExperimentDataUseCase {
                 schema_name: table.schema_name,
                 page,
                 pageSize,
-                totalPages: 1, // Sample data is just 1 page
+                totalPages: 1,
                 totalRows: dataResult.isSuccess() ? dataResult.value.totalRows : 0,
               };
 

@@ -35,7 +35,7 @@ describe("DeleteExperimentUseCase", () => {
     });
 
     // Delete the experiment
-    const result = await useCase.execute(experiment.id);
+    const result = await useCase.execute(experiment.id, testUserId);
 
     // Verify the operation was successful
     expect(result.isSuccess()).toBe(true);
@@ -50,11 +50,30 @@ describe("DeleteExperimentUseCase", () => {
     expect(experimentCheck.length).toBe(0);
   });
 
+  it("should return FORBIDDEN error if user is not a member", async () => {
+    // Create an experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Access Control Test",
+      userId: testUserId,
+    });
+
+    // Create another user who is not a member
+    const otherUserId = await testApp.createTestUser({});
+
+    // Try to delete as non-member
+    const result = await useCase.execute(experiment.id, otherUserId);
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+    expect(result.error.message).toBe("Only experiment members can delete experiments");
+  });
+
   it("should return NOT_FOUND error if experiment does not exist", async () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
 
     // Try to delete a non-existent experiment
-    const result = await useCase.execute(nonExistentId);
+    const result = await useCase.execute(nonExistentId, testUserId);
 
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);

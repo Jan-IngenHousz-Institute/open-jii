@@ -10,31 +10,50 @@ export class UpdateExperimentUseCase {
 
   constructor(private readonly experimentRepository: ExperimentRepository) {}
 
-  async execute(id: string, data: UpdateExperimentDto): Promise<Result<ExperimentDto>> {
-    this.logger.log(`Updating experiment with ID ${id}`);
+  async execute(
+    id: string,
+    data: UpdateExperimentDto,
+    userId: string,
+  ): Promise<Result<ExperimentDto>> {
+    this.logger.log(`Updating experiment with ID ${id} by user ${userId}`);
 
-    // Check if experiment exists
-    const experimentResult = await this.experimentRepository.findOne(id);
+    // Check if experiment exists and user is a member
+    const accessCheckResult = await this.experimentRepository.checkAccess(id, userId);
 
-    return experimentResult.chain(async (experiment: ExperimentDto | null) => {
-      if (!experiment) {
-        this.logger.warn(`Attempt to update non-existent experiment with ID ${id}`);
-        return failure(AppError.notFound(`Experiment with ID ${id} not found`));
-      }
-
-      this.logger.debug(`Updating experiment "${experiment.name}" (ID: ${id})`);
-      // Update the experiment
-      const updateResult = await this.experimentRepository.update(id, data);
-      return updateResult.chain((updatedExperiments: ExperimentDto[]) => {
-        if (updatedExperiments.length === 0) {
-          this.logger.error(`Failed to update experiment ${id}`);
-          return failure(AppError.internal(`Failed to update experiment ${id}`));
+    return accessCheckResult.chain(
+      async ({
+        experiment,
+        hasAccess,
+      }: {
+        experiment: ExperimentDto | null;
+        hasAccess: boolean;
+      }) => {
+        if (!experiment) {
+          this.logger.warn(`Attempt to update non-existent experiment with ID ${id}`);
+          return failure(AppError.notFound(`Experiment with ID ${id} not found`));
         }
 
-        const updatedExperiment = updatedExperiments[0];
-        this.logger.log(`Successfully updated experiment "${updatedExperiment.name}" (ID: ${id})`);
-        return success(updatedExperiment);
-      });
-    });
+        if (!hasAccess) {
+          this.logger.warn(`User ${userId} is not a member of experiment ${id}`);
+          return failure(AppError.forbidden("Only experiment members can update experiments"));
+        }
+
+        this.logger.debug(`Updating experiment "${experiment.name}" (ID: ${id})`);
+        // Update the experiment
+        const updateResult = await this.experimentRepository.update(id, data);
+        return updateResult.chain((updatedExperiments: ExperimentDto[]) => {
+          if (updatedExperiments.length === 0) {
+            this.logger.error(`Failed to update experiment ${id}`);
+            return failure(AppError.internal(`Failed to update experiment ${id}`));
+          }
+
+          const updatedExperiment = updatedExperiments[0];
+          this.logger.log(
+            `Successfully updated experiment "${updatedExperiment.name}" (ID: ${id}) by user ${userId}`,
+          );
+          return success(updatedExperiment);
+        });
+      },
+    );
   }
 }

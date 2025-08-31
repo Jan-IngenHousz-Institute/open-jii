@@ -1,13 +1,13 @@
 import { tsr } from "@/lib/tsr";
 
 interface CreateUserProfileProps {
-  onSuccess?: () => void;
+  onSuccess?: () => Promise<void> | void;
 }
 
 export const useCreateUserProfile = (props: CreateUserProfileProps) => {
   return tsr.users.createUserProfile.useMutation({
-    onSuccess: () => {
-      if (props.onSuccess) props.onSuccess();
+    onSuccess: async () => {
+      if (props.onSuccess) await props.onSuccess();
     },
   });
 };

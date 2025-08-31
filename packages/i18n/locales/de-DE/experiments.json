@@ -17,6 +17,8 @@
     "completed": "Abgeschlossen",
     "paused": "Pausiert",
     "cancelled": "Abgebrochen",
+    "archived": "Archiviert",
+    "stale": "Veraltet",
     "provisioning": "Bereitstellung"
   },
   "visibility": {
@@ -40,6 +42,39 @@
     "downloadData": "Daten herunterladen",
     "noMeasurements": "Noch keine Messungen aufgezeichnet"
   },
+  "flow": {
+    "title": "Experimentablauf",
+    "legend": "Legende",
+    "description": "Entwerfen und visualisieren Sie Ihren Experiment-Workflow durch Verbindung verschiedener Schritte und Operationen.",
+    "editDescription": "Entwerfen und visualisieren Sie Ihren Experiment-Workflow durch Verbindung verschiedener Schritte und Operationen.",
+    "staticDescription": "Visuelle Übersicht des Experiment-Workflows",
+    "tabLabel": "Fließen",
+    "saving": "Speichern...",
+    "saveFlow": "Flow speichern",
+    "nodeTypes": {
+      "INSTRUCTION": "Anleitung",
+      "QUESTION": "Frage",
+      "MEASUREMENT": "Messung",
+      "ANALYSIS": "Analyse"
+    }
+  },
+  "overview": "Übersicht",
+  "data": "Daten",
+  "experiment": "Experiment",
+  "experimentId": "Experiment-ID",
+  "created": "Erstellt",
+  "updated": "Aktualisiert",
+  "descriptionTitle": "Beschreibung",
+  "manageExperimentDescription": "Experimentdetails, Daten, Flow und Einstellungen anzeigen und verwalten.",
+  "loading": "Laden...",
+  "failedToLoad": "Experiment konnte nicht geladen werden",
+  "notFound": "Experiment nicht gefunden",
+  "noPermissionToAccess": "Sie haben keine Berechtigung, auf dieses Experiment zuzugreifen",
+  "errorLoadingExperiment": "Beim Laden des Experiments ist ein Fehler aufgetreten",
+  "experimentNotFound": "Das gesuchte Experiment konnte nicht gefunden werden",
+  "needMemberAccess": "Sie benötigen Mitgliederzugriff für diese Aktion",
+  "previewMode": "Vorschau-Modus",
+  "editingMode": "Bearbeitungsmodus",
   "validation": {
     "nameRequired": "Experimentname ist erforderlich",
     "nameMinLength": "Name muss mindestens 3 Zeichen lang sein",
@@ -47,5 +82,61 @@
     "protocolRequired": "Bitte wählen Sie ein Protokoll",
     "deviceRequired": "Bitte wählen Sie ein Gerät",
     "invalidDateRange": "Enddatum muss nach dem Startdatum liegen"
+  },
+  "start": "START",
+  "analysisPanel": {
+    "title": "Analyseoptionen",
+    "select": "Messanalyse auswählen...",
+    "searchPlaceholder": "Analyseoptionen suchen...",
+    "analysis": "Analyse",
+    "by": "von",
+    "noOptions": "Keine Analyseoptionen gefunden."
+  },
+  "edgePanel": {
+    "settings": "Kanten-Einstellungen",
+    "label": "Bezeichnung",
+    "labelPlaceholder": "Kantenbezeichnung eingeben...",
+    "actions": "Aktionen",
+    "remove": "Kante entfernen",
+    "closeBackdrop": "Kanten-Panel-Hintergrund schließen"
+  },
+  "instructionPanel": {
+    "title": "Anleitungsdetails",
+    "placeholder": "Anleitungsdetails eingeben..."
+  },
+  "questionPanel": {
+    "title": "Frage"
+  },
+  "sidePanelFlow": {
+    "nodePanel": "Knoten-Panel",
+    "label": "Bezeichnung",
+    "labelPlaceholder": "Knotentitel eingeben...",
+    "nodeProperties": "Knoteneigenschaften",
+    "startNode": "Startknoten",
+    "startNodeLimit": "Auf einen pro Flow begrenzt",
+    "closeBackdrop": "Seitenpanel-Hintergrund schließen"
+  },
+  "questionCard": {
+    "placeholder": "Was möchten Sie fragen?",
+    "requiredLabel": "Pflichtfrage",
+    "requiredDescription": "Teilnehmer müssen diese Frage beantworten, um fortzufahren",
+    "answerTypeLabel": "Antworttyp",
+    "answerTypes": {
+      "TEXT": "Text",
+      "SELECT": "Mehrfachauswahl",
+      "NUMBER": "Nummer",
+      "BOOLEAN": "Ja/Nein"
+    },
+    "answerOptionsLabel": "Antwortoptionen",
+    "answerOptionPlaceholder": "Antwortoption eingeben",
+    "noAnswerOptions": "Noch keine Antwortoptionen",
+    "addOption": "Option hinzufügen",
+    "removeOption": "Option entfernen",
+    "textResponseLabel": "Textantwort",
+    "textResponseDescription": "Teilnehmer können ihre eigene Antwort schreiben",
+    "numberResponseLabel": "Nummerantwort",
+    "numberResponseDescription": "Teilnehmer geben einen numerischen Wert ein",
+    "booleanResponseLabel": "Ja/Nein-Antwort",
+    "booleanResponseDescription": "Teilnehmer wählen Ja oder Nein"
   }
 }

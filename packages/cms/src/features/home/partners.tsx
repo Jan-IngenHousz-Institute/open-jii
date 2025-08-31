@@ -25,7 +25,8 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
     skip: !preview,
     locale,
   });
-  const currentPartners = livePartners || partnersData;
+
+  const currentPartners = livePartners ?? partnersData;
 
   if (!currentPartners) return null;
 
@@ -60,14 +61,14 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
           className="flex w-full max-w-xs flex-col items-center rounded-2xl border border-gray-200 bg-gray-50 p-8 shadow-sm transition-colors duration-200 hover:bg-white hover:shadow-md"
         >
           {/* Removed gradient overlay and backdrop-blur for performance */}
-          {partner.logo && partner.logo.url ? (
+          {partner.logo?.url ? (
             <div
               className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-white shadow-inner"
               {...partnerInspectorProps({ fieldId: "logo" })}
             >
               <Image
                 src={partner.logo.url}
-                alt={partner.logo.title || "Partner logo"}
+                alt={partner.logo.title ?? "Partner logo"}
                 width={80}
                 height={80}
                 className="h-20 w-20 object-contain"

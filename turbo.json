@@ -16,11 +16,17 @@
         "AUTH_GITHUB_ID",
         "AUTH_GITHUB_SECRET",
         "AUTH_EMAIL_SERVER",
-        "AUTH_EMAIL_FROM"
+        "AUTH_EMAIL_FROM",
+        "DATABASE_URL",
+        "DB_HOST",
+        "DB_PORT",
+        "DB_NAME",
+        "DB_CREDENTIALS"
       ]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": ["^build", "^lint"],
+      "env": ["DATABASE_URL", "DB_HOST", "DB_PORT", "DB_NAME", "DB_CREDENTIALS"]
     },
     "check-types": {
       "dependsOn": ["^check-types"]
@@ -48,8 +54,17 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["coverage/**"]
+      "inputs": ["$TURBO_DEFAULT$", ".env*", "$TURBO_ROOT$/vitest.config.ts"],
+      "outputs": ["coverage/**", "coverage.json"],
+      "env": [
+        "DATABRICKS_WEBHOOK_API_KEY_ID",
+        "DATABRICKS_WEBHOOK_SECRET",
+        "DATABASE_URL",
+        "DB_HOST",
+        "DB_PORT",
+        "DB_NAME",
+        "DB_CREDENTIALS"
+      ]
     },
     "clean": {
       "cache": false

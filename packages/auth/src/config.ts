@@ -1,7 +1,8 @@
-/* eslint-disable turbo/no-undeclared-env-vars */
 import GitHub from "@auth/core/providers/github";
 import type { ExpressAuthConfig } from "@auth/express";
 import type { NextAuthConfig } from "next-auth";
+
+import { isSession } from "./types";
 
 const useSecureCookies = process.env.NODE_ENV === "production";
 const cookiePrefix = useSecureCookies ? "__Secure-" : "";
@@ -43,12 +44,16 @@ export const baseAuthConfig = {
     },
   },
   callbacks: {
-    jwt({ token, user }) {
+    jwt({ token, user, trigger, session }) {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (user) {
         token.id = user.id;
         token.registered = user.registered;
         // token.role = user.role;
+      }
+
+      if (trigger === "update" && isSession(session)) {
+        token.registered = session.user.registered;
       }
 
       return token;

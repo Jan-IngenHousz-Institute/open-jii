@@ -1,13 +1,11 @@
-import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
+import { assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
 import { CreateProtocolUseCase } from "./create-protocol";
 
 describe("CreateProtocolUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: CreateProtocolUseCase;
-  let protocolRepository: ProtocolRepository;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -17,12 +15,11 @@ describe("CreateProtocolUseCase", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(CreateProtocolUseCase);
-    protocolRepository = testApp.module.get(ProtocolRepository);
   });
 
   afterEach(() => {
     testApp.afterEach();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   afterAll(async () => {

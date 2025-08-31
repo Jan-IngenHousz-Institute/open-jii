@@ -4,11 +4,12 @@ import Image from "next/image";
 import React, { useRef, useState } from "react";
 
 interface VisualMediaProps {
-  images: Array<{
+  images: {
     url?: string | null;
     title?: string | null;
     sys?: { id?: string | null };
-  }>;
+  }[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   inspectorProps?: (args: any) => any;
 }
 
@@ -20,7 +21,7 @@ export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps
   const scrollToIdx = (idx: number) => {
     setCurrentIdx(idx);
     if (carouselRef.current) {
-      const child = carouselRef.current.children[idx] as HTMLElement;
+      const child = carouselRef.current.children[idx] as HTMLElement | null;
       if (child) {
         let inline: ScrollLogicalPosition = "center";
         if (idx === 0) inline = "start";
@@ -104,7 +105,7 @@ export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps
           {filteredImages.map((img, idx) =>
             img?.url ? (
               <div
-                key={img.sys?.id || idx}
+                key={img.sys?.id ?? idx}
                 className={`flex h-60 w-full min-w-[90vw] max-w-full snap-center items-center rounded-2xl md:h-96 md:min-w-[600px] md:max-w-2xl justify-center${
                   idx === currentIdx ? "ring-jii-dark-green ring-2" : ""
                 }`}
@@ -113,7 +114,7 @@ export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps
               >
                 <Image
                   src={img.url}
-                  alt={img.title || "Partner visual"}
+                  alt={img.title ?? "Partner visual"}
                   width={900}
                   height={400}
                   className="h-full w-full rounded-2xl object-cover shadow-sm"

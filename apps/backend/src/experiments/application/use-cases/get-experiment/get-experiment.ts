@@ -10,20 +10,34 @@ export class GetExperimentUseCase {
 
   constructor(private readonly experimentRepository: ExperimentRepository) {}
 
-  async execute(id: string): Promise<Result<ExperimentDto>> {
-    this.logger.log(`Getting experiment with ID ${id}`);
+  async execute(id: string, userId: string): Promise<Result<ExperimentDto>> {
+    this.logger.log(`Getting experiment with ID ${id} for user ${userId}`);
 
-    const experimentResult = await this.experimentRepository.findOne(id);
+    // Check if experiment exists and user has access
+    const accessCheckResult = await this.experimentRepository.checkAccess(id, userId);
 
-    return experimentResult.chain((experiment: ExperimentDto | null) => {
-      if (!experiment) {
-        this.logger.warn(`Experiment with ID ${id} not found`);
-        return failure(AppError.notFound(`Experiment with ID ${id} not found`));
-      }
+    return accessCheckResult.chain(
+      ({ experiment, hasAccess }: { experiment: ExperimentDto | null; hasAccess: boolean }) => {
+        if (!experiment) {
+          this.logger.warn(`Experiment with ID ${id} not found`);
+          return failure(AppError.notFound(`Experiment with ID ${id} not found`));
+        }
 
-      this.logger.debug(`Found experiment "${experiment.name}" (ID: ${id})`);
+        // Allow access if user is a member OR if experiment is public
+        const isPublic = experiment.visibility === "public";
+        if (!(hasAccess || isPublic)) {
+          this.logger.warn(`User ${userId} does not have access to private experiment ${id}`);
+          return failure(
+            AppError.forbidden("You do not have permission to access this experiment"),
+          );
+        }
 
-      return success(experiment);
-    });
+        this.logger.debug(
+          `Found experiment "${experiment.name}" (ID: ${id}) for user ${userId} (public: ${isPublic}, member: ${hasAccess})`,
+        );
+
+        return success(experiment);
+      },
+    );
   }
 }

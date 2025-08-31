@@ -1,25 +1,17 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
-import type { ErrorResponse, Protocol, ProtocolList } from "@repo/api";
+import type { Protocol, ProtocolList } from "@repo/api";
 import { contract } from "@repo/api";
 
 import { success } from "../../common/utils/fp-utils";
-import { SuperTestResponse, TestHarness } from "../../test/test-harness";
-import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
-import { DeleteProtocolUseCase } from "../application/use-cases/delete-protocol/delete-protocol";
+import { TestHarness } from "../../test/test-harness";
 import { GetProtocolUseCase } from "../application/use-cases/get-protocol/get-protocol";
-import { ListProtocolsUseCase } from "../application/use-cases/list-protocols/list-protocols";
-import { UpdateProtocolUseCase } from "../application/use-cases/update-protocol/update-protocol";
 
 describe("ProtocolController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
-  let createProtocolUseCase: CreateProtocolUseCase;
   let getProtocolUseCase: GetProtocolUseCase;
-  let listProtocolsUseCase: ListProtocolsUseCase;
-  let updateProtocolUseCase: UpdateProtocolUseCase;
-  let deleteProtocolUseCase: DeleteProtocolUseCase;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -30,14 +22,10 @@ describe("ProtocolController", () => {
     testUserId = await testApp.createTestUser({});
 
     // Get use case instances for mocking
-    createProtocolUseCase = testApp.module.get(CreateProtocolUseCase);
     getProtocolUseCase = testApp.module.get(GetProtocolUseCase);
-    listProtocolsUseCase = testApp.module.get(ListProtocolsUseCase);
-    updateProtocolUseCase = testApp.module.get(UpdateProtocolUseCase);
-    deleteProtocolUseCase = testApp.module.get(DeleteProtocolUseCase);
 
     // Reset any mocks before each test
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -604,7 +592,7 @@ describe("ProtocolController", () => {
         updatedAt: new Date(),
       };
 
-      jest.spyOn(getProtocolUseCase, "execute").mockResolvedValue(success(mockProtocol));
+      vi.spyOn(getProtocolUseCase, "execute").mockResolvedValue(success(mockProtocol));
 
       // Act
       const path = testApp.resolvePath(contract.protocols.getProtocol.path, {
@@ -613,7 +601,9 @@ describe("ProtocolController", () => {
       const response = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
 
       // Assert - the code should be parsed from string to object
-      expect(response.body.code).toEqual({ steps: [{ name: "Step 1", action: "test" }] });
+      expect((response.body as Protocol).code).toEqual({
+        steps: [{ name: "Step 1", action: "test" }],
+      });
     });
 
     it("should handle invalid JSON in code field", async () => {
@@ -630,7 +620,7 @@ describe("ProtocolController", () => {
         updatedAt: new Date(),
       };
 
-      jest.spyOn(getProtocolUseCase, "execute").mockResolvedValue(success(mockProtocol));
+      vi.spyOn(getProtocolUseCase, "execute").mockResolvedValue(success(mockProtocol));
 
       // Act
       const path = testApp.resolvePath(contract.protocols.getProtocol.path, {
@@ -639,7 +629,7 @@ describe("ProtocolController", () => {
       const response = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
 
       // Assert - the code should fallback to empty object for invalid JSON
-      expect(response.body.code).toEqual([{}]);
+      expect((response.body as Protocol).code).toEqual([{}]);
     });
   });
 });

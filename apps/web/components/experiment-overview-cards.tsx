@@ -31,35 +31,35 @@ export function ExperimentOverviewCards({
           const IconComponent = isPrivate ? Lock : Globe;
           const iconDescription = isPrivate ? t("visibility.private") : t("visibility.public");
           return (
-            <Card key={experiment.id} className="bg-white transition-shadow hover:shadow-md">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="mb-2 max-w-xs overflow-hidden truncate whitespace-nowrap font-semibold text-gray-900">
-                      {experiment.name}
-                    </h3>
-                    <ExperimentStatusBadge status={experiment.status} />
+            <Link key={experiment.id} href={`/platform/experiments/${experiment.id}`}>
+              <Card className="bg-white transition-shadow hover:shadow-md">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="mb-2 overflow-hidden truncate whitespace-nowrap font-semibold text-gray-900">
+                        {experiment.name}
+                      </h3>
+                      <ExperimentStatusBadge status={experiment.status} />
+                    </div>
+                    <span title={iconDescription}>
+                      <IconComponent
+                        className="mt-1 h-4 w-4 text-gray-400"
+                        aria-description={iconDescription}
+                      />
+                    </span>
                   </div>
-                  <span title={iconDescription}>
-                    <IconComponent
-                      className="mt-1 h-4 w-4 text-gray-400"
-                      aria-description={iconDescription}
-                    />
-                  </span>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <Link href={`/platform/experiments/${experiment.id}`}>
+                </CardHeader>
+                <CardContent className="pt-0">
                   <Button
                     variant="ghost"
-                    className="h-auto p-0 font-normal text-gray-900 hover:bg-transparent hover:text-gray-700"
+                    className="mt-6 h-auto w-full justify-between p-0 font-normal text-gray-700 hover:text-gray-900"
                   >
                     {t("experiments.viewDetails")}
-                    <ArrowRight className="ml-1 h-3 w-3" />
+                    <ArrowRight className="h-4 w-4" />
                   </Button>
-                </Link>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
           );
         })}
       </div>

@@ -1,5 +1,5 @@
 import { DropdownOption } from "~/components/Dropdown";
-import { ProtocolName, protocolsDefinitions } from "~/protocols/definitions";
+import { protocolsDefinitions } from "~/protocols/definitions";
 
 export function getProtocolsDropdownOptions() {
   return Object.entries(protocolsDefinitions).map(([name, definition]) => ({
