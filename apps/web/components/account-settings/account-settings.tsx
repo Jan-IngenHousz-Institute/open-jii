@@ -10,6 +10,7 @@ import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserP
 import { zCreateUserProfileBody } from "@repo/api";
 import type { CreateUserProfileBody } from "@repo/api";
 import type { Session } from "@repo/auth/types";
+import { useTranslation } from "@repo/i18n";
 import { Form, Button } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
@@ -18,6 +19,7 @@ import { ProfileCard } from "./profile-card";
 import { ProfilePictureCard } from "./profile-picture-card";
 
 export function AccountSettings({ session }: { session: Session | null }) {
+  const { t } = useTranslation("account");
   const user = session?.user as
     | { id: string; email: string; name?: string | null; image?: string | null }
     | undefined;
@@ -31,12 +33,12 @@ export function AccountSettings({ session }: { session: Session | null }) {
 
   // 1) Loading gate
   if (isLoadingProfile) {
-    return <div>Loading account settings...</div>;
+    return <div>{t("settings.loading")}</div>;
   }
 
   // 2) Error gate
   if (error) {
-    return <ErrorDisplay error={error} title="Error loading account settings" />;
+    return <ErrorDisplay error={error} title={t("settings.errorTitle")} />;
   }
 
   const initialValues: CreateUserProfileBody = userProfile?.body
@@ -59,10 +61,10 @@ export function AccountSettings({ session }: { session: Session | null }) {
 // A pure form component that mounts once with the right defaults.
 function AccountSettingsInner({ initialValues }: { initialValues: CreateUserProfileBody }) {
   const router = useRouter();
-
+  const { t } = useTranslation("account");
   const { mutate: createUserProfile, isPending } = useCreateUserProfile({
     onSuccess: () => {
-      toast({ description: "Account settings saved" });
+      toast({ description: t("settings.saved") });
     },
   });
 
@@ -96,10 +98,10 @@ function AccountSettingsInner({ initialValues }: { initialValues: CreateUserProf
         {/* Footer buttons */}
         <div className="flex gap-2">
           <Button type="button" onClick={onCancel} variant="outline">
-            Cancel
+            {t("settings.cancel")}
           </Button>
           <Button type="submit" disabled={isPending} aria-busy={isPending}>
-            {isPending ? "Saving..." : "Save changes"}
+            {isPending ? t("settings.saving") : t("settings.save")}
           </Button>
         </div>
       </form>

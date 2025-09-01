@@ -256,7 +256,9 @@
     "experiments": "Experimente",
     "new": "Neu",
     "edit": "Bearbeiten",
-    "view": "Ansehen"
+    "view": "Ansehen",
+    "account": "Konto",
+    "settings": "Einstellungen"
   },
   "experimentData": {
     "title": "Experimentdaten",

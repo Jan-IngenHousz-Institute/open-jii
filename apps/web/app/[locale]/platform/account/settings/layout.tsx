@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 
 import type { Locale } from "@repo/i18n";
+import initTranslations from "@repo/i18n/server";
 import {
   Button,
   DropdownMenu,
@@ -22,6 +23,12 @@ export default async function AccountSettingsLayout({
   const { locale } = await params;
   const base = `/${locale}/platform/account`;
 
+  // Load translations from common and account namespaces
+  const { t } = await initTranslations({
+    locale,
+    namespaces: ["common", "account"],
+  });
+
   interface Tab {
     key: "overview" | "settings" | "security" | "notifications" | "team" | "activity";
     href: string;
@@ -31,21 +38,44 @@ export default async function AccountSettingsLayout({
   }
 
   const tabs: Tab[] = [
-    { key: "overview", href: `${base}/overview`, label: "Overview", icon: User, disabled: true },
-    { key: "settings", href: `${base}/settings`, label: "Settings", icon: SettingsIcon },
-    { key: "security", href: `${base}/security`, label: "Security", icon: Shield, disabled: true },
+    {
+      key: "overview",
+      href: `${base}/overview`,
+      label: t("account:overview.title"),
+      icon: User,
+      disabled: true,
+    },
+    {
+      key: "settings",
+      href: `${base}/settings`,
+      label: t("account:settings.title"),
+      icon: SettingsIcon,
+    },
+    {
+      key: "security",
+      href: `${base}/security`,
+      label: t("account:security.title"),
+      icon: Shield,
+      disabled: true,
+    },
     {
       key: "notifications",
       href: `${base}/notifications`,
-      label: "Notifications",
+      label: t("account:notifications.title"),
       icon: Bell,
       disabled: true,
     },
-    { key: "team", href: `${base}/team`, label: "Team", icon: Users, disabled: true },
+    {
+      key: "team",
+      href: `${base}/team`,
+      label: t("account:team.title"),
+      icon: Users,
+      disabled: true,
+    },
     {
       key: "activity",
       href: `${base}/activity`,
-      label: "Activity",
+      label: t("account:activity.title"),
       icon: Activity,
       disabled: true,
     },
@@ -119,7 +149,7 @@ export default async function AccountSettingsLayout({
               <Button
                 variant="ghost"
                 className="h-auto w-full justify-between px-4 py-3"
-                aria-label="Account settings navigation"
+                aria-label={t("account:mobileNavAriaLabel")}
               >
                 <div className="flex items-center gap-2">
                   <activeTab.icon className="text-jii-dark-green h-4 w-4" />

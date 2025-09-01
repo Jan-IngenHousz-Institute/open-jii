@@ -89,7 +89,7 @@ export function NavUser({
                     <UserIcon className="h-4 w-4" />
                   </AvatarFallback>
                 </Avatar>
-                {t("auth.accountSettings", "Account")}
+                {t("auth.account")}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

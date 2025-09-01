@@ -7,7 +7,8 @@ import type { ReactNode } from "react";
 import { SessionProvider } from "@repo/auth/client";
 import { ContentfulPreviewProvider } from "@repo/cms/contentful";
 import { dir } from "@repo/i18n";
-import type { Locale, Namespace } from "@repo/i18n";
+import type { Locale } from "@repo/i18n";
+import { namespaces } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -25,8 +26,6 @@ const overpass = Overpass({
   weight: ["400", "500", "600", "700", "800", "900"],
   variable: "--font-overpass",
 });
-
-const i18nNamespaces: Namespace[] = ["common", "navigation", "experiments", "dashboard"];
 
 interface LocaleLayoutProps {
   children: ReactNode;
@@ -57,7 +56,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   const { isEnabled: preview } = await draftMode();
   const { resources } = await initTranslations({
     locale,
-    namespaces: i18nNamespaces,
+    namespaces: [...namespaces],
   });
 
   return (
@@ -78,7 +77,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
           enableLiveUpdates={preview}
           targetOrigin={allowedOriginList}
         >
-          <TranslationsProvider locale={locale} namespaces={i18nNamespaces} resources={resources}>
+          <TranslationsProvider locale={locale} namespaces={[...namespaces]} resources={resources}>
             <SessionProvider>
               <QueryProvider>{children}</QueryProvider>
             </SessionProvider>
