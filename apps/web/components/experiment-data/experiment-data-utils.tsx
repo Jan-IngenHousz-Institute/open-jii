@@ -1,10 +1,18 @@
 import { flexRender } from "@tanstack/react-table";
 import type { Row, HeaderGroup, RowData } from "@tanstack/react-table";
 import React from "react";
+import { RenderCommentsAndFlags } from "~/components/experiment-data/experiment-data-flags-comments";
 import type { DataRow } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import { useTranslation } from "@repo/i18n";
-import { Skeleton, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components";
+import {
+  Checkbox,
+  Skeleton,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@repo/ui/components";
 
 export function formatValue(value: unknown, type: string) {
   switch (type) {
@@ -15,6 +23,15 @@ export function formatValue(value: unknown, type: string) {
       return <div className="text-right italic">{value as number}</div>;
     case "TIMESTAMP":
       return (value as string).substring(0, 19).replace("T", " ");
+    case "ID": {
+      if (value !== undefined) {
+        const id = value as string;
+        return <Checkbox name="id" value={id} />;
+      } else return "";
+    }
+    case "JSON_COMMENTS": {
+      return <RenderCommentsAndFlags commentsJSON={value as string} />;
+    }
     default: {
       return value as string;
     }

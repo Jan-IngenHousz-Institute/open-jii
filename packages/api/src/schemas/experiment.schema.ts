@@ -247,6 +247,7 @@ export type FlowGraph = z.infer<typeof zFlowGraph>;
 export type Flow = z.infer<typeof zFlow>;
 export type UpsertFlowBody = z.infer<typeof zUpsertFlowBody>;
 export type ExperimentDataComment = z.infer<typeof zExperimentDataComment>;
+export type ExperimentDataCommentFlag = z.infer<typeof zExperimentDataCommentFlag>;
 export type CreateExperimentDataComments = z.infer<typeof zCreateExperimentDataCommentsBody>;
 
 // Define request and response types
