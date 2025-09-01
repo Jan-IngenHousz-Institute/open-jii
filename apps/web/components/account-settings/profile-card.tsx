@@ -92,7 +92,6 @@ export function ProfileCard({ form }: ProfileCardProps) {
                   placeholder={tAccount("settings.profileCard.bioPlaceholder")}
                   rows={3}
                   {...field}
-                  value={field.value}
                 />
               </FormControl>
               <FormMessage />
@@ -111,7 +110,6 @@ export function ProfileCard({ form }: ProfileCardProps) {
                 <Input
                   placeholder={tAccount("settings.profileCard.institutionPlaceholder")}
                   {...field}
-                  value={field.value}
                   trim
                 />
               </FormControl>
