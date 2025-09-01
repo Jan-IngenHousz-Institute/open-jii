@@ -31,13 +31,11 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
-        run: |
-          cd ../..
-          pnpm install
-          cd apps/mobile
+        run: pnpm install
 
       - name: Build Android App Bundle
         run: |
+          cd apps/mobile
           echo 'node-linker=hoisted' > .npmrc
           eas build --platform android --profile production --local
           rm .npmrc
@@ -49,6 +47,6 @@ jobs:
         with:
           name: android-aab
           path: |
-            *.aab
-            *.apk
+            apps/mobile/*.aab
+            apps/mobile/*.apk
           retention-days: 30
