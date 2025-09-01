@@ -6,11 +6,9 @@ import type { Result } from "../../../../common/utils/fp-utils";
 import { AppError, failure } from "../../../../common/utils/fp-utils";
 import { success } from "../../../../common/utils/fp-utils";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
-import type {
-  ExperimentDataCommentsRepository,
-  ExperimentDataTableSchema,
-} from "../../../core/repositories/experiment-data-comments.repository";
-import type { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import { ExperimentDataCommentsRepository } from "../../../core/repositories/experiment-data-comments.repository";
+import type { ExperimentDataTableSchema } from "../../../core/repositories/experiment-data-comments.repository";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 @Injectable()
 export class CreateExperimentDataCommentsUseCase {

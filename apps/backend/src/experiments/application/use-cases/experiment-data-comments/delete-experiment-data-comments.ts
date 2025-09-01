@@ -4,7 +4,7 @@ import type { Result } from "../../../../common/utils/fp-utils";
 import { AppError, failure } from "../../../../common/utils/fp-utils";
 import { tryCatch } from "../../../../common/utils/fp-utils";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
-import type { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 @Injectable()
 export class DeleteExperimentDataCommentsUseCase {
