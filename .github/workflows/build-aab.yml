@@ -3,6 +3,9 @@ name: Build Android App Bundle (AAB)
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-aab:
     runs-on: ubuntu-latest
