@@ -11,24 +11,24 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#49e06d"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.photosynq.app",
+      "bundleIdentifier": "com.openjii.app",
       "appleTeamId": "7Q2WX38PT2"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#49e06d"
       },
       "permissions": [
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN",
         "android.permission.BLUETOOTH_CONNECT"
       ],
-      "package": "com.photosynq.app"
+      "package": "com.openjii.app"
     },
     "web": {
       "favicon": "./assets/favicon.png",
