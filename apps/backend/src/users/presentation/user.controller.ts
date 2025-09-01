@@ -97,19 +97,10 @@ export class UserController {
 
       if (result.isSuccess()) {
         const userProfile = result.value;
-
-        // Transform to match API schema - only return the fields we want
-        const apiResponse = {
-          firstName: userProfile.firstName,
-          lastName: userProfile.lastName,
-          bio: userProfile.bio,
-          organization: userProfile.organization ?? null, // Convert undefined to null
-        };
-
         this.logger.log(`User profile ${params.id} retrieved`);
         return {
           status: StatusCodes.OK,
-          body: apiResponse,
+          body: userProfile,
         };
       }
 

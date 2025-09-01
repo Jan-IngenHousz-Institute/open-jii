@@ -60,7 +60,7 @@ export default async function AccountSettingsLayout({
   const activeTab = tabs.find(isActive) ?? tabs[1]; // fallback to settings tab
 
   return (
-    <div className="space-y-6">
+    <div className="-mt-4 space-y-6">
       {/* Top-of-page custom tab nav */}
       <nav className="border-b border-gray-200">
         {/* Desktop Navigation - Hidden on mobile */}
@@ -162,7 +162,7 @@ export default async function AccountSettingsLayout({
       </nav>
 
       {/* Page content below the tabs */}
-      <div className="mx-4 mt-6">{children}</div>
+      <div>{children}</div>
     </div>
   );
 }

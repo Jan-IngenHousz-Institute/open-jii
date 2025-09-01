@@ -32,8 +32,14 @@ export function ProfilePictureCard() {
           <Plus className="h-6 w-6 opacity-40" aria-hidden />
         </div>
 
-        {/* fake upload button (no functionality) */}
-        <Button type="button" variant="outline" className="gap-2 text-gray-500" aria-disabled>
+        {/* disabled upload button */}
+        <Button
+          type="button"
+          variant="outline"
+          className="gap-2 text-gray-500"
+          disabled
+          aria-disabled="true"
+        >
           <Upload className="h-4 w-4 text-gray-400" />
           Upload New Photo
         </Button>

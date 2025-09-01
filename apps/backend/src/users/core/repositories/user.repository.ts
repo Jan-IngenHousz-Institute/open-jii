@@ -85,33 +85,6 @@ export class UserRepository {
     });
   }
 
-  async findUserProfile(userId: string): Promise<Result<UserProfileDto | null>> {
-    return tryCatch(async () => {
-      const result = await this.database
-        .select({
-          firstName: profiles.firstName,
-          lastName: profiles.lastName,
-          bio: profiles.bio,
-          organization: organizations.name,
-        })
-        .from(profiles)
-        .leftJoin(organizations, eq(profiles.organizationId, organizations.id))
-        .where(eq(profiles.userId, userId))
-        .limit(1);
-
-      if (result.length === 0) {
-        return null;
-      }
-
-      return {
-        firstName: result[0].firstName,
-        lastName: result[0].lastName,
-        bio: result[0].bio,
-        organization: result[0].organization ?? null,
-      } as UserProfileDto;
-    });
-  }
-
   private async createOrReturnOrganization(organization?: string): Promise<string | null> {
     if (organization) {
       // Check if organization already exists with this name
@@ -172,6 +145,33 @@ export class UserRepository {
         lastName: createUserProfileDto.lastName,
         bio: createUserProfileDto.bio,
         organization: createUserProfileDto.organization,
+      } as UserProfileDto;
+    });
+  }
+
+  async findUserProfile(userId: string): Promise<Result<UserProfileDto | null>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select({
+          firstName: profiles.firstName,
+          lastName: profiles.lastName,
+          bio: profiles.bio,
+          organization: organizations.name,
+        })
+        .from(profiles)
+        .leftJoin(organizations, eq(profiles.organizationId, organizations.id))
+        .where(eq(profiles.userId, userId))
+        .limit(1);
+
+      if (result.length === 0) {
+        return null;
+      }
+
+      return {
+        firstName: result[0].firstName,
+        lastName: result[0].lastName,
+        bio: result[0].bio,
+        organization: result[0].organization,
       } as UserProfileDto;
     });
   }

@@ -48,7 +48,7 @@ export const zUserProfile = z.object({
   firstName: z.string(),
   lastName: z.string(),
   bio: z.string().nullable(),
-  organization: z.string().nullable(),
+  organization: z.string().optional(),
 });
 
 // Path parameters
