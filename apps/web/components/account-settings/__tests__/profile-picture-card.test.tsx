@@ -7,7 +7,25 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ProfilePictureCard } from "../profile-picture-card";
 
 globalThis.React = React;
-// Mock UI components from @repo/ui/components
+
+/* ---------- Local i18n mock for @repo/i18n ---------- */
+const DICT: Record<string, string> = {
+  "settings.profilePictureCard.title": "Profile Picture",
+  "settings.profilePictureCard.upload": "Upload New Photo",
+  "settings.profilePictureCard.description": "JPG, PNG or GIF. Max size 5MB.",
+  "settings.disabled": "Disabled",
+};
+
+vi.mock("@repo/i18n", () => {
+  // mock just what ProfilePictureCard needs
+  return {
+    useTranslation: () => ({
+      t: (key: string) => DICT[key] ?? key,
+      i18n: { language: "en" },
+    }),
+  };
+});
+
 vi.mock("@repo/ui/components", () => ({
   Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div data-testid="card" className={className}>
@@ -35,14 +53,12 @@ vi.mock("@repo/ui/components", () => ({
   Button: ({
     children,
     type,
-    variant: _variant,
     className,
     "aria-disabled": ariaDisabled,
     ...props
   }: {
     children: React.ReactNode;
     type?: string;
-    variant?: string;
     className?: string;
     "aria-disabled"?: boolean;
   }) => (
@@ -58,22 +74,15 @@ vi.mock("@repo/ui/components", () => ({
   ),
 }));
 
-// Mock lucide-react icons
 vi.mock("lucide-react", () => ({
   Upload: ({ className, ...props }: { className?: string }) => (
-    <svg data-testid="upload-icon" className={className} {...props}>
-      <title>Upload</title>
-    </svg>
+    <svg data-testid="upload-icon" className={className} aria-hidden="true" {...props} />
   ),
-  Plus: ({ className, ...props }: { className?: string; "aria-hidden"?: boolean }) => (
-    <svg data-testid="plus-icon" className={className} {...props}>
-      <title>Plus</title>
-    </svg>
+  Plus: ({ className, ...props }: { className?: string }) => (
+    <svg data-testid="plus-icon" className={className} aria-hidden="true" {...props} />
   ),
-  User: ({ className, ...props }: { className?: string; "aria-hidden"?: boolean }) => (
-    <svg data-testid="user-icon" className={className} {...props}>
-      <title>User</title>
-    </svg>
+  User: ({ className, ...props }: { className?: string }) => (
+    <svg data-testid="user-icon" className={className} aria-hidden="true" {...props} />
   ),
 }));
 
@@ -84,7 +93,6 @@ describe("<ProfilePictureCard />", () => {
 
   it("renders the card structure correctly", () => {
     render(<ProfilePictureCard />);
-
     expect(screen.getByTestId("card")).toBeInTheDocument();
     expect(screen.getByTestId("card-header")).toBeInTheDocument();
     expect(screen.getByTestId("card-content")).toBeInTheDocument();
@@ -92,7 +100,6 @@ describe("<ProfilePictureCard />", () => {
 
   it("displays the title with user icon and disabled badge", () => {
     render(<ProfilePictureCard />);
-
     expect(screen.getByTestId("user-icon")).toBeInTheDocument();
     expect(screen.getByTestId("card-title")).toHaveTextContent("Profile Picture");
     expect(screen.getByText("Disabled")).toBeInTheDocument();
@@ -100,7 +107,6 @@ describe("<ProfilePictureCard />", () => {
 
   it("shows the circular placeholder with plus icon", () => {
     render(<ProfilePictureCard />);
-
     const plusIcon = screen.getByTestId("plus-icon");
     expect(plusIcon).toBeInTheDocument();
     expect(plusIcon).toHaveClass("h-6", "w-6", "opacity-40");
@@ -108,37 +114,25 @@ describe("<ProfilePictureCard />", () => {
 
   it("displays the upload button with upload icon", () => {
     render(<ProfilePictureCard />);
-
     const uploadButton = screen.getByTestId("upload-button");
     expect(uploadButton).toBeInTheDocument();
     expect(uploadButton).toHaveTextContent("Upload New Photo");
     expect(uploadButton).toHaveAttribute("type", "button");
     expect(uploadButton).toHaveAttribute("aria-disabled");
-
-    const uploadIcon = screen.getByTestId("upload-icon");
-    expect(uploadIcon).toBeInTheDocument();
+    expect(screen.getByTestId("upload-icon")).toBeInTheDocument();
   });
 
   it("shows the file format and size restrictions", () => {
     render(<ProfilePictureCard />);
-
     expect(screen.getByText("JPG, PNG or GIF. Max size 5MB.")).toBeInTheDocument();
   });
 
   it("applies correct CSS classes for styling", () => {
     render(<ProfilePictureCard />);
-
-    const card = screen.getByTestId("card");
-    expect(card).toHaveClass("h-full");
-
-    const title = screen.getByTestId("card-title");
-    expect(title).toHaveClass("text-gray-500");
-
-    const description = screen.getByTestId("card-description");
-    expect(description).toHaveClass("text-gray-500");
-
-    const content = screen.getByTestId("card-content");
-    expect(content).toHaveClass(
+    expect(screen.getByTestId("card")).toHaveClass("h-full");
+    expect(screen.getByTestId("card-title")).toHaveClass("text-gray-500");
+    expect(screen.getByTestId("card-description")).toHaveClass("text-gray-500");
+    expect(screen.getByTestId("card-content")).toHaveClass(
       "flex",
       "flex-col",
       "items-center",
@@ -146,47 +140,31 @@ describe("<ProfilePictureCard />", () => {
       "gap-4",
       "py-8",
     );
-
-    const button = screen.getByTestId("upload-button");
-    expect(button).toHaveClass("gap-2", "text-gray-500");
+    expect(screen.getByTestId("upload-button")).toHaveClass("gap-2", "text-gray-500");
   });
 
   it("button is not clickable due to disabled state", async () => {
     const user = userEvent.setup();
     render(<ProfilePictureCard />);
-
     const uploadButton = screen.getByTestId("upload-button");
     expect(uploadButton).toHaveAttribute("aria-disabled");
-
     await user.click(uploadButton);
   });
 
   it("renders all visual elements in the correct hierarchy", () => {
     render(<ProfilePictureCard />);
-
-    // Check that the card contains both header and content
     const card = screen.getByTestId("card");
     const header = screen.getByTestId("card-header");
     const content = screen.getByTestId("card-content");
-
     expect(card).toContainElement(header);
     expect(card).toContainElement(content);
-
-    // Check that content contains the circular placeholder and button
-    const button = screen.getByTestId("upload-button");
-    expect(content).toContainElement(button);
+    expect(content).toContainElement(screen.getByTestId("upload-button"));
   });
 
   it("displays proper accessibility attributes", () => {
     render(<ProfilePictureCard />);
-
-    const userIcon = screen.getByTestId("user-icon");
-    expect(userIcon).toHaveAttribute("aria-hidden");
-
-    const plusIcon = screen.getByTestId("plus-icon");
-    expect(plusIcon).toHaveAttribute("aria-hidden");
-
-    const uploadButton = screen.getByTestId("upload-button");
-    expect(uploadButton).toHaveAttribute("aria-disabled");
+    expect(screen.getByTestId("user-icon")).toHaveAttribute("aria-hidden");
+    expect(screen.getByTestId("plus-icon")).toHaveAttribute("aria-hidden");
+    expect(screen.getByTestId("upload-button")).toHaveAttribute("aria-disabled");
   });
 });

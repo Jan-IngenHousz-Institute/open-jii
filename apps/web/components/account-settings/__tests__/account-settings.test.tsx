@@ -1,4 +1,3 @@
-// components/account-settings/__tests__/account-settings.test.tsx
 import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import React from "react";
@@ -33,7 +32,6 @@ interface MinimalForm {
   getValues: () => MinimalFormValues;
 }
 
-// ---------- Hoisted spies ----------
 const { mutateSpy, routerBackSpy, toastSpy, createCfgRef } = vi.hoisted(() => {
   return {
     mutateSpy: vi.fn<(arg: MutateArg) => unknown>(),
@@ -43,7 +41,27 @@ const { mutateSpy, routerBackSpy, toastSpy, createCfgRef } = vi.hoisted(() => {
   };
 });
 
-// ---------- Mocks (declare BEFORE SUT import) ----------
+const DICT: Record<string, string> = {
+  // gates
+  "settings.loading": "Loading account settings",
+  "settings.errorTitle": "Error loading account settings",
+
+  // footer buttons
+  "settings.cancel": "Cancel",
+  "settings.save": "Save Changes",
+  "settings.saving": "Saving...",
+
+  // toast after save
+  "settings.saved": "Account settings saved",
+};
+
+vi.mock("@repo/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string) => DICT[key] ?? key,
+    i18n: { language: "en" },
+  }),
+}));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ back: routerBackSpy }),
 }));
@@ -52,7 +70,6 @@ vi.mock("@repo/ui/hooks", () => ({
   toast: (arg: { description: string }) => toastSpy(arg),
 }));
 
-// Stub the UI kit with the pieces used by AccountSettings, ErrorDisplay, ProfilePictureCard
 vi.mock("@repo/ui/components", () => {
   const Form = ({
     children,
@@ -119,7 +136,7 @@ vi.mock("@repo/ui/components", () => {
   }) =>
     render({
       field: {
-        value: "Dummy", // give it some dummy value if needed
+        value: "Dummy",
         onChange: () => {
           /* no-op */
         },
