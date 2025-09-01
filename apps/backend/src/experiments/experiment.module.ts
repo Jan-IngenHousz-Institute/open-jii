@@ -23,14 +23,14 @@ import { ListExperimentsUseCase } from "./application/use-cases/list-experiments
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
 import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-provisioning-status/update-provisioning-status";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
-import { ExperimentDataCommentsRepository } from "./core/repositories/experiment-data-comments.repository";
 // Repositories
+import { ExperimentDataCommentsRepository } from "./core/repositories/experiment-data-comments.repository";
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
 import { ExperimentProtocolRepository } from "./core/repositories/experiment-protocol.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
 import { FlowRepository } from "./core/repositories/flow.repository";
-import { ExperimentCommentsController } from "./presentation/experiment-comments.controller";
 // Controllers
+import { ExperimentCommentsController } from "./presentation/experiment-comments.controller";
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
 import { ExperimentFlowsController } from "./presentation/experiment-flows.controller";
 import { ExperimentMembersController } from "./presentation/experiment-members.controller";

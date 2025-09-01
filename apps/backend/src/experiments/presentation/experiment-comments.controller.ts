@@ -63,7 +63,7 @@ export class ExperimentCommentsController {
           params.id,
           params.tableName,
           user.id,
-          body.rowId,
+          body.rowIds,
         );
 
         if (result.isSuccess()) {

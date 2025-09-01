@@ -216,7 +216,7 @@ export const zExperimentDataComment = z.object({
 export const zExperimentDataComments = z.array(zExperimentDataComment);
 
 export const zCreateExperimentDataCommentsBody = z.object({
-  rowId: z.array(z.string().uuid()).min(1),
+  rowIds: z.array(z.string().uuid()).min(1),
   text: z.string().min(1),
   flag: zExperimentDataCommentFlag.optional(),
 });
@@ -227,7 +227,7 @@ export const zExperimentDataCommentsPathParam = z.object({
 });
 
 export const zDeleteExperimentDataCommentsBody = z.object({
-  rowId: z.array(z.string().uuid()).min(1),
+  rowIds: z.array(z.string().uuid()).min(1),
 });
 
 // Infer types from Zod schemas

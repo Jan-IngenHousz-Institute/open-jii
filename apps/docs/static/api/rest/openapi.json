@@ -1353,7 +1353,7 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "rowId": {
+                  "rowIds": {
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -1370,7 +1370,7 @@
                     "enum": ["outlier", "needs_review"]
                   }
                 },
-                "required": ["rowId", "text"]
+                "required": ["rowIds", "text"]
               }
             }
           }
@@ -1495,7 +1495,7 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "rowId": {
+                  "rowIds": {
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -1504,7 +1504,7 @@
                     "minItems": 1
                   }
                 },
-                "required": ["rowId"]
+                "required": ["rowIds"]
               }
             }
           }

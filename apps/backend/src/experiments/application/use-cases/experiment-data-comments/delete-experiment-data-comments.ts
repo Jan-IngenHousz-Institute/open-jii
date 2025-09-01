@@ -1,25 +1,31 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { Result } from "../../../../common/utils/fp-utils";
+import { Result, tryCatch } from "../../../../common/utils/fp-utils";
 import { AppError, failure } from "../../../../common/utils/fp-utils";
-import { tryCatch } from "../../../../common/utils/fp-utils";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
+import {
+  ExperimentDataCommentsRepository,
+  ExperimentDataTableSchema,
+} from "../../../core/repositories/experiment-data-comments.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 @Injectable()
 export class DeleteExperimentDataCommentsUseCase {
   private readonly logger = new Logger(DeleteExperimentDataCommentsUseCase.name);
 
-  constructor(private readonly experimentRepository: ExperimentRepository) {}
+  constructor(
+    private readonly experimentRepository: ExperimentRepository,
+    private readonly experimentDataCommentsRepository: ExperimentDataCommentsRepository,
+  ) {}
 
   async execute(
     experimentId: string,
     tableName: string,
     userId: string,
-    rowId: string[],
+    rowIds: string[],
   ): Promise<Result<void>> {
     this.logger.log(
-      `Deleting experiment data comments for experiment ${experimentId} table ${tableName} with rows ${rowId.join(",")}`,
+      `Deleting experiment data comments for experiment ${experimentId} table ${tableName} with rows ${rowIds.join(",")}`,
     );
 
     // Check if experiment exists and user has access
@@ -46,15 +52,27 @@ export class DeleteExperimentDataCommentsUseCase {
 
         // Validate that the table name is provided
         if (!tableName) {
-          this.logger.warn("Attempt to create experiment data comment without table name");
+          this.logger.warn("Attempt to delete experiment data comments without table name");
           return failure(
             AppError.badRequest("Table name is required to create a experiment data comments"),
           );
         }
 
-        // Dummy implementation
-        return await tryCatch(() => {
-          return;
+        const schemaResult =
+          await this.experimentDataCommentsRepository.getValidatedExperimentDataTableSchema(
+            experimentId,
+            experiment.name,
+            tableName,
+          );
+        return schemaResult.chain(async (schema: ExperimentDataTableSchema) => {
+          // For each data row
+          for (const rowId of rowIds) {
+            await this.experimentDataCommentsRepository.deleteCommentsForTableRow(schema, rowId);
+          }
+          // Trick to return void as a success value
+          return await tryCatch(() => {
+            return;
+          });
         });
       },
     );

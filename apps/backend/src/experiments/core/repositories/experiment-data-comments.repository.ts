@@ -28,6 +28,7 @@ export class ExperimentDataCommentsRepository {
   ): Promise<Result<ExperimentDataTableSchema>> {
     // First, validate that the table exists by listing all tables
     const tablesResult = await this.databricksPort.listTables(experimentName, experimentId);
+    this.logger.debug("Tables result", tablesResult);
 
     if (tablesResult.isFailure()) {
       return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
@@ -59,7 +60,7 @@ export class ExperimentDataCommentsRepository {
       return;
     });
     this.logger.log("Running query", sqlQuery);
-    const columnResult = "[]";
+    const columnResult = [];
     try {
       const existingComments = zExperimentDataComments.parse(columnResult);
 
@@ -85,5 +86,14 @@ export class ExperimentDataCommentsRepository {
     });
     this.logger.log("Running query", sqlQuery);
     return success(comments);
+  }
+
+  async deleteCommentsForTableRow(schema: ExperimentDataTableSchema, rowId: string) {
+    // TODO
+    const sqlQuery = `UPDATE ${schema.tableName} SET ${this.DATA_TABLE_COMMENTS_COLUMN}='[]' WHERE ${this.DATA_TABLE_ID_COLUMN}='${rowId}'`;
+    this.logger.log("Running query", sqlQuery);
+    return await tryCatch(() => {
+      return;
+    });
   }
 }

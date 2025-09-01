@@ -69,7 +69,7 @@ export class CreateExperimentDataCommentsUseCase {
         return schemaResult.chain(async (schema: ExperimentDataTableSchema) => {
           // For each data row
           const storedComments: ExperimentDataComment[] = [];
-          for (const rowId of newComment.rowId) {
+          for (const rowId of newComment.rowIds) {
             // Retrieve current comments
             const existingCommentsResult =
               await this.experimentDataCommentsRepository.getCommentsForTableRow(schema, rowId);
@@ -105,9 +105,7 @@ export class CreateExperimentDataCommentsUseCase {
               // Continue with the next row
               continue;
             }
-
             storedComments.push(comment);
-            // Update current comments
           }
 
           return success(storedComments);
