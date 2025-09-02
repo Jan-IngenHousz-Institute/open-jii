@@ -199,7 +199,7 @@ export const zFlowEdge = z.object({
 
 export const zFlowGraph = z
   .object({
-    nodes: z.array(zFlowNode).min(1),
+    nodes: z.array(zFlowNode).min(1, "At least one node is required to create a flow"),
     edges: z.array(zFlowEdge),
   })
   .superRefine((graph, ctx) => {
