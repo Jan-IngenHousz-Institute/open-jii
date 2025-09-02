@@ -66,12 +66,18 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
   });
 
   const handleSave = useCallback(() => {
-    const data = flowEditorRef.current ? flowEditorRef.current.getFlowData() : null;
-    if (!data) return; // not ready
-    if (existingFlow?.body) {
-      updateFlowMutation.mutate({ params: { id }, body: data });
-    } else {
-      createFlowMutation.mutate({ params: { id }, body: data });
+    try {
+      const data = flowEditorRef.current ? flowEditorRef.current.getFlowData() : null;
+      if (!data) return; // not ready
+      if (existingFlow?.body) {
+        updateFlowMutation.mutate({ params: { id }, body: data });
+      } else {
+        createFlowMutation.mutate({ params: { id }, body: data });
+      }
+    } catch (error) {
+      // Show validation errors to the user
+      const message = error instanceof Error ? error.message : "Flow validation failed";
+      toast({ description: message, variant: "destructive" });
     }
   }, [createFlowMutation, updateFlowMutation, existingFlow, id]);
 

@@ -138,19 +138,20 @@ export class FlowMapper {
   static toApiGraph(nodes: Node[], edges: Edge[]): UpsertFlowBody {
     const apiNodes = nodes.map((node) => {
       const data = node.data as unknown as FlowNodeDataWithSpec;
+
+      if (!node.type || !(node.type in REACT_FLOW_TO_API_NODE_TYPE)) {
+        throw new Error(`Unsupported node type "${node.type}".`);
+      }
+
       const nodeType =
         REACT_FLOW_TO_API_NODE_TYPE[node.type as keyof typeof REACT_FLOW_TO_API_NODE_TYPE];
 
+      // --- Normalize node data ---
       const nodeTitle = typeof data.title === "string" ? data.title : "";
       const nodeDescription = typeof data.description === "string" ? data.description : "";
+
       const text = nodeDescription || nodeTitle || `Default ${nodeType}`;
       let content: StepSpecification;
-
-      // Helper to decide if an arbitrary value already matches a given zod schema
-      const parseIfValid = <T>(schema: z.ZodType<T>, value: unknown): T | null => {
-        const result = schema.safeParse(value as T);
-        return result.success ? result.data : null;
-      };
 
       if (nodeType === "question") {
         // For questions, convert from QuestionUI format to QuestionContent format
@@ -168,17 +169,12 @@ export class FlowMapper {
             answerType === "SELECT" ? stepSpec.options : undefined,
           );
 
-          const valid = parseIfValid(zQuestionContent, candidate);
-          if (valid) {
-            content = valid;
-          } else {
-            // Fallback
-            content = {
-              kind: "open_ended",
-              text: questionText,
-              required: false,
-            };
+          // Throw only the first message if invalid
+          const parsed = zQuestionContent.safeParse(candidate);
+          if (!parsed.success) {
+            throw new Error(parsed.error.errors[0].message);
           }
+          content = parsed.data;
         } else {
           // No stepSpecification or no answerType, create default
           const candidate: QuestionContent = {
@@ -186,11 +182,13 @@ export class FlowMapper {
             text: text,
             required: false,
           };
-          content = parseIfValid(zQuestionContent, candidate) ?? {
-            kind: "open_ended",
-            text: "Question",
-            required: false,
-          };
+
+          // Throw only the first message if invalid
+          const parsed = zQuestionContent.safeParse(candidate);
+          if (!parsed.success) {
+            throw new Error(parsed.error.errors[0].message);
+          }
+          content = parsed.data;
         }
       } else if (nodeType === "measurement") {
         const protocolId =
@@ -198,33 +196,35 @@ export class FlowMapper {
           (isObject(data.stepSpecification)
             ? (data.stepSpecification as { protocolId?: string }).protocolId
             : undefined);
-        if (!protocolId) {
-          throw new Error(
-            `Measurement node "${nodeTitle}" requires a protocol to be selected before saving.`,
-          );
-        }
         const rawParams = isObject(data.stepSpecification)
           ? (data.stepSpecification as { params?: Record<string, unknown> }).params
           : undefined;
         const candidate: MeasurementContent = {
-          protocolId,
+          protocolId: protocolId ?? "", // Let Zod validate empty/invalid protocol
           params: rawParams ?? {},
         } as const;
-        const valid = parseIfValid(zMeasurementContent, candidate);
-        if (!valid) {
-          throw new Error(`Invalid measurement node "${nodeTitle}": invalid measurement content`);
+
+        // Let Zod handle all validation including missing protocol
+        const parsed = zMeasurementContent.safeParse(candidate);
+        if (!parsed.success) {
+          throw new Error(parsed.error.errors[0].message);
         }
-        content = valid;
+        content = parsed.data;
       } else {
         // instruction - prioritize current description over existing stepSpecification
         const candidate: InstructionContent = { text: text || "Instruction" } as const;
-        content = parseIfValid(zInstructionContent, candidate) ?? { text: "Instruction" };
+
+        const parsed = zInstructionContent.safeParse(candidate);
+        if (!parsed.success) {
+          throw new Error(parsed.error.errors[0].message);
+        }
+        content = parsed.data;
       }
 
       return {
         id: node.id,
         type: nodeType,
-        name: nodeTitle || "Untitled",
+        name: nodeTitle,
         content,
         isStart: Boolean(data.isStartNode),
         position: { x: node.position.x, y: node.position.y },
@@ -239,7 +239,7 @@ export class FlowMapper {
     const flowGraph = { nodes: apiNodes, edges: apiEdges };
     const result = zFlowGraph.safeParse(flowGraph);
     if (!result.success) {
-      throw new Error(`Flow validation failed: ${result.error.message}`);
+      throw new Error(result.error.errors[0].message);
     }
     return result.data;
   }

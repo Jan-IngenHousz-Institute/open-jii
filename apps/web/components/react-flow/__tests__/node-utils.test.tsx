@@ -5,13 +5,7 @@ import { Position } from "@xyflow/react";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
-import {
-  toPosition,
-  createNewNode,
-  validateFlowNodes,
-  BaseNodeWrapper,
-  FlowContextProvider,
-} from "../node-utils";
+import { toPosition, createNewNode, BaseNodeWrapper, FlowContextProvider } from "../node-utils";
 
 globalThis.React = React;
 
@@ -53,40 +47,6 @@ describe("createNewNode", () => {
   it("creates an ANALYSIS node with empty spec", () => {
     const node = createNewNode("ANALYSIS", { x: 3, y: 4 });
     expect(node.data.stepSpecification).toEqual({});
-  });
-});
-
-describe("validateFlowNodes", () => {
-  it("returns false for empty", () => {
-    expect(validateFlowNodes([])).toBe(false);
-  });
-
-  it("validates MEASUREMENT with protocolId", () => {
-    const node = createNewNode("MEASUREMENT", { x: 0, y: 0 });
-    node.data.stepSpecification = { protocolId: "abc" };
-    expect(validateFlowNodes([node])).toBe(true);
-  });
-
-  it("validates QUESTION with text", () => {
-    const node = createNewNode("QUESTION", { x: 0, y: 0 });
-    node.data.stepSpecification = { kind: "open_ended", text: "hi" };
-    expect(validateFlowNodes([node])).toBe(true);
-  });
-
-  it("falls back to QUESTION title when text empty", () => {
-    const node = createNewNode("QUESTION", { x: 0, y: 0 }, "Hello");
-    node.data.stepSpecification = { kind: "open_ended", text: "" };
-    expect(validateFlowNodes([node])).toBe(true);
-  });
-
-  it("validates INSTRUCTION with text", () => {
-    const node: Node = {
-      id: "1",
-      type: "INSTRUCTION",
-      position: { x: 0, y: 0 },
-      data: { title: "", stepSpecification: { text: "Do this" } },
-    };
-    expect(validateFlowNodes([node])).toBe(true);
   });
 });
 

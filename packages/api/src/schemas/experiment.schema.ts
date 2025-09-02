@@ -106,7 +106,10 @@ export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice", "nu
 const zQuestionYesNo = z
   .object({
     kind: z.literal("yes_no"),
-    text: z.string().min(1),
+    text: z
+      .string()
+      .min(1, "Question text is required")
+      .max(64, "Question text must be 64 characters or less"),
     required: z.boolean().optional().default(false),
   })
   .strict();
@@ -114,7 +117,10 @@ const zQuestionYesNo = z
 const zQuestionOpenEnded = z
   .object({
     kind: z.literal("open_ended"),
-    text: z.string().min(1),
+    text: z
+      .string()
+      .min(1, "Question text is required")
+      .max(64, "Question text must be 64 characters or less"),
     required: z.boolean().optional().default(false),
   })
   .strict();
@@ -122,8 +128,18 @@ const zQuestionOpenEnded = z
 const zQuestionMultiChoice = z
   .object({
     kind: z.literal("multi_choice"),
-    text: z.string().min(1),
-    options: z.array(z.string()).min(1),
+    text: z
+      .string()
+      .min(1, "Question text is required")
+      .max(64, "Question text must be 64 characters or less"),
+    options: z
+      .array(
+        z
+          .string()
+          .min(1, "Option text is required")
+          .max(64, "Option text must be 64 characters or less"),
+      )
+      .min(1, "At least one option is required for multiple choice questions"),
     required: z.boolean().optional().default(false),
   })
   .strict();
@@ -131,7 +147,10 @@ const zQuestionMultiChoice = z
 const zQuestionNumber = z
   .object({
     kind: z.literal("number"),
-    text: z.string().min(1),
+    text: z
+      .string()
+      .min(1, "Question text is required")
+      .max(64, "Question text must be 64 characters or less"),
     required: z.boolean().optional().default(false),
   })
   .strict();
@@ -144,18 +163,21 @@ export const zQuestionContent = z.discriminatedUnion("kind", [
 ]);
 
 export const zInstructionContent = z.object({
-  text: z.string().min(1),
+  text: z.string().min(1, "Instruction text is required"),
 });
 
 export const zMeasurementContent = z.object({
-  protocolId: z.string().uuid(),
+  protocolId: z.string().uuid("A valid protocol must be selected for measurement nodes"),
   params: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const zFlowNode = z.object({
   id: z.string().min(1),
   type: zFlowNodeType,
-  name: z.string().min(1),
+  name: z
+    .string()
+    .min(1, "Node label is required")
+    .max(64, "Node label must be 64 characters or less"),
   content: z.union([zQuestionContent, zInstructionContent, zMeasurementContent]),
   // A node can be marked as a start node. Exactly one node must be the start node for any flow.
   isStart: z.boolean().optional().default(false),
@@ -172,7 +194,7 @@ export const zFlowEdge = z.object({
   id: z.string().min(1),
   source: z.string().min(1),
   target: z.string().min(1),
-  label: z.string().optional().nullable(),
+  label: z.string().max(64, "Edge label must be 64 characters or less").optional().nullable(),
 });
 
 export const zFlowGraph = z

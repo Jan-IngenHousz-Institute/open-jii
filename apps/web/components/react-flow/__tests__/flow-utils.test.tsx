@@ -1,16 +1,13 @@
 // flow-utils.test.ts
 import { MarkerType } from "@xyflow/react";
 import type { Node, Edge } from "@xyflow/react";
-import type { Mock } from "vitest";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import {
   getInitialFlowData,
-  getFlowData,
   handleNodesDeleteWithReconnection,
   handleNodeDrop,
 } from "../flow-utils";
-import { validateFlowNodes as validateFlowNodesImport } from "../node-utils";
 
 // --- mocks ---
 vi.mock("../../flow-editor/flow-mapper", () => ({
@@ -30,9 +27,6 @@ vi.mock("../node-utils", () => ({
   })),
 }));
 
-// Cast to typed mock
-const validateFlowNodes = vi.mocked(validateFlowNodesImport);
-
 describe("flow-utils", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -41,14 +35,6 @@ describe("flow-utils", () => {
   it("getInitialFlowData returns empty arrays", () => {
     const res = getInitialFlowData();
     expect(res).toEqual({ nodes: [], edges: [] });
-  });
-
-  describe("getFlowData", () => {
-    it("returns null when validateFlowNodes fails", () => {
-      (validateFlowNodes as unknown as Mock).mockReturnValueOnce(false);
-      const result = getFlowData([], []);
-      expect(result).toBeNull();
-    });
   });
 
   describe("handleNodesDeleteWithReconnection", () => {

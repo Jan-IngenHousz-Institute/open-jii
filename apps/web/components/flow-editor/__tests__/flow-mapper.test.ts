@@ -293,6 +293,8 @@ describe("FlowMapper.toApiGraph validation", () => {
     const data = react.nodes[0].data as FlowNodeDataWithSpec;
     data.stepSpecification = undefined;
     data.protocolId = undefined;
-    expect(() => FlowMapper.toApiGraph(react.nodes, react.edges)).toThrow(/requires a protocol/);
+    expect(() => FlowMapper.toApiGraph(react.nodes, react.edges)).toThrow(
+      "A valid protocol must be selected for measurement nodes",
+    );
   });
 });
