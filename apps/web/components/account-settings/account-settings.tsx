@@ -6,9 +6,9 @@ import { useForm } from "react-hook-form";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
-// ***** ONLY USING EXISTING SCHEMAS *****
 import { zCreateUserProfileBody } from "@repo/api";
 import type { CreateUserProfileBody } from "@repo/api";
+import type { User } from "@repo/api";
 import type { Session } from "@repo/auth/types";
 import { useTranslation } from "@repo/i18n";
 import { Form, Button } from "@repo/ui/components";
@@ -20,9 +20,7 @@ import { ProfilePictureCard } from "./profile-picture-card";
 
 export function AccountSettings({ session }: { session: Session | null }) {
   const { t } = useTranslation("account");
-  const user = session?.user as
-    | { id: string; email: string; name?: string | null; image?: string | null }
-    | undefined;
+  const user = session?.user as User | undefined;
 
   // Fetch existing user profile data
   const {
@@ -55,11 +53,11 @@ export function AccountSettings({ session }: { session: Session | null }) {
         organization: "",
       };
 
-  return <AccountSettingsInner initialValues={initialValues} />;
+  return <AccountSettingsForm initialValues={initialValues} />;
 }
 
 // A pure form component that mounts once with the right defaults.
-function AccountSettingsInner({ initialValues }: { initialValues: CreateUserProfileBody }) {
+function AccountSettingsForm({ initialValues }: { initialValues: CreateUserProfileBody }) {
   const router = useRouter();
   const { t } = useTranslation("account");
   const { mutate: createUserProfile, isPending } = useCreateUserProfile({
