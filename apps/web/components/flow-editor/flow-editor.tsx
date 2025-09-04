@@ -237,9 +237,13 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     const styledEdges = getStyledEdges(
       edges.map((edge) => {
         const label = edge.data?.label;
-        return typeof label === "string" || typeof label === "number"
-          ? { ...edge, label: String(label) }
-          : { ...edge, label: undefined };
+        if (typeof label === "string" || typeof label === "number") {
+          const labelStr = String(label);
+          // Truncate label at 64 characters and add ... if longer
+          const displayLabel = labelStr.length > 64 ? labelStr.slice(0, 64) + "..." : labelStr;
+          return { ...edge, label: displayLabel };
+        }
+        return { ...edge, label: undefined };
       }),
       selectedEdgeId,
     );
