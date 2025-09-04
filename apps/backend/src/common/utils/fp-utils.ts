@@ -195,7 +195,7 @@ export class AppError extends Error {
 
 /**
  * Utility for handling errors in a controller context
- * @param error The AppError object to handle
+ * @param failure The AppError object to handle
  * @param logger Logger to use for logging errors
  */
 export function handleFailure(failure: Failure<AppError>, logger: Logger) {

@@ -91,7 +91,7 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
           </div>
         </CardHeader>
         <CardContent>
-          <JsonCodeViewer value={protocol.code} height="300px" />
+          <JsonCodeViewer value={protocol.code} height="700px" />
         </CardContent>
       </Card>
     </div>
