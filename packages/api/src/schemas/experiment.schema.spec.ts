@@ -262,15 +262,17 @@ describe("Experiment Schema", () => {
     });
 
     it("Question content (.strict) rejects extra keys", () => {
-      const good = { kind: "yes_no", text: "OK?" };
+      const good = { kind: "yes_no", text: "OK?", required: false };
       expect(zQuestionContent.parse(good)).toEqual(good);
+
       const bad = { kind: "yes_no", text: "OK?", extra: 1 };
       expect(() => zQuestionContent.parse(bad)).toThrow();
     });
 
     it("Multi choice requires options", () => {
-      const mc = { kind: "multi_choice", text: "Pick", options: ["a", "b"] };
+      const mc = { kind: "multi_choice", text: "Pick", options: ["a", "b"], required: false };
       expect(zQuestionContent.parse(mc)).toEqual(mc);
+
       const bad = { kind: "multi_choice", text: "Pick", options: [] };
       expect(() => zQuestionContent.parse(bad)).toThrow();
     });
@@ -286,7 +288,7 @@ describe("Experiment Schema", () => {
         id: "n1",
         type: "question",
         name: "Start Q",
-        content: { kind: "open_ended", text: "Hello?" },
+        content: { kind: "open_ended", text: "Hello?", required: false },
       };
       const parsed = zFlowNode.parse(node);
       expect(parsed).toEqual({ ...node, isStart: false });
@@ -304,7 +306,7 @@ describe("Experiment Schema", () => {
             id: "n1",
             type: "question",
             name: "Q",
-            content: { kind: "yes_no", text: "ok?" },
+            content: { kind: "yes_no", text: "ok?", required: false },
             isStart: true,
           },
           {
@@ -312,13 +314,12 @@ describe("Experiment Schema", () => {
             type: "instruction",
             name: "Read",
             content: { text: "Follow" },
-            isStart: false, // explicit — matches parsed result
+            isStart: false,
           },
         ],
         edges: [{ id: "e1", source: "n1", target: "n2", label: null }],
       };
-
-      expect(zFlowGraph.parse(goodGraph)).toEqual(goodGraph); // ✅
+      expect(zFlowGraph.parse(goodGraph)).toEqual(goodGraph);
 
       const zeroStart = {
         ...goodGraph,
@@ -340,7 +341,7 @@ describe("Experiment Schema", () => {
             id: "start",
             type: "question",
             name: "Start",
-            content: { kind: "open_ended", text: "Go?" },
+            content: { kind: "open_ended", text: "Go?", required: false },
             isStart: true,
           },
         ],
@@ -397,9 +398,41 @@ describe("Experiment Schema", () => {
     });
 
     it("zExperimentFilterQuery valid and optional", () => {
+      // Test empty object (all fields optional)
       expect(zExperimentFilterQuery.parse({})).toEqual({});
+
+      // Test filter field
       expect(zExperimentFilterQuery.parse({ filter: "my" })).toEqual({ filter: "my" });
+      expect(zExperimentFilterQuery.parse({ filter: "member" })).toEqual({ filter: "member" });
+      expect(zExperimentFilterQuery.parse({ filter: "related" })).toEqual({ filter: "related" });
       expect(() => zExperimentFilterQuery.parse({ filter: "unknown" })).toThrow();
+
+      // Test status field
+      expect(zExperimentFilterQuery.parse({ status: "active" })).toEqual({ status: "active" });
+      expect(zExperimentFilterQuery.parse({ status: "archived" })).toEqual({ status: "archived" });
+      expect(() => zExperimentFilterQuery.parse({ status: "invalid_status" })).toThrow();
+
+      // Test search field
+      expect(zExperimentFilterQuery.parse({ search: "test experiment" })).toEqual({
+        search: "test experiment",
+      });
+      expect(zExperimentFilterQuery.parse({ search: "" })).toEqual({ search: "" });
+      expect(zExperimentFilterQuery.parse({ search: "special chars !@#$%" })).toEqual({
+        search: "special chars !@#$%",
+      });
+
+      // Test combinations
+      expect(
+        zExperimentFilterQuery.parse({
+          filter: "my",
+          status: "active",
+          search: "my experiment",
+        }),
+      ).toEqual({
+        filter: "my",
+        status: "active",
+        search: "my experiment",
+      });
     });
   });
 

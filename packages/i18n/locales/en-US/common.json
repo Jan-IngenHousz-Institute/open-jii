@@ -1,5 +1,7 @@
 {
   "common": {
+    "protocolLabel": "Protocol",
+    "by": "by",
     "homepage": "Homepage",
     "language": "Language",
     "languageDrawer": "Toggle language drawer",
@@ -37,6 +39,12 @@
     "openJII": "openJII"
   },
   "experiments": {
+    "filterMy": "My Experiments",
+    "filterMember": "Member Experiments",
+    "filterRelated": "All Related Experiments",
+    "filterAll": "All Experiments",
+    "filterStatusAll": "All Statuses",
+    "clearSearch": "Clear search",
     "title": "Experiments",
     "newExperiment": "New Experiment",
     "overview": "Overview",
@@ -61,6 +69,7 @@
     "experimentId": "Experiment ID",
     "descriptionTitle": "Description",
     "searchUsers": "Search users",
+    "searchExperiments": "Search experiments...",
     "startTypingToSearch": "Start typing to search",
     "searchProtocols": "Search protocols",
     "loadingProtocols": "Loading...",
@@ -73,7 +82,8 @@
     "noPermissionToAccess": "You do not have permission to access this experiment.",
     "errorLoadingExperiment": "There was an error loading the experiment.",
     "experimentNotFound": "The experiment you are looking for could not be found.",
-    "needMemberAccess": "You need to be a member to access experiment settings"
+    "needMemberAccess": "You need to be a member to access experiment settings",
+    "measurementPanelTitle": "Measurement Protocol"
   },
   "newExperiment": {
     "description": "Set up a new experiment (project).",

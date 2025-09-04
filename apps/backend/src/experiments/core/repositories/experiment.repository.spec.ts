@@ -339,6 +339,96 @@ describe("ExperimentRepository", () => {
       // This experiment should be filtered out because it's by another user
       expect(experiments.some((e) => e.id === otherActive.id)).toBe(false);
     });
+    it("should filter experiments by search term in name", async () => {
+      // Arrange
+      const userId = await testApp.createTestUser({ email: "search-test@example.com" });
+      await testApp.createExperiment({ name: "Alpha Experiment", userId });
+      await testApp.createExperiment({ name: "Beta Experiment", userId });
+      await testApp.createExperiment({ name: "Gamma", userId });
+
+      // Act
+      const result = await repository.findAll(userId, undefined, undefined, "Experiment");
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+      expect(experiments.length).toBe(2);
+      expect(experiments).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: "Alpha Experiment" }),
+          expect.objectContaining({ name: "Beta Experiment" }),
+        ]),
+      );
+      expect(experiments.some((e) => e.name === "Gamma")).toBe(false);
+    });
+
+    it("should filter experiments by search term, relationship, and status together", async () => {
+      // Arrange
+      const mainUserId = await testApp.createTestUser({
+        email: "search-rel-status-repo@example.com",
+      });
+      const otherUserId = await testApp.createTestUser({
+        email: "search-rel-status-repo-other@example.com",
+      });
+
+      // Create experiments with unique names and statuses
+      await testApp.createExperiment({
+        name: "My Searchable Active",
+        userId: mainUserId,
+        status: "active",
+      });
+      await testApp.createExperiment({
+        name: "My Searchable Archived",
+        userId: mainUserId,
+        status: "archived",
+      });
+      await testApp.createExperiment({
+        name: "My Unrelated",
+        userId: mainUserId,
+        status: "active",
+      });
+      const { experiment: memberExpActive } = await testApp.createExperiment({
+        name: "Member Searchable Active",
+        userId: otherUserId,
+        status: "active",
+      });
+      const { experiment: memberExpArchived } = await testApp.createExperiment({
+        name: "Member Searchable Archived",
+        userId: otherUserId,
+        status: "archived",
+      });
+      await testApp.addExperimentMember(memberExpActive.id, mainUserId, "member");
+      await testApp.addExperimentMember(memberExpArchived.id, mainUserId, "member");
+      await testApp.createExperiment({
+        name: "Other Experiment",
+        userId: otherUserId,
+        status: "active",
+      });
+
+      // Act
+      const result = await repository.findAll(mainUserId, "related", "active", "Searchable");
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+      // Should only return 'My Searchable Active' and 'Member Searchable Active' with status 'active'
+      expect(experiments.length).toBe(2);
+      expect(experiments).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: "My Searchable Active", status: "active" }),
+          expect.objectContaining({ name: "Member Searchable Active", status: "active" }),
+        ]),
+      );
+      // Should not return archived or unrelated experiments
+      expect(
+        experiments.some(
+          (e) =>
+            e.status === "archived" || e.name === "My Unrelated" || e.name === "Other Experiment",
+        ),
+      ).toBe(false);
+    });
   });
 
   describe("findOne", () => {

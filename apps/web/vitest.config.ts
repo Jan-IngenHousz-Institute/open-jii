@@ -9,6 +9,8 @@ const aliasConfig = defineConfig({
     alias: {
       "@": resolve(__dirname, "."),
       "@/": resolve(__dirname, ".") + "/",
+      "~": resolve(__dirname, "."),
+      "~/": resolve(__dirname, ".") + "/",
     },
   },
 });
@@ -25,7 +27,4 @@ const webConfig = defineConfig({
   },
 });
 
-export default mergeConfig(
-  mergeConfig(aliasConfig, uiConfig),
-  webConfig
-);
+export default mergeConfig(mergeConfig(aliasConfig, uiConfig), webConfig);
