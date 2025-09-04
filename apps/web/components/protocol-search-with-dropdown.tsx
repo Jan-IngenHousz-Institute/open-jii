@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronsUpDown } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import type { Protocol } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
@@ -34,7 +34,25 @@ export function ProtocolSearchWithDropdown({
   const [open, setOpen] = useState(false);
   const { t } = useTranslation("common");
 
-  const selectedProtocol = availableProtocols.find((protocol) => protocol.id === value);
+  // Snapshot the selected protocol when it’s visible in the current list.
+  const selectedSnapshotRef = useRef<Protocol | undefined>(undefined);
+
+  const currentMatch = value ? availableProtocols.find((p) => p.id === value) : undefined;
+
+  // Keep selected protocol snapshot in sync with current value and available protocols
+  useEffect(() => {
+    if (!value) {
+      // Clear snapshot when no protocol is selected
+      selectedSnapshotRef.current = undefined;
+    } else if (currentMatch && selectedSnapshotRef.current?.id !== currentMatch.id) {
+      // Update snapshot when we have a new match that's different from current snapshot
+      selectedSnapshotRef.current = currentMatch;
+    }
+  }, [value, currentMatch]);
+
+  const selectedProtocol = selectedSnapshotRef.current;
+
+  const dropdownProtocols = availableProtocols.filter((protocol) => protocol.id !== value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -78,7 +96,7 @@ export function ProtocolSearchWithDropdown({
         </Button>
       </PopoverTrigger>
       <ProtocolSearchPopover
-        availableProtocols={availableProtocols}
+        availableProtocols={dropdownProtocols}
         searchValue={searchValue}
         onSearchChange={onSearchChange}
         onAddProtocol={onAddProtocol}
