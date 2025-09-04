@@ -1,8 +1,3 @@
-export interface DatabricksPipelineHealthCheck {
-  healthy: boolean;
-  service: string;
-}
-
 export interface DatabricksPipelineGetParams {
   pipelineId: string;
 }
