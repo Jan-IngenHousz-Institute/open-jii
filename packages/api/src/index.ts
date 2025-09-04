@@ -10,3 +10,4 @@ export * from "./contracts/protocol.contract";
 export * from "./schemas/experiment.schema";
 export * from "./schemas/user.schema";
 export * from "./schemas/protocol.schema";
+export * from "./schemas/protocol-validator";
