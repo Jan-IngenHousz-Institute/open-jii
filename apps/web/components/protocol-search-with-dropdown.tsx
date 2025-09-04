@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronsUpDown } from "lucide-react";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import type { Protocol } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
@@ -43,13 +43,15 @@ export function ProtocolSearchWithDropdown({
   );
 
   // Keep selected protocol snapshot in sync with current value and available protocols
-  if (!value) {
-    // Clear snapshot when no protocol is selected
-    selectedSnapshotRef.current = undefined;
-  } else if (currentMatch && selectedSnapshotRef.current?.id !== currentMatch.id) {
-    // Update snapshot when we have a new match that's different from current snapshot
-    selectedSnapshotRef.current = currentMatch;
-  }
+  useEffect(() => {
+    if (!value) {
+      // Clear snapshot when no protocol is selected
+      selectedSnapshotRef.current = undefined;
+    } else if (currentMatch && selectedSnapshotRef.current?.id !== currentMatch.id) {
+      // Update snapshot when we have a new match that's different from current snapshot
+      selectedSnapshotRef.current = currentMatch;
+    }
+  }, [value, currentMatch]);
 
   const selectedProtocol = selectedSnapshotRef.current;
 
