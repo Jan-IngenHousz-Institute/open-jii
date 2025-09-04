@@ -1,0 +1,46 @@
+{
+  "mobileNavAriaLabel": "Navigation Einstellungen",
+  "overview": {
+    "title": "Übersicht"
+  },
+  "security": {
+    "title": "Sicherheit"
+  },
+  "notifications": {
+    "title": "Benachrichtigungen"
+  },
+  "team": {
+    "title": "Team"
+  },
+  "activity": {
+    "title": "Aktivität"
+  },
+  "settings": {
+    "profilePictureCard": {
+      "title": "Profilbild",
+      "upload": "Neues Foto hochladen",
+      "description": "JPG, PNG oder GIF. Maximale Größe 5MB."
+    },
+    "profileCard": {
+      "title": "Profilinformationen",
+      "professionalTitle": "Berufstitel",
+      "bio": "Bio",
+      "bioPlaceholder": "Erzählen Sie uns etwas über sich",
+      "institution": "Institution/Organisation",
+      "institutionPlaceholder": "Organisation suchen oder erstellen",
+      "department": "Abteilung",
+      "professionalTitlePlaceholder": "Ihr Berufstitel",
+      "departmentPlaceholder": "Ihre Abteilung"
+    },
+    "disabled": "Deaktiviert",
+    "title": "Einstellungen",
+    "accountsettings": "Kontoeinstellungen",
+    "description": "Verwalten Sie Ihre Informationen und Einstellungen",
+    "loading": "Kontoeinstellungen werden geladen...",
+    "errorTitle": "Fehler beim Laden der Kontoeinstellungen",
+    "cancel": "Abbrechen",
+    "save": "Änderungen speichern",
+    "saving": "Speichern...",
+    "saved": "Kontoeinstellungen gespeichert"
+  }
+}

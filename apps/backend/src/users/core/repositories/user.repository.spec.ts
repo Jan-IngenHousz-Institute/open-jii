@@ -446,5 +446,33 @@ describe("UserRepository", () => {
         .where(eq(organizations.name, orgName));
       expect(orgs.length).toBe(1);
     });
+
+    it("should create a user profile with bio", async () => {
+      const dto = {
+        firstName: "John",
+        lastName: "Smith",
+        bio: "Software engineer with 10 years of experience.",
+        organization: "TechCorp",
+      };
+
+      const result = await repository.createOrUpdateUserProfile(testUserId, dto);
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toMatchObject({
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        bio: dto.bio,
+        organization: dto.organization,
+      });
+
+      // Check profile was created with bio
+      const profs = await testApp.database
+        .select()
+        .from(profiles)
+        .where(eq(profiles.userId, testUserId));
+      expect(profs.length).toBe(1);
+      expect(profs[0].bio).toBe(dto.bio);
+    });
   });
 });

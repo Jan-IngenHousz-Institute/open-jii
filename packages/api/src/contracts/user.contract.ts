@@ -8,6 +8,7 @@ import {
   zUserIdPathParam,
   zCreateUserProfileBody,
   zCreateUserProfileResponse,
+  zUserProfile,
 } from "../schemas/user.schema";
 
 const c = initContract();
@@ -47,5 +48,18 @@ export const userContract = c.router({
     },
     summary: "Create user profile",
     description: "Creates user profile and sets the user as registered",
+  },
+
+  getUserProfile: {
+    method: "GET",
+    path: "/api/v1/users/:id/profile",
+    pathParams: zUserIdPathParam,
+    responses: {
+      200: zUserProfile,
+      404: zErrorResponse,
+    },
+    summary: "Get user profile",
+    description:
+      "Returns the user's profile information including firstName, lastName, bio, and organization",
   },
 });

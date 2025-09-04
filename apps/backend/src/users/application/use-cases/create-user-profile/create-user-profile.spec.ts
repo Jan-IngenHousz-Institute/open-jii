@@ -57,4 +57,24 @@ describe("CreateUserProfileUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
   });
+
+  it("should create a user profile with bio", async () => {
+    const dto = {
+      firstName: "Bob",
+      lastName: "Johnson",
+      bio: "Experienced data scientist.",
+      organization: "DataCorp",
+    };
+
+    const result = await useCase.execute(dto, testUserId);
+
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value).toMatchObject({
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      bio: dto.bio,
+      organization: dto.organization,
+    });
+  });
 });

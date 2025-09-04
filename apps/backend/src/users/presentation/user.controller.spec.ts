@@ -278,6 +278,21 @@ describe("UserController", () => {
       expect(response.body).toEqual({});
     });
 
+    it("should successfully create a user profile with bio", async () => {
+      const response = await testApp
+        .post(contract.users.createUserProfile.path)
+        .withAuth(testUserId)
+        .send({
+          firstName: "Test",
+          lastName: "User",
+          bio: "Software developer with experience in Node.js and React.",
+          organization: "Test Organization",
+        })
+        .expect(StatusCodes.CREATED);
+
+      expect(response.body).toEqual({});
+    });
+
     it("should return 400 on invalid input", async () => {
       await testApp
         .post(contract.users.createUserProfile.path)
@@ -292,6 +307,66 @@ describe("UserController", () => {
         .withoutAuth()
         .send({ firstName: "Test", lastName: "User" })
         .expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+  describe("getUserProfile", () => {
+    it("should return the user's profile by ID", async () => {
+      // Arrange: create a user and a profile for that user
+      const userEmail = faker.internet.email();
+      const userId = await testApp.createTestUser({ email: userEmail });
+
+      // create profile via API to match real flow
+      await testApp
+        .post(contract.users.createUserProfile.path)
+        .withAuth(userId)
+        .send({
+          firstName: "Ada",
+          lastName: "Lovelace",
+          bio: "Math enjoyer",
+          organization: "Analytical Engines Inc.",
+        })
+        .expect(StatusCodes.CREATED);
+
+      const path = testApp.resolvePath(contract.users.getUserProfile.path, { id: userId });
+
+      // Act
+      const res = await testApp
+        .get(path)
+        .withAuth(userId) // any authenticated user is fine due to your guard
+        .expect(StatusCodes.OK);
+
+      // Assert (shape only — adapt if your profile has more fields)
+      expect(res.body).toMatchObject({
+        firstName: "Ada",
+        lastName: "Lovelace",
+        bio: "Math enjoyer",
+        organization: "Analytical Engines Inc.",
+      });
+    });
+
+    it("should return 404 if user profile does not exist", async () => {
+      const nonExistentId = faker.string.uuid();
+      const path = testApp.resolvePath(contract.users.getUserProfile.path, { id: nonExistentId });
+
+      await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.NOT_FOUND)
+        .expect(({ body }: { body: ErrorResponse }) => {
+          expect(body.message.toLowerCase()).toContain("not found");
+        });
+    });
+
+    it("should return 400 for invalid UUID", async () => {
+      const path = testApp.resolvePath(contract.users.getUserProfile.path, { id: "invalid-uuid" });
+
+      await testApp.get(path).withAuth(testUserId).expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 401 if not authenticated", async () => {
+      const path = testApp.resolvePath(contract.users.getUserProfile.path, { id: testUserId });
+
+      await testApp.get(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
     });
   });
 });
