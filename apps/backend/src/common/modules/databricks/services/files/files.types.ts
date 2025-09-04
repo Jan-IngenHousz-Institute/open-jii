@@ -1,4 +1,7 @@
 export interface UploadFileResponse {
-  fileId: string;
   filePath: string;
+}
+
+export interface CreateDirectoryResponse {
+  directoryPath: string;
 }

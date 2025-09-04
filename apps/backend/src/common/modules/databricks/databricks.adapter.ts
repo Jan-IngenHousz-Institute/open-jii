@@ -4,7 +4,7 @@ import { DatabricksPort } from "../../../experiments/core/ports/databricks.port"
 import type { Result } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
-import type { UploadFileResponse } from "./services/files/files.types";
+import type { CreateDirectoryResponse, UploadFileResponse } from "./services/files/files.types";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
 import type { DatabricksHealthCheck } from "./services/jobs/jobs.types";
 import type {
@@ -80,13 +80,38 @@ export class DatabricksAdapter implements DatabricksPort {
   ): Promise<Result<UploadFileResponse>> {
     // Construct schema name following the pattern in experiment_pipeline_create_task.py
     const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-    const schemaName = `exp_${cleanName}_${experimentId.replace(/-/g, "_")}`;
+    const schemaName = `exp_${cleanName}_${experimentId}`;
     const catalogName = this.configService.getCatalogName();
 
     // Construct the full path
     const filePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}/${fileName}`;
 
     return this.filesService.upload(filePath, fileBuffer);
+  }
+
+  /**
+   * Create a directory structure in Databricks for a specific experiment.
+   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}
+   *
+   * @param experimentId - ID of the experiment
+   * @param experimentName - Name of the experiment for schema construction
+   * @param sourceType - Type of data source (e.g., 'ambyte')
+   * @returns Result containing the created directory path
+   */
+  async createExperimentDirectory(
+    experimentId: string,
+    experimentName: string,
+    sourceType: string,
+  ): Promise<Result<CreateDirectoryResponse>> {
+    // Construct schema name following the pattern in experiment_pipeline_create_task.py
+    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+    const schemaName = `exp_${cleanName}_${experimentId}`;
+    const catalogName = this.configService.getCatalogName();
+
+    // Construct the full path
+    const directoryPath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}`;
+
+    return this.filesService.createDirectory(directoryPath);
   }
 
   /**

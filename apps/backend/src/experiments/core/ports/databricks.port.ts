@@ -1,4 +1,7 @@
-import type { UploadFileResponse } from "../../../common/modules/databricks/services/files/files.types";
+import type {
+  CreateDirectoryResponse,
+  UploadFileResponse,
+} from "../../../common/modules/databricks/services/files/files.types";
 import type {
   DatabricksHealthCheck,
   DatabricksJobTriggerParams,
@@ -69,4 +72,19 @@ export interface DatabricksPort {
     experimentName: string,
     experimentId: string,
   ): Promise<Result<DatabricksPipelineStartUpdateResponse>>;
+
+  /**
+   * Create a directory structure in Databricks for a specific experiment.
+   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}
+   *
+   * @param experimentId - ID of the experiment
+   * @param experimentName - Name of the experiment for schema construction
+   * @param sourceType - Type of data source (e.g., 'ambyte')
+   * @returns Result containing the created directory path
+   */
+  createExperimentDirectory(
+    experimentId: string,
+    experimentName: string,
+    sourceType: string,
+  ): Promise<Result<CreateDirectoryResponse>>;
 }
