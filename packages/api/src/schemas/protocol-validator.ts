@@ -56,116 +56,118 @@ const EnvironmentalSensorSchema = z
   .min(1); // At least sensor name, optional parameters
 
 // Core protocol schema with all possible fields
-export const ProtocolSetSchema = z.object({
-  // Label field (required only for multi-protocol sets, optional for single protocols)
-  label: z.string().optional(),
+export const ProtocolSetSchema = z
+  .object({
+    // Label field (required only for multi-protocol sets, optional for single protocols)
+    label: z.string().optional(),
 
-  // Basic control fields
-  averages: z.number().int().positive().optional(),
-  averages_delay: z.number().int().nonnegative().optional(),
-  averages_delay_ms: z.number().int().nonnegative().optional(),
-  protocols: z.number().int().positive().optional(),
-  protocols_delay: z.number().int().nonnegative().optional(),
-  measurements: z.number().int().positive().optional(),
-  measurements_delay: z.number().int().nonnegative().optional(),
+    // Basic control fields
+    averages: z.number().int().positive().optional(),
+    averages_delay: z.number().int().nonnegative().optional(),
+    averages_delay_ms: z.number().int().nonnegative().optional(),
+    protocols: z.number().int().positive().optional(),
+    protocols_delay: z.number().int().nonnegative().optional(),
+    measurements: z.number().int().positive().optional(),
+    measurements_delay: z.number().int().nonnegative().optional(),
 
-  // Light pulse configuration
-  pulses: z.array(z.union([z.number().int().positive(), VariableReferenceSchema])).optional(),
-  pulsesize: z.number().int().positive().optional(),
-  pulsedistance: z.number().int().positive().optional(),
-  pulse_distance: z.array(z.number().int().positive()).optional(),
-  pulse_length: z
-    .array(z.array(z.union([z.number().int().nonnegative(), VariableReferenceSchema])))
-    .optional(), // Allow 0
+    // Light pulse configuration
+    pulses: z.array(z.union([z.number().int().positive(), VariableReferenceSchema])).optional(),
+    pulsesize: z.number().int().positive().optional(),
+    pulsedistance: z.number().int().positive().optional(),
+    pulse_distance: z.array(z.number().int().positive()).optional(),
+    pulse_length: z
+      .array(z.array(z.union([z.number().int().nonnegative(), VariableReferenceSchema])))
+      .optional(), // Allow 0
 
-  // Light source hardware configuration
-  act_background_light: PinNumberSchema.optional(),
-  act1_lights: z.array(PinNumberSchema).optional(),
-  act2_lights: z.array(PinNumberSchema).optional(),
-  pulsed_lights: z.array(z.array(PinNumberSchema)).optional(),
-  nonpulsed_lights: z.array(z.array(PinNumberSchema)).optional(),
-  meas_lights: z.array(z.array(PinNumberSchema)).optional(),
+    // Light source hardware configuration
+    act_background_light: PinNumberSchema.optional(),
+    act1_lights: z.array(PinNumberSchema).optional(),
+    act2_lights: z.array(PinNumberSchema).optional(),
+    pulsed_lights: z.array(z.array(PinNumberSchema)).optional(),
+    nonpulsed_lights: z.array(z.array(PinNumberSchema)).optional(),
+    meas_lights: z.array(z.array(PinNumberSchema)).optional(),
 
-  // Light intensity configuration
-  act_intensities: z.array(LightIntensitySchema).optional(),
-  cal_intensities: z.array(LightIntensitySchema).optional(),
-  meas_intensities: z.array(LightIntensitySchema).optional(),
-  pulsed_lights_brightness: z
-    .array(z.array(z.union([z.number().int().nonnegative(), VariableReferenceSchema])))
-    .optional(), // Allow 0
-  nonpulsed_lights_brightness: z
-    .array(z.array(z.union([z.number().int().nonnegative(), VariableReferenceSchema])))
-    .optional(),
+    // Light intensity configuration
+    act_intensities: z.array(LightIntensitySchema).optional(),
+    cal_intensities: z.array(LightIntensitySchema).optional(),
+    meas_intensities: z.array(LightIntensitySchema).optional(),
+    pulsed_lights_brightness: z
+      .array(z.array(z.union([z.number().int().nonnegative(), VariableReferenceSchema])))
+      .optional(), // Allow 0
+    nonpulsed_lights_brightness: z
+      .array(z.array(z.union([z.number().int().nonnegative(), VariableReferenceSchema])))
+      .optional(),
 
-  // Detector configuration
-  detectors: z.array(z.array(PinNumberSchema)).optional(),
+    // Detector configuration
+    detectors: z.array(z.array(PinNumberSchema)).optional(),
 
-  // Environmental sensors
-  environmental: z.array(EnvironmentalSensorSchema).optional(),
+    // Environmental sensors
+    environmental: z.array(EnvironmentalSensorSchema).optional(),
 
-  // Special measurements
-  spad: z.array(z.union([z.number().int().positive(), z.array(z.number().int())])).optional(), // Can be array of arrays as seen in report
-  get_blank_cal: z.array(PinNumberSchema).optional(),
-  get_ir_baseline: z.array(PinNumberSchema).optional(),
-  get_offset: z.number().int().optional(),
+    // Special measurements
+    spad: z.array(z.union([z.number().int().positive(), z.array(z.number().int())])).optional(), // Can be array of arrays as seen in report
+    get_blank_cal: z.array(PinNumberSchema).optional(),
+    get_ir_baseline: z.array(PinNumberSchema).optional(),
+    get_offset: z.number().int().optional(),
 
-  // Advanced configuration
-  autogain: z
-    .array(
-      z.tuple([
-        PinNumberSchema, // light_pin
-        PinNumberSchema, // detector_pin
-        z.number().int().min(1).max(4), // gain_level
-        z.number().int().positive(), // intensity
-        z.number().int().positive(), // timeout
-      ]),
-    )
-    .optional(),
+    // Advanced configuration
+    autogain: z
+      .array(
+        z.tuple([
+          PinNumberSchema, // light_pin
+          PinNumberSchema, // detector_pin
+          z.number().int().min(1).max(4), // gain_level
+          z.number().int().positive(), // intensity
+          z.number().int().positive(), // timeout
+        ]),
+      )
+      .optional(),
 
-  pre_illumination: z
-    .array(
-      z.union([
-        z.number().int(),
-        z.string().regex(/^@s[0-9]+$/), // Variable reference like "@s2",
-        z.array(z.number().int()),
-        z.array(z.string().regex(/^@s[0-9]+$/)),
-      ]),
-    )
-    .optional(),
+    pre_illumination: z
+      .array(
+        z.union([
+          z.number().int(),
+          z.string().regex(/^@s[0-9]+$/), // Variable reference like "@s2",
+          z.array(z.number().int()),
+          z.array(z.string().regex(/^@s[0-9]+$/)),
+        ]),
+      )
+      .optional(),
 
-  // Device control
-  tcs_to_act: z.number().int().min(0).max(100).optional(),
-  par_led_start_on_open: z.number().int().optional(),
-  par_led_start_on_close: z.number().int().optional(),
-  energy_save_timeout: z.number().int().positive().optional(),
-  energy_min_wake_time: z.number().int().positive().optional(),
-  do_once: z.number().int().optional(), // Can be negative
-  dw: z.array(z.union([z.number().int(), z.string()])).optional(), // Can contain strings like "@i4"
+    // Device control
+    tcs_to_act: z.number().int().min(0).max(100).optional(),
+    par_led_start_on_open: z.number().int().optional(),
+    par_led_start_on_close: z.number().int().optional(),
+    energy_save_timeout: z.number().int().positive().optional(),
+    energy_min_wake_time: z.number().int().positive().optional(),
+    do_once: z.number().int().optional(), // Can be negative
+    dw: z.array(z.union([z.number().int(), z.string()])).optional(), // Can contain strings like "@i4"
 
-  // Additional fields discovered from CSV data
-  protocol_repeats: z.union([z.number().int(), z.string()]).optional(), // Can be number or string like "@n0:0"
-  recall: z.array(z.string()).optional(), // Array of calibration strings
-  indicator: z.array(z.number().int()).optional(), // LED indicator values
-  gs_air: z.number().int().optional(), // Gas sensor air
-  v_arrays: z.array(z.array(z.union([z.number(), z.string()]))).optional(), // Complex mixed arrays
-  protocols_pre_delay: z.string().optional(), // String references like "@n5:1"
-  set_light_intensity: z.union([z.number().int(), z.string()]).optional(), // Can be number or string like "@s2"
-  pulses_delay: z.array(z.number().int()).optional(), // Delay between pulses
-  set_air_flow: z.number().int().optional(), // Air flow control
-  bleed_correction: z.number().int().optional(), // Correction factor
-  set_repeats: z.union([z.number().int(), z.string()]).optional(), // Repeat count, can be string like "#l2"
-  protocol_averages: z.number().int().optional(), // Protocol-level averages
-  check_battery: z.number().int().optional(), // Battery check flag
-  led_persist: z.number().int().optional(), // LED persistence
-  open_close_start: z.number().int().optional(), // Open/close start position
-  indicate_red: z.number().int().optional(), // Red indicator intensity
-  indicate_green: z.number().int().optional(), // Green indicator intensity
-  share: z.number().int().optional(), // Share flag
-  set_led_delay: z.array(z.array(z.number().int())).optional(), // LED delay configuration
-  message: z.array(z.array(z.string())).optional(), // User messages/prompts
-  e_time: z.number().int().optional(),
-  hello: z.array(z.number().int()).optional(),
-});
+    // Additional fields discovered from CSV data
+    protocol_repeats: z.union([z.number().int(), z.string()]).optional(), // Can be number or string like "@n0:0"
+    recall: z.array(z.string()).optional(), // Array of calibration strings
+    indicator: z.array(z.number().int()).optional(), // LED indicator values
+    gs_air: z.number().int().optional(), // Gas sensor air
+    v_arrays: z.array(z.array(z.union([z.number(), z.string()]))).optional(), // Complex mixed arrays
+    protocols_pre_delay: z.string().optional(), // String references like "@n5:1"
+    set_light_intensity: z.union([z.number().int(), z.string()]).optional(), // Can be number or string like "@s2"
+    pulses_delay: z.array(z.number().int()).optional(), // Delay between pulses
+    set_air_flow: z.number().int().optional(), // Air flow control
+    bleed_correction: z.number().int().optional(), // Correction factor
+    set_repeats: z.union([z.number().int(), z.string()]).optional(), // Repeat count, can be string like "#l2"
+    protocol_averages: z.number().int().optional(), // Protocol-level averages
+    check_battery: z.number().int().optional(), // Battery check flag
+    led_persist: z.number().int().optional(), // LED persistence
+    open_close_start: z.number().int().optional(), // Open/close start position
+    indicate_red: z.number().int().optional(), // Red indicator intensity
+    indicate_green: z.number().int().optional(), // Green indicator intensity
+    share: z.number().int().optional(), // Share flag
+    set_led_delay: z.array(z.array(z.number().int())).optional(), // LED delay configuration
+    message: z.array(z.array(z.string())).optional(), // User messages/prompts
+    e_time: z.number().int().optional(),
+    hello: z.array(z.number().int()).optional(),
+  })
+  .strict();
 
 // Schema for protocols within a multi-protocol set (requires label)
 const ProtocolSetWithLabelSchema = ProtocolSetSchema.extend({
@@ -176,7 +178,7 @@ const ProtocolSetWithLabelSchema = ProtocolSetSchema.extend({
 export const ProtocolJsonSchema = z.array(
   ProtocolSetSchema.extend({
     _protocol_set_: z.array(ProtocolSetWithLabelSchema).min(1).optional(),
-  }),
+  }).strict(),
 );
 
 export type ProtocolSet = z.infer<typeof ProtocolSetSchema>;
@@ -186,14 +188,6 @@ export interface ValidationResult<T> {
   success: boolean;
   data?: T;
   error?: z.ZodIssue[];
-}
-
-export interface BatchValidationResult<T> {
-  validProtocols: T[];
-  errors: { index: number; errors: z.ZodIssue[] }[];
-  totalProcessed: number;
-  validCount: number;
-  errorCount: number;
 }
 
 export function validateProtocolJson(json: unknown): ValidationResult<ProtocolJson> {
@@ -224,33 +218,6 @@ export function validateProtocolJson(json: unknown): ValidationResult<ProtocolJs
     }
     throw error;
   }
-}
-
-export function validateProtocolJsonArray(
-  jsonStrings: string[],
-): BatchValidationResult<ProtocolJson> {
-  const results: ProtocolJson[] = [];
-  const errors: { index: number; errors: z.ZodIssue[] }[] = [];
-
-  jsonStrings.forEach((jsonString, index) => {
-    const result = validateProtocolJson(JSON.parse(jsonString));
-    if (result.success && result.data) {
-      results.push(result.data);
-    } else if (result.error) {
-      errors.push({
-        index,
-        errors: result.error,
-      });
-    }
-  });
-
-  return {
-    validProtocols: results,
-    errors: errors,
-    totalProcessed: jsonStrings.length,
-    validCount: results.length,
-    errorCount: errors.length,
-  };
 }
 
 // Utility functions for protocol analysis
