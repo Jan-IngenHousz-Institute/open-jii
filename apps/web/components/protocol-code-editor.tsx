@@ -33,7 +33,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   const monacoRef = useRef<Monaco | null>(null);
   const editorRef = useRef<IStandaloneCodeEditor | null>(null);
   const [editorCode, setEditorCode] = useState<string | undefined>(undefined);
-  const [debouncedEditorCode] = useDebounce(editorCode, 1000);
+  const [debouncedEditorCode] = useDebounce(editorCode, 200);
 
   // Convert array to JSON string for editor if needed
   const editorValue = typeof value === "string" ? value : JSON.stringify(value, null, 2);
