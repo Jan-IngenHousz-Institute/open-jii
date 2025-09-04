@@ -29,6 +29,7 @@ import { NavItems } from "./nav-items";
 import { NavUser } from "./nav-user";
 
 interface UserData {
+  id?: string | null;
   name?: string | null;
   email?: string | null;
   image?: string | null;
@@ -116,6 +117,7 @@ export function AppSidebar({
           <NavUser
             locale={locale}
             user={{
+              id: user.id ?? "",
               name: user.name ?? "User",
               email: user.email ?? "",
               avatar: user.image ?? "/avatars/default.jpg",

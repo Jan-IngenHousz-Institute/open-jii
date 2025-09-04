@@ -22,11 +22,14 @@ import {
   useSidebar,
 } from "@repo/ui/components";
 
+import { useGetUserProfile } from "../hooks/profile/useGetUserProfile/useGetUserProfile";
+
 export function NavUser({
   user,
   locale,
 }: {
   user: {
+    id: string;
     name: string;
     email: string;
     avatar: string;
@@ -35,6 +38,15 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar();
   const { t } = useTranslation();
+
+  // Fetch user profile for first/last name
+  const { data: userProfile } = useGetUserProfile(user.id);
+  const userProfileBody = userProfile?.body;
+  // Prefer profile name if available
+  const displayName =
+    userProfileBody?.firstName && userProfileBody.lastName
+      ? `${userProfileBody.firstName} ${userProfileBody.lastName}`
+      : "";
 
   return (
     <SidebarMenu>
@@ -52,7 +64,7 @@ export function NavUser({
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
+                <span className="truncate font-medium">{displayName}</span>
                 <span className="truncate text-xs">{user.email}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
@@ -73,7 +85,7 @@ export function NavUser({
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
+                  <span className="truncate font-medium">{displayName}</span>
                   <span className="truncate text-xs">{user.email}</span>
                 </div>
               </div>
