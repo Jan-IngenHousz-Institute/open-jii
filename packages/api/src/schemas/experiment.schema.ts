@@ -353,7 +353,7 @@ export const zExperimentDataResponse = zExperimentDataTableList;
 // --- Data Upload Types ---
 export const zDataSourceType = z.enum(["ambyte"]).describe("Data source type for the upload");
 
-// TODO - find way to validate form data
+// TODO - find a (good) way to validate form data
 export const zUploadExperimentDataBody = z.any();
 
 export const zUploadExperimentDataResponse = z.object({
@@ -361,7 +361,6 @@ export const zUploadExperimentDataResponse = z.object({
   files: z.array(
     z.object({
       fileName: z.string(),
-      fileId: z.string(),
       filePath: z.string(),
     }),
   ),

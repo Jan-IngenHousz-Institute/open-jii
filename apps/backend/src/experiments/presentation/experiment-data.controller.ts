@@ -13,6 +13,102 @@ import { GetExperimentDataUseCase } from "../application/use-cases/experiment-da
 import { UploadAmbyteDataUseCase } from "../application/use-cases/experiment-data/upload-ambyte-data";
 import { GetExperimentAccessUseCase } from "../application/use-cases/get-experiment-access/get-experiment-access";
 
+/**
+ * A queue implementation for controlled file processing
+ * Helps prevent memory issues and token race conditions
+ */
+class FileProcessingQueue {
+  private queue: (() => Promise<void>)[] = [];
+  private running = 0;
+  private readonly concurrency: number;
+  private readonly logger: Logger;
+  private readonly id: string;
+
+  constructor(concurrency = 1, logger: Logger) {
+    this.concurrency = concurrency;
+    this.logger = logger;
+    this.id = `queue-${Math.random().toString(36).substring(2, 10)}`;
+    this.logger.debug(`Created new FileProcessingQueue ${this.id} with concurrency ${concurrency}`);
+  }
+
+  add(task: () => Promise<void>, filename: string): void {
+    this.queue.push(task);
+    const queueLength = this.queue.length;
+    this.logger.debug(
+      `[Queue ${this.id}] Queued file: ${filename}. Queue length: ${queueLength}, running: ${this.running}/${this.concurrency}`,
+    );
+    // Using void to explicitly mark promise as handled elsewhere
+    void this.processNext();
+  }
+
+  private async processNext(): Promise<void> {
+    if (this.queue.length === 0) {
+      this.logger.debug(`[Queue ${this.id}] Queue empty, nothing to process`);
+      return;
+    }
+
+    if (this.running >= this.concurrency) {
+      this.logger.debug(
+        `[Queue ${this.id}] Max concurrency reached (${this.running}/${this.concurrency}), waiting for completion`,
+      );
+      return;
+    }
+
+    const item = this.queue.shift();
+    if (!item) return;
+
+    this.running++;
+    this.logger.debug(
+      `[Queue ${this.id}] Processing file: ${this.running} running, ${this.queue.length} in queue`,
+    );
+
+    try {
+      await item();
+      this.logger.debug(
+        `[Queue ${this.id}] File processed successfully, ${this.queue.length} remaining in queue`,
+      );
+    } catch (error: unknown) {
+      this.logger.error(
+        `[Queue ${this.id}] Error processing file: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      this.running--;
+      this.logger.debug(
+        `[Queue ${this.id}] Completed processing, now ${this.running} running, ${this.queue.length} in queue`,
+      );
+      // Using void to explicitly mark promise as handled elsewhere
+      void this.processNext();
+    }
+  }
+
+  async waitForCompletion(): Promise<void> {
+    if (this.queue.length === 0 && this.running === 0) {
+      this.logger.debug(
+        `[Queue ${this.id}] No files in queue or processing, completing immediately`,
+      );
+      return;
+    }
+
+    this.logger.debug(
+      `[Queue ${this.id}] Waiting for completion: ${this.queue.length} files in queue, ${this.running} running`,
+    );
+
+    return new Promise<void>((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (this.queue.length === 0 && this.running === 0) {
+          this.logger.debug(`[Queue ${this.id}] All files processed, queue empty`);
+          clearInterval(checkInterval);
+          resolve();
+        } else {
+          this.logger.debug(
+            `[Queue ${this.id}] Still waiting: ${this.queue.length} in queue, ${this.running} running`,
+          );
+        }
+      }, 100);
+    });
+  }
+}
+
 @Controller()
 @UseGuards(AuthGuard)
 export class ExperimentDataController {
@@ -87,6 +183,11 @@ export class ExperimentDataController {
       // Process the multipart/form-data request directly with busboy
       let sourceType: string | undefined;
 
+      // Create a single shared processing queue with concurrency of 1
+      // This queue will be used for all files to ensure sequential processing
+      const processingQueue = new FileProcessingQueue(1, this.logger);
+      this.logger.log("Created shared file processing queue for all uploads");
+
       try {
         await new Promise<void>((resolve, reject) => {
           const bb = busboy({
@@ -97,105 +198,111 @@ export class ExperimentDataController {
             },
           });
 
-          // Track ongoing file processing promises
-          const processingPromises: Promise<void>[] = [];
+          // Handle regular form fields
+          bb.on("field", (fieldname, value) => {
+            this.logger.debug(`Received field: ${fieldname}`);
+            if (fieldname === "sourceType") {
+              sourceType = value;
+              this.logger.log(`Source type: ${sourceType}`);
+
+              // // Create directory in Databricks for this experiment and source type
+              // if (sourceType) {
+              //   this.logger.log(
+              //     `Creating directory for experiment ${experimentId} and source type ${sourceType}`,
+              //   );
+
+              //   this.uploadAmbyteDataUseCase
+              //     .createDirectory(experimentId, experiment.name, sourceType)
+              //     .then((result) => {
+              //       if (result.isSuccess()) {
+              //         this.logger.log(
+              //           `Successfully created directory at: ${result.value.directoryPath}`,
+              //         );
+              //       } else {
+              //         this.logger.warn(`Failed to create directory: ${result.error.message}`);
+              //         // We'll continue with uploads even if directory creation fails
+              //         // Databricks will create parent directories as needed during file upload
+              //       }
+              //     })
+              //     .catch((error) => {
+              //       this.logger.error(`Error creating directory: ${String(error)}`);
+              //     });
+              // }
+            }
+          });
 
           // Handle files
           bb.on("file", (fieldname, fileStream, info) => {
             const { filename, encoding, mimeType } = info;
 
-            console.log(`Received file: ${filename}, fieldname: ${fieldname}`);
+            this.logger.log(`Received file: ${filename}, fieldname: ${fieldname}`);
 
             if (fieldname !== "files") {
-              console.log(`Skipping file with non-matching fieldname: ${fieldname}`);
+              this.logger.log(`Skipping file with non-matching fieldname: ${fieldname}`);
               fileStream.resume(); // Skip non-matching field names
               return;
             }
 
-            console.log(`Processing file: ${filename} (${processingPromises.length + 1})`);
+            // Check if sourceType is defined before processing any files
+            if (sourceType === undefined) {
+              this.logger.error(`Received file ${filename} but sourceType is not defined`);
+              fileStream.resume(); // Skip this file
+              reject(new Error("sourceType field must be provided before file uploads"));
+              return;
+            }
 
-            // Add each file processing promise to our tracking array
-            const processPromise = this.uploadAmbyteDataUseCase
-              .execute(
-                {
-                  filename,
-                  encoding,
-                  mimetype: mimeType,
-                  stream: fileStream,
-                },
-                experimentId,
-                experiment.name,
-                successfulUploads,
-                errors,
-              )
-              .then(() => {
-                console.log(`Completed processing file: ${filename}`);
-              })
-              .catch((error) => {
-                console.error(`Error processing file ${filename}:`, error);
+            // Add the file processing task to the queue
+            processingQueue.add(async () => {
+              this.logger.log(`Processing file: ${filename}`);
+
+              try {
+                await this.uploadAmbyteDataUseCase.execute(
+                  {
+                    filename,
+                    encoding,
+                    mimetype: mimeType,
+                    stream: fileStream,
+                  },
+                  experimentId,
+                  experiment.name,
+                  sourceType,
+                  successfulUploads,
+                  errors,
+                );
+                this.logger.log(`Completed processing file: ${filename}`);
+              } catch (error) {
+                this.logger.error(`Error processing file ${filename}: ${String(error)}`);
                 errors.push({
                   fileName: filename,
                   error: String(error),
                 });
-              });
-
-            processingPromises.push(processPromise);
-            console.log(
-              `Added promise for ${filename}, total promises: ${processingPromises.length}`,
-            );
-          });
-
-          // Handle regular form fields
-          bb.on("field", (fieldname, value) => {
-            console.log(`Received field: ${fieldname}`);
-            if (fieldname === "sourceType") {
-              sourceType = value;
-              this.logger.log(`Source type: ${sourceType}`);
-            }
+              }
+            }, filename);
           });
 
           // Handle errors
           bb.on("error", (err) => {
-            console.error("Error during file upload:", err);
+            this.logger.error(`Error during file upload: ${String(err)}`);
             reject(err instanceof Error ? err : new Error(String(err)));
           });
 
           // Handle completion
           bb.on("close", () => {
-            console.log(
+            this.logger.log(
               "Busboy finished parsing the form, waiting for file processing to complete...",
             );
 
-            // Set a timeout to prevent hanging indefinitely
-            const timeoutId = setTimeout(() => {
-              console.warn(
-                "File processing timeout after 30 seconds, some files may not have completed processing",
-              );
-              // Log memory usage on timeout
-              console.log("Memory usage on timeout:", process.memoryUsage());
-              resolve();
-            }, 30000); // 30 second timeout
-
             // Wait for all file processing to complete
-            Promise.all(processingPromises)
-              .then(() => {
-                clearTimeout(timeoutId);
-                console.log("Finished processing multipart request");
-                // Log memory usage after processing
-                console.log("Memory usage after processing:", process.memoryUsage());
-                resolve();
-              })
-              .catch((err) => {
-                clearTimeout(timeoutId);
-                console.error("Error while waiting for file processing to complete:", err);
-                // Log memory usage on error
-                console.log("Memory usage on error:", process.memoryUsage());
-                reject(err instanceof Error ? err : new Error(String(err)));
-              });
+            processingQueue.waitForCompletion().catch((err) => {
+              this.logger.error(
+                `Error while waiting for file processing to complete: ${String(err)}`,
+              );
+              reject(err instanceof Error ? err : new Error(String(err)));
+            });
           });
 
           // Pipe the request to busboy
-          console.log("Piping request to busboy");
+          this.logger.debug("Piping request to busboy");
           request.pipe(bb);
         });
 
@@ -204,6 +311,15 @@ export class ExperimentDataController {
         this.logger.error(
           `Error processing files for experiment ${experimentId}: ${String(error)}`,
         );
+
+        // Check if error is due to missing sourceType
+        if (String(error).includes("sourceType field must be provided")) {
+          return {
+            status: StatusCodes.BAD_REQUEST,
+            body: { message: "sourceType field must be provided before file uploads" },
+          };
+        }
+
         return {
           status: StatusCodes.INTERNAL_SERVER_ERROR,
           body: { message: "Error processing files" },

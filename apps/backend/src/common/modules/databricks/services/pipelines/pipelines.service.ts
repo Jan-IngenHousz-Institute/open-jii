@@ -9,7 +9,6 @@ import { DatabricksConfigService } from "../config/config.service";
 import {
   DatabricksPipelineByNameParams,
   DatabricksPipelineGetParams,
-  DatabricksPipelineHealthCheck,
   DatabricksPipelineListParams,
   DatabricksPipelineListResponse,
   DatabricksPipelineResponse,
@@ -45,12 +44,54 @@ export class DatabricksPipelinesService {
         }
 
         const token = tokenResult.value;
-        const result = await this.executePipelineList(token, params);
-        if (result.isFailure()) {
-          throw result.error;
+
+        const host = this.configService.getHost();
+        const pipelinesUrl = `${host}${DatabricksPipelinesService.PIPELINES_ENDPOINT}`;
+
+        this.logger.debug("Listing Databricks pipelines");
+
+        // Prepare request parameters
+        const requestParams: Record<string, string | number> = {};
+        if (params?.maxResults) {
+          requestParams.max_results = params.maxResults;
+        }
+        if (params?.pageToken) {
+          requestParams.page_token = params.pageToken;
+        }
+        if (params?.filter) {
+          requestParams.filter = params.filter;
         }
 
-        return result.value;
+        const listResult = await tryCatch(
+          async () => {
+            const response: AxiosResponse<DatabricksPipelineListResponse> =
+              await this.httpService.axiosRef.get(pipelinesUrl, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                params: requestParams,
+                timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
+              });
+
+            const listResponse = response.data;
+            this.logger.log(
+              `Successfully retrieved ${listResponse.pipelines.length} Databricks pipelines`,
+            );
+
+            return listResponse;
+          },
+          (error) => {
+            this.logger.error(`Error listing pipelines: ${getAxiosErrorMessage(error)}`);
+            return apiErrorMapper(`Databricks pipeline list: ${getAxiosErrorMessage(error)}`);
+          },
+        );
+
+        if (listResult.isFailure()) {
+          throw listResult.error;
+        }
+
+        return listResult.value;
       },
       (error) => {
         this.logger.error(`Failed to list Databricks pipelines: ${getAxiosErrorMessage(error)}`);
@@ -77,7 +118,38 @@ export class DatabricksPipelinesService {
         const token = tokenResult.value;
 
         // Get the list of pipelines
-        const listResult = await this.executePipelineList(token);
+        const host = this.configService.getHost();
+        const pipelinesUrl = `${host}${DatabricksPipelinesService.PIPELINES_ENDPOINT}`;
+
+        this.logger.debug("Listing Databricks pipelines");
+
+        const listResult = await tryCatch(
+          async () => {
+            const response: AxiosResponse<DatabricksPipelineListResponse> =
+              await this.httpService.axiosRef.get(pipelinesUrl, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                params: {
+                  max_results: 100, // Use a reasonable default
+                },
+                timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
+              });
+
+            const listResponse = response.data;
+            this.logger.log(
+              `Successfully retrieved ${listResponse.pipelines.length} Databricks pipelines`,
+            );
+
+            return listResponse;
+          },
+          (error) => {
+            this.logger.error(`Error listing pipelines: ${getAxiosErrorMessage(error)}`);
+            return apiErrorMapper(`Databricks pipeline list: ${getAxiosErrorMessage(error)}`);
+          },
+        );
+
         if (listResult.isFailure()) {
           throw listResult.error;
         }
@@ -95,9 +167,38 @@ export class DatabricksPipelinesService {
         }
 
         // Get the details of the found pipeline
-        const getResult = await this.executePipelineGet(token, {
-          pipelineId: targetPipeline.pipeline_id,
-        });
+        const pipelineUrl = `${host}${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${targetPipeline.pipeline_id}`;
+
+        this.logger.debug(`Getting Databricks pipeline: ${targetPipeline.pipeline_id}`);
+
+        const getResult = await tryCatch(
+          async () => {
+            const response: AxiosResponse<DatabricksPipelineResponse> =
+              await this.httpService.axiosRef.get(pipelineUrl, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
+              });
+
+            const pipelineResponse = response.data;
+
+            if (!pipelineResponse.pipeline_id) {
+              throw AppError.internal("Invalid response from Databricks API: missing pipeline_id");
+            }
+
+            this.logger.log(
+              `Successfully retrieved Databricks pipeline: ${pipelineResponse.pipeline_id}`,
+            );
+
+            return pipelineResponse;
+          },
+          (error) => {
+            this.logger.error(`Error getting pipeline: ${getAxiosErrorMessage(error)}`);
+            return apiErrorMapper(`Databricks pipeline get: ${getAxiosErrorMessage(error)}`);
+          },
+        );
 
         if (getResult.isFailure()) {
           throw getResult.error;
@@ -130,7 +231,41 @@ export class DatabricksPipelinesService {
         }
 
         const token = tokenResult.value;
-        const result = await this.executePipelineGet(token, params);
+
+        const host = this.configService.getHost();
+        const pipelineUrl = `${host}${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${params.pipelineId}`;
+
+        this.logger.debug(`Getting Databricks pipeline: ${params.pipelineId}`);
+
+        const result = await tryCatch(
+          async () => {
+            const response: AxiosResponse<DatabricksPipelineResponse> =
+              await this.httpService.axiosRef.get(pipelineUrl, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
+              });
+
+            const pipelineResponse = response.data;
+
+            if (!pipelineResponse.pipeline_id) {
+              throw AppError.internal("Invalid response from Databricks API: missing pipeline_id");
+            }
+
+            this.logger.log(
+              `Successfully retrieved Databricks pipeline: ${pipelineResponse.pipeline_id}`,
+            );
+
+            return pipelineResponse;
+          },
+          (error) => {
+            this.logger.error(`Error getting pipeline: ${getAxiosErrorMessage(error)}`);
+            return apiErrorMapper(`Databricks pipeline get: ${getAxiosErrorMessage(error)}`);
+          },
+        );
+
         if (result.isFailure()) {
           throw result.error;
         }
@@ -160,7 +295,61 @@ export class DatabricksPipelinesService {
         }
 
         const token = tokenResult.value;
-        const result = await this.executePipelineStartUpdate(token, params);
+
+        const host = this.configService.getHost();
+        const updateUrl = `${host}${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${params.pipelineId}/updates`;
+
+        this.logger.debug(`Starting update for Databricks pipeline: ${params.pipelineId}`);
+
+        // Prepare request body based on provided parameters
+        const requestBody: Record<string, unknown> = {};
+
+        if (params.fullRefresh !== undefined) {
+          requestBody.full_refresh = params.fullRefresh;
+        }
+
+        if (params.refreshSelection) {
+          requestBody.refresh_selection = {
+            refresh_all_data: params.refreshSelection.refreshAllData,
+            dataset_names: params.refreshSelection.datasetNames,
+          };
+        }
+
+        if (params.parameters) {
+          requestBody.parameters = params.parameters;
+        }
+
+        const result = await tryCatch(
+          async () => {
+            const response: AxiosResponse<DatabricksPipelineStartUpdateResponse> =
+              await this.httpService.axiosRef.post(updateUrl, requestBody, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
+              });
+
+            const updateResponse = response.data;
+
+            if (!updateResponse.update_id) {
+              throw AppError.internal("Invalid response from Databricks API: missing update_id");
+            }
+
+            this.logger.log(
+              `Successfully started update for Databricks pipeline ${params.pipelineId}, update ID: ${updateResponse.update_id}`,
+            );
+
+            return updateResponse;
+          },
+          (error) => {
+            this.logger.error(`Error starting pipeline update: ${getAxiosErrorMessage(error)}`);
+            return apiErrorMapper(
+              `Databricks pipeline start update: ${getAxiosErrorMessage(error)}`,
+            );
+          },
+        );
+
         if (result.isFailure()) {
           throw result.error;
         }
@@ -172,225 +361,6 @@ export class DatabricksPipelinesService {
           `Failed to start Databricks pipeline update: ${getAxiosErrorMessage(error)}`,
         );
         return apiErrorMapper(`Databricks pipeline start update: ${getAxiosErrorMessage(error)}`);
-      },
-    );
-  }
-
-  /**
-   * Execute a list pipelines request
-   * @param token Authentication token
-   * @param params Optional request parameters
-   * @returns List of pipelines
-   */
-  private async executePipelineList(
-    token: string,
-    params?: DatabricksPipelineListParams,
-  ): Promise<Result<DatabricksPipelineListResponse>> {
-    const host = this.configService.getHost();
-    const pipelinesUrl = `${host}${DatabricksPipelinesService.PIPELINES_ENDPOINT}`;
-
-    this.logger.debug("Listing Databricks pipelines");
-
-    // Prepare request parameters
-    const requestParams: Record<string, string | number> = {};
-    if (params?.maxResults) {
-      requestParams.max_results = params.maxResults;
-    }
-    if (params?.pageToken) {
-      requestParams.page_token = params.pageToken;
-    }
-    if (params?.filter) {
-      requestParams.filter = params.filter;
-    }
-
-    return await tryCatch(
-      async () => {
-        const response: AxiosResponse<DatabricksPipelineListResponse> =
-          await this.httpService.axiosRef.get(pipelinesUrl, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            params: requestParams,
-            timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
-          });
-
-        const listResponse = response.data;
-        this.logger.log(
-          `Successfully retrieved ${listResponse.pipelines.length} Databricks pipelines`,
-        );
-
-        return listResponse;
-      },
-      (error) => {
-        this.logger.error(`Error listing pipelines: ${getAxiosErrorMessage(error)}`);
-        return apiErrorMapper(`Databricks pipeline list: ${getAxiosErrorMessage(error)}`);
-      },
-    );
-  }
-
-  /**
-   * Execute a get pipeline request
-   * @param token Authentication token
-   * @param params Request parameters
-   * @returns Pipeline information
-   */
-  private async executePipelineGet(
-    token: string,
-    params: DatabricksPipelineGetParams,
-  ): Promise<Result<DatabricksPipelineResponse>> {
-    const host = this.configService.getHost();
-    const pipelineUrl = `${host}${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${params.pipelineId}`;
-
-    this.logger.debug(`Getting Databricks pipeline: ${params.pipelineId}`);
-
-    return await tryCatch(
-      async () => {
-        const response: AxiosResponse<DatabricksPipelineResponse> =
-          await this.httpService.axiosRef.get(pipelineUrl, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
-          });
-
-        const pipelineResponse = response.data;
-        this.validatePipelineResponse(pipelineResponse);
-
-        this.logger.log(
-          `Successfully retrieved Databricks pipeline: ${pipelineResponse.pipeline_id}`,
-        );
-
-        return pipelineResponse;
-      },
-      (error) => {
-        this.logger.error(`Error getting pipeline: ${getAxiosErrorMessage(error)}`);
-        return apiErrorMapper(`Databricks pipeline get: ${getAxiosErrorMessage(error)}`);
-      },
-    );
-  }
-
-  /**
-   * Execute a start pipeline update request
-   * @param token Authentication token
-   * @param params Request parameters
-   * @returns Information about the started update
-   */
-  private async executePipelineStartUpdate(
-    token: string,
-    params: DatabricksPipelineStartUpdateParams,
-  ): Promise<Result<DatabricksPipelineStartUpdateResponse>> {
-    const host = this.configService.getHost();
-    const updateUrl = `${host}${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${params.pipelineId}/updates`;
-
-    this.logger.debug(`Starting update for Databricks pipeline: ${params.pipelineId}`);
-
-    // Prepare request body based on provided parameters
-    const requestBody: Record<string, unknown> = {};
-
-    if (params.fullRefresh !== undefined) {
-      requestBody.full_refresh = params.fullRefresh;
-    }
-
-    if (params.refreshSelection) {
-      requestBody.refresh_selection = {
-        refresh_all_data: params.refreshSelection.refreshAllData,
-        dataset_names: params.refreshSelection.datasetNames,
-      };
-    }
-
-    if (params.parameters) {
-      requestBody.parameters = params.parameters;
-    }
-
-    return await tryCatch(
-      async () => {
-        const response: AxiosResponse<DatabricksPipelineStartUpdateResponse> =
-          await this.httpService.axiosRef.post(updateUrl, requestBody, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
-          });
-
-        const updateResponse = response.data;
-        this.validateStartUpdateResponse(updateResponse);
-
-        this.logger.log(
-          `Successfully started update for Databricks pipeline ${params.pipelineId}, update ID: ${updateResponse.update_id}`,
-        );
-
-        return updateResponse;
-      },
-      (error) => {
-        this.logger.error(`Error starting pipeline update: ${getAxiosErrorMessage(error)}`);
-        return apiErrorMapper(`Databricks pipeline start update: ${getAxiosErrorMessage(error)}`);
-      },
-    );
-  }
-
-  /**
-   * Validate the pipeline response
-   * @param response Pipeline response
-   */
-  private validatePipelineResponse(response: DatabricksPipelineResponse): void {
-    if (!response.pipeline_id) {
-      throw AppError.internal("Invalid response from Databricks API: missing pipeline_id");
-    }
-  }
-
-  /**
-   * Validate the start update response
-   * @param response Start update response
-   */
-  private validateStartUpdateResponse(response: DatabricksPipelineStartUpdateResponse): void {
-    if (!response.update_id) {
-      throw AppError.internal("Invalid response from Databricks API: missing update_id");
-    }
-  }
-
-  /**
-   * Health check for the Databricks Pipelines service
-   * @returns Health check result
-   */
-  async healthCheck(): Promise<Result<DatabricksPipelineHealthCheck>> {
-    return await tryCatch(
-      async () => {
-        const tokenResult = await this.authService.getAccessToken();
-        if (tokenResult.isFailure()) {
-          throw tokenResult.error;
-        }
-
-        const token = tokenResult.value;
-        const host = this.configService.getHost();
-        const apiUrl = `${host}${DatabricksPipelinesService.PIPELINES_ENDPOINT}`;
-
-        this.logger.debug(`Calling Databricks Pipelines health check at: ${apiUrl}`);
-
-        const response = await this.httpService.axiosRef.get(apiUrl, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          params: {
-            max_results: 1,
-          },
-          timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
-        });
-
-        return {
-          healthy: response.status === 200,
-          service: "databricks-pipelines",
-        };
-      },
-      (error) => {
-        this.logger.error(
-          `Databricks Pipelines health check failed: ${getAxiosErrorMessage(error)}`,
-        );
-        return apiErrorMapper(
-          `Databricks Pipelines service unavailable: ${getAxiosErrorMessage(error)}`,
-        );
       },
     );
   }
