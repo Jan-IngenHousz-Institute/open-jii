@@ -23,6 +23,8 @@ const BREADCRUMB_TRANSLATIONS: Record<string, string> = {
   new: "breadcrumbs.new",
   edit: "breadcrumbs.edit",
   view: "breadcrumbs.view",
+  account: "breadcrumbs.account",
+  settings: "breadcrumbs.settings",
 };
 
 function getTitle(title: string, overrideTitle?: string, t?: (key: string) => string): string {
