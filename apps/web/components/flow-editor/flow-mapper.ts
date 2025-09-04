@@ -110,6 +110,14 @@ export class FlowMapper {
         stepSpecification: FlowMapper.convertApiContentToUISpec(apiNode.type, apiNode.content),
       };
 
+      // For measurement nodes, also set protocolId directly on the node data
+      if (apiNode.type === "measurement" && isObject(apiNode.content)) {
+        const measurementContent = apiNode.content as MeasurementContent;
+        if (measurementContent.protocolId) {
+          nodeData.protocolId = measurementContent.protocolId;
+        }
+      }
+
       return {
         id: apiNode.id,
         type: reactFlowType,
