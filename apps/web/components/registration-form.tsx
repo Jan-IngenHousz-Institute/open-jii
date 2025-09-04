@@ -6,7 +6,7 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
 import { handleRegister } from "~/app/actions/auth";
-import { useCreateUserProfile } from "~/hooks/useCreateUserProfile";
+import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 
 import { useTranslation } from "@repo/i18n";
 import {
@@ -129,7 +129,11 @@ export function RegistrationForm({ callbackUrl }: { callbackUrl?: string }) {
                     <FormItem>
                       <FormLabel>{t("registration.organization")}</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder={t("registration.organizationPlaceholder")} />
+                        <Input
+                          {...field}
+                          placeholder={t("registration.organizationPlaceholder")}
+                          trim
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

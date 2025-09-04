@@ -175,6 +175,29 @@ describe("User Schema", () => {
       expect(result).toEqual(profile);
     });
 
+    it("should validate with optional bio", () => {
+      const profile = {
+        firstName: "John",
+        lastName: "Doe",
+        bio: "Software developer with 5 years of experience.",
+      };
+
+      const result = zCreateUserProfileBody.parse(profile);
+      expect(result).toEqual(profile);
+    });
+
+    it("should validate with all optional fields", () => {
+      const profile = {
+        firstName: "John",
+        lastName: "Doe",
+        bio: "Software developer with 5 years of experience.",
+        organization: "ACME Corp",
+      };
+
+      const result = zCreateUserProfileBody.parse(profile);
+      expect(result).toEqual(profile);
+    });
+
     it("should reject short first name", () => {
       const profile = {
         firstName: "J",

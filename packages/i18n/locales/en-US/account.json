@@ -1,0 +1,46 @@
+{
+  "mobileNavAriaLabel": "Settings navigation",
+  "overview": {
+    "title": "Overview"
+  },
+  "security": {
+    "title": "Security"
+  },
+  "notifications": {
+    "title": "Notifications"
+  },
+  "team": {
+    "title": "Team"
+  },
+  "activity": {
+    "title": "Activity"
+  },
+  "settings": {
+    "profilePictureCard": {
+      "title": "Profile Picture",
+      "upload": "Upload New Photo",
+      "description": "JPG, PNG or GIF. Max size 5MB."
+    },
+    "profileCard": {
+      "title": "Profile Information",
+      "professionalTitle": "Professional Title",
+      "bio": "Bio",
+      "bioPlaceholder": "Tell us about yourself",
+      "institution": "Institution/Organization",
+      "institutionPlaceholder": "Search or create organization",
+      "department": "Department",
+      "professionalTitlePlaceholder": "Your professional title",
+      "departmentPlaceholder": "Your department"
+    },
+    "disabled": "Disabled",
+    "title": "Settings",
+    "accountsettings": "Account Settings",
+    "description": "Manage your information and preferences",
+    "loading": "Loading account settings...",
+    "errorTitle": "Error loading account settings",
+    "cancel": "Cancel",
+    "save": "Save changes",
+    "saving": "Saving...",
+    "saved": "Account settings saved"
+  }
+}
