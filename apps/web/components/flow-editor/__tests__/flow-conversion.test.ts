@@ -150,7 +150,7 @@ describe("Flow Conversion", () => {
       const edges: Edge[] = [];
 
       expect(() => FlowMapper.toApiGraph(nodes, edges)).toThrow(
-        'Measurement node "Invalid Measurement" requires a protocol to be selected before saving.',
+        "A valid protocol must be selected for measurement nodes",
       );
     });
   });
@@ -231,7 +231,9 @@ describe("Flow Conversion", () => {
       ];
       const edges: Edge[] = [];
 
-      expect(() => FlowMapper.toApiGraph(nodes, edges)).toThrow("Flow validation failed");
+      expect(() => FlowMapper.toApiGraph(nodes, edges)).toThrow(
+        "Exactly one start node is required",
+      );
     });
   });
 

@@ -57,54 +57,6 @@ export function createNewNode(
 }
 
 /**
- * Validates if all nodes in a flow are ready for saving.
- * Each node type has specific requirements that must be met.
- */
-export function validateFlowNodes(nodes: Node[]): boolean {
-  if (nodes.length === 0) return false;
-
-  const isObject = (v: unknown): v is Record<string, unknown> =>
-    typeof v === "object" && v !== null;
-
-  return nodes.every((n) => {
-    const data = n.data;
-
-    if (n.type === "MEASUREMENT") {
-      const spec = data.stepSpecification as { protocolId?: unknown } | undefined;
-      const proto =
-        (data.protocolId as string | undefined) ??
-        (isObject(spec) ? (spec.protocolId as string | undefined) : undefined);
-      return typeof proto === "string" && proto.length > 0;
-    }
-
-    if (n.type === "QUESTION") {
-      const spec = data.stepSpecification as { kind?: unknown; text?: unknown } | undefined;
-      if (
-        isObject(spec) &&
-        typeof spec.kind === "string" &&
-        typeof spec.text === "string" &&
-        spec.text.length > 0
-      ) {
-        return true;
-      }
-      const title = data.title as string | undefined;
-      return typeof title === "string" && title.length > 0;
-    }
-
-    if (n.type === "INSTRUCTION") {
-      const spec = data.stepSpecification as { text?: unknown } | undefined;
-      if (isObject(spec) && typeof spec.text === "string" && spec.text.length > 0) {
-        return true;
-      }
-      const title = data.title as string | undefined;
-      return typeof title === "string" && title.length > 0;
-    }
-
-    return true;
-  });
-}
-
-/**
  * Ensures exactly one start node exists in the flow by auto-healing invalid states.
  * If no start nodes or multiple start nodes exist, picks the first node as the start node.
  */
