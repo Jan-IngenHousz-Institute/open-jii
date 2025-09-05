@@ -27,11 +27,11 @@ export const createUserProfileSchema = createInsertSchema(profiles)
 export const selectUserProfileSchema = createSelectSchema(profiles)
   .omit({
     id: true,
-    userId: true,
     organizationId: true,
   })
   .extend({
     organization: z.string().optional(),
+    email: z.string().email().nullable(),
   });
 
 // Define the types

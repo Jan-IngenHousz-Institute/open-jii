@@ -78,7 +78,8 @@ export const zExperimentList = z.array(zExperiment);
 export const zExperimentMember = z.object({
   user: z.object({
     id: z.string().uuid(),
-    name: z.string().nullable(),
+    firstName: z.string(),
+    lastName: z.string(),
     email: z.string().email().nullable(),
   }),
   role: zExperimentMemberRole,

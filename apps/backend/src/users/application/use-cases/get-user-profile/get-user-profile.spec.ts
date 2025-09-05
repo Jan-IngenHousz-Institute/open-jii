@@ -1,4 +1,6 @@
 // use-cases/user/__tests__/get-user-profile.spec.ts
+import { users } from "@repo/database";
+
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { CreateUserProfileUseCase } from "../create-user-profile/create-user-profile";
@@ -58,7 +60,11 @@ describe("GetUserProfileUseCase", () => {
 
   it("should return NOT_FOUND when no profile exists for the user", async () => {
     // Arrange: create a different user with no profile
-    const userWithoutProfileId = await testApp.createTestUser({});
+    const [userWithoutProfile] = await testApp.database
+      .insert(users)
+      .values({ email: "no-profile@example.com", name: "No Profile" })
+      .returning();
+    const userWithoutProfileId = userWithoutProfile.id;
 
     // Act
     const result = await getProfileUseCase.execute(userWithoutProfileId);

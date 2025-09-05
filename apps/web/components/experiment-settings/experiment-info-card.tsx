@@ -46,8 +46,9 @@ export function ExperimentInfoCard({ experimentId, experiment }: ExperimentInfoC
   }, [members]);
 
   // Helper to get name/email from admin member
-  const adminName =
-    (adminMember?.user.name ?? adminMember?.user.email ?? experiment.createdBy) || "Unknown";
+  const adminName = adminMember
+    ? `${adminMember.user.firstName} ${adminMember.user.lastName}`
+    : "Unknown";
   const adminEmail = adminMember?.user.email;
 
   const { mutateAsync: deleteExperiment, isPending: isDeleting } = useExperimentDelete();

@@ -91,12 +91,14 @@ describe("ExperimentMemberRepository", () => {
       // Assert user info for each member
       const member1 = members.find((m) => m.user.id === memberId1);
       expect(member1).toBeDefined();
-      expect(member1?.user.name).toBe("Test1 User");
+      expect(member1?.user.firstName).toBe("Test1");
+      expect(member1?.user.lastName).toBe("User");
       expect(member1?.user.email).toBe("member1@example.com");
 
       const member2 = members.find((m) => m.user.id === memberId2);
       expect(member2).toBeDefined();
-      expect(member2?.user.name).toBe("Test2 User");
+      expect(member2?.user.firstName).toBe("Test2");
+      expect(member2?.user.lastName).toBe("User");
       expect(member2?.user.email).toBe("member2@example.com");
     });
 
@@ -167,7 +169,8 @@ describe("ExperimentMemberRepository", () => {
           id: memberId1,
         }) as Partial<UserDto>,
       });
-      expect(member1?.user.name).toBe("Multi User 1");
+      expect(member1?.user.firstName).toBe("Multi");
+      expect(member1?.user.lastName).toBe("User 1");
       expect(member1?.user.email).toBe("multi1@example.com");
 
       // Assert member2
@@ -178,7 +181,8 @@ describe("ExperimentMemberRepository", () => {
           id: memberId2,
         }) as Partial<UserDto>,
       });
-      expect(member2?.user.name).toBe("Multi User 2");
+      expect(member2?.user.firstName).toBe("Multi");
+      expect(member2?.user.lastName).toBe("User 2");
       expect(member2?.user.email).toBe("multi2@example.com");
 
       // Verify all members are present in the experiment
@@ -255,8 +259,10 @@ describe("ExperimentMemberRepository", () => {
       const member2 = members.find((m) => m.user.id === memberId2);
       expect(member1?.role).toBe("member");
       expect(member2?.role).toBe("admin");
-      expect(member1?.user.name).toBe("Batch Default 1");
-      expect(member2?.user.name).toBe("Batch Default 2");
+      expect(member1?.user.firstName).toBe("Batch");
+      expect(member1?.user.lastName).toBe("Default 1");
+      expect(member2?.user.firstName).toBe("Batch");
+      expect(member2?.user.lastName).toBe("Default 2");
     });
 
     it("should return empty array and not fail if members array is empty", async () => {
@@ -281,14 +287,15 @@ describe("ExperimentMemberRepository", () => {
       });
 
       const dummyUser = {
-        name: "Single Batch Member",
+        firstName: "Single",
+        lastName: "Batch Member",
         email: "single-batch@example.com",
       };
 
       // Create a user to add as member
       const memberId = await testApp.createTestUser({
         email: dummyUser.email,
-        name: dummyUser.name,
+        name: `${dummyUser.firstName} ${dummyUser.lastName}`,
       });
 
       // Act
@@ -307,7 +314,8 @@ describe("ExperimentMemberRepository", () => {
         role: "member",
         user: {
           id: memberId,
-          name: dummyUser.name,
+          firstName: dummyUser.firstName,
+          lastName: dummyUser.lastName,
           email: dummyUser.email,
         },
       });
@@ -342,7 +350,8 @@ describe("ExperimentMemberRepository", () => {
       // Assert default role is "member"
       expect(member.role).toBe("member");
       // Assert name and email are present and correct
-      expect(member.user.name).toBe("Default Role Batch");
+      expect(member.user.firstName).toBe("Default");
+      expect(member.user.lastName).toBe("Role Batch");
       expect(member.user.email).toBe("default-role-batch@example.com");
     });
   });
@@ -596,8 +605,10 @@ describe("ExperimentMemberRepository", () => {
       const member2 = members.find((m) => m.user.id === memberId2);
       expect(member1?.role).toBe("member");
       expect(member2?.role).toBe("admin");
-      expect(member1?.user.name).toBe("Batch Default 1");
-      expect(member2?.user.name).toBe("Batch Default 2");
+      expect(member1?.user.firstName).toBe("Batch");
+      expect(member1?.user.lastName).toBe("Default 1");
+      expect(member2?.user.firstName).toBe("Batch");
+      expect(member2?.user.lastName).toBe("Default 2");
     });
 
     it("should return empty array and not fail if members array is empty", async () => {

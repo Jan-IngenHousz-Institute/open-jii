@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { AppError, Result } from "../../../../common/utils/fp-utils";
-import { UserDto, SearchUsersParams } from "../../../core/models/user.model";
+import { UserProfileDto, SearchUsersParams } from "../../../core/models/user.model";
 import { UserRepository } from "../../../core/repositories/user.repository";
 
 @Injectable()
@@ -10,7 +10,7 @@ export class SearchUsersUseCase {
 
   constructor(private readonly userRepository: UserRepository) {}
 
-  async execute(params: SearchUsersParams): Promise<Result<UserDto[]>> {
+  async execute(params: SearchUsersParams): Promise<Result<UserProfileDto[]>> {
     this.logger.log(
       `Searching users with query: "${params.query ?? ""}", limit: ${params.limit ?? 50}, offset: ${params.offset ?? 0}`,
     );
@@ -18,7 +18,7 @@ export class SearchUsersUseCase {
     const result = await this.userRepository.search(params);
 
     result.fold(
-      (users: UserDto[]) => {
+      (users: UserProfileDto[]) => {
         this.logger.debug(`Found ${users.length} users matching search criteria`);
       },
       (error: AppError) => {

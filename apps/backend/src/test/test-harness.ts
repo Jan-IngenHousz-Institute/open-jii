@@ -226,6 +226,25 @@ export class TestHarness {
       .insert(users)
       .values({ email, name, emailVerified, image })
       .returning();
+
+    // Split name into firstName and lastName for profile
+    let firstName = "Test";
+    let lastName = "User";
+    if (name) {
+      const parts = name.split(" ");
+      firstName = parts[0];
+      lastName = parts.slice(1).join(" ") || "User";
+    }
+
+    await this.database.insert(profiles).values({
+      userId: user.id,
+      firstName,
+      lastName,
+      bio: null,
+      avatarUrl: null,
+      organizationId: null,
+    });
+
     return user.id;
   }
 

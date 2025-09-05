@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
-import type { ErrorResponse, UserList, User } from "@repo/api";
+import type { ErrorResponse, UserList, UserProfileList, User } from "@repo/api";
 import { contract } from "@repo/api";
 
 import type { SuperTestResponse } from "../../test/test-harness";
@@ -53,14 +53,14 @@ describe("UserController", () => {
         email: "bob@example.com",
       });
 
-      const response: SuperTestResponse<UserList> = await testApp
+      const response: SuperTestResponse<UserProfileList> = await testApp
         .get(contract.users.searchUsers.path)
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
       expect(response.body.length).toBeGreaterThanOrEqual(3); // At least the 3 users we created
 
-      const userIds = response.body.map((u) => u.id);
+      const userIds = response.body.map((u) => u.userId);
       expect(userIds).toContain(testUserId);
       expect(userIds).toContain(user1Id);
       expect(userIds).toContain(user2Id);
@@ -77,14 +77,14 @@ describe("UserController", () => {
         email: "bob@example.com",
       });
 
-      const response: SuperTestResponse<UserList> = await testApp
+      const response: SuperTestResponse<UserProfileList> = await testApp
         .get(contract.users.searchUsers.path)
         .withAuth(testUserId)
         .query({ query: "Alice" })
         .expect(StatusCodes.OK);
 
       expect(response.body).toHaveLength(1);
-      expect(response.body[0].name).toBe("Alice Smith");
+      expect(`${response.body[0].firstName} ${response.body[0].lastName}`).toBe("Alice Smith");
     });
 
     it("should search users by email", async () => {
@@ -119,14 +119,16 @@ describe("UserController", () => {
         email: "alice.johnson@example.com",
       });
 
-      const response: SuperTestResponse<UserList> = await testApp
+      const response: SuperTestResponse<UserProfileList> = await testApp
         .get(contract.users.searchUsers.path)
         .withAuth(testUserId)
         .query({ query: "Alice" })
         .expect(StatusCodes.OK);
 
       expect(response.body).toHaveLength(2);
-      expect(response.body.every((u) => u.name?.includes("Alice") ?? false)).toBe(true);
+      expect(response.body.every((u) => `${u.firstName} ${u.lastName}`.includes("Alice"))).toBe(
+        true,
+      );
     });
 
     it("should apply limit and offset for pagination", async () => {
@@ -141,7 +143,7 @@ describe("UserController", () => {
       }
 
       // Get first 2 users
-      const firstPageResponse: SuperTestResponse<UserList> = await testApp
+      const firstPageResponse: SuperTestResponse<UserProfileList> = await testApp
         .get(contract.users.searchUsers.path)
         .withAuth(testUserId)
         .query({ limit: 2, offset: 0 })
@@ -150,7 +152,7 @@ describe("UserController", () => {
       expect(firstPageResponse.body).toHaveLength(2);
 
       // Get next 2 users
-      const secondPageResponse: SuperTestResponse<UserList> = await testApp
+      const secondPageResponse: SuperTestResponse<UserProfileList> = await testApp
         .get(contract.users.searchUsers.path)
         .withAuth(testUserId)
         .query({ limit: 2, offset: 2 })
@@ -159,8 +161,8 @@ describe("UserController", () => {
       expect(secondPageResponse.body).toHaveLength(2);
 
       // Ensure no overlap between pages
-      const firstPageIds = firstPageResponse.body.map((u) => u.id);
-      const secondPageIds = secondPageResponse.body.map((u) => u.id);
+      const firstPageIds = firstPageResponse.body.map((u) => u.userId);
+      const secondPageIds = secondPageResponse.body.map((u) => u.userId);
       expect(firstPageIds.some((id) => secondPageIds.includes(id))).toBe(false);
     });
 

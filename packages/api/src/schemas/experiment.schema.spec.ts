@@ -171,13 +171,13 @@ describe("Experiment Schema", () => {
     const member = {
       user: {
         id: uuidA,
-        name: "John",
+        firstName: "John",
+        lastName: "Doe",
         email: "john@example.com",
       },
       role: "member",
       joinedAt: isoTime,
     };
-
     it("zExperimentMember valid", () => {
       expect(zExperimentMember.parse(member)).toEqual(member);
     });

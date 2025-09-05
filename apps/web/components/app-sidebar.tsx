@@ -118,7 +118,6 @@ export function AppSidebar({
             locale={locale}
             user={{
               id: user.id ?? "",
-              name: user.name ?? "User",
               email: user.email ?? "",
               avatar: user.image ?? "/avatars/default.jpg",
             }}
