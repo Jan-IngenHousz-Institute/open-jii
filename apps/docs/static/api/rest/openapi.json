@@ -65,6 +65,23 @@
                       "required": ["userId"]
                     },
                     "description": "Optional array of member objects with userId and role"
+                  },
+                  "protocols": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "protocolId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "order": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": ["protocolId"]
+                    },
+                    "description": "Optional array of protocol objects with protocolId and order to associate with the experiment"
                   }
                 },
                 "required": ["name"]
@@ -223,8 +240,8 @@
                           "rows": {
                             "type": "array",
                             "items": {
-                              "type": "array",
-                              "items": {
+                              "type": "object",
+                              "additionalProperties": {
                                 "type": "string",
                                 "nullable": true
                               }
@@ -366,8 +383,8 @@
                         "rows": {
                           "type": "array",
                           "items": {
-                            "type": "array",
-                            "items": {
+                            "type": "object",
+                            "additionalProperties": {
                               "type": "string",
                               "nullable": true
                             }
@@ -549,8 +566,8 @@
                         "rows": {
                           "type": "array",
                           "items": {
-                            "type": "array",
-                            "items": {
+                            "type": "object",
+                            "additionalProperties": {
                               "type": "string",
                               "nullable": true
                             }
@@ -619,6 +636,176 @@
         "responses": {
           "204": {
             "description": "204"
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/access": {
+      "get": {
+        "description": "Returns experiment details along with user access and admin status",
+        "summary": "Get experiment details with access information",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          }
+        ],
+        "operationId": "experiments.getExperimentAccess",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "experiment": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "provisioning",
+                            "provisioning_failed",
+                            "active",
+                            "stale",
+                            "archived",
+                            "published"
+                          ]
+                        },
+                        "visibility": {
+                          "type": "string",
+                          "enum": ["private", "public"]
+                        },
+                        "embargoIntervalDays": {
+                          "type": "integer"
+                        },
+                        "createdBy": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "columns": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "type_name": {
+                                    "type": "string"
+                                  },
+                                  "type_text": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["name", "type_name", "type_text"]
+                              }
+                            },
+                            "rows": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              }
+                            },
+                            "totalRows": {
+                              "type": "integer"
+                            },
+                            "truncated": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": ["columns", "rows", "totalRows", "truncated"]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "description",
+                        "status",
+                        "visibility",
+                        "embargoIntervalDays",
+                        "createdBy",
+                        "createdAt",
+                        "updatedAt"
+                      ]
+                    },
+                    "hasAccess": {
+                      "type": "boolean"
+                    },
+                    "isAdmin": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["experiment", "hasAccess", "isAdmin"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
           },
           "404": {
             "description": "404",
@@ -1038,8 +1225,8 @@
                           "rows": {
                             "type": "array",
                             "items": {
-                              "type": "array",
-                              "items": {
+                              "type": "object",
+                              "additionalProperties": {
                                 "type": "string",
                                 "nullable": true
                               }
@@ -1286,6 +1473,1517 @@
         }
       }
     },
+    "/api/v1/experiments/{id}/protocols": {
+      "get": {
+        "description": "Returns a list of protocol associations for the specified experiment.",
+        "summary": "List protocols associated with an experiment",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          }
+        ],
+        "operationId": "experiments.listExperimentProtocols",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "experimentId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "order": {
+                        "type": "integer"
+                      },
+                      "addedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "protocol": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "family": {
+                            "type": "string",
+                            "enum": ["multispeq", "ambit"]
+                          },
+                          "createdBy": {
+                            "type": "string",
+                            "format": "uuid"
+                          }
+                        },
+                        "required": ["id", "name", "family", "createdBy"]
+                      }
+                    },
+                    "required": ["experimentId", "order", "addedAt", "protocol"]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Associates one or more protocols with an experiment.",
+        "summary": "Add protocols to an experiment",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          }
+        ],
+        "operationId": "experiments.addExperimentProtocols",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "protocols": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "protocolId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "order": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": ["protocolId"]
+                    }
+                  }
+                },
+                "required": ["protocols"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "experimentId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "order": {
+                        "type": "integer"
+                      },
+                      "addedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "protocol": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "family": {
+                            "type": "string",
+                            "enum": ["multispeq", "ambit"]
+                          },
+                          "createdBy": {
+                            "type": "string",
+                            "format": "uuid"
+                          }
+                        },
+                        "required": ["id", "name", "family", "createdBy"]
+                      }
+                    },
+                    "required": ["experimentId", "order", "addedAt", "protocol"]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/protocols/{protocolId}": {
+      "delete": {
+        "description": "Removes the association between a protocol and an experiment.",
+        "summary": "Remove a protocol from an experiment",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          },
+          {
+            "name": "protocolId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the protocol association"
+          }
+        ],
+        "operationId": "experiments.removeExperimentProtocol",
+        "responses": {
+          "204": {
+            "description": "204"
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/flow": {
+      "get": {
+        "description": "Returns the flow graph for the specified experiment.",
+        "summary": "Get experiment flow",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          }
+        ],
+        "operationId": "experiments.getFlow",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "experimentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "graph": {
+                      "type": "object",
+                      "properties": {
+                        "nodes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": ["question", "instruction", "measurement"]
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "content": {
+                                "oneOf": [
+                                  {
+                                    "discriminator": {
+                                      "propertyName": "kind"
+                                    },
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": ["yes_no"]
+                                          },
+                                          "text": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          }
+                                        },
+                                        "required": ["kind", "text"],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": ["open_ended"]
+                                          },
+                                          "text": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          }
+                                        },
+                                        "required": ["kind", "text"],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": ["multi_choice"]
+                                          },
+                                          "text": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          },
+                                          "options": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string"
+                                            },
+                                            "minItems": 1
+                                          }
+                                        },
+                                        "required": ["kind", "text", "options"],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "text": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    },
+                                    "required": ["text"]
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "protocolId": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      "params": {
+                                        "type": "object",
+                                        "additionalProperties": {}
+                                      }
+                                    },
+                                    "required": ["protocolId"]
+                                  }
+                                ]
+                              },
+                              "isStart": {
+                                "default": false,
+                                "type": "boolean"
+                              }
+                            },
+                            "required": ["id", "type", "name", "content"]
+                          },
+                          "minItems": 1
+                        },
+                        "edges": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "source": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "target": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "label": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            },
+                            "required": ["id", "source", "target"]
+                          }
+                        }
+                      },
+                      "required": ["nodes", "edges"]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": ["id", "experimentId", "graph", "createdAt", "updatedAt"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Creates a new flow for the experiment with the provided graph.",
+        "summary": "Create experiment flow",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          }
+        ],
+        "operationId": "experiments.createFlow",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nodes": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": ["question", "instruction", "measurement"]
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "content": {
+                          "oneOf": [
+                            {
+                              "discriminator": {
+                                "propertyName": "kind"
+                              },
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": ["yes_no"]
+                                    },
+                                    "text": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "required": ["kind", "text"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": ["open_ended"]
+                                    },
+                                    "text": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "required": ["kind", "text"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": ["multi_choice"]
+                                    },
+                                    "text": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "options": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      },
+                                      "minItems": 1
+                                    }
+                                  },
+                                  "required": ["kind", "text", "options"],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string",
+                                  "minLength": 1
+                                }
+                              },
+                              "required": ["text"]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "protocolId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "params": {
+                                  "type": "object",
+                                  "additionalProperties": {}
+                                }
+                              },
+                              "required": ["protocolId"]
+                            }
+                          ]
+                        },
+                        "isStart": {
+                          "default": false,
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["id", "type", "name", "content"]
+                    },
+                    "minItems": 1
+                  },
+                  "edges": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "source": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "target": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "label": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": ["id", "source", "target"]
+                    }
+                  }
+                },
+                "required": ["nodes", "edges"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "experimentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "graph": {
+                      "type": "object",
+                      "properties": {
+                        "nodes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": ["question", "instruction", "measurement"]
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "content": {
+                                "oneOf": [
+                                  {
+                                    "discriminator": {
+                                      "propertyName": "kind"
+                                    },
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": ["yes_no"]
+                                          },
+                                          "text": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          }
+                                        },
+                                        "required": ["kind", "text"],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": ["open_ended"]
+                                          },
+                                          "text": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          }
+                                        },
+                                        "required": ["kind", "text"],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": ["multi_choice"]
+                                          },
+                                          "text": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          },
+                                          "options": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string"
+                                            },
+                                            "minItems": 1
+                                          }
+                                        },
+                                        "required": ["kind", "text", "options"],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "text": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    },
+                                    "required": ["text"]
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "protocolId": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      "params": {
+                                        "type": "object",
+                                        "additionalProperties": {}
+                                      }
+                                    },
+                                    "required": ["protocolId"]
+                                  }
+                                ]
+                              },
+                              "isStart": {
+                                "default": false,
+                                "type": "boolean"
+                              }
+                            },
+                            "required": ["id", "type", "name", "content"]
+                          },
+                          "minItems": 1
+                        },
+                        "edges": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "source": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "target": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "label": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            },
+                            "required": ["id", "source", "target"]
+                          }
+                        }
+                      },
+                      "required": ["nodes", "edges"]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": ["id", "experimentId", "graph", "createdAt", "updatedAt"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "description": "Updates the existing flow for the experiment with the provided graph.",
+        "summary": "Update experiment flow",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          }
+        ],
+        "operationId": "experiments.updateFlow",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nodes": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": ["question", "instruction", "measurement"]
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "content": {
+                          "oneOf": [
+                            {
+                              "discriminator": {
+                                "propertyName": "kind"
+                              },
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": ["yes_no"]
+                                    },
+                                    "text": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "required": ["kind", "text"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": ["open_ended"]
+                                    },
+                                    "text": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "required": ["kind", "text"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": ["multi_choice"]
+                                    },
+                                    "text": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "options": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      },
+                                      "minItems": 1
+                                    }
+                                  },
+                                  "required": ["kind", "text", "options"],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string",
+                                  "minLength": 1
+                                }
+                              },
+                              "required": ["text"]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "protocolId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "params": {
+                                  "type": "object",
+                                  "additionalProperties": {}
+                                }
+                              },
+                              "required": ["protocolId"]
+                            }
+                          ]
+                        },
+                        "isStart": {
+                          "default": false,
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["id", "type", "name", "content"]
+                    },
+                    "minItems": 1
+                  },
+                  "edges": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "source": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "target": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "label": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": ["id", "source", "target"]
+                    }
+                  }
+                },
+                "required": ["nodes", "edges"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "experimentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "graph": {
+                      "type": "object",
+                      "properties": {
+                        "nodes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": ["question", "instruction", "measurement"]
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "content": {
+                                "oneOf": [
+                                  {
+                                    "discriminator": {
+                                      "propertyName": "kind"
+                                    },
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": ["yes_no"]
+                                          },
+                                          "text": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          }
+                                        },
+                                        "required": ["kind", "text"],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": ["open_ended"]
+                                          },
+                                          "text": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          }
+                                        },
+                                        "required": ["kind", "text"],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": ["multi_choice"]
+                                          },
+                                          "text": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          },
+                                          "options": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string"
+                                            },
+                                            "minItems": 1
+                                          }
+                                        },
+                                        "required": ["kind", "text", "options"],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "text": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    },
+                                    "required": ["text"]
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "protocolId": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      "params": {
+                                        "type": "object",
+                                        "additionalProperties": {}
+                                      }
+                                    },
+                                    "required": ["protocolId"]
+                                  }
+                                ]
+                              },
+                              "isStart": {
+                                "default": false,
+                                "type": "boolean"
+                              }
+                            },
+                            "required": ["id", "type", "name", "content"]
+                          },
+                          "minItems": 1
+                        },
+                        "edges": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "source": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "target": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "label": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            },
+                            "required": ["id", "source", "target"]
+                          }
+                        }
+                      },
+                      "required": ["nodes", "edges"]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": ["id", "experimentId", "graph", "createdAt", "updatedAt"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/data/upload": {
+      "post": {
+        "description": "Uploads experiment data files to Databricks",
+        "summary": "Upload experiment data",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          }
+        ],
+        "operationId": "experiments.uploadExperimentData",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sourceType": {
+                    "type": "string",
+                    "enum": ["ambyte"]
+                  }
+                },
+                "required": ["sourceType"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "uploadId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/protocols": {
       "get": {
         "description": "Returns a list of protocols based on the specified filter criteria",
@@ -1340,6 +3038,9 @@
                       "createdBy": {
                         "type": "string",
                         "format": "uuid"
+                      },
+                      "createdByName": {
+                        "type": "string"
                       },
                       "createdAt": {
                         "type": "string",
@@ -1457,6 +3158,9 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "createdByName": {
+                      "type": "string"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -1552,6 +3256,9 @@
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
+                    },
+                    "createdByName": {
+                      "type": "string"
                     },
                     "createdAt": {
                       "type": "string",
@@ -1675,6 +3382,9 @@
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
+                    },
+                    "createdByName": {
+                      "type": "string"
                     },
                     "createdAt": {
                       "type": "string",
@@ -1866,9 +3576,20 @@
                       "createdAt": {
                         "type": "string",
                         "format": "date-time"
+                      },
+                      "registered": {
+                        "type": "boolean"
                       }
                     },
-                    "required": ["id", "name", "email", "emailVerified", "image", "createdAt"]
+                    "required": [
+                      "id",
+                      "name",
+                      "email",
+                      "emailVerified",
+                      "image",
+                      "createdAt",
+                      "registered"
+                    ]
                   }
                 }
               }
@@ -1944,15 +3665,91 @@
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "registered": {
+                      "type": "boolean"
                     }
                   },
-                  "required": ["id", "name", "email", "emailVerified", "image", "createdAt"]
+                  "required": [
+                    "id",
+                    "name",
+                    "email",
+                    "emailVerified",
+                    "image",
+                    "createdAt",
+                    "registered"
+                  ]
                 }
               }
             }
           },
           "404": {
             "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/profile": {
+      "post": {
+        "description": "Creates user profile and sets the user as registered",
+        "summary": "Create user profile",
+        "tags": ["users"],
+        "parameters": [],
+        "operationId": "users.createUserProfile",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "firstName": {
+                    "type": "string",
+                    "minLength": 2,
+                    "description": "First name"
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "minLength": 2,
+                    "description": "Last name"
+                  },
+                  "organization": {
+                    "type": "string",
+                    "description": "Organization"
+                  }
+                },
+                "required": ["firstName", "lastName"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
             "content": {
               "application/json": {
                 "schema": {
