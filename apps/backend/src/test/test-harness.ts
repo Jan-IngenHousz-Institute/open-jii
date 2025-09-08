@@ -240,9 +240,6 @@ export class TestHarness {
       userId: user.id,
       firstName,
       lastName,
-      bio: null,
-      avatarUrl: null,
-      organizationId: null,
     });
 
     return user.id;
