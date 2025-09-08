@@ -65,13 +65,37 @@ describe("ExperimentDataController", () => {
         status: "RUNNING",
       };
 
+      // Mock volume operations for preexecute
+      const mockVolumeResponse = {
+        name: "data-uploads",
+        volume_id: faker.string.uuid(),
+        catalog_name: "main",
+        schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+        volume_type: "MANAGED" as const,
+        full_name: `main.exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}.data-uploads`,
+        created_at: Date.now(),
+        created_by: testUserId,
+        updated_at: Date.now(),
+        updated_by: testUserId,
+        metastore_id: faker.string.uuid(),
+        owner: testUserId,
+      };
+
       // Set up the proper mock based on whether the test should succeed
       if (willSucceed) {
+        // Mock volume exists (so preexecute returns success immediately)
+        vi.spyOn(databricksAdapter, "getExperimentVolume").mockResolvedValue(
+          success(mockVolumeResponse),
+        );
         vi.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(success(mockUploadResponse));
         vi.spyOn(databricksAdapter, "triggerExperimentPipeline").mockResolvedValue(
           success(mockPipelineResponse),
         );
       } else {
+        // Mock volume exists but upload fails
+        vi.spyOn(databricksAdapter, "getExperimentVolume").mockResolvedValue(
+          success(mockVolumeResponse),
+        );
         vi.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(
           failure(AppError.internal("Failed to upload file to Databricks")),
         );
@@ -136,6 +160,26 @@ describe("ExperimentDataController", () => {
         userId: testUserId,
       });
 
+      // Mock volume operations for preexecute (volume exists)
+      const mockVolumeResponse = {
+        name: "data-uploads",
+        volume_id: faker.string.uuid(),
+        catalog_name: "main",
+        schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+        volume_type: "MANAGED" as const,
+        full_name: `main.exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}.data-uploads`,
+        created_at: Date.now(),
+        created_by: testUserId,
+        updated_at: Date.now(),
+        updated_by: testUserId,
+        metastore_id: faker.string.uuid(),
+        owner: testUserId,
+      };
+
+      vi.spyOn(databricksAdapter, "getExperimentVolume").mockResolvedValue(
+        success(mockVolumeResponse),
+      );
+
       // Mock the uploadFile method to ensure we can check if it's called
       const uploadFileSpy = vi.spyOn(databricksAdapter, "uploadFile");
 
@@ -153,7 +197,6 @@ describe("ExperimentDataController", () => {
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
 
       // Verify that the upload method was not called
-
       expect(uploadFileSpy).not.toHaveBeenCalled();
     });
 
@@ -259,6 +302,26 @@ describe("ExperimentDataController", () => {
         name: "Test Experiment for Multiple Files",
         userId: testUserId,
       });
+
+      // Mock volume operations for preexecute (volume exists)
+      const mockVolumeResponse = {
+        name: "data-uploads",
+        volume_id: faker.string.uuid(),
+        catalog_name: "main",
+        schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+        volume_type: "MANAGED" as const,
+        full_name: `main.exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}.data-uploads`,
+        created_at: Date.now(),
+        created_by: testUserId,
+        updated_at: Date.now(),
+        updated_by: testUserId,
+        metastore_id: faker.string.uuid(),
+        owner: testUserId,
+      };
+
+      vi.spyOn(databricksAdapter, "getExperimentVolume").mockResolvedValue(
+        success(mockVolumeResponse),
+      );
 
       // Create file paths
       const fileNames = ["Ambyte_1/1/20250615-193737_.txt", "Ambyte_1/2/20250615-193738_.txt"];
@@ -397,6 +460,8 @@ describe("ExperimentDataController", () => {
             name: "test_table",
             catalog_name: experiment.name,
             schema_name: `exp_${experiment.name}_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
           },
         ],
       };
@@ -473,11 +538,15 @@ describe("ExperimentDataController", () => {
             name: "bronze_data",
             catalog_name: "test_catalog",
             schema_name: `exp_${experiment.name}_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
           },
           {
             name: "silver_data",
             catalog_name: "test_catalog",
             schema_name: `exp_${experiment.name}_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
           },
         ],
       };
@@ -677,6 +746,8 @@ describe("ExperimentDataController", () => {
             name: "nonexistent_table",
             catalog_name: experiment.name,
             schema_name: `exp_${experiment.name}_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
           },
         ],
       };
@@ -741,6 +812,8 @@ describe("ExperimentDataController", () => {
             name: "test_table",
             catalog_name: experiment.name,
             schema_name: `exp_${experiment.name}_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
           },
         ],
       };
@@ -800,6 +873,8 @@ describe("ExperimentDataController", () => {
             name: "existing_table",
             catalog_name: experiment.name,
             schema_name: `exp_${experiment.name}_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
           },
         ],
       };
