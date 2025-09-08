@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 
 import {
   validateProtocolJson,
-  validateProtocolJsonArray,
   isMultiProtocolSet,
   extractProtocolSets,
   getEnvironmentalSensors,
@@ -468,23 +467,6 @@ describe("Comprehensive Protocol JSON Validator", () => {
   });
 
   describe("Error Handling", () => {
-    it("should validate batch processing with mixed results", () => {
-      const jsonArray = [
-        JSON.stringify([{ label: "valid1" }]),
-        JSON.stringify([{ measurements: -1 }]),
-        JSON.stringify([{ label: "valid2" }]),
-        JSON.stringify([{ invalid_field: "no_label" }]),
-      ];
-
-      const result = validateProtocolJsonArray(jsonArray);
-
-      expect(result.totalProcessed).toBe(4);
-      expect(result.validCount).toBe(3); // The no_label protocol is now valid
-      expect(result.errorCount).toBe(1);
-      expect(result.validProtocols).toHaveLength(3);
-      expect(result.errors).toHaveLength(1);
-    });
-
     it("should provide detailed validation errors", () => {
       const invalidProtocol = [
         {

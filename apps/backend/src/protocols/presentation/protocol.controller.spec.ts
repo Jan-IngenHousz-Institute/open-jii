@@ -42,7 +42,7 @@ describe("ProtocolController", () => {
       const protocolData = {
         name: "Test Protocol",
         description: "Test Description",
-        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        code: [{ averages: 1, environmental: [["light_intensity", 0]] }],
         family: "multispeq" as const,
       };
 
@@ -68,7 +68,7 @@ describe("ProtocolController", () => {
       const invalidData = {
         // Missing required name field
         description: "Test Description",
-        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        code: [{ averages: 1, environmental: [["light_intensity", 0]] }],
         family: "multispeq" as const,
       };
 
@@ -88,7 +88,7 @@ describe("ProtocolController", () => {
       const createData = {
         name: "Protocol to Retrieve",
         description: "Test Description",
-        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        code: [{ averages: 1, environmental: [["light_intensity", 0]] }],
         family: "multispeq" as const,
       };
 
@@ -122,7 +122,7 @@ describe("ProtocolController", () => {
       const createData = {
         name: "Protocol to View",
         description: "Test Description",
-        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        code: [{ averages: 1, environmental: [["light_intensity", 0]] }],
         family: "multispeq" as const,
       };
 
@@ -169,14 +169,14 @@ describe("ProtocolController", () => {
       const protocol1 = {
         name: "Protocol 1 for List",
         description: "Description 1",
-        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        code: [{ averages: 1, environmental: [["light_intensity", 0]] }],
         family: "multispeq" as const,
       };
 
       const protocol2 = {
         name: "Protocol 2 for List",
         description: "Description 2",
-        code: [{ steps: [{ name: "Step 2", action: "test" }] }],
+        code: [{ averages: 1, environmental: [["light_intensity", 0]] }],
         family: "multispeq" as const,
       };
 
@@ -209,7 +209,7 @@ describe("ProtocolController", () => {
       const protocol1 = {
         name: "Protocol 1 for Public List",
         description: "Description 1",
-        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        code: [{ averages: 1, environmental: [["light_intensity", 0]] }],
         family: "multispeq" as const,
       };
 
@@ -217,7 +217,7 @@ describe("ProtocolController", () => {
       const protocol2 = {
         name: "Protocol 2 for Public List",
         description: "Description 2",
-        code: [{ steps: [{ name: "Step 2", action: "test" }] }],
+        code: [{ averages: 1, environmental: [["light_intensity", 0]] }],
         family: "multispeq" as const,
       };
 
@@ -259,14 +259,14 @@ describe("ProtocolController", () => {
       const protocol1 = {
         name: `${uniquePrefix} Protocol`,
         description: "Description 1",
-        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        code: [{ averages: 1, environmental: [["light_intensity", 0]] }],
         family: "multispeq" as const,
       };
 
       const protocol2 = {
         name: "Different Protocol",
         description: "Description 2",
-        code: [{ steps: [{ name: "Step 2", action: "test" }] }],
+        code: [{ averages: 1, environmental: [["light_intensity", 0]] }],
         family: "multispeq" as const,
       };
 
@@ -300,7 +300,7 @@ describe("ProtocolController", () => {
       const createData = {
         name: "Protocol to Update",
         description: "Original Description",
-        code: [{ steps: [{ name: "Original Step", action: "test" }] }],
+        code: [{ averages: 1, environmental: [["light_intensity", 0]] }],
         family: "multispeq" as const,
       };
 
@@ -315,7 +315,7 @@ describe("ProtocolController", () => {
       const updateData = {
         name: "Updated Protocol",
         description: "Updated Description",
-        code: [{ steps: [{ name: "Updated Step", action: "updated" }] }],
+        code: [{ averages: 1, environmental: [["light_intensity", 1]] }],
       };
 
       // Act
@@ -356,7 +356,7 @@ describe("ProtocolController", () => {
       const createData = {
         name: "Protocol to Update",
         description: "Original Description",
-        code: [{ steps: [{ name: "Original Step", action: "test" }] }],
+        code: [{ averages: 1, environmental: [["light_intensity", 0]] }],
         family: "multispeq" as const,
       };
 
@@ -414,7 +414,7 @@ describe("ProtocolController", () => {
       const createData = {
         name: "Protocol for Partial Update",
         description: "Original Description",
-        code: [{ steps: [{ name: "Original Step", action: "test" }] }],
+        code: [{ averages: 1, environmental: [["light_intensity", 0]] }],
         family: "multispeq" as const,
       };
 
@@ -472,7 +472,7 @@ describe("ProtocolController", () => {
       const createData = {
         name: "Protocol to Delete",
         description: "Will be deleted",
-        code: [{ steps: [{ name: "Delete me", action: "test" }] }],
+        code: [{ averages: 1, environmental: [["light_intensity", 0]] }],
         family: "multispeq" as const,
       };
 
@@ -503,7 +503,7 @@ describe("ProtocolController", () => {
       const createData = {
         name: "Protocol to Delete",
         description: "Will be deleted",
-        code: [{ steps: [{ name: "Delete me", action: "test" }] }],
+        code: [{ averages: 1, environmental: [["light_intensity", 0]] }],
         family: "multispeq" as const,
       };
 

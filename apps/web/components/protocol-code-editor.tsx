@@ -5,6 +5,7 @@ import Editor from "@monaco-editor/react";
 import { Copy, Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FC } from "react";
+import { useDebounce } from "~/hooks/useDebounce";
 
 import { findProtocolErrorLine, getErrorMessage, validateProtocolJson } from "@repo/api";
 import { Button, Label } from "@repo/ui/components";
@@ -31,6 +32,8 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const monacoRef = useRef<Monaco | null>(null);
   const editorRef = useRef<IStandaloneCodeEditor | null>(null);
+  const [editorCode, setEditorCode] = useState<string | undefined>(undefined);
+  const [debouncedEditorCode] = useDebounce(editorCode, 200);
 
   // Convert array to JSON string for editor if needed
   const editorValue = typeof value === "string" ? value : JSON.stringify(value, null, 2);
@@ -80,16 +83,15 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
 
   const stats = getJsonStats();
 
-  // Handle editor changes and always try to convert to array for validation
-  const handleEditorChange = (newValue: string | undefined) => {
-    if (!newValue) {
-      onChange(newValue);
+  useEffect(() => {
+    if (!debouncedEditorCode) {
+      onChange(debouncedEditorCode);
       setIsValidJson(true);
       return;
     }
 
     try {
-      const parsedValue = JSON.parse(newValue) as unknown;
+      const parsedValue = JSON.parse(debouncedEditorCode) as unknown;
       setIsValidJson(true);
 
       // Validate with Zod
@@ -97,7 +99,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
       if (!result.success && result.error) {
         setValidationErrors(result.error.map((e) => getErrorMessage(e)));
         const errorDetails = result.error.map((e) => {
-          return findProtocolErrorLine(newValue, e);
+          return findProtocolErrorLine(debouncedEditorCode, e);
         });
         setMarkers(
           result.error.map((e) => e.message),
@@ -111,14 +113,19 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
       if (Array.isArray(parsedValue)) {
         onChange(parsedValue as Record<string, unknown>[]);
       } else {
-        onChange(newValue);
+        onChange(debouncedEditorCode);
       }
     } catch {
       setIsValidJson(false);
       setValidationErrors(["Invalid JSON syntax"]);
       setMarkers(["Invalid JSON syntax"], [{ line: 1, message: "Invalid JSON syntax" }]);
-      onChange(newValue); // Keep the invalid JSON for editing
+      onChange(debouncedEditorCode); // Keep the invalid JSON for editing
     }
+  }, [debouncedEditorCode, onChange]);
+
+  // Handle editor changes and always try to convert to array for validation
+  const handleEditorChange = (newValue: string | undefined) => {
+    setEditorCode(newValue);
   };
 
   const handleEditorMount: OnMount = (editor, monaco) => {
