@@ -27,17 +27,20 @@ export interface DatabricksPipelineSummary {
   pipeline_id: string;
   name: string;
   state: string;
+  cluster_id: string;
+  health: "HEALTHY" | "UNHEALTHY";
+  latest_updates: {
+    creation_time: string;
+    update_id: string;
+    state: string;
+  }[];
+  run_as_user_name: string;
   creator_user_name: string;
-  created_time: number;
-  last_modified_time: number;
-  target?: string;
-  catalog?: string;
 }
 
 export interface DatabricksPipelineListResponse {
-  pipelines: DatabricksPipelineSummary[];
-  token?: string;
-  has_more: boolean;
+  statuses: DatabricksPipelineSummary[];
+  next_page_token?: string;
 }
 
 export interface DatabricksPipelineResponse {

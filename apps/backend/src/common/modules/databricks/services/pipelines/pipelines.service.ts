@@ -76,7 +76,7 @@ export class DatabricksPipelinesService {
 
             const listResponse = response.data;
             this.logger.log(
-              `Successfully retrieved ${listResponse.pipelines.length} Databricks pipelines`,
+              `Successfully retrieved ${listResponse.statuses.length} Databricks pipelines`,
             );
 
             return listResponse;
@@ -139,7 +139,7 @@ export class DatabricksPipelinesService {
 
             const listResponse = response.data;
             this.logger.log(
-              `Successfully retrieved ${listResponse.pipelines.length} Databricks pipelines`,
+              `Successfully retrieved ${listResponse.statuses.length} Databricks pipelines`,
             );
 
             return listResponse;
@@ -157,7 +157,7 @@ export class DatabricksPipelinesService {
         const pipelinesList = listResult.value;
 
         // Find the pipeline with the specified name
-        const targetPipeline = pipelinesList.pipelines.find(
+        const targetPipeline = pipelinesList.statuses.find(
           (pipeline) => pipeline.name === params.pipelineName,
         );
 

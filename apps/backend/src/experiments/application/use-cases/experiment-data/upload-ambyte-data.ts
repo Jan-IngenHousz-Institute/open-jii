@@ -17,27 +17,73 @@ export class UploadAmbyteDataUseCase {
 
   static readonly MAX_FILE_SIZE = 10 * 1024 * 1024;
   static readonly MAX_FILE_COUNT = 1000;
+  static readonly UPLOADS_VOLUME_NAME = "data-uploads";
 
   constructor(@Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort) {}
 
   /**
-   * Create a directory in Databricks for the experiment data
+   * Prepares the environment for file uploads by ensuring the required volume exists
+   * This method should be called before starting the file upload process
    *
    * @param experimentId - ID of the experiment
    * @param experimentName - Name of the experiment
-   * @param sourceType - Type of data source
-   * @returns Result indicating success or failure of directory creation
+   * @returns Result indicating success or failure of the preparation
    */
-  async createDirectory(
+  async preexecute(
     experimentId: string,
     experimentName: string,
-    sourceType: string,
-  ): Promise<Result<{ directoryPath: string }>> {
+  ): Promise<Result<{ volumeName: string; volumeExists: boolean; volumeCreated: boolean }>> {
     this.logger.log(
-      `Creating directory for experiment ${experimentId} and source type ${sourceType}`,
+      `Preparing upload environment for experiment ${experimentName} (${experimentId})`,
     );
 
-    return this.databricksPort.createExperimentDirectory(experimentId, experimentName, sourceType);
+    // Construct the volume name
+    const volumeName = UploadAmbyteDataUseCase.UPLOADS_VOLUME_NAME;
+
+    // Check if volume already exists
+    const getVolumeResult = await this.databricksPort.getExperimentVolume(
+      experimentName,
+      experimentId,
+      volumeName,
+    );
+
+    // If volume exists, return success
+    if (getVolumeResult.isSuccess()) {
+      this.logger.log(`Volume "${volumeName}" already exists for experiment ${experimentName}`);
+      return success({
+        volumeName,
+        volumeExists: true,
+        volumeCreated: false,
+      });
+    }
+
+    // Volume doesn't exist, create it
+    this.logger.log(
+      `Volume "${volumeName}" doesn't exist for experiment ${experimentName}, creating it now`,
+    );
+
+    const createVolumeResult = await this.databricksPort.createExperimentVolume(
+      experimentName,
+      experimentId,
+      volumeName,
+      `Ambyte data uploads volume for experiment ${experimentName}`,
+    );
+
+    if (createVolumeResult.isSuccess()) {
+      this.logger.log(
+        `Successfully created volume "${volumeName}" for experiment ${experimentName}`,
+      );
+      return success({
+        volumeName,
+        volumeExists: false,
+        volumeCreated: true,
+      });
+    } else {
+      this.logger.error(
+        `Failed to create volume "${volumeName}" for experiment ${experimentName}: ${createVolumeResult.error.message}`,
+      );
+      return failure(createVolumeResult.error);
+    }
   }
 
   /**
@@ -55,81 +101,66 @@ export class UploadAmbyteDataUseCase {
       `Starting to process file stream: ${file.filename}, source type: ${sourceType}`,
     );
 
-    try {
-      // Validate the file name
-      if (!this.validateFileName(file.filename)) {
-        errors.push({
-          fileName: file.filename,
-          error:
-            'Invalid Ambyte data file. Expected either an "Ambyte_X" folder, a numbered subfolder (1, 2, 3, 4), or a data file in the format YYYYMMDD-HHMMSS_.txt.',
-        });
-
-        this.logger.warn(`Skipping invalid file: ${file.filename}`);
-        // Consume the stream to allow busboy to continue processing the form
-        file.stream.resume();
-        return;
-      }
-
-      if (!sourceType) {
-        this.logger.error(`Source type is undefined for file: ${file.filename}`);
-        errors.push({
-          fileName: file.filename,
-          error: "Source type is required",
-        });
-        // Consume the stream to allow busboy to continue processing the form
-        file.stream.resume();
-        return;
-      }
-
-      // Convert stream to buffer and upload the file to Databricks
-      const buffer = await this.streamToBuffer(file.stream);
-
-      this.logger.debug(
-        `Successfully converted stream to buffer for file: ${file.filename}, size: ${buffer.length} bytes`,
-      );
-
-      this.logger.log(`Uploading file to Databricks: ${file.filename}`);
-      const uploadResult = await this.databricksPort.uploadFile(
-        experimentId,
-        experimentName,
-        sourceType,
-        file.filename,
-        buffer,
-      );
-
-      if (uploadResult.isSuccess()) {
-        successfulUploads.push({
-          fileName: file.filename,
-          filePath: uploadResult.value.filePath,
-        });
-
-        this.logger.log(
-          `Successfully uploaded Ambyte data file "${file.filename}" to experiment ${experimentName} (${experimentId})`,
-        );
-      } else {
-        errors.push({
-          fileName: file.filename,
-          error: uploadResult.error.message,
-        });
-
-        this.logger.error(
-          `Failed to upload file "${file.filename}": ${uploadResult.error.message}`,
-        );
-      }
-
-      this.logger.debug(`Completed processing for file: ${file.filename}`);
-    } catch (error) {
-      console.error(`Error in processFileStream for ${file.filename}:`, error);
-
+    // Validate the file name
+    if (!this.validateFileName(file.filename)) {
       errors.push({
         fileName: file.filename,
-        error: error instanceof Error ? error.message : String(error),
+        error:
+          'Invalid Ambyte data file. Expected either an "Ambyte_X" folder, a numbered subfolder (1, 2, 3, 4), or a data file in the format YYYYMMDD-HHMMSS_.txt.',
       });
 
-      this.logger.error(
-        `Error processing file "${file.filename}": ${error instanceof Error ? error.message : String(error)}`,
-      );
+      this.logger.warn(`Skipping invalid file: ${file.filename}`);
+      // Consume the stream to allow busboy to continue processing the form
+      file.stream.resume();
+      return;
     }
+
+    if (!sourceType) {
+      this.logger.error(`Source type is undefined for file: ${file.filename}`);
+      errors.push({
+        fileName: file.filename,
+        error: "Source type is required",
+      });
+      // Consume the stream to allow busboy to continue processing the form
+      file.stream.resume();
+      return;
+    }
+
+    // Convert stream to buffer and upload the file to Databricks
+    const buffer = await this.streamToBuffer(file.stream);
+
+    this.logger.debug(
+      `Successfully converted stream to buffer for file: ${file.filename}, size: ${buffer.length} bytes`,
+    );
+
+    this.logger.log(`Uploading file to Databricks: ${file.filename}`);
+    const uploadResult = await this.databricksPort.uploadFile(
+      experimentId,
+      experimentName,
+      sourceType,
+      file.filename,
+      buffer,
+    );
+
+    if (uploadResult.isSuccess()) {
+      successfulUploads.push({
+        fileName: file.filename,
+        filePath: uploadResult.value.filePath,
+      });
+
+      this.logger.log(
+        `Successfully uploaded Ambyte data file "${file.filename}" to experiment ${experimentName} (${experimentId})`,
+      );
+    } else {
+      errors.push({
+        fileName: file.filename,
+        error: uploadResult.error.message,
+      });
+
+      this.logger.error(`Failed to upload file "${file.filename}": ${uploadResult.error.message}`);
+    }
+
+    this.logger.debug(`Completed processing for file: ${file.filename}`);
   }
 
   /**
@@ -159,20 +190,20 @@ export class UploadAmbyteDataUseCase {
       `Triggering pipeline update for experiment ${experiment.name} (${experiment.id})`,
     );
 
-    // const pipelineResult = await this.databricksPort.triggerExperimentPipeline(
-    //   experiment.name,
-    //   experiment.id,
-    // );
+    const pipelineResult = await this.databricksPort.triggerExperimentPipeline(
+      experiment.name,
+      experiment.id,
+    );
 
-    // if (pipelineResult.isSuccess()) {
-    //   this.logger.log(
-    //     `Successfully triggered pipeline update for experiment ${experiment.name} (${experiment.id}). Update ID: ${pipelineResult.value.update_id}`,
-    //   );
-    // } else {
-    //   this.logger.warn(
-    //     `Failed to trigger pipeline update for experiment ${experiment.id}: ${pipelineResult.error.message}`,
-    //   );
-    // }
+    if (pipelineResult.isSuccess()) {
+      this.logger.log(
+        `Successfully triggered pipeline update for experiment ${experiment.name} (${experiment.id}). Update ID: ${pipelineResult.value.update_id}`,
+      );
+    } else {
+      this.logger.warn(
+        `Failed to trigger pipeline update for experiment ${experiment.id}: ${pipelineResult.error.message}`,
+      );
+    }
 
     return success({
       files: successfulUploads,
