@@ -313,7 +313,7 @@ describe("AmbyteUploadModal", () => {
         new File(["content"], "data.txt", { type: "text/plain" }),
         new File(["content"], "data2.txt", { type: "text/plain" }),
       ];
-      
+
       // Mock webkitRelativePath for valid structure
       Object.defineProperty(validFiles[0], "webkitRelativePath", {
         writable: false,
@@ -406,10 +406,9 @@ describe("AmbyteUploadModal", () => {
       mockUploadHook.isSuccess = true;
 
       const onUploadSuccess = vi.fn();
-      render(
-        <AmbyteUploadModal {...defaultProps} onUploadSuccess={onUploadSuccess} />,
-        { wrapper: createWrapper() },
-      );
+      render(<AmbyteUploadModal {...defaultProps} onUploadSuccess={onUploadSuccess} />, {
+        wrapper: createWrapper(),
+      });
 
       expect(screen.getByText("uploadModal.sensorFamily.label")).toBeInTheDocument();
     });
@@ -447,7 +446,7 @@ describe("AmbyteUploadModal", () => {
     it("resets state when modal is closed", async () => {
       const onOpenChange = vi.fn();
       const user = userEvent.setup();
-      
+
       render(<AmbyteUploadModal {...defaultProps} onOpenChange={onOpenChange} />, {
         wrapper: createWrapper(),
       });
@@ -565,7 +564,7 @@ describe("AmbyteUploadModal", () => {
 
     it("handles experimentId prop correctly", () => {
       const customExperimentId = "custom-experiment-123";
-      
+
       render(<AmbyteUploadModal {...defaultProps} experimentId={customExperimentId} />, {
         wrapper: createWrapper(),
       });
@@ -575,7 +574,7 @@ describe("AmbyteUploadModal", () => {
 
     it("respects onOpenChange callback", () => {
       const onOpenChange = vi.fn();
-      
+
       render(<AmbyteUploadModal {...defaultProps} onOpenChange={onOpenChange} />, {
         wrapper: createWrapper(),
       });
@@ -618,7 +617,7 @@ describe("Helper Functions", () => {
   describe("isExcludedFile", () => {
     it("identifies .DS_Store files correctly", () => {
       const dsStoreFile = new File([""], ".DS_Store", { type: "" });
-      
+
       // We can't directly test the helper function since it's not exported,
       // but we can test its behavior through the component
       expect(dsStoreFile.name).toBe(".DS_Store");
