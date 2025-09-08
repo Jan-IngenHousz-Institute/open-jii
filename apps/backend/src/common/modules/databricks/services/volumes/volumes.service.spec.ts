@@ -1,298 +1,413 @@
-import { HttpService } from "@nestjs/axios";
-import { Test, TestingModule } from "@nestjs/testing";
-import { of } from "rxjs";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import nock from "nock";
 
+import { TestHarness } from "../../../../../test/test-harness";
+import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
-import { DatabricksConfigService } from "../config/config.service";
 import { DatabricksVolumesService } from "./volumes.service";
-import { CreateVolumeParams, GetVolumeParams, VolumeResponse } from "./volumes.types";
+import type { CreateVolumeParams, GetVolumeParams, VolumeResponse } from "./volumes.types";
+
+// Constants for testing
+const MOCK_ACCESS_TOKEN = "mock-token";
+const MOCK_EXPIRES_IN = 3600;
 
 describe("DatabricksVolumesService", () => {
-  let service: DatabricksVolumesService;
-  let httpService: HttpService;
+  const testApp = TestHarness.App;
+  const databricksHost = `${process.env.DATABRICKS_HOST}`;
+
+  let volumesService: DatabricksVolumesService;
   let authService: DatabricksAuthService;
-  let configService: DatabricksConfigService;
 
-  const mockToken = "mock-token";
-  const mockHost = "https://mock-databricks.example.com";
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        DatabricksVolumesService,
-        {
-          provide: HttpService,
-          useValue: {
-            axiosRef: {
-              post: vi.fn(),
-              get: vi.fn(),
-            },
-          },
-        },
-        {
-          provide: DatabricksAuthService,
-          useValue: {
-            getAccessToken: vi.fn(),
-          },
-        },
-        {
-          provide: DatabricksConfigService,
-          useValue: {
-            getHost: vi.fn().mockReturnValue(mockHost),
-          },
-        },
-      ],
-    }).compile();
-
-    service = module.get<DatabricksVolumesService>(DatabricksVolumesService);
-    httpService = module.get<HttpService>(HttpService);
-    authService = module.get<DatabricksAuthService>(DatabricksAuthService);
-    configService = module.get<DatabricksConfigService>(DatabricksConfigService);
+  beforeAll(async () => {
+    await testApp.setup();
   });
 
-  it("should be defined", () => {
-    expect(service).toBeDefined();
+  beforeEach(async () => {
+    await testApp.beforeEach();
+    volumesService = testApp.module.get(DatabricksVolumesService);
+
+    authService = testApp.module.get(DatabricksAuthService);
+    authService.clearTokenCache();
+
+    nock.cleanAll();
+  });
+
+  afterEach(() => {
+    testApp.afterEach();
+    nock.cleanAll();
+  });
+
+  afterAll(async () => {
+    await testApp.teardown();
   });
 
   describe("createVolume", () => {
-    it("should create a volume successfully", async () => {
-      // Arrange
-      const createVolumeParams: CreateVolumeParams = {
-        catalog_name: "main",
-        name: "my_volume",
-        schema_name: "default",
-        volume_type: "MANAGED",
-        comment: "Test volume",
-      };
+    const mockCreateVolumeParams: CreateVolumeParams = {
+      catalog_name: "test_catalog",
+      schema_name: "test_schema",
+      name: "test_volume",
+      volume_type: "MANAGED",
+      comment: "Test volume for experiments",
+    };
 
-      const mockResponse: VolumeResponse = {
-        catalog_name: "main",
-        comment: "Test volume",
-        created_at: 1666369196203,
-        created_by: "test@example.com",
-        full_name: "main.default.my_volume",
-        metastore_id: "11111111-1111-1111-1111-111111111111",
-        name: "my_volume",
-        owner: "test@example.com",
-        schema_name: "default",
-        updated_at: 1666369196203,
-        updated_by: "test@example.com",
-        volume_id: "01234567-89ab-cdef-0123-456789abcdef",
-        volume_type: "MANAGED",
-      };
+    const mockVolumeResponse: VolumeResponse = {
+      catalog_name: "test_catalog",
+      schema_name: "test_schema",
+      name: "test_volume",
+      full_name: "test_catalog.test_schema.test_volume",
+      volume_id: "12345-abcde-67890-fghij",
+      volume_type: "MANAGED",
+      comment: "Test volume for experiments",
+      metastore_id: "meta-12345",
+      owner: "test-user@example.com",
+      created_at: 1620000000000,
+      created_by: "test-user@example.com",
+      updated_at: 1620000000000,
+      updated_by: "test-user@example.com",
+    };
 
-      vi.spyOn(authService, "getAccessToken").mockResolvedValue({
-        isSuccess: () => true,
-        value: mockToken,
-      } as any);
-      vi.spyOn(httpService.axiosRef, "post").mockResolvedValue({ data: mockResponse } as any);
+    it("should successfully create a managed volume", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
 
-      // Act
-      const result = await service.createVolume(createVolumeParams);
+      // Mock volume creation API call
+      nock(databricksHost)
+        .post(DatabricksVolumesService.VOLUMES_ENDPOINT)
+        .reply(200, mockVolumeResponse);
 
-      // Assert
+      // Execute create volume
+      const result = await volumesService.createVolume(mockCreateVolumeParams);
+
+      // Assert result is success
       expect(result.isSuccess()).toBe(true);
-      if (result.isSuccess()) {
-        expect(result.value).toEqual(mockResponse);
-      }
-      expect(httpService.axiosRef.post).toHaveBeenCalledWith(
-        `${mockHost}${DatabricksVolumesService.VOLUMES_ENDPOINT}`,
-        createVolumeParams,
-        expect.objectContaining({
-          headers: {
-            Authorization: `Bearer ${mockToken}`,
-            "Content-Type": "application/json",
-          },
-        }),
-      );
+      assertSuccess(result);
+      expect(result.value).toEqual(mockVolumeResponse);
+    });
+
+    it("should successfully create an external volume", async () => {
+      const externalVolumeParams: CreateVolumeParams = {
+        ...mockCreateVolumeParams,
+        volume_type: "EXTERNAL",
+        storage_location: "s3://my-bucket/volumes/test_volume",
+      };
+
+      const externalVolumeResponse: VolumeResponse = {
+        ...mockVolumeResponse,
+        volume_type: "EXTERNAL",
+        storage_location: "s3://my-bucket/volumes/test_volume",
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock volume creation API call
+      nock(databricksHost)
+        .post(DatabricksVolumesService.VOLUMES_ENDPOINT)
+        .reply(200, externalVolumeResponse);
+
+      // Execute create volume
+      const result = await volumesService.createVolume(externalVolumeParams);
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual(externalVolumeResponse);
     });
 
     it("should handle errors when creating a volume", async () => {
-      // Arrange
-      const createVolumeParams: CreateVolumeParams = {
-        catalog_name: "main",
-        name: "my_volume",
-        schema_name: "default",
-        volume_type: "EXTERNAL",
-        storage_location: "s3://invalid-bucket",
-      };
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
 
-      vi.spyOn(authService, "getAccessToken").mockResolvedValue({
-        isSuccess: () => true,
-        value: mockToken,
-      } as any);
-      vi.spyOn(httpService.axiosRef, "post").mockRejectedValue(
-        new Error("Failed to create volume"),
-      );
+      // Mock volume creation API call with error
+      nock(databricksHost).post(DatabricksVolumesService.VOLUMES_ENDPOINT).reply(400, {
+        error_code: "INVALID_PARAMETER_VALUE",
+        message: "Volume name already exists in schema",
+      });
 
-      // Act
-      const result = await service.createVolume(createVolumeParams);
+      // Execute create volume
+      const result = await volumesService.createVolume(mockCreateVolumeParams);
 
-      // Assert
-      expect(result.isFailure()).toBe(true);
-      expect(httpService.axiosRef.post).toHaveBeenCalled();
+      // Assert result is failure
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to create volume");
     });
 
-    it("should handle auth token failure", async () => {
-      // Arrange
-      const createVolumeParams: CreateVolumeParams = {
-        catalog_name: "main",
-        name: "my_volume",
-        schema_name: "default",
-        volume_type: "MANAGED",
-      };
+    it("should handle unauthorized errors when creating a volume", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
 
-      vi.spyOn(authService, "getAccessToken").mockResolvedValue({
-        isSuccess: () => false,
-        isFailure: () => true,
-        error: new Error("Auth failed"),
-      } as any);
+      // Mock volume creation API call with unauthorized error
+      nock(databricksHost).post(DatabricksVolumesService.VOLUMES_ENDPOINT).reply(403, {
+        error_code: "PERMISSION_DENIED",
+        message: "User does not have CREATE VOLUME privilege on schema",
+      });
 
-      // Act
-      const result = await service.createVolume(createVolumeParams);
+      // Execute create volume
+      const result = await volumesService.createVolume(mockCreateVolumeParams);
 
-      // Assert
-      expect(result.isFailure()).toBe(true);
-      expect(httpService.axiosRef.post).not.toHaveBeenCalled();
+      // Assert result is failure
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to create volume");
+    });
+
+    it("should handle token fetch failure when creating a volume", async () => {
+      // Mock token request with error
+      nock(databricksHost)
+        .post(DatabricksAuthService.TOKEN_ENDPOINT)
+        .reply(401, { error_description: "Invalid client credentials" });
+
+      // Execute create volume
+      const result = await volumesService.createVolume(mockCreateVolumeParams);
+
+      // Assert result is failure
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to create volume");
+    });
+
+    it("should handle network errors during volume creation", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock volume creation API call with network error
+      nock(databricksHost)
+        .post(DatabricksVolumesService.VOLUMES_ENDPOINT)
+        .replyWithError("Network error");
+
+      // Execute create volume
+      const result = await volumesService.createVolume(mockCreateVolumeParams);
+
+      // Assert result is failure
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to create volume");
     });
   });
 
   describe("getVolume", () => {
-    it("should get a volume successfully", async () => {
-      // Arrange
-      const getVolumeParams: GetVolumeParams = {
-        name: "main.default.my_volume",
-      };
+    const mockGetVolumeParams: GetVolumeParams = {
+      name: "test_catalog.test_schema.test_volume",
+    };
 
-      const mockResponse: VolumeResponse = {
-        catalog_name: "main",
-        comment: "Test volume",
-        created_at: 1666369196203,
-        created_by: "test@example.com",
-        full_name: "main.default.my_volume",
-        metastore_id: "11111111-1111-1111-1111-111111111111",
-        name: "my_volume",
-        owner: "test@example.com",
-        schema_name: "default",
-        updated_at: 1666369196203,
-        updated_by: "test@example.com",
-        volume_id: "01234567-89ab-cdef-0123-456789abcdef",
-        volume_type: "MANAGED",
-      };
+    const mockVolumeResponse: VolumeResponse = {
+      catalog_name: "test_catalog",
+      schema_name: "test_schema",
+      name: "test_volume",
+      full_name: "test_catalog.test_schema.test_volume",
+      volume_id: "12345-abcde-67890-fghij",
+      volume_type: "MANAGED",
+      comment: "Test volume for experiments",
+      metastore_id: "meta-12345",
+      owner: "test-user@example.com",
+      created_at: 1620000000000,
+      created_by: "test-user@example.com",
+      updated_at: 1620000000000,
+      updated_by: "test-user@example.com",
+    };
 
-      vi.spyOn(authService, "getAccessToken").mockResolvedValue({
-        isSuccess: () => true,
-        value: mockToken,
-      } as any);
-      vi.spyOn(httpService.axiosRef, "get").mockResolvedValue({ data: mockResponse } as any);
+    it("should successfully get a volume", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
 
-      // Act
-      const result = await service.getVolume(getVolumeParams);
+      // Mock volume get API call
+      nock(databricksHost)
+        .get(
+          `${DatabricksVolumesService.VOLUMES_ENDPOINT}/${encodeURIComponent(mockGetVolumeParams.name)}`,
+        )
+        .reply(200, mockVolumeResponse);
 
-      // Assert
+      // Execute get volume
+      const result = await volumesService.getVolume(mockGetVolumeParams);
+
+      // Assert result is success
       expect(result.isSuccess()).toBe(true);
-      if (result.isSuccess()) {
-        expect(result.value).toEqual(mockResponse);
-      }
-      expect(httpService.axiosRef.get).toHaveBeenCalledWith(
-        `${mockHost}${DatabricksVolumesService.VOLUMES_ENDPOINT}/${encodeURIComponent(getVolumeParams.name)}`,
-        expect.objectContaining({
-          headers: {
-            Authorization: `Bearer ${mockToken}`,
-            "Content-Type": "application/json",
-          },
-        }),
-      );
+      assertSuccess(result);
+      expect(result.value).toEqual(mockVolumeResponse);
     });
 
-    it("should handle include_browse parameter", async () => {
-      // Arrange
-      const getVolumeParams: GetVolumeParams = {
-        name: "main.default.my_volume",
+    it("should successfully get a volume with include_browse parameter", async () => {
+      const paramsWithBrowse: GetVolumeParams = {
+        ...mockGetVolumeParams,
         include_browse: true,
       };
 
-      const mockResponse: VolumeResponse = {
-        catalog_name: "main",
-        comment: "Test volume",
-        created_at: 1666369196203,
-        created_by: "test@example.com",
-        full_name: "main.default.my_volume",
-        metastore_id: "11111111-1111-1111-1111-111111111111",
-        name: "my_volume",
-        owner: "test@example.com",
-        schema_name: "default",
-        updated_at: 1666369196203,
-        updated_by: "test@example.com",
-        volume_id: "01234567-89ab-cdef-0123-456789abcdef",
-        volume_type: "MANAGED",
-        browse_only: true,
+      const responseWithBrowse: VolumeResponse = {
+        ...mockVolumeResponse,
+        browse_only: false,
       };
 
-      vi.spyOn(authService, "getAccessToken").mockResolvedValue({
-        isSuccess: () => true,
-        value: mockToken,
-      } as any);
-      vi.spyOn(httpService.axiosRef, "get").mockResolvedValue({ data: mockResponse } as any);
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
 
-      // Act
-      const result = await service.getVolume(getVolumeParams);
+      // Mock volume get API call with query parameter
+      nock(databricksHost)
+        .get(
+          `${DatabricksVolumesService.VOLUMES_ENDPOINT}/${encodeURIComponent(paramsWithBrowse.name)}`,
+        )
+        .query({ include_browse: true })
+        .reply(200, responseWithBrowse);
 
-      // Assert
+      // Execute get volume
+      const result = await volumesService.getVolume(paramsWithBrowse);
+
+      // Assert result is success
       expect(result.isSuccess()).toBe(true);
-      if (result.isSuccess()) {
-        expect(result.value).toEqual(mockResponse);
-      }
-      expect(httpService.axiosRef.get).toHaveBeenCalledWith(
-        `${mockHost}${DatabricksVolumesService.VOLUMES_ENDPOINT}/${encodeURIComponent(getVolumeParams.name)}?include_browse=true`,
-        expect.objectContaining({
-          headers: {
-            Authorization: `Bearer ${mockToken}`,
-            "Content-Type": "application/json",
-          },
-        }),
-      );
+      assertSuccess(result);
+      expect(result.value).toEqual(responseWithBrowse);
     });
 
-    it("should handle errors when getting a volume", async () => {
-      // Arrange
-      const getVolumeParams: GetVolumeParams = {
-        name: "main.default.nonexistent_volume",
-      };
+    it("should handle volume not found errors", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
 
-      vi.spyOn(authService, "getAccessToken").mockResolvedValue({
-        isSuccess: () => true,
-        value: mockToken,
-      } as any);
-      vi.spyOn(httpService.axiosRef, "get").mockRejectedValue(new Error("Volume not found"));
+      // Mock volume get API call with not found error
+      nock(databricksHost)
+        .get(
+          `${DatabricksVolumesService.VOLUMES_ENDPOINT}/${encodeURIComponent(mockGetVolumeParams.name)}`,
+        )
+        .reply(404, {
+          error_code: "VOLUME_NOT_FOUND",
+          message: "Volume test_catalog.test_schema.test_volume not found",
+        });
 
-      // Act
-      const result = await service.getVolume(getVolumeParams);
+      // Execute get volume
+      const result = await volumesService.getVolume(mockGetVolumeParams);
 
-      // Assert
-      expect(result.isFailure()).toBe(true);
-      expect(httpService.axiosRef.get).toHaveBeenCalled();
+      // Assert result is failure
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to get volume");
     });
 
-    it("should handle auth token failure", async () => {
-      // Arrange
-      const getVolumeParams: GetVolumeParams = {
-        name: "main.default.my_volume",
+    it("should handle permission denied errors when getting a volume", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock volume get API call with permission denied error
+      nock(databricksHost)
+        .get(
+          `${DatabricksVolumesService.VOLUMES_ENDPOINT}/${encodeURIComponent(mockGetVolumeParams.name)}`,
+        )
+        .reply(403, {
+          error_code: "PERMISSION_DENIED",
+          message: "User does not have READ VOLUME privilege",
+        });
+
+      // Execute get volume
+      const result = await volumesService.getVolume(mockGetVolumeParams);
+
+      // Assert result is failure
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to get volume");
+    });
+
+    it("should handle token fetch failure when getting a volume", async () => {
+      // Mock token request with error
+      nock(databricksHost)
+        .post(DatabricksAuthService.TOKEN_ENDPOINT)
+        .reply(401, { error_description: "Invalid client credentials" });
+
+      // Execute get volume
+      const result = await volumesService.getVolume(mockGetVolumeParams);
+
+      // Assert result is failure
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to get volume");
+    });
+
+    it("should handle network errors during volume retrieval", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock volume get API call with network error
+      nock(databricksHost)
+        .get(
+          `${DatabricksVolumesService.VOLUMES_ENDPOINT}/${encodeURIComponent(mockGetVolumeParams.name)}`,
+        )
+        .replyWithError("Network error");
+
+      // Execute get volume
+      const result = await volumesService.getVolume(mockGetVolumeParams);
+
+      // Assert result is failure
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to get volume");
+    });
+
+    it("should properly encode volume names with special characters", async () => {
+      const specialVolumeParams: GetVolumeParams = {
+        name: "test_catalog.test-schema.test_volume-2024",
       };
 
-      vi.spyOn(authService, "getAccessToken").mockResolvedValue({
-        isSuccess: () => false,
-        isFailure: () => true,
-        error: new Error("Auth failed"),
-      } as any);
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
 
-      // Act
-      const result = await service.getVolume(getVolumeParams);
+      // Mock volume get API call with encoded name
+      nock(databricksHost)
+        .get(
+          `${DatabricksVolumesService.VOLUMES_ENDPOINT}/${encodeURIComponent(specialVolumeParams.name)}`,
+        )
+        .reply(200, {
+          ...mockVolumeResponse,
+          name: "test_volume-2024",
+          full_name: "test_catalog.test-schema.test_volume-2024",
+        });
 
-      // Assert
-      expect(result.isFailure()).toBe(true);
-      expect(httpService.axiosRef.get).not.toHaveBeenCalled();
+      // Execute get volume
+      const result = await volumesService.getVolume(specialVolumeParams);
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value.full_name).toBe("test_catalog.test-schema.test_volume-2024");
     });
   });
 });
