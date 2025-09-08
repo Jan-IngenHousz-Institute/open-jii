@@ -353,9 +353,15 @@ describe("AmbyteUploadModal", () => {
     });
 
     it("validates file size limits", () => {
-      // Create a large file that exceeds the 100MB limit
-      const largeFile = new File(["x".repeat(101 * 1024 * 1024)], "large.txt", {
+      // Create a mock large file without actually allocating the memory
+      const largeFile = new File(["content"], "large.txt", {
         type: "text/plain",
+      });
+
+      // Mock the file size to exceed the 100MB limit
+      Object.defineProperty(largeFile, "size", {
+        writable: false,
+        value: 101 * 1024 * 1024, // 101MB
       });
 
       Object.defineProperty(largeFile, "webkitRelativePath", {
@@ -363,6 +369,7 @@ describe("AmbyteUploadModal", () => {
         value: "Ambyte_1/large.txt",
       });
 
+      // The validation logic would detect this file as too large
       expect(screen.getByText("uploadModal.fileUpload.title")).toBeInTheDocument();
     });
 
