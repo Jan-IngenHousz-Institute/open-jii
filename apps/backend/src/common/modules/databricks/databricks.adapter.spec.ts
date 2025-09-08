@@ -243,11 +243,9 @@ describe("DatabricksAdapter", () => {
 
       // Mock file upload API call
       nock(databricksHost)
-        .post(DatabricksFilesService.FILES_ENDPOINT)
-        .query({ path: expectedFilePath, overwrite: "true" })
-        .reply(200, {
-          file_id: "file-abc123",
-        });
+        .put(`${DatabricksFilesService.FILES_ENDPOINT}${expectedFilePath}`)
+        .query({ overwrite: "false" })
+        .reply(200);
 
       // Execute upload file
       const result = await databricksAdapter.uploadFile(
@@ -262,7 +260,6 @@ describe("DatabricksAdapter", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toEqual({
-        fileId: "file-abc123",
         filePath: expectedFilePath,
       });
     });
@@ -288,11 +285,9 @@ describe("DatabricksAdapter", () => {
 
       // Mock file upload API call
       nock(databricksHost)
-        .post(DatabricksFilesService.FILES_ENDPOINT)
-        .query({ path: expectedFilePath, overwrite: "true" })
-        .reply(200, {
-          file_id: "file-abc123",
-        });
+        .put(`${DatabricksFilesService.FILES_ENDPOINT}${expectedFilePath}`)
+        .query({ overwrite: "false" })
+        .reply(200);
 
       // Execute upload file
       const result = await databricksAdapter.uploadFile(
