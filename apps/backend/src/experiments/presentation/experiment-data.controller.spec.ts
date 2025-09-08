@@ -153,10 +153,10 @@ describe("ExperimentDataController", () => {
       );
     });
 
-    it("should return 500 when uploaded file is not a Buffer", async () => {
+    it("should return 400 when no files are uploaded", async () => {
       // Create an experiment
       const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment for Invalid File",
+        name: "Test Experiment for No Files",
         userId: testUserId,
       });
 
@@ -188,13 +188,13 @@ describe("ExperimentDataController", () => {
         id: experiment.id,
       });
 
-      // Make the request with no file attached (which will result in an internal server error)
+      // Make the request with no file attached (which will result in bad request)
       await testApp
         .post(path)
         .withAuth(testUserId)
         .set("Content-Type", "multipart/form-data")
         .field("sourceType", "ambyte")
-        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+        .expect(StatusCodes.BAD_REQUEST);
 
       // Verify that the upload method was not called
       expect(uploadFileSpy).not.toHaveBeenCalled();
