@@ -9,6 +9,7 @@ import { DatabricksJobsService } from "./services/jobs/jobs.service";
 import { DatabricksPipelinesService } from "./services/pipelines/pipelines.service";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import { DatabricksTablesService } from "./services/tables/tables.service";
+import { DatabricksVolumesService } from "./services/volumes/volumes.service";
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { DatabricksTablesService } from "./services/tables/tables.service";
     DatabricksTablesService,
     DatabricksFilesService,
     DatabricksPipelinesService,
+    DatabricksVolumesService,
     DatabricksAdapter,
   ],
   exports: [DatabricksAdapter, DatabricksConfigService],

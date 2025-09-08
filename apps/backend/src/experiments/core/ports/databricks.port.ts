@@ -1,7 +1,4 @@
-import type {
-  CreateDirectoryResponse,
-  UploadFileResponse,
-} from "../../../common/modules/databricks/services/files/files.types";
+import type { UploadFileResponse } from "../../../common/modules/databricks/services/files/files.types";
 import type {
   DatabricksHealthCheck,
   DatabricksJobTriggerParams,
@@ -10,6 +7,10 @@ import type {
 import type { DatabricksPipelineStartUpdateResponse } from "../../../common/modules/databricks/services/pipelines/pipelines.types";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import type { ListTablesResponse } from "../../../common/modules/databricks/services/tables/tables.types";
+import type {
+  CreateVolumeParams,
+  VolumeResponse,
+} from "../../../common/modules/databricks/services/volumes/volumes.types";
 import type { Result } from "../../../common/utils/fp-utils";
 
 /**
@@ -74,17 +75,40 @@ export interface DatabricksPort {
   ): Promise<Result<DatabricksPipelineStartUpdateResponse>>;
 
   /**
-   * Create a directory structure in Databricks for a specific experiment.
-   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}
+   * Create a new volume in Databricks Unity Catalog
    *
-   * @param experimentId - ID of the experiment
-   * @param experimentName - Name of the experiment for schema construction
-   * @param sourceType - Type of data source (e.g., 'ambyte')
-   * @returns Result containing the created directory path
+   * @param params - Volume creation parameters
+   * @returns Result containing the created volume information
    */
-  createExperimentDirectory(
-    experimentId: string,
+  createVolume(params: CreateVolumeParams): Promise<Result<VolumeResponse>>;
+
+  /**
+   * Create a new managed volume under an experiment schema
+   *
+   * @param experimentName - Name of the experiment
+   * @param experimentId - ID of the experiment
+   * @param volumeName - Name of the volume to create
+   * @param comment - Optional comment for the volume
+   * @returns Result containing the created volume information
+   */
+  createExperimentVolume(
     experimentName: string,
-    sourceType: string,
-  ): Promise<Result<CreateDirectoryResponse>>;
+    experimentId: string,
+    volumeName: string,
+    comment?: string,
+  ): Promise<Result<VolumeResponse>>;
+
+  /**
+   * Get a volume from an experiment schema
+   *
+   * @param experimentName - Name of the experiment
+   * @param experimentId - ID of the experiment
+   * @param volumeName - Name of the volume to retrieve
+   * @returns Result containing the volume information
+   */
+  getExperimentVolume(
+    experimentName: string,
+    experimentId: string,
+    volumeName: string,
+  ): Promise<Result<VolumeResponse>>;
 }

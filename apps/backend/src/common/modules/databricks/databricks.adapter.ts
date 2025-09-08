@@ -1,10 +1,10 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import { DatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { Result } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
-import type { CreateDirectoryResponse, UploadFileResponse } from "./services/files/files.types";
+import type { UploadFileResponse } from "./services/files/files.types";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
 import type { DatabricksHealthCheck } from "./services/jobs/jobs.types";
 import type {
@@ -17,15 +17,20 @@ import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData } from "./services/sql/sql.types";
 import { DatabricksTablesService } from "./services/tables/tables.service";
 import type { ListTablesResponse } from "./services/tables/tables.types";
+import { DatabricksVolumesService } from "./services/volumes/volumes.service";
+import type { CreateVolumeParams, VolumeResponse } from "./services/volumes/volumes.types";
 
 @Injectable()
 export class DatabricksAdapter implements DatabricksPort {
+  private readonly logger = new Logger(DatabricksAdapter.name);
+
   constructor(
     private readonly jobsService: DatabricksJobsService,
     private readonly sqlService: DatabricksSqlService,
     private readonly tablesService: DatabricksTablesService,
     private readonly filesService: DatabricksFilesService,
     private readonly pipelinesService: DatabricksPipelinesService,
+    private readonly volumesService: DatabricksVolumesService,
     private readonly configService: DatabricksConfigService,
   ) {}
 
@@ -90,31 +95,6 @@ export class DatabricksAdapter implements DatabricksPort {
   }
 
   /**
-   * Create a directory structure in Databricks for a specific experiment.
-   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}
-   *
-   * @param experimentId - ID of the experiment
-   * @param experimentName - Name of the experiment for schema construction
-   * @param sourceType - Type of data source (e.g., 'ambyte')
-   * @returns Result containing the created directory path
-   */
-  async createExperimentDirectory(
-    experimentId: string,
-    experimentName: string,
-    sourceType: string,
-  ): Promise<Result<CreateDirectoryResponse>> {
-    // Construct schema name following the pattern in experiment_pipeline_create_task.py
-    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-    const schemaName = `exp_${cleanName}_${experimentId}`;
-    const catalogName = this.configService.getCatalogName();
-
-    // Construct the full path
-    const directoryPath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}`;
-
-    return this.filesService.createDirectory(directoryPath);
-  }
-
-  /**
    * Trigger an experiment pipeline by name
    * Looks up a pipeline by name and starts an update
    *
@@ -144,5 +124,83 @@ export class DatabricksAdapter implements DatabricksPort {
     return this.pipelinesService.startPipelineUpdate({
       pipelineId,
     });
+  }
+
+  /**
+   * Create a new volume in Databricks Unity Catalog
+   *
+   * @param params - Volume creation parameters
+   * @returns Result containing the created volume information
+   */
+  async createVolume(params: CreateVolumeParams): Promise<Result<VolumeResponse>> {
+    return this.volumesService.createVolume(params);
+  }
+
+  /**
+   * Create a new managed volume under an experiment schema
+   *
+   * @param experimentName - Name of the experiment
+   * @param experimentId - ID of the experiment
+   * @param volumeName - Name of the volume to create
+   * @param comment - Optional comment for the volume
+   * @returns Result containing the created volume information
+   */
+  async createExperimentVolume(
+    experimentName: string,
+    experimentId: string,
+    volumeName: string,
+    comment?: string,
+  ): Promise<Result<VolumeResponse>> {
+    this.logger.log(
+      `Creating managed volume '${volumeName}' for experiment ${experimentName} (${experimentId})`,
+    );
+
+    // Construct schema name following the pattern in experiment_pipeline_create_task.py
+    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+    const schemaName = `exp_${cleanName}_${experimentId}`;
+    const catalogName = this.configService.getCatalogName();
+
+    // Create volume parameters
+    const params: CreateVolumeParams = {
+      catalog_name: catalogName,
+      schema_name: schemaName,
+      name: volumeName,
+      volume_type: "MANAGED",
+    };
+
+    // Add comment if provided
+    if (comment) {
+      params.comment = comment;
+    }
+
+    return this.volumesService.createVolume(params);
+  }
+
+  /**
+   * Get a volume from an experiment schema
+   *
+   * @param experimentName - Name of the experiment
+   * @param experimentId - ID of the experiment
+   * @param volumeName - Name of the volume to retrieve
+   * @returns Result containing the volume information
+   */
+  async getExperimentVolume(
+    experimentName: string,
+    experimentId: string,
+    volumeName: string,
+  ): Promise<Result<VolumeResponse>> {
+    this.logger.log(
+      `Getting volume '${volumeName}' for experiment ${experimentName} (${experimentId})`,
+    );
+
+    // Construct schema name following the pattern in experiment_pipeline_create_task.py
+    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+    const schemaName = `exp_${cleanName}_${experimentId}`;
+    const catalogName = this.configService.getCatalogName();
+
+    // Construct the full volume name
+    const fullVolumeName = `${catalogName}.${schemaName}.${volumeName}`;
+
+    return await this.volumesService.getVolume({ name: fullVolumeName });
   }
 }

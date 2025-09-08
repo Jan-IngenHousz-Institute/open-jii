@@ -176,6 +176,25 @@ export class ExperimentDataController {
 
       const { experiment } = experimentAccessResult.value;
 
+      // Prepare the upload environment by ensuring the required volume exists
+      this.logger.log(
+        `Preparing upload environment for experiment ${experiment.name} (${experimentId})`,
+      );
+      const prepResult = await this.uploadAmbyteDataUseCase.preexecute(
+        experimentId,
+        experiment.name,
+      );
+
+      if (prepResult.isFailure()) {
+        this.logger.error(`Failed to prepare upload environment: ${prepResult.error.message}`);
+        return handleFailure(prepResult, this.logger);
+      }
+
+      this.logger.log(
+        `Upload environment prepared successfully. Volume: ${prepResult.value.volumeName}, ` +
+          `Created: ${prepResult.value.volumeCreated}, Existed: ${prepResult.value.volumeExists}`,
+      );
+
       // Initialize arrays to collect results
       const successfulUploads: { fileName: string; fileId: string; filePath: string }[] = [];
       const errors: { fileName: string; error: string }[] = [];
@@ -246,7 +265,7 @@ export class ExperimentDataController {
             // Check if sourceType is defined before processing any files
             if (sourceType === undefined) {
               this.logger.error(`Received file ${filename} but sourceType is not defined`);
-              fileStream.resume(); // Skip this file
+              fileStream.resume();
               reject(new Error("sourceType field must be provided before file uploads"));
               return;
             }
@@ -293,12 +312,18 @@ export class ExperimentDataController {
             );
 
             // Wait for all file processing to complete
-            processingQueue.waitForCompletion().catch((err) => {
-              this.logger.error(
-                `Error while waiting for file processing to complete: ${String(err)}`,
-              );
-              reject(err instanceof Error ? err : new Error(String(err)));
-            });
+            processingQueue
+              .waitForCompletion()
+              .then(() => {
+                this.logger.log("All file processing completed successfully");
+                resolve();
+              })
+              .catch((err) => {
+                this.logger.error(
+                  `Error while waiting for file processing to complete: ${String(err)}`,
+                );
+                reject(err instanceof Error ? err : new Error(String(err)));
+              });
           });
 
           // Pipe the request to busboy
