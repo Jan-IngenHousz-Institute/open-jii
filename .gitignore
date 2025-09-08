@@ -88,6 +88,4 @@ pids
 *.seed
 *.pid.lock
 
-volumes
-
 .cache
