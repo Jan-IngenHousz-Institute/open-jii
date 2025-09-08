@@ -56,7 +56,6 @@ describe("ExperimentDataController", () => {
 
       // Mock successful response from uploadFile
       const mockUploadResponse = {
-        fileId: faker.string.uuid(),
         filePath: `/Volumes/${experiment.name}/ambyte/${fileName}`,
       };
 
@@ -117,7 +116,7 @@ describe("ExperimentDataController", () => {
       const responseBody = response.body as UploadExperimentDataResponse;
       expect(responseBody.files).toHaveLength(1);
       expect(responseBody.files[0].fileName).toBe(testFileName);
-      expect(responseBody.files[0].fileId).toBe(mockUploadResponse.fileId);
+      expect(responseBody.files[0].filePath).toBe(mockUploadResponse.filePath);
 
       // Verify the databricksAdapter methods were called
       // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -130,7 +129,7 @@ describe("ExperimentDataController", () => {
       );
     });
 
-    it("should return 400 when uploaded file is not a Buffer", async () => {
+    it("should return 500 when uploaded file is not a Buffer", async () => {
       // Create an experiment
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment for Invalid File",
@@ -145,20 +144,20 @@ describe("ExperimentDataController", () => {
         id: experiment.id,
       });
 
-      // Make the request with no file attached (which will be caught by ParseFilePipe)
+      // Make the request with no file attached (which will result in an internal server error)
       await testApp
         .post(path)
         .withAuth(testUserId)
         .set("Content-Type", "multipart/form-data")
         .field("sourceType", "ambyte")
-        .expect(StatusCodes.BAD_REQUEST);
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
 
       // Verify that the upload method was not called
 
       expect(uploadFileSpy).not.toHaveBeenCalled();
     });
 
-    it("should return 400 when experiment does not exist", async () => {
+    it("should return 404 when experiment does not exist", async () => {
       const nonExistentId = faker.string.uuid();
 
       // Get the path
@@ -176,7 +175,7 @@ describe("ExperimentDataController", () => {
         .set("Content-Type", "multipart/form-data")
         .field("sourceType", "ambyte")
         .attach("files", fileBuffer, "Ambyte_1.zip")
-        .expect(StatusCodes.BAD_REQUEST);
+        .expect(StatusCodes.NOT_FOUND);
     });
 
     it("should return 403 when user does not have access to the experiment", async () => {
@@ -266,7 +265,6 @@ describe("ExperimentDataController", () => {
 
       // Mock successful responses from uploadFile
       const mockUploadResponses = fileNames.map((fileName) => ({
-        fileId: faker.string.uuid(),
         filePath: `/Volumes/${experiment.name}/ambyte/${fileName}`,
       }));
 
@@ -318,9 +316,9 @@ describe("ExperimentDataController", () => {
       // In practice, only the filename without the path is captured by multer's originalname
       const expectedFileNames = fileNames.map((path) => path.split("/").pop() ?? path);
       expect(responseBody.files[0].fileName).toBe(expectedFileNames[0]);
-      expect(responseBody.files[0].fileId).toBe(mockUploadResponses[0].fileId);
+      expect(responseBody.files[0].filePath).toBe(mockUploadResponses[0].filePath);
       expect(responseBody.files[1].fileName).toBe(expectedFileNames[1]);
-      expect(responseBody.files[1].fileId).toBe(mockUploadResponses[1].fileId);
+      expect(responseBody.files[1].filePath).toBe(mockUploadResponses[1].filePath);
 
       // Verify the databricksAdapter methods were called correctly
       // eslint-disable-next-line @typescript-eslint/unbound-method

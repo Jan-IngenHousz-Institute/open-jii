@@ -231,7 +231,7 @@ describe("DatabricksAdapter", () => {
 
       // Calculate expected schema name and file path based on adapter implementation
       const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-      const schemaName = `exp_${cleanName}_${experimentId.replace(/-/g, "_")}`;
+      const schemaName = `exp_${cleanName}_${experimentId}`;
       const expectedFilePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}/${fileName}`;
 
       // Mock token request
@@ -273,7 +273,7 @@ describe("DatabricksAdapter", () => {
 
       // Calculate expected schema name and file path based on adapter implementation
       const cleanName = specialExperimentName.toLowerCase().trim().replace(/ /g, "_");
-      const schemaName = `exp_${cleanName}_${experimentId.replace(/-/g, "_")}`;
+      const schemaName = `exp_${cleanName}_${experimentId}`;
       const expectedFilePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}/${fileName}`;
 
       // Mock token request
@@ -327,7 +327,7 @@ describe("DatabricksAdapter", () => {
         .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
         .query(true)
         .reply(200, {
-          pipelines: [
+          statuses: [
             {
               pipeline_id: pipelineId,
               name: pipelineName,
@@ -379,7 +379,7 @@ describe("DatabricksAdapter", () => {
         .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
         .query(true)
         .reply(200, {
-          pipelines: [],
+          statuses: [],
         });
 
       // Execute trigger experiment pipeline
@@ -413,7 +413,7 @@ describe("DatabricksAdapter", () => {
         .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
         .query(true)
         .reply(200, {
-          pipelines: [
+          statuses: [
             {
               pipeline_id: pipelineId,
               name: pipelineName,
