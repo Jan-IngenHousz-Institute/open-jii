@@ -128,6 +128,7 @@ export class ExperimentDataController {
 
           // Handle regular form fields
           bb.on("field", (fieldname, value) => {
+            this.logger.debug(`Received field: ${fieldname}`);
             if (fieldname === "sourceType") {
               sourceType = value;
             }
