@@ -19,6 +19,60 @@
       "title": "Datenanalyse",
       "noResults": "Keine Analyseergebnisse verfügbar.",
       "description": "Analyseergebnisse und Berichte werden hier angezeigt, sobald die Datenerfassung beginnt."
+    },
+    "uploadModal": {
+      "title": "Sensordaten hochladen",
+      "description": "Laden Sie Sensordaten zur Analyse in Ihr Experiment hoch",
+      "sensorFamily": {
+        "label": "Sensorfamilie auswählen",
+        "description": "Wählen Sie den Typ der Sensordaten, die Sie hochladen möchten"
+      },
+      "sensorTypes": {
+        "multispeq": {
+          "label": "MultispeQ",
+          "description": "MultispeQ-Sensordaten-Upload (in Kürze)",
+          "comingSoon": "In Kürze"
+        },
+        "ambyte": {
+          "label": "Ambyte",
+          "description": "Ambyte-Sensorordner mit Messdaten hochladen"
+        }
+      },
+      "fileUpload": {
+        "title": "Ambyte-Daten hochladen",
+        "description": "Wählen Sie einen Ambyte-Ordner (z. B. \"Ambyte_10\") oder einzelne Ambit-Unterordner (z. B. \"1\", \"2\", \"3\", \"4\"). Der Ordner sollte .txt-Messdateien enthalten.",
+        "selectFolder": "Ambyte-Ordner auswählen",
+        "changeSelection": "Ordnerauswahl ändern",
+        "browseInstruction": "Klicken Sie hier, um nach einem Ambyte-Datenordner zu suchen",
+        "selectedFiles": "Ausgewählt: {{count}} Dateien",
+        "validationErrors": "Validierungsfehler:",
+        "back": "Zurück",
+        "uploadFiles": "Dateien hochladen",
+        "uploading": "Wird hochgeladen..."
+      },
+      "uploading": {
+        "title": "Daten werden hochgeladen",
+        "description": "Bitte warten Sie, während wir Ihre Sensordaten verarbeiten..."
+      },
+      "success": {
+        "title": "Upload erfolgreich",
+        "description": "Ihre Sensordaten wurden erfolgreich hochgeladen und stehen nun zur Analyse zur Verfügung.",
+        "close": "Schließen"
+      },
+      "error": {
+        "title": "Upload fehlgeschlagen",
+        "close": "Schließen",
+        "retry": "Erneut versuchen"
+      },
+      "validation": {
+        "title": "Validierungsfehler:",
+        "noFiles": "Keine Dateien ausgewählt",
+        "selectFolder": "Bitte wählen Sie einen Ordner mit Ambyte-Daten aus, keine einzelnen Dateien",
+        "invalidStructure": "Ungültige Ambyte-Ordnerstruktur. Erwartete Ordner wie 'Ambyte_10' oder nummerierte Ordner '1', '2', '3', '4'",
+        "fileSizeExceeded": "{{count}} Datei(en) überschreiten die maximale Größenbeschränkung von 100 MB",
+        "unsupportedExtensions": "{{count}} Datei(en) haben nicht unterstützte Erweiterungen. Erlaubt: {{extensions}}",
+        "uploadFailed": "Upload fehlgeschlagen"
+      }
     }
   }
 }

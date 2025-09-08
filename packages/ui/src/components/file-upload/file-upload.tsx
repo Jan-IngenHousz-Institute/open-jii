@@ -1,316 +1,188 @@
 "use client";
 
-import { Upload, X, FileIcon, Loader2, AlertCircle } from "lucide-react";
-import * as React from "react";
+import { Upload } from "lucide-react";
+import React, { useCallback, useRef } from "react";
 
-import { cva, type VariantProps } from "../../lib/utils";
 import { cn } from "../../lib/utils";
-import { Button } from "../button";
-import { Progress } from "../progress";
 
-export interface ValidationResult {
-  isValid: boolean;
-  errors: string[];
-}
+export interface FileUploadProps {
+  /**
+   * Files currently selected
+   */
+  files: File[] | FileList | null;
 
-const fileUploadVariants = cva(
-  "relative rounded-lg border-2 border-dashed transition-colors min-h-[200px] flex flex-col items-center justify-center p-6",
-  {
-    variants: {
-      state: {
-        default: "border-muted-foreground/25 hover:border-primary/50",
-        active: "border-primary bg-primary/5",
-        disabled: "cursor-not-allowed opacity-50",
-        loading: "cursor-wait",
-        error: "border-destructive bg-destructive/5",
-        success: "border-green-500 bg-green-50 dark:bg-green-950/20",
-      },
-      size: {
-        sm: "min-h-[150px] p-4",
-        default: "min-h-[200px] p-6",
-        lg: "min-h-[250px] p-8",
-      },
-    },
-    defaultVariants: {
-      state: "default",
-      size: "default",
-    },
-  },
-);
+  /**
+   * Callback when files are selected/dropped
+   */
+  onFilesChange: (files: FileList | null) => void;
 
-export interface FileUploadProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof fileUploadVariants> {
-  onFileSelect: (files: FileList | null) => void;
-  accept?: string;
+  /**
+   * Whether the upload is in progress
+   */
+  isUploading?: boolean;
+
+  /**
+   * Whether to allow directory uploads (webkitdirectory)
+   */
+  allowDirectories?: boolean;
+
+  /**
+   * Custom class name for the dropzone container
+   */
+  className?: string;
+
+  /**
+   * Custom content for the dropzone
+   */
+  children?: React.ReactNode;
+
+  /**
+   * Whether to show file list
+   */
+  showFileList?: boolean;
+
+  /**
+   * Whether to allow multiple files
+   */
   multiple?: boolean;
-  directory?: boolean;
-  maxSize?: number;
-  maxFiles?: number;
-  validator?: (files: FileList) => ValidationResult;
-  disabled?: boolean;
-  loading?: boolean;
-  error?: string;
-  progress?: number;
+
+  /**
+   * Placeholder text when no files are selected
+   */
+  placeholder?: string;
+
+  /**
+   * Text to show when files are selected
+   */
+  selectedText?: string;
+
+  /**
+   * Browse instruction text
+   */
+  browseInstruction?: string;
+
+  /**
+   * Text for selected files count
+   */
+  selectedFilesText?: string;
+
+  /**
+   * Validation title text
+   */
+  validationTitle?: string;
+
+  /**
+   * Validation errors to display (with translated messages)
+   */
+  validationErrors?: string[];
+
+  /**
+   * Upload error message
+   */
+  uploadError?: string | null;
+
+  /**
+   * Icon to display in the upload area
+   */
+  icon?: React.ReactNode;
 }
 
-export function FileUpload({
-  onFileSelect,
-  accept,
-  multiple = false,
-  directory = false,
-  maxSize,
-  maxFiles,
-  validator,
-  disabled = false,
-  loading = false,
-  error,
-  progress,
-  size,
-  className,
-  children,
-  ...props
-}: FileUploadProps) {
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [isDragOver, setIsDragOver] = React.useState(false);
-  const [selectedFiles, setSelectedFiles] = React.useState<FileList | null>(null);
-  const [validationErrors, setValidationErrors] = React.useState<string[]>([]);
-
-  const currentState = React.useMemo(() => {
-    if (disabled) return "disabled";
-    if (loading) return "loading";
-    if (error || validationErrors.length > 0) return "error";
-    if (selectedFiles && selectedFiles.length > 0) return "success";
-    if (isDragOver) return "active";
-    return "default";
-  }, [disabled, loading, error, validationErrors.length, selectedFiles, isDragOver]);
-
-  // Debug effect to check browser support
-  React.useEffect(() => {
-    if (fileInputRef.current && directory) {
-      // Ensure webkitdirectory is properly set for folder selection
-      fileInputRef.current.setAttribute("webkitdirectory", "");
-    }
-  }, [directory]);
-
-  const validateFiles = React.useCallback(
-    (files: FileList): ValidationResult => {
-      const errors: string[] = [];
-
-      // File count validation
-      if (maxFiles && files.length > maxFiles) {
-        errors.push(`Maximum ${maxFiles} files allowed`);
-      }
-
-      // File size validation
-      if (maxSize) {
-        const oversizedFiles = Array.from(files).filter((file) => file.size > maxSize);
-        if (oversizedFiles.length > 0) {
-          errors.push(`Files exceed maximum size of ${(maxSize / 1024 / 1024).toFixed(1)}MB`);
-        }
-      }
-
-      // Custom validation
-      if (validator) {
-        const customResult = validator(files);
-        if (!customResult.isValid) {
-          errors.push(...customResult.errors);
-        }
-      }
-
-      return { isValid: errors.length === 0, errors };
+export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
+  (
+    {
+      files,
+      onFilesChange,
+      isUploading = false,
+      className,
+      children,
+      showFileList = true,
+      multiple = true,
+      allowDirectories = false,
+      placeholder = "Click to select files or drag and drop",
+      selectedText = "Change selection",
+      browseInstruction = "Browse and select files",
+      selectedFilesText = "Selected files",
+      validationTitle = "Validation errors",
+      validationErrors = [],
+      uploadError = null,
+      icon,
+      ...props
     },
-    [maxFiles, maxSize, validator],
-  );
+    ref,
+  ) => {
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelection = React.useCallback(
-    (files: FileList | null) => {
-      if (!files || disabled) return;
+    const handleFileSelect = useCallback(
+      (selectedFiles: FileList | null) => {
+        onFilesChange(selectedFiles);
+      },
+      [onFilesChange],
+    );
 
-      const validation = validateFiles(files);
-      if (!validation.isValid) {
-        setValidationErrors(validation.errors);
-        setSelectedFiles(null);
-        onFileSelect(null);
-        return;
-      }
+    const filesArray = files ? Array.from(files) : [];
+    const hasFiles = filesArray.length > 0;
 
-      setValidationErrors([]);
-      setSelectedFiles(files);
-      onFileSelect(files);
-    },
-    [disabled, validateFiles, onFileSelect],
-  );
+    return (
+      <div className={cn("space-y-4", className)} ref={ref} {...props}>
+        <div
+          className="hover:border-primary/50 cursor-pointer rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            {...(allowDirectories
+              ? ({ webkitdirectory: "" } as React.InputHTMLAttributes<HTMLInputElement>)
+              : {})}
+            multiple={multiple}
+            onChange={(e) => handleFileSelect(e.target.files)}
+            className="hidden"
+            disabled={isUploading}
+          />
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleFileSelection(e.target.files);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // For directory mode, don't allow drag over since drag-drop doesn't work properly
-    if (directory) {
-      return;
-    }
-    
-    if (!disabled) {
-      setIsDragOver(true);
-    }
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // For directory mode, don't process drag events
-    if (directory) {
-      return;
-    }
-    
-    setIsDragOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // For directory mode, show error message and don't process the drop
-    if (directory) {
-      setValidationErrors(["Folder drag and drop is not supported - please click to select"]);
-      return;
-    }
-    
-    setIsDragOver(false);
-    if (!disabled) {
-      handleFileSelection(e.dataTransfer.files);
-    }
-  };
-
-  const handleClick = () => {
-    if (!disabled && fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleClear = () => {
-    setSelectedFiles(null);
-    setValidationErrors([]);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-    onFileSelect(null);
-  };
-
-  const renderContent = () => {
-    if (children) {
-      return children;
-    }
-
-    if (currentState === "error") {
-      return (
-        <div className="text-center">
-          <AlertCircle className="text-destructive mx-auto mb-4 h-12 w-12" />
-          <h3 className="text-destructive mb-2 text-lg font-medium">Upload Error</h3>
-          <p className="text-muted-foreground text-sm">Click to try again</p>
-        </div>
-      );
-    }
-
-    if (currentState === "loading") {
-      return (
-        <div className="text-center">
-          <Loader2 className="text-primary mx-auto mb-4 h-12 w-12 animate-spin" />
-          <h3 className="mb-2 text-lg font-medium">
-            {progress !== undefined ? "Uploading..." : "Processing files..."}
-          </h3>
-          {progress !== undefined && (
-            <div className="mx-auto w-full max-w-xs">
-              <Progress value={progress} className="mb-2" />
-              <p className="text-muted-foreground text-sm">{progress}%</p>
+          {children || (
+            <div className="flex flex-col items-center justify-center space-y-2">
+              {icon || <Upload className="h-8 w-8 text-gray-400" />}
+              <div>
+                <p className="text-sm font-medium">{hasFiles ? selectedText : placeholder}</p>
+                <p className="text-xs text-gray-500">{browseInstruction}</p>
+              </div>
             </div>
           )}
         </div>
-      );
-    }
 
-    if (selectedFiles && selectedFiles.length > 0) {
-      return (
-        <div className="text-center">
-          <FileIcon className="mx-auto mb-4 h-12 w-12 text-green-500" />
-          <h3 className="mb-2 text-lg font-medium text-green-700">
-            {selectedFiles.length} {selectedFiles.length === 1 ? "file" : "files"} selected
-          </h3>
-          <Button variant="outline" size="sm" onClick={handleClear} className="mt-2">
-            <X className="mr-2 h-4 w-4" />
-            Clear
-          </Button>
-        </div>
-      );
-    }
+        {showFileList && hasFiles && (
+          <div className="rounded-lg bg-gray-50 p-3">
+            <p className="mb-2 text-sm font-medium">{selectedFilesText}</p>
+            <div className="max-h-32 overflow-y-auto">
+              {filesArray.map((file, index) => (
+                <p key={index} className="truncate text-xs text-gray-600">
+                  {(file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
 
-    if (isDragOver) {
-      return (
-        <div className="text-center">
-          <Upload className="text-primary mx-auto mb-4 h-12 w-12" />
-          <h3 className="mb-2 text-lg font-medium">Drop files here</h3>
-        </div>
-      );
-    }
+        {validationErrors.length > 0 && (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+            <h4 className="mb-1 text-sm font-medium text-red-800">{validationTitle}</h4>
+            <ul className="space-y-1 text-sm text-red-700">
+              {validationErrors.map((error, index) => (
+                <li key={index}>• {error}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-    return (
-      <div className="text-center">
-        <Upload className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
-        <h3 className="mb-2 text-lg font-medium">
-          {directory ? "Click to browse for a folder" : "Drag and drop your files here"}
-        </h3>
-        <p className="text-muted-foreground text-sm">
-          {directory ? "Folder drag and drop is not supported - please click to select" : "or click to browse"}
-        </p>
+        {uploadError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+            <p className="text-sm text-red-700">{uploadError}</p>
+          </div>
+        )}
       </div>
     );
-  };
+  },
+);
 
-  const allErrors = [...(error ? [error] : []), ...validationErrors];
-
-  return (
-    <div className={cn("space-y-4", className)} {...props}>
-      <div
-        className={fileUploadVariants({ state: currentState as any, size })}
-        {...(!directory && {
-          onDragOver: handleDragOver,
-          onDragLeave: handleDragLeave,
-          onDrop: handleDrop,
-        })}
-        onClick={handleClick}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          {...(!directory && { accept })}
-          {...(!directory && { multiple })}
-          {...(directory && { webkitdirectory: "", multiple: true })}
-          onChange={handleFileInputChange}
-          className="absolute inset-0 cursor-pointer opacity-0"
-          disabled={disabled}
-          aria-label={directory ? "Upload folder" : "Upload files"}
-          aria-describedby={allErrors.length > 0 ? "file-upload-errors" : undefined}
-        />
-        {renderContent()}
-      </div>
-
-      {allErrors.length > 0 && (
-        <div className="space-y-1" id="file-upload-errors">
-          {allErrors.map((errorMsg, index) => (
-            <p key={index} className="text-destructive text-sm">
-              {errorMsg}
-            </p>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export { fileUploadVariants };
+FileUpload.displayName = "FileUpload";

@@ -53,6 +53,11 @@
   },
   "overview": "Overzicht",
   "data": "Gegevens",
+  "experimentData": {
+    "title": "Experimentgegevens",
+    "description": "Bekijk en beheer gegevens die bij dit experiment horen.",
+    "uploadData": "Gegevens uploaden"
+  },
   "experiment": "Experiment",
   "experimentId": "Experiment-ID",
   "created": "Gemaakt",
@@ -73,5 +78,64 @@
     "protocolRequired": "Selecteer een protocol",
     "deviceRequired": "Selecteer een apparaat",
     "invalidDateRange": "Einddatum moet na startdatum liggen"
+  },
+  "uploadModal": {
+    "title": "Sensorgegevens uploaden",
+    "description": "Upload sensorgegevens naar uw experiment voor analyse",
+    "sensorFamily": {
+      "label": "Selecteer sensorfamilie",
+      "description": "Kies het type sensorgegevens dat u wilt uploaden"
+    },
+    "sensorTypes": {
+      "multispeq": {
+        "label": "MultispeQ",
+        "description": "MultispeQ sensorgegevens uploaden (binnenkort beschikbaar)",
+        "comingSoon": "Binnenkort beschikbaar"
+      },
+      "ambyte": {
+        "label": "Ambyte",
+        "description": "Upload Ambyte-sensormappen met meetgegevens"
+      }
+    },
+    "fileUpload": {
+      "title": "Ambyte-gegevens uploaden",
+      "description": "Selecteer een Ambyte-map (bijv. \"Ambyte_10\") of afzonderlijke ambit-submappen (bijv. \"1\", \"2\", \"3\", \"4\"). De map moet .txt-meetbestanden bevatten.",
+      "selectFolder": "Selecteer Ambyte-map",
+      "changeSelection": "Mapselectie wijzigen",
+      "browseInstruction": "Klik om te bladeren naar een Ambyte-gegevensmap",
+      "selectedFiles": "Geselecteerd: {{count}} bestanden",
+      "validationErrors": "Validatiefouten:",
+      "back": "Terug",
+      "uploadFiles": "Bestanden uploaden",
+      "uploading": "Uploaden..."
+    },
+    "uploading": {
+      "title": "Gegevens uploaden",
+      "description": "Een ogenblik geduld terwijl we uw sensorgegevens verwerken..."
+    },
+    "success": {
+      "title": "Uploaden gelukt",
+      "description": "Uw sensorgegevens zijn succesvol geüpload en zijn nu beschikbaar voor analyse.",
+      "close": "Sluiten"
+    },
+    "error": {
+      "title": "Uploaden mislukt",
+      "close": "Sluiten",
+      "retry": "Probeer opnieuw"
+    },
+    "validation": {
+      "title": "Validatiefouten:",
+      "noFiles": "Geen bestanden geselecteerd",
+      "selectFolder": "Selecteer een map met Ambyte-gegevens, geen afzonderlijke bestanden",
+      "invalidStructure": "Ongeldige Ambyte-mapstructuur. Verwachte mappen zoals 'Ambyte_10' of genummerde mappen '1', '2', '3', '4'",
+      "fileSizeExceeded": "{{count}} bestand(en) overschrijden de maximale groottelimiet van 100 MB",
+      "unsupportedExtensions": "{{count}} bestand(en) hebben niet-ondersteunde extensies. Toegestaan: {{extensions}}",
+      "uploadFailed": "Uploaden mislukt",
+      "noValidFiles": "Geen geldige bestanden om te uploaden na filtering"
+    },
+    "excludedFiles": {
+      "note": "Opmerking:",
+      "warningMessage": "De volgende {{count, plural, one {bestand} other {bestanden}}} worden automatisch uitgesloten van de upload:"
+    }
   }
 }

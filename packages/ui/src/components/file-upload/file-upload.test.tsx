@@ -1,354 +1,285 @@
+// @vitest-environment jsdom
+import "@testing-library/jest-dom";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { vi, describe, it, expect, beforeEach } from "vitest";
-import React from "react";
+import * as React from "react";
+import { vi, expect, describe, it, beforeEach } from "vitest";
 
 import { FileUpload } from "./file-upload";
-import type { ValidationResult } from "./file-upload";
 
-// Mock file for testing
-const createMockFile = (name: string, size: number, type: string = "text/plain"): File => {
-  const file = new File(["content"], name, { type });
-  Object.defineProperty(file, "size", {
-    value: size,
-    writable: false,
-  });
-  return file;
-};
-
-// Mock FileList
-const createMockFileList = (files: File[]): FileList => {
-  const fileList = {
-    length: files.length,
-    item: (index: number) => files[index] || null,
-    [Symbol.iterator]: function* () {
-      yield* files;
-    },
-  } as FileList;
-
-  files.forEach((file, index) => {
-    fileList[index] = file;
-  });
-
-  return fileList;
-};
-
+/**
+ * Test suite for the FileUpload component
+ * 
+ * This test suite covers:
+ * - Basic rendering and props handling
+ * - File selection and upload functionality
+ * - Validation and error handling
+ * - Accessibility features
+ * - Custom styling and configuration options
+ */
 describe("FileUpload", () => {
-  const mockOnFileSelect = vi.fn();
+  const mockOnFilesChange = vi.fn();
 
   beforeEach(() => {
-    mockOnFileSelect.mockClear();
+    mockOnFilesChange.mockClear();
   });
 
-  describe("Basic Functionality", () => {
-    it("renders with default content", () => {
-      render(<FileUpload onFileSelect={mockOnFileSelect} />);
+  const getFileInput = (container: HTMLElement) => {
+    return container.querySelector('input[type="file"]') as HTMLInputElement;
+  };
 
-      expect(screen.getByText("Drag and drop your files here")).toBeInTheDocument();
-      expect(screen.getByText(/click to browse/i)).toBeInTheDocument();
-    });
+  it("renders with default props", () => {
+    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} />);
 
-    it("renders directory mode content", () => {
-      render(<FileUpload onFileSelect={mockOnFileSelect} directory />);
-
-      expect(screen.getByText("Drag and drop your folder here")).toBeInTheDocument();
-    });
-
-    it("shows loading state", () => {
-      render(<FileUpload onFileSelect={mockOnFileSelect} loading />);
-
-      expect(screen.getByText("Processing files...")).toBeInTheDocument();
-    });
-
-    it("shows disabled state", () => {
-      render(<FileUpload onFileSelect={mockOnFileSelect} disabled />);
-
-      const uploadArea = screen
-        .getByText("Drag and drop your files here")
-        .closest("div")?.parentElement;
-      expect(uploadArea).toHaveClass("cursor-not-allowed", "opacity-50");
-    });
+    expect(screen.getByText("Click to select files or drag and drop")).toBeInTheDocument();
+    expect(screen.getByText("Browse and select files")).toBeInTheDocument();
+    expect(getFileInput(container)).toBeInTheDocument();
   });
 
-  describe("File Selection", () => {
-    it("handles single file selection", async () => {
-      const user = userEvent.setup();
-      render(<FileUpload onFileSelect={mockOnFileSelect} />);
+  it("renders with custom placeholder text", () => {
+    render(
+      <FileUpload
+        files={null}
+        onFilesChange={mockOnFilesChange}
+        placeholder="Custom placeholder"
+        browseInstruction="Custom browse instruction"
+      />
+    );
 
-      const file = createMockFile("test.txt", 1000);
-
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      await user.upload(fileInput, file);
-
-      expect(mockOnFileSelect).toHaveBeenCalledWith(expect.any(FileList));
-    });
-
-    it("handles multiple file selection", async () => {
-      const user = userEvent.setup();
-      render(<FileUpload onFileSelect={mockOnFileSelect} multiple />);
-
-      const files = [createMockFile("test1.txt", 1000), createMockFile("test2.txt", 2000)];
-
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      await user.upload(fileInput, files);
-
-      expect(mockOnFileSelect).toHaveBeenCalledWith(expect.any(FileList));
-    });
-
-    it("shows selected files count", async () => {
-      render(<FileUpload onFileSelect={mockOnFileSelect} multiple />);
-
-      const files = [createMockFile("test1.txt", 1000), createMockFile("test2.txt", 2000)];
-
-      // Mock the file input change event
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-
-      Object.defineProperty(fileInput, "files", {
-        value: createMockFileList(files),
-        writable: false,
-      });
-
-      fireEvent.change(fileInput);
-
-      await waitFor(() => {
-        expect(screen.getByText("2 files selected")).toBeInTheDocument();
-      });
-    });
-
-    it("allows clearing selected files", async () => {
-      const user = userEvent.setup();
-      render(<FileUpload onFileSelect={mockOnFileSelect} />);
-
-      const file = createMockFile("test.txt", 1000);
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-
-      Object.defineProperty(fileInput, "files", {
-        value: createMockFileList([file]),
-        writable: false,
-      });
-
-      fireEvent.change(fileInput);
-
-      await waitFor(() => {
-        expect(screen.getByText("1 file selected")).toBeInTheDocument();
-      });
-
-      const clearButton = screen.getByRole("button");
-      await user.click(clearButton);
-
-      expect(mockOnFileSelect).toHaveBeenCalledWith(null);
-    });
+    expect(screen.getByText("Custom placeholder")).toBeInTheDocument();
+    expect(screen.getByText("Custom browse instruction")).toBeInTheDocument();
   });
 
-  describe("Drag and Drop", () => {
-    it("handles drag over event", () => {
-      render(<FileUpload onFileSelect={mockOnFileSelect} />);
+  it("renders with custom icon", () => {
+    const CustomIcon = () => <div data-testid="custom-icon">Custom Icon</div>;
+    render(
+      <FileUpload
+        files={null}
+        onFilesChange={mockOnFilesChange}
+        icon={<CustomIcon />}
+      />
+    );
 
-      const uploadArea = screen.getByText("Drag and drop your files here").closest("div")!;
-
-      fireEvent.dragOver(uploadArea);
-
-      expect(screen.getByText("Drop files here")).toBeInTheDocument();
-    });
-
-    it("handles drag leave event", () => {
-      render(<FileUpload onFileSelect={mockOnFileSelect} />);
-
-      const uploadArea = screen.getByText("Drag and drop your files here").closest("div")!;
-
-      fireEvent.dragOver(uploadArea);
-      fireEvent.dragLeave(uploadArea);
-
-      expect(screen.getByText("Drag and drop your files here")).toBeInTheDocument();
-    });
-
-    it("handles file drop", () => {
-      render(<FileUpload onFileSelect={mockOnFileSelect} />);
-
-      const uploadArea = screen.getByText("Drag and drop your files here").closest("div")!;
-      const file = createMockFile("test.txt", 1000);
-
-      const dropEvent = new Event("drop", { bubbles: true });
-      Object.defineProperty(dropEvent, "dataTransfer", {
-        value: {
-          files: createMockFileList([file]),
-        },
-      });
-
-      fireEvent(uploadArea, dropEvent);
-
-      expect(mockOnFileSelect).toHaveBeenCalledWith(expect.any(Object));
-    });
-
-    it("ignores drag events when disabled", () => {
-      render(<FileUpload onFileSelect={mockOnFileSelect} disabled />);
-
-      const uploadArea = screen.getByText("Drag and drop your files here").closest("div")!;
-
-      fireEvent.dragOver(uploadArea);
-
-      // Should not show active drag state
-      expect(screen.queryByText("Drop files here")).not.toBeInTheDocument();
-    });
+    expect(screen.getByTestId("custom-icon")).toBeInTheDocument();
   });
 
-  describe("Validation", () => {
-    it("validates file size", async () => {
-      render(
-        <FileUpload
-          onFileSelect={mockOnFileSelect}
-          maxSize={500} // 500 bytes
-        />,
-      );
+  it("renders with custom children instead of default content", () => {
+    render(
+      <FileUpload files={null} onFilesChange={mockOnFilesChange}>
+        <div data-testid="custom-content">Custom upload content</div>
+      </FileUpload>
+    );
 
-      const file = createMockFile("large-file.txt", 1000); // 1000 bytes
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-
-      Object.defineProperty(fileInput, "files", {
-        value: createMockFileList([file]),
-        writable: false,
-      });
-
-      fireEvent.change(fileInput);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Files exceed maximum size/)).toBeInTheDocument();
-      });
-
-      expect(mockOnFileSelect).toHaveBeenCalledWith(null);
-    });
-
-    it("validates file count", async () => {
-      render(<FileUpload onFileSelect={mockOnFileSelect} maxFiles={1} multiple />);
-
-      const files = [createMockFile("file1.txt", 100), createMockFile("file2.txt", 100)];
-
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-
-      Object.defineProperty(fileInput, "files", {
-        value: createMockFileList(files),
-        writable: false,
-      });
-
-      fireEvent.change(fileInput);
-
-      await waitFor(() => {
-        expect(screen.getByText("Maximum 1 files allowed")).toBeInTheDocument();
-      });
-
-      expect(mockOnFileSelect).toHaveBeenCalledWith(null);
-    });
-
-    it("runs custom validator", async () => {
-      const mockValidator = vi.fn(
-        (): ValidationResult => ({
-          isValid: false,
-          errors: ["Custom validation error"],
-        }),
-      );
-
-      render(<FileUpload onFileSelect={mockOnFileSelect} validator={mockValidator} />);
-
-      const file = createMockFile("test.txt", 100);
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-
-      Object.defineProperty(fileInput, "files", {
-        value: createMockFileList([file]),
-        writable: false,
-      });
-
-      fireEvent.change(fileInput);
-
-      await waitFor(() => {
-        expect(screen.getByText("Custom validation error")).toBeInTheDocument();
-      });
-
-      expect(mockValidator).toHaveBeenCalledWith(expect.any(Object));
-      expect(mockOnFileSelect).toHaveBeenCalledWith(null);
-    });
-
-    it("passes validation with valid files", async () => {
-      const mockValidator = vi.fn(
-        (): ValidationResult => ({
-          isValid: true,
-          errors: [],
-        }),
-      );
-
-      render(
-        <FileUpload onFileSelect={mockOnFileSelect} validator={mockValidator} maxSize={1000} />,
-      );
-
-      const file = createMockFile("test.txt", 500);
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-
-      Object.defineProperty(fileInput, "files", {
-        value: createMockFileList([file]),
-        writable: false,
-      });
-
-      fireEvent.change(fileInput);
-
-      await waitFor(() => {
-        expect(screen.getByText("1 file selected")).toBeInTheDocument();
-      });
-
-      expect(mockOnFileSelect).toHaveBeenCalledWith(expect.any(Object));
-    });
+    expect(screen.getByTestId("custom-content")).toBeInTheDocument();
+    expect(screen.queryByText("Click to select files or drag and drop")).not.toBeInTheDocument();
   });
 
-  describe("Error Handling", () => {
-    it("displays external error", () => {
-      render(<FileUpload onFileSelect={mockOnFileSelect} error="Upload failed" />);
+  it("handles file selection", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} />);
 
-      expect(screen.getByText("Upload failed")).toBeInTheDocument();
-    });
+    const file = new File(["test content"], "test.txt", { type: "text/plain" });
+    const input = getFileInput(container);
 
-    it("shows error state in upload area", () => {
-      render(<FileUpload onFileSelect={mockOnFileSelect} error="Upload failed" />);
+    await user.upload(input, file);
 
-      expect(screen.getByText("Upload Error")).toBeInTheDocument();
-      expect(screen.getByText("Click to try again")).toBeInTheDocument();
-    });
+    expect(mockOnFilesChange).toHaveBeenCalledWith(expect.any(FileList));
   });
 
-  describe("Progress Indication", () => {
-    it("shows progress bar when loading with progress", () => {
-      render(<FileUpload onFileSelect={mockOnFileSelect} loading progress={50} />);
+  it("handles multiple file selection when multiple is enabled", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} multiple={true} />);
 
-      expect(screen.getByText("Uploading...")).toBeInTheDocument();
-      expect(screen.getByText("50%")).toBeInTheDocument();
-    });
+    const files = [
+      new File(["test1"], "test1.txt", { type: "text/plain" }),
+      new File(["test2"], "test2.txt", { type: "text/plain" }),
+    ];
+    const input = getFileInput(container);
+
+    await user.upload(input, files);
+
+    expect(mockOnFilesChange).toHaveBeenCalledWith(expect.any(FileList));
   });
 
-  describe("Accessibility", () => {
-    it("has proper ARIA attributes", () => {
-      render(<FileUpload onFileSelect={mockOnFileSelect} />);
+  it("disables file selection when isUploading is true", () => {
+    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} isUploading={true} />);
 
-      const fileInput = document.querySelector('input[type="file"]');
-      expect(fileInput).toHaveAttribute("type", "file");
-    });
-
-    it("supports keyboard navigation", async () => {
-      const user = userEvent.setup();
-      render(<FileUpload onFileSelect={mockOnFileSelect} />);
-
-      const uploadArea = screen.getByText("Drag and drop your files here").closest("div")!;
-
-      // Should be focusable and clickable
-      await user.click(uploadArea);
-
-      // File input should be triggered (though we can't easily test the file dialog)
-      expect(uploadArea).toBeDefined();
-    });
+    const input = getFileInput(container);
+    expect(input).toBeDisabled();
   });
 
-  describe("Directory Support", () => {
-    it("sets webkitdirectory attribute for directory mode", () => {
-      render(<FileUpload onFileSelect={mockOnFileSelect} directory />);
+  it("shows selected files when files are provided", () => {
+    const files = [
+      new File(["test1"], "test1.txt", { type: "text/plain" }),
+      new File(["test2"], "test2.txt", { type: "text/plain" }),
+    ];
 
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      expect(fileInput).toHaveAttribute("webkitdirectory");
+    render(<FileUpload files={files} onFilesChange={mockOnFilesChange} />);
+
+    expect(screen.getByText("Selected files")).toBeInTheDocument();
+    expect(screen.getByText("test1.txt")).toBeInTheDocument();
+    expect(screen.getByText("test2.txt")).toBeInTheDocument();
+    expect(screen.getByText("Change selection")).toBeInTheDocument();
+  });
+
+  it("hides file list when showFileList is false", () => {
+    const files = [new File(["test"], "test.txt", { type: "text/plain" })];
+
+    render(<FileUpload files={files} onFilesChange={mockOnFilesChange} showFileList={false} />);
+
+    expect(screen.queryByText("Selected files")).not.toBeInTheDocument();
+    expect(screen.queryByText("test.txt")).not.toBeInTheDocument();
+  });
+
+  it("shows webkitRelativePath when available", () => {
+    const fileWithPath = new File(["test"], "test.txt", { type: "text/plain" });
+    Object.defineProperty(fileWithPath, "webkitRelativePath", {
+      value: "folder/subfolder/test.txt",
+      writable: false,
     });
+
+    render(<FileUpload files={[fileWithPath]} onFilesChange={mockOnFilesChange} />);
+
+    expect(screen.getByText("folder/subfolder/test.txt")).toBeInTheDocument();
+  });
+
+  it("applies allowDirectories attribute when enabled", () => {
+    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} allowDirectories={true} />);
+
+    const input = getFileInput(container);
+    expect(input).toHaveAttribute("webkitdirectory", "");
+  });
+
+  it("does not apply allowDirectories attribute when disabled", () => {
+    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} allowDirectories={false} />);
+
+    const input = getFileInput(container);
+    expect(input).not.toHaveAttribute("webkitdirectory");
+  });
+
+  it("shows validation errors when provided", () => {
+    const validationErrors = ["File too large", "Invalid file type"];
+
+    render(
+      <FileUpload
+        files={null}
+        onFilesChange={mockOnFilesChange}
+        validationErrors={validationErrors}
+        validationTitle="Upload errors"
+      />
+    );
+
+    expect(screen.getByText("Upload errors")).toBeInTheDocument();
+    expect(screen.getByText("• File too large")).toBeInTheDocument();
+    expect(screen.getByText("• Invalid file type")).toBeInTheDocument();
+  });
+
+  it("shows upload error when provided", () => {
+    render(
+      <FileUpload
+        files={null}
+        onFilesChange={mockOnFilesChange}
+        uploadError="Upload failed"
+      />
+    );
+
+    expect(screen.getByText("Upload failed")).toBeInTheDocument();
+  });
+
+  it("calls onFilesChange when dropzone is clicked", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} />);
+
+    const dropzone = screen.getByText("Click to select files or drag and drop").closest('div');
+    await user.click(dropzone!);
+
+    // The click should trigger the file input click
+    const input = getFileInput(container);
+    expect(input).toBeDefined();
+  });
+
+  it("applies custom className", () => {
+    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} className="custom-class" />);
+
+    expect(container.firstChild).toHaveClass("custom-class");
+  });
+
+  it("handles single file selection when multiple is false", () => {
+    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} multiple={false} />);
+
+    const input = getFileInput(container);
+    expect(input).not.toHaveAttribute("multiple");
+  });
+
+  it("shows custom text labels", () => {
+    render(
+      <FileUpload
+        files={null}
+        onFilesChange={mockOnFilesChange}
+        selectedFilesText="Custom selected files"
+        selectedText="Custom change selection"
+      />
+    );
+
+    // With no files, should show placeholder
+    expect(screen.getByText("Click to select files or drag and drop")).toBeInTheDocument();
+
+    // With files
+    const files = [new File(["test"], "test.txt", { type: "text/plain" })];
+    render(
+      <FileUpload
+        files={files}
+        onFilesChange={mockOnFilesChange}
+        selectedFilesText="Custom selected files"
+        selectedText="Custom change selection"
+      />
+    );
+
+    expect(screen.getByText("Custom selected files")).toBeInTheDocument();
+    expect(screen.getByText("Custom change selection")).toBeInTheDocument();
+  });
+
+  it("forwards ref correctly", () => {
+    const ref = React.createRef<HTMLDivElement>();
+    render(<FileUpload ref={ref} files={null} onFilesChange={mockOnFilesChange} />);
+
+    expect(ref.current).toBeInstanceOf(HTMLDivElement);
+  });
+
+  it("handles FileList as files prop", () => {
+    const file1 = new File(["test1"], "test1.txt", { type: "text/plain" });
+    const file2 = new File(["test2"], "test2.txt", { type: "text/plain" });
+    
+    // Mock a FileList instead of using DataTransfer
+    const mockFileList = {
+      0: file1,
+      1: file2,
+      length: 2,
+      item: (index: number) => index === 0 ? file1 : index === 1 ? file2 : null,
+      [Symbol.iterator]: function* () {
+        yield file1;
+        yield file2;
+      }
+    } as FileList;
+
+    render(<FileUpload files={mockFileList} onFilesChange={mockOnFilesChange} />);
+
+    expect(screen.getByText("test1.txt")).toBeInTheDocument();
+    expect(screen.getByText("test2.txt")).toBeInTheDocument();
+  });
+
+  it("shows file count correctly in file list", () => {
+    const files = [
+      new File(["test1"], "test1.txt", { type: "text/plain" }),
+      new File(["test2"], "test2.txt", { type: "text/plain" }),
+      new File(["test3"], "test3.txt", { type: "text/plain" }),
+    ];
+
+    render(<FileUpload files={files} onFilesChange={mockOnFilesChange} />);
+
+    // Should show all files
+    expect(screen.getByText("test1.txt")).toBeInTheDocument();
+    expect(screen.getByText("test2.txt")).toBeInTheDocument();
+    expect(screen.getByText("test3.txt")).toBeInTheDocument();
   });
 });

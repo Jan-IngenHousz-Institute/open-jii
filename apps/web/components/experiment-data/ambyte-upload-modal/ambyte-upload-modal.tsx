@@ -1,8 +1,8 @@
 "use client";
 
-import { CheckCircle, Loader2, Upload, AlertCircle } from "lucide-react";
+import { useExperimentDataUpload } from "@/hooks/experiment/useExperimentDataUpload/useExperimentDataUpload";
+import { CheckCircle, Loader2, AlertCircle } from "lucide-react";
 import * as React from "react";
-import { useAmbyteUploadWrapper } from "~/hooks/experiment/useAmbyteUpload/useAmbyteUpload";
 
 import type { UploadExperimentDataResponse } from "@repo/api";
 import { useTranslation } from "@repo/i18n/client";
@@ -13,13 +13,124 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  FileUpload,
   Label,
   RadioGroup,
   RadioGroupItem,
+  FileUpload,
 } from "@repo/ui/components";
-import type { ValidationResult } from "@repo/ui/components";
 import { cva } from "@repo/ui/lib/utils";
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: { key: string; options?: Record<string, unknown> }[];
+}
+
+// File validation constants
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB per file
+const ALLOWED_EXTENSIONS = [".txt"];
+
+// Files to exclude from upload and validation
+const EXCLUDED_FILES = [".DS_Store"];
+
+// Helper function to check if a file should be excluded
+const isExcludedFile = (file: File): boolean => {
+  return EXCLUDED_FILES.some(
+    (excludedFile) => file.name === excludedFile || file.webkitRelativePath.includes(excludedFile),
+  );
+};
+
+// Ambyte folder structure validation
+const validateAmbyteStructure = (files: FileList): ValidationResult => {
+  const errors: { key: string; options?: Record<string, unknown> }[] = [];
+
+  if (files.length === 0) {
+    errors.push({ key: "uploadModal.validation.noFiles" });
+    return { isValid: false, errors };
+  }
+
+  // Check if we have files with webkitRelativePath (folder structure), excluding system files
+  const filesWithPath = Array.from(files).filter(
+    (file) => file.webkitRelativePath && !isExcludedFile(file),
+  );
+
+  if (filesWithPath.length === 0) {
+    errors.push({ key: "uploadModal.validation.selectFolder" });
+    return { isValid: false, errors };
+  }
+
+  // Extract the root folder pattern
+  const rootFolders = new Set(filesWithPath.map((file) => file.webkitRelativePath.split("/")[0]));
+
+  // Validate Ambyte folder structure
+  let hasValidStructure = false;
+
+  for (const rootFolder of rootFolders) {
+    // Check for Ambyte_XX pattern at root level
+    const isAmbyteFolder =
+      rootFolder.startsWith("Ambyte_") &&
+      rootFolder.substring(7).length > 0 &&
+      !isNaN(Number(rootFolder.substring(7)));
+
+    // If root folder is directly an Ambyte_N folder, it's valid
+    if (isAmbyteFolder) {
+      hasValidStructure = true;
+      break;
+    }
+
+    // If root folder is not Ambyte_N, check if it contains Ambyte_N subdirectories
+    const hasAmbyteSubdirs = filesWithPath.some((file) => {
+      const pathSegments = file.webkitRelativePath.split("/");
+      if (pathSegments.length >= 2 && pathSegments[0] === rootFolder) {
+        const subdirName = pathSegments[1];
+        return (
+          subdirName.startsWith("Ambyte_") &&
+          subdirName.substring(7).length > 0 &&
+          !isNaN(Number(subdirName.substring(7)))
+        );
+      }
+      return false;
+    });
+
+    if (hasAmbyteSubdirs) {
+      hasValidStructure = true;
+      break;
+    }
+  }
+
+  if (!hasValidStructure) {
+    errors.push({ key: "uploadModal.validation.invalidStructure" });
+  }
+
+  // Check file sizes (excluding system files)
+  const oversizedFiles = Array.from(files).filter(
+    (file) => file.size > MAX_FILE_SIZE && !isExcludedFile(file),
+  );
+  if (oversizedFiles.length > 0) {
+    errors.push({
+      key: "uploadModal.validation.fileSizeExceeded",
+      options: { count: oversizedFiles.length },
+    });
+  }
+
+  // Check file extensions (excluding system files)
+  const invalidFiles = Array.from(files).filter((file) => {
+    if (isExcludedFile(file)) return false;
+    const extension = file.name.toLowerCase().substring(file.name.lastIndexOf("."));
+    return !ALLOWED_EXTENSIONS.includes(extension);
+  });
+
+  if (invalidFiles.length > 0) {
+    errors.push({
+      key: "uploadModal.validation.unsupportedExtensions",
+      options: {
+        count: invalidFiles.length,
+        extensions: ALLOWED_EXTENSIONS.join(", "),
+      },
+    });
+  }
+
+  return { isValid: errors.length === 0, errors };
+};
 
 interface SensorFamily {
   id: "multispeq" | "ambyte";
@@ -103,137 +214,6 @@ const SENSOR_FAMILIES: SensorFamily[] = [
   },
 ];
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-
-function validateAmbyteStructure(files: FileList): ValidationResult {
-  if (files.length === 0) {
-    return { isValid: false, errors: ["Please select a folder to upload"] };
-  }
-
-  const filePaths = Array.from(files).map((f) => f.webkitRelativePath || f.name);
-
-  const errors: string[] = [];
-
-  // Check for Ambyte_X pattern (main folder structure)
-  const ambyteRootPaths = filePaths.filter((path) => /^Ambyte_\d+\//.test(path));
-  const hasAmbyteRoot = ambyteRootPaths.length > 0;
-
-  // Check for numbered folder pattern (individual ambit subfolders: 1/, 2/, 3/, 4/)
-  // This can be either direct numbered folders or within Ambyte_X folders
-  const numberedRootPaths = filePaths.filter(
-    (path) => /^\d+\//.test(path) || /^Ambyte_\d+\/[1-4]\//.test(path),
-  );
-  const hasNumberedRoot = numberedRootPaths.length > 0;
-
-  if (!hasAmbyteRoot && !hasNumberedRoot) {
-    // Check if we're getting folder names without webkitRelativePath
-    const folderOnlyNames = filePaths.filter(
-      (path) => /^Ambyte_\d+$/.test(path) || /^\d+$/.test(path),
-    );
-
-    if (folderOnlyNames.length > 0) {
-      errors.push(
-        `Folder detected but contents not accessible. This might be a browser limitation. Detected: ${folderOnlyNames.join(", ")}`,
-      );
-    } else {
-      errors.push(
-        "Please select an Ambyte folder (e.g., 'Ambyte_10') or individual ambit subfolders (e.g., '1', '2', '3', '4')",
-      );
-    }
-    return { isValid: false, errors };
-  }
-
-  // Validate Ambyte_X folder structure
-  if (hasAmbyteRoot) {
-    const ambyteFolder = ambyteRootPaths[0].split("/")[0];
-
-    // Check for required root files
-    const requiredRootFiles = ["ambyte_log.txt", "config.txt", "run.txt"];
-    const missingRootFiles = requiredRootFiles.filter(
-      (file) => !filePaths.includes(`${ambyteFolder}/${file}`),
-    );
-
-    if (missingRootFiles.length > 0) {
-      errors.push(`Missing required files in ${ambyteFolder}: ${missingRootFiles.join(", ")}`);
-    }
-
-    // Check for numbered subfolders
-    const numberedSubfolders = filePaths
-      .filter((path) => path.startsWith(`${ambyteFolder}/`) && /\/\d+\//.test(path))
-      .map((path) => path.split("/")[1])
-      .filter((folder, index, arr) => arr.indexOf(folder) === index);
-
-    if (numberedSubfolders.length === 0) {
-      errors.push(
-        `No ambit subfolders found in ${ambyteFolder}. Expected numbered folders like '1', '2', '3', '4'`,
-      );
-    }
-  }
-
-  // Validate numbered folder structure (individual ambit folders)
-  if (hasNumberedRoot && !hasAmbyteRoot) {
-    const numberedFolders = numberedRootPaths
-      .map((path) => path.split("/")[0])
-      .filter((folder, index, arr) => arr.indexOf(folder) === index);
-
-    // Check if folders are valid numbers (1-4 typically)
-    const invalidNumbers = numberedFolders.filter((folder) => !/^\d+$/.test(folder));
-    if (invalidNumbers.length > 0) {
-      errors.push(
-        `Invalid ambit folder names: ${invalidNumbers.join(", ")}. Expected numbered folders like '1', '2', '3', '4'`,
-      );
-    }
-  }
-
-  // Validate file types and structure
-  const invalidFiles = filePaths.filter((path) => {
-    const fileName = path.split("/").pop() ?? "";
-
-    // Ignore system files
-    if (fileName === ".DS_Store" || fileName.startsWith("._")) {
-      return false; // These are valid (ignored)
-    }
-
-    // Check if it's a valid .txt file
-    const isValidTxtFile =
-      fileName.endsWith(".txt") &&
-      (fileName === "ambyte_log.txt" ||
-        fileName === "config.txt" ||
-        fileName === "run.txt" ||
-        fileName.startsWith("LOG_") ||
-        fileName === "RTC error.txt" || // Allow RTC error files
-        /^\d{8}-\d{6}_\.txt$/.test(fileName)); // Timestamp files like 20250604-192743_.txt
-
-    return !isValidTxtFile;
-  });
-
-  if (invalidFiles.length > 0) {
-    const sampleInvalidFiles = invalidFiles.slice(0, 3);
-    errors.push(
-      `Invalid files detected: ${sampleInvalidFiles.join(", ")}${invalidFiles.length > 3 ? ` and ${invalidFiles.length - 3} more` : ""}. Only .txt files are allowed.`,
-    );
-  }
-
-  // Check for measurement files in numbered folders
-  if (hasAmbyteRoot || hasNumberedRoot) {
-    const measurementFiles = filePaths.filter((path) => {
-      const fileName = path.split("/").pop() ?? "";
-      return /^\d{8}-\d{6}_\.txt$/.test(fileName);
-    });
-
-    if (measurementFiles.length === 0) {
-      errors.push(
-        "No measurement data files found. Expected timestamped files like '20250604-192743_.txt'",
-      );
-    }
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
-}
-
 // Step Components
 interface SensorSelectionStepProps {
   selectedSensor: SensorFamily | null;
@@ -249,11 +229,9 @@ const SensorSelectionStep: React.FC<SensorSelectionStepProps> = ({
   return (
     <div className={uploadStepVariants()}>
       <div>
-        <Label className="text-base font-medium">
-          {t("experimentData.uploadModal.sensorFamily.label")}
-        </Label>
+        <Label className="text-base font-medium">{t("uploadModal.sensorFamily.label")}</Label>
         <p className="text-muted-foreground mt-1 text-sm">
-          {t("experimentData.uploadModal.sensorFamily.description")}
+          {t("uploadModal.sensorFamily.description")}
         </p>
       </div>
 
@@ -279,16 +257,18 @@ const SensorSelectionStep: React.FC<SensorSelectionStepProps> = ({
             />
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <Label className="cursor-pointer font-medium">{sensor.label}</Label>
+                <Label className="cursor-pointer font-medium">
+                  {t(`uploadModal.sensorTypes.${sensor.id}.label`)}
+                </Label>
                 {sensor.disabled && (
                   <span className="bg-muted text-muted-foreground rounded px-2 py-1 text-xs">
-                    Coming Soon
+                    {t("uploadModal.sensorTypes.multispeq.comingSoon")}
                   </span>
                 )}
               </div>
-              {sensor.description && (
-                <p className="text-muted-foreground mt-1 text-sm">{sensor.description}</p>
-              )}
+              <p className="text-muted-foreground mt-1 text-sm">
+                {t(`uploadModal.sensorTypes.${sensor.id}.description`)}
+              </p>
             </div>
           </div>
         ))}
@@ -298,47 +278,157 @@ const SensorSelectionStep: React.FC<SensorSelectionStepProps> = ({
 };
 
 interface FileUploadStepProps {
-  selectedFiles: FileList | null;
-  onFileSelect: (files: FileList | null) => void;
+  experimentId: string;
   onBack: () => void;
-  onUpload: () => void;
+  onUploadSuccess: () => void;
 }
 
 const FileUploadStep: React.FC<FileUploadStepProps> = ({
-  selectedFiles,
-  onFileSelect,
+  experimentId,
   onBack,
-  onUpload,
+  onUploadSuccess,
 }) => {
   const { t } = useTranslation("experiments");
+  const [selectedFiles, setSelectedFiles] = React.useState<FileList | null>(null);
+  const [validationErrors, setValidationErrors] = React.useState<
+    { key: string; options?: Record<string, unknown> }[]
+  >([]);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const [excludedFiles, setExcludedFiles] = React.useState<string[]>([]);
+
+  const { mutate: uploadData, isPending: isUploading } = useExperimentDataUpload({
+    onSuccess: () => {
+      onUploadSuccess();
+    },
+    onError: (error) => {
+      setUploadError(
+        error instanceof Error ? error.message : t("uploadModal.validation.uploadFailed"),
+      );
+    },
+  });
+
+  const handleFileSelect = (files: FileList | null) => {
+    setSelectedFiles(files);
+    setValidationErrors([]);
+    setUploadError(null);
+
+    if (files) {
+      // Find excluded files in the current selection with their full paths
+      const foundExcludedFiles = Array.from(files)
+        .filter((file) => isExcludedFile(file))
+        .map((file) => file.webkitRelativePath || file.name);
+
+      setExcludedFiles(foundExcludedFiles);
+
+      const validation = validateAmbyteStructure(files);
+      if (!validation.isValid) {
+        setValidationErrors(validation.errors);
+      }
+    } else {
+      setExcludedFiles([]);
+    }
+  };
+
+  const handleUpload = () => {
+    if (!selectedFiles || validationErrors.length > 0) return;
+
+    const formData = new FormData();
+    formData.append("sourceType", "ambyte");
+
+    // Filter out excluded system files before uploading
+    const validFiles = Array.from(selectedFiles).filter((file) => !isExcludedFile(file));
+
+    // Ensure we have files to upload after filtering
+    if (validFiles.length === 0) {
+      setUploadError(t("uploadModal.validation.noValidFiles"));
+      return;
+    }
+
+    validFiles.forEach((file) => {
+      formData.append("files", file);
+    });
+
+    uploadData({
+      params: { id: experimentId },
+      body: formData,
+    });
+  };
+
+  // Translate validation errors
+  const translatedValidationErrors = validationErrors.map((error) => t(error.key, error.options));
 
   return (
     <div className={uploadStepVariants()}>
       <div>
-        <Label className="text-base font-medium">
-          {t("experimentData.uploadModal.fileUpload.title", "Upload Ambyte Data")}
-        </Label>
+        <Label className="text-base font-medium">{t("uploadModal.fileUpload.title")}</Label>
         <p className="text-muted-foreground mt-1 text-sm">
-          Select an Ambyte folder (e.g., "Ambyte_10") or individual ambit subfolders (e.g., "1",
-          "2", "3", "4"). The folder should contain .txt measurement files.
+          {t("uploadModal.fileUpload.description")}
         </p>
       </div>
 
       <FileUpload
-        directory={true}
-        onFileSelect={onFileSelect}
-        validator={validateAmbyteStructure}
-        maxSize={MAX_FILE_SIZE}
-        className="w-full"
+        files={selectedFiles}
+        onFilesChange={handleFileSelect}
+        isUploading={isUploading}
+        allowDirectories={true}
+        placeholder={t("uploadModal.fileUpload.selectFolder")}
+        selectedText={t("uploadModal.fileUpload.changeSelection")}
+        browseInstruction={t("uploadModal.fileUpload.browseInstruction")}
+        selectedFilesText={t("uploadModal.fileUpload.selectedFiles", {
+          count: selectedFiles?.length ?? 0,
+        })}
+        validationTitle={t("uploadModal.validation.title")}
+        validationErrors={translatedValidationErrors}
+        uploadError={uploadError}
       />
 
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={onBack}>
-          Back
+      {/* Warning about excluded files - only show if there are excluded files */}
+      {excludedFiles.length > 0 && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-5 w-5 text-amber-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-amber-800">
+                <strong>{t("uploadModal.excludedFiles.note")}</strong>{" "}
+                {t("uploadModal.excludedFiles.warningMessage", { count: excludedFiles.length })}{" "}
+                <code className="rounded bg-amber-100 px-1 py-0.5 text-xs">
+                  {excludedFiles.join(", ")}
+                </code>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-between gap-3">
+        <Button variant="outline" onClick={onBack} disabled={isUploading}>
+          {t("uploadModal.fileUpload.back")}
         </Button>
-        <Button onClick={onUpload} disabled={!selectedFiles}>
-          <Upload className="mr-2 h-4 w-4" />
-          Upload Data
+        <Button
+          onClick={handleUpload}
+          disabled={!selectedFiles || validationErrors.length > 0 || isUploading}
+        >
+          {isUploading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {t("uploadModal.fileUpload.uploading")}
+            </>
+          ) : (
+            t("uploadModal.fileUpload.uploadFiles")
+          )}
         </Button>
       </div>
     </div>
@@ -352,10 +442,8 @@ const UploadingStep: React.FC = () => {
     <div className={uploadStepVariants({ alignment: "center" })}>
       <div className="flex flex-col items-center">
         <Loader2 className={statusIconVariants({ type: "loading" })} />
-        <h3 className="text-lg font-medium">{t("experimentData.uploadModal.uploading.title")}</h3>
-        <p className="text-muted-foreground text-sm">
-          {t("experimentData.uploadModal.uploading.description")}
-        </p>
+        <h3 className="text-lg font-medium">{t("uploadModal.uploading.title")}</h3>
+        <p className="text-muted-foreground text-sm">{t("uploadModal.uploading.description")}</p>
       </div>
     </div>
   );
@@ -372,16 +460,12 @@ const SuccessStep: React.FC<SuccessStepProps> = ({ onClose }) => {
     <div className={uploadStepVariants({ alignment: "center" })}>
       <div className="flex flex-col items-center">
         <CheckCircle className={statusIconVariants({ type: "success" })} />
-        <h3 className="text-lg font-medium text-green-700">
-          {t("experimentData.uploadModal.success.title")}
-        </h3>
-        <p className="text-muted-foreground text-sm">
-          {t("experimentData.uploadModal.success.description")}
-        </p>
+        <h3 className="text-lg font-medium text-green-700">{t("uploadModal.success.title")}</h3>
+        <p className="text-muted-foreground text-sm">{t("uploadModal.success.description")}</p>
       </div>
 
       <Button onClick={onClose} className="w-full">
-        {t("experimentData.uploadModal.success.close")}
+        {t("uploadModal.success.close")}
       </Button>
     </div>
   );
@@ -400,18 +484,16 @@ const ErrorStep: React.FC<ErrorStepProps> = ({ error, onClose, onRetry }) => {
     <div className={uploadStepVariants({ alignment: "center" })}>
       <div className="flex flex-col items-center">
         <AlertCircle className={statusIconVariants({ type: "error" })} />
-        <h3 className="text-destructive text-lg font-medium">
-          {t("experimentData.uploadModal.error.title")}
-        </h3>
+        <h3 className="text-destructive text-lg font-medium">{t("uploadModal.error.title")}</h3>
         <p className="text-muted-foreground text-sm">{error}</p>
       </div>
 
       <div className="flex gap-3">
         <Button variant="outline" onClick={onClose} className="flex-1">
-          {t("experimentData.uploadModal.error.close")}
+          {t("uploadModal.error.close")}
         </Button>
         <Button onClick={onRetry} className="flex-1">
-          {t("experimentData.uploadModal.error.retry")}
+          {t("uploadModal.error.retry")}
         </Button>
       </div>
     </div>
@@ -425,14 +507,23 @@ export function AmbyteUploadModal({
   onUploadSuccess,
 }: AmbyteUploadModalProps) {
   const { t } = useTranslation("experiments");
-  const {
-    upload,
-    isLoading,
-    error: uploadError,
-    data: uploadData,
-    isSuccess,
-    reset,
-  } = useAmbyteUploadWrapper();
+  const { isPending: isLoading } = useExperimentDataUpload({
+    onSuccess: (data) => {
+      setState((prev) => ({
+        ...prev,
+        step: "success",
+        uploadResponse: data as UploadExperimentDataResponse,
+      }));
+      onUploadSuccess?.(data as UploadExperimentDataResponse);
+    },
+    onError: (_error) => {
+      setState((prev) => ({
+        ...prev,
+        step: "error",
+        error: "Upload failed",
+      }));
+    },
+  });
 
   const [state, setState] = React.useState<UploadState>({
     step: "sensor-selection",
@@ -450,27 +541,6 @@ export function AmbyteUploadModal({
     }
   }, [isLoading, state.step]);
 
-  React.useEffect(() => {
-    if (isSuccess && uploadData) {
-      setState((prev) => ({
-        ...prev,
-        step: "success",
-        uploadResponse: uploadData.body,
-      }));
-      onUploadSuccess?.(uploadData.body);
-    }
-  }, [isSuccess, uploadData, onUploadSuccess]);
-
-  React.useEffect(() => {
-    if (uploadError) {
-      setState((prev) => ({
-        ...prev,
-        step: "error",
-        error: "Upload failed",
-      }));
-    }
-  }, [uploadError]);
-
   const handleSensorSelect = (sensorId: string) => {
     const sensor = SENSOR_FAMILIES.find((s) => s.id === sensorId);
     if (sensor && !sensor.disabled) {
@@ -482,25 +552,10 @@ export function AmbyteUploadModal({
     }
   };
 
-  const handleFileSelect = (files: FileList | null) => {
-    setState((prev) => ({
-      ...prev,
-      selectedFiles: files,
-      error: null,
-    }));
-  };
-
-  const handleUpload = async () => {
-    if (!state.selectedFiles) return;
-
-    try {
-      await upload({ experimentId, files: state.selectedFiles });
-    } catch (error) {
-      console.error("Upload error:", error);
-    }
-  };
-
   const handleClose = () => {
+    onOpenChange(false);
+
+    // Reset state to initial values
     setState({
       step: "sensor-selection",
       selectedSensor: null,
@@ -509,8 +564,6 @@ export function AmbyteUploadModal({
       error: null,
       uploadResponse: null,
     });
-    reset(); // Reset the upload hook
-    onOpenChange(false);
   };
 
   const handleRetry = () => {
@@ -520,7 +573,6 @@ export function AmbyteUploadModal({
       selectedFiles: null,
       error: null,
     }));
-    reset(); // Reset the upload hook
   };
 
   const renderCurrentStep = () => {
@@ -536,10 +588,13 @@ export function AmbyteUploadModal({
       case "file-upload":
         return (
           <FileUploadStep
-            selectedFiles={state.selectedFiles}
-            onFileSelect={handleFileSelect}
+            experimentId={experimentId}
             onBack={handleRetry}
-            onUpload={handleUpload}
+            onUploadSuccess={() => {
+              setState((prev) => ({ ...prev, step: "success" }));
+              // FileUploadForm handles its own success callback,
+              // but we can also call the parent's onUploadSuccess if needed
+            }}
           />
         );
 
@@ -561,8 +616,8 @@ export function AmbyteUploadModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>{t("experimentData.uploadModal.title")}</DialogTitle>
-          <DialogDescription>Upload sensor data to your experiment for analysis</DialogDescription>
+          <DialogTitle>{t("uploadModal.title")}</DialogTitle>
+          <DialogDescription>{t("uploadModal.description")}</DialogDescription>
         </DialogHeader>
 
         {renderCurrentStep()}
