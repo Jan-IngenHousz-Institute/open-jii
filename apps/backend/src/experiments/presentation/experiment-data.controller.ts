@@ -222,31 +222,6 @@ export class ExperimentDataController {
             this.logger.debug(`Received field: ${fieldname}`);
             if (fieldname === "sourceType") {
               sourceType = value;
-              this.logger.log(`Source type: ${sourceType}`);
-
-              // // Create directory in Databricks for this experiment and source type
-              // if (sourceType) {
-              //   this.logger.log(
-              //     `Creating directory for experiment ${experimentId} and source type ${sourceType}`,
-              //   );
-
-              //   this.uploadAmbyteDataUseCase
-              //     .createDirectory(experimentId, experiment.name, sourceType)
-              //     .then((result) => {
-              //       if (result.isSuccess()) {
-              //         this.logger.log(
-              //           `Successfully created directory at: ${result.value.directoryPath}`,
-              //         );
-              //       } else {
-              //         this.logger.warn(`Failed to create directory: ${result.error.message}`);
-              //         // We'll continue with uploads even if directory creation fails
-              //         // Databricks will create parent directories as needed during file upload
-              //       }
-              //     })
-              //     .catch((error) => {
-              //       this.logger.error(`Error creating directory: ${String(error)}`);
-              //     });
-              // }
             }
           });
 
