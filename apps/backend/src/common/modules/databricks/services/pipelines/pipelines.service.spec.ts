@@ -54,17 +54,19 @@ describe("DatabricksPipelinesService", () => {
       };
 
       const mockResponse = {
-        pipelines: [
+        statuses: [
           {
             pipeline_id: MOCK_PIPELINE_ID,
             name: MOCK_PIPELINE_NAME,
             state: "ACTIVE",
+            cluster_id: "test-cluster",
+            health: "HEALTHY" as const,
+            latest_updates: [],
+            run_as_user_name: "test-user",
             creator_user_name: "test-user",
-            created_time: 1629123456789,
-            last_modified_time: 1629123456789,
           },
         ],
-        has_more: false,
+        next_page_token: undefined,
       };
 
       // Mock token request
@@ -216,17 +218,19 @@ describe("DatabricksPipelinesService", () => {
   describe("getPipelineByName", () => {
     it("should successfully get pipeline by name", async () => {
       const mockListResponse = {
-        pipelines: [
+        statuses: [
           {
             pipeline_id: MOCK_PIPELINE_ID,
             name: MOCK_PIPELINE_NAME,
             state: "ACTIVE",
+            cluster_id: "test-cluster",
+            health: "HEALTHY" as const,
+            latest_updates: [],
+            run_as_user_name: "test-user",
             creator_user_name: "test-user",
-            created_time: 1629123456789,
-            last_modified_time: 1629123456789,
           },
         ],
-        has_more: false,
+        next_page_token: undefined,
       };
 
       const mockGetResponse = {
@@ -255,6 +259,7 @@ describe("DatabricksPipelinesService", () => {
       // Mock pipelines list request
       nock(databricksHost)
         .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
+        .query({ max_results: 100 })
         .reply(200, mockListResponse);
 
       // Mock pipeline get request
@@ -273,17 +278,19 @@ describe("DatabricksPipelinesService", () => {
 
     it("should handle pipeline not found by name", async () => {
       const mockListResponse = {
-        pipelines: [
+        statuses: [
           {
             pipeline_id: "other-pipeline-id",
             name: "Other Pipeline",
             state: "ACTIVE",
+            cluster_id: "test-cluster",
+            health: "HEALTHY" as const,
+            latest_updates: [],
+            run_as_user_name: "test-user",
             creator_user_name: "test-user",
-            created_time: 1629123456789,
-            last_modified_time: 1629123456789,
           },
         ],
-        has_more: false,
+        next_page_token: undefined,
       };
 
       // Mock token request
@@ -296,6 +303,7 @@ describe("DatabricksPipelinesService", () => {
       // Mock pipelines list request
       nock(databricksHost)
         .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
+        .query({ max_results: 100 })
         .reply(200, mockListResponse);
 
       // Execute get pipeline by name

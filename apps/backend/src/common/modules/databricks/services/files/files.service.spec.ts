@@ -8,7 +8,6 @@ import { DatabricksFilesService } from "./files.service";
 // Constants for testing
 const MOCK_ACCESS_TOKEN = "mock-token";
 const MOCK_EXPIRES_IN = 3600;
-const MOCK_FILE_ID = "mock-file-id";
 const MOCK_SCHEMA_NAME = "exp_test_experiment";
 const MOCK_CATALOG_NAME = "main";
 const MOCK_SOURCE_TYPE = "ambyte";
@@ -57,11 +56,9 @@ describe("DatabricksFilesService", () => {
       // Mock file upload request
       const expectedPath = `/Volumes/${MOCK_CATALOG_NAME}/${MOCK_SCHEMA_NAME}/data-uploads/${MOCK_SOURCE_TYPE}/${MOCK_FILE_NAME}`;
       nock(databricksHost)
-        .post(DatabricksFilesService.FILES_ENDPOINT)
-        .query({ path: expectedPath, overwrite: "true" })
-        .reply(200, {
-          file_id: MOCK_FILE_ID,
-        });
+        .put(`${DatabricksFilesService.FILES_ENDPOINT}${expectedPath}`)
+        .query({ overwrite: "false" })
+        .reply(200);
 
       // Execute upload
       const result = await filesService.upload(expectedPath, MOCK_FILE_BUFFER);
@@ -70,7 +67,6 @@ describe("DatabricksFilesService", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toEqual({
-        fileId: MOCK_FILE_ID,
         filePath: expectedPath,
       });
     });
@@ -86,8 +82,8 @@ describe("DatabricksFilesService", () => {
       // Mock file upload request with error
       const expectedPath = `/Volumes/${MOCK_CATALOG_NAME}/${MOCK_SCHEMA_NAME}/data-uploads/${MOCK_SOURCE_TYPE}/${MOCK_FILE_NAME}`;
       nock(databricksHost)
-        .post(DatabricksFilesService.FILES_ENDPOINT)
-        .query({ path: expectedPath, overwrite: "true" })
+        .put(`${DatabricksFilesService.FILES_ENDPOINT}${expectedPath}`)
+        .query({ overwrite: "false" })
         .reply(500, { error: "Internal Server Error" });
 
       // Execute upload
