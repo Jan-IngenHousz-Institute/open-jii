@@ -67,19 +67,21 @@ export class DatabricksAdapter implements DatabricksPort {
 
   /**
    * Upload a file to Databricks for a specific experiment.
-   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}/{fileName}
+   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}/{directoryName}/{fileName}
    *
    * @param experimentId - ID of the experiment
    * @param experimentName - Name of the experiment for schema construction
    * @param sourceType - Type of data source (e.g., 'ambyte')
+   * @param directoryName - Unique directory name for this upload session
    * @param fileName - Name of the file
    * @param fileBuffer - File contents as a buffer
    * @returns Result containing the upload response
    */
-  async uploadFile(
+  async uploadExperimentData(
     experimentId: string,
     experimentName: string,
     sourceType: string,
+    directoryName: string,
     fileName: string,
     fileBuffer: Buffer,
   ): Promise<Result<UploadFileResponse>> {
@@ -89,7 +91,7 @@ export class DatabricksAdapter implements DatabricksPort {
     const catalogName = this.configService.getCatalogName();
 
     // Construct the full path
-    const filePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}/${fileName}`;
+    const filePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}/${directoryName}/${fileName}`;
 
     return this.filesService.upload(filePath, fileBuffer);
   }
