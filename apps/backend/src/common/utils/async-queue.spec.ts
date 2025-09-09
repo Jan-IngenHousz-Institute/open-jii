@@ -64,17 +64,50 @@ describe("AsyncQueue", () => {
   });
 
   describe("add", () => {
-    it("should add tasks to the queue", () => {
+    it("should add tasks to the queue and process them", async () => {
       const queue = new AsyncQueue(1, mockLogger);
-      const task = vi.fn().mockResolvedValue(undefined);
+      const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+      let taskExecuted = false;
 
-      queue.add(task, "test-task");
+      queue.add(async () => {
+        await delay(50);
+        taskExecuted = true;
+      }, "test-task");
 
+      // Immediately after adding, task should be running (not queued)
       const status = queue.getStatus();
-      expect(status.queueLength).toBe(1);
+      expect(status.running).toBe(1);
+      expect(status.queueLength).toBe(0);
       expect(mockLogger.debug).toHaveBeenCalledWith(
         expect.stringMatching(/Queued test-task\. Queue length: 1, running: 0\/1/),
       );
+
+      await queue.waitForCompletion();
+      expect(taskExecuted).toBe(true);
+    });
+
+    it("should queue multiple tasks when concurrency is exceeded", async () => {
+      const queue = new AsyncQueue(1, mockLogger);
+      const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+      // Add first task that will start immediately
+      queue.add(async () => {
+        await delay(100);
+      }, "task-1");
+
+      // Add second task that should be queued
+      queue.add(async () => {
+        await delay(50);
+      }, "task-2");
+
+      // Give a moment for the first task to start
+      await new Promise<void>((resolve) => setTimeout(resolve, 10));
+
+      const status = queue.getStatus();
+      expect(status.running).toBe(1);
+      expect(status.queueLength).toBe(1);
+
+      await queue.waitForCompletion();
     });
 
     it("should generate task identifier when none provided", () => {
