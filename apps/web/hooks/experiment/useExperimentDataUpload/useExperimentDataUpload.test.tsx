@@ -54,7 +54,9 @@ describe("useExperimentDataUpload", () => {
       invalidateQueries: mockInvalidateQueries,
     };
 
-    mockTsr.useQueryClient.mockReturnValue(mockQueryClient as unknown as ReturnType<typeof tsr.useQueryClient>);
+    mockTsr.useQueryClient.mockReturnValue(
+      mockQueryClient as unknown as ReturnType<typeof tsr.useQueryClient>,
+    );
   });
 
   it("should call useMutation with correct configuration", () => {
@@ -76,11 +78,15 @@ describe("useExperimentDataUpload", () => {
       const mockPreviousData = { data: "test-data" };
       mockGetQueryData.mockReturnValue(mockPreviousData);
 
-      let onMutate: ((variables: MutateVariables) => Promise<{ previousData: typeof mockPreviousData }>) | undefined;
-      
+      let onMutate:
+        | ((variables: MutateVariables) => Promise<{ previousData: typeof mockPreviousData }>)
+        | undefined;
+
       (mockTsr.experiments.uploadExperimentData.useMutation as unknown) = vi.fn(
         (opts: {
-          onMutate: (variables: MutateVariables) => Promise<{ previousData: typeof mockPreviousData }>;
+          onMutate: (
+            variables: MutateVariables,
+          ) => Promise<{ previousData: typeof mockPreviousData }>;
         }) => {
           onMutate = opts.onMutate;
           return {};
@@ -90,7 +96,7 @@ describe("useExperimentDataUpload", () => {
       renderHook(() => useExperimentDataUpload(), { wrapper: createWrapper() });
 
       const variables = { params: { id: "experiment-123" } };
-      const result = await onMutate!(variables);
+      const result = await onMutate(variables);
 
       expect(mockCancelQueries).toHaveBeenCalledWith({
         queryKey: ["experiments", "experiment-123", "data"],
@@ -102,11 +108,17 @@ describe("useExperimentDataUpload", () => {
 
   describe("onError callback", () => {
     it("should revert to previous data when context has previousData", () => {
-      let onError: ((error: Error, variables: MutateVariables, context?: { previousData?: unknown }) => void) | undefined;
-      
+      let onError:
+        | ((error: Error, variables: MutateVariables, context?: { previousData?: unknown }) => void)
+        | undefined;
+
       (mockTsr.experiments.uploadExperimentData.useMutation as unknown) = vi.fn(
         (opts: {
-          onError: (error: Error, variables: MutateVariables, context?: { previousData?: unknown }) => void;
+          onError: (
+            error: Error,
+            variables: MutateVariables,
+            context?: { previousData?: unknown },
+          ) => void;
         }) => {
           onError = opts.onError;
           return {};
@@ -119,20 +131,25 @@ describe("useExperimentDataUpload", () => {
       const variables = { params: { id: "experiment-123" } };
       const context = { previousData: { data: "previous-data" } };
 
-      onError!(error, variables, context);
+      onError?.(error, variables, context);
 
-      expect(mockSetQueryData).toHaveBeenCalledWith(
-        ["experiments", "experiment-123", "data"],
-        { data: "previous-data" }
-      );
+      expect(mockSetQueryData).toHaveBeenCalledWith(["experiments", "experiment-123", "data"], {
+        data: "previous-data",
+      });
     });
 
     it("should not revert data when context has no previousData", () => {
-      let onError: ((error: Error, variables: MutateVariables, context?: { previousData?: unknown }) => void) | undefined;
-      
+      let onError:
+        | ((error: Error, variables: MutateVariables, context?: { previousData?: unknown }) => void)
+        | undefined;
+
       (mockTsr.experiments.uploadExperimentData.useMutation as unknown) = vi.fn(
         (opts: {
-          onError: (error: Error, variables: MutateVariables, context?: { previousData?: unknown }) => void;
+          onError: (
+            error: Error,
+            variables: MutateVariables,
+            context?: { previousData?: unknown },
+          ) => void;
         }) => {
           onError = opts.onError;
           return {};
@@ -145,17 +162,23 @@ describe("useExperimentDataUpload", () => {
       const variables = { params: { id: "experiment-123" } };
       const context = {};
 
-      onError!(error, variables, context);
+      onError?.(error, variables, context);
 
       expect(mockSetQueryData).not.toHaveBeenCalled();
     });
 
     it("should not revert data when context is undefined", () => {
-      let onError: ((error: Error, variables: MutateVariables, context?: { previousData?: unknown }) => void) | undefined;
-      
+      let onError:
+        | ((error: Error, variables: MutateVariables, context?: { previousData?: unknown }) => void)
+        | undefined;
+
       (mockTsr.experiments.uploadExperimentData.useMutation as unknown) = vi.fn(
         (opts: {
-          onError: (error: Error, variables: MutateVariables, context?: { previousData?: unknown }) => void;
+          onError: (
+            error: Error,
+            variables: MutateVariables,
+            context?: { previousData?: unknown },
+          ) => void;
         }) => {
           onError = opts.onError;
           return {};
@@ -167,7 +190,7 @@ describe("useExperimentDataUpload", () => {
       const error = new Error("Upload failed");
       const variables = { params: { id: "experiment-123" } };
 
-      onError!(error, variables, undefined);
+      onError?.(error, variables, undefined);
 
       expect(mockSetQueryData).not.toHaveBeenCalled();
     });
@@ -175,14 +198,13 @@ describe("useExperimentDataUpload", () => {
 
   describe("onSuccess callback", () => {
     it("should log success and invalidate experiment queries", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
       const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-      
+
       let onSuccess: ((data: unknown) => Promise<void>) | undefined;
-      
+
       (mockTsr.experiments.uploadExperimentData.useMutation as unknown) = vi.fn(
-        (opts: {
-          onSuccess: (data: unknown) => Promise<void>;
-        }) => {
+        (opts: { onSuccess: (data: unknown) => Promise<void> }) => {
           onSuccess = opts.onSuccess;
           return {};
         },
@@ -191,7 +213,7 @@ describe("useExperimentDataUpload", () => {
       renderHook(() => useExperimentDataUpload(), { wrapper: createWrapper() });
 
       const successData = { success: true, id: "upload-123" };
-      await onSuccess!(successData);
+      await onSuccess?.(successData);
 
       expect(consoleSpy).toHaveBeenCalledWith("Upload success response:", successData);
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
@@ -204,11 +226,17 @@ describe("useExperimentDataUpload", () => {
 
   describe("onSettled callback", () => {
     it("should invalidate specific experiment queries", async () => {
-      let onSettled: ((data: unknown, error: Error | null, variables: MutateVariables) => Promise<void>) | undefined;
-      
+      let onSettled:
+        | ((data: unknown, error: Error | null, variables: MutateVariables) => Promise<void>)
+        | undefined;
+
       (mockTsr.experiments.uploadExperimentData.useMutation as unknown) = vi.fn(
         (opts: {
-          onSettled: (data: unknown, error: Error | null, variables: MutateVariables) => Promise<void>;
+          onSettled: (
+            data: unknown,
+            error: Error | null,
+            variables: MutateVariables,
+          ) => Promise<void>;
         }) => {
           onSettled = opts.onSettled;
           return {};
@@ -221,7 +249,7 @@ describe("useExperimentDataUpload", () => {
       const error = null;
       const variables = { params: { id: "experiment-123" } };
 
-      await onSettled!(data, error, variables);
+      await onSettled?.(data, error, variables);
 
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
         queryKey: ["experiments", "experiment-123", "data"],
@@ -232,11 +260,17 @@ describe("useExperimentDataUpload", () => {
     });
 
     it("should invalidate queries even when there's an error", async () => {
-      let onSettled: ((data: unknown, error: Error | null, variables: MutateVariables) => Promise<void>) | undefined;
-      
+      let onSettled:
+        | ((data: unknown, error: Error | null, variables: MutateVariables) => Promise<void>)
+        | undefined;
+
       (mockTsr.experiments.uploadExperimentData.useMutation as unknown) = vi.fn(
         (opts: {
-          onSettled: (data: unknown, error: Error | null, variables: MutateVariables) => Promise<void>;
+          onSettled: (
+            data: unknown,
+            error: Error | null,
+            variables: MutateVariables,
+          ) => Promise<void>;
         }) => {
           onSettled = opts.onSettled;
           return {};
@@ -249,7 +283,7 @@ describe("useExperimentDataUpload", () => {
       const error = new Error("Upload failed");
       const variables = { params: { id: "experiment-123" } };
 
-      await onSettled!(data, error, variables);
+      await onSettled?.(data, error, variables);
 
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
         queryKey: ["experiments", "experiment-123", "data"],
@@ -271,10 +305,12 @@ describe("useExperimentDataUpload", () => {
       reset: vi.fn(),
     };
 
-    (mockTsr.experiments.uploadExperimentData.useMutation as unknown) = vi.fn().mockReturnValue(mockMutationResult);
+    (mockTsr.experiments.uploadExperimentData.useMutation as unknown) = vi
+      .fn()
+      .mockReturnValue(mockMutationResult);
 
-    const { result } = renderHook(() => useExperimentDataUpload(), { 
-      wrapper: createWrapper() 
+    const { result } = renderHook(() => useExperimentDataUpload(), {
+      wrapper: createWrapper(),
     });
 
     expect(result.current).toBe(mockMutationResult);
