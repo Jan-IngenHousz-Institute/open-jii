@@ -44,20 +44,22 @@ export interface DatabricksPort {
   listTables(experimentName: string, experimentId: string): Promise<Result<ListTablesResponse>>;
 
   /**
-   * Upload a file to Databricks for a specific experiment.
-   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}/{fileName}
+   * Upload data to Databricks for a specific experiment.
+   * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}/{directoryName}/{fileName}
    *
    * @param experimentId - ID of the experiment
    * @param experimentName - Name of the experiment for schema construction
    * @param sourceType - Type of data source (e.g., 'ambyte')
+   * @param directoryName - Unique directory name for this upload session
    * @param fileName - Name of the file
    * @param fileBuffer - File contents as a buffer
    * @returns Result containing the upload response
    */
-  uploadFile(
+  uploadExperimentData(
     experimentId: string,
     experimentName: string,
     sourceType: string,
+    directoryName: string,
     fileName: string,
     fileBuffer: Buffer,
   ): Promise<Result<UploadFileResponse>>;

@@ -216,10 +216,11 @@ describe("DatabricksAdapter", () => {
     });
   });
 
-  describe("uploadFile", () => {
+  describe("uploadExperimentData", () => {
     const experimentId = "123-456-789";
     const experimentName = "Test Experiment";
     const sourceType = "ambyte";
+    const directoryName = "upload_20250910_143022_123-456-789";
     const fileName = "data.csv";
     const fileBuffer = Buffer.from("test,data");
     const catalogName = "main";
@@ -232,7 +233,7 @@ describe("DatabricksAdapter", () => {
       // Calculate expected schema name and file path based on adapter implementation
       const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
       const schemaName = `exp_${cleanName}_${experimentId}`;
-      const expectedFilePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}/${fileName}`;
+      const expectedFilePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}/${directoryName}/${fileName}`;
 
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
@@ -248,10 +249,11 @@ describe("DatabricksAdapter", () => {
         .reply(200);
 
       // Execute upload file
-      const result = await databricksAdapter.uploadFile(
+      const result = await databricksAdapter.uploadExperimentData(
         experimentId,
         experimentName,
         sourceType,
+        directoryName,
         fileName,
         fileBuffer,
       );
@@ -274,7 +276,7 @@ describe("DatabricksAdapter", () => {
       // Calculate expected schema name and file path based on adapter implementation
       const cleanName = specialExperimentName.toLowerCase().trim().replace(/ /g, "_");
       const schemaName = `exp_${cleanName}_${experimentId}`;
-      const expectedFilePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}/${fileName}`;
+      const expectedFilePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}/${directoryName}/${fileName}`;
 
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
@@ -290,10 +292,11 @@ describe("DatabricksAdapter", () => {
         .reply(200);
 
       // Execute upload file
-      const result = await databricksAdapter.uploadFile(
+      const result = await databricksAdapter.uploadExperimentData(
         experimentId,
         specialExperimentName,
         sourceType,
+        directoryName,
         fileName,
         fileBuffer,
       );

@@ -97,8 +97,12 @@ export class ExperimentDataController {
 
       this.logger.log(
         `Upload environment prepared successfully. Volume: ${prepResult.value.volumeName}, ` +
-          `Created: ${prepResult.value.volumeCreated}, Existed: ${prepResult.value.volumeExists}`,
+          `Created: ${prepResult.value.volumeCreated}, Existed: ${prepResult.value.volumeExists}, ` +
+          `Directory: ${prepResult.value.directoryName}`,
       );
+
+      // Extract the directory name for use in file uploads
+      const { directoryName } = prepResult.value;
 
       // Initialize arrays to collect results
       const successfulUploads: { fileName: string; fileId: string; filePath: string }[] = [];
@@ -165,6 +169,7 @@ export class ExperimentDataController {
                   experimentId,
                   experiment.name,
                   sourceType,
+                  directoryName,
                   successfulUploads,
                   errors,
                 );

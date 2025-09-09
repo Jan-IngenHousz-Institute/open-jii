@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { z } from "zod";
 
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { streamToBuffer } from "../../../../common/utils/stream-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
@@ -32,10 +33,25 @@ export class UploadAmbyteDataUseCase {
   async preexecute(
     experimentId: string,
     experimentName: string,
-  ): Promise<Result<{ volumeName: string; volumeExists: boolean; volumeCreated: boolean }>> {
+  ): Promise<
+    Result<{
+      volumeName: string;
+      volumeExists: boolean;
+      volumeCreated: boolean;
+      directoryName: string;
+    }>
+  > {
     this.logger.log(
       `Preparing upload environment for experiment ${experimentName} (${experimentId})`,
     );
+
+    // Generate unique directory name
+    // Format: upload_YYYYMMDD_HHMMSS
+    const now = new Date();
+    const timestamp = now.toISOString().replace(/[-:]/g, "").replace("T", "_").split(".")[0];
+    const directoryName = `upload_${timestamp}`;
+
+    this.logger.log(`Generated upload directory name: ${directoryName}`);
 
     // Construct the volume name
     const volumeName = UploadAmbyteDataUseCase.UPLOADS_VOLUME_NAME;
@@ -54,6 +70,7 @@ export class UploadAmbyteDataUseCase {
         volumeName,
         volumeExists: true,
         volumeCreated: false,
+        directoryName,
       });
     }
 
@@ -77,6 +94,7 @@ export class UploadAmbyteDataUseCase {
         volumeName,
         volumeExists: false,
         volumeCreated: true,
+        directoryName,
       });
     } else {
       this.logger.error(
@@ -94,6 +112,7 @@ export class UploadAmbyteDataUseCase {
     experimentId: string,
     experimentName: string,
     sourceType: string | undefined,
+    directoryName: string,
     successfulUploads: { fileName: string; filePath: string }[],
     errors: { fileName: string; error: string }[],
   ): Promise<void> {
@@ -127,17 +146,22 @@ export class UploadAmbyteDataUseCase {
     }
 
     // Convert stream to buffer and upload the file to Databricks
-    const buffer = await this.streamToBuffer(file.stream);
+    const buffer = await streamToBuffer(file.stream, {
+      maxSize: UploadAmbyteDataUseCase.MAX_FILE_SIZE,
+      timeoutMs: 30000,
+      logger: this.logger,
+    });
 
     this.logger.debug(
       `Successfully converted stream to buffer for file: ${file.filename}, size: ${buffer.length} bytes`,
     );
 
     this.logger.log(`Uploading file to Databricks: ${file.filename}`);
-    const uploadResult = await this.databricksPort.uploadFile(
+    const uploadResult = await this.databricksPort.uploadExperimentData(
       experimentId,
       experimentName,
       sourceType,
+      directoryName,
       file.filename,
       buffer,
     );
@@ -207,75 +231,6 @@ export class UploadAmbyteDataUseCase {
 
     return success({
       files: successfulUploads,
-    });
-  }
-
-  /**
-   * Convert a stream to a buffer
-   * @param stream - The readable stream
-   * @returns Promise resolving to a Buffer
-   */
-  private async streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
-    return new Promise<Buffer>((resolve, reject) => {
-      const chunks: Buffer[] = [];
-      let totalSize = 0;
-
-      // Handle data chunks
-      stream.on("data", (chunk) => {
-        // Ensure chunk is a Buffer
-        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-        totalSize += buffer.length;
-
-        // Check if we're exceeding the size limit
-        if (totalSize > UploadAmbyteDataUseCase.MAX_FILE_SIZE) {
-          reject(
-            new Error(
-              `File exceeds maximum size of ${UploadAmbyteDataUseCase.MAX_FILE_SIZE / (1024 * 1024)}MB`,
-            ),
-          );
-          return;
-        }
-
-        chunks.push(buffer);
-      });
-
-      // Handle errors
-      stream.on("error", (err) => {
-        console.error("Stream error:", err);
-        reject(err instanceof Error ? err : new Error(String(err)));
-      });
-
-      // Handle completion
-      stream.on("end", () => {
-        try {
-          this.logger.debug(`Stream ended, concatenating ${chunks.length} chunks`);
-          const result = Buffer.concat(chunks);
-          // Clear the chunks array to help garbage collection
-          chunks.length = 0;
-          this.logger.debug("Buffer created, chunks cleared");
-          resolve(result);
-        } catch (err) {
-          this.logger.error("Error during buffer concatenation:", err);
-          reject(err instanceof Error ? err : new Error(String(err)));
-        }
-      });
-
-      // Set a timeout to prevent hanging
-      const timeout = setTimeout(() => {
-        this.logger.warn("Stream processing timeout triggered");
-        reject(new Error("Stream processing timed out after 30 seconds"));
-      }, 30000);
-
-      // Clear the timeout when done
-      stream.on("end", () => {
-        this.logger.debug("Clearing timeout on end");
-        clearTimeout(timeout);
-      });
-
-      stream.on("error", () => {
-        this.logger.error("Clearing timeout on error");
-        clearTimeout(timeout);
-      });
     });
   }
 

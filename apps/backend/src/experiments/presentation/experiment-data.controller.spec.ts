@@ -54,7 +54,7 @@ describe("ExperimentDataController", () => {
         userId: testUserId,
       });
 
-      // Mock successful response from uploadFile
+      // Mock successful response from uploadExperimentData
       const mockUploadResponse = {
         filePath: `/Volumes/${experiment.name}/ambyte/${fileName}`,
       };
@@ -87,7 +87,9 @@ describe("ExperimentDataController", () => {
         vi.spyOn(databricksAdapter, "getExperimentVolume").mockResolvedValue(
           success(mockVolumeResponse),
         );
-        vi.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(success(mockUploadResponse));
+        vi.spyOn(databricksAdapter, "uploadExperimentData").mockResolvedValue(
+          success(mockUploadResponse),
+        );
         vi.spyOn(databricksAdapter, "triggerExperimentPipeline").mockResolvedValue(
           success(mockPipelineResponse),
         );
@@ -96,7 +98,7 @@ describe("ExperimentDataController", () => {
         vi.spyOn(databricksAdapter, "getExperimentVolume").mockResolvedValue(
           success(mockVolumeResponse),
         );
-        vi.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(
+        vi.spyOn(databricksAdapter, "uploadExperimentData").mockResolvedValue(
           failure(AppError.internal("Failed to upload file to Databricks")),
         );
       }
@@ -144,7 +146,7 @@ describe("ExperimentDataController", () => {
 
       // Verify the databricksAdapter methods were called
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.uploadFile).toHaveBeenCalledWith(
+      expect(databricksAdapter.uploadExperimentData).toHaveBeenCalledWith(
         experiment.id,
         experiment.name,
         "ambyte",
@@ -180,8 +182,8 @@ describe("ExperimentDataController", () => {
         success(mockVolumeResponse),
       );
 
-      // Mock the uploadFile method to ensure we can check if it's called
-      const uploadFileSpy = vi.spyOn(databricksAdapter, "uploadFile");
+      // Mock the uploadExperimentData method to ensure we can check if it's called
+      const uploadExperimentDataSpy = vi.spyOn(databricksAdapter, "uploadExperimentData");
 
       // Get the path
       const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
@@ -197,7 +199,7 @@ describe("ExperimentDataController", () => {
         .expect(StatusCodes.BAD_REQUEST);
 
       // Verify that the upload method was not called
-      expect(uploadFileSpy).not.toHaveBeenCalled();
+      expect(uploadExperimentDataSpy).not.toHaveBeenCalled();
     });
 
     it("should return 404 when experiment does not exist", async () => {
@@ -230,8 +232,8 @@ describe("ExperimentDataController", () => {
         visibility: "private",
       });
 
-      // Mock the DatabricksAdapter uploadFile method to return forbidden error
-      vi.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(
+      // Mock the DatabricksAdapter uploadExperimentData method to return forbidden error
+      vi.spyOn(databricksAdapter, "uploadExperimentData").mockResolvedValue(
         failure(AppError.forbidden(`User does not have access to experiment`)),
       );
 
@@ -282,7 +284,7 @@ describe("ExperimentDataController", () => {
       const { path, fileBuffer } = await setupFileUploadTest("Ambyte_1", "Upload Error", false);
 
       // Override the mock to simulate upload failure
-      vi.spyOn(databricksAdapter, "uploadFile").mockResolvedValue(
+      vi.spyOn(databricksAdapter, "uploadExperimentData").mockResolvedValue(
         failure(AppError.internal("Failed to upload file to Databricks")),
       );
 
@@ -326,7 +328,7 @@ describe("ExperimentDataController", () => {
       // Create file paths
       const fileNames = ["Ambyte_1/1/20250615-193737_.txt", "Ambyte_1/2/20250615-193738_.txt"];
 
-      // Mock successful responses from uploadFile
+      // Mock successful responses from uploadExperimentData
       const mockUploadResponses = fileNames.map((fileName) => ({
         filePath: `/Volumes/${experiment.name}/ambyte/${fileName}`,
       }));
@@ -339,7 +341,7 @@ describe("ExperimentDataController", () => {
 
       // Setup upload mocks for each file
       let uploadCallCount = 0;
-      vi.spyOn(databricksAdapter, "uploadFile").mockImplementation(() => {
+      vi.spyOn(databricksAdapter, "uploadExperimentData").mockImplementation(() => {
         const response = success(mockUploadResponses[uploadCallCount]);
         uploadCallCount++;
         return Promise.resolve(response);
@@ -385,13 +387,13 @@ describe("ExperimentDataController", () => {
 
       // Verify the databricksAdapter methods were called correctly
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.uploadFile).toHaveBeenCalledTimes(2);
+      expect(databricksAdapter.uploadExperimentData).toHaveBeenCalledTimes(2);
 
       // In practice, only the filename without the path is captured by multer's originalname
       const expectedDatabricsUploadNames = fileNames.map((path) => path.split("/").pop() ?? path);
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.uploadFile).toHaveBeenNthCalledWith(
+      expect(databricksAdapter.uploadExperimentData).toHaveBeenNthCalledWith(
         1,
         experiment.id,
         experiment.name,
@@ -400,7 +402,7 @@ describe("ExperimentDataController", () => {
         expect.any(Buffer),
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.uploadFile).toHaveBeenNthCalledWith(
+      expect(databricksAdapter.uploadExperimentData).toHaveBeenNthCalledWith(
         2,
         experiment.id,
         experiment.name,
