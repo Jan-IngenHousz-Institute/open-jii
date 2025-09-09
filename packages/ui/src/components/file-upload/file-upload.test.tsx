@@ -193,10 +193,45 @@ describe("FileUpload", () => {
 
   it("shows upload error when provided", () => {
     render(
-      <FileUpload files={null} onFilesChange={mockOnFilesChange} uploadError="Upload failed" />,
+      <FileUpload
+        files={null}
+        onFilesChange={mockOnFilesChange}
+        uploadError={{ title: "Upload Error", message: "Upload failed" }}
+      />,
     );
 
+    expect(screen.getByText("Upload Error")).toBeInTheDocument();
     expect(screen.getByText("Upload failed")).toBeInTheDocument();
+  });
+
+  it("shows upload error with retry message when provided", () => {
+    render(
+      <FileUpload
+        files={null}
+        onFilesChange={mockOnFilesChange}
+        uploadError={{
+          title: "Upload Error",
+          message: "Upload failed",
+          retryMessage: "Please try again",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Upload Error")).toBeInTheDocument();
+    expect(screen.getByText("Upload failed")).toBeInTheDocument();
+    expect(screen.getByText("Please try again")).toBeInTheDocument();
+  });
+
+  it("does not show upload error when message is empty", () => {
+    render(
+      <FileUpload
+        files={null}
+        onFilesChange={mockOnFilesChange}
+        uploadError={{ title: "Upload Error", message: "" }}
+      />,
+    );
+
+    expect(screen.queryByText("Upload Error")).not.toBeInTheDocument();
   });
 
   it("calls onFilesChange when dropzone is clicked", async () => {

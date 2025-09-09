@@ -537,7 +537,6 @@ describe("FileUploadStep", () => {
       />,
     );
 
-    // Try to upload without files - should trigger early return on line 66
     const uploadButton = screen.getByText("uploadModal.fileUpload.uploadFiles");
     fireEvent.click(uploadButton);
 
@@ -562,7 +561,6 @@ describe("FileUploadStep", () => {
     const fileUploadButton = screen.getByTestId("file-upload-button");
     fireEvent.click(fileUploadButton);
 
-    // Try to upload with errors - should trigger early return on line 66
     const uploadButton = screen.getByText("uploadModal.fileUpload.uploadFiles");
     fireEvent.click(uploadButton);
 
