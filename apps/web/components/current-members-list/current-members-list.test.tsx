@@ -40,12 +40,6 @@ vi.mock("@/util/date", () => ({
   formatDate: (iso: string) => `FMT(${iso.slice(0, 10)})`,
 }));
 
-// lucide-react icons
-vi.mock("lucide-react", () => {
-  const Icon = () => <span data-testid="icon" />;
-  return { Trash2: Icon, Mail: Icon, Calendar: Icon };
-});
-
 /* --------------------------------- Test data ---------------------------------- */
 
 const mkUser = (over: Partial<StrictUserProfile> = {}): StrictUserProfile => {
