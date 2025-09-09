@@ -10,7 +10,7 @@ import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components";
 
-import { MemberList } from "../current-members-list";
+import { MemberList } from "../current-members-list/current-members-list";
 import { UserSearchWithDropdown } from "../user-search-with-dropdown";
 
 interface Member {

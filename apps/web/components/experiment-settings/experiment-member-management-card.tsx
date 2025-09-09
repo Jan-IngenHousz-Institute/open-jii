@@ -11,7 +11,7 @@ import { useExperimentMemberRemove } from "../../hooks/experiment/useExperimentM
 import { useExperimentMembers } from "../../hooks/experiment/useExperimentMembers/useExperimentMembers";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useUserSearch } from "../../hooks/useUserSearch";
-import { MemberList } from "../current-members-list";
+import { MemberList } from "../current-members-list/current-members-list";
 import { UserSearchWithDropdown } from "../user-search-with-dropdown";
 
 interface ExperimentMemberManagementProps {

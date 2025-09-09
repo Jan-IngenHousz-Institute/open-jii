@@ -22,7 +22,7 @@ import {
   useSidebar,
 } from "@repo/ui/components";
 
-import { useGetUserProfile } from "../hooks/profile/useGetUserProfile/useGetUserProfile";
+import { useGetUserProfile } from "../../hooks/profile/useGetUserProfile/useGetUserProfile";
 
 export function NavUser({
   user,

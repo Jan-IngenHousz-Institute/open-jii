@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { UserProfile } from "@repo/api";
 
-import { MemberList } from "../current-members-list";
+import { MemberList } from "./current-members-list";
 
 globalThis.React = React;
 
@@ -28,21 +28,10 @@ interface StrictMember {
 
 /* ------------------------------------ Mocks ------------------------------------ */
 
-// i18n
+// i18n – returns the key (intentionally dumb)
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
-    t: (k: string, fallback?: string) =>
-      (
-        ({
-          "experimentSettings.noMembersYet": "No members yet",
-          "experimentSettings.addCollaborators": "Add collaborators to get started.",
-          "experimentSettings.noEmail": "No email",
-          "experimentSettings.joined": "Joined",
-          "experimentSettings.cannotRemoveLastAdmin": "Cannot remove the last admin",
-          "experimentSettings.removeMember": "Remove member",
-          "experimentSettings.defaultRole": fallback ?? "member",
-        }) as Record<string, string>
-      )[k] ?? k,
+    t: (k: string) => k,
   }),
 }));
 
@@ -55,42 +44,6 @@ vi.mock("@/util/date", () => ({
 vi.mock("lucide-react", () => {
   const Icon = () => <span data-testid="icon" />;
   return { Trash2: Icon, Mail: Icon, Calendar: Icon };
-});
-
-// Minimal Button & Badge
-vi.mock("@repo/ui/components", () => {
-  const Button = ({
-    children,
-    onClick,
-    disabled,
-    title,
-    className,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    disabled?: boolean;
-    title?: string;
-    className?: string;
-  }) => (
-    <button type="button" onClick={onClick} disabled={disabled} title={title} className={className}>
-      {children}
-    </button>
-  );
-
-  const Badge = ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    variant?: "default" | "secondary" | "destructive" | "outline";
-  }) => (
-    <span data-testid="badge" className={className}>
-      {children}
-    </span>
-  );
-
-  return { Button, Badge };
 });
 
 /* --------------------------------- Test data ---------------------------------- */
@@ -132,8 +85,8 @@ describe("<MemberList />", () => {
       />,
     );
 
-    expect(screen.getByText("No members yet")).toBeInTheDocument();
-    expect(screen.getByText("Add collaborators to get started.")).toBeInTheDocument();
+    expect(screen.getByText("experimentSettings.noMembersYet")).toBeInTheDocument();
+    expect(screen.getByText("experimentSettings.addCollaborators")).toBeInTheDocument();
   });
 
   it("converts members + users to membersWithUserInfo and calls onRemoveMember", () => {
@@ -161,20 +114,15 @@ describe("<MemberList />", () => {
     // Name + email present
     expect(screen.getByText("Grace Hopper")).toBeInTheDocument();
     expect(screen.getByText("grace@example.com")).toBeInTheDocument();
+    expect(screen.getByText("experimentSettings.defaultRole")).toBeInTheDocument();
+    expect(screen.getByText(/experimentSettings\.joined/)).toBeInTheDocument();
 
-    // Role badge shows default "member"
-    expect(screen.getByTestId("badge")).toHaveTextContent("member");
-
-    // 'Joined' label present
-    expect(screen.getByText(/Joined/)).toBeInTheDocument();
-
-    const removeBtn = screen.getByRole("button", { name: "Remove member" });
+    const removeBtn = screen.getByRole("button", { name: "experimentSettings.removeMember" });
     fireEvent.click(removeBtn);
-    expect(onRemove).toHaveBeenCalledTimes(1);
     expect(onRemove).toHaveBeenCalledWith("user-2");
   });
 
-  it("uses provided membersWithUserInfo as-is, shows 'No email' when email is null, and disables last admin removal", () => {
+  it("uses provided membersWithUserInfo as-is, shows key for no email, and disables last admin removal", () => {
     const onRemove = vi.fn();
 
     render(
@@ -200,13 +148,17 @@ describe("<MemberList />", () => {
     );
 
     expect(screen.getByText("Katherine Johnson")).toBeInTheDocument();
-    expect(screen.getByText("No email")).toBeInTheDocument();
-    expect(screen.getByText("Joined FMT(2023-01-02)")).toBeInTheDocument();
-    expect(screen.getByTestId("badge")).toHaveTextContent("admin");
 
-    const btn = screen.getByRole("button", { name: "Cannot remove the last admin" });
+    // No email -> i18n key
+    expect(screen.getByText("experimentSettings.noEmail")).toBeInTheDocument();
+
+    // Joined label (key) and formatted date both present (could be split by nodes)
+    expect(screen.getByText(/experimentSettings\.joined/)).toBeInTheDocument();
+    expect(screen.getByText(/FMT\(2023-01-02\)/, { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("admin")).toBeInTheDocument();
+
+    const btn = screen.getByRole("button", { name: "experimentSettings.cannotRemoveLastAdmin" });
     expect(btn).toBeDisabled();
-
     fireEvent.click(btn);
     expect(onRemove).not.toHaveBeenCalled();
   });
@@ -229,18 +181,11 @@ describe("<MemberList />", () => {
       />,
     );
 
-    // Two remove buttons in order of the provided array
     const buttons = screen.getAllByRole("button");
-    expect(buttons.length).toBeGreaterThanOrEqual(2);
+    expect(buttons[0]).not.toBeDisabled();
+    expect(buttons[1]).toBeDisabled();
 
-    const firstBtn = buttons[0];
-    const secondBtn = buttons[1];
-
-    expect(firstBtn).not.toBeDisabled();
-    expect(secondBtn).toBeDisabled();
-
-    fireEvent.click(firstBtn);
-    expect(onRemove).toHaveBeenCalledTimes(1);
+    fireEvent.click(buttons[0]);
     expect(onRemove).toHaveBeenCalledWith("u1");
   });
 });

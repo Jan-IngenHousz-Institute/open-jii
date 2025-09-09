@@ -26,7 +26,7 @@ import {
 } from "@repo/ui/components";
 
 import { NavItems } from "./nav-items";
-import { NavUser } from "./nav-user";
+import { NavUser } from "./nav-user/nav-user";
 
 interface UserData {
   id?: string | null;
