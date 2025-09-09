@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
@@ -18,6 +19,7 @@ interface ExperimentMemberManagementProps {
 }
 
 export function ExperimentMemberManagement({ experimentId }: ExperimentMemberManagementProps) {
+  const { t } = useTranslation();
   // Get experiment members
   const {
     data: membersData,
@@ -71,7 +73,7 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
       },
     });
 
-    toast({ description: "Member added successfully" });
+    toast({ description: t("experimentSettings.memberAdded") });
     setSelectedUserId("");
   };
 
@@ -87,7 +89,7 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
         },
       });
 
-      toast({ description: "Member removed successfully" });
+      toast({ description: t("experimentSettings.memberRemoved") });
     } finally {
       setRemovingMemberId(null);
     }
@@ -97,7 +99,7 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
     return (
       <Card className="animate-pulse">
         <CardHeader>
-          <CardTitle>Member Management</CardTitle>
+          <CardTitle>{t("experimentSettings.memberManagement")}</CardTitle>
           <div className="bg-muted/40 h-6 w-32 rounded" />
         </CardHeader>
         <CardContent>
@@ -111,9 +113,9 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
     return (
       <Card className="border-destructive">
         <CardHeader>
-          <CardTitle>Member Management</CardTitle>
+          <CardTitle>{t("experimentSettings.memberManagement")}</CardTitle>
           <CardDescription className="text-destructive">
-            Error loading members. Please try again.
+            {t("experimentSettings.memberManagementError")}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -123,17 +125,16 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Member Management</CardTitle>
-        <CardDescription>Manage who has access to this experiment</CardDescription>
+        <CardTitle>{t("experimentSettings.memberManagement")}</CardTitle>
+        <CardDescription>{t("experimentSettings.memberDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Add member section */}
-
         <UserSearchWithDropdown
           availableUsers={availableUsers}
           value={selectedUserId}
           onValueChange={setSelectedUserId}
-          placeholder="Add a member"
+          placeholder={t("newExperiment.addMembersTitle")}
           loading={!isDebounced || isFetchingUsers}
           searchValue={userSearch}
           onSearchChange={setUserSearch}
@@ -142,7 +143,7 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
         />
         {/* Current members section */}
         <div>
-          <h6 className="mb-2 text-sm font-medium">Current Members</h6>
+          <h6 className="mb-2 text-sm font-medium">{t("experimentSettings.currentMembers")}</h6>
           <MemberList
             membersWithUserInfo={members.map((member) => ({
               ...member,

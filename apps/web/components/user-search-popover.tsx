@@ -83,7 +83,7 @@ function SearchStatus({ loading, hasUsers, hasSearchQuery, searchValue }: Search
   }
 
   if (!hasUsers && hasSearchQuery) {
-    return <CommandEmpty>{t("common.noUsersFound", { search: searchValue })}</CommandEmpty>;
+    return <CommandEmpty>{t("experiments.noUsersFound", { search: searchValue })}</CommandEmpty>;
   }
 
   if (!hasUsers && !hasSearchQuery) {
