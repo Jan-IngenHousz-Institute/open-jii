@@ -60,8 +60,13 @@ vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
     t: (k: string) =>
       ({
-        "auth.account": "Account",
-        "navigation.logout": "Sign out",
+        "experimentSettings.memberManagement": "Member Management",
+        "experimentSettings.memberManagementError": "Error loading members. Please try again.",
+        "experimentSettings.memberDescription": "Manage who has access to this experiment",
+        "experimentSettings.currentMembers": "Current Members",
+        "experimentSettings.memberAdded": "Member added successfully",
+        "experimentSettings.memberRemoved": "Member removed successfully",
+        "newExperiment.addMembersTitle": "Add a member",
       })[k] ?? k,
   }),
 }));
