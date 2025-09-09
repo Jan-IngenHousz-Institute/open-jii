@@ -192,7 +192,7 @@
       "noFiles": "Keine Dateien ausgewählt",
       "selectFolder": "Bitte wählen Sie einen Ordner mit Ambyte-Daten aus, keine einzelnen Dateien",
       "invalidStructure": "Ungültige Ambyte-Ordnerstruktur. Erwartete Ordner entweder mit Namen wie 'Ambyte_10' oder nur nummerierte Ordner wie '1', '2', '3', '4', aber nicht beide Muster gleichzeitig",
-      "fileSizeExceeded": "{{count}} Datei(en) überschreiten die maximale Größenbeschränkung von 100 MB",
+      "fileSizeExceeded": "{{count}} Datei(en) überschreiten die maximale Größenbeschränkung von 10 MB",
       "unsupportedExtensions": "{{count}} Datei(en) haben nicht unterstützte Erweiterungen. Erlaubt: {{extensions}}",
       "uploadFailed": "Upload fehlgeschlagen",
       "noValidFiles": "Keine gültigen Dateien zum Hochladen"

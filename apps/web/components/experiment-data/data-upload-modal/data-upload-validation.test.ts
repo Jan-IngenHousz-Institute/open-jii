@@ -190,7 +190,7 @@ describe("data-upload-validation", () => {
 
   describe("constants", () => {
     it("should have correct MAX_FILE_SIZE", () => {
-      expect(MAX_FILE_SIZE).toBe(100 * 1024 * 1024);
+      expect(MAX_FILE_SIZE).toBe(10 * 1024 * 1024);
     });
 
     it("should have correct ALLOWED_EXTENSIONS", () => {

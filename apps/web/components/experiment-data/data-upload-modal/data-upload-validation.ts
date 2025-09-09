@@ -4,7 +4,7 @@ export interface ValidationResult {
 }
 
 // File validation constants
-export const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB per file
+export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
 export const ALLOWED_EXTENSIONS = [".txt"];
 
 // Files to exclude from upload and validation
