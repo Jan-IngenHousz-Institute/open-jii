@@ -8,106 +8,11 @@ import { contract } from "@repo/api";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
+import { AsyncQueue } from "../../common/utils/async-queue";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data";
 import { UploadAmbyteDataUseCase } from "../application/use-cases/experiment-data/upload-ambyte-data";
 import { GetExperimentAccessUseCase } from "../application/use-cases/get-experiment-access/get-experiment-access";
-
-/**
- * A queue implementation for controlled file processing
- * Helps prevent memory issues and token race conditions
- */
-class FileProcessingQueue {
-  private queue: (() => Promise<void>)[] = [];
-  private running = 0;
-  private readonly concurrency: number;
-  private readonly logger: Logger;
-  private readonly id: string;
-
-  constructor(concurrency = 1, logger: Logger) {
-    this.concurrency = concurrency;
-    this.logger = logger;
-    this.id = `queue-${Math.random().toString(36).substring(2, 10)}`;
-    this.logger.debug(`Created new FileProcessingQueue ${this.id} with concurrency ${concurrency}`);
-  }
-
-  add(task: () => Promise<void>, filename: string): void {
-    this.queue.push(task);
-    const queueLength = this.queue.length;
-    this.logger.debug(
-      `[Queue ${this.id}] Queued file: ${filename}. Queue length: ${queueLength}, running: ${this.running}/${this.concurrency}`,
-    );
-    // Using void to explicitly mark promise as handled elsewhere
-    void this.processNext();
-  }
-
-  private async processNext(): Promise<void> {
-    if (this.queue.length === 0) {
-      this.logger.debug(`[Queue ${this.id}] Queue empty, nothing to process`);
-      return;
-    }
-
-    if (this.running >= this.concurrency) {
-      this.logger.debug(
-        `[Queue ${this.id}] Max concurrency reached (${this.running}/${this.concurrency}), waiting for completion`,
-      );
-      return;
-    }
-
-    const item = this.queue.shift();
-    if (!item) return;
-
-    this.running++;
-    this.logger.debug(
-      `[Queue ${this.id}] Processing file: ${this.running} running, ${this.queue.length} in queue`,
-    );
-
-    try {
-      await item();
-      this.logger.debug(
-        `[Queue ${this.id}] File processed successfully, ${this.queue.length} remaining in queue`,
-      );
-    } catch (error: unknown) {
-      this.logger.error(
-        `[Queue ${this.id}] Error processing file: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    } finally {
-      this.running--;
-      this.logger.debug(
-        `[Queue ${this.id}] Completed processing, now ${this.running} running, ${this.queue.length} in queue`,
-      );
-      // Using void to explicitly mark promise as handled elsewhere
-      void this.processNext();
-    }
-  }
-
-  async waitForCompletion(): Promise<void> {
-    if (this.queue.length === 0 && this.running === 0) {
-      this.logger.debug(
-        `[Queue ${this.id}] No files in queue or processing, completing immediately`,
-      );
-      return;
-    }
-
-    this.logger.debug(
-      `[Queue ${this.id}] Waiting for completion: ${this.queue.length} files in queue, ${this.running} running`,
-    );
-
-    return new Promise<void>((resolve) => {
-      const checkInterval = setInterval(() => {
-        if (this.queue.length === 0 && this.running === 0) {
-          this.logger.debug(`[Queue ${this.id}] All files processed, queue empty`);
-          clearInterval(checkInterval);
-          resolve();
-        } else {
-          this.logger.debug(
-            `[Queue ${this.id}] Still waiting: ${this.queue.length} in queue, ${this.running} running`,
-          );
-        }
-      }, 100);
-    });
-  }
-}
 
 @Controller()
 @UseGuards(AuthGuard)
@@ -204,7 +109,7 @@ export class ExperimentDataController {
 
       // Create a single shared processing queue with concurrency of 1
       // This queue will be used for all files to ensure sequential processing
-      const processingQueue = new FileProcessingQueue(1, this.logger);
+      const processingQueue = new AsyncQueue(1, this.logger);
       this.logger.log("Created shared file processing queue for all uploads");
 
       try {
