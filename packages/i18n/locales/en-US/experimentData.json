@@ -20,59 +20,6 @@
       "noResults": "No analysis results available.",
       "description": "Analysis results and reports will appear here once data collection begins."
     },
-    "uploadModal": {
-      "title": "Upload Sensor Data",
-      "description": "Upload sensor data to your experiment for analysis",
-      "sensorFamily": {
-        "label": "Select Sensor Family",
-        "description": "Choose the type of sensor data you want to upload"
-      },
-      "sensorTypes": {
-        "multispeq": {
-          "label": "MultispeQ",
-          "description": "MultispeQ sensor data upload (coming soon)",
-          "comingSoon": "Coming Soon"
-        },
-        "ambyte": {
-          "label": "Ambyte",
-          "description": "Upload Ambyte sensor folders containing measurement data"
-        }
-      },
-      "fileUpload": {
-        "title": "Upload Ambyte Data",
-        "description": "Select an Ambyte folder (e.g., \"Ambyte_10\") or individual ambit subfolders (e.g., \"1\", \"2\", \"3\", \"4\"). The folder should contain .txt measurement files.",
-        "selectFolder": "Select Ambyte folder",
-        "changeSelection": "Change folder selection",
-        "browseInstruction": "Click to browse for an Ambyte data folder",
-        "selectedFiles": "Selected: {{count}} files",
-        "validationErrors": "Validation Errors:",
-        "back": "Back",
-        "uploadFiles": "Upload Files",
-        "uploading": "Uploading..."
-      },
-      "uploading": {
-        "title": "Uploading Data",
-        "description": "Please wait while we process your sensor data..."
-      },
-      "success": {
-        "title": "Upload Successful",
-        "description": "Your sensor data has been uploaded successfully and is now available for analysis.",
-        "close": "Close"
-      },
-      "error": {
-        "title": "Upload Failed",
-        "close": "Close",
-        "retry": "Try Again"
-      },
-      "validation": {
-        "title": "Validation Errors:",
-        "noFiles": "No files selected",
-        "selectFolder": "Please select a folder containing Ambyte data, not individual files",
-        "invalidStructure": "Invalid Ambyte folder structure. Expected folders like 'Ambyte_10' or numbered folders '1', '2', '3', '4'",
-        "fileSizeExceeded": "{{count}} file(s) exceed the maximum size limit of 100MB",
-        "unsupportedExtensions": "{{count}} file(s) have unsupported extensions. Allowed: {{extensions}}",
-        "uploadFailed": "Upload failed"
-      }
-    }
+    "uploadData": "Upload Data"
   }
 }

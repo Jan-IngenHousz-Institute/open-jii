@@ -9,7 +9,7 @@ import { FileUpload } from "./file-upload";
 
 /**
  * Test suite for the FileUpload component
- * 
+ *
  * This test suite covers:
  * - Basic rendering and props handling
  * - File selection and upload functionality
@@ -43,7 +43,7 @@ describe("FileUpload", () => {
         onFilesChange={mockOnFilesChange}
         placeholder="Custom placeholder"
         browseInstruction="Custom browse instruction"
-      />
+      />,
     );
 
     expect(screen.getByText("Custom placeholder")).toBeInTheDocument();
@@ -52,13 +52,7 @@ describe("FileUpload", () => {
 
   it("renders with custom icon", () => {
     const CustomIcon = () => <div data-testid="custom-icon">Custom Icon</div>;
-    render(
-      <FileUpload
-        files={null}
-        onFilesChange={mockOnFilesChange}
-        icon={<CustomIcon />}
-      />
-    );
+    render(<FileUpload files={null} onFilesChange={mockOnFilesChange} icon={<CustomIcon />} />);
 
     expect(screen.getByTestId("custom-icon")).toBeInTheDocument();
   });
@@ -67,7 +61,7 @@ describe("FileUpload", () => {
     render(
       <FileUpload files={null} onFilesChange={mockOnFilesChange}>
         <div data-testid="custom-content">Custom upload content</div>
-      </FileUpload>
+      </FileUpload>,
     );
 
     expect(screen.getByTestId("custom-content")).toBeInTheDocument();
@@ -88,7 +82,9 @@ describe("FileUpload", () => {
 
   it("handles multiple file selection when multiple is enabled", async () => {
     const user = userEvent.setup();
-    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} multiple={true} />);
+    const { container } = render(
+      <FileUpload files={null} onFilesChange={mockOnFilesChange} multiple={true} />,
+    );
 
     const files = [
       new File(["test1"], "test1.txt", { type: "text/plain" }),
@@ -102,10 +98,27 @@ describe("FileUpload", () => {
   });
 
   it("disables file selection when isUploading is true", () => {
-    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} isUploading={true} />);
+    const { container } = render(
+      <FileUpload files={null} onFilesChange={mockOnFilesChange} isUploading={true} />,
+    );
 
     const input = getFileInput(container);
     expect(input).toBeDisabled();
+  });
+
+  it("shows loading view when isUploading is true", () => {
+    render(
+      <FileUpload
+        files={null}
+        onFilesChange={mockOnFilesChange}
+        isUploading={true}
+        uploadingText="Custom uploading text"
+        uploadingDescription="Custom uploading description"
+      />,
+    );
+
+    expect(screen.getByText("Custom uploading text")).toBeInTheDocument();
+    expect(screen.getByText("Custom uploading description")).toBeInTheDocument();
   });
 
   it("shows selected files when files are provided", () => {
@@ -144,14 +157,18 @@ describe("FileUpload", () => {
   });
 
   it("applies allowDirectories attribute when enabled", () => {
-    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} allowDirectories={true} />);
+    const { container } = render(
+      <FileUpload files={null} onFilesChange={mockOnFilesChange} allowDirectories={true} />,
+    );
 
     const input = getFileInput(container);
     expect(input).toHaveAttribute("webkitdirectory", "");
   });
 
   it("does not apply allowDirectories attribute when disabled", () => {
-    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} allowDirectories={false} />);
+    const { container } = render(
+      <FileUpload files={null} onFilesChange={mockOnFilesChange} allowDirectories={false} />,
+    );
 
     const input = getFileInput(container);
     expect(input).not.toHaveAttribute("webkitdirectory");
@@ -166,7 +183,7 @@ describe("FileUpload", () => {
         onFilesChange={mockOnFilesChange}
         validationErrors={validationErrors}
         validationTitle="Upload errors"
-      />
+      />,
     );
 
     expect(screen.getByText("Upload errors")).toBeInTheDocument();
@@ -176,11 +193,7 @@ describe("FileUpload", () => {
 
   it("shows upload error when provided", () => {
     render(
-      <FileUpload
-        files={null}
-        onFilesChange={mockOnFilesChange}
-        uploadError="Upload failed"
-      />
+      <FileUpload files={null} onFilesChange={mockOnFilesChange} uploadError="Upload failed" />,
     );
 
     expect(screen.getByText("Upload failed")).toBeInTheDocument();
@@ -190,7 +203,7 @@ describe("FileUpload", () => {
     const user = userEvent.setup();
     const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} />);
 
-    const dropzone = screen.getByText("Click to select files or drag and drop").closest('div');
+    const dropzone = screen.getByText("Click to select files or drag and drop").closest("div");
     await user.click(dropzone!);
 
     // The click should trigger the file input click
@@ -198,14 +211,31 @@ describe("FileUpload", () => {
     expect(input).toBeDefined();
   });
 
+  it("doesn't trigger file selection when dropzone is clicked during upload", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <FileUpload files={null} onFilesChange={mockOnFilesChange} isUploading={true} />,
+    );
+
+    const dropzone = screen.getByText("Uploading files...").closest("div");
+    await user.click(dropzone!);
+
+    // The click should not trigger any file selection
+    expect(mockOnFilesChange).not.toHaveBeenCalled();
+  });
+
   it("applies custom className", () => {
-    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} className="custom-class" />);
+    const { container } = render(
+      <FileUpload files={null} onFilesChange={mockOnFilesChange} className="custom-class" />,
+    );
 
     expect(container.firstChild).toHaveClass("custom-class");
   });
 
   it("handles single file selection when multiple is false", () => {
-    const { container } = render(<FileUpload files={null} onFilesChange={mockOnFilesChange} multiple={false} />);
+    const { container } = render(
+      <FileUpload files={null} onFilesChange={mockOnFilesChange} multiple={false} />,
+    );
 
     const input = getFileInput(container);
     expect(input).not.toHaveAttribute("multiple");
@@ -218,7 +248,7 @@ describe("FileUpload", () => {
         onFilesChange={mockOnFilesChange}
         selectedFilesText="Custom selected files"
         selectedText="Custom change selection"
-      />
+      />,
     );
 
     // With no files, should show placeholder
@@ -232,7 +262,7 @@ describe("FileUpload", () => {
         onFilesChange={mockOnFilesChange}
         selectedFilesText="Custom selected files"
         selectedText="Custom change selection"
-      />
+      />,
     );
 
     expect(screen.getByText("Custom selected files")).toBeInTheDocument();
@@ -249,17 +279,17 @@ describe("FileUpload", () => {
   it("handles FileList as files prop", () => {
     const file1 = new File(["test1"], "test1.txt", { type: "text/plain" });
     const file2 = new File(["test2"], "test2.txt", { type: "text/plain" });
-    
+
     // Mock a FileList instead of using DataTransfer
     const mockFileList = {
       0: file1,
       1: file2,
       length: 2,
-      item: (index: number) => index === 0 ? file1 : index === 1 ? file2 : null,
+      item: (index: number) => (index === 0 ? file1 : index === 1 ? file2 : null),
       [Symbol.iterator]: function* () {
         yield file1;
         yield file2;
-      }
+      },
     } as FileList;
 
     render(<FileUpload files={mockFileList} onFilesChange={mockOnFilesChange} />);

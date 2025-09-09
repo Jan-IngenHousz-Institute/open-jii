@@ -1,6 +1,6 @@
 "use client";
 
-import { Upload } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import React, { useCallback, useRef } from "react";
 
 import { cn } from "../../lib/utils";
@@ -79,12 +79,26 @@ export interface FileUploadProps {
   /**
    * Upload error message
    */
-  uploadError?: string | null;
+  uploadError?: {
+    title: string;
+    message: string;
+    retryMessage?: string;
+  };
 
   /**
    * Icon to display in the upload area
    */
   icon?: React.ReactNode;
+
+  /**
+   * Text to show during upload
+   */
+  uploadingText?: string;
+
+  /**
+   * Upload progress description
+   */
+  uploadingDescription?: string;
 }
 
 export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
@@ -106,6 +120,8 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
       validationErrors = [],
       uploadError = null,
       icon,
+      uploadingText = "Uploading files...",
+      uploadingDescription = "Please wait while your files are being processed",
       ...props
     },
     ref,
@@ -125,8 +141,11 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
     return (
       <div className={cn("space-y-4", className)} ref={ref} {...props}>
         <div
-          className="hover:border-primary/50 cursor-pointer rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors"
-          onClick={() => fileInputRef.current?.click()}
+          className={cn(
+            "hover:border-primary/50 rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors",
+            isUploading ? "cursor-wait" : "cursor-pointer",
+          )}
+          onClick={() => !isUploading && fileInputRef.current?.click()}
         >
           <input
             ref={fileInputRef}
@@ -142,11 +161,23 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
 
           {children || (
             <div className="flex flex-col items-center justify-center space-y-2">
-              {icon || <Upload className="h-8 w-8 text-gray-400" />}
-              <div>
-                <p className="text-sm font-medium">{hasFiles ? selectedText : placeholder}</p>
-                <p className="text-xs text-gray-500">{browseInstruction}</p>
-              </div>
+              {isUploading ? (
+                <>
+                  <Loader2 className="text-primary h-8 w-8 animate-spin" />
+                  <div>
+                    <p className="text-sm font-medium">{uploadingText}</p>
+                    <p className="text-xs text-gray-500">{uploadingDescription}</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {icon || <Upload className="h-8 w-8 text-gray-400" />}
+                  <div>
+                    <p className="text-sm font-medium">{hasFiles ? selectedText : placeholder}</p>
+                    <p className="text-xs text-gray-500">{browseInstruction}</p>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -175,9 +206,13 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
           </div>
         )}
 
-        {uploadError && (
+        {uploadError && uploadError.message.length > 0 && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-            <p className="text-sm text-red-700">{uploadError}</p>
+            <h4 className="mb-1 text-sm font-medium text-red-800">{uploadError.title}</h4>
+            <p className="text-sm text-red-700">{uploadError.message}</p>
+            {uploadError.retryMessage && (
+              <p className="mt-2 text-sm text-red-600">{uploadError.retryMessage}</p>
+            )}
           </div>
         )}
       </div>

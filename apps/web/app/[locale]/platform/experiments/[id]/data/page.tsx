@@ -5,7 +5,7 @@ import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { Upload } from "lucide-react";
 import { use } from "react";
 import * as React from "react";
-import { AmbyteUploadModal } from "~/components/experiment-data/ambyte-upload-modal/ambyte-upload-modal";
+import { DataUploadModal } from "~/components/experiment-data/data-upload-modal/data-upload-modal";
 import { ExperimentDataSampleTables } from "~/components/experiment-data/experiment-data-sample-tables";
 import { useLocale } from "~/hooks/useLocale";
 
@@ -36,11 +36,6 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
     return <div>{t("notFound")}</div>;
   }
 
-  const handleUploadSuccess = () => {
-    // Refresh experiment data after successful upload
-    setUploadModalOpen(false);
-  };
-
   return (
     <div className="space-y-8">
       <div className="flex items-start justify-between">
@@ -50,18 +45,13 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         </div>
         <Button onClick={() => setUploadModalOpen(true)}>
           <Upload className="mr-2 h-4 w-4" />
-          {t("experimentData.uploadData", "Upload Data")}
+          {t("experimentData.uploadData")}
         </Button>
       </div>
 
       <ExperimentDataSampleTables experimentId={id} sampleSize={5} locale={locale} />
 
-      <AmbyteUploadModal
-        experimentId={id}
-        open={uploadModalOpen}
-        onOpenChange={setUploadModalOpen}
-        onUploadSuccess={handleUploadSuccess}
-      />
+      <DataUploadModal experimentId={id} open={uploadModalOpen} onOpenChange={setUploadModalOpen} />
     </div>
   );
 }
