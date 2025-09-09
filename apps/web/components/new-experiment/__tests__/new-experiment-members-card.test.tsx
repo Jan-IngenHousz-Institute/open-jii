@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { render, screen, within, act } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import React from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -37,41 +37,12 @@ interface MemberListCapturedProps {
 
 /* --------------------------------- Mocks --------------------------------- */
 
-// i18n labels
+// i18n
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
-    t: (k: string) =>
-      ({
-        "newExperiment.addMembersTitle": "Add members",
-        "newExperiment.addMembersDescription": "Invite teammates to your experiment.",
-        "newExperiment.addMemberPlaceholder": "Search or paste an email",
-      })[k] ?? k,
+    t: (k: string) => k,
   }),
 }));
-
-// UI
-vi.mock("@repo/ui/components", () => {
-  const Card = ({ children, className }: React.HTMLAttributes<HTMLDivElement>) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  );
-  const CardHeader = ({ children }: React.PropsWithChildren) => (
-    <div data-testid="card-header">{children}</div>
-  );
-  const CardTitle = ({ children }: React.PropsWithChildren) => (
-    <h2 data-testid="card-title">{children}</h2>
-  );
-  const CardDescription = ({ children }: React.PropsWithChildren) => (
-    <p data-testid="card-desc">{children}</p>
-  );
-  const CardContent = ({ children, className }: React.HTMLAttributes<HTMLDivElement>) => (
-    <div data-testid="card-content" className={className}>
-      {children}
-    </div>
-  );
-  return { Card, CardHeader, CardTitle, CardDescription, CardContent };
-});
 
 // session
 const sessionUserId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -94,9 +65,8 @@ vi.mock("@/hooks/useUserSearch", () => ({
 }));
 
 let lastUserSearchProps: UserSearchCapturedProps | null = null;
-let lastMemberListProps: MemberListCapturedProps | null = null;
 
-// user search dropdown stub
+// user search dropdown
 vi.mock("../../user-search-with-dropdown", () => ({
   UserSearchWithDropdown: (props: UserSearchCapturedProps) => {
     lastUserSearchProps = props;
@@ -118,9 +88,8 @@ vi.mock("../../user-search-with-dropdown", () => ({
 }));
 
 // member list
-vi.mock("../../current-members-list", () => ({
+vi.mock("../current-members-list/current-members-list", () => ({
   MemberList: (props: MemberListCapturedProps) => {
-    lastMemberListProps = props;
     return (
       <div data-testid="member-list">
         <div data-testid="member-count">{props.members.length}</div>
@@ -154,7 +123,7 @@ const mkProfile = (over: Partial<UserProfile>): UserProfile => ({
 });
 
 const profiles: UserProfile[] = [
-  mkProfile({ userId: sessionUserId, firstName: "Me", lastName: "Myself" }), // current user -> should be filtered
+  mkProfile({ userId: sessionUserId, firstName: "Me", lastName: "Myself" }), // current user -> filtered
   mkProfile({
     userId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
     firstName: "Grace",
@@ -178,7 +147,6 @@ function makeForm(initialMembers: Member[] = []): UseFormReturn<CreateExperiment
   return {
     // only the pieces used by the component
     watch: (name?: string) => {
-      // our component only calls watch("members")
       if (name === "members") return members;
       return undefined;
     },
@@ -186,9 +154,7 @@ function makeForm(initialMembers: Member[] = []): UseFormReturn<CreateExperiment
       if (name === "members") {
         members = value as Member[];
         // Trigger a re-render by calling the callback if it exists
-        if (formUpdateCallback) {
-          formUpdateCallback();
-        }
+        if (formUpdateCallback) formUpdateCallback();
       }
     },
     register: vi.fn() as never,
@@ -211,7 +177,6 @@ function makeForm(initialMembers: Member[] = []): UseFormReturn<CreateExperiment
 beforeEach(() => {
   vi.clearAllMocks();
   lastUserSearchProps = null;
-  lastMemberListProps = null;
   formUpdateCallback = null;
 
   useDebounceMock.mockImplementation((v: string): [string, boolean] => [v, true]);
@@ -224,10 +189,9 @@ describe("<NewExperimentMembersCard />", () => {
   it("renders card titles and description", () => {
     const form = makeForm([]);
     render(<NewExperimentMembersCard form={form} />);
-    expect(screen.getByTestId("card-title")).toHaveTextContent("Add members");
-    expect(screen.getByTestId("card-desc")).toHaveTextContent(
-      "Invite teammates to your experiment.",
-    );
+
+    expect(screen.getByText("newExperiment.addMembersTitle")).toBeInTheDocument();
+    expect(screen.getByText("newExperiment.addMembersDescription")).toBeInTheDocument();
   });
 
   it("filters available users to exclude current user and already-added members", () => {
@@ -244,49 +208,41 @@ describe("<NewExperimentMembersCard />", () => {
   it("adds a member via the dropdown and clears selection + search", () => {
     const form = makeForm([]);
     const { rerender } = render(<NewExperimentMembersCard form={form} />);
-
     formUpdateCallback = () => rerender(<NewExperimentMembersCard form={form} />);
 
-    act(() => {
-      within(screen.getByTestId("user-search")).getByTestId("add-first-user").click();
-    });
+    // before: no members yet
+    const countBefore = screen.queryAllByTitle("experimentSettings.removeMember").length;
+    expect(countBefore).toBe(0);
+    expect(screen.getByText("experimentSettings.noMembersYet")).toBeInTheDocument();
 
-    // member list should now have 1 member, and adminCount stays 0
-    expect(screen.getByTestId("member-count")).toHaveTextContent("1");
-    expect(screen.getByTestId("admin-count")).toHaveTextContent("0");
+    // add the first available user via the stubbed dropdown
+    within(screen.getByTestId("user-search")).getByTestId("add-first-user").click();
 
-    // after add, component clears selectedUserId + userSearch
-    const props = lastUserSearchProps;
-    expect(props?.value).toBe("");
-    expect(props?.searchValue).toBe("");
+    // after: one more member row
+    const countAfter = screen.queryAllByTitle("experimentSettings.removeMember").length;
+    expect(countAfter).toBe(countBefore + 1);
 
-    // users passed to MemberList should include the newly added profile and other search results
-    const ml = lastMemberListProps;
-    const userIds = ml?.users.map((u) => u.userId);
-    expect(userIds).toEqual(
-      expect.arrayContaining([
-        "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-        "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-      ]),
-    );
+    // empty state should be gone
+    expect(screen.queryByText("experimentSettings.noMembersYet")).not.toBeInTheDocument();
+
+    // controlled clears
+    expect(lastUserSearchProps?.value).toBe("");
+    expect(lastUserSearchProps?.searchValue).toBe("");
   });
 
   it("removes a member via MemberList callback", () => {
     const form = makeForm([{ userId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", role: "member" }]);
     const { rerender } = render(<NewExperimentMembersCard form={form} />);
-
     formUpdateCallback = () => rerender(<NewExperimentMembersCard form={form} />);
 
-    // one member visible now
-    expect(screen.getByTestId("member-count")).toHaveTextContent("1");
+    // The member name is visible
+    expect(screen.getByText("Grace Hopper")).toBeInTheDocument();
 
-    // click remove
-    act(() => {
-      screen.getByTestId("remove-bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb").click();
-    });
+    // Click the real remove icon button
+    screen.getAllByTitle("experimentSettings.removeMember")[0].click();
 
-    // list should be empty now
-    expect(screen.getByTestId("member-count")).toHaveTextContent("0");
+    // The member should be gone
+    expect(screen.queryByText("Grace Hopper")).not.toBeInTheDocument();
   });
 
   it("computes adminCount from members with role=admin", () => {
@@ -297,7 +253,10 @@ describe("<NewExperimentMembersCard />", () => {
     ];
     const form = makeForm(initial);
     render(<NewExperimentMembersCard form={form} />);
-    expect(screen.getByTestId("admin-count")).toHaveTextContent("2");
+
+    // Count badges with text "admin"
+    const adminBadges = screen.getAllByText("admin");
+    expect(adminBadges.length).toBe(2);
   });
 
   it("sets loading=true when not debounced OR user search is fetching", () => {

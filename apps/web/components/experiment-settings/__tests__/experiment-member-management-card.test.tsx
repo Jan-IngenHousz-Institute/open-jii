@@ -55,52 +55,12 @@ const useExperimentMemberRemoveMock = vi.hoisted(() => vi.fn());
 const useDebounceMock = vi.hoisted(() => vi.fn());
 const useUserSearchMock = vi.hoisted(() => vi.fn());
 
-// i18n labels (minimal)
+// i18n
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
-    t: (k: string) =>
-      ({
-        "experimentSettings.memberManagement": "Member Management",
-        "experimentSettings.memberManagementError": "Error loading members. Please try again.",
-        "experimentSettings.memberDescription": "Manage who has access to this experiment",
-        "experimentSettings.currentMembers": "Current Members",
-        "experimentSettings.memberAdded": "Member added successfully",
-        "experimentSettings.memberRemoved": "Member removed successfully",
-        "newExperiment.addMembersTitle": "Add a member",
-      })[k] ?? k,
+    t: (k: string) => k,
   }),
 }));
-
-// UI skeleton
-vi.mock("@repo/ui/components", () => {
-  const Card = ({ children, className }: React.HTMLAttributes<HTMLDivElement>) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  );
-  const CardHeader = ({ children }: React.PropsWithChildren) => (
-    <div data-testid="card-header">{children}</div>
-  );
-  const CardTitle = ({ children }: React.PropsWithChildren) => (
-    <h2 data-testid="card-title">{children}</h2>
-  );
-  const CardDescription = ({ children }: React.PropsWithChildren) => (
-    <p data-testid="card-desc">{children}</p>
-  );
-  const CardContent = ({ children, className }: React.HTMLAttributes<HTMLDivElement>) => (
-    <div data-testid="card-content" className={className}>
-      {children}
-    </div>
-  );
-
-  return {
-    Card,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-    CardContent,
-  };
-});
 
 vi.mock("@repo/ui/hooks", () => ({
   toast: toastMock,
@@ -158,29 +118,6 @@ vi.mock("../../user-search-with-dropdown", () => ({
       </div>
     );
   },
-}));
-
-vi.mock("../../current-members-list", () => ({
-  MemberList: (props: {
-    adminCount?: number;
-    membersWithUserInfo?: { user: { userId: string } }[];
-    onRemoveMember: (userId: string) => void;
-  }) => (
-    <div data-testid="member-list">
-      <div data-testid="ml-admin-count">{props.adminCount ?? 0}</div>
-      <div data-testid="ml-member-count">{props.membersWithUserInfo?.length ?? 0}</div>
-      {(props.membersWithUserInfo ?? []).map((m) => (
-        <button
-          key={m.user.userId}
-          type="button"
-          data-testid={`remove-${m.user.userId}`}
-          onClick={() => props.onRemoveMember(m.user.userId)}
-        >
-          remove {m.user.userId}
-        </button>
-      ))}
-    </div>
-  ),
 }));
 
 /* ------------------------------- Test Data ------------------------------- */
@@ -249,6 +186,8 @@ beforeEach(() => {
   useExperimentMemberRemoveMock.mockReturnValue(defaultMockReturns.memberRemove);
 });
 
+/* --------------------------------- Tests -------------------------------- */
+
 describe("<ExperimentMemberManagement />", () => {
   it("renders loading skeleton when members are loading", () => {
     useExperimentMembersMock.mockReturnValueOnce({
@@ -259,8 +198,7 @@ describe("<ExperimentMemberManagement />", () => {
 
     renderWithClient(<ExperimentMemberManagement experimentId={experimentId} />);
 
-    expect(screen.getByTestId("card-title")).toHaveTextContent("Member Management");
-    expect(screen.getByTestId("card-content")).toBeInTheDocument();
+    expect(screen.getByText("experimentSettings.memberManagement")).toBeInTheDocument();
   });
 
   it("renders error card when members fail to load", () => {
@@ -272,21 +210,23 @@ describe("<ExperimentMemberManagement />", () => {
 
     renderWithClient(<ExperimentMemberManagement experimentId={experimentId} />);
 
-    expect(screen.getByTestId("card-title")).toHaveTextContent("Member Management");
-    expect(screen.getByTestId("card-desc")).toHaveTextContent(
-      "Error loading members. Please try again.",
-    );
+    expect(screen.getByText("experimentSettings.memberManagement")).toBeInTheDocument();
+    expect(screen.getByText("experimentSettings.memberManagementError")).toBeInTheDocument();
   });
 
-  it("renders title/description and passes adminCount + members to MemberList", () => {
+  it("renders title/description and shows member information (real MemberList)", () => {
     renderWithClient(<ExperimentMemberManagement experimentId={experimentId} />);
 
-    expect(screen.getByTestId("card-title")).toHaveTextContent("Member Management");
-    expect(screen.getByTestId("card-desc")).toHaveTextContent(
-      "Manage who has access to this experiment",
-    );
-    expect(screen.getByTestId("ml-admin-count")).toHaveTextContent("1");
-    expect(screen.getByTestId("ml-member-count")).toHaveTextContent("2");
+    expect(screen.getByText("experimentSettings.memberManagement")).toBeInTheDocument();
+    expect(screen.getByText("experimentSettings.memberDescription")).toBeInTheDocument();
+
+    // Member names should be visible (from real MemberList)
+    expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+    expect(screen.getByText("Grace Hopper")).toBeInTheDocument();
+
+    // Roles should be visible (Badge text inside MemberList)
+    expect(screen.getByText("admin")).toBeInTheDocument();
+    expect(screen.getByText("member")).toBeInTheDocument();
   });
 
   it("filters available users to exclude already-added members (by user.id)", () => {
@@ -305,14 +245,12 @@ describe("<ExperimentMemberManagement />", () => {
 
     const user = userEvent.setup();
 
-    // Select a user first
+    // Select a user first via our controlled mock
     await user.click(within(screen.getByTestId("user-search")).getByTestId("set-user-value"));
     expect(screen.getByTestId("current-value")).toHaveTextContent("u-free");
 
     // Add the user
-    if (lastUserSearchProps?.onAddUser) {
-      await lastUserSearchProps.onAddUser();
-    }
+    await lastUserSearchProps?.onAddUser();
 
     expect(addSpy).toHaveBeenCalledWith({
       params: { id: experimentId },
@@ -323,13 +261,29 @@ describe("<ExperimentMemberManagement />", () => {
     await waitFor(() => expect(toastMock).toHaveBeenCalled());
   });
 
-  it("invokes removeMember with the correct payload", async () => {
+  it("invokes removeMember with the correct payload (clicks real remove button for non-admin)", async () => {
     const removeSpy = vi.fn().mockResolvedValue({ ok: true });
     useExperimentMemberRemoveMock.mockReturnValueOnce({ mutateAsync: removeSpy, isPending: false });
 
     renderWithClient(<ExperimentMemberManagement experimentId={experimentId} />);
 
-    await userEvent.setup().click(screen.getByTestId("remove-u-member"));
+    // We search by role=button and look for 'remove' in text/aria-label/title.
+    const allButtons = screen.getAllByRole("button");
+    const removeBtn =
+      allButtons.find(
+        (b) =>
+          !b.hasAttribute("disabled") &&
+          /remove/i.test(
+            (b.textContent ?? "") +
+              (b.getAttribute("aria-label") ?? "") +
+              (b.getAttribute("title") ?? ""),
+          ),
+      ) ?? allButtons.reverse().find((b) => !b.hasAttribute("disabled"));
+
+    expect(removeBtn).toBeTruthy();
+    if (removeBtn) {
+      await userEvent.click(removeBtn);
+    }
 
     expect(removeSpy).toHaveBeenCalledWith({
       params: { id: experimentId, memberId: "u-member" },
@@ -338,12 +292,10 @@ describe("<ExperimentMemberManagement />", () => {
   });
 
   it("sets user search dropdown loading=true when not debounced OR user search is fetching", () => {
-    // Test not debounced
     useDebounceMock.mockImplementationOnce((v: string) => [v, false]);
     renderWithClient(<ExperimentMemberManagement experimentId={experimentId} />);
     expect(screen.getByTestId("loading-flag")).toHaveTextContent("true");
 
-    // Test user search is loading
     useDebounceMock.mockImplementationOnce((v: string) => [v, true]);
     useUserSearchMock.mockReturnValueOnce({ data: { body: userProfiles }, isLoading: true });
     renderWithClient(<ExperimentMemberManagement experimentId={experimentId} />);
