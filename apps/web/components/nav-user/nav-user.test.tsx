@@ -46,33 +46,6 @@ vi.mock("@/lib/tsr", () => ({
   },
 }));
 
-vi.mock("next/link", () => ({
-  __esModule: true,
-  default: ({
-    href,
-    children,
-    className,
-    ...rest
-  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { children: React.ReactNode }) => (
-    <a href={typeof href === "string" ? href : String(href)} className={className} {...rest}>
-      {children}
-    </a>
-  ),
-}));
-
-// lucide-react icons
-vi.mock("lucide-react", () => {
-  const Icon = ({ className }: { className?: string }) => (
-    <span data-testid="icon" className={className} />
-  );
-  return {
-    ChevronsUpDown: Icon,
-    LogOut: Icon,
-    User: Icon,
-    UserIcon: Icon,
-  };
-});
-
 /* -------------------- Helpers -------------------- */
 
 const baseUser = {
@@ -126,8 +99,7 @@ describe("<NavUser />", () => {
     // Initials should be in the fallback (AD for Ada Lovelace)
     expect(screen.getByText("AD")).toBeInTheDocument();
 
-    // Chevron icon should be present
-    expect(screen.getByTestId("icon")).toBeInTheDocument();
+    expect(triggerBtn.querySelector("svg")).toBeInTheDocument();
 
     // Button should be clickable
     expect(triggerBtn).not.toBeDisabled();
