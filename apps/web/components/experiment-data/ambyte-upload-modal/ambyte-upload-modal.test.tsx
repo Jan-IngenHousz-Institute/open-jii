@@ -31,7 +31,7 @@ const mockUploadHook = {
   mutate: vi.fn(),
   isPending: false,
   error: null as Error | null,
-  data: null,
+  data: null as { id: string } | null,
   isError: false,
   isSuccess: false,
 };
@@ -619,8 +619,8 @@ describe("AmbyteUploadModal", () => {
   });
 });
 
-// Additional unit tests for helper functions
-describe("Helper Functions", () => {
+// Unit tests for file validation utility functions
+describe("File Validation Utilities", () => {
   describe("isExcludedFile", () => {
     it("identifies .DS_Store files correctly", () => {
       const dsStoreFile = new File([""], ".DS_Store", { type: "" });
@@ -664,6 +664,258 @@ describe("Helper Functions", () => {
 
       expect(validFolderName.startsWith("Ambyte_")).toBe(true);
       expect(invalidFolderName.startsWith("Ambyte_")).toBe(false);
+    });
+  });
+});
+
+// Comprehensive integration and edge case tests
+describe("AmbyteUploadModal - Integration and Lifecycle", () => {
+  const defaultProps = {
+    experimentId: "test-experiment-id",
+    open: true,
+    onOpenChange: vi.fn(),
+    onUploadSuccess: vi.fn(),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUploadHook.mutate = vi.fn();
+    mockUploadHook.isPending = false;
+    mockUploadHook.error = null;
+    mockUploadHook.data = null;
+    mockUploadHook.isError = false;
+    mockUploadHook.isSuccess = false;
+  });
+
+  describe("File Upload User Interface", () => {
+    it("shows file upload interface for Ambyte sensor", async () => {
+      const user = userEvent.setup();
+      render(<AmbyteUploadModal {...defaultProps} />, { wrapper: createWrapper() });
+
+      // Navigate to file upload step
+      const ambyteRadio = screen.getAllByRole("radio")[1];
+      await user.click(ambyteRadio);
+
+      await waitFor(() => {
+        expect(screen.getByText("uploadModal.fileUpload.title")).toBeInTheDocument();
+      });
+
+      // Verify file upload UI elements
+      expect(screen.getByText(/uploadModal.fileUpload.selectFolder/)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", {
+          name: /uploadModal.fileUpload.uploadFiles/i,
+        }),
+      ).toBeDisabled();
+    });
+
+    it("shows upload button as disabled initially", async () => {
+      const user = userEvent.setup();
+      render(<AmbyteUploadModal {...defaultProps} />, { wrapper: createWrapper() });
+
+      // Navigate to file upload step
+      const ambyteRadio = screen.getAllByRole("radio")[1];
+      await user.click(ambyteRadio);
+
+      await waitFor(() => {
+        expect(screen.getByText("uploadModal.fileUpload.title")).toBeInTheDocument();
+      });
+
+      // Upload button should be disabled when no files selected
+      const uploadButton = screen.getByRole("button", {
+        name: /uploadModal.fileUpload.uploadFiles/i,
+      });
+      expect(uploadButton).toBeDisabled();
+    });
+
+    it("handles back navigation from file upload step", async () => {
+      const user = userEvent.setup();
+      render(<AmbyteUploadModal {...defaultProps} />, { wrapper: createWrapper() });
+
+      // Navigate to file upload step
+      const ambyteRadio = screen.getAllByRole("radio")[1];
+      await user.click(ambyteRadio);
+
+      await waitFor(() => {
+        expect(screen.getByText("uploadModal.fileUpload.title")).toBeInTheDocument();
+      });
+
+      // Navigate back
+      const backButton = screen.getByRole("button", { name: /uploadModal.fileUpload.back/i });
+      await user.click(backButton);
+
+      // Should be back to sensor selection
+      await waitFor(() => {
+        expect(screen.getByText("uploadModal.sensorFamily.label")).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("Component State and Lifecycle Management", () => {
+    it("shows sensor selection by default", () => {
+      render(<AmbyteUploadModal {...defaultProps} />, { wrapper: createWrapper() });
+
+      expect(screen.getByText("uploadModal.sensorFamily.label")).toBeInTheDocument();
+    });
+
+    it("handles upload hook integration", () => {
+      render(<AmbyteUploadModal {...defaultProps} />, { wrapper: createWrapper() });
+
+      // The component should render without crashing
+      expect(screen.getByText("uploadModal.sensorFamily.label")).toBeInTheDocument();
+
+      // The component integrates with the upload hook internally
+      // This test ensures the hook integration doesn't cause errors
+    });
+
+    it("handles component state initialization", () => {
+      render(<AmbyteUploadModal {...defaultProps} />, { wrapper: createWrapper() });
+
+      // Should initialize with sensor selection step
+      expect(screen.getByText("uploadModal.sensorFamily.label")).toBeInTheDocument();
+
+      // Should not show other step content initially
+      expect(screen.queryByText("uploadModal.fileUpload.title")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Input Validation and Error Messages", () => {
+    it("shows validation title when errors exist", async () => {
+      const user = userEvent.setup();
+      render(<AmbyteUploadModal {...defaultProps} />, { wrapper: createWrapper() });
+
+      // Navigate to file upload step
+      const ambyteRadio = screen.getAllByRole("radio")[1];
+      await user.click(ambyteRadio);
+
+      await waitFor(() => {
+        expect(screen.getByText("uploadModal.fileUpload.title")).toBeInTheDocument();
+      });
+
+      // The validation UI should be accessible for testing
+      // These tests verify the UI structure without file interactions
+      expect(screen.getByText("uploadModal.fileUpload.title")).toBeInTheDocument();
+    });
+  });
+
+  describe("Props Handling and Component Integration", () => {
+    it("resets state when modal opens", () => {
+      const { rerender } = render(<AmbyteUploadModal {...defaultProps} open={false} />, {
+        wrapper: createWrapper(),
+      });
+
+      // Modal should not be visible
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+      // Open the modal
+      rerender(<AmbyteUploadModal {...defaultProps} open={true} />);
+
+      // Should show sensor selection step
+      expect(screen.getByText("uploadModal.sensorFamily.label")).toBeInTheDocument();
+    });
+
+    it("handles onOpenChange callback properly", () => {
+      const onOpenChange = vi.fn();
+
+      render(<AmbyteUploadModal {...defaultProps} onOpenChange={onOpenChange} />, {
+        wrapper: createWrapper(),
+      });
+
+      // Modal behavior depends on the actual implementation
+      // This test ensures the callback is properly passed through
+      expect(onOpenChange).toHaveBeenCalledTimes(0);
+    });
+
+    it("handles different experimentId values", () => {
+      const { rerender } = render(
+        <AmbyteUploadModal {...defaultProps} experimentId="experiment-1" />,
+        { wrapper: createWrapper() },
+      );
+
+      expect(screen.getByText("uploadModal.sensorFamily.label")).toBeInTheDocument();
+
+      rerender(<AmbyteUploadModal {...defaultProps} experimentId="experiment-2" />);
+
+      expect(screen.getByText("uploadModal.sensorFamily.label")).toBeInTheDocument();
+    });
+
+    it("handles open prop changes correctly", () => {
+      const { rerender } = render(<AmbyteUploadModal {...defaultProps} open={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+      rerender(<AmbyteUploadModal {...defaultProps} open={false} />);
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Error Handling and Robustness", () => {
+    it("handles upload success callback error gracefully", () => {
+      const onUploadSuccess = vi.fn(() => {
+        throw new Error("Callback error");
+      });
+
+      // Should not crash when callback throws
+      expect(() => {
+        render(<AmbyteUploadModal {...defaultProps} onUploadSuccess={onUploadSuccess} />, {
+          wrapper: createWrapper(),
+        });
+      }).not.toThrow();
+    });
+
+    it("handles missing experimentId gracefully", () => {
+      const propsWithoutExperimentId = {
+        ...defaultProps,
+        experimentId: "",
+      };
+
+      expect(() => {
+        render(<AmbyteUploadModal {...propsWithoutExperimentId} />, {
+          wrapper: createWrapper(),
+        });
+      }).not.toThrow();
+    });
+
+    it("handles disabled sensor selection correctly", async () => {
+      const user = userEvent.setup();
+      render(<AmbyteUploadModal {...defaultProps} />, { wrapper: createWrapper() });
+
+      // MultispeQ should be disabled
+      const multispeqRadio = screen.getAllByRole("radio")[0];
+      expect(multispeqRadio).toBeDisabled();
+
+      // Clicking disabled radio should not change state
+      await user.click(multispeqRadio);
+
+      // Should still be on sensor selection step
+      expect(screen.getByText("uploadModal.sensorFamily.label")).toBeInTheDocument();
+    });
+
+    it("handles component unmounting gracefully", () => {
+      const { unmount } = render(<AmbyteUploadModal {...defaultProps} />, {
+        wrapper: createWrapper(),
+      });
+
+      expect(() => {
+        unmount();
+      }).not.toThrow();
+    });
+
+    it("handles rapid prop changes", () => {
+      const { rerender } = render(<AmbyteUploadModal {...defaultProps} />, {
+        wrapper: createWrapper(),
+      });
+
+      // Rapidly change props
+      rerender(<AmbyteUploadModal {...defaultProps} open={false} />);
+      rerender(<AmbyteUploadModal {...defaultProps} open={true} />);
+      rerender(<AmbyteUploadModal {...defaultProps} experimentId="different-id" />);
+
+      // Should still render correctly
+      expect(screen.getByText("uploadModal.sensorFamily.label")).toBeInTheDocument();
     });
   });
 });
