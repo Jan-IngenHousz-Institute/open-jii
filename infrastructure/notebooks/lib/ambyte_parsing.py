@@ -388,8 +388,12 @@ def process_trace_files(ambyte_folder: str, files_per_byte: List[List[list]]) ->
                     if _idx > 0:
                         rec['Time'] = df_ambit.iloc[_idx - 1].name
                 df_par = pd.DataFrame(_par_dict_l)
-                df_par.drop(columns=['t'], inplace=True, errors='ignore')
-                df_ambit = df_ambit.join(df_par.set_index('Time'))
+                df_par.drop(columns=['t'], inplace=True)
+                df_ambit = df_ambit.join(df_par.set_index('Time'), how='left')
+                
+                # Ensure spec column has consistent array type for Spark compatibility
+                if 'spec' in df_ambit.columns:
+                    df_ambit['spec'] = df_ambit['spec'].apply(lambda x: x if isinstance(x, list) else [])
 
             # Temperature conversions & leaf temps
             df_ambit.loc[df_ambit['Temp'] == 0, 'Temp'] = np.nan
