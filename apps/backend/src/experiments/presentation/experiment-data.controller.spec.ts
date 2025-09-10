@@ -115,11 +115,11 @@ describe("ExperimentDataController", () => {
     };
 
     it.each([
-      ["Ambyte_1", "Ambyte folder"],
-      ["Ambyte_123", "Ambyte folder with multiple digits"],
-      ["1", "Numbered subfolder"],
-      ["3", "Numbered subfolder simple"],
-      ["20250615-193737_.txt", "Individual data file"],
+      ["Ambyte_1/data.txt", "Ambyte folder with file"],
+      ["Ambyte_123/measurement.txt", "Ambyte folder with multiple digits"],
+      ["Ambyte_1/1/data.txt", "Numbered subfolder"],
+      ["Ambyte_3/3/results.txt", "Numbered subfolder simple"],
+      ["Ambyte_1/20250615-193737_.txt", "Individual data file"],
     ])("should upload ambyte data file successfully: %s (%s)", async (fileName, description) => {
       const {
         experiment,
@@ -219,7 +219,7 @@ describe("ExperimentDataController", () => {
         .withAuth(testUserId)
         .set("Content-Type", "multipart/form-data")
         .field("sourceType", "ambyte")
-        .attach("files", fileBuffer, "Ambyte_1.zip")
+        .attach("files", fileBuffer, "Ambyte_1/data.txt")
         .expect(StatusCodes.NOT_FOUND);
     });
 
@@ -251,7 +251,7 @@ describe("ExperimentDataController", () => {
         .withAuth(testUserId) // Use the test user who doesn't have access
         .set("Content-Type", "multipart/form-data")
         .field("sourceType", "ambyte")
-        .attach("files", fileBuffer, "Ambyte_1.zip")
+        .attach("files", fileBuffer, "Ambyte_1/data.txt")
         .expect(StatusCodes.FORBIDDEN);
     });
 
@@ -263,7 +263,9 @@ describe("ExperimentDataController", () => {
       ["Ambyte_X/5/file.txt", "Invalid subfolder number"],
       ["random_file.txt", "Completely invalid format"],
       ["20250615-19373_.txt", "Malformed date format"],
-      ["Ambyte_12345", "Ambyte folder with too many digits"],
+      ["Ambyte_12345/data.txt", "Ambyte folder with too many digits"],
+      ["Ambyte_1/file.pdf", "Invalid file extension"],
+      ["NotAmbyte_1/data.txt", "Invalid folder prefix"],
     ])("should reject invalid ambyte data file: %s (%s)", async (fileName, description) => {
       const { path, fileBuffer } = await setupFileUploadTest(fileName, description, false);
 
@@ -294,7 +296,7 @@ describe("ExperimentDataController", () => {
         .withAuth(testUserId)
         .set("Content-Type", "multipart/form-data")
         .field("sourceType", "ambyte")
-        .attach("files", fileBuffer, "Ambyte_1")
+        .attach("files", fileBuffer, "Ambyte_1/data.txt")
         .expect(StatusCodes.BAD_REQUEST);
     });
 
