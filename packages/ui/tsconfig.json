@@ -33,10 +33,11 @@
     "lib": ["ES2022", "dom", "dom.iterable"],
     "jsx": "preserve",
     "rootDir": ".",
-    "types": ["vitest/globals"],
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
     "paths": {
       "@repo/ui/*": ["./src/*"]
     }
   },
+  "include": ["src/**/*", "vitest-setup.d.ts"],
   "exclude": ["node_modules", "build", "dist", ".next", ".expo"]
 }

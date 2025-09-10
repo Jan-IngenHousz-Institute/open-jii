@@ -18,6 +18,7 @@ export * from "./context-menu";
 export * from "./dialog";
 export * from "./drawer";
 export * from "./dropdown-menu";
+export * from "./file-upload/file-upload";
 export * from "./form";
 export * from "./hover-card";
 export * from "./icons";

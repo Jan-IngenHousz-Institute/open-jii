@@ -1,7 +1,7 @@
 import z from "zod";
 
 const apiError = z.object({
-  code: z.string(),
+  code: z.string().optional(),
   message: z.string(),
 });
 
