@@ -42,6 +42,12 @@ describe("ExperimentDataController", () => {
   });
 
   describe("uploadExperimentData", () => {
+    const trimFileName = (fileName: string): string => {
+      const pattern = /Ambyte_\d{1,3}\/(?:[1-4]\/)?[^/]+\.txt$/i;
+      const ambyteMatch = pattern.exec(fileName);
+      return ambyteMatch ? ambyteMatch[0] : fileName;
+    };
+
     // Test mocking helper function to properly prepare the test
     const setupFileUploadTest = async (
       fileName: string,
@@ -114,6 +120,11 @@ describe("ExperimentDataController", () => {
       return { experiment, path, fileBuffer, fileName, mockUploadResponse };
     };
 
+    const getExpectedDirectoryNamePattern = (): RegExp => {
+      // Format: upload_YYYYMMDD_HHMMSS
+      return /^upload_\d{8}_\d{6}$/;
+    };
+
     it.each([
       ["Ambyte_1/data.txt", "Ambyte folder with file"],
       ["Ambyte_123/measurement.txt", "Ambyte folder with multiple digits"],
@@ -129,6 +140,8 @@ describe("ExperimentDataController", () => {
         mockUploadResponse,
       } = await setupFileUploadTest(fileName, description);
 
+      const trimmedFileName = trimFileName(testFileName);
+
       // Make the request
       const response = await testApp
         .post(path)
@@ -141,16 +154,16 @@ describe("ExperimentDataController", () => {
       // Verify response
       const responseBody = response.body as UploadExperimentDataResponse;
       expect(responseBody.files).toHaveLength(1);
-      expect(responseBody.files[0].fileName).toBe(testFileName);
+      expect(responseBody.files[0].fileName).toBe(trimmedFileName);
       expect(responseBody.files[0].filePath).toBe(mockUploadResponse.filePath);
 
-      // Verify the databricksAdapter methods were called
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.uploadExperimentData).toHaveBeenCalledWith(
         experiment.id,
         experiment.name,
         "ambyte",
-        testFileName,
+        expect.stringMatching(getExpectedDirectoryNamePattern()), // directoryName follows upload_YYYYMMDD_HHMMSS pattern
+        trimmedFileName,
         fileBuffer,
       );
     });
@@ -380,19 +393,15 @@ describe("ExperimentDataController", () => {
       const responseBody = response.body as UploadExperimentDataResponse;
       expect(responseBody.files).toHaveLength(2);
 
-      // In practice, only the filename without the path is captured by multer's originalname
-      const expectedFileNames = fileNames.map((path) => path.split("/").pop() ?? path);
-      expect(responseBody.files[0].fileName).toBe(expectedFileNames[0]);
+      const trimmedFileNames = fileNames.map((fileName) => trimFileName(fileName));
+      expect(responseBody.files[0].fileName).toBe(trimmedFileNames[0]);
       expect(responseBody.files[0].filePath).toBe(mockUploadResponses[0].filePath);
-      expect(responseBody.files[1].fileName).toBe(expectedFileNames[1]);
+      expect(responseBody.files[1].fileName).toBe(trimmedFileNames[1]);
       expect(responseBody.files[1].filePath).toBe(mockUploadResponses[1].filePath);
 
       // Verify the databricksAdapter methods were called correctly
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.uploadExperimentData).toHaveBeenCalledTimes(2);
-
-      // In practice, only the filename without the path is captured by multer's originalname
-      const expectedDatabricsUploadNames = fileNames.map((path) => path.split("/").pop() ?? path);
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.uploadExperimentData).toHaveBeenNthCalledWith(
@@ -400,7 +409,8 @@ describe("ExperimentDataController", () => {
         experiment.id,
         experiment.name,
         "ambyte",
-        expectedDatabricsUploadNames[0],
+        expect.stringMatching(getExpectedDirectoryNamePattern()), // directoryName follows upload_YYYYMMDD_HHMMSS pattern
+        trimmedFileNames[0],
         expect.any(Buffer),
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -409,7 +419,8 @@ describe("ExperimentDataController", () => {
         experiment.id,
         experiment.name,
         "ambyte",
-        expectedDatabricsUploadNames[1],
+        expect.stringMatching(getExpectedDirectoryNamePattern()), // directoryName follows upload_YYYYMMDD_HHMMSS pattern
+        trimmedFileNames[1],
         expect.any(Buffer),
       );
     });
