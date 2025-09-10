@@ -126,7 +126,7 @@
         }
       },
       "get": {
-        "description": "Returns a list of experiments based on the specified filter criteria",
+        "description": "Returns a list of experiments based on the specified filter criteria, including search.",
         "summary": "List experiments",
         "tags": ["experiments"],
         "parameters": [
@@ -159,6 +159,18 @@
                     "archived",
                     "published"
                   ]
+                }
+              }
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search term for experiment name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
                 }
               }
             }
@@ -861,9 +873,11 @@
                             "type": "string",
                             "format": "uuid"
                           },
-                          "name": {
-                            "type": "string",
-                            "nullable": true
+                          "firstName": {
+                            "type": "string"
+                          },
+                          "lastName": {
+                            "type": "string"
                           },
                           "email": {
                             "type": "string",
@@ -871,7 +885,7 @@
                             "nullable": true
                           }
                         },
-                        "required": ["id", "name", "email"]
+                        "required": ["id", "firstName", "lastName", "email"]
                       },
                       "role": {
                         "type": "string",
@@ -991,9 +1005,11 @@
                             "type": "string",
                             "format": "uuid"
                           },
-                          "name": {
-                            "type": "string",
-                            "nullable": true
+                          "firstName": {
+                            "type": "string"
+                          },
+                          "lastName": {
+                            "type": "string"
                           },
                           "email": {
                             "type": "string",
@@ -1001,7 +1017,7 @@
                             "nullable": true
                           }
                         },
-                        "required": ["id", "name", "email"]
+                        "required": ["id", "firstName", "lastName", "email"]
                       },
                       "role": {
                         "type": "string",
@@ -1919,7 +1935,8 @@
                               },
                               "name": {
                                 "type": "string",
-                                "minLength": 1
+                                "minLength": 1,
+                                "maxLength": 64
                               },
                               "content": {
                                 "oneOf": [
@@ -1937,7 +1954,12 @@
                                           },
                                           "text": {
                                             "type": "string",
-                                            "minLength": 1
+                                            "minLength": 1,
+                                            "maxLength": 64
+                                          },
+                                          "required": {
+                                            "default": false,
+                                            "type": "boolean"
                                           }
                                         },
                                         "required": ["kind", "text"],
@@ -1952,7 +1974,12 @@
                                           },
                                           "text": {
                                             "type": "string",
-                                            "minLength": 1
+                                            "minLength": 1,
+                                            "maxLength": 64
+                                          },
+                                          "required": {
+                                            "default": false,
+                                            "type": "boolean"
                                           }
                                         },
                                         "required": ["kind", "text"],
@@ -1967,17 +1994,44 @@
                                           },
                                           "text": {
                                             "type": "string",
-                                            "minLength": 1
+                                            "minLength": 1,
+                                            "maxLength": 64
                                           },
                                           "options": {
                                             "type": "array",
                                             "items": {
-                                              "type": "string"
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 64
                                             },
                                             "minItems": 1
+                                          },
+                                          "required": {
+                                            "default": false,
+                                            "type": "boolean"
                                           }
                                         },
                                         "required": ["kind", "text", "options"],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": ["number"]
+                                          },
+                                          "text": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 64
+                                          },
+                                          "required": {
+                                            "default": false,
+                                            "type": "boolean"
+                                          }
+                                        },
+                                        "required": ["kind", "text"],
                                         "additionalProperties": false
                                       }
                                     ]
@@ -2011,6 +2065,18 @@
                               "isStart": {
                                 "default": false,
                                 "type": "boolean"
+                              },
+                              "position": {
+                                "type": "object",
+                                "properties": {
+                                  "x": {
+                                    "type": "number"
+                                  },
+                                  "y": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": ["x", "y"]
                               }
                             },
                             "required": ["id", "type", "name", "content"]
@@ -2036,6 +2102,7 @@
                               },
                               "label": {
                                 "type": "string",
+                                "maxLength": 64,
                                 "nullable": true
                               }
                             },
@@ -2132,7 +2199,8 @@
                         },
                         "name": {
                           "type": "string",
-                          "minLength": 1
+                          "minLength": 1,
+                          "maxLength": 64
                         },
                         "content": {
                           "oneOf": [
@@ -2150,7 +2218,12 @@
                                     },
                                     "text": {
                                       "type": "string",
-                                      "minLength": 1
+                                      "minLength": 1,
+                                      "maxLength": 64
+                                    },
+                                    "required": {
+                                      "default": false,
+                                      "type": "boolean"
                                     }
                                   },
                                   "required": ["kind", "text"],
@@ -2165,7 +2238,12 @@
                                     },
                                     "text": {
                                       "type": "string",
-                                      "minLength": 1
+                                      "minLength": 1,
+                                      "maxLength": 64
+                                    },
+                                    "required": {
+                                      "default": false,
+                                      "type": "boolean"
                                     }
                                   },
                                   "required": ["kind", "text"],
@@ -2180,17 +2258,44 @@
                                     },
                                     "text": {
                                       "type": "string",
-                                      "minLength": 1
+                                      "minLength": 1,
+                                      "maxLength": 64
                                     },
                                     "options": {
                                       "type": "array",
                                       "items": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 64
                                       },
                                       "minItems": 1
+                                    },
+                                    "required": {
+                                      "default": false,
+                                      "type": "boolean"
                                     }
                                   },
                                   "required": ["kind", "text", "options"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": ["number"]
+                                    },
+                                    "text": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 64
+                                    },
+                                    "required": {
+                                      "default": false,
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": ["kind", "text"],
                                   "additionalProperties": false
                                 }
                               ]
@@ -2224,6 +2329,18 @@
                         "isStart": {
                           "default": false,
                           "type": "boolean"
+                        },
+                        "position": {
+                          "type": "object",
+                          "properties": {
+                            "x": {
+                              "type": "number"
+                            },
+                            "y": {
+                              "type": "number"
+                            }
+                          },
+                          "required": ["x", "y"]
                         }
                       },
                       "required": ["id", "type", "name", "content"]
@@ -2249,6 +2366,7 @@
                         },
                         "label": {
                           "type": "string",
+                          "maxLength": 64,
                           "nullable": true
                         }
                       },
@@ -2295,7 +2413,8 @@
                               },
                               "name": {
                                 "type": "string",
-                                "minLength": 1
+                                "minLength": 1,
+                                "maxLength": 64
                               },
                               "content": {
                                 "oneOf": [
@@ -2313,7 +2432,12 @@
                                           },
                                           "text": {
                                             "type": "string",
-                                            "minLength": 1
+                                            "minLength": 1,
+                                            "maxLength": 64
+                                          },
+                                          "required": {
+                                            "default": false,
+                                            "type": "boolean"
                                           }
                                         },
                                         "required": ["kind", "text"],
@@ -2328,7 +2452,12 @@
                                           },
                                           "text": {
                                             "type": "string",
-                                            "minLength": 1
+                                            "minLength": 1,
+                                            "maxLength": 64
+                                          },
+                                          "required": {
+                                            "default": false,
+                                            "type": "boolean"
                                           }
                                         },
                                         "required": ["kind", "text"],
@@ -2343,17 +2472,44 @@
                                           },
                                           "text": {
                                             "type": "string",
-                                            "minLength": 1
+                                            "minLength": 1,
+                                            "maxLength": 64
                                           },
                                           "options": {
                                             "type": "array",
                                             "items": {
-                                              "type": "string"
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 64
                                             },
                                             "minItems": 1
+                                          },
+                                          "required": {
+                                            "default": false,
+                                            "type": "boolean"
                                           }
                                         },
                                         "required": ["kind", "text", "options"],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": ["number"]
+                                          },
+                                          "text": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 64
+                                          },
+                                          "required": {
+                                            "default": false,
+                                            "type": "boolean"
+                                          }
+                                        },
+                                        "required": ["kind", "text"],
                                         "additionalProperties": false
                                       }
                                     ]
@@ -2387,6 +2543,18 @@
                               "isStart": {
                                 "default": false,
                                 "type": "boolean"
+                              },
+                              "position": {
+                                "type": "object",
+                                "properties": {
+                                  "x": {
+                                    "type": "number"
+                                  },
+                                  "y": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": ["x", "y"]
                               }
                             },
                             "required": ["id", "type", "name", "content"]
@@ -2412,6 +2580,7 @@
                               },
                               "label": {
                                 "type": "string",
+                                "maxLength": 64,
                                 "nullable": true
                               }
                             },
@@ -2524,7 +2693,8 @@
                         },
                         "name": {
                           "type": "string",
-                          "minLength": 1
+                          "minLength": 1,
+                          "maxLength": 64
                         },
                         "content": {
                           "oneOf": [
@@ -2542,7 +2712,12 @@
                                     },
                                     "text": {
                                       "type": "string",
-                                      "minLength": 1
+                                      "minLength": 1,
+                                      "maxLength": 64
+                                    },
+                                    "required": {
+                                      "default": false,
+                                      "type": "boolean"
                                     }
                                   },
                                   "required": ["kind", "text"],
@@ -2557,7 +2732,12 @@
                                     },
                                     "text": {
                                       "type": "string",
-                                      "minLength": 1
+                                      "minLength": 1,
+                                      "maxLength": 64
+                                    },
+                                    "required": {
+                                      "default": false,
+                                      "type": "boolean"
                                     }
                                   },
                                   "required": ["kind", "text"],
@@ -2572,17 +2752,44 @@
                                     },
                                     "text": {
                                       "type": "string",
-                                      "minLength": 1
+                                      "minLength": 1,
+                                      "maxLength": 64
                                     },
                                     "options": {
                                       "type": "array",
                                       "items": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 64
                                       },
                                       "minItems": 1
+                                    },
+                                    "required": {
+                                      "default": false,
+                                      "type": "boolean"
                                     }
                                   },
                                   "required": ["kind", "text", "options"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": ["number"]
+                                    },
+                                    "text": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 64
+                                    },
+                                    "required": {
+                                      "default": false,
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "required": ["kind", "text"],
                                   "additionalProperties": false
                                 }
                               ]
@@ -2616,6 +2823,18 @@
                         "isStart": {
                           "default": false,
                           "type": "boolean"
+                        },
+                        "position": {
+                          "type": "object",
+                          "properties": {
+                            "x": {
+                              "type": "number"
+                            },
+                            "y": {
+                              "type": "number"
+                            }
+                          },
+                          "required": ["x", "y"]
                         }
                       },
                       "required": ["id", "type", "name", "content"]
@@ -2641,6 +2860,7 @@
                         },
                         "label": {
                           "type": "string",
+                          "maxLength": 64,
                           "nullable": true
                         }
                       },
@@ -2687,7 +2907,8 @@
                               },
                               "name": {
                                 "type": "string",
-                                "minLength": 1
+                                "minLength": 1,
+                                "maxLength": 64
                               },
                               "content": {
                                 "oneOf": [
@@ -2705,7 +2926,12 @@
                                           },
                                           "text": {
                                             "type": "string",
-                                            "minLength": 1
+                                            "minLength": 1,
+                                            "maxLength": 64
+                                          },
+                                          "required": {
+                                            "default": false,
+                                            "type": "boolean"
                                           }
                                         },
                                         "required": ["kind", "text"],
@@ -2720,7 +2946,12 @@
                                           },
                                           "text": {
                                             "type": "string",
-                                            "minLength": 1
+                                            "minLength": 1,
+                                            "maxLength": 64
+                                          },
+                                          "required": {
+                                            "default": false,
+                                            "type": "boolean"
                                           }
                                         },
                                         "required": ["kind", "text"],
@@ -2735,17 +2966,44 @@
                                           },
                                           "text": {
                                             "type": "string",
-                                            "minLength": 1
+                                            "minLength": 1,
+                                            "maxLength": 64
                                           },
                                           "options": {
                                             "type": "array",
                                             "items": {
-                                              "type": "string"
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 64
                                             },
                                             "minItems": 1
+                                          },
+                                          "required": {
+                                            "default": false,
+                                            "type": "boolean"
                                           }
                                         },
                                         "required": ["kind", "text", "options"],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": ["number"]
+                                          },
+                                          "text": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 64
+                                          },
+                                          "required": {
+                                            "default": false,
+                                            "type": "boolean"
+                                          }
+                                        },
+                                        "required": ["kind", "text"],
                                         "additionalProperties": false
                                       }
                                     ]
@@ -2779,6 +3037,18 @@
                               "isStart": {
                                 "default": false,
                                 "type": "boolean"
+                              },
+                              "position": {
+                                "type": "object",
+                                "properties": {
+                                  "x": {
+                                    "type": "number"
+                                  },
+                                  "y": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": ["x", "y"]
                               }
                             },
                             "required": ["id", "type", "name", "content"]
@@ -2804,6 +3074,7 @@
                               },
                               "label": {
                                 "type": "string",
+                                "maxLength": 64,
                                 "nullable": true
                               }
                             },
@@ -2901,14 +3172,7 @@
           "content": {
             "multipart/form-data": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "sourceType": {
-                    "type": "string",
-                    "enum": ["ambyte"]
-                  }
-                },
-                "required": ["sourceType"]
+                "nullable": true
               }
             }
           }
@@ -2921,14 +3185,26 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "message": {
-                      "type": "string"
-                    },
                     "uploadId": {
                       "type": "string"
+                    },
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "fileName": {
+                            "type": "string"
+                          },
+                          "filePath": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["fileName", "filePath"]
+                      }
                     }
                   },
-                  "required": ["message"]
+                  "required": ["files"]
                 }
               }
             }
@@ -3102,7 +3378,8 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 255
                   },
                   "description": {
                     "type": "string"
@@ -3328,7 +3605,9 @@
                 "type": "object",
                 "properties": {
                   "name": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
                   },
                   "description": {
                     "type": "string"
@@ -3551,45 +3830,30 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "id": {
+                      "userId": {
                         "type": "string",
                         "format": "uuid"
                       },
-                      "name": {
+                      "firstName": {
+                        "type": "string"
+                      },
+                      "lastName": {
+                        "type": "string"
+                      },
+                      "bio": {
                         "type": "string",
                         "nullable": true
+                      },
+                      "organization": {
+                        "type": "string"
                       },
                       "email": {
                         "type": "string",
                         "format": "email",
                         "nullable": true
-                      },
-                      "emailVerified": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                      },
-                      "image": {
-                        "type": "string",
-                        "nullable": true
-                      },
-                      "createdAt": {
-                        "type": "string",
-                        "format": "date-time"
-                      },
-                      "registered": {
-                        "type": "boolean"
                       }
                     },
-                    "required": [
-                      "id",
-                      "name",
-                      "email",
-                      "emailVerified",
-                      "image",
-                      "createdAt",
-                      "registered"
-                    ]
+                    "required": ["userId", "firstName", "lastName", "bio", "email"]
                   }
                 }
               }
@@ -3726,6 +3990,10 @@
                     "minLength": 2,
                     "description": "Last name"
                   },
+                  "bio": {
+                    "type": "string",
+                    "description": "Bio"
+                  },
                   "organization": {
                     "type": "string",
                     "description": "Organization"
@@ -3750,6 +4018,79 @@
           },
           "400": {
             "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}/profile": {
+      "get": {
+        "description": "Returns the user's profile information including firstName, lastName, bio, and organization",
+        "summary": "Get user profile",
+        "tags": ["users"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the user"
+          }
+        ],
+        "operationId": "users.getUserProfile",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "lastName": {
+                      "type": "string"
+                    },
+                    "bio": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "organization": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email",
+                      "nullable": true
+                    }
+                  },
+                  "required": ["userId", "firstName", "lastName", "bio", "email"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
             "content": {
               "application/json": {
                 "schema": {
