@@ -43,7 +43,7 @@ describe("SearchUsersUseCase", () => {
     const foundUsers = result.value;
     expect(foundUsers.length).toBeGreaterThanOrEqual(3); // At least the 3 created users
 
-    const userIds = foundUsers.map((u) => u.id);
+    const userIds = foundUsers.map((u) => u.userId);
     expect(userIds).toContain(testUserId);
     expect(userIds).toContain(user1Id);
     expect(userIds).toContain(user2Id);
@@ -68,7 +68,8 @@ describe("SearchUsersUseCase", () => {
     assertSuccess(result);
     const foundUsers = result.value;
     expect(foundUsers.length).toBe(1);
-    expect(foundUsers[0].name).toBe("Alice Smith");
+    expect(foundUsers[0].firstName).toBe("Alice");
+    expect(foundUsers[0].lastName).toBe("Smith");
   });
 
   it("should search users by email", async () => {
@@ -112,7 +113,7 @@ describe("SearchUsersUseCase", () => {
     assertSuccess(result);
     const foundUsers = result.value;
     expect(foundUsers.length).toBe(2);
-    expect(foundUsers.every((u) => u.name?.includes("Alice") ?? false)).toBe(true);
+    expect(foundUsers.every((u) => u.firstName.includes("Alice"))).toBe(true);
   });
 
   it("should apply limit and offset for pagination", async () => {
@@ -147,8 +148,8 @@ describe("SearchUsersUseCase", () => {
     expect(secondPageUsers.length).toBe(2);
 
     // Ensure no overlap
-    const firstPageIds = firstPageUsers.map((u) => u.id);
-    const secondPageIds = secondPageUsers.map((u) => u.id);
+    const firstPageIds = firstPageUsers.map((u) => u.userId);
+    const secondPageIds = secondPageUsers.map((u) => u.userId);
     expect(firstPageIds.some((id) => secondPageIds.includes(id))).toBe(false);
   });
 

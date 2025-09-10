@@ -3,7 +3,7 @@ import { initContract } from "@ts-rest/core";
 import { zErrorResponse } from "../schemas/experiment.schema";
 import {
   zUser,
-  zUserList,
+  zUserProfileList,
   zSearchUsersQuery,
   zUserIdPathParam,
   zCreateUserProfileBody,
@@ -19,7 +19,7 @@ export const userContract = c.router({
     path: "/api/v1/users/search",
     query: zSearchUsersQuery,
     responses: {
-      200: zUserList,
+      200: zUserProfileList,
       400: zErrorResponse,
     },
     summary: "Search users",

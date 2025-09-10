@@ -45,11 +45,15 @@ export const zCreateUserProfileBody = z.object({
 export const zCreateUserProfileResponse = z.object({});
 
 export const zUserProfile = z.object({
+  userId: z.string().uuid(),
   firstName: z.string(),
   lastName: z.string(),
   bio: z.string().nullable(),
   organization: z.string().optional(),
+  email: z.string().email().nullable(),
 });
+
+export const zUserProfileList = z.array(zUserProfile);
 
 // Path parameters
 export const zUserIdPathParam = z.object({
@@ -59,6 +63,7 @@ export const zUserIdPathParam = z.object({
 // Infer types from Zod schemas
 export type User = z.infer<typeof zUser>;
 export type UserList = z.infer<typeof zUserList>;
+export type UserProfileList = z.infer<typeof zUserProfileList>;
 export type SearchUsersQuery = z.infer<typeof zSearchUsersQuery>;
 export type UserIdPathParam = z.infer<typeof zUserIdPathParam>;
 export type UserProfile = z.infer<typeof zUserProfile>;

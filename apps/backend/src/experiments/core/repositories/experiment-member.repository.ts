@@ -1,6 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, eq, experimentMembers, inArray, users } from "@repo/database";
+import { and, eq, experimentMembers, inArray, users, profiles } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -22,12 +22,14 @@ export class ExperimentMemberRepository {
           joinedAt: experimentMembers.joinedAt,
           user: {
             id: users.id,
-            name: users.name,
+            firstName: profiles.firstName,
+            lastName: profiles.lastName,
             email: users.email,
           },
         })
         .from(experimentMembers)
         .innerJoin(users, eq(experimentMembers.userId, users.id))
+        .innerJoin(profiles, eq(users.id, profiles.userId))
         .where(eq(experimentMembers.experimentId, experimentId));
     });
   }
@@ -56,12 +58,14 @@ export class ExperimentMemberRepository {
           joinedAt: experimentMembers.joinedAt,
           user: {
             id: users.id,
-            name: users.name,
+            firstName: profiles.firstName,
+            lastName: profiles.lastName,
             email: users.email,
           },
         })
         .from(experimentMembers)
         .innerJoin(users, eq(experimentMembers.userId, users.id))
+        .innerJoin(profiles, eq(users.id, profiles.userId))
         .where(
           and(
             eq(experimentMembers.experimentId, experimentId),

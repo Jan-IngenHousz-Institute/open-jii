@@ -22,7 +22,8 @@ export const experimentMemberSchema = createSelectSchema(experimentMembers)
   .extend({
     user: z.object({
       id: z.string().uuid(),
-      name: z.string().nullable(),
+      firstName: z.string(),
+      lastName: z.string(),
       email: z.string().nullable(),
     }),
   });

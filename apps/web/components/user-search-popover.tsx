@@ -3,7 +3,7 @@
 import { SearchX, UserPlus } from "lucide-react";
 import React from "react";
 
-import type { User } from "@repo/api";
+import type { UserProfile } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components";
 import {
@@ -18,7 +18,7 @@ import { PopoverContent } from "@repo/ui/components";
 
 // Props for the UserList component
 interface UserListProps {
-  users: User[];
+  users: UserProfile[];
   onAddUser: (userId: string) => Promise<void> | void;
   isAddingUser: boolean;
   setOpen: (open: boolean) => void;
@@ -30,10 +30,16 @@ function UserList({ users, onAddUser, isAddingUser, setOpen, onSearchChange }: U
   return (
     <>
       {users.map((user) => (
-        <CommandItem key={user.id} value={user.id} className="flex items-center justify-between">
+        <CommandItem
+          key={user.userId}
+          value={user.userId}
+          className="flex items-center justify-between"
+        >
           <div className="flex-1 overflow-hidden">
             <div className="flex flex-col">
-              <span className="overflow-hidden text-ellipsis whitespace-nowrap">{user.name}</span>
+              <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+                {user.firstName} {user.lastName}
+              </span>
               <span className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
                 {user.email}
               </span>
@@ -44,7 +50,7 @@ function UserList({ users, onAddUser, isAddingUser, setOpen, onSearchChange }: U
             size="sm"
             onClick={async (e) => {
               e.stopPropagation();
-              await onAddUser(user.id);
+              await onAddUser(user.userId);
               setOpen(false);
               onSearchChange("");
             }}
@@ -77,7 +83,7 @@ function SearchStatus({ loading, hasUsers, hasSearchQuery, searchValue }: Search
   }
 
   if (!hasUsers && hasSearchQuery) {
-    return <CommandEmpty>{t("common.noUsersFound", { search: searchValue })}</CommandEmpty>;
+    return <CommandEmpty>{t("experiments.noUsersFound", { search: searchValue })}</CommandEmpty>;
   }
 
   if (!hasUsers && !hasSearchQuery) {
@@ -123,7 +129,7 @@ function SearchField({ searchValue, onSearchChange, isAddingUser }: SearchFieldP
 }
 
 export interface UserSearchPopoverProps {
-  availableUsers: User[];
+  availableUsers: UserProfile[];
   searchValue: string;
   onSearchChange: (value: string) => void;
   onAddUser: (userId: string) => Promise<void> | void;

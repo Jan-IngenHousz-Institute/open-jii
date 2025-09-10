@@ -44,16 +44,32 @@ export class UserRepository {
     });
   }
 
-  async search(params: SearchUsersParams): Promise<Result<UserDto[]>> {
+  async search(params: SearchUsersParams): Promise<Result<UserProfileDto[]>> {
     return tryCatch(() => {
-      // Dynamic query construction
-      // https://orm.drizzle.team/docs/dynamic-query-building
-      let query = this.database.select().from(users).$dynamic();
+      // Select profiles and join users to get email
+      let query = this.database
+        .select({
+          userId: profiles.userId,
+          firstName: profiles.firstName,
+          lastName: profiles.lastName,
+          email: users.email,
+          createdAt: profiles.createdAt,
+          bio: profiles.bio,
+          avatarUrl: profiles.avatarUrl,
+          organizationId: profiles.organizationId,
+        })
+        .from(profiles)
+        .innerJoin(users, eq(profiles.userId, users.id))
+        .$dynamic();
 
-      // If search query is provided, search in name and email fields
+      // If search query is provided, search in firstName, lastName, email fields
       if (params.query) {
         query = query.where(
-          or(ilike(users.name, `%${params.query}%`), ilike(users.email, `%${params.query}%`)),
+          or(
+            ilike(profiles.firstName, `%${params.query}%`),
+            ilike(profiles.lastName, `%${params.query}%`),
+            ilike(users.email, `%${params.query}%`),
+          ),
         );
       }
 
@@ -81,6 +97,7 @@ export class UserRepository {
 
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
+      await this.database.delete(profiles).where(eq(profiles.userId, id));
       await this.database.delete(users).where(eq(users.id, id));
     });
   }

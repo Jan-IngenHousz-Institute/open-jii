@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import type { User } from "@repo/api";
+import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
@@ -11,7 +11,7 @@ import { useExperimentMemberRemove } from "../../hooks/experiment/useExperimentM
 import { useExperimentMembers } from "../../hooks/experiment/useExperimentMembers/useExperimentMembers";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useUserSearch } from "../../hooks/useUserSearch";
-import { MemberList } from "../current-members-list";
+import { MemberList } from "../current-members-list/current-members-list";
 import { UserSearchWithDropdown } from "../user-search-with-dropdown";
 
 interface ExperimentMemberManagementProps {
@@ -19,6 +19,7 @@ interface ExperimentMemberManagementProps {
 }
 
 export function ExperimentMemberManagement({ experimentId }: ExperimentMemberManagementProps) {
+  const { t } = useTranslation();
   // Get experiment members
   const {
     data: membersData,
@@ -50,7 +51,7 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
   // Safely extract available users and filter out existing members
   const availableUsers = useMemo(() => {
     if (userSearchData?.body && Array.isArray(userSearchData.body)) {
-      return userSearchData.body.filter((user) => !members.some((m) => m.user.id === user.id));
+      return userSearchData.body.filter((user) => !members.some((m) => m.user.id === user.userId));
     }
     return [];
   }, [userSearchData, members]);
@@ -72,7 +73,7 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
       },
     });
 
-    toast({ description: "Member added successfully" });
+    toast({ description: t("experimentSettings.memberAdded") });
     setSelectedUserId("");
   };
 
@@ -88,7 +89,7 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
         },
       });
 
-      toast({ description: "Member removed successfully" });
+      toast({ description: t("experimentSettings.memberRemoved") });
     } finally {
       setRemovingMemberId(null);
     }
@@ -98,7 +99,7 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
     return (
       <Card className="animate-pulse">
         <CardHeader>
-          <CardTitle>Member Management</CardTitle>
+          <CardTitle>{t("experimentSettings.memberManagement")}</CardTitle>
           <div className="bg-muted/40 h-6 w-32 rounded" />
         </CardHeader>
         <CardContent>
@@ -112,58 +113,28 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
     return (
       <Card className="border-destructive">
         <CardHeader>
-          <CardTitle>Member Management</CardTitle>
+          <CardTitle>{t("experimentSettings.memberManagement")}</CardTitle>
           <CardDescription className="text-destructive">
-            Error loading members. Please try again.
+            {t("experimentSettings.memberManagementError")}
           </CardDescription>
         </CardHeader>
       </Card>
     );
   }
-  // Helper to get user info from member.user if present, then availableUsers, then fallback to user.id
-  const getUserInfo = (member: {
-    user: { id: string; name?: string | null; email?: string | null };
-  }): User => {
-    if (typeof member.user.name === "string") {
-      return {
-        id: member.user.id,
-        name: member.user.name,
-        email: member.user.email ?? "",
-        emailVerified: null,
-        image: null,
-        createdAt: "",
-        registered: true,
-      };
-    }
-    const foundUser = availableUsers.find((u) => u.id === member.user.id);
-    if (foundUser) {
-      return foundUser;
-    }
-    return {
-      id: member.user.id,
-      name: "Loading user info...",
-      email: "",
-      emailVerified: null,
-      image: null,
-      createdAt: "",
-      registered: true,
-    };
-  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Member Management</CardTitle>
-        <CardDescription>Manage who has access to this experiment</CardDescription>
+        <CardTitle>{t("experimentSettings.memberManagement")}</CardTitle>
+        <CardDescription>{t("experimentSettings.memberDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Add member section */}
-
         <UserSearchWithDropdown
           availableUsers={availableUsers}
           value={selectedUserId}
           onValueChange={setSelectedUserId}
-          placeholder="Add a member"
+          placeholder={t("newExperiment.addMembersTitle")}
           loading={!isDebounced || isFetchingUsers}
           searchValue={userSearch}
           onSearchChange={setUserSearch}
@@ -172,11 +143,18 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
         />
         {/* Current members section */}
         <div>
-          <h6 className="mb-2 text-sm font-medium">Current Members</h6>
+          <h6 className="mb-2 text-sm font-medium">{t("experimentSettings.currentMembers")}</h6>
           <MemberList
             membersWithUserInfo={members.map((member) => ({
               ...member,
-              user: getUserInfo(member),
+              user: {
+                userId: member.user.id,
+                firstName: member.user.firstName,
+                lastName: member.user.lastName,
+                email: member.user.email,
+                bio: null,
+                organization: undefined,
+              },
             }))}
             onRemoveMember={handleRemoveMember}
             isRemovingMember={isRemovingMember}

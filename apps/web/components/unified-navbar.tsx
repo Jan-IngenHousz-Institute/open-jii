@@ -22,6 +22,7 @@ import {
 } from "@repo/ui/components";
 
 import { handleLogout } from "../app/actions/auth";
+import { useGetUserProfile } from "../hooks/profile/useGetUserProfile/useGetUserProfile";
 
 interface UnifiedNavbarProps {
   locale: Locale;
@@ -32,10 +33,12 @@ interface UnifiedNavbarProps {
 function UserMenu({
   locale,
   session,
+  displayName,
   onSignOut,
 }: {
   locale: Locale;
   session: Session | null;
+  displayName: string;
   onSignOut: () => void;
 }) {
   const { t } = useTranslation();
@@ -62,7 +65,7 @@ function UserMenu({
         >
           {session.user.image ? (
             <Avatar className="h-6 w-6">
-              <AvatarImage src={session.user.image} alt={session.user.name ?? "User"} />
+              <AvatarImage src={session.user.image} alt={displayName} />
               <AvatarFallback>
                 <User className="h-4 w-4" />
               </AvatarFallback>
@@ -70,9 +73,7 @@ function UserMenu({
           ) : (
             <User className="h-4 w-4" />
           )}
-          <span className="hidden max-w-32 truncate sm:inline">
-            {session.user.name ?? t("auth.account", "Account")}
-          </span>
+          <span className="hidden max-w-32 truncate sm:inline">{displayName}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
@@ -80,14 +81,14 @@ function UserMenu({
           <div className="flex w-full items-center gap-3">
             {session.user.image && (
               <Avatar className="h-8 w-8">
-                <AvatarImage src={session.user.image} alt={session.user.name ?? "User"} />
+                <AvatarImage src={session.user.image} alt={displayName} />
                 <AvatarFallback>
                   <User className="h-4 w-4" />
                 </AvatarFallback>
               </Avatar>
             )}
             <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate font-medium">{session.user.name}</span>
+              <span className="truncate font-medium">{displayName}</span>
               <span className="text-muted-foreground truncate text-xs">{session.user.email}</span>
             </div>
           </div>
@@ -125,6 +126,11 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
   const pathname = usePathname();
 
   const isAuthenticated = !!session?.user;
+
+  const { data: userProfile } = useGetUserProfile(session?.user.id ?? "");
+  const profile = userProfile?.body;
+  const displayName =
+    profile?.firstName && profile.lastName ? `${profile.firstName} ${profile.lastName}` : "";
 
   const handleSignOut = () => {
     return handleLogout({
@@ -207,7 +213,12 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
         <div className="col-start-3 col-end-4 flex items-center justify-end space-x-3 justify-self-end md:justify-end">
           {/* Desktop User Menu */}
           <div className="hidden md:block">
-            <UserMenu locale={locale} session={session} onSignOut={handleSignOut} />
+            <UserMenu
+              locale={locale}
+              session={session}
+              displayName={displayName}
+              onSignOut={handleSignOut}
+            />
           </div>
           <LanguageSwitcher locale={locale} />
 
@@ -259,17 +270,14 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
                       <div className="flex w-full items-center gap-3">
                         {session.user.image && (
                           <Avatar className="h-6 w-6">
-                            <AvatarImage
-                              src={session.user.image}
-                              alt={session.user.name ?? "User"}
-                            />
+                            <AvatarImage src={session.user.image} alt={displayName} />
                             <AvatarFallback>
                               <User className="h-3 w-3" />
                             </AvatarFallback>
                           </Avatar>
                         )}
                         <div className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate text-sm font-medium">{session.user.name}</span>
+                          <span className="truncate text-sm font-medium">{displayName}</span>
                           <span className="text-muted-foreground truncate text-xs">
                             {session.user.email}
                           </span>

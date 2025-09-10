@@ -2,18 +2,14 @@ import { formatDate } from "@/util/date";
 import { Trash2, Mail, Calendar } from "lucide-react";
 import { useMemo } from "react";
 
-import type { User } from "@repo/api";
+import type { UserProfile } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Button, Badge } from "@repo/ui/components";
 
 interface MemberWithUserInfo {
   role: string;
   joinedAt: string;
-  user: {
-    id: string;
-    name: string | null;
-    email: string | null;
-  };
+  user: UserProfile;
 }
 
 interface Member {
@@ -24,7 +20,7 @@ interface Member {
 interface MemberListProps {
   // Accept either ready-made formatted membersWithUserInfo or raw members with users
   members?: Member[];
-  users?: User[];
+  users?: UserProfile[];
   membersWithUserInfo?: MemberWithUserInfo[];
   onRemoveMember: (memberId: string) => void;
   isRemovingMember: boolean;
@@ -50,23 +46,19 @@ export function MemberList({
     if (!members) return [];
 
     return members.map((member) => {
-      const user = users?.find((u) => u.id === member.userId) ?? {
-        id: member.userId,
-        name: null,
+      const user = users?.find((u) => u.userId === member.userId) ?? {
+        userId: member.userId,
+        firstName: "",
+        lastName: "",
         email: null,
-        emailVerified: null,
-        image: null,
-        createdAt: "",
+        bio: null,
+        organization: undefined,
       };
 
       return {
         role: member.role ?? t("experimentSettings.defaultRole", "member"),
         joinedAt: new Date().toISOString(),
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-        },
+        user,
       };
     });
   }, [providedMembersWithUserInfo, members, users, t]);
@@ -90,14 +82,14 @@ export function MemberList({
         const isLastAdmin = member.role === "admin" && adminCount === 1;
         return (
           <div
-            key={member.user.id}
+            key={member.user.userId}
             className="flex items-center justify-between rounded border p-3"
           >
             <div className="flex min-w-0 flex-1 flex-col space-y-1">
               <div className="flex min-w-0 flex-1">
                 <div className="flex min-w-0 flex-wrap items-center gap-x-2">
                   <h4 className="text-foreground truncate text-sm font-medium md:text-base">
-                    {member.user.name ?? t("experimentSettings.unknownUser")}
+                    {`${member.user.firstName} ${member.user.lastName}`}
                   </h4>
                   <span
                     className="flex min-w-0 items-center gap-x-1"
@@ -126,8 +118,10 @@ export function MemberList({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onRemoveMember(member.user.id)}
-                disabled={(isRemovingMember && removingMemberId === member.user.id) || isLastAdmin}
+                onClick={() => onRemoveMember(member.user.userId)}
+                disabled={
+                  (isRemovingMember && removingMemberId === member.user.userId) || isLastAdmin
+                }
                 title={
                   isLastAdmin
                     ? t("experimentSettings.cannotRemoveLastAdmin")

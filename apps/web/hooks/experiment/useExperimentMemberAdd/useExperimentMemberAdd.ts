@@ -26,7 +26,8 @@ export const useExperimentMemberAdd = () => {
         (member) => ({
           user: {
             id: member.userId,
-            name: null,
+            firstName: "",
+            lastName: "",
             email: null,
           },
           role: member.role ?? "member",

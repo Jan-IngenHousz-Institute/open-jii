@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import React from "react";
@@ -13,6 +14,15 @@ import { UnifiedNavbar } from "../unified-navbar";
 globalThis.React = React;
 
 // ---- Mocks ----
+
+// --- mock the profile hook to avoid network and control the UI ---
+let __mockProfile: { firstName?: string; lastName?: string } | undefined;
+
+vi.mock("../../hooks/profile/useGetUserProfile/useGetUserProfile", () => ({
+  useGetUserProfile: vi.fn(() => {
+    return __mockProfile ? { data: { body: __mockProfile } } : { data: undefined };
+  }),
+}));
 
 // Make next/image a plain <img> so src is stable in tests
 vi.mock("next/image", () => ({
@@ -166,7 +176,20 @@ function renderNavbar({
   session?: Session | null;
 } = {}) {
   usePathnameMock.mockReturnValue(pathname);
-  return render(<UnifiedNavbar locale={locale} session={session} />);
+
+  // Provide a QueryClient for hooks
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
+  // If authenticated, make sure the navbar can show a display name
+  __mockProfile = session?.user ? { firstName: "Ada", lastName: "Lovelace" } : undefined;
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <UnifiedNavbar locale={locale} session={session} />
+    </QueryClientProvider>,
+  );
 }
 
 const makeSession = (over: Partial<Session> = {}) =>
@@ -249,6 +272,7 @@ describe("<UnifiedNavbar />", () => {
     });
 
     const trigger = screen.getAllByTestId("dropdown-trigger")[0];
+
     expect(within(trigger).getByText("Ada Lovelace")).toBeInTheDocument();
     const avatarImage = screen.getAllByTestId("avatar-image")[0];
     expect(avatarImage).toHaveAttribute("src", "https://example.com/ada.png");

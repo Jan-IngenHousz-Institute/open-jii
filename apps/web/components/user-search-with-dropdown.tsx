@@ -3,7 +3,7 @@
 import { ChevronsUpDown } from "lucide-react";
 import React, { useState } from "react";
 
-import type { User } from "@repo/api";
+import type { UserProfile } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components";
 import { Popover, PopoverTrigger } from "@repo/ui/components";
@@ -11,7 +11,7 @@ import { Popover, PopoverTrigger } from "@repo/ui/components";
 import { UserSearchPopover } from "./user-search-popover";
 
 export interface UserSearchWithDropdownProps {
-  availableUsers: User[];
+  availableUsers: UserProfile[];
   value: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
@@ -35,7 +35,7 @@ export function UserSearchWithDropdown({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
-  const selectedUser = availableUsers.find((user) => user.id === value);
+  const selectedUser = availableUsers.find((user) => user.userId === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -50,7 +50,7 @@ export function UserSearchWithDropdown({
             {selectedUser ? (
               <div className="flex flex-col">
                 <span className="overflow-hidden text-ellipsis whitespace-nowrap">
-                  {selectedUser.name}
+                  {selectedUser.firstName} {selectedUser.lastName}
                 </span>
                 <span className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
                   {selectedUser.email}
