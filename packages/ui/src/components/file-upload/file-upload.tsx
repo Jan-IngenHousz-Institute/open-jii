@@ -188,7 +188,7 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
             <div className="max-h-32 overflow-y-auto">
               {filesArray.map((file, index) => (
                 <p key={index} className="truncate text-xs text-gray-600">
-                  {(file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name}
+                  {file.webkitRelativePath || file.name}
                 </p>
               ))}
             </div>
