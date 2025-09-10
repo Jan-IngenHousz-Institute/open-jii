@@ -288,14 +288,117 @@ describe("UploadAmbyteDataUseCase", () => {
       );
     });
 
+    it("should handle plain .txt files and construct appropriate paths", async () => {
+      const testCases = [
+        {
+          fileName: "20250614-000059_.txt",
+          expectedPath: "unknown_ambyte/unknown_ambit/20250614-000059_.txt",
+        },
+        {
+          fileName: "20250612-132005_.txt",
+          expectedPath: "unknown_ambyte/unknown_ambit/20250612-132005_.txt",
+        },
+        {
+          fileName: "some_file.txt",
+          expectedPath: "unknown_ambyte/some_file.txt",
+        },
+        {
+          fileName: "data.txt",
+          expectedPath: "unknown_ambyte/data.txt",
+        },
+      ];
+
+      for (const testCase of testCases) {
+        const file = createMockFile(testCase.fileName);
+
+        const mockUploadResponse = {
+          filePath: `/Volumes/main/exp_test_experiment_${experimentId}/data-uploads/${sourceType}/${directoryName}/${testCase.expectedPath}`,
+        };
+
+        vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(
+          success(mockUploadResponse),
+        );
+
+        await useCase.execute(
+          file,
+          experimentId,
+          experimentName,
+          sourceType,
+          directoryName,
+          successfulUploads,
+          errors,
+        );
+
+        expect(successfulUploads).toHaveLength(1);
+        expect(successfulUploads[0]).toEqual({
+          fileName: testCase.expectedPath,
+          filePath: mockUploadResponse.filePath,
+        });
+        expect(errors).toHaveLength(0);
+
+        expect(databricksPort.uploadExperimentData).toHaveBeenCalledWith(
+          experimentId,
+          experimentName,
+          sourceType,
+          directoryName,
+          testCase.expectedPath,
+          expect.any(Buffer),
+        );
+
+        // Reset for next iteration
+        successfulUploads.length = 0;
+        errors.length = 0;
+        vi.clearAllMocks();
+      }
+    });
+
+    it("should accept any .txt file even if it doesn't match Ambyte patterns", async () => {
+      const plainTxtFiles = ["simple.txt", "data_file.txt", "measurements.txt", "results_2024.txt"];
+
+      for (const fileName of plainTxtFiles) {
+        const file = createMockFile(fileName);
+
+        const mockUploadResponse = {
+          filePath: `/Volumes/main/exp_test_experiment_${experimentId}/data-uploads/${sourceType}/${directoryName}/unknown_ambyte/${fileName}`,
+        };
+
+        vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(
+          success(mockUploadResponse),
+        );
+
+        await useCase.execute(
+          file,
+          experimentId,
+          experimentName,
+          sourceType,
+          directoryName,
+          successfulUploads,
+          errors,
+        );
+
+        expect(successfulUploads).toHaveLength(1);
+        expect(successfulUploads[0]).toEqual({
+          fileName: `unknown_ambyte/${fileName}`,
+          filePath: mockUploadResponse.filePath,
+        });
+        expect(errors).toHaveLength(0);
+
+        // Reset for next iteration
+        successfulUploads.length = 0;
+        errors.length = 0;
+        vi.clearAllMocks();
+      }
+    });
+
     it("should reject invalid file names", async () => {
       const invalidFileNames = [
-        "invalid.txt",
         "NotAmbyte_1/data.txt",
         "Ambyte_/data.txt",
         "Ambyte_1/5/data.txt", // Invalid subdirectory (only 1-4 allowed)
         "Ambyte_1/data.pdf", // Invalid extension
         "Ambyte_1000/data.txt", // Number too large
+        "invalid.pdf", // Not a .txt file
+        "data.doc", // Not a .txt file
       ];
 
       // Add spy to ensure it's not called
@@ -319,7 +422,7 @@ describe("UploadAmbyteDataUseCase", () => {
       expect(errors).toHaveLength(invalidFileNames.length);
 
       errors.forEach((error) => {
-        expect(error.error).toContain("Invalid Ambyte data file path");
+        expect(error.error).toContain("Invalid file format");
       });
 
       expect(uploadSpy).not.toHaveBeenCalled();
@@ -576,7 +679,7 @@ describe("UploadAmbyteDataUseCase", () => {
       };
     };
 
-    it("should validate correct Ambyte file names", async () => {
+    it("should validate correct Ambyte file names with full paths", async () => {
       const validFileNames = [
         "Ambyte_1/data.txt",
         "Ambyte_2/1/data.txt",
@@ -611,18 +714,54 @@ describe("UploadAmbyteDataUseCase", () => {
       }
     });
 
-    it("should reject invalid Ambyte file names", async () => {
+    it("should validate plain .txt files", async () => {
+      const validFileNames = [
+        "simple.txt",
+        "20250614-000059_.txt",
+        "data_file.txt",
+        "measurements.txt",
+        "results_2024.txt",
+      ];
+
+      for (const fileName of validFileNames) {
+        const file = createMockFileForTest(fileName);
+
+        const successfulUploads: { fileName: string; filePath: string }[] = [];
+        const errors: { fileName: string; error: string }[] = [];
+
+        vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(
+          success({ filePath: "/mock/path" }),
+        );
+
+        await useCase.execute(
+          file,
+          faker.string.uuid(),
+          "Test Experiment",
+          "ambyte",
+          "upload_20250910_143000",
+          successfulUploads,
+          errors,
+        );
+
+        expect(errors).toHaveLength(0);
+        expect(successfulUploads).toHaveLength(1);
+      }
+    });
+
+    it("should reject invalid file formats", async () => {
       const invalidFileNames = [
-        "invalid.txt",
-        "NotAmbyte_1/data.txt",
-        "Ambyte_/data.txt",
+        "NotAmbyte_1/data.txt", // Invalid path structure
+        "Ambyte_/data.txt", // Missing number
         "Ambyte_1/5/data.txt", // Invalid subdirectory
-        "Ambyte_1/data.pdf", // Invalid extension
+        "Ambyte_1/data.pdf", // Invalid extension in path
         "Ambyte_1000/data.txt", // Number too large
         "Ambyte_1", // Missing file
         "Ambyte_1/", // Missing file
         "", // Empty string
         "Ambyte_abc/data.txt", // Non-numeric ID
+        "simple.pdf", // Not a .txt file
+        "data.doc", // Not a .txt file
+        "file.xlsx", // Not a .txt file
       ];
 
       for (const fileName of invalidFileNames) {
@@ -643,7 +782,7 @@ describe("UploadAmbyteDataUseCase", () => {
 
         expect(errors).toHaveLength(1);
         expect(successfulUploads).toHaveLength(0);
-        expect(errors[0].error).toContain("Invalid Ambyte data file path");
+        expect(errors[0].error).toContain("Invalid file format");
       }
     });
   });
@@ -665,7 +804,7 @@ describe("UploadAmbyteDataUseCase", () => {
       };
     };
 
-    it("should trim parent directories correctly", async () => {
+    it("should trim parent directories correctly for files with Ambyte paths", async () => {
       const testCases = [
         {
           input: "some/parent/dir/Ambyte_1/data.txt",
@@ -705,6 +844,65 @@ describe("UploadAmbyteDataUseCase", () => {
         expect(successfulUploads[0].fileName).toBe(testCase.expected);
 
         // Verify the databricks call used the trimmed name
+        expect(databricksPort.uploadExperimentData).toHaveBeenCalledWith(
+          expect.any(String),
+          expect.any(String),
+          expect.any(String),
+          expect.any(String),
+          testCase.expected,
+          expect.any(Buffer),
+        );
+      }
+    });
+
+    it("should construct paths for plain .txt files", async () => {
+      const testCases = [
+        {
+          input: "20250614-000059_.txt",
+          expected: "unknown_ambyte/unknown_ambit/20250614-000059_.txt",
+        },
+        {
+          input: "20250612-132005_.txt",
+          expected: "unknown_ambyte/unknown_ambit/20250612-132005_.txt",
+        },
+        {
+          input: "simple.txt",
+          expected: "unknown_ambyte/simple.txt",
+        },
+        {
+          input: "data_file.txt",
+          expected: "unknown_ambyte/data_file.txt",
+        },
+        {
+          input: "measurements.txt",
+          expected: "unknown_ambyte/measurements.txt",
+        },
+      ];
+
+      for (const testCase of testCases) {
+        const file = createMockFileForTest(testCase.input);
+
+        const successfulUploads: { fileName: string; filePath: string }[] = [];
+        const errors: { fileName: string; error: string }[] = [];
+
+        vi.spyOn(databricksPort, "uploadExperimentData").mockResolvedValue(
+          success({ filePath: "/mock/path" }),
+        );
+
+        await useCase.execute(
+          file,
+          faker.string.uuid(),
+          "Test Experiment",
+          "ambyte",
+          "upload_20250910_143000",
+          successfulUploads,
+          errors,
+        );
+
+        expect(successfulUploads).toHaveLength(1);
+        expect(successfulUploads[0].fileName).toBe(testCase.expected);
+
+        // Verify the databricks call used the constructed path
         expect(databricksPort.uploadExperimentData).toHaveBeenCalledWith(
           expect.any(String),
           expect.any(String),

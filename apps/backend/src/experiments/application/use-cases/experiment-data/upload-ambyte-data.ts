@@ -125,7 +125,7 @@ export class UploadAmbyteDataUseCase {
       errors.push({
         fileName: file.filename,
         error:
-          'Invalid Ambyte data file path. Expected file paths like: "Ambyte_N/*.txt", "Ambyte_N/1-4/*.txt", "someDir/Ambyte_N/*.txt", or "someDir/Ambyte_N/1-4/*.txt".',
+          'Invalid file format. Expected .txt files with either full paths like "Ambyte_N/*.txt" or "Ambyte_N/1-4/*.txt", or plain .txt filenames.',
       });
 
       this.logger.warn(`Skipping invalid file: ${file.filename}`);
@@ -241,8 +241,10 @@ export class UploadAmbyteDataUseCase {
   }
 
   /**
-   * Validate the Ambyte file path
-   * Accepts paths like: someDir/Ambyte_N/*.txt or Ambyte_N/[1-4]/*.txt
+   * Validate the Ambyte file
+   * Accepts:
+   * - Full paths like: someDir/Ambyte_N/*.txt or Ambyte_N/[1-4]/*.txt
+   * - Plain .txt files (will be processed with constructed paths)
    */
   private validateFileName(fileName: string): boolean {
     const schema = z
@@ -250,20 +252,48 @@ export class UploadAmbyteDataUseCase {
       .min(1, "File name cannot be empty")
       .max(256, "File path too long")
       .refine((name) => {
-        const validPattern = /^(?:[^/]+\/)*Ambyte_\d{1,3}\/(?:[1-4]\/)?[^/]+\.txt$/i;
-        return validPattern.test(name);
-      }, "Invalid Ambyte file path format");
+        // Check if it's a .txt file
+        if (!name.toLowerCase().endsWith(".txt")) {
+          return false;
+        }
+
+        // If it contains path separators, validate the full path structure
+        if (name.includes("/")) {
+          const validPattern = /^(?:[^/]+\/)*Ambyte_\d{1,3}\/(?:[1-4]\/)?[^/]+\.txt$/i;
+          return validPattern.test(name);
+        }
+
+        // If it's just a filename without path, it's valid if it's a .txt file
+        return true;
+      }, "Invalid file format - must be a .txt file");
 
     return schema.safeParse(fileName).success;
   }
 
   /**
-   * Trims the file path to start with Ambyte_N/...
-   * Removes any parent directories before the Ambyte folder
+   * Processes the file name to ensure proper path structure
+   * - If path exists: trims to start with Ambyte_N/...
+   * - If no path: constructs appropriate path based on filename pattern
    */
   private trimFileName(fileName: string): string {
-    const pattern = /Ambyte_\d{1,3}\/(?:[1-4]\/)?[^/]+\.txt$/i;
-    const ambyteMatch = pattern.exec(fileName);
-    return ambyteMatch ? ambyteMatch[0] : fileName;
+    // If the filename contains a path and matches the Ambyte pattern, trim it
+    if (fileName.includes("/")) {
+      const pattern = /Ambyte_\d{1,3}\/(?:[1-4]\/)?[^/]+\.txt$/i;
+      const ambyteMatch = pattern.exec(fileName);
+      return ambyteMatch ? ambyteMatch[0] : fileName;
+    }
+
+    // No path in filename - construct one based on the pattern
+    const baseFileName = fileName;
+
+    // Check if it matches the timestamp pattern: YYYYMMDD-HHMMSS_.txt
+    const timestampPattern = /^\d{8}-\d{6}_\.txt$/;
+    if (timestampPattern.test(baseFileName)) {
+      // For timestamp files, use unknown_ambyte/unknown_ambit/filename structure
+      return `unknown_ambyte/unknown_ambit/${baseFileName}`;
+    }
+
+    // For other files, use unknown_ambyte/filename structure
+    return `unknown_ambyte/${baseFileName}`;
   }
 }
