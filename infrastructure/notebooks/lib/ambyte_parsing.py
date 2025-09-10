@@ -9,7 +9,11 @@ import numpy as np
 import datetime
 import os
 from typing import List, Tuple, Optional
+from pyspark.sql import SparkSession
+from pyspark.dbutils import DBUtils
 
+spark = SparkSession.builder.getOrCreate()
+dbutils = DBUtils(spark)
 
 def protocol_array_calc(arr: np.ndarray, actual_size=-1):
     if arr.size == 3:
@@ -206,8 +210,7 @@ def load_files_per_byte(byte_folder_path: str, year_prefix: str = "2025") -> Tup
                 if not (name.endswith('_.txt') and name.startswith(year_prefix)):
                     continue
                 try:
-                    with dbutils.fs.open(fi.path, 'r') as fh:  # type: ignore
-                        content = fh.read()
+                    content = dbutils.fs.head(fi.path, max_bytes=10485760)  # 10MB limit  # type: ignore
                     lines = content.split('\n')
                     lines.append("EOF")
                     if len(lines) > 7:
@@ -231,8 +234,7 @@ def load_files_per_byte(byte_folder_path: str, year_prefix: str = "2025") -> Tup
                 if not (name.endswith('_.txt') and name.startswith(year_prefix)):
                     continue
                 try:
-                    with dbutils.fs.open(fi.path, 'r') as fh:  # type: ignore
-                        content = fh.read()
+                    content = dbutils.fs.head(fi.path, max_bytes=10485760)  # 10MB limit  # type: ignore
                     lines = content.split('\n')
                     lines.append("EOF")
                     if len(lines) > 7:
@@ -355,7 +357,7 @@ def process_trace_files(ambyte_folder: str, files_per_byte: List[List[list]]) ->
                         # Timestamp alignment using corrected per-ambit offset factor
                         idx = min(_header_counter, len(ms_offset_factor) - 1)
                         df['Time'] = pd.to_datetime(df['t'] + RTC_T0_MS - df['t'][0] * (1 - ms_offset_factor[idx]), unit='ms')
-                        df['PTS'] = np.arange(df.shape[0]).astype(np.uint16)
+                        df['PTS'] = np.arange(df.shape[0]).astype('int32')  # Use int32 instead of uint16
                         if len(df.loc[df['Time'] < "2020"]):
                             df.drop(df.loc[df['Time'] < "2020"].index)
 
@@ -419,38 +421,39 @@ def process_trace_files(ambyte_folder: str, files_per_byte: List[List[list]]) ->
             if "Dark" in attrs:
                 df_ambit['meta_Dark'] = attrs["Dark"]
 
-            # Type / dtype normalization
-            df_ambit['Sig7'] = df_ambit['Sig7'].astype(pd.UInt16Dtype())
-            df_ambit['Ref7'] = df_ambit['Ref7'].astype(pd.UInt16Dtype())
-            df_ambit.loc[(df_ambit['Sig7'] < 1) | (df_ambit['Ref7'] < 10), ['Sig7', 'Ref7']] = pd.NA
-            df_ambit['Sun'] = df_ambit['Sun'].astype(np.int16).astype(pd.Int16Dtype())
+            # Type / dtype normalization - using Spark-compatible types
+            df_ambit['Sig7'] = df_ambit['Sig7'].astype('int32')
+            df_ambit['Ref7'] = df_ambit['Ref7'].astype('int32')
+            df_ambit.loc[(df_ambit['Sig7'] < 1) | (df_ambit['Ref7'] < 10), ['Sig7', 'Ref7']] = None
+            df_ambit['Sun'] = df_ambit['Sun'].astype('int32')
             df_ambit['Sun'] -= df_ambit['Sun'].min()
-            df_ambit['Leaf'] = df_ambit['Leaf'].astype(np.int16).astype(pd.Int16Dtype())
+            df_ambit['Leaf'] = df_ambit['Leaf'].astype('int32')
             df_ambit['Leaf'] -= df_ambit['Leaf'].min()
-            df_ambit['Actinic'] = pd.Categorical(df_ambit['Actinic'])
-            df_ambit['Res'] = df_ambit['Res'].astype(np.uint8).astype(pd.UInt8Dtype())
-            df_ambit['Type'] = pd.Categorical(df_ambit['Type'])
-            df_ambit['Count'] = df_ambit['Count'].astype(np.uint16).astype(pd.UInt16Dtype())
+            df_ambit['Actinic'] = df_ambit['Actinic'].astype('int32')  # Convert categorical to int32
+            df_ambit['Res'] = df_ambit['Res'].astype('int32')
+            df_ambit['Type'] = df_ambit['Type'].astype('string')  # Convert categorical to string
+            df_ambit['Count'] = df_ambit['Count'].astype('int32')
             if 'raw' in df_ambit.columns:
-                df_ambit['raw'] = df_ambit['raw'].astype(np.float32).astype(pd.Float32Dtype())
+                df_ambit['raw'] = df_ambit['raw'].astype('float32')
             if 'PAR' in df_ambit.columns:
-                df_ambit['PAR'] = df_ambit['PAR'].astype(np.float32).astype(pd.Float32Dtype())
-            df_ambit['Temp'] = df_ambit['Temp'].astype(np.float32).astype(pd.Float32Dtype())
+                df_ambit['PAR'] = df_ambit['PAR'].astype('float32')
+            df_ambit['Temp'] = df_ambit['Temp'].astype('float32')
             if 'BoardT' in df_ambit.columns:
-                df_ambit['BoardT'] = df_ambit['BoardT'].astype(np.float32).astype(pd.Float32Dtype())
+                df_ambit['BoardT'] = df_ambit['BoardT'].astype('float32')
             if 'meta_Actinic' in df_ambit.columns:
-                df_ambit['meta_Actinic'] = df_ambit['meta_Actinic'].astype(np.float32).astype(pd.Float32Dtype())
+                df_ambit['meta_Actinic'] = df_ambit['meta_Actinic'].astype('float32')
             if 'meta_Dark' in df_ambit.columns:
-                df_ambit['meta_Dark'] = df_ambit['meta_Dark'].astype(np.uint16).astype(pd.UInt16Dtype())
+                df_ambit['meta_Dark'] = df_ambit['meta_Dark'].astype('int32')
             df_ambit.drop(columns=['t'], inplace=True, errors='ignore')
 
             # Identification columns
             df_ambit['ambyte_folder'] = ambyte_folder
             # Set ambit_index to null for unknown_ambit case, otherwise use normal index
             if is_unknown_ambit:
-                df_ambit['ambit_index'] = pd.NA
+                df_ambit['ambit_index'] = None  # Use None instead of pd.NA for Spark compatibility
             else:
                 df_ambit['ambit_index'] = ambit_index + 1
+            df_ambit['ambit_index'] = df_ambit['ambit_index'].astype('int32')  # Ensure int32 type
             all_dfs.append(df_ambit)
 
         except Exception as e:  # pragma: no cover - defensive
