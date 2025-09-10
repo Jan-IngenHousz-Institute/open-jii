@@ -124,6 +124,7 @@ export class ExperimentDataController {
               files: UploadAmbyteDataUseCase.MAX_FILE_COUNT,
               fileSize: UploadAmbyteDataUseCase.MAX_FILE_SIZE,
             },
+            preservePath: true,
           });
 
           // Handle regular form fields

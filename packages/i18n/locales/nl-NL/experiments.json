@@ -126,7 +126,7 @@
       "title": "De volgende problemen met de geselecteerde bestanden:",
       "noFiles": "Geen bestanden geselecteerd",
       "selectFolder": "Selecteer een map met Ambyte-gegevens, geen afzonderlijke bestanden",
-      "invalidStructure": "Ongeldige Ambyte-mapstructuur. Verwachte mappen ofwel met namen zoals 'Ambyte_10' of alleen genummerde mappen zoals '1', '2', '3', '4', maar niet beide patronen tegelijk",
+      "invalidStructure": "Ongeldige Ambyte-mapstructuur. Verwachte mappen met namen zoals 'Ambyte_10' of mappen die submappen bevatten met namen zoals 'Ambyte_10'.",
       "fileSizeExceeded": "{{count}} bestand(en) overschrijden de maximale groottelimiet van 10 MB",
       "unsupportedExtensions": "{{count}} bestand(en) hebben niet-ondersteunde extensies. Toegestaan: {{extensions}}",
       "uploadFailed": "Uploaden mislukt",

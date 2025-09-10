@@ -191,7 +191,7 @@
       "title": "You have the following problems with the selected files:",
       "noFiles": "No files selected",
       "selectFolder": "Please select a folder containing Ambyte data, not individual files",
-      "invalidStructure": "Invalid Ambyte folder structure. Expected folders either named like 'Ambyte_10' or just numbered folders like '1', '2', '3', '4', but not both patterns at once",
+      "invalidStructure": "Invalid Ambyte folder structure. Expected folders either named like 'Ambyte_10' or folder containing sub-folders named like 'Ambyte_10'.",
       "fileSizeExceeded": "{{count}} file(s) exceed the maximum size limit of 10MB",
       "unsupportedExtensions": "{{count}} file(s) have unsupported extensions. Allowed: {{extensions}}",
       "uploadFailed": "Upload failed",
