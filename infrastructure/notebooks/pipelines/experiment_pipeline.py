@@ -49,6 +49,31 @@ print(f"Processing experiment: {EXPERIMENT_ID}")
 print(f"Using experiment schema: {EXPERIMENT_SCHEMA}")
 print(f"Reading from central schema: {CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}")
 
+
+# COMMAND ----------
+
+# DBTITLE 1,Bronze Layer - Experiment Data Extraction
+@dlt.table(
+    name=BRONZE_TABLE,
+    comment=f"Bronze layer: Experiment-specific data for {EXPERIMENT_ID} from central Silver tier",
+    table_properties={
+        "quality": "bronze",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.enableChangeDataFeed": "true"
+    }
+)
+def experiment_bronze():
+    """
+    Reads data from central schema Silver layer that matches the experiment ID.
+    This creates an experiment-specific snapshot as the foundation for scientific analysis.
+    """
+    # Read from central Silver tier, filtering for this experiment only
+    return (
+        spark.readStream.table(f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}")
+        .filter(F.col("experiment_id") == EXPERIMENT_ID)
+        .withColumn("experiment_import_timestamp", F.current_timestamp())
+    )
+
 # COMMAND ----------
 
 # DBTITLE 1,Experiment Silver Layer - Specialized Processing
@@ -183,8 +208,6 @@ def experiment_status():
     
     return status_df
 
-
-
 # COMMAND ----------
 
 # DBTITLE 1,Raw Ambyte Data Table Schema
@@ -206,7 +229,7 @@ raw_ambyte_schema = StructType([
     StructField("PTS", IntegerType(), True),
     StructField("PAR", FloatType(), True),
     StructField("raw", FloatType(), True),
-    StructField("spec", ArrayType(IntegerType()), True),  # Reverted back to ArrayType
+    StructField("spec", ArrayType(IntegerType()), True),
     StructField("BoardT", FloatType(), True),
     StructField("ambyte_folder", StringType(), True),
     StructField("ambit_index", IntegerType(), True),
@@ -215,7 +238,6 @@ raw_ambyte_schema = StructType([
     StructField("upload_directory", StringType(), True),
     StructField("upload_time", TimestampType(), True)
 ])
-
 # COMMAND ----------
 
 # DBTITLE 1,Raw Ambyte Data Table
@@ -294,45 +316,12 @@ def raw_ambyte_data():
                     else:
                         df['upload_time'] = None
                     
-                    # Debug: Print column types before conversion
-                    print(f"DataFrame columns and types for {ambyte_folder_name}:")
-                    for col in df.columns:
-                        print(f"  {col}: {df[col].dtype}")
-                    
-                    # Ensure consistent types before converting to Spark DataFrame
-                    # Handle any remaining type inconsistencies
-                    for col in df.columns:
-                        if col == 'spec' and col in df.columns:
-                            # Ensure spec column is consistently a list type
-                            # If there are any non-list values, convert them to empty lists
-                            df[col] = df[col].apply(lambda x: x if isinstance(x, list) else [])
-                        elif col in ['SigF', 'RefF', 'Sun', 'Leaf', 'Sig7', 'Ref7', 'Actinic', 'Res', 'Count', 'PTS', 'ambit_index', 'meta_Dark']:
-                            # Ensure integer columns are int32
-                            df[col] = df[col].astype('Int32')  # Use nullable integer type
-                        elif col in ['Temp', 'PAR', 'raw', 'BoardT', 'meta_Actinic']:
-                            # Ensure float columns are float32
-                            df[col] = df[col].astype('float32')
-                        elif col in ['Type', 'ambyte_folder', 'upload_directory']:
-                            # Ensure string columns are string type
-                            df[col] = df[col].astype('string')
-                        elif col == 'Full':
-                            # Ensure boolean column
-                            df[col] = df[col].astype('bool')
-                    
                     # Convert pandas DataFrame to Spark DataFrame
                     spark_df = spark.createDataFrame(df)
                     
                     all_data.append(spark_df)
                 except Exception as e:
                     print(f"Error converting DataFrame to Spark DataFrame for {ambyte_folder_name} in {upload_dir_name}: {e}")
-                    print(f"DataFrame shape: {df.shape}")
-                    print(f"DataFrame columns: {list(df.columns)}")
-                    # Print sample of problematic data
-                    for col in df.columns:
-                        unique_types = df[col].apply(type).unique()
-                        if len(unique_types) > 1:
-                            print(f"Column {col} has mixed types: {unique_types}")
-                            print(f"Sample values: {df[col].head().tolist()}")
     
     # Combine all spark dataframes if any were created
     if all_data:
