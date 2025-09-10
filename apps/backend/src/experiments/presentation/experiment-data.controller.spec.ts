@@ -662,6 +662,7 @@ describe("ExperimentDataController", () => {
       expect(responseBody.files[0].fileName).toBe(trimmedFileName);
       expect(responseBody.files[0].filePath).toBe(mockUploadResponse.filePath);
 
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.uploadExperimentData).toHaveBeenCalledWith(
         experiment.id,
         experiment.name,
