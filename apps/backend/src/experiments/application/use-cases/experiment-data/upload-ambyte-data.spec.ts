@@ -164,9 +164,12 @@ describe("UploadAmbyteDataUseCase", () => {
     });
 
     const createMockFile = (filename: string, content = "test file content") => {
-      const stream = new Readable();
-      stream.push(content);
-      stream.push(null); // End the stream
+      const stream = new Readable({
+        read() {
+          this.push(content);
+          this.push(null); // End the stream
+        },
+      });
 
       return {
         filename,
@@ -295,6 +298,9 @@ describe("UploadAmbyteDataUseCase", () => {
         "Ambyte_1000/data.txt", // Number too large
       ];
 
+      // Add spy to ensure it's not called
+      const uploadSpy = vi.spyOn(databricksPort, "uploadExperimentData");
+
       for (const fileName of invalidFileNames) {
         const file = createMockFile(fileName);
 
@@ -316,12 +322,15 @@ describe("UploadAmbyteDataUseCase", () => {
         expect(error.error).toContain("Invalid Ambyte data file path");
       });
 
-      expect(databricksPort.uploadExperimentData).not.toHaveBeenCalled();
+      expect(uploadSpy).not.toHaveBeenCalled();
     });
 
     it("should handle missing sourceType", async () => {
       const fileName = "Ambyte_1/data.txt";
       const file = createMockFile(fileName);
+
+      // Add spy to ensure it's not called
+      const uploadSpy = vi.spyOn(databricksPort, "uploadExperimentData");
 
       await useCase.execute(
         file,
@@ -340,7 +349,7 @@ describe("UploadAmbyteDataUseCase", () => {
         error: "Source type is required",
       });
 
-      expect(databricksPort.uploadExperimentData).not.toHaveBeenCalled();
+      expect(uploadSpy).not.toHaveBeenCalled();
     });
 
     it("should handle upload failure", async () => {
@@ -493,6 +502,9 @@ describe("UploadAmbyteDataUseCase", () => {
         updatedAt: new Date(),
       };
 
+      // Add spy to ensure it's not called
+      const pipelineSpy = vi.spyOn(databricksPort, "triggerExperimentPipeline");
+
       const result = await useCase.postexecute(successfulUploads, errors, experiment);
 
       expect(result.isFailure()).toBe(true);
@@ -502,7 +514,7 @@ describe("UploadAmbyteDataUseCase", () => {
       expect(result.error.message).toContain("invalid.txt: Invalid file format");
       expect(result.error.message).toContain("Ambyte_1/failed.txt: Upload failed");
 
-      expect(databricksPort.triggerExperimentPipeline).not.toHaveBeenCalled();
+      expect(pipelineSpy).not.toHaveBeenCalled();
     });
 
     it("should return success with mixed results (some successful, some failed)", async () => {
@@ -548,6 +560,22 @@ describe("UploadAmbyteDataUseCase", () => {
   });
 
   describe("validateFileName", () => {
+    const createMockFileForTest = (filename: string, content = "test file content") => {
+      const stream = new Readable({
+        read() {
+          this.push(content);
+          this.push(null); // End the stream
+        },
+      });
+
+      return {
+        filename,
+        encoding: "utf8",
+        mimetype: "text/plain",
+        stream,
+      };
+    };
+
     it("should validate correct Ambyte file names", async () => {
       const validFileNames = [
         "Ambyte_1/data.txt",
@@ -559,12 +587,7 @@ describe("UploadAmbyteDataUseCase", () => {
       ];
 
       for (const fileName of validFileNames) {
-        const file = {
-          filename: fileName,
-          encoding: "utf8",
-          mimetype: "text/plain",
-          stream: new Readable(),
-        };
+        const file = createMockFileForTest(fileName);
 
         const successfulUploads: { fileName: string; filePath: string }[] = [];
         const errors: { fileName: string; error: string }[] = [];
@@ -603,12 +626,7 @@ describe("UploadAmbyteDataUseCase", () => {
       ];
 
       for (const fileName of invalidFileNames) {
-        const file = {
-          filename: fileName,
-          encoding: "utf8",
-          mimetype: "text/plain",
-          stream: new Readable(),
-        };
+        const file = createMockFileForTest(fileName);
 
         const successfulUploads: { fileName: string; filePath: string }[] = [];
         const errors: { fileName: string; error: string }[] = [];
@@ -631,6 +649,22 @@ describe("UploadAmbyteDataUseCase", () => {
   });
 
   describe("trimFileName", () => {
+    const createMockFileForTest = (filename: string, content = "test file content") => {
+      const stream = new Readable({
+        read() {
+          this.push(content);
+          this.push(null); // End the stream
+        },
+      });
+
+      return {
+        filename,
+        encoding: "utf8",
+        mimetype: "text/plain",
+        stream,
+      };
+    };
+
     it("should trim parent directories correctly", async () => {
       const testCases = [
         {
@@ -648,12 +682,7 @@ describe("UploadAmbyteDataUseCase", () => {
       ];
 
       for (const testCase of testCases) {
-        const file = {
-          filename: testCase.input,
-          encoding: "utf8",
-          mimetype: "text/plain",
-          stream: new Readable(),
-        };
+        const file = createMockFileForTest(testCase.input);
 
         const successfulUploads: { fileName: string; filePath: string }[] = [];
         const errors: { fileName: string; error: string }[] = [];
