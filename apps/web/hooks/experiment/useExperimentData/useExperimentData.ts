@@ -23,6 +23,9 @@ function createTableColumns(data: ExperimentData | undefined, formatFunction?: D
     columns.push(
       columnHelper.accessor(dataColumn.name, {
         header: dataColumn.name,
+        meta: {
+          type: dataColumn.type_name,
+        },
         cell: ({ row }) => {
           const value = row.getValue(dataColumn.name);
           if (formatFunction) {

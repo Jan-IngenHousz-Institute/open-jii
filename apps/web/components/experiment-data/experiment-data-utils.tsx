@@ -12,7 +12,7 @@ export function formatValue(value: unknown, type: string) {
     case "INT":
     case "LONG":
     case "BIGINT":
-      return <div className="text-right italic">{value as number}</div>;
+      return <div className="text-right tabular-nums">{value as number}</div>;
     case "TIMESTAMP":
       return (value as string).substring(0, 19).replace("T", " ");
     default: {
@@ -26,9 +26,18 @@ export function ExperimentTableHeader({ headerGroups }: { headerGroups: HeaderGr
     <TableHeader key={headerGroup.id}>
       <TableRow className="h-2">
         {headerGroup.headers.map((header) => {
+          const columnDef = header.column.columnDef;
+          const meta = columnDef.meta as { type?: string } | undefined;
+          const isNumericColumn =
+            meta?.type === "DOUBLE" ||
+            meta?.type === "INT" ||
+            meta?.type === "LONG" ||
+            meta?.type === "BIGINT";
+
           return (
             <TableHead
               key={header.id}
+              className={isNumericColumn ? "text-right" : "text-left"}
               style={{
                 minWidth: header.column.columnDef.size,
               }}
