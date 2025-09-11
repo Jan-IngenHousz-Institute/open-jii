@@ -1,9 +1,16 @@
 import nock from "nock";
 
 import { TestHarness } from "../../../test/test-harness";
-import { assertSuccess } from "../../utils/fp-utils";
+import { assertFailure, assertSuccess } from "../../utils/fp-utils";
 import { DatabricksAdapter } from "./databricks.adapter";
 import { DatabricksAuthService } from "./services/auth/auth.service";
+import { DatabricksConfigService } from "./services/config/config.service";
+import { DatabricksFilesService } from "./services/files/files.service";
+import { DatabricksJobsService } from "./services/jobs/jobs.service";
+import { DatabricksPipelinesService } from "./services/pipelines/pipelines.service";
+import { DatabricksSqlService } from "./services/sql/sql.service";
+import { DatabricksTablesService } from "./services/tables/tables.service";
+import { DatabricksVolumesService } from "./services/volumes/volumes.service";
 
 // Constants for testing
 const MOCK_ACCESS_TOKEN = "mock-token";
@@ -45,7 +52,7 @@ describe("DatabricksAdapter", () => {
 
       // Mock jobs list API call
       nock(databricksHost)
-        .get(/\/api\/2\.2\/jobs\/list/)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/list`)
         .query(true)
         .reply(200, {
           jobs: [{ job_id: 12345, settings: { name: "Test Job" } }],
@@ -86,7 +93,7 @@ describe("DatabricksAdapter", () => {
 
       // Mock job run-now request
       nock(databricksHost)
-        .post(/\/api\/2\.2\/jobs\/run-now/)
+        .post(`${DatabricksJobsService.JOBS_ENDPOINT}/run-now`)
         .reply(200, mockResponse);
 
       // Execute trigger job
@@ -126,7 +133,7 @@ describe("DatabricksAdapter", () => {
 
       // Mock SQL statement execution
       nock(databricksHost)
-        .post(/\/api\/2\.0\/sql\/statements\//)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
         .reply(200, {
           statement_id: "mock-statement-id",
           status: { state: "SUCCEEDED" },
@@ -196,7 +203,7 @@ describe("DatabricksAdapter", () => {
 
       // Mock tables list API call
       nock(databricksHost)
-        .get(/\/api\/2\.1\/unity-catalog\/tables/)
+        .get(DatabricksTablesService.TABLES_ENDPOINT)
         .query(true)
         .reply(200, mockTablesResponse);
 
@@ -207,6 +214,608 @@ describe("DatabricksAdapter", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value.tables).toEqual(mockTablesResponse.tables);
+    });
+  });
+
+  describe("uploadExperimentData", () => {
+    const experimentId = "123-456-789";
+    const experimentName = "Test Experiment";
+    const sourceType = "ambyte";
+    const directoryName = "upload_20250910_143022_123-456-789";
+    const fileName = "data.csv";
+    const fileBuffer = Buffer.from("test,data");
+    const catalogName = "main";
+
+    it("should correctly format the file path and upload the file", async () => {
+      // Get the actual config service for mocking
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
+
+      // Calculate expected schema name and file path based on adapter implementation
+      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+      const schemaName = `exp_${cleanName}_${experimentId}`;
+      const expectedFilePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}/${directoryName}/${fileName}`;
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock file upload API call
+      nock(databricksHost)
+        .put(`${DatabricksFilesService.FILES_ENDPOINT}${expectedFilePath}`)
+        .query({ overwrite: "false" })
+        .reply(200);
+
+      // Execute upload file
+      const result = await databricksAdapter.uploadExperimentData(
+        experimentId,
+        experimentName,
+        sourceType,
+        directoryName,
+        fileName,
+        fileBuffer,
+      );
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual({
+        filePath: expectedFilePath,
+      });
+    });
+
+    it("should handle spaces and special characters in experiment name", async () => {
+      const specialExperimentName = "  Test EXPERIMENT with SPACES  ";
+
+      // Get the actual config service for mocking
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
+
+      // Calculate expected schema name and file path based on adapter implementation
+      const cleanName = specialExperimentName.toLowerCase().trim().replace(/ /g, "_");
+      const schemaName = `exp_${cleanName}_${experimentId}`;
+      const expectedFilePath = `/Volumes/${catalogName}/${schemaName}/data-uploads/${sourceType}/${directoryName}/${fileName}`;
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock file upload API call
+      nock(databricksHost)
+        .put(`${DatabricksFilesService.FILES_ENDPOINT}${expectedFilePath}`)
+        .query({ overwrite: "false" })
+        .reply(200);
+
+      // Execute upload file
+      const result = await databricksAdapter.uploadExperimentData(
+        experimentId,
+        specialExperimentName,
+        sourceType,
+        directoryName,
+        fileName,
+        fileBuffer,
+      );
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value.filePath).toEqual(expectedFilePath);
+    });
+  });
+
+  describe("triggerExperimentPipeline", () => {
+    const experimentName = "Test Experiment";
+    const experimentId = "123-456-789";
+
+    it("should correctly format pipeline name, get pipeline ID, and trigger update", async () => {
+      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+      const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
+      const pipelineId = "pipeline-abc123";
+      const updateId = "update-xyz789";
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock list pipelines to find pipeline by name
+      nock(databricksHost)
+        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          statuses: [
+            {
+              pipeline_id: pipelineId,
+              name: pipelineName,
+              state: "ACTIVE",
+            },
+          ],
+        });
+
+      // Mock get pipeline details
+      nock(databricksHost)
+        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
+        .reply(200, {
+          pipeline_id: pipelineId,
+          name: pipelineName,
+          state: "ACTIVE",
+        });
+
+      // Mock start pipeline update API call
+      nock(databricksHost)
+        .post(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`)
+        .reply(200, {
+          update_id: updateId,
+        });
+
+      // Execute trigger experiment pipeline
+      const result = await databricksAdapter.triggerExperimentPipeline(
+        experimentName,
+        experimentId,
+      );
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual({
+        update_id: updateId,
+      });
+    });
+
+    it("should handle failure when pipeline is not found", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock list pipelines with empty results
+      nock(databricksHost)
+        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          statuses: [],
+        });
+
+      // Execute trigger experiment pipeline
+      const result = await databricksAdapter.triggerExperimentPipeline(
+        experimentName,
+        experimentId,
+      );
+
+      // Assert result is failure
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("not found");
+    });
+
+    it("should handle spaces and uppercase characters in experiment name", async () => {
+      const specialExperimentName = "  Test EXPERIMENT with SPACES  ";
+      const cleanName = specialExperimentName.toLowerCase().trim().replace(/ /g, "_");
+      const pipelineName = `exp-${cleanName}-DLT-Pipeline-DEV`;
+      const pipelineId = "pipeline-abc123";
+      const updateId = "update-xyz789";
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock list pipelines to find pipeline by name
+      nock(databricksHost)
+        .get(DatabricksPipelinesService.PIPELINES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          statuses: [
+            {
+              pipeline_id: pipelineId,
+              name: pipelineName,
+              state: "ACTIVE",
+            },
+          ],
+        });
+
+      // Mock get pipeline details
+      nock(databricksHost)
+        .get(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}`)
+        .reply(200, {
+          pipeline_id: pipelineId,
+          name: pipelineName,
+          state: "ACTIVE",
+        });
+
+      // Mock start pipeline update API call
+      nock(databricksHost)
+        .post(`${DatabricksPipelinesService.PIPELINES_ENDPOINT}/${pipelineId}/updates`)
+        .reply(200, {
+          update_id: updateId,
+        });
+
+      // Execute trigger experiment pipeline
+      const result = await databricksAdapter.triggerExperimentPipeline(
+        specialExperimentName,
+        experimentId,
+      );
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual({
+        update_id: updateId,
+      });
+    });
+  });
+
+  describe("createVolume", () => {
+    it("should successfully create a volume", async () => {
+      const mockVolumeParams = {
+        catalog_name: "main",
+        schema_name: "test_schema",
+        name: "test_volume",
+        volume_type: "MANAGED" as const,
+        comment: "Test volume comment",
+      };
+
+      const mockVolumeResponse = {
+        catalog_name: "main",
+        schema_name: "test_schema",
+        name: "test_volume",
+        full_name: "main.test_schema.test_volume",
+        volume_type: "MANAGED",
+        comment: "Test volume comment",
+        volume_id: "volume-123",
+        created_at: 1620000000000,
+        created_by: "test-user",
+        updated_at: 1620000000000,
+        updated_by: "test-user",
+        owner: "test-user",
+        metastore_id: "metastore-123",
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock create volume API call
+      nock(databricksHost)
+        .post(DatabricksVolumesService.VOLUMES_ENDPOINT)
+        .reply(200, mockVolumeResponse);
+
+      // Execute create volume
+      const result = await databricksAdapter.createVolume(mockVolumeParams);
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual(mockVolumeResponse);
+    });
+  });
+
+  describe("createExperimentVolume", () => {
+    const experimentName = "Test Experiment";
+    const experimentId = "123-456-789";
+    const volumeName = "data-uploads";
+    const comment = "Volume for test experiment data uploads";
+    const catalogName = "main";
+
+    it("should successfully create an experiment volume with correct naming", async () => {
+      // Get the actual config service for mocking
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
+
+      // Calculate expected schema name based on adapter implementation
+      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+      const schemaName = `exp_${cleanName}_${experimentId}`;
+
+      const mockVolumeResponse = {
+        catalog_name: catalogName,
+        schema_name: schemaName,
+        name: volumeName,
+        full_name: `${catalogName}.${schemaName}.${volumeName}`,
+        volume_type: "MANAGED",
+        comment,
+        volume_id: "volume-123",
+        created_at: 1620000000000,
+        created_by: "test-user",
+        updated_at: 1620000000000,
+        updated_by: "test-user",
+        owner: "test-user",
+        metastore_id: "metastore-123",
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock create volume API call
+      nock(databricksHost)
+        .post(DatabricksVolumesService.VOLUMES_ENDPOINT)
+        .reply(200, mockVolumeResponse);
+
+      // Execute create experiment volume
+      const result = await databricksAdapter.createExperimentVolume(
+        experimentName,
+        experimentId,
+        volumeName,
+        comment,
+      );
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual(mockVolumeResponse);
+    });
+
+    it("should create experiment volume without comment", async () => {
+      // Get the actual config service for mocking
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
+
+      // Calculate expected schema name based on adapter implementation
+      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+      const schemaName = `exp_${cleanName}_${experimentId}`;
+
+      const mockVolumeResponse = {
+        catalog_name: catalogName,
+        schema_name: schemaName,
+        name: volumeName,
+        full_name: `${catalogName}.${schemaName}.${volumeName}`,
+        volume_type: "MANAGED",
+        volume_id: "volume-123",
+        created_at: 1620000000000,
+        created_by: "test-user",
+        updated_at: 1620000000000,
+        updated_by: "test-user",
+        owner: "test-user",
+        metastore_id: "metastore-123",
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock create volume API call
+      nock(databricksHost)
+        .post(DatabricksVolumesService.VOLUMES_ENDPOINT)
+        .reply(200, mockVolumeResponse);
+
+      // Execute create experiment volume without comment
+      const result = await databricksAdapter.createExperimentVolume(
+        experimentName,
+        experimentId,
+        volumeName,
+      );
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual(mockVolumeResponse);
+    });
+
+    it("should handle spaces and special characters in experiment name", async () => {
+      const specialExperimentName = "  Test EXPERIMENT with SPACES  ";
+
+      // Get the actual config service for mocking
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
+
+      // Calculate expected schema name based on adapter implementation
+      const cleanName = specialExperimentName.toLowerCase().trim().replace(/ /g, "_");
+      const schemaName = `exp_${cleanName}_${experimentId}`;
+
+      const mockVolumeResponse = {
+        catalog_name: catalogName,
+        schema_name: schemaName,
+        name: volumeName,
+        full_name: `${catalogName}.${schemaName}.${volumeName}`,
+        volume_type: "MANAGED",
+        comment,
+        volume_id: "volume-123",
+        created_at: 1620000000000,
+        created_by: "test-user",
+        updated_at: 1620000000000,
+        updated_by: "test-user",
+        owner: "test-user",
+        metastore_id: "metastore-123",
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock create volume API call
+      nock(databricksHost)
+        .post(DatabricksVolumesService.VOLUMES_ENDPOINT)
+        .reply(200, mockVolumeResponse);
+
+      // Execute create experiment volume with special characters
+      const result = await databricksAdapter.createExperimentVolume(
+        specialExperimentName,
+        experimentId,
+        volumeName,
+        comment,
+      );
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value.schema_name).toEqual(schemaName);
+    });
+  });
+
+  describe("getExperimentVolume", () => {
+    const experimentName = "Test Experiment";
+    const experimentId = "123-456-789";
+    const volumeName = "data-uploads";
+    const catalogName = "main";
+
+    it("should successfully get an experiment volume", async () => {
+      // Get the actual config service for mocking
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
+
+      // Calculate expected schema name and full volume name based on adapter implementation
+      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+      const schemaName = `exp_${cleanName}_${experimentId}`;
+      const expectedFullVolumeName = `${catalogName}.${schemaName}.${volumeName}`;
+
+      const mockVolumeResponse = {
+        catalog_name: catalogName,
+        schema_name: schemaName,
+        name: volumeName,
+        full_name: expectedFullVolumeName,
+        volume_type: "MANAGED",
+        volume_id: "volume-123",
+        created_at: 1620000000000,
+        created_by: "test-user",
+        updated_at: 1620000000000,
+        updated_by: "test-user",
+        owner: "test-user",
+        metastore_id: "metastore-123",
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock get volume API call
+      nock(databricksHost)
+        .get(
+          `${DatabricksVolumesService.VOLUMES_ENDPOINT}/${encodeURIComponent(expectedFullVolumeName)}`,
+        )
+        .reply(200, mockVolumeResponse);
+
+      // Execute get experiment volume
+      const result = await databricksAdapter.getExperimentVolume(
+        experimentName,
+        experimentId,
+        volumeName,
+      );
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual(mockVolumeResponse);
+    });
+
+    it("should handle failure when volume is not found", async () => {
+      // Get the actual config service for mocking
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
+
+      // Calculate expected schema name and full volume name based on adapter implementation
+      const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+      const schemaName = `exp_${cleanName}_${experimentId}`;
+      const expectedFullVolumeName = `${catalogName}.${schemaName}.${volumeName}`;
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock get volume API call with 404 error
+      nock(databricksHost)
+        .get(
+          `${DatabricksVolumesService.VOLUMES_ENDPOINT}/${encodeURIComponent(expectedFullVolumeName)}`,
+        )
+        .reply(404, {
+          error_code: "VOLUME_DOES_NOT_EXIST",
+          message: "Volume does not exist",
+        });
+
+      // Execute get experiment volume
+      const result = await databricksAdapter.getExperimentVolume(
+        experimentName,
+        experimentId,
+        volumeName,
+      );
+
+      // Assert result is failure
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to get volume");
+    });
+
+    it("should handle spaces and special characters in experiment name", async () => {
+      const specialExperimentName = "  Test EXPERIMENT with SPACES  ";
+
+      // Get the actual config service for mocking
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getCatalogName").mockReturnValue(catalogName);
+
+      // Calculate expected schema name and full volume name based on adapter implementation
+      const cleanName = specialExperimentName.toLowerCase().trim().replace(/ /g, "_");
+      const schemaName = `exp_${cleanName}_${experimentId}`;
+      const expectedFullVolumeName = `${catalogName}.${schemaName}.${volumeName}`;
+
+      const mockVolumeResponse = {
+        catalog_name: catalogName,
+        schema_name: schemaName,
+        name: volumeName,
+        full_name: expectedFullVolumeName,
+        volume_type: "MANAGED",
+        volume_id: "volume-123",
+        created_at: 1620000000000,
+        created_by: "test-user",
+        updated_at: 1620000000000,
+        updated_by: "test-user",
+        owner: "test-user",
+        metastore_id: "metastore-123",
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock get volume API call
+      nock(databricksHost)
+        .get(
+          `${DatabricksVolumesService.VOLUMES_ENDPOINT}/${encodeURIComponent(expectedFullVolumeName)}`,
+        )
+        .reply(200, mockVolumeResponse);
+
+      // Execute get experiment volume with special characters
+      const result = await databricksAdapter.getExperimentVolume(
+        specialExperimentName,
+        experimentId,
+        volumeName,
+      );
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value.full_name).toEqual(expectedFullVolumeName);
     });
   });
 });

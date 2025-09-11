@@ -19,6 +19,7 @@
       "title": "Data Analysis",
       "noResults": "No analysis results available.",
       "description": "Analysis results and reports will appear here once data collection begins."
-    }
+    },
+    "uploadData": "Upload Data"
   }
 }

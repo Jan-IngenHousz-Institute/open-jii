@@ -1,7 +1,11 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
-import type { ErrorResponse, ExperimentDataResponse } from "@repo/api";
+import type {
+  ErrorResponse,
+  ExperimentDataResponse,
+  UploadExperimentDataResponse,
+} from "@repo/api";
 import { contract } from "@repo/api";
 
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
@@ -86,6 +90,8 @@ describe("ExperimentDataController", () => {
             name: "test_table",
             catalog_name: experiment.name,
             schema_name: `exp_${experiment.name}_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
           },
         ],
       };
@@ -162,11 +168,15 @@ describe("ExperimentDataController", () => {
             name: "bronze_data",
             catalog_name: "test_catalog",
             schema_name: `exp_${experiment.name}_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
           },
           {
             name: "silver_data",
             catalog_name: "test_catalog",
             schema_name: `exp_${experiment.name}_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
           },
         ],
       };
@@ -366,6 +376,8 @@ describe("ExperimentDataController", () => {
             name: "nonexistent_table",
             catalog_name: experiment.name,
             schema_name: `exp_${experiment.name}_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
           },
         ],
       };
@@ -430,6 +442,8 @@ describe("ExperimentDataController", () => {
             name: "test_table",
             catalog_name: experiment.name,
             schema_name: `exp_${experiment.name}_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
           },
         ],
       };
@@ -489,6 +503,8 @@ describe("ExperimentDataController", () => {
             name: "existing_table",
             catalog_name: experiment.name,
             schema_name: `exp_${experiment.name}_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
           },
         ],
       };
@@ -507,6 +523,405 @@ describe("ExperimentDataController", () => {
         .expect(({ body }: { body: ErrorResponse }) => {
           expect(body.message).toContain("Table 'non_existent_table' not found in this experiment");
         });
+    });
+  });
+
+  describe("uploadExperimentData", () => {
+    // Note: We only test plain .txt files without paths in these controller tests
+    // because webkitdirectory behavior cannot be reproduced with supertest.
+    // Files with full paths (like "some/dir/Ambyte_1/data.txt") are tested
+    // in the use case unit tests where we can control the file structure directly.
+
+    const trimFileName = (fileName: string): string => {
+      // If the filename contains a path and matches the Ambyte pattern, trim it
+      if (fileName.includes("/")) {
+        const pattern = /Ambyte_\d{1,3}\/(?:[1-4]\/)?[^/]+\.txt$/i;
+        const ambyteMatch = pattern.exec(fileName);
+        return ambyteMatch ? ambyteMatch[0] : fileName;
+      }
+
+      // No path in filename - construct one based on the pattern
+      const baseFileName = fileName;
+
+      // Check if it matches the timestamp pattern: YYYYMMDD-HHMMSS_.txt
+      const timestampPattern = /^\d{8}-\d{6}_\.txt$/;
+      if (timestampPattern.test(baseFileName)) {
+        // For timestamp files, use unknown_ambyte/unknown_ambit/filename structure
+        return `unknown_ambyte/unknown_ambit/${baseFileName}`;
+      }
+
+      // For other files, use unknown_ambyte/filename structure
+      return `unknown_ambyte/${baseFileName}`;
+    };
+
+    // Test mocking helper function to properly prepare the test
+    const setupFileUploadTest = async (
+      fileName: string,
+      description: string,
+      willSucceed = true,
+    ) => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: `Test Experiment for ${description}`,
+        userId: testUserId,
+      });
+
+      // Mock successful response from uploadExperimentData
+      // Include directoryName in the path structure
+      const directoryName = `upload_${new Date().toISOString().replace(/[-:]/g, "").replace("T", "_").split(".")[0]}`;
+      const mockUploadResponse = {
+        filePath: `/Volumes/${experiment.name}/ambyte/${directoryName}/${fileName}`,
+      };
+
+      // Mock successful response from triggerExperimentPipeline
+      const mockPipelineResponse = {
+        update_id: faker.string.uuid(),
+        status: "RUNNING",
+      };
+
+      // Mock volume operations for preexecute
+      const mockVolumeResponse = {
+        name: "data-uploads",
+        volume_id: faker.string.uuid(),
+        catalog_name: "main",
+        schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+        volume_type: "MANAGED" as const,
+        full_name: `main.exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}.data-uploads`,
+        created_at: Date.now(),
+        created_by: testUserId,
+        updated_at: Date.now(),
+        updated_by: testUserId,
+        metastore_id: faker.string.uuid(),
+        owner: testUserId,
+      };
+
+      // Set up the proper mock based on whether the test should succeed
+      if (willSucceed) {
+        // Mock volume exists (so preexecute returns success immediately)
+        vi.spyOn(databricksAdapter, "getExperimentVolume").mockResolvedValue(
+          success(mockVolumeResponse),
+        );
+        vi.spyOn(databricksAdapter, "uploadExperimentData").mockResolvedValue(
+          success(mockUploadResponse),
+        );
+        vi.spyOn(databricksAdapter, "triggerExperimentPipeline").mockResolvedValue(
+          success(mockPipelineResponse),
+        );
+      } else {
+        // Mock volume exists but upload fails
+        vi.spyOn(databricksAdapter, "getExperimentVolume").mockResolvedValue(
+          success(mockVolumeResponse),
+        );
+        vi.spyOn(databricksAdapter, "uploadExperimentData").mockResolvedValue(
+          failure(AppError.internal("Failed to upload file to Databricks")),
+        );
+      }
+
+      // Get the path
+      const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      // Create mock file data as Buffer
+      const fileBuffer = Buffer.from("mock ambyte data content");
+
+      return { experiment, path, fileBuffer, fileName, mockUploadResponse };
+    };
+
+    const getExpectedDirectoryNamePattern = (): RegExp => {
+      // Format: upload_YYYYMMDD_HHMMSS
+      return /^upload_\d{8}_\d{6}$/;
+    };
+
+    it("should upload plain txt file successfully", async () => {
+      const fileName = "data.txt";
+      const description = "Plain text file";
+
+      const {
+        experiment,
+        path,
+        fileBuffer,
+        fileName: testFileName,
+        mockUploadResponse,
+      } = await setupFileUploadTest(fileName, description);
+
+      const trimmedFileName = trimFileName(testFileName);
+
+      // Make the request
+      const response = await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .set("Content-Type", "multipart/form-data")
+        .field("sourceType", "ambyte")
+        .attach("files", fileBuffer, testFileName)
+        .expect(StatusCodes.CREATED);
+
+      // Verify response
+      const responseBody = response.body as UploadExperimentDataResponse;
+      expect(responseBody.files).toHaveLength(1);
+      expect(responseBody.files[0].fileName).toBe(trimmedFileName);
+      expect(responseBody.files[0].filePath).toBe(mockUploadResponse.filePath);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksAdapter.uploadExperimentData).toHaveBeenCalledWith(
+        experiment.id,
+        experiment.name,
+        "ambyte",
+        expect.stringMatching(getExpectedDirectoryNamePattern()),
+        trimmedFileName,
+        fileBuffer,
+      );
+    });
+
+    it("should return 400 when no files are uploaded", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for No Files",
+        userId: testUserId,
+      });
+
+      // Mock volume operations for preexecute (volume exists)
+      const mockVolumeResponse = {
+        name: "data-uploads",
+        volume_id: faker.string.uuid(),
+        catalog_name: "main",
+        schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+        volume_type: "MANAGED" as const,
+        full_name: `main.exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}.data-uploads`,
+        created_at: Date.now(),
+        created_by: testUserId,
+        updated_at: Date.now(),
+        updated_by: testUserId,
+        metastore_id: faker.string.uuid(),
+        owner: testUserId,
+      };
+
+      vi.spyOn(databricksAdapter, "getExperimentVolume").mockResolvedValue(
+        success(mockVolumeResponse),
+      );
+
+      // Mock the uploadExperimentData method to ensure we can check if it's called
+      const uploadExperimentDataSpy = vi.spyOn(databricksAdapter, "uploadExperimentData");
+
+      // Get the path
+      const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      // Make the request with no file attached (which will result in bad request)
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .set("Content-Type", "multipart/form-data")
+        .field("sourceType", "ambyte")
+        .expect(StatusCodes.BAD_REQUEST);
+
+      // Verify that the upload method was not called
+      expect(uploadExperimentDataSpy).not.toHaveBeenCalled();
+    });
+
+    it("should return 404 when experiment does not exist", async () => {
+      const nonExistentId = faker.string.uuid();
+
+      // Get the path
+      const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
+        id: nonExistentId,
+      });
+
+      // Create mock file data
+      const fileBuffer = Buffer.from("mock ambyte data content");
+
+      // Make the request
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .set("Content-Type", "multipart/form-data")
+        .field("sourceType", "ambyte")
+        .attach("files", fileBuffer, "Ambyte_1/data.txt")
+        .expect(StatusCodes.NOT_FOUND);
+    });
+
+    it("should return 403 when user does not have access to the experiment", async () => {
+      // Create an experiment owned by another user with private visibility
+      const otherUserId = await testApp.createTestUser({});
+      const { experiment } = await testApp.createExperiment({
+        name: "Private Experiment",
+        userId: otherUserId,
+        visibility: "private",
+      });
+
+      // Mock the DatabricksAdapter uploadExperimentData method to return forbidden error
+      vi.spyOn(databricksAdapter, "uploadExperimentData").mockResolvedValue(
+        failure(AppError.forbidden(`User does not have access to experiment`)),
+      );
+
+      // Get the path
+      const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      // Create mock file data
+      const fileBuffer = Buffer.from("mock ambyte data content");
+
+      // Make the request
+      await testApp
+        .post(path)
+        .withAuth(testUserId) // Use the test user who doesn't have access
+        .set("Content-Type", "multipart/form-data")
+        .field("sourceType", "ambyte")
+        .attach("files", fileBuffer, "Ambyte_1/data.txt")
+        .expect(StatusCodes.FORBIDDEN);
+    });
+
+    it("should reject invalid file formats", async () => {
+      const fileName = "invalid.pdf"; // Not a .txt file
+      const description = "Invalid file format";
+
+      const { path, fileBuffer } = await setupFileUploadTest(fileName, description, false);
+
+      // Make the request
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .set("Content-Type", "multipart/form-data")
+        .field("sourceType", "ambyte")
+        .attach("files", fileBuffer, fileName)
+        .expect(StatusCodes.BAD_REQUEST);
+
+      // No need to verify specific error structure as it will use handleFailure now
+    });
+
+    it("should handle failure in databricks file upload", async () => {
+      // Set up the test with a valid file name but mock a failure
+      const { path, fileBuffer } = await setupFileUploadTest("Ambyte_1", "Upload Error", false);
+
+      // Override the mock to simulate upload failure
+      vi.spyOn(databricksAdapter, "uploadExperimentData").mockResolvedValue(
+        failure(AppError.internal("Failed to upload file to Databricks")),
+      );
+
+      // Make the request
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .set("Content-Type", "multipart/form-data")
+        .field("sourceType", "ambyte")
+        .attach("files", fileBuffer, "Ambyte_1/data.txt")
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should handle multiple file uploads", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Multiple Files",
+        userId: testUserId,
+      });
+
+      // Mock volume operations for preexecute (volume exists)
+      const mockVolumeResponse = {
+        name: "data-uploads",
+        volume_id: faker.string.uuid(),
+        catalog_name: "main",
+        schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+        volume_type: "MANAGED" as const,
+        full_name: `main.exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}.data-uploads`,
+        created_at: Date.now(),
+        created_by: testUserId,
+        updated_at: Date.now(),
+        updated_by: testUserId,
+        metastore_id: faker.string.uuid(),
+        owner: testUserId,
+      };
+
+      vi.spyOn(databricksAdapter, "getExperimentVolume").mockResolvedValue(
+        success(mockVolumeResponse),
+      );
+
+      // Create file paths
+      const fileNames = ["data1.txt", "data2.txt"];
+
+      // Mock successful responses from uploadExperimentData
+      // Include directoryName in the path structure
+      const directoryName = `upload_${new Date().toISOString().replace(/[-:]/g, "").replace("T", "_").split(".")[0]}`;
+      const mockUploadResponses = fileNames.map((fileName) => ({
+        filePath: `/Volumes/${experiment.name}/ambyte/${directoryName}/${fileName}`,
+      }));
+
+      // Mock successful response from triggerExperimentPipeline
+      const mockPipelineResponse = {
+        update_id: faker.string.uuid(),
+        status: "RUNNING",
+      };
+
+      // Setup upload mocks for each file
+      let uploadCallCount = 0;
+      vi.spyOn(databricksAdapter, "uploadExperimentData").mockImplementation(() => {
+        const response = success(mockUploadResponses[uploadCallCount]);
+        uploadCallCount++;
+        return Promise.resolve(response);
+      });
+
+      vi.spyOn(databricksAdapter, "triggerExperimentPipeline").mockResolvedValue(
+        success(mockPipelineResponse),
+      );
+
+      // Get the path
+      const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      // Create mock file buffers
+      const fileBuffers = fileNames.map(() => Buffer.from("mock ambyte data content"));
+
+      // Prepare the request
+      const request = testApp
+        .post(path)
+        .withAuth(testUserId)
+        .set("Content-Type", "multipart/form-data")
+        .field("sourceType", "ambyte");
+
+      // Attach all files
+      fileNames.forEach((fileName, index) => {
+        request.attach("files", fileBuffers[index], fileName);
+      });
+
+      // Make the request
+      const response = await request.expect(StatusCodes.CREATED);
+
+      // Verify response
+      const responseBody = response.body as UploadExperimentDataResponse;
+      expect(responseBody.files).toHaveLength(2);
+
+      const trimmedFileNames = fileNames.map((fileName) => trimFileName(fileName));
+      expect(responseBody.files[0].fileName).toBe(trimmedFileNames[0]);
+      expect(responseBody.files[0].filePath).toBe(mockUploadResponses[0].filePath);
+      expect(responseBody.files[1].fileName).toBe(trimmedFileNames[1]);
+      expect(responseBody.files[1].filePath).toBe(mockUploadResponses[1].filePath);
+
+      // Verify the databricksAdapter methods were called correctly
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksAdapter.uploadExperimentData).toHaveBeenCalledTimes(2);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksAdapter.uploadExperimentData).toHaveBeenNthCalledWith(
+        1,
+        experiment.id,
+        experiment.name,
+        "ambyte",
+        expect.stringMatching(getExpectedDirectoryNamePattern()), // directoryName follows upload_YYYYMMDD_HHMMSS pattern
+        trimmedFileNames[0],
+        expect.any(Buffer),
+      );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksAdapter.uploadExperimentData).toHaveBeenNthCalledWith(
+        2,
+        experiment.id,
+        experiment.name,
+        "ambyte",
+        expect.stringMatching(getExpectedDirectoryNamePattern()), // directoryName follows upload_YYYYMMDD_HHMMSS pattern
+        trimmedFileNames[1],
+        expect.any(Buffer),
+      );
     });
   });
 });

@@ -4,9 +4,12 @@ import { Module } from "@nestjs/common";
 import { DatabricksAdapter } from "./databricks.adapter";
 import { DatabricksAuthService } from "./services/auth/auth.service";
 import { DatabricksConfigService } from "./services/config/config.service";
+import { DatabricksFilesService } from "./services/files/files.service";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
+import { DatabricksPipelinesService } from "./services/pipelines/pipelines.service";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import { DatabricksTablesService } from "./services/tables/tables.service";
+import { DatabricksVolumesService } from "./services/volumes/volumes.service";
 
 @Module({
   imports: [
@@ -21,6 +24,9 @@ import { DatabricksTablesService } from "./services/tables/tables.service";
     DatabricksJobsService,
     DatabricksSqlService,
     DatabricksTablesService,
+    DatabricksFilesService,
+    DatabricksPipelinesService,
+    DatabricksVolumesService,
     DatabricksAdapter,
   ],
   exports: [DatabricksAdapter, DatabricksConfigService],

@@ -19,6 +19,8 @@ import {
   zExperimentWebhookSuccessResponse,
   zExperimentWebhookErrorResponse,
   zExperimentAccess,
+  zUploadExperimentDataBody,
+  zUploadExperimentDataResponse,
 } from "../schemas/experiment.schema";
 import { zFlow, zUpsertFlowBody } from "../schemas/experiment.schema";
 import {
@@ -264,5 +266,21 @@ export const experimentContract = c.router({
     },
     summary: "Update experiment flow",
     description: "Updates the existing flow for the experiment with the provided graph.",
+  },
+
+  uploadExperimentData: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/data/upload",
+    pathParams: zIdPathParam,
+    contentType: "multipart/form-data",
+    body: zUploadExperimentDataBody,
+    responses: {
+      201: zUploadExperimentDataResponse,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Upload experiment data",
+    description: "Uploads experiment data files to Databricks",
   },
 });

@@ -32,6 +32,7 @@
     "quill": "^2.0.3",
     "radix-ui": "^1.4.2",
     "react-day-picker": "8.10.1",
+    "react-dropzone": "^14.3.8",
     "react-hook-form": "catalog:",
     "react-quilljs": "^2.0.5",
     "react-resizable-panels": "^3.0.1",

@@ -68,7 +68,7 @@ catalogs:
       specifier: ^16.3.0
       version: 16.3.0
     '@testing-library/user-event':
-      specifier: ^14.5.2
+      specifier: ^14.6.1
       version: 14.6.1
     '@vitest/coverage-v8':
       specifier: ^3.2.4
@@ -159,9 +159,15 @@ importers:
       '@ts-rest/nest':
         specifier: ^3.52.1
         version: 3.52.1(@nestjs/common@11.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.0)(@ts-rest/core@3.52.1(@types/node@22.15.30)(zod@3.24.4))(rxjs@7.8.2)(zod@3.24.4)
+      '@types/busboy':
+        specifier: ^1.5.4
+        version: 1.5.4
       axios:
         specifier: ^1.9.0
         version: 1.9.0
+      busboy:
+        specifier: ^1.6.0
+        version: 1.6.0
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -962,6 +968,9 @@ importers:
       react-day-picker:
         specifier: 8.10.1
         version: 8.10.1(date-fns@4.1.0)(react@19.1.0)
+      react-dropzone:
+        specifier: ^14.3.8
+        version: 14.3.8(react@19.1.0)
       react-hook-form:
         specifier: 'catalog:'
         version: 7.56.3(react@19.1.0)
@@ -7661,6 +7670,9 @@ packages:
   '@types/bunyan@1.8.11':
     resolution: {integrity: sha512-758fRH7umIMk5qt5ELmRMff4mLDlN+xyYzC+dkPTdKwbSkJFvz6xwyScrytPU0QIBbRRwbiE8/BIg8bpajerNQ==}
 
+  '@types/busboy@1.5.4':
+    resolution: {integrity: sha512-kG7WrUuAKK0NoyxfQHsVE6j1m01s6kMma64E+OZenQABMQyTJop1DumUWcLwAQ2JzpefU7PDYoRDKl8uZosFjw==}
+
   '@types/chai@5.2.2':
     resolution: {integrity: sha512-8kB30R7Hwqf40JPiKhVzodJs2Qc1ZJ5zuT3uzw5Hq/dhNCl3G3l83jfpdI1e20BP348+fV7VIL/+FxaXkqBmWg==}
 
@@ -8635,6 +8647,10 @@ packages:
   at-least-node@1.0.0:
     resolution: {integrity: sha512-+q/t7Ekv1EDY2l6Gda6LLiX14rU9TV20Wa3ofeQmwPFZbOMo9DXrLbOjFaaclkXKWidIaopwAObQDqwWtGUjqg==}
     engines: {node: '>= 4.0.0'}
+
+  attr-accept@2.2.5:
+    resolution: {integrity: sha512-0bDNnY/u6pPwHDMoF0FieU354oBi0a8rD9FcsLwzcGWbc8KS8KPIi7y+s13OlVY+gMWc/9xEMUgNE6Qm8ZllYQ==}
+    engines: {node: '>=4'}
 
   auto-bind@4.0.0:
     resolution: {integrity: sha512-Hdw8qdNiqdJ8LqT0iK0sVzkFbzg6fhnQqqfWhBDxcHZvU75+B+ayzTy8x+k5Ix0Y92XOhOUlx74ps+bA6BeYMQ==}
@@ -11225,6 +11241,10 @@ packages:
     engines: {node: '>= 10.13.0'}
     peerDependencies:
       webpack: ^4.0.0 || ^5.0.0
+
+  file-selector@2.1.2:
+    resolution: {integrity: sha512-QgXo+mXTe8ljeqUFaX3QVHc5osSItJ/Km+xpocx0aSqWGMSCf6qYs/VnzZgS864Pjn5iceMRFigeAV7AfTlaig==}
+    engines: {node: '>= 12'}
 
   file-type@19.6.0:
     resolution: {integrity: sha512-VZR5I7k5wkD0HgFnMsq5hOsSc710MJMu5Nc5QYsbe38NN5iPV/XTObYLc/cpttRTf6lX538+5uO1ZQRhYibiZQ==}
@@ -15624,6 +15644,12 @@ packages:
 
   react-dom@19.1.0:
     resolution: {integrity: sha512-Xs1hdnE+DyKgeHJeJznQmYMIBG3TKIHJJT95Q58nHLSrElKlGQqDTR2HQ9fx5CN/Gk6Vh/kupBTDLU11/nDk/g==}
+    peerDependencies:
+      react: 19.1.0
+
+  react-dropzone@14.3.8:
+    resolution: {integrity: sha512-sBgODnq+lcA4P296DY4wacOZz3JFpD99fp+hb//iBO2HHnyeZU3FwWyXJ6salNpqQdsZrgMrotuko/BdJMV8Ug==}
+    engines: {node: '>= 10.13'}
     peerDependencies:
       react: 19.1.0
 
@@ -24768,7 +24794,7 @@ snapshots:
 
   '@jridgewell/source-map@0.3.6':
     dependencies:
-      '@jridgewell/gen-mapping': 0.3.8
+      '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.30
 
   '@jridgewell/sourcemap-codec@1.5.0': {}
@@ -29017,7 +29043,7 @@ snapshots:
 
   '@types/babel__traverse@7.20.7':
     dependencies:
-      '@babel/types': 7.27.1
+      '@babel/types': 7.28.2
 
   '@types/body-parser@1.19.5':
     dependencies:
@@ -29029,6 +29055,10 @@ snapshots:
       '@types/node': 22.15.30
 
   '@types/bunyan@1.8.11':
+    dependencies:
+      '@types/node': 22.15.30
+
+  '@types/busboy@1.5.4':
     dependencies:
       '@types/node': 22.15.30
 
@@ -29195,7 +29225,7 @@ snapshots:
 
   '@types/eslint@9.6.1':
     dependencies:
-      '@types/estree': 1.0.7
+      '@types/estree': 1.0.8
       '@types/json-schema': 7.0.15
 
   '@types/estree-jsx@1.0.5':
@@ -30234,6 +30264,8 @@ snapshots:
   asynckit@0.4.0: {}
 
   at-least-node@1.0.0: {}
+
+  attr-accept@2.2.5: {}
 
   auto-bind@4.0.0: {}
 
@@ -32847,7 +32879,7 @@ snapshots:
       '@humanwhocodes/module-importer': 1.0.1
       '@humanwhocodes/retry': 0.4.3
       '@modelcontextprotocol/sdk': 1.11.2
-      '@types/estree': 1.0.7
+      '@types/estree': 1.0.8
       '@types/json-schema': 7.0.15
       ajv: 6.12.6
       chalk: 4.1.2
@@ -33436,6 +33468,10 @@ snapshots:
       loader-utils: 2.0.4
       schema-utils: 3.3.0
       webpack: 5.99.8(@swc/core@1.11.24)
+
+  file-selector@2.1.2:
+    dependencies:
+      tslib: 2.8.1
 
   file-type@19.6.0:
     dependencies:
@@ -34110,7 +34146,7 @@ snapshots:
 
   hast-util-to-estree@3.1.3:
     dependencies:
-      '@types/estree': 1.0.7
+      '@types/estree': 1.0.8
       '@types/estree-jsx': 1.0.5
       '@types/hast': 3.0.4
       comma-separated-tokens: 2.0.3
@@ -35989,7 +36025,7 @@ snapshots:
       '@babel/core': 7.27.1
       '@babel/generator': 7.28.3
       '@babel/template': 7.27.2
-      '@babel/traverse': 7.27.1
+      '@babel/traverse': 7.28.3
       flow-enums-runtime: 0.0.6
       nullthrows: 1.1.1
     transitivePeerDependencies:
@@ -37984,14 +38020,6 @@ snapshots:
       '@csstools/utilities': 2.0.0(postcss@8.5.4)
       postcss: 8.5.4
 
-  postcss-load-config@4.0.2(postcss@8.5.4)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.30)(typescript@5.8.3)):
-    dependencies:
-      lilconfig: 3.1.3
-      yaml: 2.7.1
-    optionalDependencies:
-      postcss: 8.5.4
-      ts-node: 10.9.2(@swc/core@1.11.24)(@types/node@22.15.30)(typescript@5.8.3)
-
   postcss-load-config@4.0.2(postcss@8.5.4)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.30)(typescript@5.9.2)):
     dependencies:
       lilconfig: 3.1.3
@@ -38007,6 +38035,14 @@ snapshots:
     optionalDependencies:
       postcss: 8.5.6
       ts-node: 10.9.2(@swc/core@1.11.24)(@types/node@16.18.126)(typescript@5.8.3)
+
+  postcss-load-config@4.0.2(postcss@8.5.6)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.30)(typescript@5.8.3)):
+    dependencies:
+      lilconfig: 3.1.3
+      yaml: 2.7.1
+    optionalDependencies:
+      postcss: 8.5.6
+      ts-node: 10.9.2(@swc/core@1.11.24)(@types/node@22.15.30)(typescript@5.8.3)
 
   postcss-loader@7.3.4(postcss@8.5.4)(typescript@5.8.3)(webpack@5.99.8(@swc/core@1.11.24)):
     dependencies:
@@ -38716,10 +38752,17 @@ snapshots:
       react: 19.1.0
       scheduler: 0.26.0
 
+  react-dropzone@14.3.8(react@19.1.0):
+    dependencies:
+      attr-accept: 2.2.5
+      file-selector: 2.1.2
+      prop-types: 15.8.1
+      react: 19.1.0
+
   react-email@4.1.3:
     dependencies:
-      '@babel/parser': 7.27.2
-      '@babel/traverse': 7.27.1
+      '@babel/parser': 7.28.3
+      '@babel/traverse': 7.28.3
       chalk: 5.4.1
       chokidar: 4.0.3
       commander: 13.1.0
@@ -39229,7 +39272,7 @@ snapshots:
 
   recma-parse@1.0.0:
     dependencies:
-      '@types/estree': 1.0.7
+      '@types/estree': 1.0.8
       esast-util-from-js: 2.0.1
       unified: 11.0.5
       vfile: 6.0.3
@@ -40693,11 +40736,11 @@ snapshots:
       normalize-path: 3.0.0
       object-hash: 3.0.0
       picocolors: 1.1.1
-      postcss: 8.5.4
-      postcss-import: 15.1.0(postcss@8.5.4)
-      postcss-js: 4.0.1(postcss@8.5.4)
-      postcss-load-config: 4.0.2(postcss@8.5.4)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.30)(typescript@5.8.3))
-      postcss-nested: 6.2.0(postcss@8.5.4)
+      postcss: 8.5.6
+      postcss-import: 15.1.0(postcss@8.5.6)
+      postcss-js: 4.0.1(postcss@8.5.6)
+      postcss-load-config: 4.0.2(postcss@8.5.6)(ts-node@10.9.2(@swc/core@1.11.24)(@types/node@22.15.30)(typescript@5.8.3))
+      postcss-nested: 6.2.0(postcss@8.5.6)
       postcss-selector-parser: 6.1.2
       resolve: 1.22.10
       sucrase: 3.35.0
