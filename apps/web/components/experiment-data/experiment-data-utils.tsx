@@ -27,11 +27,12 @@ export function ExperimentTableHeader({ headerGroups }: { headerGroups: HeaderGr
       <TableRow className="h-2">
         {headerGroup.headers.map((header) => {
           const columnDef = header.column.columnDef;
+          const meta = columnDef.meta as { type?: string } | undefined;
           const isNumericColumn =
-            columnDef.meta?.type === "DOUBLE" ||
-            columnDef.meta?.type === "INT" ||
-            columnDef.meta?.type === "LONG" ||
-            columnDef.meta?.type === "BIGINT";
+            meta?.type === "DOUBLE" ||
+            meta?.type === "INT" ||
+            meta?.type === "LONG" ||
+            meta?.type === "BIGINT";
 
           return (
             <TableHead
@@ -70,7 +71,6 @@ export function ExperimentDataRows({
     );
   return rows.map((row) => (
     <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       {row.getVisibleCells().map((cell) => (
         <TableCell
           key={cell.id}
