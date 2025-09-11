@@ -10,13 +10,15 @@ const nextAuth = (async () => {
   const isLambda = isLambdaEnvironment();
   let authSecrets: SecretMap = {};
   let dbSecrets: SecretMap = {};
+  let sesSecrets: SecretMap = {};
 
   if (isLambda) {
     authSecrets = await getSecret(process.env.OAUTH_SECRET_ARN ?? "");
     dbSecrets = await getSecret(process.env.DB_SECRET_ARN ?? "");
+    sesSecrets = await getSecret(process.env.SES_SECRET_ARN ?? "");
   }
 
-  return initAuth({ authSecrets, dbSecrets, isLambda });
+  return initAuth({ authSecrets, dbSecrets, sesSecrets, isLambda });
 })();
 
 const {
