@@ -54,6 +54,7 @@ variable "forwarded_headers" {
     "Referer",
     "User-Agent",
     "Content-Type",
+    "Content-Length",
     "x-api-key-id",
     "x-databricks-signature",
     "x-databricks-timestamp",

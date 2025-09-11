@@ -801,6 +801,12 @@ module "backend_waf" {
   rate_limit         = 500
   log_retention_days = 30
 
+  # Backend endpoints that need large body support (up to 1024MB)
+  # These endpoints will be rate-limited to 5 requests per minute per IP
+  large_body_endpoints = [
+    "/data/upload" # This will match /api/v1/experiments/:id/data/upload
+  ]
+
   tags = {
     Environment = "dev"
     Project     = "open-jii"
