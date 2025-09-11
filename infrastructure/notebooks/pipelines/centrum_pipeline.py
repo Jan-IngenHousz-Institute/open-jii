@@ -50,7 +50,6 @@ SERVICE_CREDENTIAL_NAME = spark.conf.get("SERVICE_CREDENTIAL_NAME")
         "delta.enableChangeDataFeed": "true"
     }
 )
-@dlt.expect_or_drop("valid_data", "topic IS NOT NULL")
 def raw_data():
     """
     Directly ingests raw Kinesis sensor data streams into structured bronze layer tables.
@@ -69,10 +68,8 @@ def raw_data():
         spark.readStream
         .format("kinesis")
         .option("streamName", KINESIS_STREAM_NAME)
-        .option("initialPosition", "LATEST") 
+        .option("initialPosition", "TRIM_HORIZON") 
         .option("serviceCredential", SERVICE_CREDENTIAL_NAME)
-        .option("checkpointLocation", CHECKPOINT_PATH)
-        .option("failOnDataLoss", "false")
         .option("maxRecordsPerFetch", "10000")
         .load()
         .withColumn("ingestion_timestamp", F.current_timestamp())
