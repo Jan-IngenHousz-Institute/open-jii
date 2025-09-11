@@ -398,6 +398,56 @@ module "contentful_secrets" {
   }
 }
 
+# SES Email Service for transactional emails
+module "ses" {
+  source = "../../modules/ses"
+
+  region          = var.aws_region
+  domain_name     = var.domain_name
+  subdomain       = "mail"
+  environment     = var.environment
+  route53_zone_id = module.route53.route53_zone_id
+
+  allowed_from_addresses = [
+    "auth@mail.${var.environment}.${var.domain_name}",
+  ]
+
+  create_smtp_user        = true
+  enable_event_publishing = true
+  enable_dmarc_reports    = true
+  dmarc_report_retention_days = 90
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "email"
+  }
+
+}
+
+# SES SMTP secrets for application use
+module "ses_secrets" {
+  source = "../../modules/secrets-manager"
+
+  name        = "openjii-ses-secrets-dev"
+  description = "SES SMTP credentials for transactional email sending"
+
+  # Store SES SMTP credentials as JSON
+  secret_string = jsonencode({
+    AUTH_EMAIL_SERVER = module.ses.auth_email_server
+    AUTH_EMAIL_FROM   = "noreply@mail.${var.environment}.${var.domain_name}"
+  })
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "email"
+    SecretType  = "ses"
+  }
+}
+
 # WAF for OpenNext Web Application
 module "opennext_waf" {
   source = "../../modules/waf"
@@ -446,6 +496,7 @@ module "opennext" {
   db_credentials_secret_arn = module.aurora_db.master_user_secret_arn
   oauth_secret_arn          = module.auth_secrets.secret_arn
   contentful_secret_arn     = module.contentful_secrets.secret_arn
+  ses_secret_arn            = module.ses_secrets.secret_arn
 
   server_environment_variables = {
     COOKIE_DOMAIN = ".${var.environment}.${var.domain_name}"

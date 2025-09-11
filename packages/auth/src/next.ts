@@ -12,6 +12,7 @@ import { sendVerificationRequest } from "./email/verificationRequest";
 interface InitAuthParams {
   authSecrets: Record<string, string>;
   dbSecrets: Record<string, string>;
+  sesSecrets: Record<string, string>;
   isLambda: boolean;
 }
 
@@ -19,22 +20,24 @@ export type NextAuth = NextAuthResult & {
   providerMap: { id: string; name: string }[];
 };
 
-export function initAuth({ authSecrets, dbSecrets, isLambda }: InitAuthParams): NextAuth {
+export function initAuth({
+  authSecrets,
+  dbSecrets,
+  sesSecrets,
+  isLambda,
+}: InitAuthParams): NextAuth {
   const providers: Provider[] = [
     GitHub({
       clientId: authSecrets.AUTH_GITHUB_ID || process.env.AUTH_GITHUB_ID,
       clientSecret: authSecrets.AUTH_GITHUB_SECRET || process.env.AUTH_GITHUB_SECRET,
     }),
+    Nodemailer({
+      server: sesSecrets.AUTH_EMAIL_SERVER || process.env.AUTH_EMAIL_SERVER,
+      from: sesSecrets.AUTH_EMAIL_FROM || process.env.AUTH_EMAIL_FROM,
+      sendVerificationRequest,
+    }),
   ];
-  if (authSecrets.AUTH_EMAIL_SERVER || process.env.AUTH_EMAIL_SERVER) {
-    providers.push(
-      Nodemailer({
-        server: authSecrets.AUTH_EMAIL_SERVER || process.env.AUTH_EMAIL_SERVER,
-        from: authSecrets.AUTH_EMAIL_FROM || process.env.AUTH_EMAIL_FROM,
-        sendVerificationRequest,
-      }),
-    );
-  }
+
   const authConfig: NextAuthConfig = {
     ...baseAuthConfig,
     secret: authSecrets.AUTH_SECRET || process.env.AUTH_SECRET,
