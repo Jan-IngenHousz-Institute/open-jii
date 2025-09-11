@@ -43,9 +43,8 @@ print(f"Reading from central schema: {CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}")
 def device():
     """Extract device metadata from central silver table filtered for MultispeQ data"""
     return (
-        spark.readStream.table(f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}")
+        spark.read.table(f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}")
         .filter(F.col("experiment_id") == EXPERIMENT_ID)  # Filter for specific experiment
-        .filter(F.col("device_type") == "multispeq")  # Filter for MultispeQ devices
         .select(
             F.col("device_name"),
             F.col("device_version"),
@@ -72,25 +71,41 @@ def device():
 def sample():
     """Extract sample metadata and create references to measurement sets from central silver table"""
     return (
-        spark.readStream.table(f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}")
+        spark.read.table(f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}")
         .filter(F.col("experiment_id") == EXPERIMENT_ID)  # Filter for specific experiment
-        .filter(F.col("device_type") == "multispeq")  # Filter for MultispeQ devices
         .select(
             F.col("device_id"),
             F.col("device_name"),
-            F.explode(F.col("sample")).alias("sample_data")
+            F.explode(F.from_json(F.col("sample"), "array<string>")).alias("sample_data_str")
         )
         .select(
             F.col("device_id"),
             F.col("device_name"),
-            F.col("sample_data.v_arrays").alias("v_arrays"),
-            F.col("sample_data.set_repeats").alias("set_repeats"),
-            F.col("sample_data.protocol_id").alias("protocol_id"),
-            F.col("sample_data.set").alias("measurement_sets"),
-            F.hash(F.col("device_id"), F.col("sample_data")).alias("sample_id"),
+            F.get_json_object(F.col("sample_data_str"), "$.v_arrays").alias("v_arrays"),
+            F.get_json_object(F.col("sample_data_str"), "$.set_repeats").cast("int").alias("set_repeats"),
+            F.get_json_object(F.col("sample_data_str"), "$.protocol_id").alias("protocol_id"),
+            F.when(F.get_json_object(F.col("sample_data_str"), "$.set").isNotNull(), 
+                   F.from_json(F.get_json_object(F.col("sample_data_str"), "$.set"), "array<string>"))
+            .otherwise(
+                # Extract all fields except v_arrays, set_repeats, and protocol_id as JSON strings
+                F.expr("""
+                    transform(
+                        filter(
+                            map_keys(from_json(sample_data_str, 'map<string,string>')),
+                            key -> key NOT IN ('v_arrays', 'set_repeats', 'protocol_id')
+                        ),
+                        key -> to_json(map(key, get_json_object(sample_data_str, concat('$.', key))))
+                    )
+                """)
+            ).alias("measurement_sets"),
+            F.hash(F.col("device_id"), F.col("sample_data_str")).alias("sample_id"),
             F.current_timestamp().alias("processed_timestamp")
         )
         .withColumn("measurement_set_types", 
-            F.expr("transform(measurement_sets, x -> x.label)")
+            F.when(F.col("measurement_sets").isNotNull(),
+                   F.when(F.expr("size(filter(transform(measurement_sets, x -> get_json_object(x, '$.label')), label -> label is not null)) > 0"),
+                          F.expr("transform(measurement_sets, x -> get_json_object(x, '$.label'))"))
+                   .otherwise(F.lit(None)))
+            .otherwise(F.array())
         )
     )
