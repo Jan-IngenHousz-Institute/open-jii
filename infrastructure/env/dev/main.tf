@@ -196,6 +196,7 @@ module "databricks_catalog" {
         "CREATE_SCHEMA",
         "CREATE_TABLE",
         "CREATE_VOLUME",
+        "READ_VOLUME",
         "SELECT",
         "USE_CATALOG",
         "USE_SCHEMA"
@@ -252,53 +253,6 @@ module "centrum_pipeline" {
   depends_on = [module.central_schema]
 }
 
-module "kinesis_ingest_cluster" {
-  source = "../../modules/databricks/cluster"
-
-  name             = "Kinesis-Ingest-Cluster"
-  single_node      = true
-  single_user      = true
-  single_user_name = var.databricks_client_id
-  spark_version    = "16.2.x-scala2.12"
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-}
-
-module "kinesis_ingest_job" {
-  source = "../../modules/databricks/job"
-
-  name        = "Kinesis-Stream-Ingest-Job-DEV"
-  description = "Handles connection to Kinesis stream and pulls data into the central schema"
-  continuous  = true
-
-  tasks = [
-    {
-      key           = "kinesis_ingest"
-      task_type     = "notebook"
-      compute_type  = "existing_cluster"
-      cluster_id    = module.kinesis_ingest_cluster.cluster_id
-      notebook_path = "/Workspace/Shared/notebooks/tasks/kinesis_ingest_task"
-
-      parameters = {
-        "kinesis_stream_name"     = module.kinesis.kinesis_stream_name
-        "checkpoint_path"         = "/Volumes/open_jii_dev/centrum/checkpoints/kinesis"
-        "catalog_name"            = module.databricks_catalog.catalog_name
-        "schema_name"             = "centrum"
-        "target_table"            = "raw_kinesis_data"
-        "service_credential_name" = "unity-catalog-kinesis-role"
-      }
-    },
-  ]
-
-  depends_on = [module.kinesis_ingest_cluster]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-}
-
 module "experiment_provisioning_job" {
   source = "../../modules/databricks/job"
 
@@ -309,6 +263,10 @@ module "experiment_provisioning_job" {
   use_serverless                = true
   continuous                    = false
   serverless_performance_target = "STANDARD"
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
 
   # Configure task retries
   task_retry_config = {

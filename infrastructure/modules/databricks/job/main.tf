@@ -31,6 +31,15 @@ resource "databricks_job" "this" {
   # Set performance target for serverless compute at the job level
   performance_target = var.use_serverless ? var.serverless_performance_target : null
 
+  # Run as configuration
+  dynamic "run_as" {
+    for_each = var.run_as != null ? [1] : []
+    content {
+      service_principal_name = var.run_as.service_principal_name
+      user_name              = var.run_as.user_name
+    }
+  }
+
   dynamic "continuous" {
     for_each = var.continuous ? [1] : []
     content {
