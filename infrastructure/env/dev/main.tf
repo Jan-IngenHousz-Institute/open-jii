@@ -236,10 +236,12 @@ module "centrum_pipeline" {
   ]
 
   configuration = {
-    "CENTRAL_SCHEMA"    = "centrum"
-    "BRONZE_TABLE"      = "raw_data"
-    "SILVER_TABLE"      = "clean_data"
-    "RAW_KINESIS_TABLE" = "raw_kinesis_data"
+    "BRONZE_TABLE"            = "raw_data"
+    "SILVER_TABLE"            = "clean_data"
+    "RAW_KINESIS_TABLE"       = "raw_kinesis_data"
+    "KINESIS_STREAM_NAME"     = module.kinesis.kinesis_stream_name
+    "CHECKPOINT_PATH"         = "/Volumes/open_jii_dev/centrum/checkpoints/kinesis"
+    "SERVICE_CREDENTIAL_NAME" = module.kinesis.role_name
   }
 
   continuous_mode  = false

@@ -30,10 +30,6 @@ sensor_schema = StructType([
 # COMMAND ----------
 
 # DBTITLE 1,Configuration
-# Runtime configuration parameters with default values
-# Override these via pipeline parameters when deploying
-CENTRAL_SCHEMA = spark.conf.get("CENTRAL_SCHEMA", "centrum")
-CATALOG_NAME = spark.conf.get("CATALOG_NAME", "open_jii_dev")
 BRONZE_TABLE = spark.conf.get("BRONZE_TABLE", "raw_data")
 SILVER_TABLE = spark.conf.get("SILVER_TABLE", "clean_data")
 
@@ -84,6 +80,7 @@ def raw_data():
         .withColumn("kinesis_sequence_number", F.col("sequenceNumber"))
         .withColumn("kinesis_shard_id", F.col("shardId"))
         .withColumn("kinesis_arrival_time", F.col("approximateArrivalTimestamp"))
+        .withColumn("partitionKey", F.col("partitionKey"))
         # Parse data for basic extraction
         .withColumn("parsed_data", F.from_json(F.col("data").cast("string"), sensor_schema))
         .withColumn("ingest_date", F.to_date(F.col("ingestion_timestamp")))
