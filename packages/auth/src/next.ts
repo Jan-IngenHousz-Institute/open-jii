@@ -31,12 +31,20 @@ export function initAuth({
       clientId: authSecrets.AUTH_GITHUB_ID || process.env.AUTH_GITHUB_ID,
       clientSecret: authSecrets.AUTH_GITHUB_SECRET || process.env.AUTH_GITHUB_SECRET,
     }),
-    Nodemailer({
-      server: sesSecrets.AUTH_EMAIL_SERVER || process.env.AUTH_EMAIL_SERVER,
-      from: sesSecrets.AUTH_EMAIL_FROM || process.env.AUTH_EMAIL_FROM,
-      sendVerificationRequest,
-    }),
   ];
+
+  if (
+    (sesSecrets.AUTH_EMAIL_SERVER || process.env.AUTH_EMAIL_SERVER) &&
+    (sesSecrets.AUTH_EMAIL_FROM || process.env.AUTH_EMAIL_FROM)
+  ) {
+    providers.push(
+      Nodemailer({
+        server: sesSecrets.AUTH_EMAIL_SERVER || process.env.AUTH_EMAIL_SERVER,
+        from: sesSecrets.AUTH_EMAIL_FROM || process.env.AUTH_EMAIL_FROM,
+        sendVerificationRequest,
+      }),
+    );
+  }
 
   const authConfig: NextAuthConfig = {
     ...baseAuthConfig,

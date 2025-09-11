@@ -6,8 +6,9 @@
     ".react-email"
   ],
   "scripts": {
-    "dev": "email dev -p 3001",
-    "export": "email export"
+    "dev": "email dev -p 3001 & sleep 1 && pnpm start:mailcatcher",
+    "export": "email export",
+    "start:mailcatcher": "docker compose -f docker-compose.yml up mailcatcher"
   },
   "dependencies": {
     "@react-email/components": "catalog:react-email",
