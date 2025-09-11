@@ -26,6 +26,34 @@ variable "log_retention_days" {
   default     = 30
 }
 
+variable "large_body_endpoints" {
+  description = "List of endpoints that should allow large request bodies (up to 1024MB). These endpoints will be rate-limited to 5 requests per minute per IP and will bypass the standard AWS Managed Rules body size restrictions."
+  type        = list(string)
+  default     = []
+  
+  validation {
+    condition = alltrue([
+      for endpoint in var.large_body_endpoints :
+      can(regex("^/", endpoint))
+    ])
+    error_message = "All endpoints must start with a forward slash (/)."
+  }
+}
+
+variable "large_body_endpoints" {
+  description = "List of backend endpoints (evaluated by ENDS_WITH) that should allow large request bodies (up to 1024MB). These endpoints will be rate-limited to 5 requests per minute per IP and will bypass the standard AWS Managed Rules body size restrictions."
+  type        = list(string)
+  default     = []
+  
+  validation {
+    condition = alltrue([
+      for endpoint in var.large_body_endpoints :
+      can(regex("^/", endpoint))
+    ])
+    error_message = "All backend endpoints must start with a forward slash (/)."
+  }
+}
+
 variable "tags" {
   description = "A map of tags to assign to resources"
   type        = map(string)

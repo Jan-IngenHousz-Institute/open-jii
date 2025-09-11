@@ -210,7 +210,7 @@ resource "aws_wafv2_web_acl" "main" {
   # Rule to block requests for sensitive paths like .git
   rule {
     name     = "BlockSensitivePaths"
-    priority = 0 # Highest priority to block these requests first
+    priority = 0
 
     action {
       block {}
@@ -234,6 +234,220 @@ resource "aws_wafv2_web_acl" "main" {
       cloudwatch_metrics_enabled = true
       metric_name                = "BlockSensitivePathsMetric"
       sampled_requests_enabled   = true
+    }
+  }
+
+  # AWS Managed Core Rule Set for large_body_endpoints - excludes body size restrictions
+  # This allows large file uploads (1024MB) for specific large_body_endpoints
+  # MUST have higher priority (lower number) than the general Common Rule Set
+  dynamic "rule" {
+    for_each = length(var.large_body_endpoints) > 0 ? [1] : []
+    content {
+      name     = "AWSManagedRulesCommonRuleSetBackendLargeBody"
+      priority = 1
+
+      override_action {
+        none {}
+      }
+
+      statement {
+        managed_rule_group_statement {
+          name        = "AWSManagedRulesCommonRuleSet"
+          vendor_name = "AWS"
+
+          # Exclude body size restriction for large_body_endpoints
+          rule_action_override {
+            action_to_use {
+              count {}
+            }
+            name = "SizeRestrictions_BODY"
+          }
+
+          # Only apply to large_body_endpoints
+          scope_down_statement {
+            or_statement {
+              dynamic "statement" {
+                for_each = var.large_body_endpoints
+                content {
+                  byte_match_statement {
+                    search_string         = statement.value
+                    positional_constraint = "ENDS_WITH"
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "NONE"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "CommonRuleSetBackendLargeBodyMetric"
+        sampled_requests_enabled   = true
+      }
+    }
+  }
+
+  # AWS Managed Core Rule Set - protects against OWASP Top 10 vulnerabilities
+  # Includes protection against: SQL injection, XSS, path traversal, etc.
+  # Maintained and updated by AWS security team - reduces management overhead
+  # This rule applies to all endpoints except large_body_endpoints
+  rule {
+    name     = "AWSManagedRulesCommonRuleSet"
+    priority = 2
+
+    # override_action "none" means apply all rules in the group as-is
+    # Use "count" for monitoring mode without blocking
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+
+        dynamic "scope_down_statement" {
+          for_each = length(var.large_body_endpoints) > 0 ? [1] : []
+          content {
+            not_statement {
+              statement {
+                or_statement {
+                  dynamic "statement" {
+                    for_each = var.large_body_endpoints
+                    content {
+                      byte_match_statement {
+                        search_string         = statement.value
+                        positional_constraint = "ENDS_WITH"
+                        field_to_match {
+                          uri_path {}
+                        }
+                        text_transformation {
+                          priority = 0
+                          type     = "NONE"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    # CloudWatch metrics for monitoring WAF effectiveness and false positives
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "CommonRuleSetMetric"
+      sampled_requests_enabled   = true # Logs sample of blocked/allowed requests
+    }
+  }
+
+  # AWS Managed Known Bad Inputs Rule Set - blocks requests with malicious patterns
+  # Protects against known malicious inputs, exploit attempts, and vulnerability scanners
+  # Complements the Core Rule Set with additional threat intelligence
+  rule {
+    name     = "AWSManagedRulesKnownBadInputsRuleSet"
+    priority = 3
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "KnownBadInputsRuleSetMetric"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # Rate limiting protection against DDoS and brute force attacks
+  # Blocks IP addresses that exceed the specified request rate within 5-minute windows
+  # aggregate_key_type = "IP" means rate limit is per source IP address
+  rule {
+    name     = "RateLimitRule"
+    priority = 4
+
+    action {
+      block {} # Block requests that exceed the rate limit
+    }
+
+    statement {
+      rate_based_statement {
+        limit              = var.rate_limit # Requests per 5-minute window per IP
+        aggregate_key_type = "IP"           # Rate limit per source IP
+        # Alternative: "FORWARDED_IP" for X-Forwarded-For header (behind proxy/CDN)
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "RateLimitRuleMetric"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # Special rate limiting for large_body_endpoints with large body allowance
+  # 5 requests per minute (300 requests per 5-minute window) for endpoints that handle large files
+  dynamic "rule" {
+    for_each = length(var.large_body_endpoints) > 0 ? [1] : []
+    content {
+      name     = "BackendLargeBodyRateLimit"
+      priority = 5
+
+      action {
+        block {}
+      }
+
+      statement {
+        rate_based_statement {
+          limit              = 50
+          aggregate_key_type = "IP"
+
+          scope_down_statement {
+            or_statement {
+              dynamic "statement" {
+                for_each = var.large_body_endpoints
+                content {
+                  byte_match_statement {
+                    search_string         = statement.value
+                    positional_constraint = "ENDS_WITH"
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "NONE"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "BackendLargeBodyRateLimitMetric"
+        sampled_requests_enabled   = true
+      }
     }
   }
 
