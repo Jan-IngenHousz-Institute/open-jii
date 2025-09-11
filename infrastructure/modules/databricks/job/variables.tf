@@ -105,3 +105,12 @@ variable "permissions" {
     error_message = "permission_level must be one of: CAN_VIEW, CAN_MANAGE_RUN, IS_OWNER, CAN_MANAGE"
   }
 }
+
+variable "run_as" {
+  description = "Run as configuration for the job. Specify either service_principal_name or user_name."
+  type = object({
+    service_principal_name = optional(string)
+    user_name              = optional(string)
+  })
+  default = null
+}
