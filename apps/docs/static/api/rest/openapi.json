@@ -3316,9 +3316,8 @@
                         "type": "string",
                         "enum": ["python", "r", "javascript"]
                       },
-                      "codeFile": {
-                        "type": "string",
-                        "nullable": true
+                      "code": {
+                        "type": "string"
                       },
                       "createdBy": {
                         "type": "string",
@@ -3341,7 +3340,7 @@
                       "name",
                       "description",
                       "language",
-                      "codeFile",
+                      "code",
                       "createdBy",
                       "createdAt",
                       "updatedAt"
@@ -3397,12 +3396,12 @@
                     "type": "string",
                     "enum": ["python", "r", "javascript"]
                   },
-                  "codeFile": {
+                  "code": {
                     "type": "string",
                     "minLength": 1
                   }
                 },
-                "required": ["name", "language", "codeFile"]
+                "required": ["name", "language", "code"]
               }
             }
           }
@@ -3430,9 +3429,8 @@
                       "type": "string",
                       "enum": ["python", "r", "javascript"]
                     },
-                    "codeFile": {
-                      "type": "string",
-                      "nullable": true
+                    "code": {
+                      "type": "string"
                     },
                     "createdBy": {
                       "type": "string",
@@ -3455,7 +3453,7 @@
                     "name",
                     "description",
                     "language",
-                    "codeFile",
+                    "code",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
@@ -3526,9 +3524,8 @@
                       "type": "string",
                       "enum": ["python", "r", "javascript"]
                     },
-                    "codeFile": {
-                      "type": "string",
-                      "nullable": true
+                    "code": {
+                      "type": "string"
                     },
                     "createdBy": {
                       "type": "string",
@@ -3551,7 +3548,7 @@
                     "name",
                     "description",
                     "language",
-                    "codeFile",
+                    "code",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
@@ -3616,7 +3613,7 @@
                     "type": "string",
                     "enum": ["python", "r", "javascript"]
                   },
-                  "codeFile": {
+                  "code": {
                     "type": "string"
                   }
                 }
@@ -3647,9 +3644,8 @@
                       "type": "string",
                       "enum": ["python", "r", "javascript"]
                     },
-                    "codeFile": {
-                      "type": "string",
-                      "nullable": true
+                    "code": {
+                      "type": "string"
                     },
                     "createdBy": {
                       "type": "string",
@@ -3672,7 +3668,7 @@
                     "name",
                     "description",
                     "language",
-                    "codeFile",
+                    "code",
                     "createdBy",
                     "createdAt",
                     "updatedAt"

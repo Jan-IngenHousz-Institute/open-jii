@@ -31,17 +31,9 @@ export class MacroController {
   @UseGuards(AuthGuard)
   createMacro(@CurrentUser() user: User) {
     return tsRestHandler(macroContract.createMacro, async ({ body }) => {
-      const result = await this.createMacroUseCase.execute(
-        {
-          name: body.name,
-          description: body.description,
-          language: body.language,
-          codeFile: body.codeFile,
-        },
-        user.id,
-      );
+      const result = await this.createMacroUseCase.execute(body, user.id);
 
-      if (isSuccess(result)) {
+      if (result.isSuccess()) {
         return {
           status: StatusCodes.CREATED,
           body: formatDates(result.value),
@@ -78,7 +70,7 @@ export class MacroController {
         language: query.language,
       });
 
-      if (isSuccess(result)) {
+      if (result.isSuccess()) {
         return {
           status: StatusCodes.OK,
           body: formatDatesList(result.value),
@@ -93,14 +85,9 @@ export class MacroController {
   @UseGuards(AuthGuard)
   updateMacro(@CurrentUser() _user: User) {
     return tsRestHandler(macroContract.updateMacro, async ({ params, body }) => {
-      const result = await this.updateMacroUseCase.execute(params.id, {
-        name: body.name,
-        description: body.description,
-        language: body.language,
-        codeFile: body.codeFile,
-      });
+      const result = await this.updateMacroUseCase.execute(params.id, body);
 
-      if (isSuccess(result)) {
+      if (result.isSuccess()) {
         return {
           status: StatusCodes.OK,
           body: formatDates(result.value),
@@ -117,7 +104,7 @@ export class MacroController {
     return tsRestHandler(macroContract.deleteMacro, async ({ params }) => {
       const result = await this.deleteMacroUseCase.execute(params.id);
 
-      if (isSuccess(result)) {
+      if (result.isSuccess()) {
         return {
           status: StatusCodes.NO_CONTENT,
           body: undefined,

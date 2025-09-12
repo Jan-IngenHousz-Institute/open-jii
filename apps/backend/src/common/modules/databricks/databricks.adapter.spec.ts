@@ -11,6 +11,7 @@ import { DatabricksPipelinesService } from "./services/pipelines/pipelines.servi
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import { DatabricksTablesService } from "./services/tables/tables.service";
 import { DatabricksVolumesService } from "./services/volumes/volumes.service";
+import { DatabricksWorkspaceService } from "./services/workspace/workspace.service";
 
 // Constants for testing
 const MOCK_ACCESS_TOKEN = "mock-token";
@@ -816,6 +817,180 @@ describe("DatabricksAdapter", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value.full_name).toEqual(expectedFullVolumeName);
+    });
+  });
+
+  describe("uploadMacroCode", () => {
+    const macroData = {
+      name: "test-macro",
+      language: "python" as const,
+      code: 'print("Hello, World!")',
+    };
+
+    it("should successfully upload Python macro code to workspace", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock workspace import API call
+      nock(databricksHost)
+        .post(DatabricksWorkspaceService.WORKSPACE_IMPORT_ENDPOINT)
+        .reply(200, {});
+
+      // Execute upload macro code
+      const result = await databricksAdapter.uploadMacroCode(macroData);
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual({});
+    });
+
+    it("should successfully upload R macro code to workspace", async () => {
+      const rMacroData = {
+        name: "r-test-macro",
+        language: "r" as const,
+        code: 'cat("Hello from R!")',
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock workspace import API call
+      nock(databricksHost)
+        .post(DatabricksWorkspaceService.WORKSPACE_IMPORT_ENDPOINT)
+        .reply(200, {});
+
+      // Execute upload macro code
+      const result = await databricksAdapter.uploadMacroCode(rMacroData);
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual({});
+    });
+
+    it("should successfully upload JavaScript macro code to workspace (mapped to Scala)", async () => {
+      const jsMacroData = {
+        name: "js-test-macro",
+        language: "javascript" as const,
+        code: 'console.log("Hello from JavaScript!");',
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock workspace import API call
+      nock(databricksHost)
+        .post(DatabricksWorkspaceService.WORKSPACE_IMPORT_ENDPOINT)
+        .reply(200, {});
+
+      // Execute upload macro code
+      const result = await databricksAdapter.uploadMacroCode(jsMacroData);
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual({});
+    });
+
+    it("should handle upload failure from Databricks workspace API", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock workspace import API call with error
+      nock(databricksHost).post(DatabricksWorkspaceService.WORKSPACE_IMPORT_ENDPOINT).reply(400, {
+        error_code: "INVALID_REQUEST",
+        message: "Invalid workspace path",
+      });
+
+      // Execute upload macro code
+      const result = await databricksAdapter.uploadMacroCode(macroData);
+
+      // Assert result is failure
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to import workspace object");
+    });
+  });
+
+  describe("deleteMacroCode", () => {
+    const macroName = "test-macro-to-delete";
+
+    it("should successfully delete macro code from workspace", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock workspace delete API call
+      nock(databricksHost)
+        .post(DatabricksWorkspaceService.WORKSPACE_DELETE_ENDPOINT)
+        .reply(200, {});
+
+      // Execute delete macro code
+      const result = await databricksAdapter.deleteMacroCode(macroName);
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual({});
+    });
+
+    it("should handle delete failure when macro does not exist", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock workspace delete API call with error
+      nock(databricksHost).post(DatabricksWorkspaceService.WORKSPACE_DELETE_ENDPOINT).reply(404, {
+        error_code: "RESOURCE_DOES_NOT_EXIST",
+        message: "Workspace object does not exist",
+      });
+
+      // Execute delete macro code
+      const result = await databricksAdapter.deleteMacroCode(macroName);
+
+      // Assert result is failure
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to delete workspace object");
+    });
+
+    it("should handle authentication failure during delete", async () => {
+      // Mock token request failure
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(401, {
+        error: "invalid_client",
+        error_description: "Invalid client credentials",
+      });
+
+      // Execute delete macro code
+      const result = await databricksAdapter.deleteMacroCode(macroName);
+
+      // Assert result is failure
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to delete workspace object");
     });
   });
 });

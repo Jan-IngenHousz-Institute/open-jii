@@ -8,7 +8,7 @@ export const zMacro = z.object({
   name: z.string(),
   description: z.string().nullable(),
   language: zMacroLanguage,
-  codeFile: z.string().nullable(), // Base64 encoded file content
+  code: z.string(),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
@@ -27,7 +27,7 @@ export const zMacroIdPathParam = z.object({
   id: z.string().uuid(),
 });
 
-// Request body schemas - includes codeFile for Databricks processing
+// Request body schemas - includes code for Databricks processing
 export const zCreateMacroRequestBody = z.object({
   name: z
     .string()
@@ -36,7 +36,7 @@ export const zCreateMacroRequestBody = z.object({
     .max(255, "Name must be at most 255 characters"),
   description: z.string().optional(),
   language: zMacroLanguage,
-  codeFile: z.string().min(1, "Code file content is required"), // Base64 encoded file content
+  code: z.string().min(1, "Code file content is required"), // Base64 encoded file content
 });
 
 export const zUpdateMacroRequestBody = z.object({
@@ -48,7 +48,7 @@ export const zUpdateMacroRequestBody = z.object({
     .optional(),
   description: z.string().optional(),
   language: zMacroLanguage.optional(),
-  codeFile: z.string().optional(), // Base64 encoded file content
+  code: z.string().optional(), // Base64 encoded file content
 });
 
 // Error response

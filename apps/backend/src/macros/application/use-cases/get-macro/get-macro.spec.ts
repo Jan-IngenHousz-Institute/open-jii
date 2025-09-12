@@ -1,4 +1,5 @@
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import type { CreateMacroDto } from "../../../../macros/core/models/macro.model";
 import { TestHarness } from "../../../../test/test-harness";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 import { GetMacroUseCase } from "./get-macro";
@@ -31,10 +32,11 @@ describe("GetMacroUseCase", () => {
 
   it("should get a macro by id", async () => {
     // Arrange
-    const macroData = {
+    const macroData: CreateMacroDto = {
       name: "Test Macro",
       description: "A test macro description",
-      language: "python" as const,
+      language: "python",
+      code: "cHl0aG9uIGNvZGU=",
     };
 
     // Create a macro to retrieve

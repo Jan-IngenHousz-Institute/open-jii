@@ -257,7 +257,7 @@ export const macros = pgTable("macros", {
   name: varchar("name", { length: 255 }).notNull().unique(),
   description: text("description"),
   language: macroLanguageEnum("language").notNull(),
-  codeFile: text("code_file"), // Base64 encoded content of the macro code
+  code: text("code").notNull(), // Base64 encoded content of the macro code
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),

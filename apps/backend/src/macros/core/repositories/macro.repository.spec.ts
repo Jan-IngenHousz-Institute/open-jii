@@ -4,6 +4,7 @@ import { macros as macrosTable, eq } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
+import type { CreateMacroDto } from "../models/macro.model";
 import { MacroRepository } from "./macro.repository";
 import type { MacroFilter } from "./macro.repository";
 
@@ -41,7 +42,7 @@ describe("MacroRepository", () => {
         name: "Test Macro",
         description: "Test Description",
         language: "python" as const,
-        codeFile: "cHl0aG9uIGNvZGU=", // base64 encoded "python code"
+        code: "cHl0aG9uIGNvZGU=", // base64 encoded "python code"
       };
 
       // Act
@@ -58,7 +59,7 @@ describe("MacroRepository", () => {
         name: createMacroDto.name,
         description: createMacroDto.description,
         language: createMacroDto.language,
-        codeFile: createMacroDto.codeFile,
+        code: createMacroDto.code,
         createdBy: testUserId,
         createdAt: expect.any(Date) as Date,
         updatedAt: expect.any(Date) as Date,
@@ -75,7 +76,7 @@ describe("MacroRepository", () => {
         name: createMacroDto.name,
         description: createMacroDto.description,
         language: createMacroDto.language,
-        codeFile: createMacroDto.codeFile,
+        code: createMacroDto.code,
         createdBy: testUserId,
       });
     });
@@ -86,6 +87,7 @@ describe("MacroRepository", () => {
         name: "Macro Without Description",
         description: null,
         language: "r" as const,
+        code: "UiBjb2RlIGhlcmU=", // base64 encoded "R code here"
       };
 
       // Act
@@ -103,18 +105,20 @@ describe("MacroRepository", () => {
 
     it("should fail to create macro with duplicate name", async () => {
       // Arrange
-      const createMacroDto = {
+      const createMacroDto: CreateMacroDto = {
         name: "Unique Macro Name",
         description: "First macro",
-        language: "javascript" as const,
+        language: "javascript",
+        code: "amF2YXNjcmlwdCBjb2Rl", // base64 encoded "javascript code"
       };
 
       await repository.create(createMacroDto, testUserId);
 
-      const duplicateDto = {
+      const duplicateDto: CreateMacroDto = {
         name: "Unique Macro Name", // Same name
         description: "Second macro",
-        language: "python" as const,
+        language: "python",
+        code: "cHl0aG9uIGNvZGU=", // base64 encoded "python code"
       };
 
       // Act
@@ -128,15 +132,17 @@ describe("MacroRepository", () => {
   describe("findAll", () => {
     it("should return all macros without filter", async () => {
       // Arrange
-      const macro1 = {
+      const macro1: CreateMacroDto = {
         name: "Python Macro",
         description: "Python Description",
-        language: "python" as const,
+        language: "python",
+        code: "cHl0aG9uIGNvZGU=", // base64 encoded "python code"
       };
-      const macro2 = {
+      const macro2: CreateMacroDto = {
         name: "R Macro",
         description: "R Description",
-        language: "r" as const,
+        language: "r",
+        code: "UiBjb2Rl", // base64 encoded "R code"
       };
 
       await repository.create(macro1, testUserId);
@@ -168,7 +174,8 @@ describe("MacroRepository", () => {
         {
           name: "First Macro",
           description: "First",
-          language: "python" as const,
+          language: "python",
+          code: "Zmlyc3QgbWFjcm8=", // base64 encoded "first macro"
         },
         testUserId,
       );
@@ -179,7 +186,8 @@ describe("MacroRepository", () => {
         {
           name: "Second Macro",
           description: "Second",
-          language: "r" as const,
+          language: "r",
+          code: "c2Vjb25kIG1hY3Jv", // base64 encoded "second macro"
         },
         testUserId,
       );
@@ -190,7 +198,8 @@ describe("MacroRepository", () => {
         {
           name: "Third Macro",
           description: "Third",
-          language: "javascript" as const,
+          language: "javascript",
+          code: "dGhpcmQgbWFjcm8=", // base64 encoded "third macro"
         },
         testUserId,
       );
@@ -227,7 +236,8 @@ describe("MacroRepository", () => {
         {
           name: "Data Analysis Macro",
           description: "For data processing",
-          language: "python" as const,
+          language: "python",
+          code: "ZGF0YSBhbmFseXNpcw==", // base64 encoded "data analysis"
         },
         testUserId,
       );
@@ -236,7 +246,8 @@ describe("MacroRepository", () => {
         {
           name: "Visualization Script",
           description: "For creating charts",
-          language: "r" as const,
+          language: "r",
+          code: "dmlzdWFsaXphdGlvbg==", // base64 encoded "visualization"
         },
         testUserId,
       );
@@ -261,7 +272,8 @@ describe("MacroRepository", () => {
         {
           name: "Python Script",
           description: "Python macro",
-          language: "python" as const,
+          language: "python",
+          code: "cHl0aG9uIHNjcmlwdA==", // base64 encoded "python script"
         },
         testUserId,
       );
@@ -270,7 +282,8 @@ describe("MacroRepository", () => {
         {
           name: "R Script",
           description: "R macro",
-          language: "r" as const,
+          language: "r",
+          code: "UiBzY3JpcHQ=", // base64 encoded "R script"
         },
         testUserId,
       );
@@ -279,7 +292,8 @@ describe("MacroRepository", () => {
         {
           name: "JavaScript Function",
           description: "JS macro",
-          language: "javascript" as const,
+          language: "javascript",
+          code: "amF2YXNjcmlwdCBmdW5jdGlvbg==", // base64 encoded "javascript function"
         },
         testUserId,
       );
@@ -305,7 +319,8 @@ describe("MacroRepository", () => {
         {
           name: "Data Analysis Python",
           description: "Python data processing",
-          language: "python" as const,
+          language: "python",
+          code: "ZGF0YSBhbmFseXNpcyBweXRob24=", // base64 encoded "data analysis python"
         },
         testUserId,
       );
@@ -314,7 +329,8 @@ describe("MacroRepository", () => {
         {
           name: "Data Analysis R",
           description: "R data processing",
-          language: "r" as const,
+          language: "r",
+          code: "ZGF0YSBhbmFseXNpcyBSIGNvZGU=", // base64 encoded "data analysis R code"
         },
         testUserId,
       );
@@ -323,7 +339,8 @@ describe("MacroRepository", () => {
         {
           name: "Visualization Python",
           description: "Python visualization",
-          language: "python" as const,
+          language: "python",
+          code: "cHl0aG9uIHZpc3VhbGl6YXRpb24=", // base64 encoded "python visualization"
         },
         testUserId,
       );
@@ -348,7 +365,8 @@ describe("MacroRepository", () => {
         {
           name: "Python Script",
           description: "A Python macro",
-          language: "python" as const,
+          language: "python",
+          code: "cHl0aG9uIHNjcmlwdA==", // base64 encoded "python script"
         },
         testUserId,
       );
@@ -370,7 +388,8 @@ describe("MacroRepository", () => {
         {
           name: "Machine Learning Model",
           description: "ML processing script",
-          language: "python" as const,
+          language: "python",
+          code: "bWFjaGluZSBsZWFybmluZyBtb2RlbA==", // base64 encoded "machine learning model"
         },
         testUserId,
       );
@@ -393,10 +412,11 @@ describe("MacroRepository", () => {
   describe("findById", () => {
     it("should return macro by id with creator name", async () => {
       // Arrange
-      const createMacroDto = {
+      const createMacroDto: CreateMacroDto = {
         name: "Test Macro",
         description: "Test Description",
-        language: "python" as const,
+        language: "python",
+        code: "dGVzdCBtYWNybw==", // base64 encoded "test macro"
       };
 
       const createResult = await repository.create(createMacroDto, testUserId);
@@ -454,7 +474,7 @@ describe("MacroRepository", () => {
         name: "Original Macro",
         description: "Original Description",
         language: "python" as const,
-        codeFile: "b3JpZ2luYWwgY29kZQ==", // base64 encoded "original code"
+        code: "b3JpZ2luYWwgY29kZQ==", // base64 encoded "original code"
       };
 
       const createResult = await repository.create(createMacroDto, testUserId);
@@ -466,7 +486,7 @@ describe("MacroRepository", () => {
         name: "Updated Macro",
         description: "Updated Description",
         language: "javascript" as const,
-        codeFile: "dXBkYXRlZCBjb2Rl", // base64 encoded "updated code"
+        code: "dXBkYXRlZCBjb2Rl", // base64 encoded "updated code"
       };
 
       // Act
@@ -483,7 +503,7 @@ describe("MacroRepository", () => {
         name: updateDto.name,
         description: updateDto.description,
         language: updateDto.language,
-        codeFile: updateDto.codeFile,
+        code: updateDto.code,
         createdBy: testUserId,
       });
 
@@ -507,7 +527,7 @@ describe("MacroRepository", () => {
         name: "Original Macro",
         description: "Original Description",
         language: "python" as const,
-        codeFile: "b3JpZ2luYWwgY29kZQ==", // base64 encoded "original code"
+        code: "b3JpZ2luYWwgY29kZQ==", // base64 encoded "original code"
       };
 
       const createResult = await repository.create(createMacroDto, testUserId);
@@ -531,7 +551,7 @@ describe("MacroRepository", () => {
         name: partialUpdate.name,
         description: createMacroDto.description,
         language: createMacroDto.language,
-        codeFile: createMacroDto.codeFile,
+        code: createMacroDto.code,
         createdBy: testUserId,
       });
     });
@@ -572,7 +592,8 @@ describe("MacroRepository", () => {
         {
           name: "First Macro",
           description: "First",
-          language: "python" as const,
+          language: "python",
+          code: "Zmlyc3QgbWFjcm8=", // base64 encoded "first macro"
         },
         testUserId,
       );
@@ -582,7 +603,8 @@ describe("MacroRepository", () => {
         {
           name: "Second Macro",
           description: "Second",
-          language: "r" as const,
+          language: "r",
+          code: "c2Vjb25kIG1hY3Jv", // base64 encoded "second macro"
         },
         testUserId,
       );
@@ -604,10 +626,11 @@ describe("MacroRepository", () => {
   describe("delete", () => {
     it("should delete macro by id", async () => {
       // Arrange
-      const createMacroDto = {
+      const createMacroDto: CreateMacroDto = {
         name: "Macro to Delete",
         description: "This will be deleted",
-        language: "python" as const,
+        language: "python",
+        code: "bWFjcm8gdG8gZGVsZXRl", // base64 encoded "macro to delete"
       };
 
       const createResult = await repository.create(createMacroDto, testUserId);

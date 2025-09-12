@@ -1,16 +1,16 @@
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
+import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
+import type { CreateMacroDto } from "../../../../macros/core/models/macro.model";
 import { TestHarness } from "../../../../test/test-harness";
-import { DatabricksPort } from "../../../core/ports/databricks.port";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 import { CreateMacroUseCase } from "./create-macro";
-import type { CreateMacroRequest } from "./create-macro";
 
 describe("CreateMacroUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: CreateMacroUseCase;
   let macroRepository: MacroRepository;
-  let databricksPort: DatabricksPort;
+  let databricksAdapter: DatabricksAdapter;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -21,7 +21,7 @@ describe("CreateMacroUseCase", () => {
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(CreateMacroUseCase);
     macroRepository = testApp.module.get(MacroRepository);
-    databricksPort = testApp.module.get(DatabricksPort);
+    databricksAdapter = testApp.module.get(DatabricksAdapter);
   });
 
   afterEach(() => {
@@ -34,20 +34,18 @@ describe("CreateMacroUseCase", () => {
   });
 
   describe("execute", () => {
-    const mockRequest: CreateMacroRequest = {
+    const mockRequest: CreateMacroDto = {
       name: "Test Macro",
       description: "A test macro",
       language: "python",
-      codeFile: "cHl0aG9uIGNvZGU=", // base64 encoded "python code"
+      code: "cHl0aG9uIGNvZGU=",
     };
 
     it("should successfully create a macro", async () => {
       // Arrange
-      const processMacroCodeSpy = vi.spyOn(databricksPort, "processMacroCode").mockResolvedValue({
-        success: true,
-        message: "Code processed successfully",
-        databricksJobId: "job-123",
-      });
+      const uploadMacroCodeSpy = vi
+        .spyOn(databricksAdapter, "uploadMacroCode")
+        .mockResolvedValue(success({}));
 
       // Act
       const result = await useCase.execute(mockRequest, testUserId);
@@ -59,23 +57,27 @@ describe("CreateMacroUseCase", () => {
         name: mockRequest.name,
         description: mockRequest.description,
         language: mockRequest.language,
-        codeFile: mockRequest.codeFile,
+        code: mockRequest.code,
         createdBy: testUserId,
       });
 
-      expect(processMacroCodeSpy).toHaveBeenCalledWith({
-        content: mockRequest.codeFile,
+      expect(uploadMacroCodeSpy).toHaveBeenCalledWith({
+        code: mockRequest.code,
         language: mockRequest.language,
-        macroId: result.value.id,
+        name: result.value.name,
       });
     });
 
     it("should clean up macro and return error when Databricks fails", async () => {
       // Arrange
-      vi.spyOn(databricksPort, "processMacroCode").mockResolvedValue({
-        success: false,
-        message: "Databricks processing failed",
-      });
+      vi.spyOn(databricksAdapter, "uploadMacroCode").mockResolvedValue(
+        failure({
+          message: "Databricks processing failed",
+          code: "DATABRICKS_ERROR",
+          statusCode: 500,
+          name: "",
+        }),
+      );
 
       // Act
       const result = await useCase.execute(mockRequest, testUserId);
@@ -93,11 +95,7 @@ describe("CreateMacroUseCase", () => {
 
     it("should handle duplicate macro names", async () => {
       // Arrange - Create a macro with the same name first
-      vi.spyOn(databricksPort, "processMacroCode").mockResolvedValue({
-        success: true,
-        message: "Code processed successfully",
-        databricksJobId: "job-123",
-      });
+      vi.spyOn(databricksAdapter, "uploadMacroCode").mockResolvedValue(success({}));
 
       await useCase.execute(mockRequest, testUserId);
 

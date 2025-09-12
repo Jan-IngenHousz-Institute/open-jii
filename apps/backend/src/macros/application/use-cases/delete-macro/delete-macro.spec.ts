@@ -1,6 +1,13 @@
-import { assertFailure, assertSuccess, AppError, failure } from "../../../../common/utils/fp-utils";
+import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
+import {
+  assertFailure,
+  assertSuccess,
+  AppError,
+  failure,
+  success,
+} from "../../../../common/utils/fp-utils";
+import type { CreateMacroDto } from "../../../../macros/core/models/macro.model";
 import { TestHarness } from "../../../../test/test-harness";
-import { DatabricksPort } from "../../../core/ports/databricks.port";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 import { DeleteMacroUseCase } from "./delete-macro";
 
@@ -9,7 +16,7 @@ describe("DeleteMacroUseCase", () => {
   let testUserId: string;
   let useCase: DeleteMacroUseCase;
   let macroRepository: MacroRepository;
-  let databricksPort: DatabricksPort;
+  let databricksAdapter: DatabricksAdapter;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -20,7 +27,7 @@ describe("DeleteMacroUseCase", () => {
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(DeleteMacroUseCase);
     macroRepository = testApp.module.get(MacroRepository);
-    databricksPort = testApp.module.get(DatabricksPort);
+    databricksAdapter = testApp.module.get(DatabricksAdapter);
   });
 
   afterEach(() => {
@@ -34,10 +41,11 @@ describe("DeleteMacroUseCase", () => {
 
   it("should delete a macro by id", async () => {
     // Arrange
-    const macroData = {
+    const macroData: CreateMacroDto = {
       name: "Macro to Delete",
       description: "This macro will be deleted",
-      language: "python" as const,
+      language: "python",
+      code: "cHl0aG9uIGNvZGU=",
     };
 
     // Create a macro to delete
@@ -46,10 +54,7 @@ describe("DeleteMacroUseCase", () => {
     const createdMacro = createResult.value[0];
 
     // Mock Databricks success
-    vi.spyOn(databricksPort, "deleteMacroCode").mockResolvedValue({
-      success: true,
-      message: "Code deleted successfully",
-    });
+    vi.spyOn(databricksAdapter, "deleteMacroCode").mockResolvedValue(success({}));
 
     // Act
     const result = await useCase.execute(createdMacro.id);
@@ -65,7 +70,7 @@ describe("DeleteMacroUseCase", () => {
 
     // Verify Databricks was called
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksPort.deleteMacroCode).toHaveBeenCalledWith(createdMacro.id);
+    expect(databricksAdapter.deleteMacroCode).toHaveBeenCalledWith(createdMacro.id);
   });
 
   it("should return error when deleting non-existent macro", async () => {
@@ -87,10 +92,11 @@ describe("DeleteMacroUseCase", () => {
 
   it("should still delete macro even if Databricks deletion fails", async () => {
     // Arrange
-    const macroData = {
+    const macroData: CreateMacroDto = {
       name: "Macro with Databricks Failure",
       description: "Databricks will fail but macro should still be deleted",
-      language: "r" as const,
+      language: "r",
+      code: "cHl0aG9uIGNvZGU=",
     };
 
     // Create a macro to delete
@@ -99,10 +105,14 @@ describe("DeleteMacroUseCase", () => {
     const createdMacro = createResult.value[0];
 
     // Mock Databricks failure
-    vi.spyOn(databricksPort, "deleteMacroCode").mockResolvedValue({
-      success: false,
-      message: "Databricks deletion failed",
-    });
+    vi.spyOn(databricksAdapter, "deleteMacroCode").mockResolvedValue(
+      failure({
+        message: "Databricks deletion failed",
+        code: "DATABRICKS_ERROR",
+        statusCode: 500,
+        name: "",
+      }),
+    );
 
     // Act
     const result = await useCase.execute(createdMacro.id);
@@ -118,15 +128,16 @@ describe("DeleteMacroUseCase", () => {
 
     // Verify Databricks was called
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksPort.deleteMacroCode).toHaveBeenCalledWith(createdMacro.id);
+    expect(databricksAdapter.deleteMacroCode).toHaveBeenCalledWith(createdMacro.id);
   });
 
   it("should return error when database deletion fails", async () => {
     // Arrange
-    const macroData = {
+    const macroData: CreateMacroDto = {
       name: "Database Fail Macro",
       description: "Database deletion will fail",
-      language: "javascript" as const,
+      language: "javascript",
+      code: "cHl0aG9uIGNvZGU=",
     };
 
     // Create a macro
@@ -135,10 +146,7 @@ describe("DeleteMacroUseCase", () => {
     const createdMacro = createResult.value[0];
 
     // Mock successful Databricks deletion
-    vi.spyOn(databricksPort, "deleteMacroCode").mockResolvedValue({
-      success: true,
-      message: "Code deleted successfully",
-    });
+    vi.spyOn(databricksAdapter, "deleteMacroCode").mockResolvedValue(success({}));
 
     // Mock database failure AFTER the macro is created
     // We need to mock it in a way that findById works but delete fails
