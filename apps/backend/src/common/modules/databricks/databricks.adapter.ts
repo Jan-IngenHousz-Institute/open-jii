@@ -1,6 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { DatabricksPort } from "../../../experiments/core/ports/databricks.port";
+import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
+import type { MacroDto } from "../../../macros/core/models/macro.model";
+import { DatabricksPort as MacrosDatabricksPort } from "../../../macros/core/ports/databricks.port";
 import type { Result } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
@@ -19,9 +21,18 @@ import { DatabricksTablesService } from "./services/tables/tables.service";
 import type { ListTablesResponse } from "./services/tables/tables.types";
 import { DatabricksVolumesService } from "./services/volumes/volumes.service";
 import type { CreateVolumeParams, VolumeResponse } from "./services/volumes/volumes.types";
+import { DatabricksWorkspaceService } from "./services/workspace/workspace.service";
+import type {
+  ImportWorkspaceObjectResponse,
+  DeleteWorkspaceObjectResponse,
+} from "./services/workspace/workspace.types";
+import {
+  WorkspaceObjectLanguage,
+  WorkspaceObjectFormat,
+} from "./services/workspace/workspace.types";
 
 @Injectable()
-export class DatabricksAdapter implements DatabricksPort {
+export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabricksPort {
   private readonly logger = new Logger(DatabricksAdapter.name);
 
   constructor(
@@ -32,6 +43,7 @@ export class DatabricksAdapter implements DatabricksPort {
     private readonly pipelinesService: DatabricksPipelinesService,
     private readonly volumesService: DatabricksVolumesService,
     private readonly configService: DatabricksConfigService,
+    private readonly workspaceService: DatabricksWorkspaceService,
   ) {}
 
   /**
@@ -204,5 +216,66 @@ export class DatabricksAdapter implements DatabricksPort {
     const fullVolumeName = `${catalogName}.${schemaName}.${volumeName}`;
 
     return await this.volumesService.getVolume({ name: fullVolumeName });
+  }
+
+  /**
+   * Upload macro code file to Databricks workspace
+   * @param code - The macro code file to upload
+   * @returns Result containing the import response
+   */
+  async uploadMacroCode({
+    name,
+    language,
+    code,
+  }: Pick<MacroDto, "name" | "language" | "code">): Promise<Result<ImportWorkspaceObjectResponse>> {
+    this.logger.log(`Uploading macro code for macro: ${name}`);
+
+    const mapMacroLanguageToWorkspaceLanguage = (
+      language: MacroDto["language"],
+    ): WorkspaceObjectLanguage => {
+      switch (language) {
+        case "python":
+          return WorkspaceObjectLanguage.PYTHON;
+        case "r":
+          return WorkspaceObjectLanguage.R;
+        case "javascript":
+          return WorkspaceObjectLanguage.SCALA; // Note: JavaScript maps to Scala in Databricks context
+        default:
+          return WorkspaceObjectLanguage.PYTHON; // Default fallback
+      }
+    };
+
+    // Construct the workspace path for the macro
+    const workspacePath = `/Shared/macros/${name}`;
+
+    // Map the macro language to Databricks workspace language
+    const workspaceLanguage = mapMacroLanguageToWorkspaceLanguage(language);
+
+    // Upload the macro code to Databricks workspace
+    return await this.workspaceService.importWorkspaceObject({
+      content: code,
+      format: WorkspaceObjectFormat.SOURCE,
+      language: workspaceLanguage,
+      overwrite: true,
+      path: workspacePath,
+    });
+  }
+
+  /**
+   * Delete macro code from Databricks workspace
+   * @param name - The name of the macro to delete
+   * @returns Result containing the delete response
+   */
+  async deleteMacroCode(name: string): Promise<Result<DeleteWorkspaceObjectResponse>> {
+    this.logger.log(`Deleting macro code for macro: ${name}`);
+
+    // Construct the workspace path for the macro
+    const workspacePath = `/Shared/macros/${name}`;
+
+    // Delete the macro code from Databricks workspace
+    return await this.workspaceService.deleteWorkspaceObject({
+      path: workspacePath,
+      recursive: false,
+    });
   }
 }

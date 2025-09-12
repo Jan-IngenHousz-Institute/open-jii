@@ -10,7 +10,7 @@ import { DeleteMacroUseCase } from "../application/use-cases/delete-macro/delete
 import { GetMacroUseCase } from "../application/use-cases/get-macro/get-macro";
 import { ListMacrosUseCase } from "../application/use-cases/list-macros/list-macros";
 import { UpdateMacroUseCase } from "../application/use-cases/update-macro/update-macro";
-import type { MacroDto } from "../core/models/macro.model";
+import type { MacroDto, CreateMacroDto, UpdateMacroDto } from "../core/models/macro.model";
 
 describe("MacroController", () => {
   const testApp = TestHarness.App;
@@ -51,12 +51,26 @@ describe("MacroController", () => {
   describe("createMacro", () => {
     it("should successfully create a macro", async () => {
       // Arrange
-      const macroData = {
+      const macroData: CreateMacroDto = {
         name: "Test Macro",
         description: "Test Description",
-        language: "python" as const,
-        codeFile: "cHl0aG9uIGNvZGU=", // base64 encoded "python code"
+        language: "python",
+        code: "cHl0aG9uIGNvZGU=", // base64 encoded "python code"
       };
+
+      const mockMacro: MacroDto = {
+        id: faker.string.uuid(),
+        name: macroData.name,
+        description: macroData.description ?? "",
+        language: macroData.language,
+        code: macroData.code,
+        createdBy: testUserId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdByName: faker.person.fullName(),
+      };
+
+      vi.spyOn(createMacroUseCase, "execute").mockResolvedValue(success(mockMacro));
 
       // Act
       const response = await testApp
@@ -80,7 +94,7 @@ describe("MacroController", () => {
       const invalidData = {
         // Missing required name field
         description: "Test Description",
-        language: "python" as const,
+        language: "python",
       };
 
       // Act & Assert
@@ -93,11 +107,11 @@ describe("MacroController", () => {
 
     it("should handle use case failure", async () => {
       // Arrange
-      const macroData = {
+      const macroData: CreateMacroDto = {
         name: "Test Macro",
         description: "Test Description",
-        language: "python" as const,
-        codeFile: "cHl0aG9uIGNvZGU=",
+        language: "python",
+        code: "cHl0aG9uIGNvZGU=",
       };
 
       vi.spyOn(createMacroUseCase, "execute").mockResolvedValue(
@@ -117,7 +131,7 @@ describe("MacroController", () => {
       const macroData = {
         name: "Test Macro",
         description: "Test Description",
-        language: "python" as const,
+        language: "python",
       };
 
       // Act & Assert
@@ -136,6 +150,7 @@ describe("MacroController", () => {
         name: "Test Macro",
         description: "Test Description",
         language: "python",
+        code: "cHl0aG9uIGNvZGU=",
         createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -194,6 +209,7 @@ describe("MacroController", () => {
           name: "Test Macro 1",
           description: "Test Description 1",
           language: "python",
+          code: "dGVzdCBjb2RlIDE=", // base64 encoded "test code 1"
           createdBy: testUserId,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -204,6 +220,7 @@ describe("MacroController", () => {
           name: "Test Macro 2",
           description: "Test Description 2",
           language: "javascript",
+          code: "dGVzdCBjb2RlIDI=", // base64 encoded "test code 2"
           createdBy: testUserId,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -260,17 +277,18 @@ describe("MacroController", () => {
     it("should successfully update a macro", async () => {
       // Arrange
       const macroId = faker.string.uuid();
-      const updateData = {
+      const updateData: UpdateMacroDto = {
         name: "Updated Macro",
         description: "Updated Description",
-        language: "javascript" as const,
+        language: "javascript",
       };
 
       const mockUpdatedMacro: MacroDto = {
         id: macroId,
-        name: updateData.name,
-        description: updateData.description,
-        language: updateData.language,
+        name: "Updated Macro",
+        description: "Updated Description",
+        language: "javascript",
+        code: "dXBkYXRlZCBjb2Rl", // base64 encoded "updated code"
         createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -323,7 +341,7 @@ describe("MacroController", () => {
       const macroId = faker.string.uuid();
       const updateData = {
         name: "Updated Macro",
-        codeFile: "bmV3IGNvZGU=", // base64 encoded "new code"
+        code: "bmV3IGNvZGU=", // base64 encoded "new code"
       };
 
       const mockUpdatedMacro: MacroDto = {
@@ -331,6 +349,7 @@ describe("MacroController", () => {
         name: updateData.name,
         description: "Description",
         language: "python",
+        code: "dXBkYXRlZCBjb2RlIHdpdGggZmlsZQ==", // base64 encoded "updated code with file"
         createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),

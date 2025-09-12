@@ -1,4 +1,5 @@
 import { assertSuccess } from "../../../../common/utils/fp-utils";
+import type { CreateMacroDto } from "../../../../macros/core/models/macro.model";
 import { TestHarness } from "../../../../test/test-harness";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 import { ListMacrosUseCase } from "./list-macros";
@@ -33,15 +34,17 @@ describe("ListMacrosUseCase", () => {
 
   it("should list all macros without filter", async () => {
     // Arrange
-    const macroData1 = {
+    const macroData1: CreateMacroDto = {
       name: "Python Macro",
       description: "A Python test macro",
-      language: "python" as const,
+      language: "python",
+      code: "cHl0aG9uIGNvZGU=",
     };
-    const macroData2 = {
+    const macroData2: CreateMacroDto = {
       name: "R Macro",
       description: "An R test macro",
-      language: "r" as const,
+      language: "r",
+      code: "ciBjb2Rl",
     };
 
     // Create macros
@@ -65,15 +68,17 @@ describe("ListMacrosUseCase", () => {
 
   it("should filter macros by search term", async () => {
     // Arrange
-    const macroData1 = {
+    const macroData1: CreateMacroDto = {
       name: "Data Analysis Script",
       description: "Analyzes experimental data",
-      language: "python" as const,
+      language: "python",
+      code: "cHl0aG9uIGNvZGUgZmlsZQ==",
     };
-    const macroData2 = {
+    const macroData2: CreateMacroDto = {
       name: "Image Processing",
       description: "Processes microscopy images",
-      language: "python" as const,
+      language: "python",
+      code: "aW1hZ2UgcHJvY2Vzc2luZyBpbWFnZXM=",
     };
 
     // Create macros
@@ -104,7 +109,7 @@ describe("ListMacrosUseCase", () => {
       name: "Macro With Code",
       description: "A macro with stored code",
       language: "python" as const,
-      codeFile: "cHl0aG9uIGNvZGUgZmlsZQ==", // base64 encoded "python code file"
+      code: "cHl0aG9uIGNvZGUgZmlsZQ==", // base64 encoded "python code file"
     };
 
     // Create macro with code
@@ -121,7 +126,7 @@ describe("ListMacrosUseCase", () => {
 
     const foundMacro = result.value.find((macro) => macro.id === createdMacroId);
     expect(foundMacro).toBeDefined();
-    expect(foundMacro?.codeFile).toBe(macroWithCode.codeFile);
+    expect(foundMacro?.code).toBe(macroWithCode.code);
   });
 
   it("should filter macros by language", async () => {
@@ -130,19 +135,19 @@ describe("ListMacrosUseCase", () => {
       name: "Python Script",
       description: "A Python macro",
       language: "python" as const,
-      codeFile: "cHl0aG9uIGNvZGU=", // base64 encoded "python code"
+      code: "cHl0aG9uIGNvZGU=", // base64 encoded "python code"
     };
     const rMacro = {
       name: "R Script",
       description: "An R macro",
       language: "r" as const,
-      codeFile: "UiBjb2Rl", // base64 encoded "R code"
+      code: "UiBjb2Rl", // base64 encoded "R code"
     };
     const jsMacro = {
       name: "JavaScript Script",
       description: "A JavaScript macro",
       language: "javascript" as const,
-      codeFile: "anMgY29kZQ==", // base64 encoded "js code"
+      code: "anMgY29kZQ==", // base64 encoded "js code"
     };
 
     // Create macros
@@ -168,15 +173,17 @@ describe("ListMacrosUseCase", () => {
 
   it("should combine search and language filters", async () => {
     // Arrange
-    const macroData1 = {
+    const macroData1: CreateMacroDto = {
       name: "Analysis Python Script",
       description: "Python data analysis",
-      language: "python" as const,
+      language: "python",
+      code: "cHl0aG9uIGNvZGU=",
     };
-    const macroData2 = {
+    const macroData2: CreateMacroDto = {
       name: "Analysis R Script",
       description: "R data analysis",
-      language: "r" as const,
+      language: "r",
+      code: "ciBjb2Rl",
     };
 
     // Create macros

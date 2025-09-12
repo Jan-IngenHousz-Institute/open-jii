@@ -1,37 +1,27 @@
-import { Injectable } from "@nestjs/common";
+import type {
+  DeleteWorkspaceObjectResponse,
+  ImportWorkspaceObjectResponse,
+} from "../../../common/modules/databricks/services/workspace/workspace.types";
+import type { Result } from "../../../common/utils/fp-utils";
+import type { MacroDto } from "../models/macro.model";
 
-export interface MacroCodeFile {
-  content: string; // Base64 encoded content
-  language: "python" | "r" | "javascript";
-  macroId: string;
-}
+/**
+ * Injection token for the Macro Databricks port
+ */
+export const DATABRICKS_PORT = Symbol("MACRO_DATABRICKS_PORT");
 
-export interface DatabricksResponse {
-  success: boolean;
-  message?: string;
-  databricksJobId?: string;
-}
-
-@Injectable()
 export abstract class DatabricksPort {
   /**
-   * Process macro code file through Databricks
-   * @param codeFile - The macro code file to process
-   * @returns Promise<DatabricksResponse>
+   * Upload macro code file to Databricks
+   * @param macro - The uploaded macro
    */
-  abstract processMacroCode(codeFile: MacroCodeFile): Promise<DatabricksResponse>;
-
-  /**
-   * Update macro code file in Databricks
-   * @param codeFile - The updated macro code file
-   * @returns Promise<DatabricksResponse>
-   */
-  abstract updateMacroCode(codeFile: MacroCodeFile): Promise<DatabricksResponse>;
+  abstract uploadMacroCode(
+    params: Pick<MacroDto, "name" | "language" | "code">,
+  ): Promise<Result<ImportWorkspaceObjectResponse>>;
 
   /**
    * Delete macro from Databricks
    * @param macroId - The ID of the macro to delete
-   * @returns Promise<DatabricksResponse>
    */
-  abstract deleteMacroCode(macroId: string): Promise<DatabricksResponse>;
+  abstract deleteMacroCode(macroId: string): Promise<Result<DeleteWorkspaceObjectResponse>>;
 }
