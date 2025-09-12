@@ -22,6 +22,7 @@ import {
   experimentProtocols,
   organizations,
   flows,
+  macros,
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
@@ -138,6 +139,8 @@ export class TestHarness {
     await this.database.delete(flows).execute();
     await this.database.delete(experiments).execute();
     await this.database.delete(protocols).execute();
+    // Macros reference users, so delete macros before users
+    await this.database.delete(macros).execute();
     await this.database.delete(profiles).execute();
     await this.database.delete(organizations).execute();
     await this.database.delete(users).execute();
