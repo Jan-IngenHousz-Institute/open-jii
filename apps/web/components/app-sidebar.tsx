@@ -3,6 +3,7 @@
 import {
   Archive,
   BookOpen,
+  Code,
   FileSliders,
   Home,
   Microscope,
@@ -49,6 +50,7 @@ interface NavigationItem {
 interface NavigationData {
   navExperiments: NavigationItem[];
   navHardware: NavigationItem[];
+  navMacros: NavigationItem[];
 }
 
 interface Translations {
@@ -58,6 +60,7 @@ interface Translations {
 
   experimentsTitle: string;
   hardwareTitle: string;
+  macrosTitle: string;
 }
 
 // Icon mapping for string-based icons
@@ -69,6 +72,7 @@ const iconMap = {
   Webcam,
   FileSliders,
   RadioReceiver,
+  Code,
 } as const;
 
 export function AppSidebar({
@@ -94,6 +98,11 @@ export function AppSidebar({
     icon: iconMap[item.icon as keyof typeof iconMap],
   }));
 
+  const processedNavMacros = navigationData.navMacros.map((item) => ({
+    ...item,
+    icon: iconMap[item.icon as keyof typeof iconMap],
+  }));
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -111,6 +120,7 @@ export function AppSidebar({
       <SidebarContent>
         <NavItems items={processedNavExperiments} title={translations.experimentsTitle} />
         <NavItems items={processedNavHardware} title={translations.hardwareTitle} />
+        <NavItems items={processedNavMacros} title={translations.macrosTitle} />
       </SidebarContent>
       <SidebarFooter>
         {user ? (

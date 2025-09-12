@@ -15,6 +15,7 @@
   "sidebar": {
     "newExperiment": "Nieuw experiment",
     "newProtocol": "Nieuw protocol",
+    "newMacro": "Nieuwe macro",
     "overview": "Overzicht",
     "archivedData": "Gearchiveerde gegevens",
     "recentMeasurements": "Recente metingen",
@@ -24,6 +25,7 @@
     "configuration": "Configuratie",
     "experiments": "Experimenten",
     "hardware": "Hardware",
+    "macros": "Macro's",
     "archive": "Archief",
     "public": "Openbaar",
     "private": "Privé",
