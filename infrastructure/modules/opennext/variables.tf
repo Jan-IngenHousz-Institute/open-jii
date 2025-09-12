@@ -318,6 +318,12 @@ variable "contentful_secret_arn" {
   default     = "" # Or a specific default ARN if applicable
 }
 
+variable "ses_secret_arn" {
+  description = "ARN of the SES SMTP credentials secret in AWS Secrets Manager."
+  type        = string
+  default     = ""
+}
+
 variable "secrets_extension_layer_arn" {
   description = "ARN of the AWS-Parameters-and-Secrets-Lambda-Extension layer. Ensure this is correct for your deployment region."
   type        = string
