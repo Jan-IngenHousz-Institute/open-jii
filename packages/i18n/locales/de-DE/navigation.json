@@ -18,6 +18,7 @@
     "blog": "Blog",
     "newExperiment": "Neues Experiment",
     "newProtocol": "Neues Protokoll",
+    "newMacro": "Neues Makro",
     "overview": "Übersicht",
     "archivedData": "Archivierte Daten",
     "recentMeasurements": "Neueste Messungen",
@@ -35,7 +36,8 @@
     "protocol1": "Protokoll 1",
     "otherDevices": "Andere Geräte",
     "otherDevice1": "Anderes Gerät 1",
-    "hardware": "Hardware"
+    "hardware": "Hardware",
+    "macros": "Makros"
   },
   "breadcrumbs": {
     "home": "Startseite",
