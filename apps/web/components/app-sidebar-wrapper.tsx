@@ -61,6 +61,24 @@ export async function AppSidebarWrapper({
         ],
       },
     ],
+    navMacros: [
+      {
+        title: tNavigation("sidebar.macros"),
+        url: `/${locale}/platform/macros`,
+        icon: "Code",
+        isActive: true,
+        items: [
+          {
+            title: tNavigation("sidebar.newMacro"),
+            url: `/${locale}/platform/macros/new`,
+          },
+          {
+            title: tNavigation("sidebar.overview"),
+            url: `/${locale}/platform/macros`,
+          },
+        ],
+      },
+    ],
   };
 
   const translations = {
@@ -69,6 +87,7 @@ export async function AppSidebarWrapper({
     signIn: tCommon("signIn"),
     experimentsTitle: tNavigation("sidebar.experiments"),
     hardwareTitle: tNavigation("sidebar.hardware"),
+    macrosTitle: tNavigation("sidebar.macros"),
   };
 
   return (

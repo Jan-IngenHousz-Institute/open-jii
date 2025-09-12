@@ -1,0 +1,277 @@
+import "@testing-library/jest-dom/vitest";
+import { render, screen } from "@testing-library/react";
+import React from "react";
+import { describe, it, expect, vi } from "vitest";
+
+import { AppSidebar } from "../app-sidebar";
+
+// Mock the Image component from next/image
+vi.mock("next/image", () => ({
+  default: ({
+    src,
+    alt,
+    width: _width,
+    height: _height,
+  }: {
+    src: string;
+    alt: string;
+    width: number;
+    height: number;
+  }) => <span data-testid="next-image" data-src={src} data-alt={alt} />,
+}));
+
+// Mock the Link component from next/link
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    locale,
+    children,
+  }: {
+    href: string;
+    locale: string;
+    children: React.ReactNode;
+  }) => (
+    <a href={href} data-locale={locale}>
+      {children}
+    </a>
+  ),
+}));
+
+// Mock the Sidebar components
+vi.mock("@repo/ui/components", () => ({
+  Sidebar: ({ children, collapsible }: { children: React.ReactNode; collapsible: string }) => (
+    <div data-testid="sidebar" data-collapsible={collapsible}>
+      {children}
+    </div>
+  ),
+  SidebarHeader: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="sidebar-header">{children}</div>
+  ),
+  SidebarContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="sidebar-content">{children}</div>
+  ),
+  SidebarFooter: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="sidebar-footer">{children}</div>
+  ),
+  SidebarMenu: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="sidebar-menu">{children}</div>
+  ),
+  SidebarMenuButton: ({
+    asChild,
+    className,
+    children,
+  }: {
+    asChild: boolean;
+    className: string;
+    children: React.ReactNode;
+  }) => (
+    <div data-testid="sidebar-menu-button" data-as-child={asChild} className={className}>
+      {children}
+    </div>
+  ),
+  SidebarMenuItem: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="sidebar-menu-item">{children}</div>
+  ),
+  SidebarRail: () => <div data-testid="sidebar-rail" />,
+}));
+
+// Mock NavItems component
+vi.mock("../nav-items", () => ({
+  NavItems: ({
+    items,
+    title,
+  }: {
+    items: {
+      title: string;
+      url: string;
+      icon: React.ComponentType;
+      isActive?: boolean;
+      items: { title: string; url: string }[];
+    }[];
+    title: string;
+  }) => (
+    <div data-testid="nav-items" data-title={title}>
+      {items.map((item, i) => (
+        <div key={i} data-item-title={item.title}>
+          <item.icon data-testid="item-icon" />
+        </div>
+      ))}
+    </div>
+  ),
+}));
+
+// Mock NavUser component
+vi.mock("../nav-user/nav-user", () => ({
+  NavUser: ({
+    locale,
+    user,
+  }: {
+    locale: string;
+    user: { id: string; email: string; avatar: string };
+  }) => (
+    <div
+      data-testid="nav-user"
+      data-locale={locale}
+      data-user-id={user.id}
+      data-user-email={user.email}
+      data-user-avatar={user.avatar}
+    />
+  ),
+}));
+
+// Mock Lucide icons
+vi.mock("lucide-react", () => ({
+  Home: () => <div data-testid="icon-home" />,
+  BookOpen: () => <div data-testid="icon-book-open" />,
+  Microscope: () => <div data-testid="icon-microscope" />,
+  Archive: () => <div data-testid="icon-archive" />,
+  Webcam: () => <div data-testid="icon-webcam" />,
+  FileSliders: () => <div data-testid="icon-file-sliders" />,
+  RadioReceiver: () => <div data-testid="icon-radio-receiver" />,
+  Code: () => <div data-testid="icon-code" />,
+}));
+
+describe("<AppSidebar />", () => {
+  const mockUser = {
+    id: "user-123",
+    name: "Test User",
+    email: "test@example.com",
+    image: "/test-avatar.jpg",
+  };
+
+  const mockNavigationData = {
+    navExperiments: [
+      {
+        title: "Experiments",
+        url: "/platform/experiments",
+        icon: "Microscope",
+        isActive: true,
+        items: [{ title: "Experiment 1", url: "/platform/experiments/1" }],
+      },
+    ],
+    navHardware: [
+      {
+        title: "Hardware",
+        url: "/platform/hardware",
+        icon: "RadioReceiver",
+        items: [{ title: "Device 1", url: "/platform/hardware/1" }],
+      },
+    ],
+    navMacros: [
+      {
+        title: "Macros",
+        url: "/platform/macros",
+        icon: "Code",
+        items: [{ title: "Macro 1", url: "/platform/macros/1" }],
+      },
+    ],
+  };
+
+  const mockTranslations = {
+    openJII: "Open JII",
+    logoAlt: "Open JII Logo",
+    signIn: "Sign In",
+    experimentsTitle: "Experiments",
+    hardwareTitle: "Hardware",
+    macrosTitle: "Macros",
+  };
+
+  it("renders the sidebar structure correctly", () => {
+    render(
+      <AppSidebar
+        user={mockUser}
+        locale="en-US"
+        navigationData={mockNavigationData}
+        translations={mockTranslations}
+      />,
+    );
+
+    // Check main sidebar structure
+    expect(screen.getByTestId("sidebar")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-header")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-content")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-footer")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-rail")).toBeInTheDocument();
+  });
+
+  it("renders the logo and title in the header", () => {
+    render(
+      <AppSidebar
+        user={mockUser}
+        locale="en-US"
+        navigationData={mockNavigationData}
+        translations={mockTranslations}
+      />,
+    );
+
+    const image = screen.getByTestId("next-image");
+    expect(image).toHaveAttribute("data-src", "/logo.png");
+    expect(image).toHaveAttribute("data-alt", "Open JII Logo");
+    expect(screen.getByText("Open JII")).toBeInTheDocument();
+  });
+
+  it("renders navigation items with correct titles", () => {
+    render(
+      <AppSidebar
+        user={mockUser}
+        locale="en-US"
+        navigationData={mockNavigationData}
+        translations={mockTranslations}
+      />,
+    );
+
+    const navItems = screen.getAllByTestId("nav-items");
+    expect(navItems).toHaveLength(3);
+    expect(navItems[0]).toHaveAttribute("data-title", "Experiments");
+    expect(navItems[1]).toHaveAttribute("data-title", "Hardware");
+    expect(navItems[2]).toHaveAttribute("data-title", "Macros");
+  });
+
+  it("renders NavUser component when user is provided", () => {
+    render(
+      <AppSidebar
+        user={mockUser}
+        locale="en-US"
+        navigationData={mockNavigationData}
+        translations={mockTranslations}
+      />,
+    );
+
+    const navUser = screen.getByTestId("nav-user");
+    expect(navUser).toBeInTheDocument();
+    expect(navUser).toHaveAttribute("data-locale", "en-US");
+    expect(navUser).toHaveAttribute("data-user-id", "user-123");
+    expect(navUser).toHaveAttribute("data-user-email", "test@example.com");
+    expect(navUser).toHaveAttribute("data-user-avatar", "/test-avatar.jpg");
+  });
+
+  it("renders sign-in link when user is not provided", () => {
+    render(
+      <AppSidebar
+        user={null}
+        locale="en-US"
+        navigationData={mockNavigationData}
+        translations={mockTranslations}
+      />,
+    );
+
+    expect(screen.getByText("Sign In")).toBeInTheDocument();
+    expect(screen.queryByTestId("nav-user")).not.toBeInTheDocument();
+  });
+
+  it("processes icons correctly", () => {
+    render(
+      <AppSidebar
+        user={mockUser}
+        locale="en-US"
+        navigationData={mockNavigationData}
+        translations={mockTranslations}
+      />,
+    );
+
+    // Check that icon mapping worked
+    expect(screen.getByTestId("icon-microscope")).toBeInTheDocument();
+    expect(screen.getByTestId("icon-radio-receiver")).toBeInTheDocument();
+    expect(screen.getByTestId("icon-code")).toBeInTheDocument();
+  });
+});
