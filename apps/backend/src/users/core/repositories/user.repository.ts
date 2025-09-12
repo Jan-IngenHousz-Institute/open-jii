@@ -57,6 +57,7 @@ export class UserRepository {
           bio: profiles.bio,
           avatarUrl: profiles.avatarUrl,
           organizationId: profiles.organizationId,
+          updatedAt: profiles.updatedAt,
         })
         .from(profiles)
         .innerJoin(users, eq(profiles.userId, users.id))

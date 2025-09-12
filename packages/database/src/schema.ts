@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { primaryKey } from "drizzle-orm/pg-core";
 import {
   pgTable,
@@ -11,14 +12,25 @@ import {
   integer,
 } from "drizzle-orm/pg-core";
 
+// UTC timestamps helper
+const timestamps = {
+  createdAt: timestamp("created_at")
+    .default(sql`(now() AT TIME ZONE 'UTC')`)
+    .notNull(),
+  updatedAt: timestamp("updated_at")
+    .default(sql`(now() AT TIME ZONE 'UTC')`)
+    .$onUpdate(() => new Date())
+    .notNull(),
+};
+
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name"),
   email: text("email").unique(),
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
   registered: boolean("registered").notNull().default(false),
+  ...timestamps,
 });
 
 export const accounts = pgTable(
@@ -117,7 +129,7 @@ export const profiles = pgTable("profiles", {
     .references(() => users.id)
     .notNull(),
   organizationId: uuid("organization_id").references(() => organizations.id),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  ...timestamps,
 });
 
 // Organizations Table
@@ -128,7 +140,7 @@ export const organizations = pgTable("organizations", {
   description: text("description"),
   website: varchar("website", { length: 255 }),
   location: text("location"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  ...timestamps,
 });
 
 // Sensors Table
@@ -139,7 +151,7 @@ export const sensors = pgTable("sensors", {
   family: sensorFamilyEnum("family").notNull(),
   location: text("location"),
   isActive: boolean("is_active").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  ...timestamps,
 });
 
 // Experiments Table
@@ -166,11 +178,7 @@ export const experiments = pgTable("experiments", {
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
+  ...timestamps,
 });
 
 export const experimentMembersEnum = pgEnum("experiment_members_role", ["admin", "member"]);
@@ -185,7 +193,9 @@ export const experimentMembers = pgTable(
       .references(() => users.id)
       .notNull(),
     role: experimentMembersEnum("role").default("member").notNull(),
-    joinedAt: timestamp("joined_at").defaultNow().notNull(),
+    joinedAt: timestamp("joined_at")
+      .default(sql`(now() AT TIME ZONE 'UTC')`)
+      .notNull(),
   },
   (table) => [primaryKey({ columns: [table.experimentId, table.userId] })],
 );
@@ -201,7 +211,9 @@ export const experimentProtocols = pgTable(
       .references(() => protocols.id)
       .notNull(),
     order: integer("order").default(0).notNull(),
-    addedAt: timestamp("added_at").defaultNow().notNull(),
+    addedAt: timestamp("added_at")
+      .default(sql`(now() AT TIME ZONE 'UTC')`)
+      .notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.experimentId, table.protocolId] }),
@@ -217,7 +229,9 @@ export const auditLogs = pgTable("audit_logs", {
     .references(() => users.id)
     .notNull(),
   action: text("action").notNull(),
-  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  timestamp: timestamp("timestamp")
+    .default(sql`(now() AT TIME ZONE 'UTC')`)
+    .notNull(),
   details: jsonb("details"),
 });
 
@@ -231,11 +245,7 @@ export const protocols = pgTable("protocols", {
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
+  ...timestamps,
 });
 
 // Flows Table - stores a single graph JSON per experiment (1:1)
@@ -246,9 +256,5 @@ export const flows = pgTable("flows", {
     .references(() => experiments.id, { onDelete: "cascade" })
     .unique(),
   graph: jsonb("graph").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
+  ...timestamps,
 });
