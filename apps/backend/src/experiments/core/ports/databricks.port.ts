@@ -5,7 +5,10 @@ import type {
   DatabricksJobRunResponse,
 } from "../../../common/modules/databricks/services/jobs/jobs.types";
 import type { DatabricksPipelineStartUpdateResponse } from "../../../common/modules/databricks/services/pipelines/pipelines.types";
-import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
+import type {
+  SchemaData,
+  DownloadLinksData,
+} from "../../../common/modules/databricks/services/sql/sql.types";
 import type { ListTablesResponse } from "../../../common/modules/databricks/services/tables/tables.types";
 import type {
   CreateVolumeParams,
@@ -37,6 +40,14 @@ export interface DatabricksPort {
    * Execute a SQL query in a specific schema
    */
   executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>>;
+
+  /**
+   * Download experiment data using EXTERNAL_LINKS disposition for large datasets
+   */
+  downloadExperimentData(
+    schemaName: string,
+    sqlStatement: string,
+  ): Promise<Result<DownloadLinksData>>;
 
   /**
    * List tables in the schema for a specific experiment

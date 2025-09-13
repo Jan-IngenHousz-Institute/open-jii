@@ -167,6 +167,76 @@ describe("DatabricksAdapter", () => {
     });
   });
 
+  describe("downloadExperimentData", () => {
+    const schemaName = "exp_test_experiment_123";
+    const sqlStatement = "SELECT * FROM test_table";
+
+    it("should successfully download experiment data with external links", async () => {
+      const mockDownloadData = {
+        external_links: [
+          {
+            chunk_index: 0,
+            row_count: 1000,
+            row_offset: 0,
+            byte_count: 5242880,
+            external_link: "https://databricks-presigned-url.com/chunk0",
+            expiration: "2024-01-15T12:00:00.000Z",
+          },
+          {
+            chunk_index: 1,
+            row_count: 500,
+            row_offset: 1000,
+            byte_count: 2621440,
+            external_link: "https://databricks-presigned-url.com/chunk1",
+            expiration: "2024-01-15T12:00:00.000Z",
+          },
+        ],
+        totalRows: 1500,
+        format: "JSON_ARRAY",
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock SQL statement execution with EXTERNAL_LINKS disposition
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 2,
+              columns: [
+                { name: "id", type_name: "LONG", type_text: "BIGINT", position: 0 },
+                { name: "measurement", type_name: "DOUBLE", type_text: "DOUBLE", position: 1 },
+              ],
+            },
+            total_row_count: mockDownloadData.totalRows,
+            format: mockDownloadData.format,
+          },
+          result: {
+            external_links: mockDownloadData.external_links,
+            chunk_index: 0,
+            row_count: 0,
+            row_offset: 0,
+          },
+        });
+
+      // Execute download query
+      const result = await databricksAdapter.downloadExperimentData(schemaName, sqlStatement);
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual(mockDownloadData);
+    });
+  });
+
   describe("listTables", () => {
     const experimentName = "test_experiment";
     const experimentId = "123";

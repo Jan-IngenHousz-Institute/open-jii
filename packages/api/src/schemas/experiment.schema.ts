@@ -478,6 +478,29 @@ export const zExperimentWebhookErrorResponse = z.object({
   statusCode: z.number(),
 });
 
+// --- Download Data Schemas ---
+export const zDownloadExperimentDataQuery = z.object({
+  tableName: z.string().describe("Name of the table to download"),
+});
+
+export const zExternalLink = z.object({
+  chunk_index: z.number().int(),
+  row_count: z.number().int(),
+  row_offset: z.number().int(),
+  byte_count: z.number().int(),
+  external_link: z.string().url(),
+  expiration: z.string().datetime(),
+});
+
+export const zDownloadExperimentDataResponse = z.object({
+  external_links: z.array(
+    z.object({
+      external_link: z.string().url(),
+      expiration: z.string().datetime(),
+    }),
+  ),
+});
+
 // Infer request and response types
 export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;
 export type UpdateExperimentBody = z.infer<typeof zUpdateExperimentBody>;
@@ -487,6 +510,8 @@ export type ExperimentFilter = ExperimentFilterQuery["filter"];
 export type CreateExperimentResponse = z.infer<typeof zCreateExperimentResponse>;
 export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
 export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
+export type DownloadExperimentDataQuery = z.infer<typeof zDownloadExperimentDataQuery>;
+export type DownloadExperimentDataResponse = z.infer<typeof zDownloadExperimentDataResponse>;
 export type IdPathParam = z.infer<typeof zIdPathParam>;
 export type ExperimentMemberPathParam = z.infer<typeof zExperimentMemberPathParam>;
 export type DataSourceType = z.infer<typeof zDataSourceType>;

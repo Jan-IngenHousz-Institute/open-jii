@@ -16,7 +16,7 @@ import type {
 import { DatabricksPipelinesService } from "./services/pipelines/pipelines.service";
 import type { DatabricksPipelineStartUpdateResponse } from "./services/pipelines/pipelines.types";
 import { DatabricksSqlService } from "./services/sql/sql.service";
-import type { SchemaData } from "./services/sql/sql.types";
+import type { SchemaData, DownloadLinksData } from "./services/sql/sql.types";
 import { DatabricksTablesService } from "./services/tables/tables.service";
 import type { ListTablesResponse } from "./services/tables/tables.types";
 import { DatabricksVolumesService } from "./services/volumes/volumes.service";
@@ -61,7 +61,24 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    * Execute a SQL query in a specific schema
    */
   async executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {
-    return this.sqlService.executeSqlQuery(schemaName, sqlStatement);
+    const result = await this.sqlService.executeSqlQuery(schemaName, sqlStatement, "INLINE");
+    return result as Result<SchemaData>;
+  }
+
+  /**
+   * Download experiment data using EXTERNAL_LINKS disposition for large datasets
+   */
+  async downloadExperimentData(
+    schemaName: string,
+    sqlStatement: string,
+  ): Promise<Result<DownloadLinksData>> {
+    const result = await this.sqlService.executeSqlQuery(
+      schemaName,
+      sqlStatement,
+      "EXTERNAL_LINKS",
+      "JSON_ARRAY",
+    );
+    return result as Result<DownloadLinksData>;
   }
 
   /**
