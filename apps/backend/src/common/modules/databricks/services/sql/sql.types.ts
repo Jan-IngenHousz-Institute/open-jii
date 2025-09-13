@@ -6,6 +6,8 @@ export interface ExecuteStatementRequest {
   wait_timeout: string;
   disposition: string;
   format: string;
+  byte_limit?: number;
+  row_limit?: number;
 }
 
 export interface StatementResponse {
@@ -29,12 +31,29 @@ export interface StatementResponse {
     };
     total_row_count?: number;
     truncated?: boolean;
+    format?: string;
+    total_byte_count?: number;
+    total_chunk_count?: number;
+    chunks?: {
+      chunk_index: number;
+      row_count: number;
+      row_offset: number;
+      byte_count?: number;
+    }[];
   };
   result?: {
     data_array?: (string | null)[][];
     chunk_index: number;
     row_count: number;
     row_offset: number;
+    external_links?: {
+      chunk_index: number;
+      row_count: number;
+      row_offset: number;
+      byte_count: number;
+      external_link: string;
+      expiration: string;
+    }[];
   };
 }
 
@@ -47,4 +66,17 @@ export interface SchemaData {
   rows: (string | null)[][];
   totalRows: number;
   truncated: boolean;
+}
+
+export interface DownloadLinksData {
+  external_links: {
+    chunk_index: number;
+    row_count: number;
+    row_offset: number;
+    byte_count: number;
+    external_link: string;
+    expiration: string;
+  }[];
+  totalRows: number;
+  format: string;
 }

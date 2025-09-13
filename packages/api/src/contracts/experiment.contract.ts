@@ -21,6 +21,8 @@ import {
   zExperimentAccess,
   zUploadExperimentDataBody,
   zUploadExperimentDataResponse,
+  zDownloadExperimentDataQuery,
+  zDownloadExperimentDataResponse,
 } from "../schemas/experiment.schema";
 import { zFlow, zUpsertFlowBody } from "../schemas/experiment.schema";
 import {
@@ -282,5 +284,21 @@ export const experimentContract = c.router({
     },
     summary: "Upload experiment data",
     description: "Uploads experiment data files to Databricks",
+  },
+
+  downloadExperimentData: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/data/download",
+    pathParams: zIdPathParam,
+    query: zDownloadExperimentDataQuery,
+    responses: {
+      200: zDownloadExperimentDataResponse,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Download experiment data",
+    description:
+      "Generates download links for complete table data using EXTERNAL_LINKS disposition",
   },
 });

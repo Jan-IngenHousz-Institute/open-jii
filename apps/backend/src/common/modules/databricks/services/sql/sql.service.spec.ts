@@ -225,6 +225,76 @@ describe("DatabricksSqlService", () => {
       expect(result.error.message).toContain("Databricks SQL query execution");
     });
 
+    it("should successfully execute SQL query with EXTERNAL_LINKS disposition", async () => {
+      const mockDownloadData = {
+        external_links: [
+          {
+            chunk_index: 0,
+            row_count: 1000,
+            row_offset: 0,
+            byte_count: 5242880,
+            external_link: "https://databricks-presigned-url.com/chunk0",
+            expiration: "2024-01-15T12:00:00.000Z",
+          },
+          {
+            chunk_index: 1,
+            row_count: 500,
+            row_offset: 1000,
+            byte_count: 2621440,
+            external_link: "https://databricks-presigned-url.com/chunk1",
+            expiration: "2024-01-15T12:00:00.000Z",
+          },
+        ],
+        totalRows: 1500,
+        format: "JSON_ARRAY",
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock SQL statement execution with EXTERNAL_LINKS disposition
+      nock(databricksHost)
+        .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/")
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 2,
+              columns: [
+                { name: "id", type_name: "LONG", type_text: "BIGINT", position: 0 },
+                { name: "measurement", type_name: "DOUBLE", type_text: "DOUBLE", position: 1 },
+              ],
+            },
+            total_row_count: mockDownloadData.totalRows,
+            format: mockDownloadData.format,
+          },
+          result: {
+            external_links: mockDownloadData.external_links,
+            chunk_index: 0,
+            row_count: 0,
+            row_offset: 0,
+          },
+        });
+
+      // Execute SQL query with EXTERNAL_LINKS disposition
+      const result = await sqlService.executeSqlQuery(
+        schemaName,
+        sqlStatement,
+        "EXTERNAL_LINKS",
+        "JSON_ARRAY",
+      );
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual(mockDownloadData);
+    });
+
     it("should handle token fetch failure", async () => {
       // Mock token request with error
       nock(databricksHost)
