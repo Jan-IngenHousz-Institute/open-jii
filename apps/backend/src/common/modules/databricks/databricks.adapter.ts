@@ -76,7 +76,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       schemaName,
       sqlStatement,
       "EXTERNAL_LINKS",
-      "JSON_ARRAY",
+      "CSV",
     );
     return result as Result<DownloadLinksData>;
   }

@@ -192,7 +192,7 @@ describe("DatabricksAdapter", () => {
           },
         ],
         totalRows: 1500,
-        format: "JSON_ARRAY",
+        format: "CSV",
       };
 
       // Mock token request

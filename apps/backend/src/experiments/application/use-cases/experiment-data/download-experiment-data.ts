@@ -86,7 +86,7 @@ export class DownloadExperimentDataUseCase {
       }
 
       // Execute SQL query to get all data from the table using EXTERNAL_LINKS
-      const sqlQuery = `SELECT * FROM ${query.tableName}`;
+      const sqlQuery = `SELECT * FROM ${query.tableName} LIMIT 10`;
       this.logger.debug(`Executing download query: ${sqlQuery}`);
 
       const dataResult = await this.databricksPort.downloadExperimentData(schemaName, sqlQuery);
