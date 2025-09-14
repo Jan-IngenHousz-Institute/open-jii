@@ -8,6 +8,7 @@ import { AuthError } from "next-auth";
 import { adapter, lambdaAdapter } from "./adapter";
 import { baseAuthConfig } from "./config";
 import { sendVerificationRequest } from "./email/verificationRequest";
+import ORCID from "./providers/orcid";
 
 interface InitAuthParams {
   authSecrets: Record<string, string>;
@@ -32,6 +33,20 @@ export function initAuth({
       clientSecret: authSecrets.AUTH_GITHUB_SECRET || process.env.AUTH_GITHUB_SECRET,
     }),
   ];
+
+  if (authSecrets.AUTH_ORCID_ID || process.env.AUTH_ORCID_ID) {
+    providers.push(
+      ORCID({
+        clientId: authSecrets.AUTH_ORCID_ID || process.env.AUTH_ORCID_ID,
+        clientSecret: authSecrets.AUTH_ORCID_SECRET || process.env.AUTH_ORCID_SECRET,
+        environment:
+          authSecrets.AUTH_ORCID_ENVIRONMENT === "sandbox" ||
+          process.env.AUTH_ORCID_ENVIRONMENT === "sandbox"
+            ? "sandbox"
+            : "production",
+      }),
+    );
+  }
 
   if (
     (sesSecrets.AUTH_EMAIL_SERVER || process.env.AUTH_EMAIL_SERVER) &&

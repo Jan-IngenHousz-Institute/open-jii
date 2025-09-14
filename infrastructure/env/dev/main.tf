@@ -335,6 +335,8 @@ module "auth_secrets" {
     AUTH_SECRET        = var.auth_secret
     AUTH_GITHUB_ID     = var.github_oauth_client_id
     AUTH_GITHUB_SECRET = var.github_oauth_client_secret
+    AUTH_ORCID_ID      = var.orcid_oauth_client_id
+    AUTH_ORCID_SECRET  = var.orcid_oauth_client_secret
   })
 
   tags = {
@@ -757,6 +759,14 @@ module "backend_ecs" {
     {
       name      = "AUTH_SECRET"
       valueFrom = "${module.auth_secrets.secret_arn}:AUTH_SECRET::"
+    },
+    {
+      name      = "AUTH_ORCID_ID"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_ORCID_ID::"
+    },
+    {
+      name      = "AUTH_ORCID_SECRET"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_ORCID_SECRET::"
     },
     {
       name      = "DATABRICKS_CLIENT_ID"

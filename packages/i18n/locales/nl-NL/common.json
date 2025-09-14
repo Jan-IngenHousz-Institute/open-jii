@@ -151,6 +151,9 @@
     "loginToAccount": "Log in op je account",
     "continueWith": "Doorgaan met",
     "loginWith": "Inloggen met {{provider}}",
+    "loginWith-github": "Inloggen met GitHub",
+    "loginWith-nodemailer": "Inloggen met e-mail",
+    "loginWith-orcid": "Inloggen met ORCID",
     "account": "Account",
     "userMenu": "Gebruikersmenu",
     "signingOut": "Uitloggen..."
