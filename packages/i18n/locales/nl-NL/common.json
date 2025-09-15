@@ -88,7 +88,16 @@
     "addMembersDescription": "Beheer wie toegang heeft tot dit experiment",
     "addMemberPlaceholder": "Lid toevoegen",
     "visibilityTitle": "Zichtbaarheidsinstellingen",
-    "visibilityDescription": "Beheer de zichtbaarheid en embargo-periode van je experiment"
+    "visibilityDescription": "Beheer de zichtbaarheid en embargo-periode van je experiment",
+    "addProtocolsTitle": "Protocollen toevoegen",
+    "addProtocolsDescription": "Beheer en sorteer experimentprotocollen",
+    "addProtocolsPlaceholder": "Protocol toevoegen",
+    "locationsTitle": "Experimentlocaties",
+    "locationsDescription": "Selecteer geografische locaties waar dit experiment plaatsvindt",
+    "selectLocations": "Locaties selecteren",
+    "addLocationsTitle": "Locaties toevoegen",
+    "addLocationsDescription": "Klik op de kaart om experimentlocaties toe te voegen",
+    "locationsListTitle": "Geselecteerde locaties"
   },
   "experimentSettings": {
     "loading": "Experiment instellingen laden...",

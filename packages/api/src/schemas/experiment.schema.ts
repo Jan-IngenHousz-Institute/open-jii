@@ -1,5 +1,49 @@
 import { z } from "zod";
 
+// --- Location Schemas ---
+export const zLocation = z.object({
+  id: z.string().uuid(),
+  name: z
+    .string()
+    .min(1, "Location name is required")
+    .max(255, "Location name must be 255 characters or less"),
+  latitude: z
+    .number()
+    .min(-90, "Latitude must be between -90 and 90")
+    .max(90, "Latitude must be between -90 and 90"),
+  longitude: z
+    .number()
+    .min(-180, "Longitude must be between -180 and 180")
+    .max(180, "Longitude must be between -180 and 180"),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const zLocationInput = z.object({
+  name: z
+    .string()
+    .min(1, "Location name is required")
+    .max(255, "Location name must be 255 characters or less"),
+  latitude: z
+    .number()
+    .min(-90, "Latitude must be between -90 and 90")
+    .max(90, "Latitude must be between -90 and 90"),
+  longitude: z
+    .number()
+    .min(-180, "Longitude must be between -180 and 180")
+    .max(180, "Longitude must be between -180 and 180"),
+});
+
+export const zLocationList = z.array(zLocation);
+
+export const zAddExperimentLocationsBody = z.object({
+  locations: z.array(zLocationInput),
+});
+
+export const zUpdateExperimentLocationsBody = z.object({
+  locations: z.array(zLocationInput),
+});
+
 // --- Protocol Association Schemas ---
 export const zExperimentProtocolDetails = z.object({
   id: z.string().uuid(),
@@ -71,6 +115,7 @@ export const zExperiment = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   data: zExperimentData.optional(),
+  locations: zLocationList.optional(),
 });
 
 export const zExperimentList = z.array(zExperiment);
@@ -241,6 +286,9 @@ export type FlowNodeType = z.infer<typeof zFlowNodeType>;
 export type FlowGraph = z.infer<typeof zFlowGraph>;
 export type Flow = z.infer<typeof zFlow>;
 export type UpsertFlowBody = z.infer<typeof zUpsertFlowBody>;
+export type Location = z.infer<typeof zLocation>;
+export type LocationInput = z.infer<typeof zLocationInput>;
+export type LocationList = z.infer<typeof zLocationList>;
 
 // Define request and response types
 // Shared embargo date validation function
@@ -324,6 +372,43 @@ export const zCreateExperimentBody = z
   .superRefine((val, ctx) => {
     validateEmbargoDate(val.embargoUntil, ctx, ["embargoUntil"]);
   });
+  
+export const zCreateExperimentBody = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "The name of the experiment is required")
+    .max(255, "The name must be at most 255 characters")
+    .describe("The name of the experiment"),
+  description: z.string().optional().describe("Optional description of the experiment"),
+  status: zExperimentStatus.optional().describe("Initial status of the experiment"),
+  visibility: zExperimentVisibility.optional().describe("Experiment visibility setting"),
+  embargoIntervalDays: z.number().int().positive().optional().describe("Embargo period in days"),
+  members: z
+    .array(
+      z.object({
+        userId: z.string().uuid(),
+        role: zExperimentMemberRole.optional(),
+      }),
+    )
+    .optional()
+    .describe("Optional array of member objects with userId and role"),
+  protocols: z
+    .array(
+      z.object({
+        protocolId: z.string().uuid(),
+        order: z.number().int().optional(),
+      }),
+    )
+    .optional()
+    .describe(
+      "Optional array of protocol objects with protocolId and order to associate with the experiment",
+    ),
+  locations: z
+    .array(zLocationInput)
+    .optional()
+    .describe("Optional array of locations associated with the experiment"),
+});
 
 export const zUpdateExperimentBody = z.object({
   name: z
@@ -343,6 +428,10 @@ export const zUpdateExperimentBody = z.object({
     .describe(
       "Updated embargo end date and time (ISO datetime string, will be stored as UTC in database)",
     ),
+  locations: z
+    .array(zLocationInput)
+    .optional()
+    .describe("Updated locations associated with the experiment"),
 });
 
 export const visibilitySchema = zUpdateExperimentBody
@@ -507,6 +596,8 @@ export const zDownloadExperimentDataResponse = z.object({
 export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;
 export type UpdateExperimentBody = z.infer<typeof zUpdateExperimentBody>;
 export type AddExperimentMembersBody = z.infer<typeof zAddExperimentMembersBody>;
+export type AddExperimentLocationsBody = z.infer<typeof zAddExperimentLocationsBody>;
+export type UpdateExperimentLocationsBody = z.infer<typeof zUpdateExperimentLocationsBody>;
 export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;
 export type ExperimentFilter = ExperimentFilterQuery["filter"];
 export type CreateExperimentResponse = z.infer<typeof zCreateExperimentResponse>;

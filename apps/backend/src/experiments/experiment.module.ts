@@ -11,6 +11,9 @@ import { DeleteExperimentUseCase } from "./application/use-cases/delete-experime
 import { DownloadExperimentDataUseCase } from "./application/use-cases/experiment-data/download-experiment-data";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data";
 import { UploadAmbyteDataUseCase } from "./application/use-cases/experiment-data/upload-ambyte-data";
+import { AddExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/add-experiment-locations";
+import { GetExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/get-experiment-locations";
+import { UpdateExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/update-experiment-locations";
 import { AddExperimentMembersUseCase } from "./application/use-cases/experiment-members/add-experiment-members";
 import { ListExperimentMembersUseCase } from "./application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "./application/use-cases/experiment-members/remove-experiment-member";
@@ -27,6 +30,7 @@ import { UpdateExperimentUseCase } from "./application/use-cases/update-experime
 import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-provisioning-status/update-provisioning-status";
 // Ports
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
+import { LocationRepository } from "./core/repositories/experiment-location.repository";
 // Repositories
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
 import { ExperimentProtocolRepository } from "./core/repositories/experiment-protocol.repository";
@@ -35,6 +39,7 @@ import { FlowRepository } from "./core/repositories/flow.repository";
 // Controllers
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
 import { ExperimentFlowsController } from "./presentation/experiment-flows.controller";
+import { ExperimentLocationsController } from "./presentation/experiment-locations.controller";
 import { ExperimentMembersController } from "./presentation/experiment-members.controller";
 import { ExperimentProtocolsController } from "./presentation/experiment-protocols.controller";
 import { ExperimentWebhookController } from "./presentation/experiment-webhook.controller";
@@ -49,6 +54,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ExperimentMembersController,
     ExperimentProtocolsController,
     ExperimentWebhookController,
+    ExperimentLocationsController,
   ],
   providers: [
     // Port implementations
@@ -62,6 +68,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ExperimentMemberRepository,
     ExperimentProtocolRepository,
     FlowRepository,
+    LocationRepository,
 
     // Services
     EmbargoProcessorService,
@@ -84,6 +91,11 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ListExperimentMembersUseCase,
     AddExperimentMembersUseCase,
     RemoveExperimentMemberUseCase,
+
+    // Experiment location use cases
+    GetExperimentLocationsUseCase,
+    AddExperimentLocationsUseCase,
+    UpdateExperimentLocationsUseCase,
 
     // Experiment protocol use cases
     AddExperimentProtocolsUseCase,

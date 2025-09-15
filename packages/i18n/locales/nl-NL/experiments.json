@@ -72,6 +72,32 @@
   "created": "Gemaakt",
   "updated": "Bijgewerkt",
   "descriptionTitle": "Beschrijving",
+  "details": {
+    "locations": {
+      "locationsTitle": "Experiment Locaties",
+      "locationsCount": "{{count}} locatie",
+      "locationsCount_plural": "{{count}} locaties",
+      "noLocations": "Geen locaties",
+      "noLocationsDescription": "Dit experiment heeft geen geconfigureerde locaties."
+    }
+  },
+  "settings": {
+    "locations": {
+      "title": "Locatie Beheer",
+      "description": "Experiment locaties configureren en beheren",
+      "editLocations": "Locaties bewerken",
+      "count": "{{count}} locatie",
+      "count_plural": "{{count}} locaties",
+      "noLocations": "Geen locaties geconfigureerd",
+      "noLocationsDescription": "Voeg locaties toe om aan te geven waar dit experiment plaatsvindt",
+      "viewMap": "Bekijk op kaart",
+      "mapPreview": "Locatie kaart voorbeeld",
+      "editMode": "Locaties bewerken",
+      "editModeDescription": "Klik op de kaart om locaties toe te voegen, klik op bestaande markeringen om ze te bewerken of te verwijderen",
+      "editingCount": "{{count}} locatie geselecteerd",
+      "editingCount_plural": "{{count}} locaties geselecteerd"
+    }
+  },
   "manageExperimentDescription": "Bekijk en beheer experimentdetails, gegevens, flow en instellingen.",
   "loading": "Laden...",
   "failedToLoad": "Experiment laden mislukt",

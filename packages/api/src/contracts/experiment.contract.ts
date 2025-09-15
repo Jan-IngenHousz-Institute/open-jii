@@ -23,6 +23,9 @@ import {
   zUploadExperimentDataResponse,
   zDownloadExperimentDataQuery,
   zDownloadExperimentDataResponse,
+  zLocationList,
+  zAddExperimentLocationsBody,
+  zUpdateExperimentLocationsBody,
 } from "../schemas/experiment.schema";
 import { zFlow, zUpsertFlowBody } from "../schemas/experiment.schema";
 import {
@@ -293,12 +296,54 @@ export const experimentContract = c.router({
     query: zDownloadExperimentDataQuery,
     responses: {
       200: zDownloadExperimentDataResponse,
-      400: zErrorResponse,
       403: zErrorResponse,
       404: zErrorResponse,
     },
     summary: "Download experiment data",
     description:
       "Generates download links for complete table data using EXTERNAL_LINKS disposition",
+  },
+
+  getExperimentLocations: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/locations",
+    pathParams: zIdPathParam,
+    responses: {
+      200: zLocationList,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Get experiment locations",
+    description: "Returns all locations associated with the specified experiment.",
+  },
+
+  addExperimentLocations: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/locations",
+    pathParams: zIdPathParam,
+    body: zAddExperimentLocationsBody,
+    responses: {
+      201: zLocationList,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Add locations to an experiment",
+    description: "Associates one or more locations with an experiment.",
+  },
+
+  updateExperimentLocations: {
+    method: "PUT",
+    path: "/api/v1/experiments/:id/locations",
+    pathParams: zIdPathParam,
+    body: zUpdateExperimentLocationsBody,
+    responses: {
+      200: zLocationList,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Update experiment locations",
+    description: "Replaces all locations associated with an experiment.",
   },
 });
