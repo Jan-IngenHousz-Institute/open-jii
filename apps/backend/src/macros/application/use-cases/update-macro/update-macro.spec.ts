@@ -106,7 +106,6 @@ describe("UpdateMacroUseCase", () => {
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(databricksAdapter.uploadMacroCode).toHaveBeenCalledWith({
       code: updateData.code,
-      language: macroData.language,
       name: updateData.name,
     });
   });

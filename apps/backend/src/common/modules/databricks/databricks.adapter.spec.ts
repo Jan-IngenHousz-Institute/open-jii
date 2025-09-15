@@ -823,11 +823,10 @@ describe("DatabricksAdapter", () => {
   describe("uploadMacroCode", () => {
     const macroData = {
       name: "test-macro",
-      language: "python" as const,
       code: 'print("Hello, World!")',
     };
 
-    it("should successfully upload Python macro code to workspace", async () => {
+    it("should successfully upload macro code to workspace", async () => {
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,
@@ -842,62 +841,6 @@ describe("DatabricksAdapter", () => {
 
       // Execute upload macro code
       const result = await databricksAdapter.uploadMacroCode(macroData);
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toEqual({});
-    });
-
-    it("should successfully upload R macro code to workspace", async () => {
-      const rMacroData = {
-        name: "r-test-macro",
-        language: "r" as const,
-        code: 'cat("Hello from R!")',
-      };
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock workspace import API call
-      nock(databricksHost)
-        .post(DatabricksWorkspaceService.WORKSPACE_IMPORT_ENDPOINT)
-        .reply(200, {});
-
-      // Execute upload macro code
-      const result = await databricksAdapter.uploadMacroCode(rMacroData);
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toEqual({});
-    });
-
-    it("should successfully upload JavaScript macro code to workspace (mapped to Scala)", async () => {
-      const jsMacroData = {
-        name: "js-test-macro",
-        language: "javascript" as const,
-        code: 'console.log("Hello from JavaScript!");',
-      };
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock workspace import API call
-      nock(databricksHost)
-        .post(DatabricksWorkspaceService.WORKSPACE_IMPORT_ENDPOINT)
-        .reply(200, {});
-
-      // Execute upload macro code
-      const result = await databricksAdapter.uploadMacroCode(jsMacroData);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);

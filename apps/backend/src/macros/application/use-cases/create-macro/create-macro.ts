@@ -41,7 +41,6 @@ export class CreateMacroUseCase {
 
     const databricksResult = await this.databricksPort.uploadMacroCode({
       name: macro.name,
-      language: macro.language,
       code: macro.code,
     });
 

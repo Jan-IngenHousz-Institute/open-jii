@@ -36,7 +36,6 @@ export class UpdateMacroUseCase {
     if (data.code) {
       const databricksResult = await this.databricksPort.uploadMacroCode({
         name: macro.name,
-        language: macro.language,
         code: data.code,
       });
 

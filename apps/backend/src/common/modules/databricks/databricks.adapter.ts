@@ -26,10 +26,7 @@ import type {
   ImportWorkspaceObjectResponse,
   DeleteWorkspaceObjectResponse,
 } from "./services/workspace/workspace.types";
-import {
-  WorkspaceObjectLanguage,
-  WorkspaceObjectFormat,
-} from "./services/workspace/workspace.types";
+import { WorkspaceObjectFormat } from "./services/workspace/workspace.types";
 
 @Injectable()
 export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabricksPort {
@@ -225,37 +222,17 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    */
   async uploadMacroCode({
     name,
-    language,
     code,
-  }: Pick<MacroDto, "name" | "language" | "code">): Promise<Result<ImportWorkspaceObjectResponse>> {
+  }: Pick<MacroDto, "name" | "code">): Promise<Result<ImportWorkspaceObjectResponse>> {
     this.logger.log(`Uploading macro code for macro: ${name}`);
-
-    const mapMacroLanguageToWorkspaceLanguage = (
-      language: MacroDto["language"],
-    ): WorkspaceObjectLanguage => {
-      switch (language) {
-        case "python":
-          return WorkspaceObjectLanguage.PYTHON;
-        case "r":
-          return WorkspaceObjectLanguage.R;
-        case "javascript":
-          return WorkspaceObjectLanguage.SCALA; // Note: JavaScript maps to Scala in Databricks context
-        default:
-          return WorkspaceObjectLanguage.PYTHON; // Default fallback
-      }
-    };
 
     // Construct the workspace path for the macro
     const workspacePath = `/Shared/macros/${name}`;
-
-    // Map the macro language to Databricks workspace language
-    const workspaceLanguage = mapMacroLanguageToWorkspaceLanguage(language);
 
     // Upload the macro code to Databricks workspace
     return await this.workspaceService.importWorkspaceObject({
       content: code,
       format: WorkspaceObjectFormat.SOURCE,
-      language: workspaceLanguage,
       overwrite: true,
       path: workspacePath,
     });

@@ -63,7 +63,6 @@ describe("CreateMacroUseCase", () => {
 
       expect(uploadMacroCodeSpy).toHaveBeenCalledWith({
         code: mockRequest.code,
-        language: mockRequest.language,
         name: result.value.name,
       });
     });

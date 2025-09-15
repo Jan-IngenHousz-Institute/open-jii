@@ -16,7 +16,7 @@ export abstract class DatabricksPort {
    * @param macro - The uploaded macro
    */
   abstract uploadMacroCode(
-    params: Pick<MacroDto, "name" | "language" | "code">,
+    params: Pick<MacroDto, "name" | "code">,
   ): Promise<Result<ImportWorkspaceObjectResponse>>;
 
   /**
