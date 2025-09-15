@@ -120,7 +120,13 @@
     "pickADate": "Pick a date",
     "embargoUntil": "Embargo until",
     "visibilityCannotBeChanged": "Once public, visibility cannot be changed back to private.",
-    "embargoUntilHelperString": "This experiment will become public on {{date}}."
+    "embargoUntilHelperString": "This experiment will become public on {{date}}.",
+    "locationsTitle": "Experiment Locations",
+    "locationsDescription": "Select geographic locations where this experiment will take place",
+    "selectLocations": "Select Locations",
+    "addLocationsTitle": "Add Locations",
+    "addLocationsDescription": "Click on the map to add experiment locations",
+    "locationsListTitle": "Selected Locations"
   },
 
   "experimentSettings": {
