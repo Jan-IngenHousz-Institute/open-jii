@@ -412,9 +412,9 @@ module "ses" {
     "auth@mail.${var.environment}.${var.domain_name}",
   ]
 
-  create_smtp_user        = true
-  enable_event_publishing = true
-  enable_dmarc_reports    = true
+  create_smtp_user            = true
+  enable_event_publishing     = true
+  enable_dmarc_reports        = true
   dmarc_report_retention_days = 90
 
   tags = {
@@ -462,10 +462,10 @@ module "opennext_waf" {
     {
       search_string         = "login"
       positional_constraint = "CONTAINS_WORD"
-      method               = "POST"
+      method                = "POST"
     },
   ]
-  
+
   tags = {
     Environment = "dev"
     Project     = "open-jii"

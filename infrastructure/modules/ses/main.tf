@@ -16,10 +16,10 @@ data "aws_caller_identity" "current" {}
 locals {
   # Region from variable for cleaner references
   region = var.region
-  
+
   # Construct the from domain based on subdomain, environment, and domain
   from_domain = var.subdomain != "" ? "${var.subdomain}.${var.environment}.${var.domain_name}" : "${var.environment}.${var.domain_name}"
-  
+
   # Generate DMARC policy with dynamic domain
   dmarc_policy = var.dmarc_policy != "" ? var.dmarc_policy : "v=DMARC1; p=quarantine; adkim=s; aspf=s; pct=100; rua=mailto:dmarc@${local.from_domain}"
 }
@@ -66,8 +66,8 @@ resource "aws_route53_record" "dkim_records" {
 
 # Set up a custom MAIL FROM domain for better SPF alignment
 resource "aws_ses_domain_mail_from" "this" {
-  domain           = aws_ses_domain_identity.main.domain
-  mail_from_domain = "bounce.${local.from_domain}"
+  domain                 = aws_ses_domain_identity.main.domain
+  mail_from_domain       = "bounce.${local.from_domain}"
   behavior_on_mx_failure = "UseDefaultValue"
 }
 
@@ -136,7 +136,7 @@ resource "aws_s3_bucket_public_access_block" "dmarc_reports" {
 resource "aws_s3_bucket_ownership_controls" "dmarc_reports" {
   count  = var.enable_dmarc_reports ? 1 : 0
   bucket = aws_s3_bucket.dmarc_reports[0].id
-  
+
   rule {
     object_ownership = "BucketOwnerEnforced"
   }
@@ -187,8 +187,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "dmarc_reports" {
 
 # SES Receipt Rule Set for DMARC reports (if receiving reports)
 resource "aws_ses_receipt_rule_set" "dmarc_reports" {
-  count          = var.enable_dmarc_reports ? 1 : 0
-  rule_set_name  = "${var.environment}-dmarc-reports"
+  count         = var.enable_dmarc_reports ? 1 : 0
+  rule_set_name = "${var.environment}-dmarc-reports"
 }
 
 resource "aws_ses_receipt_rule" "dmarc_reports" {
@@ -208,7 +208,7 @@ resource "aws_ses_receipt_rule" "dmarc_reports" {
 
 # Activate the receipt rule set
 resource "aws_ses_active_receipt_rule_set" "this" {
-  count = var.enable_dmarc_reports ? 1 : 0
+  count         = var.enable_dmarc_reports ? 1 : 0
   rule_set_name = aws_ses_receipt_rule_set.dmarc_reports[0].rule_set_name
 }
 
@@ -221,28 +221,28 @@ resource "aws_s3_bucket_policy" "dmarc_reports" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowSESPuts"
-        Effect    = "Allow"
+        Sid    = "AllowSESPuts"
+        Effect = "Allow"
         Principal = {
           Service = "ses.amazonaws.com"
         }
-        Action    = "s3:PutObject"
-        Resource  = "${aws_s3_bucket.dmarc_reports[0].arn}/dmarc-reports/*"
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.dmarc_reports[0].arn}/dmarc-reports/*"
         Condition = {
           StringEquals = {
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id,
-            "aws:SourceArn" = "arn:aws:ses:${local.region}:${data.aws_caller_identity.current.account_id}:receipt-rule-set/${aws_ses_receipt_rule_set.dmarc_reports[0].rule_set_name}:receipt-rule/${aws_ses_receipt_rule.dmarc_reports[0].name}"
+            "aws:SourceArn"     = "arn:aws:ses:${local.region}:${data.aws_caller_identity.current.account_id}:receipt-rule-set/${aws_ses_receipt_rule_set.dmarc_reports[0].rule_set_name}:receipt-rule/${aws_ses_receipt_rule.dmarc_reports[0].name}"
           }
         }
       },
       {
-        Sid       = "DenyInsecureTransport"
-        Effect    = "Deny"
+        Sid    = "DenyInsecureTransport"
+        Effect = "Deny"
         Principal = {
           "AWS" = "*"
         }
-        Action    = "s3:*"
-        Resource  = [
+        Action = "s3:*"
+        Resource = [
           aws_s3_bucket.dmarc_reports[0].arn,
           "${aws_s3_bucket.dmarc_reports[0].arn}/*"
         ]
@@ -335,7 +335,7 @@ resource "aws_iam_user_policy_attachment" "ses_smtp_policy" {
 # Configuration Set for tracking and reputation management
 resource "aws_ses_configuration_set" "main" {
   name = "${var.environment}-${var.service_name}"
-  
+
   delivery_options {
     tls_policy = "Require"
   }

@@ -9,7 +9,7 @@ terraform {
 
 # Get smallest available instance type, only when not using serverless
 data "databricks_node_type" "smallest" {
-  count     = var.serverless ? 0 : 1
+  count      = var.serverless ? 0 : 1
   local_disk = true
 }
 

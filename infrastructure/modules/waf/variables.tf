@@ -37,7 +37,7 @@ variable "restrictive_rate_limit_routes" {
   type = list(object({
     search_string         = string
     positional_constraint = string
-    method               = string
+    method                = string
   }))
   default = []
 

@@ -18,10 +18,10 @@ resource "databricks_catalog" "this" {
 
 # Grant permissions on the catalog
 resource "databricks_grant" "catalog" {
-  provider  = databricks.workspace
-  for_each  = var.grants
-  
-  catalog   = databricks_catalog.this.name
-  principal = each.value.principal
+  provider = databricks.workspace
+  for_each = var.grants
+
+  catalog    = databricks_catalog.this.name
+  principal  = each.value.principal
   privileges = each.value.privileges
 }
