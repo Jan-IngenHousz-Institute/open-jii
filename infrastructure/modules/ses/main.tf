@@ -305,7 +305,7 @@ resource "aws_iam_policy" "ses_sending" {
         ]
         Resource = "*"
         Condition = {
-          StringEquals = {
+          "ForAnyValue:StringEquals" = {
             "ses:FromAddress" = var.allowed_from_addresses
           }
           StringLike = {
