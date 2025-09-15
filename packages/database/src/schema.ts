@@ -261,11 +261,7 @@ export const macros = pgTable("macros", {
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
+  ...timestamps,
 });
 
 // Flows Table - stores a single graph JSON per experiment (1:1)

@@ -6,8 +6,8 @@ CREATE TABLE "macros" (
 	"language" "macro_language" NOT NULL,
 	"code" text NOT NULL,
 	"created_by" uuid NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
+	"created_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL,
+	"updated_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL,
 	CONSTRAINT "macros_name_unique" UNIQUE("name")
 );
 --> statement-breakpoint
