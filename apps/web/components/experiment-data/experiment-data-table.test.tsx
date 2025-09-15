@@ -169,10 +169,29 @@ vi.mock("@repo/ui/components", () => ({
   Skeleton: ({ className }: { className?: string }) => (
     <div data-testid="skeleton" className={className} />
   ),
+  Form: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
+    <div {...props}>{children}</div>
+  ),
+  FormField: ({
+    render,
+  }: {
+    render: (field: {
+      field: { value: string; onChange: (value: string) => void };
+    }) => React.ReactNode;
+  }) => {
+    const field = { value: "csv", onChange: vi.fn() };
+    return <>{render({ field })}</>;
+  },
+  FormItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  FormLabel: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <label className={className}>{children}</label>
+  ),
+  FormControl: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  FormMessage: () => <div />,
 }));
 
 // Mock DataDownloadModal
-vi.mock("~/components/experiment-data/data-download-modal", () => ({
+vi.mock("./data-download-modal/data-download-modal", () => ({
   DataDownloadModal: ({
     open,
     onOpenChange,

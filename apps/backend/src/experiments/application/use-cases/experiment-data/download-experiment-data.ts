@@ -16,9 +16,11 @@ export interface DownloadExperimentDataQuery {
  * Response structure for download links data
  */
 export interface DownloadExperimentDataDto {
-  external_links: {
-    external_link: string;
+  externalLinks: {
+    externalLink: string;
     expiration: string;
+    totalSize: number;
+    rowCount: number;
   }[];
 }
 
@@ -101,15 +103,17 @@ export class DownloadExperimentDataUseCase {
 
       // Transform the response to only include download links
       const response: DownloadExperimentDataDto = {
-        external_links: data.external_links.map((link) => ({
-          external_link: link.external_link,
+        externalLinks: data.external_links.map((link) => ({
+          externalLink: link.external_link,
           expiration: link.expiration,
+          totalSize: link.byte_count,
+          rowCount: link.row_count,
         })),
       };
 
       this.logger.log(
         `Successfully prepared download for experiment ${experimentId}, table ${query.tableName}. ` +
-          `Total rows: ${data.totalRows}, Total chunks: ${data.external_links.length}`,
+          `Total rows: ${data.totalRows}, Total chunks: ${response.externalLinks.length}`,
       );
 
       return success(response);

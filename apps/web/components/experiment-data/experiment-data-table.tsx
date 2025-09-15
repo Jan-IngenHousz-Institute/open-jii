@@ -9,7 +9,6 @@ import type { PaginationState, Updater } from "@tanstack/react-table";
 import { getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
 import { Download } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
-import { DataDownloadModal } from "~/components/experiment-data/data-download-modal";
 import {
   ExperimentDataRows,
   ExperimentTableHeader,
@@ -35,6 +34,8 @@ import {
   TableBody,
 } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
+
+import { DataDownloadModal } from "./data-download-modal/data-download-modal";
 
 export function ExperimentDataTable({
   experimentId,

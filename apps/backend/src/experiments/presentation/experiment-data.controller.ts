@@ -276,7 +276,7 @@ export class ExperimentDataController {
 
         this.logger.log(
           `Successfully prepared download links for experiment ${experimentId}, table ${tableName}. ` +
-            `Total chunks: ${data.external_links.length}`,
+            `Total chunks: ${data.externalLinks.length}`,
         );
 
         return {

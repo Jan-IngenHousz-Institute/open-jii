@@ -493,10 +493,12 @@ export const zExternalLink = z.object({
 });
 
 export const zDownloadExperimentDataResponse = z.object({
-  external_links: z.array(
+  externalLinks: z.array(
     z.object({
-      external_link: z.string().url(),
+      externalLink: z.string().url(),
       expiration: z.string().datetime(),
+      totalSize: z.number().int().nonnegative(),
+      rowCount: z.number().int().nonnegative(),
     }),
   ),
 });

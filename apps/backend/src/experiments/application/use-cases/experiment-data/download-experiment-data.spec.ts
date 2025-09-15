@@ -19,7 +19,7 @@ describe("DownloadExperimentDataUseCase", () => {
   const MOCK_CATALOG_NAME = "test_catalog";
   const MOCK_WAIT_TIMEOUT = "50s";
   const MOCK_DISPOSITION = "EXTERNAL_LINKS";
-  const MOCK_FORMAT = "JSON_ARRAY";
+  const MOCK_FORMAT = "CSV";
 
   beforeAll(async () => {
     await testApp.setup();
@@ -77,7 +77,7 @@ describe("DownloadExperimentDataUseCase", () => {
         },
       ],
       totalRows: 1500,
-      format: "JSON_ARRAY",
+      format: "CSV",
     };
 
     // Mock token request
@@ -104,7 +104,7 @@ describe("DownloadExperimentDataUseCase", () => {
     // Mock SQL query with EXTERNAL_LINKS disposition
     nock(DATABRICKS_HOST)
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: "SELECT * FROM bronze_data",
+        statement: "SELECT * FROM bronze_data LIMIT 10",
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: `exp_${experiment.name}_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
@@ -147,14 +147,18 @@ describe("DownloadExperimentDataUseCase", () => {
     const downloadData = result.value;
 
     expect(downloadData).toEqual({
-      external_links: [
+      externalLinks: [
         {
-          external_link: "https://databricks-presigned-url.com/chunk0",
+          externalLink: "https://databricks-presigned-url.com/chunk0",
           expiration: "2024-01-01T15:00:00.000Z",
+          totalSize: 50000,
+          rowCount: 1000,
         },
         {
-          external_link: "https://databricks-presigned-url.com/chunk1",
+          externalLink: "https://databricks-presigned-url.com/chunk1",
           expiration: "2024-01-01T15:00:00.000Z",
+          totalSize: 25000,
+          rowCount: 500,
         },
       ],
     });

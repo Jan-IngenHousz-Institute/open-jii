@@ -1,10 +1,10 @@
 import { tsr } from "@/lib/tsr";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, renderHook, waitFor } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-import { useExperimentDataDownload } from "./useExperimentDataDownload";
+import { useExperimentDataDownload, useDownloadFile } from "./useExperimentDataDownload";
 
 // Mock the tsr module
 vi.mock("@/lib/tsr", () => ({
@@ -35,39 +35,27 @@ describe("useExperimentDataDownload", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    // Set up DOM environment properly
-    if (typeof document !== "undefined") {
-      document.body.innerHTML = '<div id="test-container"></div>';
-    }
-
-    // Mock document methods for download simulation
-    global.document.createElement = vi.fn().mockImplementation(() => ({
-      href: "",
-      download: "",
-      target: "",
-      rel: "",
-      click: vi.fn(),
-    }));
-    global.document.body.appendChild = vi.fn();
-    global.document.body.removeChild = vi.fn();
   });
 
-  it("should call the downloadExperimentData query with correct parameters", async () => {
+  it("should call the downloadExperimentData query with correct parameters when enabled", async () => {
     const experimentId = "experiment-123";
     const tableName = "test_table";
 
     const mockResponse = {
       status: 200,
       body: {
-        external_links: [
+        externalLinks: [
           {
-            external_link: "https://example.com/download/file1.csv",
+            externalLink: "https://example.com/download/file1.csv",
             expiration: "2023-12-31T23:59:59Z",
+            totalSize: 1024,
+            rowCount: 100,
           },
           {
-            external_link: "https://example.com/download/file2.csv",
+            externalLink: "https://example.com/download/file2.csv",
             expiration: "2023-12-31T23:59:59Z",
+            totalSize: 2048,
+            rowCount: 200,
           },
         ],
       },
@@ -77,80 +65,43 @@ describe("useExperimentDataDownload", () => {
     const queryMock = vi.fn().mockResolvedValue(mockResponse);
     vi.mocked(tsr.experiments.downloadExperimentData.query).mockImplementation(queryMock);
 
-    const { result } = renderHook(() => useExperimentDataDownload(), {
+    const { result } = renderHook(() => useExperimentDataDownload(experimentId, tableName, true), {
       wrapper: createWrapper(),
-      container: document.getElementById("test-container") ?? document.body,
     });
 
-    result.current.mutate({ experimentId, tableName });
-
     await waitFor(() => {
-      expect(queryMock).toHaveBeenCalledWith({
-        params: { id: experimentId },
-        query: { tableName },
-      });
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(queryMock).toHaveBeenCalledWith({
+      params: { id: experimentId },
+      query: { tableName },
+    });
+
+    expect(result.current.data).toEqual({
+      data: mockResponse.body,
+      tableName,
     });
   });
 
-  it("should create download links for each external link", async () => {
+  it("should not fetch data when enabled is false", () => {
     const experimentId = "experiment-123";
     const tableName = "test_table";
 
-    const mockResponse = {
-      status: 200,
-      body: {
-        external_links: [
-          {
-            external_link: "https://example.com/download/file1.csv",
-            expiration: "2023-12-31T23:59:59Z",
-          },
-          {
-            external_link: "https://example.com/download/file2.csv",
-            expiration: "2023-12-31T23:59:59Z",
-          },
-        ],
-      },
-    };
-
-    // Setup the mock
-    const queryMock = vi.fn().mockResolvedValue(mockResponse);
+    const queryMock = vi.fn();
     vi.mocked(tsr.experiments.downloadExperimentData.query).mockImplementation(queryMock);
 
-    const createElement = vi.fn().mockImplementation(() => ({
-      href: "",
-      download: "",
-      target: "",
-      rel: "",
-      click: vi.fn(),
-    }));
-    const appendChild = vi.fn();
-    const removeChild = vi.fn();
-
-    Object.defineProperty(document, "createElement", { value: createElement });
-    Object.defineProperty(document.body, "appendChild", { value: appendChild });
-    Object.defineProperty(document.body, "removeChild", { value: removeChild });
-
-    const { result } = renderHook(() => useExperimentDataDownload(), {
+    const { result } = renderHook(() => useExperimentDataDownload(experimentId, tableName, false), {
       wrapper: createWrapper(),
-      container: document.getElementById("test-container") ?? document.body,
     });
 
-    result.current.mutate({ experimentId, tableName });
-
-    await waitFor(() => {
-      expect(queryMock).toHaveBeenCalledTimes(1);
-      expect(createElement).toHaveBeenCalledTimes(2);
-      expect(appendChild).toHaveBeenCalledTimes(2);
-      expect(removeChild).toHaveBeenCalledTimes(2);
-    });
+    expect(result.current.isFetching).toBe(false);
+    expect(queryMock).not.toHaveBeenCalled();
   });
 
   it("should handle errors when download fails", async () => {
     const experimentId = "experiment-123";
     const tableName = "test_table";
-    const errorMessage = "Failed to generate download links";
-
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
 
     // Setup the mock with error response
     const queryMock = vi.fn().mockResolvedValue({
@@ -159,27 +110,88 @@ describe("useExperimentDataDownload", () => {
     });
     vi.mocked(tsr.experiments.downloadExperimentData.query).mockImplementation(queryMock);
 
-    const { result } = renderHook(() => useExperimentDataDownload(), {
+    const { result } = renderHook(() => useExperimentDataDownload(experimentId, tableName, true), {
       wrapper: createWrapper(),
-      container: document.getElementById("test-container") ?? document.body,
     });
-
-    result.current.mutate({ experimentId, tableName });
 
     await waitFor(() => {
-      expect(queryMock).toHaveBeenCalledWith({
-        params: { id: experimentId },
-        query: { tableName },
-      });
-      expect(consoleErrorSpy).toHaveBeenCalled();
-      expect(consoleErrorSpy.mock.calls[0][0]).toBe("Download failed:");
-
-      // Check the error object
-      const error = consoleErrorSpy.mock.calls[0][1] as Error;
-      expect(error).toBeInstanceOf(Error);
-      expect(error.message).toBe(errorMessage);
+      expect(result.current.isError).toBe(true);
     });
 
-    consoleErrorSpy.mockRestore();
+    expect(queryMock).toHaveBeenCalledWith({
+      params: { id: experimentId },
+      query: { tableName },
+    });
+
+    expect(result.current.error).toBeInstanceOf(Error);
+    if (result.current.error) {
+      expect(result.current.error.message).toBe("Failed to generate download links");
+    }
+  });
+
+  it("should use correct query key", () => {
+    const experimentId = "experiment-123";
+    const tableName = "test_table";
+
+    const queryMock = vi.fn().mockResolvedValue({
+      status: 200,
+      body: { externalLinks: [] },
+    });
+    vi.mocked(tsr.experiments.downloadExperimentData.query).mockImplementation(queryMock);
+
+    renderHook(() => useExperimentDataDownload(experimentId, tableName, true), {
+      wrapper: createWrapper(),
+    });
+
+    // Check that the query key is correct by inspecting the query cache
+    const queries = queryClient.getQueryCache().getAll();
+    expect(queries).toHaveLength(1);
+    expect(queries[0]?.queryKey).toEqual(["downloadExperimentData", experimentId, tableName]);
+  });
+});
+
+describe("useDownloadFile", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Mock DOM methods for download simulation
+    global.document.createElement = vi.fn().mockImplementation(() => ({
+      href: "",
+      target: "",
+      rel: "",
+      click: vi.fn(),
+    }));
+    global.document.body.appendChild = vi.fn();
+    global.document.body.removeChild = vi.fn();
+  });
+
+  it("should create download link and trigger click", () => {
+    const url = "https://example.com/file.csv";
+    const mockLink = {
+      href: "",
+      target: "",
+      rel: "",
+      click: vi.fn(),
+    };
+
+    const createElementMock = vi.fn().mockReturnValue(mockLink);
+    const appendChildMock = vi.fn();
+    const removeChildMock = vi.fn();
+
+    global.document.createElement = createElementMock;
+    global.document.body.appendChild = appendChildMock;
+    global.document.body.removeChild = removeChildMock;
+
+    const hook = useDownloadFile();
+
+    hook.downloadFile(url);
+
+    expect(createElementMock).toHaveBeenCalledWith("a");
+    expect(mockLink.href).toBe(url);
+    expect(mockLink.target).toBe("_blank");
+    expect(mockLink.rel).toBe("noopener noreferrer");
+    expect(appendChildMock).toHaveBeenCalledWith(mockLink);
+    expect(mockLink.click).toHaveBeenCalled();
+    expect(removeChildMock).toHaveBeenCalledWith(mockLink);
   });
 });
