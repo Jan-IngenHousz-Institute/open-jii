@@ -97,6 +97,76 @@ resource "aws_wafv2_web_acl" "main" {
     }
   }
 
+  # Restrictive rate limiting for specific sensitive routes
+  # Applies much lower rate limits to specific routes that may be sensitive or costly
+  # Each route can have its own method and positional constraint configuration
+  dynamic "rule" {
+    for_each = length(var.restrictive_rate_limit_routes) > 0 ? [1] : []
+    content {
+      name     = "RestrictiveRateLimitRule"
+      priority = 5
+
+      action {
+        block {}
+      }
+
+      statement {
+        rate_based_statement {
+          limit              = var.restrictive_rate_limit # Much lower limit (default: 5 requests per 5 minutes)
+          aggregate_key_type = "IP"
+
+          # Apply this rate limit to configured routes with their specific methods and constraints
+          scope_down_statement {
+            or_statement {
+              # Create a statement for each configured route
+              dynamic "statement" {
+                for_each = var.restrictive_rate_limit_routes
+                content {
+                  and_statement {
+                    # Match the HTTP method for this route
+                    statement {
+                      byte_match_statement {
+                        search_string         = statement.value.method
+                        positional_constraint = "EXACTLY"
+                        field_to_match {
+                          method {}
+                        }
+                        text_transformation {
+                          priority = 0
+                          type     = "NONE"
+                        }
+                      }
+                    }
+                    # Match the URI path with the configured constraint
+                    statement {
+                      byte_match_statement {
+                        search_string         = statement.value.search_string
+                        positional_constraint = statement.value.positional_constraint
+                        field_to_match {
+                          uri_path {}
+                        }
+                        text_transformation {
+                          priority = 0
+                          type     = "LOWERCASE"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "RestrictiveRateLimitRuleMetric"
+        sampled_requests_enabled   = true
+      }
+    }
+  }
+
   # Rule to block requests for sensitive paths like .git
   rule {
     name     = "BlockSensitivePaths"
@@ -134,7 +204,7 @@ resource "aws_wafv2_web_acl" "main" {
     for_each = length(var.blocked_countries) > 0 ? [1] : []
     content {
       name     = "GeoBlockRule"
-      priority = 4
+      priority = 6
 
       action {
         block {}
