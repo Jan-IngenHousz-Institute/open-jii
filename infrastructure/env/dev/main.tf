@@ -211,19 +211,6 @@ module "databricks_catalog" {
   depends_on = [module.databricks_metastore, module.node_service_principal]
 }
 
-module "central_schema" {
-  source         = "../../modules/databricks/schema"
-  catalog_name   = module.databricks_catalog.catalog_name
-  schema_name    = "centrum"
-  schema_comment = "Central schema for OpenJII sensor data following the medallion architecture"
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-
-  depends_on = [module.databricks_catalog]
-}
-
 module "centrum_pipeline" {
   source = "../../modules/databricks/pipeline"
 
@@ -236,10 +223,12 @@ module "centrum_pipeline" {
   ]
 
   configuration = {
-    "CENTRAL_SCHEMA"    = "centrum"
-    "BRONZE_TABLE"      = "raw_data"
-    "SILVER_TABLE"      = "clean_data"
-    "RAW_KINESIS_TABLE" = "raw_kinesis_data"
+    "BRONZE_TABLE"            = "raw_data"
+    "SILVER_TABLE"            = "clean_data"
+    "RAW_KINESIS_TABLE"       = "raw_kinesis_data"
+    "KINESIS_STREAM_NAME"     = module.kinesis.kinesis_stream_name
+    "SERVICE_CREDENTIAL_NAME" = module.kinesis.role_name
+    "CHECKPOINT_PATH"         = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
   }
 
   continuous_mode  = false
@@ -249,8 +238,6 @@ module "centrum_pipeline" {
   providers = {
     databricks.workspace = databricks.workspace
   }
-
-  depends_on = [module.central_schema]
 }
 
 module "experiment_provisioning_job" {
