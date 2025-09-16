@@ -3308,6 +3308,9 @@
                       "name": {
                         "type": "string"
                       },
+                      "filename": {
+                        "type": "string"
+                      },
                       "description": {
                         "type": "string",
                         "nullable": true
@@ -3338,6 +3341,7 @@
                     "required": [
                       "id",
                       "name",
+                      "filename",
                       "description",
                       "language",
                       "code",
@@ -3421,6 +3425,9 @@
                     "name": {
                       "type": "string"
                     },
+                    "filename": {
+                      "type": "string"
+                    },
                     "description": {
                       "type": "string",
                       "nullable": true
@@ -3451,6 +3458,7 @@
                   "required": [
                     "id",
                     "name",
+                    "filename",
                     "description",
                     "language",
                     "code",
@@ -3516,6 +3524,9 @@
                     "name": {
                       "type": "string"
                     },
+                    "filename": {
+                      "type": "string"
+                    },
                     "description": {
                       "type": "string",
                       "nullable": true
@@ -3546,6 +3557,7 @@
                   "required": [
                     "id",
                     "name",
+                    "filename",
                     "description",
                     "language",
                     "code",
@@ -3636,6 +3648,9 @@
                     "name": {
                       "type": "string"
                     },
+                    "filename": {
+                      "type": "string"
+                    },
                     "description": {
                       "type": "string",
                       "nullable": true
@@ -3666,6 +3681,7 @@
                   "required": [
                     "id",
                     "name",
+                    "filename",
                     "description",
                     "language",
                     "code",
