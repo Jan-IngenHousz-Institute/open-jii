@@ -6,6 +6,7 @@ export const zMacroLanguage = z.enum(["python", "r", "javascript"]);
 export const zMacro = z.object({
   id: z.string().uuid(),
   name: z.string(),
+  filename: z.string(),
   description: z.string().nullable(),
   language: zMacroLanguage,
   code: z.string(),

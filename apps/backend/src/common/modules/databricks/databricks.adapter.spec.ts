@@ -822,12 +822,12 @@ describe("DatabricksAdapter", () => {
 
   describe("uploadMacroCode", () => {
     const macroData = {
-      name: "Some Macro 17",
+      filename: "some_macro_17",
       code: 'print("Hello, World!")',
       language: "python" as const,
     };
 
-    it("should successfully upload macro code to workspace with formatted name and extension", async () => {
+    it("should successfully upload macro code to workspace with filename and extension", async () => {
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,
@@ -849,29 +849,29 @@ describe("DatabricksAdapter", () => {
       expect(result.value).toEqual({});
     });
 
-    it("should format macro name correctly for different languages", async () => {
+    it("should format filename correctly for different languages", async () => {
       const testCases: {
-        name: string;
+        filename: string;
         language: string;
         expectedPath: string;
       }[] = [
         {
-          name: "Some Macro 17",
+          filename: "some_macro_17",
           language: "python",
           expectedPath: "/Shared/macros/some_macro_17.py",
         },
         {
-          name: "R Analysis Script",
+          filename: "r_analysis_script",
           language: "r",
           expectedPath: "/Shared/macros/r_analysis_script.r",
         },
         {
-          name: "JavaScript Helper",
+          filename: "javascript_helper",
           language: "javascript",
           expectedPath: "/Shared/macros/javascript_helper.js",
         },
         {
-          name: "Unknown Language Macro",
+          filename: "unknown_language_macro",
           language: "unknown",
           expectedPath: "/Shared/macros/unknown_language_macro",
         },
@@ -892,7 +892,7 @@ describe("DatabricksAdapter", () => {
 
         // Execute upload macro code
         const result = await databricksAdapter.uploadMacroCode({
-          name: testCase.name,
+          filename: testCase.filename,
           code: "test code",
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           language: testCase.language as any, // Type assertion for test case
@@ -929,9 +929,9 @@ describe("DatabricksAdapter", () => {
   });
 
   describe("deleteMacroCode", () => {
-    const macroName = "Some Test Macro 123";
+    const filename = "some_test_macro_123";
 
-    it("should successfully delete macro code from workspace with formatted name", async () => {
+    it("should successfully delete macro code from workspace with filename", async () => {
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,
@@ -939,13 +939,13 @@ describe("DatabricksAdapter", () => {
         token_type: "Bearer",
       });
 
-      // Mock workspace delete API call
+      // Mock workspace delete API call - the adapter tries multiple extensions
       nock(databricksHost)
         .post(DatabricksWorkspaceService.WORKSPACE_DELETE_ENDPOINT)
         .reply(200, {});
 
       // Execute delete macro code
-      const result = await databricksAdapter.deleteMacroCode(macroName);
+      const result = await databricksAdapter.deleteMacroCode(filename);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -961,14 +961,17 @@ describe("DatabricksAdapter", () => {
         token_type: "Bearer",
       });
 
-      // Mock workspace delete API call with error
-      nock(databricksHost).post(DatabricksWorkspaceService.WORKSPACE_DELETE_ENDPOINT).reply(404, {
-        error_code: "RESOURCE_DOES_NOT_EXIST",
-        message: "Workspace object does not exist",
-      });
+      // Mock workspace delete API calls - try all extensions and fail
+      const extensions = [".py", ".r", ".js", ""];
+      for (const _ext of extensions) {
+        nock(databricksHost).post(DatabricksWorkspaceService.WORKSPACE_DELETE_ENDPOINT).reply(404, {
+          error_code: "RESOURCE_DOES_NOT_EXIST",
+          message: "Workspace object does not exist",
+        });
+      }
 
       // Execute delete macro code
-      const result = await databricksAdapter.deleteMacroCode(macroName);
+      const result = await databricksAdapter.deleteMacroCode(filename);
 
       // Assert result is failure
       expect(result.isFailure()).toBe(true);
@@ -984,7 +987,7 @@ describe("DatabricksAdapter", () => {
       });
 
       // Execute delete macro code
-      const result = await databricksAdapter.deleteMacroCode(macroName);
+      const result = await databricksAdapter.deleteMacroCode(filename);
 
       // Assert result is failure
       expect(result.isFailure()).toBe(true);

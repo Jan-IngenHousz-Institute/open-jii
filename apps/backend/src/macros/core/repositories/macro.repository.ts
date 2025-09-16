@@ -4,7 +4,12 @@ import { and, desc, eq, ilike, macros, users } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import { CreateMacroDto, UpdateMacroDto, MacroDto } from "../models/macro.model";
+import {
+  CreateMacroDto,
+  UpdateMacroDto,
+  MacroDto,
+  deriveFilenameFromName,
+} from "../models/macro.model";
 
 export interface MacroFilter {
   search?: string;
@@ -24,6 +29,7 @@ export class MacroRepository {
         .insert(macros)
         .values({
           ...data,
+          filename: deriveFilenameFromName(data.name),
           createdBy: userId,
         })
         .returning();
@@ -87,10 +93,18 @@ export class MacroRepository {
 
   async update(id: string, data: UpdateMacroDto): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
+      // Build the update object with potentially derived filename
+      const updateData: UpdateMacroDto & { filename?: string } = { ...data };
+
+      // If name is being updated, also update the filename
+      if (data.name) {
+        updateData.filename = deriveFilenameFromName(data.name);
+      }
+
       const results = await this.database
         .update(macros)
         .set({
-          ...data,
+          ...updateData,
           updatedAt: new Date(),
         })
         .where(eq(macros.id, id))

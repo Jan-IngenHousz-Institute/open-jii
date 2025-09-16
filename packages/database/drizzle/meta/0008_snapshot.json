@@ -1,5 +1,5 @@
 {
-  "id": "d28919ad-106e-4492-9f1d-a84968b4f245",
+  "id": "8079676d-d0af-44d6-88d1-16c8300b2be4",
   "prevId": "51ba824e-74f6-44d8-bd9e-67af922e28d9",
   "version": "7",
   "dialect": "postgresql",
@@ -570,6 +570,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "filename": {
+          "name": "filename",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
         "description": {
           "name": "description",
           "type": "text",
@@ -633,6 +639,13 @@
           "nullsNotDistinct": false,
           "columns": [
             "name"
+          ]
+        },
+        "macros_filename_unique": {
+          "name": "macros_filename_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "filename"
           ]
         }
       },

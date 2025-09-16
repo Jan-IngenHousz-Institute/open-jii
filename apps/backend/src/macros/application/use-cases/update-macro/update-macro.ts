@@ -35,7 +35,7 @@ export class UpdateMacroUseCase {
     // If a new code file is provided, process it through Databricks
     if (data.code) {
       const databricksResult = await this.databricksPort.uploadMacroCode({
-        name: macro.name,
+        filename: macro.filename,
         code: data.code,
         language: macro.language,
       });

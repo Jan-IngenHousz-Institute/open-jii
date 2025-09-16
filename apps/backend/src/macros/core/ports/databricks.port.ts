@@ -13,17 +13,15 @@ export const DATABRICKS_PORT = Symbol("MACRO_DATABRICKS_PORT");
 export abstract class DatabricksPort {
   /**
    * Upload macro code file to Databricks
-   * Formats the macro name by converting to lowercase and replacing spaces with underscores
-   * Adds appropriate file extension based on the language
-   * @param macro - The uploaded macro with name, code, and language
+   * @param params - The macro with filename, code, and language
    */
   abstract uploadMacroCode(
-    params: Pick<MacroDto, "name" | "code" | "language">,
+    params: Pick<MacroDto, "filename" | "code" | "language">,
   ): Promise<Result<ImportWorkspaceObjectResponse>>;
 
   /**
    * Delete macro from Databricks
-   * @param macroName - The name of the macro to delete (will be formatted)
+   * @param filename - The filename of the macro to delete
    */
-  abstract deleteMacroCode(macroName: string): Promise<Result<DeleteWorkspaceObjectResponse>>;
+  abstract deleteMacroCode(filename: string): Promise<Result<DeleteWorkspaceObjectResponse>>;
 }

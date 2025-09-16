@@ -1,6 +1,7 @@
 import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import type { CreateMacroDto } from "../../../../macros/core/models/macro.model";
+import { deriveFilenameFromName } from "../../../../macros/core/models/macro.model";
 import { TestHarness } from "../../../../test/test-harness";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 import { CreateMacroUseCase } from "./create-macro";
@@ -55,6 +56,7 @@ describe("CreateMacroUseCase", () => {
       assertSuccess(result);
       expect(result.value).toMatchObject({
         name: mockRequest.name,
+        filename: deriveFilenameFromName(mockRequest.name),
         description: mockRequest.description,
         language: mockRequest.language,
         code: mockRequest.code,
@@ -63,7 +65,7 @@ describe("CreateMacroUseCase", () => {
 
       expect(uploadMacroCodeSpy).toHaveBeenCalledWith({
         code: mockRequest.code,
-        name: result.value.name,
+        filename: result.value.filename,
         language: mockRequest.language,
       });
     });

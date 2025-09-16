@@ -5,6 +5,7 @@ import { macros as macrosTable, eq } from "@repo/database";
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import type { CreateMacroDto } from "../models/macro.model";
+import { deriveFilenameFromName } from "../models/macro.model";
 import { MacroRepository } from "./macro.repository";
 import type { MacroFilter } from "./macro.repository";
 
@@ -57,6 +58,7 @@ describe("MacroRepository", () => {
       expect(macro).toMatchObject({
         id: expect.any(String) as string,
         name: createMacroDto.name,
+        filename: deriveFilenameFromName(createMacroDto.name),
         description: createMacroDto.description,
         language: createMacroDto.language,
         code: createMacroDto.code,
@@ -74,6 +76,7 @@ describe("MacroRepository", () => {
       expect(dbResult.length).toBe(1);
       expect(dbResult[0]).toMatchObject({
         name: createMacroDto.name,
+        filename: deriveFilenameFromName(createMacroDto.name),
         description: createMacroDto.description,
         language: createMacroDto.language,
         code: createMacroDto.code,
@@ -100,6 +103,7 @@ describe("MacroRepository", () => {
 
       expect(macro.description).toBeNull();
       expect(macro.name).toBe(createMacroDto.name);
+      expect(macro.filename).toBe(deriveFilenameFromName(createMacroDto.name));
       expect(macro.language).toBe(createMacroDto.language);
     });
 
@@ -123,6 +127,32 @@ describe("MacroRepository", () => {
 
       // Act
       const result = await repository.create(duplicateDto, anotherUserId);
+
+      // Assert
+      expect(result.isFailure()).toBe(true);
+    });
+
+    it("should fail to create macro with duplicate filename (derived from different names)", async () => {
+      // Arrange - create first macro
+      const firstMacroDto: CreateMacroDto = {
+        name: "Test Macro", // This becomes "test_macro"
+        description: "First macro",
+        language: "python",
+        code: "Zmlyc3QgbWFjcm8=", // base64 encoded "first macro"
+      };
+
+      await repository.create(firstMacroDto, testUserId);
+
+      // Try to create second macro with different name but same derived filename
+      const secondMacroDto: CreateMacroDto = {
+        name: "test_macro", // This also becomes "test_macro"
+        description: "Second macro",
+        language: "python",
+        code: "c2Vjb25kIG1hY3Jv", // base64 encoded "second macro"
+      };
+
+      // Act
+      const result = await repository.create(secondMacroDto, anotherUserId);
 
       // Assert
       expect(result.isFailure()).toBe(true);
@@ -500,6 +530,7 @@ describe("MacroRepository", () => {
       expect(updatedMacro).toMatchObject({
         id: createdMacro.id,
         name: updateDto.name,
+        filename: deriveFilenameFromName(updateDto.name),
         description: updateDto.description,
         language: updateDto.language,
         code: updateDto.code,
@@ -512,7 +543,10 @@ describe("MacroRepository", () => {
         .from(macrosTable)
         .where(eq(macrosTable.id, createdMacro.id));
 
-      expect(dbResult[0]).toMatchObject(updateDto);
+      expect(dbResult[0]).toMatchObject({
+        ...updateDto,
+        filename: deriveFilenameFromName(updateDto.name),
+      });
     });
 
     it("should update macro with partial fields", async () => {
@@ -543,6 +577,7 @@ describe("MacroRepository", () => {
       expect(updatedMacro).toMatchObject({
         id: createdMacro.id,
         name: partialUpdate.name,
+        filename: deriveFilenameFromName(partialUpdate.name),
         description: createMacroDto.description,
         language: createMacroDto.language,
         code: createMacroDto.code,
@@ -614,6 +649,35 @@ describe("MacroRepository", () => {
 
       // Assert
       expect(result.isFailure()).toBe(true);
+    });
+
+    it("should correctly derive filename from name with special characters", async () => {
+      // Arrange
+      const createMacroDto = {
+        name: "  My AWESOME Macro   v2.1  ",
+        description: "Test filename derivation",
+        language: "python" as const,
+        code: "dGVzdCBjb2Rl", // base64 encoded "test code"
+      };
+
+      const createResult = await repository.create(createMacroDto, testUserId);
+      assertSuccess(createResult);
+      const createdMacro = createResult.value[0];
+
+      // Assert the filename was properly derived
+      expect(createdMacro.filename).toBe("my_awesome_macro_v2.1");
+
+      // Test updating with another special name
+      const updateDto = {
+        name: "NEW   NAME With     SPACES",
+      };
+
+      const updateResult = await repository.update(createdMacro.id, updateDto);
+      assertSuccess(updateResult);
+      const updatedMacro = updateResult.value[0];
+
+      // Assert the filename was properly updated
+      expect(updatedMacro.filename).toBe("new_name_with_spaces");
     });
   });
 

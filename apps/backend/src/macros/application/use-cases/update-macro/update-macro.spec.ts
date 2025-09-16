@@ -2,6 +2,7 @@ import { DatabricksAdapter } from "../../../../common/modules/databricks/databri
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import type { CreateMacroDto, UpdateMacroDto } from "../../../core/models/macro.model";
+import { deriveFilenameFromName } from "../../../core/models/macro.model";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 import { UpdateMacroUseCase } from "./update-macro";
 
@@ -70,6 +71,9 @@ describe("UpdateMacroUseCase", () => {
       language: updateData.language,
       createdBy: testUserId,
     });
+
+    // Verify filename was updated
+    expect(result.value.filename).toBe(deriveFilenameFromName("Updated Macro"));
   });
 
   it("should update a macro with code file and process through Databricks", async () => {
@@ -106,7 +110,7 @@ describe("UpdateMacroUseCase", () => {
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(databricksAdapter.uploadMacroCode).toHaveBeenCalledWith({
       code: updateData.code,
-      name: updateData.name,
+      filename: "updated_code_macro", // derived from updateData.name
       language: "python", // original language from created macro
     });
   });

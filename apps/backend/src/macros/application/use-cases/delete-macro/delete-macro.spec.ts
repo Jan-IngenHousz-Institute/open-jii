@@ -68,9 +68,9 @@ describe("DeleteMacroUseCase", () => {
     assertSuccess(findResult);
     expect(findResult.value).toBeNull();
 
-    // Verify Databricks was called
+    // Verify Databricks was called with filename, not name
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksAdapter.deleteMacroCode).toHaveBeenCalledWith(createdMacro.id);
+    expect(databricksAdapter.deleteMacroCode).toHaveBeenCalledWith(createdMacro.filename);
   });
 
   it("should return error when deleting non-existent macro", async () => {
@@ -126,9 +126,9 @@ describe("DeleteMacroUseCase", () => {
     assertSuccess(findResult);
     expect(findResult.value).toBeNull();
 
-    // Verify Databricks was called
+    // Verify Databricks was called with filename, not name
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksAdapter.deleteMacroCode).toHaveBeenCalledWith(createdMacro.id);
+    expect(databricksAdapter.deleteMacroCode).toHaveBeenCalledWith(createdMacro.filename);
   });
 
   it("should return error when database deletion fails", async () => {

@@ -28,8 +28,10 @@ export class DeleteMacroUseCase {
       return failure(AppError.notFound("Macro not found"));
     }
 
-    // Delete from Databricks first
-    const databricksResult = await this.databricksPort.deleteMacroCode(id);
+    const macro = macroResult.value;
+
+    // Delete from Databricks first - use filename, not name
+    const databricksResult = await this.databricksPort.deleteMacroCode(macro.filename);
 
     if (databricksResult.isFailure()) {
       this.logger.warn(

@@ -255,6 +255,7 @@ export const macroLanguageEnum = pgEnum("macro_language", ["python", "r", "javas
 export const macros = pgTable("macros", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull().unique(),
+  filename: varchar("filename", { length: 255 }).notNull().unique(),
   description: text("description"),
   language: macroLanguageEnum("language").notNull(),
   code: text("code").notNull(), // Base64 encoded content of the macro code

@@ -217,19 +217,17 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
 
   /**
    * Upload macro code file to Databricks workspace
-   * Formats the macro name by converting to lowercase and replacing spaces with underscores
-   * Adds appropriate file extension based on the language
-   * @param params - The macro name, code, and language to upload
+   * Uses the pre-computed filename and adds appropriate file extension based on the language
+   * @param params - The macro filename, code, and language to upload
    * @returns Result containing the import response
    */
   async uploadMacroCode({
-    name,
+    filename,
     code,
     language,
-  }: Pick<MacroDto, "name" | "code" | "language">): Promise<Result<ImportWorkspaceObjectResponse>> {
-    // Format the macro name: lowercase and replace spaces with underscores
-    const formattedName = name.toLowerCase().trim().replace(/\s+/g, "_");
-
+  }: Pick<MacroDto, "filename" | "code" | "language">): Promise<
+    Result<ImportWorkspaceObjectResponse>
+  > {
     // Determine file extension based on language
     let fileExtension: string | undefined;
     switch (language) {
@@ -246,9 +244,9 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
         fileExtension = undefined;
     }
 
-    const fileName = fileExtension ? `${formattedName}${fileExtension}` : formattedName;
+    const fileName = fileExtension ? `${filename}${fileExtension}` : filename;
 
-    this.logger.log(`Uploading macro code for macro: ${name} (${language}) -> ${fileName}`);
+    this.logger.log(`Uploading macro code with filename: ${filename} (${language}) -> ${fileName}`);
 
     // Construct the workspace path for the macro
     const workspacePath = `/Shared/macros/${fileName}`;
@@ -264,22 +262,41 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
 
   /**
    * Delete macro code from Databricks workspace
-   * Formats the macro name by converting to lowercase and replacing spaces with underscores
-   * @param name - The name of the macro to delete
+   * Uses the pre-computed filename directly
+   * @param filename - The filename of the macro to delete
    * @returns Result containing the delete response
    */
-  async deleteMacroCode(name: string): Promise<Result<DeleteWorkspaceObjectResponse>> {
-    // Format the macro name: lowercase and replace spaces with underscores
-    const formattedName = name.toLowerCase().trim().replace(/\s+/g, "_");
+  async deleteMacroCode(filename: string): Promise<Result<DeleteWorkspaceObjectResponse>> {
+    this.logger.log(`Deleting macro code with filename: ${filename}`);
 
-    this.logger.log(`Deleting macro code for macro: ${name} -> ${formattedName}`);
+    // Construct the workspace path for the macro - we need to determine the extension
+    // For now, we'll try common extensions (this could be improved by storing extension separately)
+    const extensions = [".py", ".r", ".js", ""];
 
-    // Construct the workspace path for the macro
-    const workspacePath = `/Shared/macros/${formattedName}`;
+    for (const ext of extensions) {
+      const workspacePath = `/Shared/macros/${filename}${ext}`;
 
-    // Delete the macro code from Databricks workspace
-    return await this.workspaceService.deleteWorkspaceObject({
-      path: workspacePath,
+      const deleteResult = await this.workspaceService.deleteWorkspaceObject({
+        path: workspacePath,
+        recursive: false,
+      });
+
+      // If deletion was successful or file was not found, we're done
+      if (deleteResult.isSuccess()) {
+        this.logger.log(`Successfully deleted macro: ${workspacePath}`);
+        return deleteResult;
+      }
+
+      // If it's not a "not found" error, return the error
+      if (!deleteResult.error.message.includes("does not exist")) {
+        return deleteResult;
+      }
+    }
+
+    // If we get here, the file wasn't found with any extension
+    this.logger.warn(`Macro file not found with filename: ${filename}`);
+    return this.workspaceService.deleteWorkspaceObject({
+      path: `/Shared/macros/${filename}`,
       recursive: false,
     });
   }
