@@ -3,26 +3,30 @@
 # Implementation of experiment-specific medallion architecture pipeline
 # Processes data from central silver layer into experiment-specific bronze/silver/gold tables
 
+%pip install py-mini-racer numpy scipy
+
 # COMMAND ----------
 
 import dlt
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
-from pyspark.sql.types import StringType, TimestampType, DoubleType
 from pyspark.sql.types import StringType, TimestampType, DoubleType, StructType, StructField, IntegerType, FloatType, BooleanType, ArrayType
 from pyspark.sql import SparkSession
 from delta.tables import DeltaTable
 import os
+import json
 import sys
-import pandas as pd
+from typing import Dict, Any, List
 
 sys.path.append("/Workspace/Shared/lib")
-
-# Import the processing functions from the separate module
+# Import the ambyte processing utilities
 from ambyte_parsing import find_byte_folders, load_files_per_byte, process_trace_files
-
 # Import volume I/O utilities
 from volume_io import discover_and_validate_upload_directories, parse_upload_time
+
+sys.path.append("/Workspace/Shared/lib/multispeq/macro")
+# Import our macro processing library
+from macro import execute_macro_script, get_available_macros, process_macro_output_for_spark
 
 # COMMAND ----------
 
@@ -37,6 +41,10 @@ CENTRAL_SILVER_TABLE = spark.conf.get("CENTRAL_SILVER_TABLE", "clean_data")
 # Constants for ambyte processing
 YEAR_PREFIX = "2025"
 
+# Macro processing configuration
+MACROS_PATH = "/Workspace/Shared/macros"  # Path to macro scripts
+ENABLE_MACRO_PROCESSING = spark.conf.get("ENABLE_MACRO_PROCESSING", "true").lower() == "true"
+
 # Output table names
 DEVICE_TABLE = "device"
 SAMPLE_TABLE = "sample"
@@ -47,6 +55,9 @@ spark = SparkSession.builder.getOrCreate()
 print(f"Processing experiment: {EXPERIMENT_ID}")
 print(f"Using experiment schema: {EXPERIMENT_SCHEMA}")
 print(f"Reading from central schema: {CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}")
+print(f"Macro processing enabled: {ENABLE_MACRO_PROCESSING}")
+if ENABLE_MACRO_PROCESSING:
+    print(f"Macros path: {MACROS_PATH}")
 
 # COMMAND ----------
 
@@ -103,6 +114,7 @@ def sample():
             F.get_json_object(F.col("sample_data_str"), "$.v_arrays").alias("v_arrays"),
             F.get_json_object(F.col("sample_data_str"), "$.set_repeats").cast("int").alias("set_repeats"),
             F.get_json_object(F.col("sample_data_str"), "$.protocol_id").alias("protocol_id"),
+            F.get_json_object(F.col("sample_data_str"), "$.macros").alias("macros"),
             F.when(F.get_json_object(F.col("sample_data_str"), "$.set").isNotNull(), 
                    F.from_json(F.get_json_object(F.col("sample_data_str"), "$.set"), "array<string>"))
             .otherwise(
@@ -159,6 +171,7 @@ raw_ambyte_schema = StructType([
     StructField("upload_directory", StringType(), True),
     StructField("upload_time", TimestampType(), True)
 ])
+
 # COMMAND ----------
 
 # DBTITLE 1,Raw Ambyte Data Table
@@ -249,3 +262,144 @@ def raw_ambyte_data():
         return all_data[0] if len(all_data) == 1 else all_data[0].unionAll(*all_data[1:])
     else:
         return spark.createDataFrame([], schema=raw_ambyte_schema)
+    
+
+# COMMAND ----------
+
+# DBTITLE 1,Macro Processing Pipeline
+def create_macro_tables():
+    """
+    Create DLT tables for each macro found in the experiment data
+    This function should be called after the pipeline initialization
+    """
+    if not ENABLE_MACRO_PROCESSING:
+        return []
+    
+    # Get the distinct macros from the central silver table for this experiment
+    try:
+        macros_df = (
+            spark.read.table(
+                f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}"
+            )
+            .filter(F.col("experiment_id") == EXPERIMENT_ID)
+            .filter(F.col("macros").isNotNull())
+            .filter(F.size(F.col("macros")) > 0)
+            .select(F.explode(F.col("macros")).alias("macro_name"))
+            .distinct()
+        )
+        
+        # Get available macros and process each one
+        available_macros = get_available_macros(MACROS_PATH)
+        experiment_macros = [row.macro_name for row in macros_df.collect()]
+        
+        print(f"Available macros: {available_macros}")
+        print(f"Macros used in experiment: {experiment_macros}")
+        
+        return experiment_macros, available_macros
+    except Exception as e:
+        print(f"Error reading macros from central table: {str(e)}")
+        return [], []
+
+
+def create_macro_table_code(macro_name: str) -> str:
+    """
+    Generate Python code for a macro table function
+    
+    Since DLT requires tables to be defined at module level with decorators,
+    we need to dynamically generate and execute the function definitions.
+    """
+    return f'''
+@dlt.table(
+    name="macro_{macro_name}",
+    comment="Output from macro: {macro_name}",
+    table_properties={{
+        "quality": "silver",
+        "pipelines.autoOptimize.managed": "true"
+    }}
+)
+def macro_{macro_name}_table():
+    """Process records through the {macro_name} macro and create output table"""
+    # Read data that has this macro
+    base_df = (
+        spark.read.table(f"{{CATALOG_NAME}}.{{CENTRAL_SCHEMA}}.{{CENTRAL_SILVER_TABLE}}")
+        .filter(F.col("experiment_id") == EXPERIMENT_ID)
+        .filter(F.array_contains(F.col("macros"), "{macro_name}"))
+    )
+    
+    # Collect all data to process through macro
+    rows_data = base_df.collect()
+    processed_rows = []
+    
+    for row in rows_data:
+        try:
+            # Prepare input data for the macro
+            input_data = {{
+                "device_id": getattr(row, 'device_id', None),
+                "device_name": getattr(row, 'device_name', None),
+                "experiment_id": getattr(row, 'experiment_id', None),
+                "sample": getattr(row, 'sample', None),
+                "macros": getattr(row, 'macros', None),
+            }}
+            
+            # Remove None values
+            input_data = {{k: v for k, v in input_data.items() if v is not None}}
+            
+            # Execute the macro using the library function
+            output = execute_macro_script("{macro_name}", input_data, MACROS_PATH)
+            
+            if output:
+                # Add metadata to output
+                output["macro_name"] = "{macro_name}"
+                output["experiment_id"] = EXPERIMENT_ID
+                
+                # Process output for Spark compatibility using library function
+                processed_output = process_macro_output_for_spark(output)
+                processed_rows.append(processed_output)
+        
+        except Exception as e:
+            print(f"Error processing row for macro {macro_name}: {{str(e)}}")
+            continue
+    
+    if processed_rows:
+        # Create DataFrame from processed rows
+        df = spark.createDataFrame(processed_rows)
+        # Add processed timestamp
+        return df.withColumn("processed_timestamp", F.current_timestamp())
+    else:
+        # Return empty DataFrame with minimal schema
+        minimal_schema = StructType([
+            StructField("macro_name", StringType(), False),
+            StructField("experiment_id", StringType(), False),
+            StructField("processed_timestamp", TimestampType(), False)
+        ])
+        empty_df = spark.createDataFrame([], minimal_schema)
+        return empty_df.withColumn("processed_timestamp", F.current_timestamp())
+'''
+
+
+# Initialize macro processing by generating table functions at module level
+if ENABLE_MACRO_PROCESSING:
+    try:
+        experiment_macros, available_macros = create_macro_tables()
+        
+        # Generate and execute table function code for each macro
+        for macro_name in experiment_macros:
+            if macro_name in available_macros:
+                print(f"Creating DLT table function for macro: {macro_name}")
+                
+                # Generate the function code
+                table_code = create_macro_table_code(macro_name)
+                
+                # Execute the code to define the function at module level
+                exec(table_code, globals())
+                
+            else:
+                print(f"Warning: Macro {macro_name} referenced in data but script not found")
+        
+        print("Macro processing setup complete")
+        
+    except Exception as e:
+        print(f"Error setting up macro processing: {str(e)}")
+        print("Continuing without macro processing...")
+else:
+    print("Macro processing disabled")
