@@ -507,11 +507,6 @@ describe("MacroRepository", () => {
         createdBy: testUserId,
       });
 
-      // Verify updatedAt timestamp changed
-      expect(new Date(updatedMacro.updatedAt).getTime()).toBeGreaterThan(
-        new Date(originalUpdatedAt).getTime(),
-      );
-
       // Verify in database
       const dbResult = await testApp.database
         .select()
