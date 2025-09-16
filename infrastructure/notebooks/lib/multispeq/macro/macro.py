@@ -20,7 +20,7 @@ from pyspark.sql.types import (
     StructType, StructField, ArrayType
 )
 
-sys.path.append("/Workspace/Shared/lib/multispeq/macro/executors")
+sys.path.append("/Workspace/Shared/notebooks/lib/multispeq/macro/executors")
 
 # Import the new executor modules
 from js_executor import execute_javascript_macro
@@ -70,11 +70,12 @@ def execute_macro_script(
     try:
         print(f"[MACRO] Executing {script_type} macro: {macro_name}")
         if script_type == 'python':
-            result = execute_python_macro(script_path, input_data)
+            result = execute_python_macro(script_path, input_data.get("sample"))
         else:  # JavaScript
-            result = execute_javascript_macro(script_path, input_data, macro_name, helpers_path)
+            result = execute_javascript_macro(script_path, input_data.get("sample"), macro_name, helpers_path)
         
         print(f"[MACRO] Successfully executed macro {macro_name}, output keys: {list(result.keys()) if result else 'None'}")
+
         return result
             
     except Exception as e:
@@ -149,18 +150,21 @@ def infer_schema_from_output(output: Dict[str, Any]) -> StructType:
         elif isinstance(value, list):
             # Handle arrays based on their content type
             if len(value) > 0:
-                first_element = value[0]
-                if isinstance(first_element, str):
+                # Check if all elements are numeric (int or float)
+                all_numeric = all(isinstance(elem, (int, float)) for elem in value)
+                all_strings = all(isinstance(elem, str) for elem in value)
+                
+                if all_strings:
                     fields.append(StructField(key, ArrayType(StringType()), True))
-                elif isinstance(first_element, int):
-                    fields.append(StructField(key, ArrayType(IntegerType()), True))
-                elif isinstance(first_element, float):
+                elif all_numeric:
+                    # For spectrum data and other numeric arrays, always use DoubleType
+                    # to handle mixed int/float values from JavaScript TransformTrace function
                     fields.append(StructField(key, ArrayType(DoubleType()), True))
                 else:
-                    # For complex arrays or mixed types, store as JSON string
+                    # For complex arrays or mixed non-numeric types, store as JSON string
                     fields.append(StructField(key, StringType(), True))
             else:
-                # Empty array - default to string array
+                # Empty array - default to string array, let Spark infer later if needed
                 fields.append(StructField(key, ArrayType(StringType()), True))
         elif isinstance(value, dict):
             fields.append(StructField(key, StringType(), True))  # Store as JSON string
@@ -214,7 +218,15 @@ def process_macro_output_for_spark(output: Dict[str, Any]) -> Dict[str, Any]:
                     conversions_made += 1
                     print(f"[MACRO] Converted complex array '{key}' to JSON string")
                 else:
-                    print(f"[MACRO] Kept primitive array '{key}' as-is ({original_type})")
+                    # Check if this is a numeric array that needs type normalization
+                    all_numeric = all(isinstance(elem, (int, float)) for elem in value if elem is not None)
+                    if all_numeric:
+                        # Convert all numeric arrays to float to prevent LongType/DoubleType conflicts
+                        # This is essential because JavaScript TransformTrace functions can return mixed int/float arrays
+                        processed_output[key] = [float(elem) if elem is not None else None for elem in value]
+                        print(f"[MACRO] Normalized numeric array '{key}' to all floats ({original_type})")
+                    else:
+                        print(f"[MACRO] Kept primitive array '{key}' as-is ({original_type})")
             else:
                 print(f"[MACRO] Kept empty array '{key}' as-is")
             # else: keep as array for primitive types
@@ -301,7 +313,7 @@ def create_macro_table_function(
                 
                 # Execute the macro using the library function
                 output = execute_macro_script(macro_name, input_data, macros_path)
-                
+
                 if output:
                     # Add metadata to output
                     output["macro_name"] = macro_name

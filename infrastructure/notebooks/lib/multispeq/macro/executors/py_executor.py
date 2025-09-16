@@ -14,11 +14,11 @@ from typing import Dict, Any, Callable
 # Import importlib for dynamic module loading
 import importlib.util
 
-def execute_python_macro(script_path: str, input_data: Dict[str, Any]) -> Dict[str, Any]:
+def execute_python_macro(script_path: str, input_data: str) -> Dict[str, Any]:
     """Execute a Python macro script in a restricted environment"""
     
     print(f"[PY_EXECUTOR] Executing Python macro at: {script_path}")
-    print(f"[PY_EXECUTOR] Input data size: {len(str(input_data))} characters")
+    print(f"[PY_EXECUTOR] Input data size: {len(input_data)} characters")
     
     # Create a restricted set of safe built-in functions
     safe_builtins = {
@@ -99,10 +99,25 @@ def execute_python_macro(script_path: str, input_data: Dict[str, Any]) -> Dict[s
     python_helpers = get_python_helpers()
     print(f"[PY_EXECUTOR] Loaded {len(python_helpers)} Python helper functions")
     
+    # Convert input_data string to object
+    try:
+        parsed_input_data = json.loads(input_data)
+        print(f"[PY_EXECUTOR] Successfully parsed input_data JSON")
+        
+        # If it's an array, take the first item
+        if isinstance(parsed_input_data, list) and len(parsed_input_data) > 0:
+            parsed_input_data = parsed_input_data[0]
+            print(f"[PY_EXECUTOR] Taking first item from array")
+        
+    except json.JSONDecodeError as e:
+        print(f"[PY_EXECUTOR] WARNING: Failed to parse input_data as JSON: {str(e)}")
+        # Fall back to treating it as a plain string
+        parsed_input_data = input_data
+    
     # Create restricted execution environment
     exec_globals = {
         '__builtins__': safe_builtins,
-        'input_data': input_data,
+        'input_data': parsed_input_data,
         'output': {},
         # Add safe math functions
         **safe_math_functions,

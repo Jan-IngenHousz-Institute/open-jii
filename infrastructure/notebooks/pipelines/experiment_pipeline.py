@@ -24,7 +24,7 @@ from ambyte_parsing import find_byte_folders, load_files_per_byte, process_trace
 # Import volume I/O utilities
 from volume_io import discover_and_validate_upload_directories, parse_upload_time
 
-sys.path.append("/Workspace/Shared/lib/multispeq/macro")
+sys.path.append("/Workspace/Shared/notebooks/lib/multispeq/macro")
 # Import our macro processing library
 from macro import execute_macro_script, get_available_macros, process_macro_output_for_spark
 
