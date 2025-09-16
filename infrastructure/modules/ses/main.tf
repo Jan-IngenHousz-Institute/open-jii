@@ -175,7 +175,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "dmarc_reports" {
     }
 
     transition {
-      days          = 90
+      days          = 60
       storage_class = "GLACIER"
     }
 
@@ -230,8 +230,10 @@ resource "aws_s3_bucket_policy" "dmarc_reports" {
         Resource = "${aws_s3_bucket.dmarc_reports[0].arn}/dmarc-reports/*"
         Condition = {
           StringEquals = {
-            "aws:SourceAccount" = data.aws_caller_identity.current.account_id,
-            "aws:SourceArn"     = "arn:aws:ses:${local.region}:${data.aws_caller_identity.current.account_id}:receipt-rule-set/${aws_ses_receipt_rule_set.dmarc_reports[0].rule_set_name}:receipt-rule/${aws_ses_receipt_rule.dmarc_reports[0].name}"
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          },
+          "ArnLike": {
+            "aws:SourceArn": "arn:aws:ses:${local.region}:${data.aws_caller_identity.current.account_id}:receipt-rule-set/${aws_ses_receipt_rule_set.dmarc_reports[0].rule_set_name}:*"
           }
         }
       },
