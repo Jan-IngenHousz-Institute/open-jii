@@ -107,6 +107,7 @@ describe("UpdateMacroUseCase", () => {
     expect(databricksAdapter.uploadMacroCode).toHaveBeenCalledWith({
       code: updateData.code,
       name: updateData.name,
+      language: "python", // original language from created macro
     });
   });
 

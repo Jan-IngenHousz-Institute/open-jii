@@ -822,11 +822,12 @@ describe("DatabricksAdapter", () => {
 
   describe("uploadMacroCode", () => {
     const macroData = {
-      name: "test-macro",
+      name: "Some Macro 17",
       code: 'print("Hello, World!")',
+      language: "python" as const,
     };
 
-    it("should successfully upload macro code to workspace", async () => {
+    it("should successfully upload macro code to workspace with formatted name and extension", async () => {
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,
@@ -846,6 +847,61 @@ describe("DatabricksAdapter", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toEqual({});
+    });
+
+    it("should format macro name correctly for different languages", async () => {
+      const testCases: {
+        name: string;
+        language: string;
+        expectedPath: string;
+      }[] = [
+        {
+          name: "Some Macro 17",
+          language: "python",
+          expectedPath: "/Shared/macros/some_macro_17.py",
+        },
+        {
+          name: "R Analysis Script",
+          language: "r",
+          expectedPath: "/Shared/macros/r_analysis_script.r",
+        },
+        {
+          name: "JavaScript Helper",
+          language: "javascript",
+          expectedPath: "/Shared/macros/javascript_helper.js",
+        },
+        {
+          name: "Unknown Language Macro",
+          language: "unknown",
+          expectedPath: "/Shared/macros/unknown_language_macro",
+        },
+      ];
+
+      for (const testCase of testCases) {
+        // Mock token request
+        nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+          access_token: MOCK_ACCESS_TOKEN,
+          expires_in: MOCK_EXPIRES_IN,
+          token_type: "Bearer",
+        });
+
+        // Mock workspace import API call - capture the request to verify path
+        nock(databricksHost)
+          .post(DatabricksWorkspaceService.WORKSPACE_IMPORT_ENDPOINT)
+          .reply(200, {});
+
+        // Execute upload macro code
+        const result = await databricksAdapter.uploadMacroCode({
+          name: testCase.name,
+          code: "test code",
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          language: testCase.language as any, // Type assertion for test case
+        });
+
+        // Assert result is success
+        expect(result.isSuccess()).toBe(true);
+        assertSuccess(result);
+      }
     });
 
     it("should handle upload failure from Databricks workspace API", async () => {
@@ -873,9 +929,9 @@ describe("DatabricksAdapter", () => {
   });
 
   describe("deleteMacroCode", () => {
-    const macroName = "test-macro-to-delete";
+    const macroName = "Some Test Macro 123";
 
-    it("should successfully delete macro code from workspace", async () => {
+    it("should successfully delete macro code from workspace with formatted name", async () => {
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,

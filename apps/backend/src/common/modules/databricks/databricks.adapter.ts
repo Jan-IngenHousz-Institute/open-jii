@@ -217,17 +217,41 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
 
   /**
    * Upload macro code file to Databricks workspace
-   * @param code - The macro code file to upload
+   * Formats the macro name by converting to lowercase and replacing spaces with underscores
+   * Adds appropriate file extension based on the language
+   * @param params - The macro name, code, and language to upload
    * @returns Result containing the import response
    */
   async uploadMacroCode({
     name,
     code,
-  }: Pick<MacroDto, "name" | "code">): Promise<Result<ImportWorkspaceObjectResponse>> {
-    this.logger.log(`Uploading macro code for macro: ${name}`);
+    language,
+  }: Pick<MacroDto, "name" | "code" | "language">): Promise<Result<ImportWorkspaceObjectResponse>> {
+    // Format the macro name: lowercase and replace spaces with underscores
+    const formattedName = name.toLowerCase().trim().replace(/\s+/g, "_");
+
+    // Determine file extension based on language
+    let fileExtension: string | undefined;
+    switch (language) {
+      case "python":
+        fileExtension = ".py";
+        break;
+      case "r":
+        fileExtension = ".r";
+        break;
+      case "javascript":
+        fileExtension = ".js";
+        break;
+      default:
+        fileExtension = undefined;
+    }
+
+    const fileName = fileExtension ? `${formattedName}${fileExtension}` : formattedName;
+
+    this.logger.log(`Uploading macro code for macro: ${name} (${language}) -> ${fileName}`);
 
     // Construct the workspace path for the macro
-    const workspacePath = `/Shared/macros/${name}`;
+    const workspacePath = `/Shared/macros/${fileName}`;
 
     // Upload the macro code to Databricks workspace
     return await this.workspaceService.importWorkspaceObject({
@@ -240,14 +264,18 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
 
   /**
    * Delete macro code from Databricks workspace
+   * Formats the macro name by converting to lowercase and replacing spaces with underscores
    * @param name - The name of the macro to delete
    * @returns Result containing the delete response
    */
   async deleteMacroCode(name: string): Promise<Result<DeleteWorkspaceObjectResponse>> {
-    this.logger.log(`Deleting macro code for macro: ${name}`);
+    // Format the macro name: lowercase and replace spaces with underscores
+    const formattedName = name.toLowerCase().trim().replace(/\s+/g, "_");
+
+    this.logger.log(`Deleting macro code for macro: ${name} -> ${formattedName}`);
 
     // Construct the workspace path for the macro
-    const workspacePath = `/Shared/macros/${name}`;
+    const workspacePath = `/Shared/macros/${formattedName}`;
 
     // Delete the macro code from Databricks workspace
     return await this.workspaceService.deleteWorkspaceObject({
