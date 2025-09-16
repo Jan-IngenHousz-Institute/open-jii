@@ -480,7 +480,6 @@ describe("MacroRepository", () => {
       const createResult = await repository.create(createMacroDto, testUserId);
       assertSuccess(createResult);
       const createdMacro = createResult.value[0];
-      const originalUpdatedAt = createdMacro.updatedAt;
 
       const updateDto = {
         name: "Updated Macro",
