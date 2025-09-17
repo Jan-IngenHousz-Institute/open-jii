@@ -104,7 +104,7 @@ describe("DownloadExperimentDataUseCase", () => {
     // Mock SQL query with EXTERNAL_LINKS disposition
     nock(DATABRICKS_HOST)
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: "SELECT * FROM bronze_data LIMIT 10",
+        statement: "SELECT * FROM bronze_data",
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: `exp_${experiment.name}_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
