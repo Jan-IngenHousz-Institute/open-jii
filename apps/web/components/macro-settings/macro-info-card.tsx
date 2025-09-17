@@ -35,7 +35,7 @@ export function MacroInfoCard({ macroId, macro }: MacroInfoCardProps) {
   const router = useRouter();
   const { mutateAsync: deleteMacro, isPending } = useMacroDelete();
 
-  const { t } = useTranslation();
+  const { t } = useTranslation("macro");
   const locale = useLocale();
 
   const handleDeleteMacro = async () => {

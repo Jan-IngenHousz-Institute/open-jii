@@ -19,7 +19,7 @@ export default async function MacroPage({ params }: MacroPageProps) {
   const { locale } = await params;
   const { t } = await initTranslations({
     locale,
-    namespaces: ["common"],
+    namespaces: ["macro"],
   });
 
   return (
