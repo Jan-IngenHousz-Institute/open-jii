@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
-import { MacroOverviewCards } from "../macro-overview-cards";
+import { MacroOverviewCards } from "./macro-overview-cards";
 
 // Mock Next.js Link component
 vi.mock("next/link", () => ({
