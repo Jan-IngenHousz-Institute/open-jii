@@ -4,7 +4,7 @@ import { render, screen } from "@testing-library/react";
 import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-import MacroOverviewPage from "./page";
+import MacroOverviewPage from "../[id]/page";
 
 // Mock React's use function
 vi.mock("react", async () => {

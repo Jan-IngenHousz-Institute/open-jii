@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { useSession } from "@repo/auth/client";
 
-import MacroSettingsPage from "./page";
+import MacroSettingsPage from "../page";
 
 // Global React for JSX in mocks
 globalThis.React = React;
