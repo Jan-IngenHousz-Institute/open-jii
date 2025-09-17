@@ -152,10 +152,10 @@ describe("MacroCodeViewer", () => {
     // Check for line count and byte count - the div that contains both
     const statsDiv = screen.getByText((content, element) => {
       return (
-        (element?.className?.includes("text-xs text-slate-500") &&
-          element?.textContent?.includes("3") &&
-          element?.textContent?.includes("common.lines") &&
-          element?.textContent?.includes("26 common.bytes")) ??
+        (element?.className.includes("text-xs text-slate-500") &&
+          element.textContent.includes("3") &&
+          element.textContent.includes("common.lines") &&
+          element.textContent.includes("26 common.bytes")) ??
         false
       );
     });
