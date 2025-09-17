@@ -858,6 +858,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 22.15.30
+      dotenv-cli:
+        specifier: ^8.0.0
+        version: 8.0.0
       drizzle-kit:
         specifier: ^0.30.6
         version: 0.30.6
