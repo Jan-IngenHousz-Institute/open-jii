@@ -1017,7 +1017,7 @@ describe("ExperimentDataController", () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.downloadExperimentData).toHaveBeenCalledWith(
         `exp_${experiment.name}_${experiment.id}`,
-        "SELECT * FROM bronze_data LIMIT 10",
+        "SELECT * FROM bronze_data",
       );
     });
 
