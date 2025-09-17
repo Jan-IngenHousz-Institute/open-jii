@@ -49,7 +49,7 @@ export class DatabricksWorkspaceService {
 
         const requestBody = {
           content: request.content,
-          format: request.format ?? WorkspaceObjectFormat.SOURCE,
+          format: request.format ?? WorkspaceObjectFormat.RAW,
           language: request.language,
           overwrite: request.overwrite ?? false,
           path: request.path,

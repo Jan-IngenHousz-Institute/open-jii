@@ -8,7 +8,14 @@ import { CalendarIcon, CodeIcon, UserIcon } from "lucide-react";
 import React, { use } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardContent, Badge } from "@repo/ui/components";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  Badge,
+  RichTextRenderer,
+} from "@repo/ui/components";
 
 interface MacroOverviewPageProps {
   params: Promise<{ id: string }>;
@@ -83,15 +90,6 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
           </div>
         </CardHeader>
         <CardContent>
-          {macro.description && (
-            <div className="mb-6">
-              <h4 className="text-muted-foreground mb-2 text-sm font-medium">
-                {t("common.description")}
-              </h4>
-              <p className="text-gray-700">{macro.description}</p>
-            </div>
-          )}
-
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
               <h4 className="text-muted-foreground text-sm font-medium">{t("common.created")}</h4>
@@ -117,6 +115,18 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Description */}
+      {macro.description && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("common.description")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RichTextRenderer content={macro.description} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Code Section Card */}
       <Card>

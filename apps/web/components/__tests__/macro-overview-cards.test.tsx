@@ -148,14 +148,6 @@ describe("<MacroOverviewCards />", () => {
     // as the component combines dynamic class names
   });
 
-  it("renders descriptions when available", () => {
-    render(<MacroOverviewCards macros={mockMacros} isLoading={false} />);
-
-    expect(screen.getByText("A Python macro for data analysis")).toBeInTheDocument();
-    expect(screen.getByText("An R macro for statistical analysis")).toBeInTheDocument();
-    expect(screen.getByText("A JavaScript macro for visualization")).toBeInTheDocument();
-  });
-
   it("renders creator name and update date information", () => {
     render(<MacroOverviewCards macros={mockMacros} isLoading={false} />);
 

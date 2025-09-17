@@ -73,10 +73,6 @@ export function MacroOverviewCards({ macros, isLoading }: MacroOverviewCardsProp
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {macro.description && (
-                  <p className="line-clamp-2 text-sm text-gray-600">{macro.description}</p>
-                )}
-
                 <div className="space-y-2 text-sm text-gray-500">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4" />

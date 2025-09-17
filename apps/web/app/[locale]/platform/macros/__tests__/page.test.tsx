@@ -1,330 +1,107 @@
-import { useMacro } from "@/hooks/macro/useMacro/useMacro";
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import React from "react";
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { vi, describe, it, expect } from "vitest";
 
-import MacroOverviewPage from "../[id]/page";
+import MacroPage from "../page";
 
-// Mock React's use function
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return {
-    ...actual,
-    use: vi.fn().mockReturnValue({ id: "test-macro-id" }),
-  };
-});
-
-// Mock the useMacro hook
-vi.mock("@/hooks/macro/useMacro/useMacro", () => ({
-  useMacro: vi.fn(),
+// Mock Next.js Link component
+vi.mock("next/link", () => ({
+  default: ({
+    children,
+    href,
+    locale,
+  }: {
+    children: React.ReactNode;
+    href: string;
+    locale: string;
+  }) => (
+    <a href={href} data-locale={locale} data-testid="link">
+      {children}
+    </a>
+  ),
 }));
 
-// Mock the date utility
-vi.mock("@/util/date", () => ({
-  formatDate: (dateString: string) => `formatted-${dateString}`,
-}));
-
-// Mock the i18n hook
-vi.mock("@repo/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
+// Mock the initTranslations function
+vi.mock("@repo/i18n/server", () => ({
+  default: vi.fn().mockResolvedValue({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        "macros.title": "Macros",
+        "macros.listDescription": "Manage and create your macros here",
+        "macros.create": "Create New Macro",
+      };
+      return translations[key] || key;
+    },
   }),
 }));
 
-// Mock the ErrorDisplay component
-vi.mock("@/components/error-display", () => ({
-  ErrorDisplay: ({ error, title }: { error: unknown; title: string }) => (
-    <div data-testid="error-display">
-      <div data-testid="error-title">{title}</div>
-      <div data-testid="error-message">{String(error)}</div>
-    </div>
-  ),
+// Mock the ListMacros component
+vi.mock("@/components/list-macros", () => ({
+  ListMacros: () => <div data-testid="list-macros">List of macros</div>,
 }));
 
-// Mock the MacroCodeViewer component
-vi.mock("@/components/macro-code-viewer", () => ({
-  default: ({ value, language, height }: { value: string; language: string; height: string }) => (
-    <div data-testid="macro-code-viewer">
-      <div data-testid="code-value">{value}</div>
-      <div data-testid="code-language">{language}</div>
-      <div data-testid="code-height">{height}</div>
-    </div>
-  ),
-}));
-
-// Mock Lucide icons
-vi.mock("lucide-react", () => ({
-  CalendarIcon: () => <div data-testid="calendar-icon" />,
-  CodeIcon: () => <div data-testid="code-icon" />,
-  UserIcon: () => <div data-testid="user-icon" />,
-}));
-
-// Mock UI components
+// Mock the Button component
 vi.mock("@repo/ui/components", () => ({
-  Card: ({ children }: { children: React.ReactNode }) => <div data-testid="card">{children}</div>,
-  CardHeader: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="card-header">{children}</div>
-  ),
-  CardTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="card-title" className={className}>
+  Button: ({ children, variant }: { children: React.ReactNode; variant?: string }) => (
+    <button data-testid="button" data-variant={variant}>
       {children}
-    </div>
-  ),
-  CardContent: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="card-content">{children}</div>
-  ),
-  Badge: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="badge" className={className}>
-      {children}
-    </div>
+    </button>
   ),
 }));
 
-const mockUseMacro = vi.mocked(useMacro);
+describe("MacroPage", () => {
+  const mockParams = Promise.resolve({ locale: "en-US" as const });
 
-// Mock data that can be reused across tests
-const mockMacroData = {
-  id: "test-macro-id",
-  name: "Test Macro",
-  filename: "test_macro.py",
-  description: "This is a test macro description",
-  language: "python" as const,
-  code: btoa("print('Hello, World!')"), // base64 encoded
-  createdBy: "creator-id",
-  createdAt: "2023-01-01T00:00:00Z",
-  updatedAt: "2023-01-02T00:00:00Z",
-  createdByName: "John Doe",
-};
+  it("should render the page title and description", async () => {
+    const result = await MacroPage({ params: mockParams });
+    render(result);
 
-describe("MacroOverviewPage", () => {
-  const mockParams = Promise.resolve({ id: "test-macro-id" });
-
-  beforeEach(() => {
-    vi.clearAllMocks();
+    expect(screen.getByText("Macros")).toBeInTheDocument();
+    expect(screen.getByText("Manage and create your macros here")).toBeInTheDocument();
   });
 
-  describe("Loading State", () => {
-    it("should display loading message when data is loading", () => {
-      // Arrange
-      const mockUseMacro = vi.fn().mockReturnValue({
-        data: undefined,
-        isLoading: true,
-        error: null,
-      });
-      vi.mocked(useMacro).mockImplementation(mockUseMacro);
+  it("should render the create macro button with correct link", async () => {
+    const result = await MacroPage({ params: mockParams });
+    render(result);
 
-      const params = Promise.resolve({ id: "test-macro-id" });
+    const link = screen.getByTestId("link");
+    expect(link).toHaveAttribute("href", "/platform/macros/new");
+    expect(link).toHaveAttribute("data-locale", "en-US");
 
-      // Act
-      render(<MacroOverviewPage params={params} />);
-
-      // Assert
-      expect(screen.getByText("common.loading")).toBeInTheDocument();
-      expect(mockUseMacro).toHaveBeenCalledWith("test-macro-id");
-    });
+    const button = screen.getByTestId("button");
+    expect(button).toHaveAttribute("data-variant", "outline");
+    expect(button).toHaveTextContent("Create New Macro");
   });
 
-  describe("Error State", () => {
-    it("should display error component when there is an error", () => {
-      // Arrange
-      const mockError = new Error("Failed to fetch macro");
-      mockUseMacro.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        error: mockError,
-      });
+  it("should render the ListMacros component", async () => {
+    const result = await MacroPage({ params: mockParams });
+    render(result);
 
-      // Act
-      render(<MacroOverviewPage params={mockParams} />);
-
-      // Assert
-      expect(screen.getByTestId("error-display")).toBeInTheDocument();
-      expect(screen.getByTestId("error-title")).toHaveTextContent("errors.failedToLoadMacro");
-      expect(mockUseMacro).toHaveBeenCalledWith("test-macro-id");
-    });
+    expect(screen.getByTestId("list-macros")).toBeInTheDocument();
+    expect(screen.getByText("List of macros")).toBeInTheDocument();
   });
 
-  describe("Not Found State", () => {
-    it("should display not found message when data is undefined", () => {
-      // Arrange
-      mockUseMacro.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        error: null,
-      });
+  it("should handle different locale", async () => {
+    const germanParams = Promise.resolve({ locale: "de-DE" as const });
+    const result = await MacroPage({ params: germanParams });
+    render(result);
 
-      // Act
-      render(<MacroOverviewPage params={mockParams} />);
-
-      // Assert
-      expect(screen.getByText("macros.notFound")).toBeInTheDocument();
-    });
+    const link = screen.getByTestId("link");
+    expect(link).toHaveAttribute("data-locale", "de-DE");
   });
 
-  describe("Success State", () => {
-    it("should display macro information when data is loaded", () => {
-      // Arrange
-      mockUseMacro.mockReturnValue({
-        data: mockMacroData,
-        isLoading: false,
-        error: null,
-      });
+  it("should have proper page structure", async () => {
+    const result = await MacroPage({ params: mockParams });
+    render(result);
 
-      // Act
-      render(<MacroOverviewPage params={mockParams} />);
+    // Check for main container exists
+    const container = screen.getByText("Macros").closest("div");
+    expect(container).toBeInTheDocument();
 
-      // Assert
-      expect(screen.getByText("Test Macro")).toBeInTheDocument();
-      expect(screen.getByText("This is a test macro description")).toBeInTheDocument();
-      expect(screen.getByText("Python")).toBeInTheDocument();
-      expect(screen.getByText("formatted-2023-01-01T00:00:00Z")).toBeInTheDocument();
-      expect(screen.getByText("formatted-2023-01-02T00:00:00Z")).toBeInTheDocument();
-      expect(screen.getByText("John Doe")).toBeInTheDocument();
-    });
-
-    it("should display macro code viewer when code is available", () => {
-      // Arrange
-      mockUseMacro.mockReturnValue({
-        data: mockMacroData,
-        isLoading: false,
-        error: null,
-      });
-
-      // Act
-      render(<MacroOverviewPage params={mockParams} />);
-
-      // Assert
-      expect(screen.getByTestId("macro-code-viewer")).toBeInTheDocument();
-      expect(screen.getByTestId("code-value")).toHaveTextContent("print('Hello, World!')");
-      expect(screen.getByTestId("code-language")).toHaveTextContent("python");
-      expect(screen.getByTestId("code-height")).toHaveTextContent("500px");
-    });
-
-    it("should handle macro without description", () => {
-      // Arrange
-      const macroWithoutDescription = { ...mockMacroData, description: null };
-      mockUseMacro.mockReturnValue({
-        data: macroWithoutDescription,
-        isLoading: false,
-        error: null,
-      });
-
-      // Act
-      render(<MacroOverviewPage params={mockParams} />);
-
-      // Assert
-      expect(screen.getByText("Test Macro")).toBeInTheDocument();
-      expect(screen.queryByText("common.description")).not.toBeInTheDocument();
-    });
-
-    it("should handle macro without createdByName", () => {
-      // Arrange
-      const macroWithoutCreator = { ...mockMacroData, createdByName: undefined };
-      mockUseMacro.mockReturnValue({
-        data: macroWithoutCreator,
-        isLoading: false,
-        error: null,
-      });
-
-      // Act
-      render(<MacroOverviewPage params={mockParams} />);
-
-      // Assert
-      expect(screen.getByText("-")).toBeInTheDocument();
-    });
-
-    it("should handle macro without code", () => {
-      // Arrange
-      const macroWithoutCode = { ...mockMacroData, code: "" };
-      mockUseMacro.mockReturnValue({
-        data: macroWithoutCode,
-        isLoading: false,
-        error: null,
-      });
-
-      // Act
-      render(<MacroOverviewPage params={mockParams} />);
-
-      // Assert
-      expect(screen.getByText("macros.codeNotAvailable")).toBeInTheDocument();
-      expect(screen.getByText("macros.codeWillBeDisplayedWhenApiImplemented")).toBeInTheDocument();
-      expect(screen.queryByTestId("macro-code-viewer")).not.toBeInTheDocument();
-    });
-
-    it("should handle invalid base64 code gracefully", () => {
-      // Arrange
-      const macroWithInvalidCode = { ...mockMacroData, code: "invalid-base64!" };
-      mockUseMacro.mockReturnValue({
-        data: macroWithInvalidCode,
-        isLoading: false,
-        error: null,
-      });
-
-      // Act
-      render(<MacroOverviewPage params={mockParams} />);
-
-      // Assert
-      expect(screen.getByTestId("macro-code-viewer")).toBeInTheDocument();
-      expect(screen.getByTestId("code-value")).toHaveTextContent("Error decoding content");
-    });
-  });
-
-  describe("Language Display and Colors", () => {
-    it.each([
-      ["python", "Python", "bg-blue-100 text-blue-800 hover:bg-blue-200"],
-      ["r", "R", "bg-green-100 text-green-800 hover:bg-green-200"],
-      ["javascript", "JavaScript", "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"],
-      ["unknown", "unknown", "bg-gray-100 text-gray-800 hover:bg-gray-200"],
-    ])("should display correct language and color for %s", (language, displayName, colorClass) => {
-      // Arrange
-      const macroWithLanguage = {
-        ...mockMacroData,
-        language: language as "python" | "r" | "javascript",
-      };
-
-      mockUseMacro.mockReturnValue({
-        data: macroWithLanguage,
-        isLoading: false,
-        error: null,
-      });
-
-      // Act
-      render(<MacroOverviewPage params={mockParams} />);
-
-      // Assert
-      const badge = screen.getByTestId("badge");
-      expect(badge).toHaveTextContent(displayName);
-      expect(badge).toHaveClass(colorClass);
-    });
-  });
-
-  describe("Component Structure", () => {
-    it("should render proper card structure", () => {
-      // Arrange
-      mockUseMacro.mockReturnValue({
-        data: mockMacroData,
-        isLoading: false,
-        error: null,
-      });
-
-      // Act
-      render(<MacroOverviewPage params={mockParams} />);
-
-      // Assert
-      const cards = screen.getAllByTestId("card");
-      expect(cards).toHaveLength(2); // Info card and code card
-
-      const cardHeaders = screen.getAllByTestId("card-header");
-      expect(cardHeaders).toHaveLength(2);
-
-      const cardContents = screen.getAllByTestId("card-content");
-      expect(cardContents).toHaveLength(2);
-
-      // Check for specific icons
-      expect(screen.getAllByTestId("calendar-icon")).toHaveLength(2); // Created and updated dates
-      expect(screen.getByTestId("user-icon")).toBeInTheDocument();
-      expect(screen.getByTestId("code-icon")).toBeInTheDocument();
-    });
+    // Check for proper heading structure
+    const heading = screen.getByText("Macros");
+    expect(heading.tagName).toBe("H1");
+    expect(heading).toBeInTheDocument();
   });
 });

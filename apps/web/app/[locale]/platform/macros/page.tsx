@@ -1,6 +1,7 @@
 import { ListMacros } from "@/components/list-macros";
 import type { Metadata } from "next";
 import Link from "next/link";
+import React from "react";
 
 import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";

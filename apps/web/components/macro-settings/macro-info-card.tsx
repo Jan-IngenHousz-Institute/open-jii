@@ -39,15 +39,10 @@ export function MacroInfoCard({ macroId, macro }: MacroInfoCardProps) {
   const locale = useLocale();
 
   const handleDeleteMacro = async () => {
-    try {
-      await deleteMacro({ params: { id: macroId } });
-      setIsDeleteDialogOpen(false);
-      // Navigate to macros list
-      router.push(`/${locale}/platform/macros`);
-    } catch (error) {
-      console.error("Error deleting macro:", error);
-      // Could add toast notification here
-    }
+    await deleteMacro({ params: { id: macroId } });
+    setIsDeleteDialogOpen(false);
+    // Navigate to macros list
+    router.push(`/${locale}/platform/macros`);
   };
 
   return (

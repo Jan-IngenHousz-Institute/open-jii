@@ -254,7 +254,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     // Upload the macro code to Databricks workspace
     return await this.workspaceService.importWorkspaceObject({
       content: code,
-      format: WorkspaceObjectFormat.SOURCE,
+      format: WorkspaceObjectFormat.RAW,
       overwrite: true,
       path: workspacePath,
     });

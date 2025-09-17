@@ -123,9 +123,6 @@ describe("MacroInfoCard", () => {
   });
 
   it("should handle delete when confirmed", async () => {
-    // Clear previous mock calls
-    mockPush.mockReset();
-
     render(<MacroInfoCard macroId="macro-123" macro={mockMacro} />);
 
     // Open the dialog

@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { Locale } from "@repo/i18n";
 
-import MacroLayout from "../[id]/layout";
+import MacroLayout from "../layout";
 
 // Global React for JSX in mocks
 globalThis.React = React;
