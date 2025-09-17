@@ -244,6 +244,45 @@ export type Flow = z.infer<typeof zFlow>;
 export type UpsertFlowBody = z.infer<typeof zUpsertFlowBody>;
 
 // Define request and response types
+// Shared embargo date validation function
+const validateEmbargoDate = (
+  embargoUntil: string | undefined,
+  ctx: z.RefinementCtx,
+  path: string[],
+) => {
+  if (embargoUntil) {
+    const picked = new Date(embargoUntil);
+
+    const now = new Date();
+    // tomorrow at 00:00 local time
+    const minDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
+    // creation day + 365 days at 23:59:59.999
+    const maxDate = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 365,
+      23,
+      59,
+      59,
+      999,
+    );
+
+    if (picked.getTime() < minDate.getTime()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path,
+        message: "Embargo end date cannot be today or earlier (must be from tomorrow onwards)",
+      });
+    } else if (picked.getTime() > maxDate.getTime()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path,
+        message: "Embargo end date must be within 365 days from today",
+      });
+    }
+  }
+};
+
 export const zCreateExperimentBody = z
   .object({
     name: z
@@ -285,37 +324,7 @@ export const zCreateExperimentBody = z
       ),
   })
   .superRefine((val, ctx) => {
-    if (val.embargoUntil) {
-      const picked = new Date(val.embargoUntil);
-
-      const now = new Date();
-      // tomorrow at 00:00 local time
-      const minDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
-      // creation day + 365 days at 23:59:59.999
-      const maxDate = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() + 365,
-        23,
-        59,
-        59,
-        999,
-      );
-
-      if (picked.getTime() < minDate.getTime()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["embargoUntil"],
-          message: "Embargo end date cannot be today or earlier (must be from tomorrow onwards)",
-        });
-      } else if (picked.getTime() > maxDate.getTime()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["embargoUntil"],
-          message: "Embargo end date must be within 365 days from today",
-        });
-      }
-    }
+    validateEmbargoDate(val.embargoUntil, ctx, ["embargoUntil"]);
   });
 
 export const zUpdateExperimentBody = z.object({
@@ -345,37 +354,7 @@ export const visibilitySchema = zUpdateExperimentBody
     embargoUntil: true,
   })
   .superRefine((val, ctx) => {
-    if (val.embargoUntil) {
-      const picked = new Date(val.embargoUntil);
-
-      const now = new Date();
-      // tomorrow at 00:00 local time
-      const minDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
-      // creation day + 365 days at 23:59:59.999
-      const maxDate = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() + 365,
-        23,
-        59,
-        59,
-        999,
-      );
-
-      if (picked.getTime() < minDate.getTime()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["embargoUntil"],
-          message: "Embargo end date cannot be today or earlier (must be from tomorrow onwards)",
-        });
-      } else if (picked.getTime() > maxDate.getTime()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["embargoUntil"],
-          message: "Embargo end date must be within 365 days from today",
-        });
-      }
-    }
+    validateEmbargoDate(val.embargoUntil, ctx, ["embargoUntil"]);
   });
 
 export const zAddExperimentMembersBody = z.object({
