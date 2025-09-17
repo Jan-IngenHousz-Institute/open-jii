@@ -3,6 +3,7 @@
 import { ErrorDisplay } from "@/components/error-display";
 import MacroCodeViewer from "@/components/macro-code-viewer";
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
+import { decodeBase64 } from "@/util/base64";
 import { formatDate } from "@/util/date";
 import { CalendarIcon, CodeIcon, UserIcon } from "lucide-react";
 import React, { use } from "react";
@@ -47,21 +48,10 @@ const getLanguageColor = (language: string) => {
   }
 };
 
-// Helper function to safely decode base64 content
-const decodeBase64 = (content: string | null): string => {
-  if (!content) return "";
-  try {
-    return atob(content);
-  } catch (e) {
-    console.error("Failed to decode base64 content:", e);
-    return "Error decoding content";
-  }
-};
-
 export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useMacro(id);
-  const { t } = useTranslation();
+  const { t } = useTranslation(["macro", "common"]);
 
   if (isLoading) {
     return <div>{t("common.loading")}</div>;

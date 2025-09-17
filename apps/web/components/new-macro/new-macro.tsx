@@ -2,6 +2,7 @@
 
 import { useMacroCreate } from "@/hooks/macro/useMacroCreate/useMacroCreate";
 import { useLocale } from "@/hooks/useLocale";
+import { encodeBase64 } from "@/util/base64";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import React from "react";
@@ -34,7 +35,7 @@ import { NewMacroDetailsCard } from "./new-macro-details-card";
 
 export function NewMacroForm() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t } = useTranslation("macro");
   const locale = useLocale();
   const { data: session } = useSession();
   const { data: userProfile, isLoading: isLoadingUserProfile } = useGetUserProfile(
@@ -61,7 +62,7 @@ export function NewMacroForm() {
 
   function onSubmit(data: CreateMacroRequestBody) {
     // Convert the code to base64 for transmission
-    const code = btoa(data.code);
+    const code = encodeBase64(data.code);
 
     createMacro({
       body: {

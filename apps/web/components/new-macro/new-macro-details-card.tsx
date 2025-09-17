@@ -25,7 +25,7 @@ interface NewMacroDetailsCardProps {
 }
 
 export function NewMacroDetailsCard({ form }: NewMacroDetailsCardProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation("macro");
 
   return (
     <Card>

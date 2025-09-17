@@ -18,7 +18,7 @@ import {
 export function ListMacros() {
   const [search, setSearch] = useState("");
   const [language, setLanguage] = useState<string | undefined>(undefined);
-  const { t } = useTranslation();
+  const { t } = useTranslation("macro");
 
   const {
     data: macros,
