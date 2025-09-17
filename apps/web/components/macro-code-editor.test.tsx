@@ -27,6 +27,20 @@ vi.mock("@monaco-editor/react", () => ({
       getValue: () => value,
     };
 
+    // Create a mock monaco object with the expected structure
+    const mockMonaco = {
+      languages: {
+        typescript: {
+          typescriptDefaults: {
+            setDiagnosticsOptions: vi.fn(),
+          },
+          javascriptDefaults: {
+            setDiagnosticsOptions: vi.fn(),
+          },
+        },
+      },
+    };
+
     return (
       <div data-testid="monaco-editor">
         <div data-testid="editor-language">{language}</div>
@@ -36,7 +50,7 @@ vi.mock("@monaco-editor/react", () => ({
           value={value}
           onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
         />
-        <button onClick={() => onMount?.(mockEditor, {})} data-testid="mount-trigger">
+        <button onClick={() => onMount?.(mockEditor, mockMonaco)} data-testid="mount-trigger">
           Mount Editor
         </button>
       </div>
