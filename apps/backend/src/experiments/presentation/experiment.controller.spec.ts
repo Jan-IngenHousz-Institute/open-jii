@@ -54,7 +54,6 @@ describe("ExperimentController", () => {
         description: "Test Description",
         status: "provisioning",
         visibility: "private",
-        embargoIntervalDays: 90,
       };
 
       const response = await testApp
@@ -93,7 +92,6 @@ describe("ExperimentController", () => {
         description: "Test Description",
         status: "provisioning",
         visibility: "private",
-        embargoIntervalDays: 90,
       };
 
       const response = await testApp
@@ -160,7 +158,6 @@ describe("ExperimentController", () => {
           description: "Test Description",
           status: "provisioning",
           visibility: "private",
-          embargoIntervalDays: 90,
         })
         .expect(StatusCodes.BAD_REQUEST);
 
@@ -169,7 +166,44 @@ describe("ExperimentController", () => {
       expect(databricksAdapter.triggerJob).not.toHaveBeenCalled();
     });
 
-    it("should return 400 if embargoIntervalDays is negative", async () => {
+    it("should successfully create an experiment with embargoUntil as ISO string", async () => {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30); // 30 days from now
+      const embargoUntilISO = futureDate.toISOString();
+
+      const experimentData = {
+        name: "Test Experiment with Embargo",
+        description: "Test Description",
+        status: "provisioning",
+        visibility: "private",
+        embargoUntil: embargoUntilISO,
+      };
+
+      const response = await testApp
+        .post(contract.experiments.createExperiment.path)
+        .withAuth(testUserId)
+        .send(experimentData)
+        .expect(StatusCodes.CREATED);
+
+      expect(response.body).toHaveProperty("id");
+      expect(response.body).toHaveProperty("embargoUntil");
+
+      // Type the response properly
+      const responseBody = response.body as { id: string; embargoUntil: string };
+
+      // The response should contain the embargoUntil as an ISO string (formatted by date-formatter)
+      expect(responseBody.embargoUntil).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+
+      // Verify that Databricks job was triggered
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksAdapter.triggerJob).toHaveBeenCalledWith({
+        experimentId: responseBody.id,
+        experimentName: experimentData.name,
+        userId: testUserId,
+      });
+    });
+
+    it("should return 400 if embargoUntil is not a valid ISO date string", async () => {
       await testApp
         .post(contract.experiments.createExperiment.path)
         .withAuth(testUserId)
@@ -178,7 +212,7 @@ describe("ExperimentController", () => {
           description: "Test Description",
           status: "provisioning",
           visibility: "private",
-          embargoIntervalDays: -1,
+          embargoUntil: "invalid-date-string",
         })
         .expect(StatusCodes.BAD_REQUEST);
 
@@ -526,6 +560,70 @@ describe("ExperimentController", () => {
         .withoutAuth()
         .send({ name: "Won't Update" })
         .expect(StatusCodes.UNAUTHORIZED);
+    });
+
+    it("should update an experiment with embargoUntil as ISO string", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Experiment to Update",
+        status: "provisioning",
+        userId: testUserId,
+      });
+
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 60); // 60 days from now
+      const embargoUntilISO = futureDate.toISOString();
+
+      const path = testApp.resolvePath(contract.experiments.updateExperiment.path, {
+        id: experiment.id,
+      });
+
+      const response = await testApp
+        .patch(path)
+        .withAuth(testUserId)
+        .send({
+          name: "Updated Name with Embargo",
+          status: "active",
+          embargoUntil: embargoUntilISO,
+        })
+        .expect(StatusCodes.OK);
+
+      // Type the response properly
+      const responseBody = response.body as {
+        id: string;
+        name: string;
+        status: string;
+        embargoUntil: string;
+      };
+
+      expect(responseBody).toMatchObject({
+        id: experiment.id,
+        name: "Updated Name with Embargo",
+        status: "active",
+      });
+
+      // The response should contain the embargoUntil as an ISO string (formatted by date-formatter)
+      expect(responseBody.embargoUntil).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    });
+
+    it("should return 400 if embargoUntil is not a valid ISO date string on update", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Experiment to Update",
+        status: "provisioning",
+        userId: testUserId,
+      });
+
+      const path = testApp.resolvePath(contract.experiments.updateExperiment.path, {
+        id: experiment.id,
+      });
+
+      await testApp
+        .patch(path)
+        .withAuth(testUserId)
+        .send({
+          name: "Updated Name",
+          embargoUntil: "invalid-date-string",
+        })
+        .expect(StatusCodes.BAD_REQUEST);
     });
   });
 

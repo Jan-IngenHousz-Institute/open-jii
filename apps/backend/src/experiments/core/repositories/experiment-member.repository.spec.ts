@@ -111,7 +111,6 @@ describe("ExperimentMemberRepository", () => {
           description: "No members",
           status: "provisioning",
           visibility: "private",
-          embargoIntervalDays: 90,
           createdBy: testUserId,
         })
         .returning();

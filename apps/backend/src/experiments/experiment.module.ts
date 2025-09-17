@@ -3,6 +3,8 @@ import { Module } from "@nestjs/common";
 // Adapters & External Modules
 import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
+// Services
+import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
 // Use Cases
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "./application/use-cases/delete-experiment/delete-experiment";
@@ -59,6 +61,9 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ExperimentMemberRepository,
     ExperimentProtocolRepository,
     FlowRepository,
+
+    // Services
+    EmbargoProcessorService,
 
     // General experiment use cases
     CreateExperimentUseCase,

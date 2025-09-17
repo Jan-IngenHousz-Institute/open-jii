@@ -257,7 +257,7 @@ export class TestHarness {
     description?: string;
     status?: "provisioning" | "provisioning_failed" | "active" | "stale" | "archived" | "published";
     visibility?: "private" | "public";
-    embargoIntervalDays?: number;
+    embargoUntil?: Date;
   }) {
     const [experiment] = await this.database
       .insert(experiments)
@@ -266,7 +266,7 @@ export class TestHarness {
         description: data.description ?? "Test description",
         status: data.status ?? "provisioning",
         visibility: data.visibility ?? "private",
-        embargoIntervalDays: data.embargoIntervalDays ?? 90,
+        embargoUntil: data.embargoUntil ?? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
         createdBy: data.userId,
       })
       .returning();
