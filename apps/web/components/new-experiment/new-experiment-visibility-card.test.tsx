@@ -1,4 +1,3 @@
-// components/new-experiment/new-experiment-visibility-card.test.tsx
 import "@testing-library/jest-dom";
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
@@ -18,8 +17,6 @@ vi.mock("@repo/i18n", () => ({
   }),
 }));
 
-// --- make embargo date logic deterministic
-
 function renderWithForm(defaultValues: Partial<CreateExperimentBody>) {
   function Host() {
     const methods = useForm<CreateExperimentBody>({
@@ -34,7 +31,6 @@ function renderWithForm(defaultValues: Partial<CreateExperimentBody>) {
         ...defaultValues,
       },
     });
-    // probe current embargo value for assertions
     const embargo = methods.watch("embargoUntil");
     return (
       <FormProvider {...methods}>
@@ -57,24 +53,28 @@ describe("<NewExperimentVisibilityCard />", () => {
 
   it("shows embargo section when visibility is not public", () => {
     renderWithForm({ visibility: "private" });
-    expect(screen.getByText(/Embargo until|newExperiment\.embargoUntil/)).toBeInTheDocument();
+    expect(
+      screen.getByText((_content, node) => node?.textContent === "newExperiment.embargoUntil"),
+    ).toBeInTheDocument();
   });
 
   it("hides embargo section when visibility is public", () => {
     renderWithForm({ visibility: "public" });
-    expect(screen.queryByText(/Embargo until|newExperiment\.embargoUntil/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText((_content, node) => node?.textContent === "newExperiment.embargoUntil"),
+    ).not.toBeInTheDocument();
   });
 
   it("sets a default embargo when none is set", async () => {
     renderWithForm({ visibility: "private", embargoUntil: "" });
 
-    // wait for useEffect -> setValue to run
+    // wait for useEffect
     await waitFor(() => {
       expect(screen.getByTestId("embargo-probe").textContent).not.toEqual("");
     });
 
-    // helper text exists (don’t assert exact date string/locale)
-    expect(screen.getByText(/become public/i)).toBeInTheDocument();
+    // helper text exists
+    expect(screen.getByText("newExperiment.embargoUntilHelperString")).toBeInTheDocument();
   });
 
   it("does not override an existing embargo", () => {
@@ -83,6 +83,6 @@ describe("<NewExperimentVisibilityCard />", () => {
 
     // no change expected
     expect(screen.getByTestId("embargo-probe")).toHaveTextContent(ISO);
-    expect(screen.getByText(/become public/i)).toBeInTheDocument();
+    expect(screen.getByText("newExperiment.embargoUntilHelperString")).toBeInTheDocument();
   });
 });
