@@ -142,7 +142,8 @@ def infer_schema_from_output(output: Dict[str, Any]) -> StructType:
         if isinstance(value, str):
             fields.append(StructField(key, StringType(), True))
         elif isinstance(value, int):
-            fields.append(StructField(key, IntegerType(), True))
+            # Use DoubleType for integers to maintain consistency with normalization
+            fields.append(StructField(key, DoubleType(), True))
         elif isinstance(value, float):
             fields.append(StructField(key, DoubleType(), True))
         elif isinstance(value, bool):
@@ -224,6 +225,7 @@ def process_macro_output_for_spark(output: Dict[str, Any]) -> Dict[str, Any]:
                         # Convert all numeric arrays to float to prevent LongType/DoubleType conflicts
                         # This is essential because JavaScript TransformTrace functions can return mixed int/float arrays
                         processed_output[key] = [float(elem) if elem is not None else None for elem in value]
+                        conversions_made += 1
                         print(f"[MACRO] Normalized numeric array '{key}' to all floats ({original_type})")
                     else:
                         print(f"[MACRO] Kept primitive array '{key}' as-is ({original_type})")
@@ -231,8 +233,13 @@ def process_macro_output_for_spark(output: Dict[str, Any]) -> Dict[str, Any]:
                 print(f"[MACRO] Kept empty array '{key}' as-is")
             # else: keep as array for primitive types
         elif key != "processed_timestamp":
-            # Convert other non-primitive types to string
-            if not isinstance(value, (str, int, float, bool)):
+            # Convert individual numeric values to float to ensure consistency across rows
+            if isinstance(value, int):
+                processed_output[key] = float(value)
+                conversions_made += 1
+                print(f"[MACRO] Converted integer '{key}' to float for consistency")
+            elif not isinstance(value, (str, float, bool)):
+                # Convert other non-primitive types to string
                 processed_output[key] = str(value)
                 conversions_made += 1
                 print(f"[MACRO] Converted non-primitive '{key}' ({original_type}) to string")
