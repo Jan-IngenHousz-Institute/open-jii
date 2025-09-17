@@ -39,7 +39,7 @@ const getLanguageColor = (language: string) => {
 };
 
 export function MacroOverviewCards({ macros, isLoading }: MacroOverviewCardsProps) {
-  const { t } = useTranslation("common");
+  const { t } = useTranslation(["macro", "common"]);
 
   if (isLoading) {
     return <div className="py-8 text-center">{t("common.loading")}</div>;

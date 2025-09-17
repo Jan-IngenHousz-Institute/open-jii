@@ -1,3 +1,4 @@
+import * as base64Utils from "@/util/base64";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
@@ -274,11 +275,15 @@ vi.mock("@hookform/resolvers/zod", () => ({
   zodResolver: () => vi.fn(),
 }));
 
+// Mock base64 utilities
+vi.mock("@/util/base64", () => ({
+  encodeBase64: vi.fn((str: string) => Buffer.from(str).toString("base64")),
+  decodeBase64: vi.fn((str: string) => Buffer.from(str, "base64").toString()),
+}));
+
 describe("NewMacroForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock btoa globally
-    global.btoa = vi.fn((str) => Buffer.from(str).toString("base64"));
   });
 
   it("should render form elements", () => {
@@ -408,7 +413,7 @@ describe("NewMacroForm", () => {
     expect(buttonsContainer).toHaveClass("flex", "gap-2");
   });
 
-  it("should encode code with btoa", async () => {
+  it("should encode code with encodeBase64", async () => {
     // Arrange
     const user = userEvent.setup();
     render(<NewMacroForm />);
@@ -418,7 +423,7 @@ describe("NewMacroForm", () => {
     await user.click(submitButton);
 
     // Assert
-    expect(global.btoa).toHaveBeenCalledWith("print('hello world')");
+    expect(vi.mocked(base64Utils.encodeBase64)).toHaveBeenCalledWith("print('hello world')");
   });
 
   it("should handle form submission correctly", () => {

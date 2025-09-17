@@ -1,5 +1,6 @@
 "use client";
 
+import { decodeBase64, encodeBase64 } from "@/util/base64";
 import { editMacroFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import React from "react";
@@ -49,7 +50,7 @@ export function MacroDetailsCard({
   initialLanguage,
 }: MacroDetailsCardProps) {
   const { mutateAsync: updateMacro, isPending: isUpdating } = useMacroUpdate(macroId);
-  const { t } = useTranslation();
+  const { t } = useTranslation("macro");
 
   const form = useForm<UpdateMacroRequestBody & { name: string; language: MacroLanguage }>({
     resolver: zodResolver(
@@ -58,7 +59,7 @@ export function MacroDetailsCard({
     defaultValues: {
       name: initialName,
       description: initialDescription,
-      code: initialCode,
+      code: decodeBase64(initialCode),
       language: initialLanguage,
     },
   });
@@ -68,7 +69,10 @@ export function MacroDetailsCard({
   ) {
     await updateMacro({
       params: { id: macroId },
-      body: data,
+      body: {
+        ...data,
+        code: encodeBase64(data.code ?? ""),
+      },
     });
     toast({ description: t("macros.macroUpdated") });
   }

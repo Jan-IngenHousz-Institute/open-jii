@@ -15,7 +15,7 @@ export default function MacroSettingsPage({ params }: MacroSettingsPageProps) {
   const { id } = use(params);
   const { data: session } = useSession();
   const { data: macroData, isLoading } = useMacro(id);
-  const { t } = useTranslation();
+  const { t } = useTranslation(["macro", "common"]);
 
   // Show loading state
   if (isLoading) {

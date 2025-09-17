@@ -14,7 +14,7 @@ interface MacroLayoutProps {
 export default function MacroLayout({ children }: MacroLayoutProps) {
   const pathname = usePathname();
   const { id } = useParams<{ id: string }>();
-  const { t } = useTranslation();
+  const { t } = useTranslation(["macro", "navigation"]);
   const locale = useLocale();
 
   // Determine active tab from URL

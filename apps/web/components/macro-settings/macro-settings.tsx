@@ -14,7 +14,7 @@ interface MacroSettingsProps {
 
 export function MacroSettings({ macroId }: MacroSettingsProps) {
   const { data, isLoading } = useMacro(macroId);
-  const { t } = useTranslation();
+  const { t } = useTranslation("macro");
 
   if (isLoading) {
     return <div>{t("macroSettings.loading")}</div>;

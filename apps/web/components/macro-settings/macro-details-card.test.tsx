@@ -184,7 +184,7 @@ describe("MacroDetailsCard", () => {
     description: "Test Description",
     language: "python" as const,
     metadata: {
-      code: "print('Hello World')",
+      code: btoa("print('Hello World')"),
     },
   };
 
@@ -262,7 +262,7 @@ describe("MacroDetailsCard", () => {
     render(<MacroDetailsCard {...defaultProps} />);
 
     expect(screen.getByTestId("macro-code-editor")).toBeInTheDocument();
-    expect(screen.getByTestId("editor-value")).toHaveTextContent(mockMacro.metadata.code);
+    expect(screen.getByTestId("editor-value")).toHaveTextContent("print('Hello World')"); // Should show decoded value
     expect(screen.getByTestId("editor-language")).toHaveTextContent("python");
     expect(screen.getByTestId("editor-macro-name")).toHaveTextContent(mockMacro.name);
   });
@@ -273,7 +273,7 @@ describe("MacroDetailsCard", () => {
       initialName: "Different Macro",
       initialDescription: "Different Description",
       initialLanguage: "r" as const,
-      initialCode: "library(ggplot2)",
+      initialCode: btoa("library(ggplot2)"),
     };
 
     render(<MacroDetailsCard {...props} />);
