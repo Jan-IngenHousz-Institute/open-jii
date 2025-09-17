@@ -27,7 +27,6 @@ function renderWithForm(defaultValues: Partial<CreateExperimentBody>) {
         status: "active",
         members: [],
         description: "",
-        embargoIntervalDays: undefined,
         ...defaultValues,
       },
     });

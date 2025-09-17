@@ -174,7 +174,6 @@ export const experiments = pgTable("experiments", {
   description: text("description"),
   status: experimentStatusEnum("status").default("provisioning").notNull(),
   visibility: experimentVisibilityEnum("visibility").default("public").notNull(),
-  embargoIntervalDays: integer("embargo_interval_days").default(90).notNull(),
   embargoUntil: timestamp("embargo_until")
     .default(sql`((now() AT TIME ZONE 'UTC') + interval '90 days')`)
     .notNull(),

@@ -128,7 +128,6 @@ describe("Experiment Schema", () => {
       description: "desc",
       status: "active",
       visibility: "private",
-      embargoIntervalDays: 7,
       embargoUntil: isoTime,
       createdBy: uuidB,
       createdAt: isoTime,
@@ -202,7 +201,6 @@ describe("Experiment Schema", () => {
         description: null,
         status: "active",
         visibility: "public",
-        embargoIntervalDays: 0,
         embargoUntil: isoTime,
         createdBy: uuidB,
         createdAt: isoTime,
@@ -374,7 +372,6 @@ describe("Experiment Schema", () => {
         description: "optional",
         status: "active",
         visibility: "public",
-        embargoIntervalDays: 14,
         members: [{ userId: uuidA, role: "admin" }, { userId: uuidB }],
         protocols: [{ protocolId: uuidA, order: 1 }, { protocolId: uuidB }],
       };
@@ -388,7 +385,7 @@ describe("Experiment Schema", () => {
     });
 
     it("zUpdateExperimentBody valid partials", () => {
-      const body = { description: "new", embargoIntervalDays: 30 };
+      const body = { description: "new" };
       expect(zUpdateExperimentBody.parse(body)).toEqual(body);
     });
 

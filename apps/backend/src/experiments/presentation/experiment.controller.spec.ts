@@ -54,7 +54,6 @@ describe("ExperimentController", () => {
         description: "Test Description",
         status: "provisioning",
         visibility: "private",
-        embargoIntervalDays: 90,
       };
 
       const response = await testApp
@@ -93,7 +92,6 @@ describe("ExperimentController", () => {
         description: "Test Description",
         status: "provisioning",
         visibility: "private",
-        embargoIntervalDays: 90,
       };
 
       const response = await testApp
@@ -160,25 +158,6 @@ describe("ExperimentController", () => {
           description: "Test Description",
           status: "provisioning",
           visibility: "private",
-          embargoIntervalDays: 90,
-        })
-        .expect(StatusCodes.BAD_REQUEST);
-
-      // Verify that Databricks was not called for invalid requests
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.triggerJob).not.toHaveBeenCalled();
-    });
-
-    it("should return 400 if embargoIntervalDays is negative", async () => {
-      await testApp
-        .post(contract.experiments.createExperiment.path)
-        .withAuth(testUserId)
-        .send({
-          name: "Test Experiment",
-          description: "Test Description",
-          status: "provisioning",
-          visibility: "private",
-          embargoIntervalDays: -1,
         })
         .expect(StatusCodes.BAD_REQUEST);
 
@@ -197,7 +176,6 @@ describe("ExperimentController", () => {
         description: "Test Description",
         status: "provisioning",
         visibility: "private",
-        embargoIntervalDays: 30,
         embargoUntil: embargoUntilISO,
       };
 

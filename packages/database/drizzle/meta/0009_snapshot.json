@@ -1,5 +1,5 @@
 {
-  "id": "e659356e-f9cf-4573-bf38-bd175e30b312",
+  "id": "eb966a1f-257b-42cd-bd29-762b21597d89",
   "prevId": "8079676d-d0af-44d6-88d1-16c8300b2be4",
   "version": "7",
   "dialect": "postgresql",
@@ -426,13 +426,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'public'"
-        },
-        "embargo_interval_days": {
-          "name": "embargo_interval_days",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 90
         },
         "embargo_until": {
           "name": "embargo_until",

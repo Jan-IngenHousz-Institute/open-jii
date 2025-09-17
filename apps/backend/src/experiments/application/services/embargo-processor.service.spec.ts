@@ -23,7 +23,6 @@ describe("EmbargoProcessorService", () => {
     description: "A test experiment",
     status: "active",
     visibility: "private",
-    embargoIntervalDays: 90,
     embargoUntil: new Date("2023-01-01"),
     createdBy: "user-1",
     createdAt: new Date("2022-10-01"),

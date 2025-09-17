@@ -41,7 +41,6 @@ describe("UpdateExperimentUseCase", () => {
       description: "Updated description",
       status: "active" as const,
       visibility: "public" as const,
-      embargoIntervalDays: 120,
     };
 
     // Execute the update
@@ -59,7 +58,6 @@ describe("UpdateExperimentUseCase", () => {
       description: updateData.description,
       status: updateData.status,
       visibility: updateData.visibility,
-      embargoIntervalDays: updateData.embargoIntervalDays,
       createdBy: testUserId,
     });
   });

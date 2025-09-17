@@ -35,7 +35,6 @@ describe("ExperimentRepository", () => {
         description: "Test Description",
         status: "provisioning" as const,
         visibility: "private" as const,
-        embargoIntervalDays: 90,
       };
 
       // Act
@@ -53,7 +52,6 @@ describe("ExperimentRepository", () => {
         description: createExperimentDto.description,
         status: createExperimentDto.status,
         visibility: createExperimentDto.visibility,
-        embargoIntervalDays: createExperimentDto.embargoIntervalDays,
         createdBy: testUserId,
       });
 
@@ -69,7 +67,6 @@ describe("ExperimentRepository", () => {
         description: createExperimentDto.description,
         status: createExperimentDto.status,
         visibility: createExperimentDto.visibility,
-        embargoIntervalDays: createExperimentDto.embargoIntervalDays,
         createdBy: testUserId,
       });
     });

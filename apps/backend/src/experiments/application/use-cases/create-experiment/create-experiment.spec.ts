@@ -44,7 +44,6 @@ describe("CreateExperimentUseCase", () => {
       description: "A test experiment description",
       status: "provisioning" as const,
       visibility: "private" as const,
-      embargoIntervalDays: 90,
     };
 
     const result = await useCase.execute(experimentData, testUserId);
@@ -61,7 +60,6 @@ describe("CreateExperimentUseCase", () => {
       description: experimentData.description,
       status: experimentData.status,
       visibility: experimentData.visibility,
-      embargoIntervalDays: experimentData.embargoIntervalDays,
       createdBy: testUserId,
     });
 

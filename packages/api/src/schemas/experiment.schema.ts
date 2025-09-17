@@ -66,7 +66,6 @@ export const zExperiment = z.object({
   description: z.string().nullable(),
   status: zExperimentStatus,
   visibility: zExperimentVisibility,
-  embargoIntervalDays: z.number().int(),
   embargoUntil: z.string().datetime(),
   createdBy: z.string().uuid(),
   createdAt: z.string().datetime(),
@@ -294,7 +293,6 @@ export const zCreateExperimentBody = z
     description: z.string().optional().describe("Optional description of the experiment"),
     status: zExperimentStatus.optional().describe("Initial status of the experiment"),
     visibility: zExperimentVisibility.optional().describe("Experiment visibility setting"),
-    embargoIntervalDays: z.number().int().positive().optional().describe("Embargo period in days"),
     embargoUntil: z
       .string()
       .datetime()
@@ -338,7 +336,6 @@ export const zUpdateExperimentBody = z.object({
   description: z.string().optional().describe("Updated experiment description"),
   status: zExperimentStatus.optional().describe("Updated experiment status"),
   visibility: zExperimentVisibility.optional().describe("Updated visibility setting"),
-  embargoIntervalDays: z.number().int().optional().describe("Updated embargo period in days"),
   embargoUntil: z
     .string()
     .datetime()

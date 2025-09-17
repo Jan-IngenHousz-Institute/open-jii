@@ -33,7 +33,6 @@ describe("GetExperimentUseCase", () => {
       description: "Test Description",
       status: "active",
       visibility: "private",
-      embargoIntervalDays: 90,
       userId: testUserId,
     });
 
@@ -53,7 +52,6 @@ describe("GetExperimentUseCase", () => {
       description: experiment.description,
       status: experiment.status,
       visibility: experiment.visibility,
-      embargoIntervalDays: experiment.embargoIntervalDays,
       createdBy: testUserId,
     });
   });
