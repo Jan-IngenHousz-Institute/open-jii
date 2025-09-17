@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+// Adapters & External Modules
 import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
 // Services
@@ -23,6 +24,7 @@ import { GetExperimentUseCase } from "./application/use-cases/get-experiment/get
 import { ListExperimentsUseCase } from "./application/use-cases/list-experiments/list-experiments";
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
 import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-provisioning-status/update-provisioning-status";
+// Ports
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 // Repositories
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";

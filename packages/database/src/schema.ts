@@ -248,6 +248,23 @@ export const protocols = pgTable("protocols", {
   ...timestamps,
 });
 
+// Macro Language Enum
+export const macroLanguageEnum = pgEnum("macro_language", ["python", "r", "javascript"]);
+
+// Macros Table - only stores metadata, actual code files are handled by Databricks
+export const macros = pgTable("macros", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull().unique(),
+  filename: varchar("filename", { length: 255 }).notNull().unique(),
+  description: text("description"),
+  language: macroLanguageEnum("language").notNull(),
+  code: text("code").notNull(), // Base64 encoded content of the macro code
+  createdBy: uuid("created_by")
+    .references(() => users.id)
+    .notNull(),
+  ...timestamps,
+});
+
 // Flows Table - stores a single graph JSON per experiment (1:1)
 export const flows = pgTable("flows", {
   id: uuid("id").primaryKey().defaultRandom(),
