@@ -1,4 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { tsr } from "@/lib/tsr";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
@@ -82,7 +83,7 @@ describe("useMacroUpdate", () => {
     const mockMutationResult = {
       mutate: vi.fn(),
       mutateAsync: vi.fn(),
-      isLoading: false,
+      isPending: false,
       error: null,
     };
 
@@ -104,7 +105,7 @@ describe("useMacroUpdate", () => {
         return {
           mutate: vi.fn(),
           mutateAsync: vi.fn(),
-          isLoading: false,
+          isPending: false,
           error: null,
         };
       },
@@ -132,7 +133,7 @@ describe("useMacroUpdate", () => {
     const mockMutationResult = {
       mutate: vi.fn(),
       mutateAsync: vi.fn(),
-      isLoading: false,
+      isPending: false,
       error: mockError,
     };
 
@@ -149,7 +150,7 @@ describe("useMacroUpdate", () => {
     const mockMutationResult = {
       mutate: vi.fn(),
       mutateAsync: vi.fn(),
-      isLoading: true,
+      isPending: true,
       error: null,
     };
 
@@ -159,7 +160,7 @@ describe("useMacroUpdate", () => {
       wrapper: createWrapper(),
     });
 
-    expect(result.current.isLoading).toBe(true);
+    expect(result.current.isPending).toBe(true);
   });
 
   it("should handle onMutate callback with optimistic updates", async () => {
@@ -185,7 +186,7 @@ describe("useMacroUpdate", () => {
         return {
           mutate: vi.fn(),
           mutateAsync: vi.fn(),
-          isLoading: false,
+          isPending: false,
           error: null,
         };
       },
@@ -260,7 +261,7 @@ describe("useMacroUpdate", () => {
         return {
           mutate: vi.fn(),
           mutateAsync: vi.fn(),
-          isLoading: false,
+          isPending: false,
           error: null,
         };
       },
@@ -317,7 +318,7 @@ describe("useMacroUpdate", () => {
         return {
           mutate: vi.fn(),
           mutateAsync: vi.fn(),
-          isLoading: false,
+          isPending: false,
           error: null,
         };
       },
@@ -357,7 +358,7 @@ describe("useMacroUpdate", () => {
         return {
           mutate: vi.fn(),
           mutateAsync: vi.fn(),
-          isLoading: false,
+          isPending: false,
           error: null,
         };
       },
@@ -390,7 +391,7 @@ describe("useMacroUpdate", () => {
         return {
           mutate: vi.fn(),
           mutateAsync: vi.fn(),
-          isLoading: false,
+          isPending: false,
           error: null,
         };
       },

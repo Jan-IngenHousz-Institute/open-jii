@@ -1,14 +1,49 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { MacroDetailsCard } from "./macro-details-card";
 
+interface MockMacroCodeEditorProps {
+  value: string;
+  language: string;
+  macroName: string;
+  onChange: (value: string) => void;
+}
+
+interface MockFieldProps {
+  field: {
+    value: string;
+    onChange: (value: string) => void;
+  };
+}
+
+interface MockFormFieldProps {
+  render: (props: MockFieldProps) => React.ReactNode;
+}
+
+interface MockSelectProps {
+  children: React.ReactNode;
+  onValueChange: (value: string) => void;
+  defaultValue?: string;
+}
+
+interface MockButtonProps {
+  children: React.ReactNode;
+  disabled?: boolean;
+  type?: "button" | "submit" | "reset";
+  [key: string]: unknown;
+}
+
+interface MockRichTextareaProps {
+  placeholder?: string;
+  value: string;
+  onChange: (value: string) => void;
+}
+
 // Mock MacroCodeEditor
 vi.mock("../macro-code-editor", () => ({
-  default: ({ value, language, macroName, onChange }: any) => (
+  default: ({ value, language, macroName, onChange }: MockMacroCodeEditorProps) => (
     <div data-testid="macro-code-editor">
       <div data-testid="editor-value">{value}</div>
       <div data-testid="editor-language">{language}</div>
@@ -26,7 +61,7 @@ vi.mock("../macro-code-editor", () => ({
 vi.mock("react-hook-form", () => ({
   useForm: () => ({
     control: {},
-    handleSubmit: (fn: any) => fn,
+    handleSubmit: (fn: (data: Record<string, unknown>) => void) => fn,
     formState: { errors: {} },
     watch: (field: string) => {
       if (field === "language") return "python";
@@ -60,27 +95,41 @@ vi.mock("../../hooks/macro/useMacroUpdate/useMacroUpdate", () => ({
 
 // Mock UI components
 vi.mock("@repo/ui/components", () => ({
-  Card: ({ children }: any) => <div data-testid="card">{children}</div>,
-  CardHeader: ({ children }: any) => <div data-testid="card-header">{children}</div>,
-  CardTitle: ({ children }: any) => <h2 data-testid="card-title">{children}</h2>,
-  CardDescription: ({ children }: any) => <p data-testid="card-description">{children}</p>,
-  CardContent: ({ children }: any) => <div data-testid="card-content">{children}</div>,
-  Form: ({ children }: any) => <div data-testid="form">{children}</div>,
-  FormControl: ({ children }: any) => <div data-testid="form-control">{children}</div>,
-  FormField: ({ render }: any) => {
+  Card: ({ children }: { children: React.ReactNode }) => <div data-testid="card">{children}</div>,
+  CardHeader: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="card-header">{children}</div>
+  ),
+  CardTitle: ({ children }: { children: React.ReactNode }) => (
+    <h2 data-testid="card-title">{children}</h2>
+  ),
+  CardDescription: ({ children }: { children: React.ReactNode }) => (
+    <p data-testid="card-description">{children}</p>
+  ),
+  CardContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="card-content">{children}</div>
+  ),
+  Form: ({ children }: { children: React.ReactNode }) => <div data-testid="form">{children}</div>,
+  FormControl: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="form-control">{children}</div>
+  ),
+  FormField: ({ render }: MockFormFieldProps) => {
     const mockField = {
       value: "print('Hello World')",
       onChange: vi.fn(),
     };
     return <div data-testid="form-field">{render({ field: mockField })}</div>;
   },
-  FormItem: ({ children }: any) => <div data-testid="form-item">{children}</div>,
-  FormLabel: ({ children }: any) => <label data-testid="form-label">{children}</label>,
+  FormItem: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="form-item">{children}</div>
+  ),
+  FormLabel: ({ children }: { children: React.ReactNode }) => (
+    <label data-testid="form-label">{children}</label>
+  ),
   FormMessage: () => <div data-testid="form-message" />,
-  Input: ({ placeholder, ...props }: any) => (
+  Input: ({ placeholder, ...props }: { placeholder?: string; [key: string]: unknown }) => (
     <input data-testid="input" placeholder={placeholder} {...props} />
   ),
-  RichTextarea: ({ placeholder, value, onChange }: any) => (
+  RichTextarea: ({ placeholder, value, onChange }: MockRichTextareaProps) => (
     <textarea
       data-testid="rich-textarea"
       placeholder={placeholder}
@@ -88,7 +137,7 @@ vi.mock("@repo/ui/components", () => ({
       onChange={(e) => onChange(e.target.value)}
     />
   ),
-  Select: ({ children, onValueChange, defaultValue }: any) => (
+  Select: ({ children, onValueChange, defaultValue }: MockSelectProps) => (
     <select
       data-testid="select"
       onChange={(e) => onValueChange(e.target.value)}
@@ -97,15 +146,19 @@ vi.mock("@repo/ui/components", () => ({
       {children}
     </select>
   ),
-  SelectContent: ({ children }: any) => <div data-testid="select-content">{children}</div>,
-  SelectItem: ({ value, children }: any) => (
+  SelectContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="select-content">{children}</div>
+  ),
+  SelectItem: ({ value, children }: { value: string; children: React.ReactNode }) => (
     <option data-testid="select-item" value={value}>
       {children}
     </option>
   ),
-  SelectTrigger: ({ children }: any) => <div data-testid="select-trigger">{children}</div>,
+  SelectTrigger: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="select-trigger">{children}</div>
+  ),
   SelectValue: () => <div data-testid="select-value" />,
-  Button: ({ children, disabled, type, ...props }: any) => (
+  Button: ({ children, disabled, type, ...props }: MockButtonProps) => (
     <button data-testid="button" disabled={disabled} type={type} {...props}>
       {children}
     </button>

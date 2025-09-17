@@ -126,6 +126,7 @@ describe("MacroSettings", () => {
     expect(screen.getByTestId("initial-name")).toHaveTextContent("Test Macro");
     expect(screen.getByTestId("initial-description")).toHaveTextContent("Test Description");
     expect(screen.getByTestId("initial-language")).toHaveTextContent("python");
+    expect(screen.getByTestId("initial-code")).toHaveTextContent(btoa("print('Hello, World!')"));
   });
 
   it("should pass correct props to MacroInfoCard", () => {

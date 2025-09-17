@@ -48,6 +48,8 @@ describe("MacroInfoCard", () => {
     name: "Test Macro",
     description: "Test description",
     language: "python" as const,
+    code: btoa("print('Hello, World!')"), // base64 encoded code
+    filename: "test_macro.py",
     createdBy: "user-123",
     createdByName: "Test User",
     createdAt: "2023-01-01T00:00:00Z",
