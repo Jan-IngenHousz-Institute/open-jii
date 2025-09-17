@@ -43,7 +43,7 @@ describe("DatabricksWorkspaceService", () => {
   describe("importWorkspaceObject", () => {
     const mockRequest = {
       content: "cHl0aG9uIGNvZGUgaGVyZQ==", // Base64 encoded "python code here"
-      format: WorkspaceObjectFormat.SOURCE,
+      format: WorkspaceObjectFormat.RAW,
       language: WorkspaceObjectLanguage.PYTHON,
       overwrite: true,
       path: "/Shared/test-notebook",
@@ -88,7 +88,7 @@ describe("DatabricksWorkspaceService", () => {
       nock(databricksHost)
         .post(DatabricksWorkspaceService.WORKSPACE_IMPORT_ENDPOINT, {
           content: minimalRequest.content,
-          format: WorkspaceObjectFormat.SOURCE,
+          format: WorkspaceObjectFormat.RAW,
           language: undefined,
           overwrite: false,
           path: minimalRequest.path,

@@ -212,6 +212,9 @@ describe("MacroRepository", () => {
       assertSuccess(createResult1);
       const macro1 = createResult1.value[0];
 
+      // Small delay to ensure distinct timestamps
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
       const createResult2 = await repository.create(
         {
           name: "Second Macro",
@@ -224,6 +227,9 @@ describe("MacroRepository", () => {
       assertSuccess(createResult2);
       const macro2 = createResult2.value[0];
 
+      // Small delay to ensure distinct timestamps
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
       const createResult3 = await repository.create(
         {
           name: "Third Macro",
@@ -235,6 +241,9 @@ describe("MacroRepository", () => {
       );
       assertSuccess(createResult3);
       const macro3 = createResult3.value[0];
+
+      // Small delay before update to ensure distinct timestamp
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Update the first macro to make it most recent
       await repository.update(macro1.id, { description: "Updated First" });
