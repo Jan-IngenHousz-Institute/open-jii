@@ -34,6 +34,7 @@ export function MacroSettings({ macroId }: MacroSettingsProps) {
         initialName={macro.name}
         initialDescription={macro.description ?? ""}
         initialLanguage={macro.language}
+        initialCode={macro.code}
       />
 
       {/* Macro Info Card - Last */}

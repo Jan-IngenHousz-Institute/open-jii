@@ -30,6 +30,7 @@ interface MockMacroDetailsCardProps {
   initialName: string;
   initialDescription: string;
   initialLanguage: string;
+  initialCode: string;
 }
 
 interface MockMacroInfoCardProps {
@@ -43,12 +44,14 @@ vi.mock("./macro-details-card", () => ({
     initialName,
     initialDescription,
     initialLanguage,
+    initialCode,
   }: MockMacroDetailsCardProps) => (
     <div data-testid="macro-details-card">
       <div data-testid="macro-id">{macroId}</div>
       <div data-testid="initial-name">{initialName}</div>
       <div data-testid="initial-description">{initialDescription}</div>
       <div data-testid="initial-language">{initialLanguage}</div>
+      <div data-testid="initial-code">{initialCode}</div>
     </div>
   ),
 }));
@@ -68,6 +71,7 @@ describe("MacroSettings", () => {
     name: "Test Macro",
     description: "Test Description",
     language: "python" as const,
+    code: btoa("print('Hello, World!')"), // base64 encoded code
     createdAt: "2023-01-01T00:00:00Z",
     updatedAt: "2023-01-02T00:00:00Z",
   };
