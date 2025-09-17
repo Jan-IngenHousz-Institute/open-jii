@@ -77,9 +77,21 @@ describe("useExperimentData", () => {
       });
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
-      renderHook(() => useExperimentData("experiment-123", 1, 20, "test_table"), {
-        wrapper: createWrapper(),
-      });
+      const formatFunction = vi.fn().mockReturnValue("formatted");
+
+      renderHook(
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+            formatFunction,
+          }),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
       expect(mockUseQuery).toHaveBeenCalledWith({
         queryData: {
@@ -99,8 +111,17 @@ describe("useExperimentData", () => {
       });
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
+      const formatFunction = vi.fn().mockReturnValue("formatted");
+
       const { result } = renderHook(
-        () => useExperimentData("experiment-123", 1, 20, "test_table"),
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+            formatFunction,
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -145,8 +166,17 @@ describe("useExperimentData", () => {
       });
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
+      const formatFunction = vi.fn().mockReturnValue("formatted");
+
       const { result } = renderHook(
-        () => useExperimentData("experiment-123", 1, 20, "test_table"),
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+            formatFunction,
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -167,8 +197,17 @@ describe("useExperimentData", () => {
       });
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
+      const formatFunction = vi.fn().mockReturnValue("formatted");
+
       const { result } = renderHook(
-        () => useExperimentData("experiment-123", 1, 20, "test_table"),
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+            formatFunction,
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -191,7 +230,14 @@ describe("useExperimentData", () => {
       const formatFunction = vi.fn().mockReturnValue("formatted");
 
       const { result } = renderHook(
-        () => useExperimentData("experiment-123", 1, 20, "test_table", formatFunction),
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+            formatFunction,
+          }),
         {
           wrapper: createWrapper(),
         },
@@ -247,9 +293,19 @@ describe("useExperimentData", () => {
       });
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
-      renderHook(() => useExperimentSampleData("experiment-123", 10), {
-        wrapper: createWrapper(),
-      });
+      const formatFunction = vi.fn().mockReturnValue("formatted");
+
+      renderHook(
+        () =>
+          useExperimentSampleData({
+            experimentId: "experiment-123",
+            sampleSize: 10,
+            formatFunction,
+          }),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
       expect(mockUseQuery).toHaveBeenCalledWith({
         queryData: {
@@ -269,9 +325,19 @@ describe("useExperimentData", () => {
       });
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
-      const { result } = renderHook(() => useExperimentSampleData("experiment-123", 10), {
-        wrapper: createWrapper(),
-      });
+      const formatFunction = vi.fn().mockReturnValue("formatted");
+
+      const { result } = renderHook(
+        () =>
+          useExperimentSampleData({
+            experimentId: "experiment-123",
+            sampleSize: 10,
+            formatFunction,
+          }),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
       expect(result.current.sampleTables).toHaveLength(2);
       expect(result.current.sampleTables[0]).toEqual({
@@ -321,9 +387,19 @@ describe("useExperimentData", () => {
       });
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
-      const { result } = renderHook(() => useExperimentSampleData("experiment-123", 10), {
-        wrapper: createWrapper(),
-      });
+      const formatFunction = vi.fn().mockReturnValue("formatted");
+
+      const { result } = renderHook(
+        () =>
+          useExperimentSampleData({
+            experimentId: "experiment-123",
+            sampleSize: 10,
+            formatFunction,
+          }),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
       expect(result.current.sampleTables).toEqual([]);
       expect(result.current.isLoading).toBe(true);
@@ -338,9 +414,14 @@ describe("useExperimentData", () => {
       });
       mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
-      renderHook(() => useExperimentSampleData("experiment-123"), {
-        wrapper: createWrapper(),
-      });
+      const formatFunction = vi.fn().mockReturnValue("formatted");
+
+      renderHook(
+        () => useExperimentSampleData({ experimentId: "experiment-123", formatFunction }),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
       expect(mockUseQuery).toHaveBeenCalledWith({
         queryData: {
@@ -350,27 +431,6 @@ describe("useExperimentData", () => {
         queryKey: ["experiment", "experiment-123", 1, 5, undefined],
         staleTime: 120000,
       });
-    });
-
-    it("should use format function when provided", () => {
-      const mockUseQuery = vi.fn().mockReturnValue({
-        data: mockSampleResponse,
-        isLoading: false,
-        error: null,
-      });
-      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-      const formatFunction = vi.fn().mockReturnValue("formatted");
-
-      const { result } = renderHook(
-        () => useExperimentSampleData("experiment-123", 10, formatFunction),
-        {
-          wrapper: createWrapper(),
-        },
-      );
-
-      expect(result.current.sampleTables).toHaveLength(2);
-      // The format function would be used in the cell renderer
     });
   });
 });

@@ -126,6 +126,24 @@ vi.mock("@repo/ui/components", () => ({
   Skeleton: ({ className }: { className?: string }) => (
     <div data-testid="skeleton" className={className} />
   ),
+  DropdownMenu: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="dropdown-menu">{children ?? "DropdownMenu"}</div>
+  ),
+  DropdownMenuTrigger: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="dropdown-menu-trigger">{children ?? "DropdownMenuTrigger"}</div>
+  ),
+  DropdownMenuContent: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="dropdown-menu-content">{children ?? "DropdownMenuContent"}</div>
+  ),
+  DropdownMenuItem: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="dropdown-menu-item">{children ?? "DropdownMenuItem"}</div>
+  ),
+  DropdownMenuSeparator: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="dropdown-menu-separator">{children ?? "DropdownMenuSeparator"}</div>
+  ),
+  Button: ({ className }: { className?: string }) => (
+    <div data-testid="button" className={className} />
+  ),
 }));
 
 // Mock cn utility
@@ -160,6 +178,11 @@ vi.mock("~/components/experiment-data/experiment-data-utils", () => ({
       <td colSpan={columnCount}>Loading {rowCount} rows...</td>
     </tr>
   ),
+}));
+
+// Mock BulkActionsBar
+vi.mock("~/components/experiment-data/comments/bulk-actions-bar", () => ({
+  BulkActionsBar: () => <div data-testid="bulk-actions-bar">BulkActionsBar</div>,
 }));
 
 const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;

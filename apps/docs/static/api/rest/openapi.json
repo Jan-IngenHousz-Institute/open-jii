@@ -1335,6 +1335,250 @@
         }
       }
     },
+    "/api/v1/experiments/{id}/data/{tableName}/comments": {
+      "post": {
+        "description": "Creates comments on the specified experiment and data table row(s)",
+        "summary": "Create experiment data table row comments",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          },
+          {
+            "name": "tableName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Table name"
+          }
+        ],
+        "operationId": "experiments.createExperimentDataComments",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rowIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "minItems": 1
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "flag": {
+                    "type": "string",
+                    "enum": ["outlier", "needs_review"]
+                  }
+                },
+                "required": ["rowIds", "text"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "rowId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      },
+                      "flag": {
+                        "type": "string",
+                        "enum": ["outlier", "needs_review"]
+                      },
+                      "createdBy": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "createdByName": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": ["text", "createdBy", "createdAt"]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "description": "Deletes comments on the specified experiment and data table row(s)",
+        "summary": "Delete experiment data table row comments",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          },
+          {
+            "name": "tableName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Table name"
+          }
+        ],
+        "operationId": "experiments.deleteExperimentDataComments",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "rowId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "createdBy": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": ["rowId", "createdBy", "createdAt"]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "rowIds": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "minItems": 1
+                      },
+                      "type": {
+                        "type": "string",
+                        "enum": ["comment", "flag"]
+                      }
+                    },
+                    "required": ["rowIds", "type"]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "204"
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/experiments/{id}/provisioning-status": {
       "post": {
         "description": "Receives status updates from Databricks workflows and updates the corresponding experiment status",

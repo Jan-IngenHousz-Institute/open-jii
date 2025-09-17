@@ -297,7 +297,82 @@
     "previous": "Previous",
     "next": "Next",
     "table": "Table",
-    "details": "Show table details"
+    "details": "Show table details",
+    "row": "row",
+    "rows": "rows"
+  },
+  "experimentDataComments": {
+    "title": "Comments & Flags",
+    "columnHeader": "Comments & Flags",
+    "titleComments": "Comments",
+    "titleFlags": "Flags",
+    "flagType": {
+      "needs_review": "Needs Review",
+      "outlier": "Outlier"
+    },
+    "commentDialog": {
+      "title": "Add Comment",
+      "description": "Add a comment to the measurement",
+      "textLabel": "Comment",
+      "textPlaceholder": "Enter your comment here...",
+      "add": "Add Comment",
+      "cancel": "Cancel"
+    },
+    "commentDialogBulk": {
+      "title": "Bulk Add Comment",
+      "description": "Add the same comment to {{count}} selected measurements",
+      "textLabel": "Comment",
+      "textPlaceholder": "Enter your comment here...",
+      "add": "Add to {{count}} Row(s)",
+      "cancel": "Cancel"
+    },
+    "flagDialog": {
+      "title": "Add Flag",
+      "description": "Flag the measurement",
+      "flagLabel": "Flag Type",
+      "flagPlaceholder": "Select flag type",
+      "textLabel": "Reason",
+      "textPlaceholder": "Explain why this measurement is being flagged...",
+      "add": "Add Flag",
+      "cancel": "Cancel"
+    },
+    "flagDialogBulk": {
+      "title": "Bulk Add Flag",
+      "description": "Flag {{count}} selected measurements",
+      "flagLabel": "Flag Type",
+      "flagPlaceholder": "Select flag type",
+      "textLabel": "Reason",
+      "textPlaceholder": "Explain why this measurement is being flagged...",
+      "add": "Flag {{count}} Rows(s)",
+      "cancel": "Cancel"
+    },
+    "commentDeleteDialog": {
+      "title": "Are you absolutely sure?",
+      "description": "This action cannot be undone. This will permanently delete all comments from the selected {{count}} row(s).",
+      "delete": "Delete"
+    },
+    "flagDeleteDialog": {
+      "title": "Are you absolutely sure?",
+      "description": "This action cannot be undone. This will permanently delete all flags from the selected {{count}} row(s).",
+      "delete": "Delete"
+    },
+    "noComments": "No comments or flags yet.",
+    "noCommentsDescription": "Use the buttons above to add one.",
+    "updated": "Comments and flags updated",
+    "deleted": {
+      "comment": "Comment deleted",
+      "comments": "Comments deleted",
+      "flag": "Flag deleted",
+      "flags": "Flags deleted"
+    },
+    "bulkActions": {
+      "actions": "Actions",
+      "selected": "selected",
+      "addComment": "Add comment",
+      "addFlag": "Add flag",
+      "removeAllComments": "Remove all comments",
+      "removeAllFlags": "Remove all flags"
+    }
   },
   "landingPage": {
     "latestArticles": "Latest articles"

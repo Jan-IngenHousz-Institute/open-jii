@@ -2,6 +2,12 @@ import type { AccessorKeyColumnDef } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import type React from "react";
 import { useMemo } from "react";
+import type { CommentsRowIdentifier } from "~/components/experiment-data/comments/utils";
+import {
+  getCommentsColumn,
+  getRowCheckbox,
+  getToggleAllRowsCheckbox,
+} from "~/components/experiment-data/comments/utils";
 import { tsr } from "~/lib/tsr";
 
 import type { ExperimentData } from "@repo/api";
@@ -13,28 +19,85 @@ export type DataRenderFunction = (value: unknown, type: string) => string | Reac
 // Time in ms before data is removed from the cache
 const STALE_TIME = 2 * 60 * 1000;
 
-function createTableColumns(data: ExperimentData | undefined, formatFunction?: DataRenderFunction) {
+interface CreateTableColumnsParams {
+  experimentId: string;
+  tableName?: string;
+  data: ExperimentData | undefined;
+  formatFunction: DataRenderFunction;
+  commentsColumnName?: string;
+}
+
+function createTableColumns({
+  experimentId,
+  tableName,
+  data,
+  formatFunction,
+  commentsColumnName,
+}: CreateTableColumnsParams) {
   const columnHelper = createColumnHelper<DataRow>();
 
   const columns: AccessorKeyColumnDef<DataRow, DataValue>[] = [];
   if (!data) return columns;
 
+  let idColumnName: string | undefined;
+
   data.columns.forEach((dataColumn) => {
-    columns.push(
-      columnHelper.accessor(dataColumn.name, {
-        header: dataColumn.name,
-        meta: {
-          type: dataColumn.type_name,
-        },
-        cell: ({ row }) => {
-          const value = row.getValue(dataColumn.name);
-          if (formatFunction) {
-            return formatFunction(value, dataColumn.type_name);
-          }
-          return value as string;
-        },
-      }),
-    );
+    switch (dataColumn.type_name) {
+      case "ID":
+        if (tableName === undefined) return;
+        columns.push(
+          columnHelper.accessor(dataColumn.name, {
+            id: dataColumn.name,
+            header: () => getToggleAllRowsCheckbox(),
+            meta: {
+              type: dataColumn.type_name,
+            },
+            cell: ({ row }) => {
+              return getRowCheckbox(row);
+            },
+            size: 30,
+          }),
+        );
+        idColumnName = dataColumn.name;
+        break;
+      case "JSON_COMMENTS":
+        if (tableName === undefined) return;
+        columns.push(
+          columnHelper.accessor(dataColumn.name, {
+            header: commentsColumnName ?? "Comments & Flags--",
+            meta: {
+              type: dataColumn.type_name,
+            },
+            cell: ({ row }) => {
+              const value = row.getValue(dataColumn.name);
+              const rowId = idColumnName ? row.getValue(idColumnName) : undefined;
+              if (rowId) {
+                const commentRowId: CommentsRowIdentifier = {
+                  experimentId,
+                  tableName,
+                  rowId: rowId as string,
+                };
+                return getCommentsColumn(commentRowId, value as string);
+              }
+              return value as string;
+            },
+          }),
+        );
+        break;
+      default:
+        columns.push(
+          columnHelper.accessor(dataColumn.name, {
+            header: dataColumn.name,
+            meta: {
+              type: dataColumn.type_name,
+            },
+            cell: ({ row }) => {
+              const value = row.getValue(dataColumn.name);
+              return formatFunction(value, dataColumn.type_name);
+            },
+          }),
+        );
+    }
   });
   return columns;
 }
@@ -45,22 +108,26 @@ export interface TableMetadata {
   totalPages: number;
 }
 
+export interface UseExperimentDataProps {
+  experimentId: string; // The ID of the experiment to fetch
+  tableName: string; // Name of the table to fetch
+  page: number; // Page to fetch; pages start with 1
+  pageSize: number; // Page to fetch; pages start with 1
+  formatFunction: DataRenderFunction; // Function used to render the column value
+  commentsColumnName?: string; // Name for the comments column
+}
+
 /**
  * Hook to fetch experiment data by ID using regular pagination
- * @param experimentId The ID of the experiment to fetch
- * @param tableName Name of the table to fetch
- * @param page Page to fetch; pages start with 1
- * @param pageSize Page size to fetch
- * @param formatFunction Function used to render the column value
- * @returns Query result containing the experiment data
  */
-export const useExperimentData = (
-  experimentId: string,
-  page: number,
-  pageSize: number,
-  tableName: string,
-  formatFunction?: DataRenderFunction,
-) => {
+export const useExperimentData = ({
+  experimentId,
+  page,
+  pageSize,
+  tableName,
+  formatFunction,
+  commentsColumnName,
+}: UseExperimentDataProps) => {
   const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
     queryData: {
       params: { id: experimentId },
@@ -74,12 +141,18 @@ export const useExperimentData = (
   const tableMetadata: TableMetadata | undefined = useMemo(() => {
     return tableData
       ? {
-          columns: createTableColumns(tableData.data, formatFunction),
+          columns: createTableColumns({
+            experimentId,
+            tableName,
+            data: tableData.data,
+            formatFunction,
+            commentsColumnName,
+          }),
           totalPages: tableData.totalPages,
           totalRows: tableData.totalRows,
         }
       : undefined;
-  }, [tableData, formatFunction]);
+  }, [tableData, experimentId, tableName, formatFunction, commentsColumnName]);
   const tableRows: DataRow[] | undefined = tableData?.data?.rows;
 
   return { tableMetadata, tableRows, isLoading, error };
@@ -91,18 +164,20 @@ export interface SampleTable {
   tableRows: DataRow[];
 }
 
+export interface UseExperimentSampleDataProps {
+  experimentId: string; // The ID of the experiment to fetch
+  sampleSize?: number; // Number of sample rows to fetch
+  formatFunction: DataRenderFunction; // Function used to render the column value
+}
+
 /**
  * Hook to fetch experiment sample data by ID
- * @param experimentId The ID of the experiment to fetch
- * @param sampleSize Number of sample rows to fetch
- * @param formatFunction Function used to render the column value
- * @returns Query result containing the experiment sample data
  */
-export const useExperimentSampleData = (
-  experimentId: string,
+export const useExperimentSampleData = ({
+  experimentId,
   sampleSize = 5,
-  formatFunction?: DataRenderFunction,
-) => {
+  formatFunction,
+}: UseExperimentSampleDataProps) => {
   const page = 1;
   const pageSize = sampleSize;
   const tableName = undefined;
@@ -122,7 +197,7 @@ export const useExperimentSampleData = (
       tables.push({
         name: tableData.name,
         tableMetadata: {
-          columns: createTableColumns(tableData.data, formatFunction),
+          columns: createTableColumns({ experimentId, data: tableData.data, formatFunction }),
           totalPages: tableData.totalPages,
           totalRows: tableData.totalRows,
         } as TableMetadata,
@@ -130,7 +205,7 @@ export const useExperimentSampleData = (
       });
     });
     return tables;
-  }, [data, formatFunction]);
+  }, [data, experimentId, formatFunction]);
 
   return { sampleTables, isLoading, error };
 };

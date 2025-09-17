@@ -1,6 +1,7 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
+import { randomUUID } from "crypto";
 
-import { ExperimentDataQuery } from "@repo/api";
+import { ExperimentDataComment, ExperimentDataQuery } from "@repo/api";
 
 import type { SchemaData } from "../../../../common/modules/databricks/services/sql/sql.types";
 import type { Table } from "../../../../common/modules/databricks/services/tables/tables.types";
@@ -152,6 +153,8 @@ export class GetExperimentDataUseCase {
               );
             }
 
+            this.addFakeCommentsColumns(dataResult.value);
+
             // Create a single-element array with the table data
             const response: ExperimentDataDto = [
               {
@@ -231,6 +234,68 @@ export class GetExperimentDataUseCase {
         }
       },
     );
+  }
+
+  private addFakeCommentsColumns(schemaData: SchemaData) {
+    // Add a fake comments column for demonstration purposes
+    const testComment1: ExperimentDataComment = {
+      text: "Test comment 1",
+      createdBy: randomUUID(),
+      createdByName: "Test User 1",
+      createdAt: new Date().toISOString(),
+    };
+    const testComment2: ExperimentDataComment = {
+      text: "Test comment 2",
+      createdBy: randomUUID(),
+      createdByName: "Test User 2",
+      createdAt: new Date().toISOString(),
+    };
+    const testCommentFlag1: ExperimentDataComment = {
+      text: "Test comment flag 1",
+      flag: "outlier",
+      createdBy: randomUUID(),
+      createdByName: "Test User 1",
+      createdAt: new Date().toISOString(),
+    };
+    const testCommentFlag2: ExperimentDataComment = {
+      text: "Test comment flag 2",
+      flag: "needs_review",
+      createdBy: randomUUID(),
+      createdByName: "Test User 2",
+      createdAt: new Date().toISOString(),
+    };
+
+    schemaData.columns.unshift({
+      name: "id",
+      type_name: "ID",
+      type_text: "ID",
+    });
+    schemaData.columns.push({
+      name: "comments",
+      type_name: "JSON_COMMENTS",
+      type_text: "JSON_COMMENTS",
+    });
+    schemaData.rows.forEach((row) => {
+      const id = randomUUID();
+      row.unshift(id);
+      const randomComment = Math.floor(Math.random() * (5 - 1 + 1)) + 1;
+      switch (randomComment) {
+        case 1:
+          row.push(JSON.stringify([testComment1]));
+          break;
+        case 2:
+          row.push(JSON.stringify([testComment1, testComment2]));
+          break;
+        case 3:
+          row.push(JSON.stringify([testCommentFlag1, testComment2]));
+          break;
+        case 4:
+          row.push(JSON.stringify([testCommentFlag1, testCommentFlag2]));
+          break;
+        default:
+          row.push("[]");
+      }
+    });
   }
 
   private transformSchemaData(schemaData: SchemaData) {

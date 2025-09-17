@@ -5,18 +5,22 @@ import type {
   TableMetadata,
 } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
-import type { PaginationState, Updater } from "@tanstack/react-table";
+import type { PaginationState, RowSelectionState, Updater } from "@tanstack/react-table";
 import { getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
 import React, { useCallback, useEffect, useState } from "react";
+import { BulkActionsBar } from "~/components/experiment-data/comments/bulk-actions-bar";
 import {
   ExperimentDataRows,
   ExperimentTableHeader,
   formatValue,
   LoadingRows,
 } from "~/components/experiment-data/experiment-data-utils";
+import { renderIntoElement } from "~/util/reactUtil";
 
+import type { ExperimentDataComment } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
+  Checkbox,
   Label,
   Pagination,
   PaginationContent,
@@ -44,24 +48,32 @@ export function ExperimentDataTable({
 }) {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
   const [persistedMetaData, setPersistedMetaData] = useState<TableMetadata>();
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const { t } = useTranslation();
 
   // Use traditional pagination with improved column persistence
-  const { tableMetadata, tableRows, isLoading, error } = useExperimentData(
+  const { tableMetadata, tableRows, isLoading, error } = useExperimentData({
     experimentId,
-    pagination.pageIndex + 1,
-    pagination.pageSize,
+    page: pagination.pageIndex + 1,
+    pageSize: pagination.pageSize,
     tableName,
-    formatValue,
-  );
+    formatFunction: formatValue,
+    commentsColumnName: t("experimentDataComments.columnHeader"),
+  });
+
+  function clearSelection() {
+    setRowSelection({});
+  }
 
   const onPaginationChange = useCallback(
     (updaterOrValue: Updater<PaginationState>) => {
       if (typeof updaterOrValue === "function") {
         const newPagination = updaterOrValue(pagination);
         setPagination(newPagination);
+        clearSelection();
       } else {
         setPagination(updaterOrValue);
+        clearSelection();
       }
     },
     [pagination],
@@ -90,8 +102,15 @@ export function ExperimentDataTable({
     getPaginationRowModel: getPaginationRowModel(),
     manualPagination: true,
     onPaginationChange,
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection: true,
+    getRowId: (originalRow: DataRow, index: number) => {
+      if (originalRow.id) return originalRow.id;
+      return index.toString();
+    },
     state: {
       pagination,
+      rowSelection,
     },
     rowCount: totalRows,
     defaultColumn: {
@@ -114,6 +133,40 @@ export function ExperimentDataTable({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [table]);
 
+  useEffect(() => {
+    function getPageRowsSelectedCheckedState() {
+      return table.getIsSomePageRowsSelected() ? "indeterminate" : table.getIsAllPageRowsSelected();
+    }
+
+    const toggleAll = document.getElementById("rowToggleAll");
+    if (toggleAll) {
+      renderIntoElement(
+        toggleAll,
+        <Checkbox
+          checked={getPageRowsSelectedCheckedState()}
+          onCheckedChange={() => table.toggleAllPageRowsSelected()}
+        />,
+      );
+    }
+  }, [persistedMetaData, table, rowSelection]);
+
+  function getSelectedNumberOfCommentsAndFlags() {
+    let totalSelectedComments = 0;
+    let totalSelectedFlags = 0;
+    if (tableRows) {
+      tableRows.forEach((row) => {
+        if (row.id && row.comments && Object.keys(rowSelection).includes(row.id)) {
+          const parsedCommentsAndFlags = JSON.parse(row.comments) as ExperimentDataComment[];
+          parsedCommentsAndFlags.forEach((comment) => {
+            if (comment.flag === undefined) totalSelectedComments++;
+            else totalSelectedFlags++;
+          });
+        }
+      });
+    }
+    return { totalSelectedComments, totalSelectedFlags };
+  }
+
   if (isLoading && !persistedMetaData) {
     return <div>{t("experimentDataTable.loading")}</div>;
   }
@@ -130,11 +183,22 @@ export function ExperimentDataTable({
   const loadingRowCount =
     pagination.pageIndex + 1 == totalPages ? totalRows % pagination.pageSize : pagination.pageSize;
 
+  const { totalSelectedComments, totalSelectedFlags } = getSelectedNumberOfCommentsAndFlags();
+  const rowIds = Object.keys(rowSelection);
+
   return (
     <div>
       <h5 className="mb-4 text-base font-medium">
         {t("experimentDataTable.table")} {tableName}
       </h5>
+      <BulkActionsBar
+        experimentId={experimentId}
+        tableName={tableName}
+        rowIds={rowIds}
+        totalComments={totalSelectedComments}
+        totalFlags={totalSelectedFlags}
+        clearSelection={clearSelection}
+      />
       <div className="text-muted-foreground rounded-md border">
         <Table>
           <ExperimentTableHeader headerGroups={table.getHeaderGroups()} />
