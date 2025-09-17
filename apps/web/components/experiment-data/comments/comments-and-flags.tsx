@@ -91,17 +91,19 @@ function RenderComment({
   );
 }
 
+export interface RenderCommentsAndFlagsProps {
+  experimentId: string;
+  tableName: string;
+  rowIds: string[];
+  commentsJSON: string;
+}
+
 export function RenderCommentsAndFlags({
   experimentId,
   tableName,
   rowIds,
   commentsJSON,
-}: {
-  experimentId: string;
-  tableName: string;
-  rowIds: string[];
-  commentsJSON: string;
-}) {
+}: RenderCommentsAndFlagsProps) {
   const { t } = useTranslation();
   const parsedCommentsAndFlags = JSON.parse(commentsJSON) as ExperimentDataComment[];
   const comments: ExperimentDataComment[] = parsedCommentsAndFlags.filter(

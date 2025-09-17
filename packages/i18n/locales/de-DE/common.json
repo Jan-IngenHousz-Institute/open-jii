@@ -307,16 +307,14 @@
       "description": "Fügen Sie einen Kommentar zur Messung hinzu",
       "textLabel": "Kommentar",
       "textPlaceholder": "Geben Sie hier Ihren Kommentar ein...",
-      "add": "Kommentar hinzufügen",
-      "cancel": "Abbrechen"
+      "add": "Kommentar hinzufügen"
     },
     "commentDialogBulk": {
       "title": "Kommentar für mehrere hinzufügen",
       "description": "Fügen Sie denselben Kommentar zu {{count}} ausgewählten Messungen hinzu",
       "textLabel": "Kommentar",
       "textPlaceholder": "Geben Sie hier Ihren Kommentar ein...",
-      "add": "Zu {{count}} Zeile(n) hinzufügen",
-      "cancel": "Abbrechen"
+      "add": "Zu {{count}} Zeile(n) hinzufügen"
     },
     "flagDialog": {
       "title": "Markierung hinzufügen",
@@ -325,8 +323,7 @@
       "flagPlaceholder": "Markierungstyp auswählen",
       "textLabel": "Grund",
       "textPlaceholder": "Erklären Sie, warum diese Messung markiert wird...",
-      "add": "Markierung hinzufügen",
-      "cancel": "Abbrechen"
+      "add": "Markierung hinzufügen"
     },
     "flagDialogBulk": {
       "title": "Markierung für mehrere hinzufügen",
@@ -334,9 +331,8 @@
       "flagLabel": "Markierungstyp",
       "flagPlaceholder": "Markierungstyp auswählen",
       "textLabel": "Grund",
-      "textPlaceholder": "Erklären Sie, warum diese Messung markiert wird...",
-      "add": "{{count}} Zeile(n) markieren",
-      "cancel": "Abbrechen"
+      "textPlaceholder": "Erklären Sie, warum diese Messungen markiert wirden...",
+      "add": "{{count}} Zeile(n) markieren"
     },
     "commentDeleteDialog": {
       "title": "Sind Sie absolut sicher?",

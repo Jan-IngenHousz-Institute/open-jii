@@ -37,6 +37,17 @@ import { toast } from "@repo/ui/hooks";
 const zAddCommentDialogSchema = zCreateExperimentDataCommentsBody.omit({ rowIds: true });
 type AddCommentDialogFormType = z.infer<typeof zAddCommentDialogSchema>;
 
+export interface AddCommentDialogProps {
+  experimentId: string;
+  tableName: string;
+  rowIds: string[];
+  type: "comment" | "flag";
+  bulk?: boolean;
+  bulkOpen?: boolean;
+  setBulkOpen?: (value: React.SetStateAction<boolean>) => void;
+  clearSelection?: () => void;
+}
+
 export function AddCommentDialog({
   experimentId,
   tableName,
@@ -46,16 +57,7 @@ export function AddCommentDialog({
   bulkOpen,
   setBulkOpen,
   clearSelection,
-}: {
-  experimentId: string;
-  tableName: string;
-  rowIds: string[];
-  type: "comment" | "flag";
-  bulk?: boolean;
-  bulkOpen?: boolean;
-  setBulkOpen?: (value: React.SetStateAction<boolean>) => void;
-  clearSelection?: () => void;
-}) {
+}: AddCommentDialogProps) {
   const { mutateAsync: createComment } = useExperimentDataCommentsCreate();
   const { t } = useTranslation();
   const [open, setOpen] = React.useState(false);

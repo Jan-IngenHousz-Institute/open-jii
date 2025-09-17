@@ -15,6 +15,16 @@ import {
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
+export interface DeleteCommentsDialogProps {
+  experimentId: string;
+  tableName: string;
+  rowIds: string[];
+  type: "comment" | "flag";
+  bulkOpen: boolean;
+  setBulkOpen: (value: React.SetStateAction<boolean>) => void;
+  clearSelection: () => void;
+}
+
 export function DeleteCommentsDialog({
   experimentId,
   tableName,
@@ -23,15 +33,7 @@ export function DeleteCommentsDialog({
   bulkOpen,
   setBulkOpen,
   clearSelection,
-}: {
-  experimentId: string;
-  tableName: string;
-  rowIds: string[];
-  type: "comment" | "flag";
-  bulkOpen: boolean;
-  setBulkOpen: (value: React.SetStateAction<boolean>) => void;
-  clearSelection: () => void;
-}) {
+}: DeleteCommentsDialogProps) {
   const { mutateAsync: deleteComment } = useExperimentDataCommentsDelete();
   const { t } = useTranslation();
   const count = rowIds.length;

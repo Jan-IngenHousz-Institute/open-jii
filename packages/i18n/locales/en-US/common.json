@@ -315,16 +315,14 @@
       "description": "Add a comment to the measurement",
       "textLabel": "Comment",
       "textPlaceholder": "Enter your comment here...",
-      "add": "Add Comment",
-      "cancel": "Cancel"
+      "add": "Add Comment"
     },
     "commentDialogBulk": {
       "title": "Bulk Add Comment",
       "description": "Add the same comment to {{count}} selected measurements",
       "textLabel": "Comment",
       "textPlaceholder": "Enter your comment here...",
-      "add": "Add to {{count}} Row(s)",
-      "cancel": "Cancel"
+      "add": "Add to {{count}} Row(s)"
     },
     "flagDialog": {
       "title": "Add Flag",
@@ -333,8 +331,7 @@
       "flagPlaceholder": "Select flag type",
       "textLabel": "Reason",
       "textPlaceholder": "Explain why this measurement is being flagged...",
-      "add": "Add Flag",
-      "cancel": "Cancel"
+      "add": "Add Flag"
     },
     "flagDialogBulk": {
       "title": "Bulk Add Flag",
@@ -342,9 +339,8 @@
       "flagLabel": "Flag Type",
       "flagPlaceholder": "Select flag type",
       "textLabel": "Reason",
-      "textPlaceholder": "Explain why this measurement is being flagged...",
-      "add": "Flag {{count}} Rows(s)",
-      "cancel": "Cancel"
+      "textPlaceholder": "Explain why these measurements are being flagged...",
+      "add": "Flag {{count}} Row(s)"
     },
     "commentDeleteDialog": {
       "title": "Are you absolutely sure?",
