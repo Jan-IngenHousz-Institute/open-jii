@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { MacroOverviewCards } from "~/components/macro-overview-cards";
 import { useMacros } from "~/hooks/macro/useMacros/useMacros";
 
+import { MacroLanguage } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
   Input,
@@ -25,7 +26,7 @@ export function ListMacros() {
     error,
   } = useMacros({
     search: search || undefined,
-    language: language as "python" | "r" | "javascript" | undefined,
+    language: language as MacroLanguage | undefined,
   });
 
   if (error) {
