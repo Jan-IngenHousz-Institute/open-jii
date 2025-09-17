@@ -2,7 +2,8 @@ import "dotenv/config";
 import postgres from "postgres";
 
 const DATABASE_URL =
-  process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/openjii_local";
+  process.env.DATABASE_URL ||
+  `postgres://postgres:postgres@localhost:${process.env.POSTGRES_PORT || "5432"}/${process.env.POSTGRES_DB || "openjii_local"}`;
 
 export default async function resetDatabase() {
   console.log("🗑️  Resetting database...");

@@ -96,7 +96,7 @@ describe("useExperimentDataUpload", () => {
       renderHook(() => useExperimentDataUpload(), { wrapper: createWrapper() });
 
       const variables = { params: { id: "experiment-123" } };
-      const result = await onMutate(variables);
+      const result = await onMutate?.(variables);
 
       expect(mockCancelQueries).toHaveBeenCalledWith({
         queryKey: ["experiments", "experiment-123", "data"],

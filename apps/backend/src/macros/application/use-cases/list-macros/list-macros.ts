@@ -11,8 +11,9 @@ export class ListMacrosUseCase {
   constructor(private readonly macroRepository: MacroRepository) {}
 
   async execute(filter?: MacroFilter): Promise<Result<MacroDto[]>> {
-    this.logger.log("Listing macros", { filter });
-
+    this.logger.log(
+      `Listing macros for with filter: language: ${filter?.language}, search: ${filter?.search}`,
+    );
     return await this.macroRepository.findAll(filter);
   }
 }
