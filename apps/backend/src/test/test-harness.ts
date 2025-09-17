@@ -268,7 +268,7 @@ export class TestHarness {
         status: data.status ?? "provisioning",
         visibility: data.visibility ?? "private",
         embargoIntervalDays: data.embargoIntervalDays ?? 90,
-        embargoUntil: data.embargoUntil ?? new Date(Date.now() + 86_400_000),
+        embargoUntil: data.embargoUntil ?? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
         createdBy: data.userId,
       })
       .returning();

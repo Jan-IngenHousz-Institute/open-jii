@@ -329,7 +329,7 @@ export const zUpdateExperimentBody = z.object({
   description: z.string().optional().describe("Updated experiment description"),
   status: zExperimentStatus.optional().describe("Updated experiment status"),
   visibility: zExperimentVisibility.optional().describe("Updated visibility setting"),
-  embargoIntervalDays: z.number().int().positive().optional().describe("Embargo period in days"),
+  embargoIntervalDays: z.number().int().optional().describe("Updated embargo period in days"),
   embargoUntil: z
     .string()
     .datetime()
