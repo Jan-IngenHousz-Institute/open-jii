@@ -128,9 +128,15 @@
     "currentProtocols": "Aktuelle Protokolle",
     "protocolAdded": "Protokoll erfolgreich hinzugefügt",
     "protocolRemoved": "Protokoll erfolgreich entfernt",
-    "errorLoadingProtocols": "Fehler beim Laden der Protokolle. Bitte versuchen Sie es erneut."
+    "errorLoadingProtocols": "Fehler beim Laden der Protokolle. Bitte versuchen Sie es erneut.",
+    "pickADate": "Datum auswählen",
+    "embargoUntil": "Embargo bis",
+    "visibilityCannotBeChanged": "Sobald öffentlich, kann die Sichtbarkeit nicht mehr auf privat geändert werden."
   },
   "newExperiment": {
+    "pickADate": "Datum auswählen",
+    "embargoUntil": "Embargo bis",
+    "visibilityCannotBeChanged": "Sobald öffentlich, kann die Sichtbarkeit nicht mehr auf privat geändert werden.",
     "description": "Richten Sie ein neues Experiment (Projekt) ein.",
     "name": "Name",
     "description_field": "Beschreibung",
@@ -149,7 +155,8 @@
     "visibilityDescription": "Steuern Sie die Sichtbarkeit und Embargoperiode Ihres Experiments",
     "addProtocolsTitle": "Protokolle hinzufügen",
     "addProtocolsDescription": "Verwalten und ordnen Sie die Experimentprotokolle",
-    "addProtocolsPlaceholder": "Protokoll hinzufügen"
+    "addProtocolsPlaceholder": "Protokoll hinzufügen",
+    "embargoUntilHelperString": "Dieses Experiment wird am {{date}} öffentlich."
   },
   "dashboard": {
     "title": "Dashboard",

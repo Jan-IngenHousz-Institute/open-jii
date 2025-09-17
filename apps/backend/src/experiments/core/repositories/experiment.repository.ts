@@ -1,7 +1,7 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import { ExperimentFilter, ExperimentStatus } from "@repo/api";
-import { desc, eq, or, and, ilike, experiments, experimentMembers } from "@repo/database";
+import { desc, eq, or, and, ilike, experiments, experimentMembers, sql } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -46,6 +46,7 @@ export class ExperimentRepository {
       status: experiments.status,
       visibility: experiments.visibility,
       embargoIntervalDays: experiments.embargoIntervalDays,
+      embargoUntil: experiments.embargoUntil,
       createdAt: experiments.createdAt,
       createdBy: experiments.createdBy,
       updatedAt: experiments.updatedAt,
@@ -163,6 +164,7 @@ export class ExperimentRepository {
         status: experiments.status,
         visibility: experiments.visibility,
         embargoIntervalDays: experiments.embargoIntervalDays,
+        embargoUntil: experiments.embargoUntil,
         createdAt: experiments.createdAt,
         createdBy: experiments.createdBy,
         updatedAt: experiments.updatedAt,
@@ -193,6 +195,29 @@ export class ExperimentRepository {
       const isAdmin = memberRole === "admin";
 
       return { experiment, hasAccess: isMember, isAdmin };
+    });
+  }
+
+  /**
+   * Find all private experiments where the embargo period has expired
+   * Uses embargoUntil field and compares with current UTC time.
+   * An experiment is expired if (now() AT TIME ZONE 'UTC') > embargoUntil.
+   */
+  async findExpiredEmbargoes(): Promise<Result<ExperimentDto[]>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select()
+        .from(experiments)
+        .where(
+          and(
+            // Only private experiments
+            eq(experiments.visibility, "private"),
+            // Where current UTC date > embargoUntil
+            sql`(now() AT TIME ZONE 'UTC') > ${experiments.embargoUntil}`,
+          ),
+        );
+
+      return result;
     });
   }
 }

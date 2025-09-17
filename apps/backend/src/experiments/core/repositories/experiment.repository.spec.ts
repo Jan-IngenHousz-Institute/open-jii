@@ -759,4 +759,63 @@ describe("ExperimentRepository", () => {
       expect(experimentCheck.length).toBe(0);
     });
   });
+
+  describe("findExpiredEmbargoes", () => {
+    it("should return only private experiments whose embargoUntil is in the past", async () => {
+      const now = Date.now();
+
+      // private + past (should be returned)
+      const { experiment: pastPrivate } = await testApp.createExperiment({
+        name: "Past Private",
+        userId: testUserId,
+        visibility: "private",
+        embargoUntil: new Date(now - 60_000), // 1 min ago
+      });
+
+      // private + future (should NOT be returned)
+      await testApp.createExperiment({
+        name: "Future Private",
+        userId: testUserId,
+        visibility: "private",
+        embargoUntil: new Date(now + 60_000),
+      });
+
+      // public + past (should NOT be returned)
+      await testApp.createExperiment({
+        name: "Past Public",
+        userId: testUserId,
+        visibility: "public",
+        embargoUntil: new Date(now - 60_000),
+      });
+
+      const result = await repository.findExpiredEmbargoes();
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+
+      expect(experiments).toHaveLength(1);
+      expect(experiments[0].id).toBe(pastPrivate.id);
+      expect(experiments[0].visibility).toBe("private");
+    });
+
+    it("should not return experiments whose embargoUntil is exactly now or in the future", async () => {
+      const nearFuture = new Date(Date.now() + 10);
+
+      await testApp.createExperiment({
+        name: "Boundary Private",
+        userId: testUserId,
+        visibility: "private",
+        embargoUntil: nearFuture,
+      });
+
+      const result = await repository.findExpiredEmbargoes();
+
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+
+      expect(experiments.some((e) => e.name === "Boundary Private")).toBe(false);
+    });
+  });
 });

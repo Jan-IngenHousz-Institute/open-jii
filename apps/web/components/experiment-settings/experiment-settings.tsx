@@ -57,7 +57,7 @@ export function ExperimentSettings({ experimentId }: ExperimentSettingsProps) {
         <ExperimentVisibilityCard
           experimentId={experimentId}
           initialVisibility={experiment.visibility}
-          initialEmbargoIntervalDays={experiment.embargoIntervalDays}
+          embargoUntil={experiment.embargoUntil}
         />
       </div>
 

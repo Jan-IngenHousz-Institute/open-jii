@@ -1,0 +1,1 @@
+ALTER TABLE "experiments" ADD COLUMN "embargo_until" timestamp DEFAULT ((now() AT TIME ZONE 'UTC') + interval '90 days') NOT NULL;
