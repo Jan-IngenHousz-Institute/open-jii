@@ -76,7 +76,7 @@ function TestWrapper({ children }: { children: React.ReactNode }) {
       name: "",
       description: "",
       language: "python",
-      codeFile: "",
+      code: "",
     },
   });
 

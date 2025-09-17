@@ -245,7 +245,7 @@ vi.mock("react-hook-form", () => {
   const mockWatch = vi.fn().mockImplementation((key?: string) => {
     if (key === "name") return "Test Macro";
     if (key === "language") return "python";
-    if (key === "codeFile") return "print('hello world')";
+    if (key === "code") return "print('hello world')";
     return "python"; // Default fallback value
   });
 
@@ -257,7 +257,7 @@ vi.mock("react-hook-form", () => {
           name: "Test Macro",
           description: "Test Description",
           language: "python",
-          codeFile: "print('hello world')",
+          code: "print('hello world')",
         });
       },
       setValue: mockSetValue,
@@ -328,7 +328,7 @@ describe("NewMacroForm", () => {
         name: "Test Macro",
         description: "Test Description",
         language: "python",
-        codeFile: Buffer.from("print('hello world')").toString("base64"),
+        code: Buffer.from("print('hello world')").toString("base64"),
       },
     });
   });

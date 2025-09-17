@@ -258,7 +258,7 @@ vi.mock("react-hook-form", () => ({
         name: "Test Macro",
         description: "Test Description",
         language: "python",
-        codeFile: "print('hello world')",
+        code: "print('hello world')",
       });
     },
     setValue: vi.fn(),
@@ -332,7 +332,7 @@ describe("NewMacroForm", () => {
         name: "Test Macro",
         description: "Test Description",
         language: "python",
-        codeFile: Buffer.from("print('hello world')").toString("base64"),
+        code: Buffer.from("print('hello world')").toString("base64"),
       },
     });
   });

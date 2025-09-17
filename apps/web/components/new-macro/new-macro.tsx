@@ -51,7 +51,7 @@ export function NewMacroForm() {
       name: "",
       description: "",
       language: "python",
-      codeFile: "",
+      code: "",
     },
   });
 
@@ -61,14 +61,14 @@ export function NewMacroForm() {
 
   function onSubmit(data: CreateMacroRequestBody) {
     // Convert the code to base64 for transmission
-    const codeFile = btoa(data.codeFile);
+    const code = btoa(data.code);
 
     createMacro({
       body: {
         name: data.name,
         description: data.description,
         language: data.language,
-        codeFile: codeFile,
+        code: code,
       },
     });
     toast({ description: t("macros.macroCreated") });
@@ -116,7 +116,7 @@ export function NewMacroForm() {
             ) : (
               <FormField
                 control={form.control}
-                name="codeFile"
+                name="code"
                 render={({ field }) => (
                   <MacroCodeEditor
                     value={field.value}
@@ -125,7 +125,7 @@ export function NewMacroForm() {
                     macroName={form.watch("name")}
                     username={`${userProfile?.body.firstName} ${userProfile?.body.lastName}`}
                     label={t("newMacro.code")}
-                    error={form.formState.errors.codeFile?.message?.toString()}
+                    error={form.formState.errors.code?.message?.toString()}
                     height="500px"
                   />
                 )}

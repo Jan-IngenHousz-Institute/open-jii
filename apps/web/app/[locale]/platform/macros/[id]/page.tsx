@@ -127,9 +127,9 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {macro.codeFile ? (
+          {macro.code ? (
             <MacroCodeViewer
-              value={decodeBase64(macro.codeFile)} // Decode base64 content safely
+              value={decodeBase64(macro.code)} // Decode base64 content safely
               language={macro.language}
               height="500px"
             />
