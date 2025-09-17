@@ -5,7 +5,7 @@ import MacroCodeViewer from "@/components/macro-code-viewer";
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
 import { formatDate } from "@/util/date";
 import { CalendarIcon, CodeIcon, UserIcon } from "lucide-react";
-import { use } from "react";
+import React, { use } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent, Badge } from "@repo/ui/components";
