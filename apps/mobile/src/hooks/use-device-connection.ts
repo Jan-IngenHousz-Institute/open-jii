@@ -112,6 +112,8 @@ export function useDeviceConnection() {
   async function disconnect() {
     reset();
     setMultispeqExecutor(undefined);
+    setConnectionType(undefined);
+    setBatteryLevel(undefined);
     try {
       await multispeqExecutor?.destroy();
     } catch {
