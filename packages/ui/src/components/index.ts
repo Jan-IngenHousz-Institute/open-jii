@@ -54,7 +54,7 @@ export * from "./toggle";
 export * from "./tooltip";
 
 // Export Plotly chart components
-// export * from "./charts/basic";
+export * from "./charts/basic";
 // export * from "./charts/statistical";
 // export * from "./charts/scientific";
 // export * from "./charts/3d";

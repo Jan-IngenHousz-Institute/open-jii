@@ -5,7 +5,7 @@
 export * from "./common";
 
 // Chart families
-// export * from "./basic";
+export * from "./basic";
 // export * from "./statistical";
 // export * from "./scientific";
 // export * from "./3d";
