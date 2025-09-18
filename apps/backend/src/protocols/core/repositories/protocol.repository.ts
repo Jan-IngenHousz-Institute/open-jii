@@ -1,7 +1,10 @@
 import { Injectable, Inject } from "@nestjs/common";
 
+import { UserProfileDto } from "src/users/core/models/user.model";
+
 import { ProtocolFilter } from "@repo/api";
 import { desc, eq, ilike, protocols, experimentProtocols, users } from "@repo/database";
+import { profiles } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -35,7 +38,7 @@ export class ProtocolRepository {
       const query = this.database
         .select()
         .from(protocols)
-        .innerJoin(users, eq(protocols.createdBy, users.id))
+        .innerJoin(profiles, eq(protocols.createdBy, profiles.userId))
         .orderBy(desc(protocols.updatedAt));
 
       if (search) {
@@ -44,8 +47,12 @@ export class ProtocolRepository {
 
       const results = await query;
       return results.map((result) => {
-        const augmentedResult = result.protocols as unknown as ProtocolDto;
-        augmentedResult.createdByName = result.users.name ?? undefined;
+        const augmentedResult = result.protocols as ProtocolDto;
+        const profile = result.profiles as Partial<UserProfileDto>;
+        augmentedResult.createdByName =
+          profile.firstName && profile.lastName
+            ? `${profile.firstName} ${profile.lastName}`
+            : undefined;
         return augmentedResult;
       });
     });
@@ -56,7 +63,7 @@ export class ProtocolRepository {
       const result = await this.database
         .select()
         .from(protocols)
-        .innerJoin(users, eq(protocols.createdBy, users.id))
+        .innerJoin(profiles, eq(protocols.createdBy, profiles.userId))
         .where(eq(protocols.id, id))
         .limit(1);
 
@@ -64,8 +71,12 @@ export class ProtocolRepository {
         return null;
       }
 
-      const augmentedResult = result[0].protocols as unknown as ProtocolDto;
-      augmentedResult.createdByName = result[0].users.name ?? undefined;
+      const augmentedResult = result[0].protocols as ProtocolDto;
+      const profile = result[0].profiles as Partial<UserProfileDto>;
+      augmentedResult.createdByName =
+        profile.firstName && profile.lastName
+          ? `${profile.firstName} ${profile.lastName}`
+          : undefined;
       return augmentedResult;
     });
   }
