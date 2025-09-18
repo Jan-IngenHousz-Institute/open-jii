@@ -2,8 +2,7 @@ import { Injectable, Inject } from "@nestjs/common";
 
 import { UserProfileDto } from "src/users/core/models/user.model";
 
-import { and, desc, eq, ilike, macros } from "@repo/database";
-import { profiles } from "@repo/database";
+import { and, desc, eq, ilike, macros, profiles } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
