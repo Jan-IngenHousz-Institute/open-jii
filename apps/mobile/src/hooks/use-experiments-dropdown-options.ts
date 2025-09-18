@@ -6,6 +6,11 @@ import { extractTextFromHTML } from "~/utils/extract-text-from-html";
 export function useExperimentsDropdownOptions() {
   const { data, isLoading, error } = tsr.experiments.listExperiments.useQuery({
     queryKey: ["experiments"],
+    queryData: {
+      query: {
+        filter: "related",
+      },
+    },
   });
   const experiments = data?.body;
 

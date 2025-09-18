@@ -26,6 +26,7 @@ export interface MeasurementRecord {
   standardized_value: string;
   timestamp: string;
   topic: string;
+  id: string;
 }
 
 export function mapRowsToMeasurements(rows: any[] | undefined): MeasurementRecord[] {

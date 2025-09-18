@@ -15,15 +15,15 @@ export function ExperimentsScreen() {
 
   const { measurements, isFetching, refetch } = useExperimentsData(
     selectedExperimentId,
-    "bronze_data_exp",
+    "silver_data_exp",
   );
 
   const { options } = useExperimentsDropdownOptions();
 
   const renderTableHeader = () => (
     <View style={styles.tableRow}>
-      <Text style={[styles.headerCell, styles.flex2]}>Type</Text>
-      <Text style={[styles.headerCell, styles.flex3]}>Protocol</Text>
+      <Text style={[styles.headerCell, styles.flex2]}>Protocol</Text>
+      <Text style={[styles.headerCell, styles.flex3]}>Measurement Value</Text>
       <Text style={[styles.headerCell, styles.flex3]}>Timestamp</Text>
     </View>
   );
@@ -34,7 +34,7 @@ export function ExperimentsScreen() {
         {item.measurement_type}
       </Text>
       <Text style={[styles.cell, styles.flex3]} numberOfLines={1} ellipsizeMode="tail">
-        {item.plant_name}
+        {item.measurement_value}
       </Text>
       <Text style={[styles.cell, styles.flex3]} numberOfLines={1} ellipsizeMode="tail">
         {formatShortDate(item.timestamp)}

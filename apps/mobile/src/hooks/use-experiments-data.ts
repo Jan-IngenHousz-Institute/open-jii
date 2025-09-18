@@ -10,7 +10,7 @@ export function useExperimentsData(experimentId: string | undefined, tableName: 
     isFetching: reactQueryIsFetching,
   } = tsr.experiments.getExperimentData.useQuery({
     queryKey: ["experiment-data", experimentId],
-    queryData: { params: { id: experimentId ?? "" } },
+    queryData: { params: { id: experimentId ?? "" }, query: { tableName, pageSize: 100 } },
     enabled: !!experimentId,
   });
 

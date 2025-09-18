@@ -7,9 +7,9 @@ import { useToast } from "~/context/toast-context";
 
 const defaultOptions = {
   queries: {
-    staleTime: Infinity,
+    staleTime: 0,
     gcTime: Infinity,
-    refetchOnMount: false,
+    refetchOnMount: true,
     refetchOnReconnect: false,
     refetchOnWindowFocus: false,
     retry: 1,
@@ -25,6 +25,7 @@ export function ConfiguredQueryClientProvider({ children }) {
   if (!queryClientRef.current) {
     const queryCache = new QueryCache({
       onError: (error: any) => {
+        console.log("error", error);
         const message = error?.body?.message ?? error?.message ?? "Something went wrong";
         showToast(message, "error");
       },
