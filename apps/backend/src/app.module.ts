@@ -1,11 +1,13 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { ScheduleModule } from "@nestjs/schedule";
 
 import databaseConfig from "./common/config/database.config";
 import databricksConfig from "./common/config/databricks.config";
 import { DatabaseModule } from "./common/database/database.module";
 import { ExperimentModule } from "./experiments/experiment.module";
 import { HealthModule } from "./health/health.module";
+import { MacroModule } from "./macros/macro.module";
 import { ProtocolModule } from "./protocols/protocol.module";
 import { UserModule } from "./users/user.module";
 
@@ -15,8 +17,10 @@ import { UserModule } from "./users/user.module";
       isGlobal: true,
       load: [databaseConfig, databricksConfig],
     }),
+    ScheduleModule.forRoot(),
     DatabaseModule,
     ExperimentModule,
+    MacroModule,
     ProtocolModule,
     UserModule,
     HealthModule,

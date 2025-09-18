@@ -36,7 +36,6 @@ export function NewExperimentForm() {
       name: "",
       description: "",
       visibility: zExperimentVisibility.enum.public,
-      embargoIntervalDays: 90,
       members: [],
     },
   });

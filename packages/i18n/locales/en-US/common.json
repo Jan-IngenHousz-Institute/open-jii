@@ -25,7 +25,19 @@
     "outline": "outline",
     "days": "days",
     "created": "Created",
-    "updated": "Updated"
+    "updated": "Updated",
+    "currentName": "Current name",
+    "currentLanguage": "Current language",
+    "dangerZone": "Danger Zone",
+    "createdBy": "Created by",
+    "description": "Description",
+    "name": "Name",
+    "none": "None",
+    "unknown": "Unknown",
+    "lines": "lines",
+    "bytes": "B",
+    "kilobytes": "KB",
+    "megabytes": "MB"
   },
   "navigation": {
     "experiments": "Experiments",
@@ -92,7 +104,6 @@
     "description_field": "Description",
     "visibility": "Visibility",
     "visibilityPlaceholder": "Select an experiment visibility",
-    "embargoIntervalDays": "Embargo Interval Days",
     "cancel": "Cancel",
     "creating": "Creating...",
     "finalizeSetup": "Finalize setup",
@@ -105,7 +116,11 @@
     "visibilityDescription": "Control your experiment's visibility and embargo period",
     "addProtocolsTitle": "Add Protocols",
     "addProtocolsDescription": "Manage and order experiment protocols",
-    "addProtocolsPlaceholder": "Add a protocol"
+    "addProtocolsPlaceholder": "Add a protocol",
+    "pickADate": "Pick a date",
+    "embargoUntil": "Embargo until",
+    "visibilityCannotBeChanged": "Once public, visibility cannot be changed back to private.",
+    "embargoUntilHelperString": "This experiment will become public on {{date}}."
   },
 
   "experimentSettings": {
@@ -117,7 +132,6 @@
     "description": "Description",
     "visibility": "Visibility",
     "visibilityPlaceholder": "Select visibility",
-    "embargoIntervalDays": "Embargo Interval Days",
     "dangerZone": "Danger Zone",
     "dangerDescription": "Delete this experiment and all of its data",
     "deleteExperiment": "Delete Experiment",
@@ -154,7 +168,10 @@
     "currentProtocols": "Current Protocols",
     "protocolAdded": "Protocol added successfully",
     "protocolRemoved": "Protocol removed successfully",
-    "errorLoadingProtocols": "Error loading protocols. Please try again."
+    "errorLoadingProtocols": "Error loading protocols. Please try again.",
+    "pickADate": "Pick a date",
+    "embargoUntil": "Embargo until",
+    "visibilityCannotBeChanged": "Once public, visibility cannot be changed back to private."
   },
 
   "dashboard": {

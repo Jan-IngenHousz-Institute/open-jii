@@ -1,0 +1,750 @@
+import { faker } from "@faker-js/faker";
+
+import { macros as macrosTable, eq } from "@repo/database";
+
+import { assertSuccess } from "../../../common/utils/fp-utils";
+import { TestHarness } from "../../../test/test-harness";
+import type { CreateMacroDto } from "../models/macro.model";
+import { deriveFilenameFromName } from "../models/macro.model";
+import { MacroRepository } from "./macro.repository";
+import type { MacroFilter } from "./macro.repository";
+
+describe("MacroRepository", () => {
+  const testApp = TestHarness.App;
+  let repository: MacroRepository;
+  let testUserId: string;
+  let anotherUserId: string;
+  const testUserName = "Test User";
+  const anotherUserName = "Another User";
+
+  beforeAll(async () => {
+    await testApp.setup();
+  });
+
+  beforeEach(async () => {
+    await testApp.beforeEach();
+    testUserId = await testApp.createTestUser({ name: testUserName });
+    anotherUserId = await testApp.createTestUser({ name: anotherUserName });
+    repository = testApp.module.get(MacroRepository);
+  });
+
+  afterEach(() => {
+    testApp.afterEach();
+  });
+
+  afterAll(async () => {
+    await testApp.teardown();
+  });
+
+  describe("create", () => {
+    it("should create a new macro", async () => {
+      // Arrange
+      const createMacroDto = {
+        name: "Test Macro",
+        description: "Test Description",
+        language: "python" as const,
+        code: "cHl0aG9uIGNvZGU=", // base64 encoded "python code"
+      };
+
+      // Act
+      const result = await repository.create(createMacroDto, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const macros = result.value;
+      const macro = macros[0];
+
+      expect(macro).toMatchObject({
+        id: expect.any(String) as string,
+        name: createMacroDto.name,
+        filename: deriveFilenameFromName(createMacroDto.name),
+        description: createMacroDto.description,
+        language: createMacroDto.language,
+        code: createMacroDto.code,
+        createdBy: testUserId,
+        createdAt: expect.any(Date) as Date,
+        updatedAt: expect.any(Date) as Date,
+      });
+
+      // Verify directly in database
+      const dbResult = await testApp.database
+        .select()
+        .from(macrosTable)
+        .where(eq(macrosTable.id, macro.id));
+
+      expect(dbResult.length).toBe(1);
+      expect(dbResult[0]).toMatchObject({
+        name: createMacroDto.name,
+        filename: deriveFilenameFromName(createMacroDto.name),
+        description: createMacroDto.description,
+        language: createMacroDto.language,
+        code: createMacroDto.code,
+        createdBy: testUserId,
+      });
+    });
+
+    it("should create a macro with null description", async () => {
+      // Arrange
+      const createMacroDto = {
+        name: "Macro Without Description",
+        description: null,
+        language: "r" as const,
+        code: "UiBjb2RlIGhlcmU=", // base64 encoded "R code here"
+      };
+
+      // Act
+      const result = await repository.create(createMacroDto, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const macro = result.value[0];
+
+      expect(macro.description).toBeNull();
+      expect(macro.name).toBe(createMacroDto.name);
+      expect(macro.filename).toBe(deriveFilenameFromName(createMacroDto.name));
+      expect(macro.language).toBe(createMacroDto.language);
+    });
+
+    it("should fail to create macro with duplicate name", async () => {
+      // Arrange
+      const createMacroDto: CreateMacroDto = {
+        name: "Unique Macro Name",
+        description: "First macro",
+        language: "javascript",
+        code: "amF2YXNjcmlwdCBjb2Rl", // base64 encoded "javascript code"
+      };
+
+      await repository.create(createMacroDto, testUserId);
+
+      const duplicateDto: CreateMacroDto = {
+        name: "Unique Macro Name", // Same name
+        description: "Second macro",
+        language: "python",
+        code: "cHl0aG9uIGNvZGU=", // base64 encoded "python code"
+      };
+
+      // Act
+      const result = await repository.create(duplicateDto, anotherUserId);
+
+      // Assert
+      expect(result.isFailure()).toBe(true);
+    });
+
+    it("should fail to create macro with duplicate filename (derived from different names)", async () => {
+      // Arrange - create first macro
+      const firstMacroDto: CreateMacroDto = {
+        name: "Test Macro", // This becomes "test_macro"
+        description: "First macro",
+        language: "python",
+        code: "Zmlyc3QgbWFjcm8=", // base64 encoded "first macro"
+      };
+
+      await repository.create(firstMacroDto, testUserId);
+
+      // Try to create second macro with different name but same derived filename
+      const secondMacroDto: CreateMacroDto = {
+        name: "test_macro", // This also becomes "test_macro"
+        description: "Second macro",
+        language: "python",
+        code: "c2Vjb25kIG1hY3Jv", // base64 encoded "second macro"
+      };
+
+      // Act
+      const result = await repository.create(secondMacroDto, anotherUserId);
+
+      // Assert
+      expect(result.isFailure()).toBe(true);
+    });
+  });
+
+  describe("findAll", () => {
+    it("should return all macros without filter", async () => {
+      // Arrange
+      const macro1: CreateMacroDto = {
+        name: "Python Macro",
+        description: "Python Description",
+        language: "python",
+        code: "cHl0aG9uIGNvZGU=", // base64 encoded "python code"
+      };
+      const macro2: CreateMacroDto = {
+        name: "R Macro",
+        description: "R Description",
+        language: "r",
+        code: "UiBjb2Rl", // base64 encoded "R code"
+      };
+
+      await repository.create(macro1, testUserId);
+      await repository.create(macro2, anotherUserId);
+
+      // Act
+      const result = await repository.findAll();
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const macros = result.value;
+
+      expect(macros.length).toBeGreaterThanOrEqual(2);
+      expect(macros.some((m) => m.name === macro1.name)).toBe(true);
+      expect(macros.some((m) => m.name === macro2.name)).toBe(true);
+
+      // Verify creator names are included
+      const pythonMacro = macros.find((m) => m.name === macro1.name);
+      expect(pythonMacro?.createdByName).toBe(testUserName);
+
+      const rMacro = macros.find((m) => m.name === macro2.name);
+      expect(rMacro?.createdByName).toBe(anotherUserName);
+    });
+
+    it("should return macros in correct order (most recently updated first)", async () => {
+      // Arrange - create three macros
+      const createResult1 = await repository.create(
+        {
+          name: "First Macro",
+          description: "First",
+          language: "python",
+          code: "Zmlyc3QgbWFjcm8=", // base64 encoded "first macro"
+        },
+        testUserId,
+      );
+      assertSuccess(createResult1);
+      const macro1 = createResult1.value[0];
+
+      // Small delay to ensure distinct timestamps
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const createResult2 = await repository.create(
+        {
+          name: "Second Macro",
+          description: "Second",
+          language: "r",
+          code: "c2Vjb25kIG1hY3Jv", // base64 encoded "second macro"
+        },
+        testUserId,
+      );
+      assertSuccess(createResult2);
+      const macro2 = createResult2.value[0];
+
+      // Small delay to ensure distinct timestamps
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const createResult3 = await repository.create(
+        {
+          name: "Third Macro",
+          description: "Third",
+          language: "javascript",
+          code: "dGhpcmQgbWFjcm8=", // base64 encoded "third macro"
+        },
+        testUserId,
+      );
+      assertSuccess(createResult3);
+      const macro3 = createResult3.value[0];
+
+      // Small delay before update to ensure distinct timestamp
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Update the first macro to make it most recent
+      await repository.update(macro1.id, { description: "Updated First" });
+
+      // Act
+      const result = await repository.findAll();
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const macros = result.value;
+
+      const macroIds = macros.map((m) => m.id);
+      const firstMacroIndex = macroIds.indexOf(macro1.id);
+      const secondMacroIndex = macroIds.indexOf(macro2.id);
+      const thirdMacroIndex = macroIds.indexOf(macro3.id);
+
+      // First macro should be first (most recently updated)
+      expect(firstMacroIndex).toBe(0);
+      // Third macro should be second (second most recent)
+      expect(thirdMacroIndex).toBe(1);
+      // Second macro should be third (oldest)
+      expect(secondMacroIndex).toBe(2);
+    });
+
+    it("should filter macros by search term", async () => {
+      // Arrange
+      await repository.create(
+        {
+          name: "Data Analysis Macro",
+          description: "For data processing",
+          language: "python",
+          code: "ZGF0YSBhbmFseXNpcw==", // base64 encoded "data analysis"
+        },
+        testUserId,
+      );
+
+      await repository.create(
+        {
+          name: "Visualization Script",
+          description: "For creating charts",
+          language: "r",
+          code: "dmlzdWFsaXphdGlvbg==", // base64 encoded "visualization"
+        },
+        testUserId,
+      );
+
+      const filter: MacroFilter = { search: "data" };
+
+      // Act
+      const result = await repository.findAll(filter);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const macros = result.value;
+
+      expect(macros.length).toBe(1);
+      expect(macros[0].name).toBe("Data Analysis Macro");
+    });
+
+    it("should filter macros by language", async () => {
+      // Arrange
+      await repository.create(
+        {
+          name: "Python Script",
+          description: "Python macro",
+          language: "python",
+          code: "cHl0aG9uIHNjcmlwdA==", // base64 encoded "python script"
+        },
+        testUserId,
+      );
+
+      await repository.create(
+        {
+          name: "R Script",
+          description: "R macro",
+          language: "r",
+          code: "UiBzY3JpcHQ=", // base64 encoded "R script"
+        },
+        testUserId,
+      );
+
+      await repository.create(
+        {
+          name: "JavaScript Function",
+          description: "JS macro",
+          language: "javascript",
+          code: "amF2YXNjcmlwdCBmdW5jdGlvbg==", // base64 encoded "javascript function"
+        },
+        testUserId,
+      );
+
+      const filter: MacroFilter = { language: "python" };
+
+      // Act
+      const result = await repository.findAll(filter);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const macros = result.value;
+
+      expect(macros.length).toBe(1);
+      expect(macros[0].name).toBe("Python Script");
+      expect(macros[0].language).toBe("python");
+    });
+
+    it("should filter macros by both search term and language", async () => {
+      // Arrange
+      await repository.create(
+        {
+          name: "Data Analysis Python",
+          description: "Python data processing",
+          language: "python",
+          code: "ZGF0YSBhbmFseXNpcyBweXRob24=", // base64 encoded "data analysis python"
+        },
+        testUserId,
+      );
+
+      await repository.create(
+        {
+          name: "Data Analysis R",
+          description: "R data processing",
+          language: "r",
+          code: "ZGF0YSBhbmFseXNpcyBSIGNvZGU=", // base64 encoded "data analysis R code"
+        },
+        testUserId,
+      );
+
+      await repository.create(
+        {
+          name: "Visualization Python",
+          description: "Python visualization",
+          language: "python",
+          code: "cHl0aG9uIHZpc3VhbGl6YXRpb24=", // base64 encoded "python visualization"
+        },
+        testUserId,
+      );
+
+      const filter: MacroFilter = { search: "data", language: "python" };
+
+      // Act
+      const result = await repository.findAll(filter);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const macros = result.value;
+
+      expect(macros.length).toBe(1);
+      expect(macros[0].name).toBe("Data Analysis Python");
+    });
+
+    it("should return empty array when no macros match filter", async () => {
+      // Arrange
+      await repository.create(
+        {
+          name: "Python Script",
+          description: "A Python macro",
+          language: "python",
+          code: "cHl0aG9uIHNjcmlwdA==", // base64 encoded "python script"
+        },
+        testUserId,
+      );
+
+      const filter: MacroFilter = { search: "nonexistent" };
+
+      // Act
+      const result = await repository.findAll(filter);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(0);
+    });
+
+    it("should handle case-insensitive search", async () => {
+      // Arrange
+      await repository.create(
+        {
+          name: "Machine Learning Model",
+          description: "ML processing script",
+          language: "python",
+          code: "bWFjaGluZSBsZWFybmluZyBtb2RlbA==", // base64 encoded "machine learning model"
+        },
+        testUserId,
+      );
+
+      const filter: MacroFilter = { search: "MACHINE" };
+
+      // Act
+      const result = await repository.findAll(filter);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const macros = result.value;
+
+      expect(macros.length).toBe(1);
+      expect(macros[0].name).toBe("Machine Learning Model");
+    });
+  });
+
+  describe("findById", () => {
+    it("should return macro by id with creator name", async () => {
+      // Arrange
+      const createMacroDto: CreateMacroDto = {
+        name: "Test Macro",
+        description: "Test Description",
+        language: "python",
+        code: "dGVzdCBtYWNybw==", // base64 encoded "test macro"
+      };
+
+      const createResult = await repository.create(createMacroDto, testUserId);
+      assertSuccess(createResult);
+      const createdMacro = createResult.value[0];
+
+      // Act
+      const result = await repository.findById(createdMacro.id);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const macro = result.value;
+
+      expect(macro).not.toBeNull();
+      expect(macro).toMatchObject({
+        id: createdMacro.id,
+        name: createMacroDto.name,
+        description: createMacroDto.description,
+        language: createMacroDto.language,
+        createdBy: testUserId,
+        createdByName: testUserName,
+      });
+    });
+
+    it("should return null for non-existent macro", async () => {
+      // Arrange
+      const nonExistentId = faker.string.uuid();
+
+      // Act
+      const result = await repository.findById(nonExistentId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+
+    it("should handle invalid UUID format", async () => {
+      // Arrange
+      const invalidId = "invalid-uuid";
+
+      // Act
+      const result = await repository.findById(invalidId);
+
+      // Assert
+      expect(result.isFailure()).toBe(true);
+    });
+  });
+
+  describe("update", () => {
+    it("should update macro with all fields", async () => {
+      // Arrange
+      const createMacroDto = {
+        name: "Original Macro",
+        description: "Original Description",
+        language: "python" as const,
+        code: "b3JpZ2luYWwgY29kZQ==", // base64 encoded "original code"
+      };
+
+      const createResult = await repository.create(createMacroDto, testUserId);
+      assertSuccess(createResult);
+      const createdMacro = createResult.value[0];
+
+      const updateDto = {
+        name: "Updated Macro",
+        description: "Updated Description",
+        language: "javascript" as const,
+        code: "dXBkYXRlZCBjb2Rl", // base64 encoded "updated code"
+      };
+
+      // Act
+      const result = await repository.update(createdMacro.id, updateDto);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const updatedMacros = result.value;
+      const updatedMacro = updatedMacros[0];
+
+      expect(updatedMacro).toMatchObject({
+        id: createdMacro.id,
+        name: updateDto.name,
+        filename: deriveFilenameFromName(updateDto.name),
+        description: updateDto.description,
+        language: updateDto.language,
+        code: updateDto.code,
+        createdBy: testUserId,
+      });
+
+      // Verify in database
+      const dbResult = await testApp.database
+        .select()
+        .from(macrosTable)
+        .where(eq(macrosTable.id, createdMacro.id));
+
+      expect(dbResult[0]).toMatchObject({
+        ...updateDto,
+        filename: deriveFilenameFromName(updateDto.name),
+      });
+    });
+
+    it("should update macro with partial fields", async () => {
+      // Arrange
+      const createMacroDto = {
+        name: "Original Macro",
+        description: "Original Description",
+        language: "python" as const,
+        code: "b3JpZ2luYWwgY29kZQ==", // base64 encoded "original code"
+      };
+
+      const createResult = await repository.create(createMacroDto, testUserId);
+      assertSuccess(createResult);
+      const createdMacro = createResult.value[0];
+
+      const partialUpdate = {
+        name: "Partially Updated Macro",
+      };
+
+      // Act
+      const result = await repository.update(createdMacro.id, partialUpdate);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const updatedMacro = result.value[0];
+
+      expect(updatedMacro).toMatchObject({
+        id: createdMacro.id,
+        name: partialUpdate.name,
+        filename: deriveFilenameFromName(partialUpdate.name),
+        description: createMacroDto.description,
+        language: createMacroDto.language,
+        code: createMacroDto.code,
+        createdBy: testUserId,
+      });
+    });
+
+    it("should return empty array when updating non-existent macro", async () => {
+      // Arrange
+      const nonExistentId = faker.string.uuid();
+      const updateDto = {
+        name: "Updated Name",
+      };
+
+      // Act
+      const result = await repository.update(nonExistentId, updateDto);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(0);
+    });
+
+    it("should handle invalid UUID format", async () => {
+      // Arrange
+      const invalidId = "invalid-uuid";
+      const updateDto = {
+        name: "Updated Name",
+      };
+
+      // Act
+      const result = await repository.update(invalidId, updateDto);
+
+      // Assert
+      expect(result.isFailure()).toBe(true);
+    });
+
+    it("should fail to update with duplicate name", async () => {
+      // Arrange - create two macros
+      const firstMacro = await repository.create(
+        {
+          name: "First Macro",
+          description: "First",
+          language: "python",
+          code: "Zmlyc3QgbWFjcm8=", // base64 encoded "first macro"
+        },
+        testUserId,
+      );
+      assertSuccess(firstMacro);
+
+      const secondMacro = await repository.create(
+        {
+          name: "Second Macro",
+          description: "Second",
+          language: "r",
+          code: "c2Vjb25kIG1hY3Jv", // base64 encoded "second macro"
+        },
+        testUserId,
+      );
+      assertSuccess(secondMacro);
+
+      // Try to update second macro with first macro's name
+      const updateDto = {
+        name: "First Macro", // Duplicate name
+      };
+
+      // Act
+      const result = await repository.update(secondMacro.value[0].id, updateDto);
+
+      // Assert
+      expect(result.isFailure()).toBe(true);
+    });
+
+    it("should correctly derive filename from name with special characters", async () => {
+      // Arrange
+      const createMacroDto = {
+        name: "  My AWESOME Macro   v2.1  ",
+        description: "Test filename derivation",
+        language: "python" as const,
+        code: "dGVzdCBjb2Rl", // base64 encoded "test code"
+      };
+
+      const createResult = await repository.create(createMacroDto, testUserId);
+      assertSuccess(createResult);
+      const createdMacro = createResult.value[0];
+
+      // Assert the filename was properly derived
+      expect(createdMacro.filename).toBe("my_awesome_macro_v2.1");
+
+      // Test updating with another special name
+      const updateDto = {
+        name: "NEW   NAME With     SPACES",
+      };
+
+      const updateResult = await repository.update(createdMacro.id, updateDto);
+      assertSuccess(updateResult);
+      const updatedMacro = updateResult.value[0];
+
+      // Assert the filename was properly updated
+      expect(updatedMacro.filename).toBe("new_name_with_spaces");
+    });
+  });
+
+  describe("delete", () => {
+    it("should delete macro by id", async () => {
+      // Arrange
+      const createMacroDto: CreateMacroDto = {
+        name: "Macro to Delete",
+        description: "This will be deleted",
+        language: "python",
+        code: "bWFjcm8gdG8gZGVsZXRl", // base64 encoded "macro to delete"
+      };
+
+      const createResult = await repository.create(createMacroDto, testUserId);
+      assertSuccess(createResult);
+      const createdMacro = createResult.value[0];
+
+      // Act
+      const result = await repository.delete(createdMacro.id);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const deletedMacros = result.value;
+      expect(deletedMacros).toHaveLength(1);
+      expect(deletedMacros[0].id).toBe(createdMacro.id);
+
+      // Verify macro is deleted from database
+      const dbResult = await testApp.database
+        .select()
+        .from(macrosTable)
+        .where(eq(macrosTable.id, createdMacro.id));
+
+      expect(dbResult).toHaveLength(0);
+    });
+
+    it("should return empty array when deleting non-existent macro", async () => {
+      // Arrange
+      const nonExistentId = faker.string.uuid();
+
+      // Act
+      const result = await repository.delete(nonExistentId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toHaveLength(0);
+    });
+
+    it("should handle invalid UUID format", async () => {
+      // Arrange
+      const invalidId = "invalid-uuid";
+
+      // Act
+      const result = await repository.delete(invalidId);
+
+      // Assert
+      expect(result.isFailure()).toBe(true);
+    });
+  });
+});

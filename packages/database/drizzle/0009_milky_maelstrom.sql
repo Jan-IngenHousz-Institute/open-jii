@@ -1,0 +1,2 @@
+ALTER TABLE "experiments" ADD COLUMN "embargo_until" timestamp DEFAULT ((now() AT TIME ZONE 'UTC') + interval '90 days') NOT NULL;--> statement-breakpoint
+ALTER TABLE "experiments" DROP COLUMN "embargo_interval_days";

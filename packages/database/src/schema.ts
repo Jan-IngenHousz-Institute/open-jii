@@ -174,7 +174,9 @@ export const experiments = pgTable("experiments", {
   description: text("description"),
   status: experimentStatusEnum("status").default("provisioning").notNull(),
   visibility: experimentVisibilityEnum("visibility").default("public").notNull(),
-  embargoIntervalDays: integer("embargo_interval_days").default(90).notNull(),
+  embargoUntil: timestamp("embargo_until")
+    .default(sql`((now() AT TIME ZONE 'UTC') + interval '90 days')`)
+    .notNull(),
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),
@@ -242,6 +244,23 @@ export const protocols = pgTable("protocols", {
   description: text("description"),
   code: jsonb("code").notNull(),
   family: sensorFamilyEnum("family").notNull(),
+  createdBy: uuid("created_by")
+    .references(() => users.id)
+    .notNull(),
+  ...timestamps,
+});
+
+// Macro Language Enum
+export const macroLanguageEnum = pgEnum("macro_language", ["python", "r", "javascript"]);
+
+// Macros Table - only stores metadata, actual code files are handled by Databricks
+export const macros = pgTable("macros", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull().unique(),
+  filename: varchar("filename", { length: 255 }).notNull().unique(),
+  description: text("description"),
+  language: macroLanguageEnum("language").notNull(),
+  code: text("code").notNull(), // Base64 encoded content of the macro code
   createdBy: uuid("created_by")
     .references(() => users.id)
     .notNull(),

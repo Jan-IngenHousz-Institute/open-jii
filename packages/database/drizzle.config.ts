@@ -11,7 +11,7 @@ export default {
         ssl: !process.env.DATABASE_URL.includes("localhost"),
       }
     : {
-        url: "postgres://postgres:postgres@localhost:5432/openjii_local",
+        url: `postgres://postgres:postgres@localhost:${process.env.POSTGRES_PORT || "5432"}/${process.env.POSTGRES_DB || "openjii_local"}`,
         ssl: false,
       },
 } satisfies Config;

@@ -33,7 +33,13 @@ export class ExperimentController {
   @TsRestHandler(contract.experiments.createExperiment)
   createExperiment(@CurrentUser() user: User) {
     return tsRestHandler(contract.experiments.createExperiment, async ({ body }) => {
-      const result = await this.createExperimentUseCase.execute(body, user.id);
+      // Convert embargoUntil from ISO string to Date object
+      const transformedBody = {
+        ...body,
+        embargoUntil: body.embargoUntil ? new Date(body.embargoUntil) : undefined,
+      };
+
+      const result = await this.createExperimentUseCase.execute(transformedBody, user.id);
 
       if (result.isSuccess()) {
         const experiment = result.value;
@@ -130,7 +136,17 @@ export class ExperimentController {
   @TsRestHandler(contract.experiments.updateExperiment)
   updateExperiment(@CurrentUser() user: User) {
     return tsRestHandler(contract.experiments.updateExperiment, async ({ params, body }) => {
-      const result = await this.updateExperimentUseCase.execute(params.id, body, user.id);
+      // Convert embargoUntil from ISO string to Date object
+      const transformedBody = {
+        ...body,
+        embargoUntil: body.embargoUntil ? new Date(body.embargoUntil) : undefined,
+      };
+
+      const result = await this.updateExperimentUseCase.execute(
+        params.id,
+        transformedBody,
+        user.id,
+      );
 
       if (result.isSuccess()) {
         const experiment = result.value;

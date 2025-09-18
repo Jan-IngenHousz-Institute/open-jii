@@ -22,6 +22,7 @@ import {
   experimentProtocols,
   organizations,
   flows,
+  macros,
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
@@ -138,6 +139,8 @@ export class TestHarness {
     await this.database.delete(flows).execute();
     await this.database.delete(experiments).execute();
     await this.database.delete(protocols).execute();
+    // Macros reference users, so delete macros before users
+    await this.database.delete(macros).execute();
     await this.database.delete(profiles).execute();
     await this.database.delete(organizations).execute();
     await this.database.delete(users).execute();
@@ -254,7 +257,7 @@ export class TestHarness {
     description?: string;
     status?: "provisioning" | "provisioning_failed" | "active" | "stale" | "archived" | "published";
     visibility?: "private" | "public";
-    embargoIntervalDays?: number;
+    embargoUntil?: Date;
   }) {
     const [experiment] = await this.database
       .insert(experiments)
@@ -263,7 +266,7 @@ export class TestHarness {
         description: data.description ?? "Test description",
         status: data.status ?? "provisioning",
         visibility: data.visibility ?? "private",
-        embargoIntervalDays: data.embargoIntervalDays ?? 90,
+        embargoUntil: data.embargoUntil ?? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
         createdBy: data.userId,
       })
       .returning();

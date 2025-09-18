@@ -326,7 +326,6 @@ describe("GetExperimentAccessUseCase", () => {
         description: "Testing return structure",
         status: "active",
         visibility: "private",
-        embargoIntervalDays: 30,
         userId: testUserId,
       });
 
@@ -354,7 +353,6 @@ describe("GetExperimentAccessUseCase", () => {
         description: "Testing return structure",
         status: "active",
         visibility: "private",
-        embargoIntervalDays: 30,
         createdBy: testUserId,
       });
 

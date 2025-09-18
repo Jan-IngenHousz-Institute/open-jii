@@ -1,10 +1,11 @@
 "use client";
 
-import { editExperimentFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CalendarIcon } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 
-import { zExperimentVisibility } from "@repo/api";
+import { zExperimentVisibility, visibilitySchema } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
   Button,
@@ -24,58 +25,61 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  Calendar,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
+import { cn } from "@repo/ui/lib/utils";
 
 import { useExperimentUpdate } from "../../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
+import {
+  isoToLocalCalendarDate,
+  localCalendarDateToIsoEndOfDay,
+  embargoUntilHelperString,
+} from "../new-experiment/embargo-utils";
 
 interface ExperimentVisibilityCardProps {
   experimentId: string;
   initialVisibility: "private" | "public";
-  initialEmbargoIntervalDays: number;
+  embargoUntil: string;
 }
 
 export function ExperimentVisibilityCard({
   experimentId,
   initialVisibility,
-  initialEmbargoIntervalDays,
+  embargoUntil,
 }: ExperimentVisibilityCardProps) {
   const { mutateAsync: updateExperiment, isPending: isUpdating } = useExperimentUpdate();
   const { t } = useTranslation();
+  const [currentVisibility, setCurrentVisibility] = useState<"private" | "public">(
+    initialVisibility,
+  );
 
   interface VisibilityFormValues {
     visibility?: "private" | "public";
-    embargoIntervalDays?: number;
+    embargoUntil?: string;
   }
 
   const form = useForm<VisibilityFormValues>({
-    resolver: zodResolver(
-      editExperimentFormSchema.pick({
-        visibility: true,
-        embargoIntervalDays: true,
-      }),
-    ),
+    resolver: zodResolver(visibilitySchema),
     defaultValues: {
       visibility: initialVisibility,
-      embargoIntervalDays: initialEmbargoIntervalDays,
+      embargoUntil,
     },
   });
 
-  // TODO: Temporary removed as the implementation is pending on the backend
   // Watch visibility to conditionally display the embargo field
-  // const visibility = form.watch("visibility");
+  const visibility = form.watch("visibility");
 
   async function onSubmit(data: VisibilityFormValues) {
-    // Skip the update if visibility is undefined
-    if (data.visibility === undefined) {
-      return;
-    }
+    if (data.visibility === undefined) return;
 
     const updateData = {
       visibility: data.visibility,
-      // Only include embargoIntervalDays when visibility is private
       ...(data.visibility === "private" && {
-        embargoIntervalDays: data.embargoIntervalDays,
+        embargoUntil: data.embargoUntil,
       }),
     };
 
@@ -84,6 +88,10 @@ export function ExperimentVisibilityCard({
       body: updateData,
     });
     toast({ description: t("experiments.experimentUpdated") });
+    // If visibility was changed to public, update local state so UI disables private
+    if (data.visibility === "public") {
+      setCurrentVisibility("public");
+    }
   }
 
   return (
@@ -101,7 +109,11 @@ export function ExperimentVisibilityCard({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("experimentSettings.visibility")}</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    disabled={currentVisibility === "public"}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={t("experimentSettings.visibilityPlaceholder")} />
@@ -115,37 +127,75 @@ export function ExperimentVisibilityCard({
                       ))}
                     </SelectContent>
                   </Select>
+                  {visibility === "public" && (
+                    <div className="text-muted-foreground pt-1 text-xs">
+                      {t("experimentSettings.visibilityCannotBeChanged")}
+                    </div>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* TODO: Temporary removed as the implementation is pending on the backend */}
-            {/* Only show embargo settings when visibility is private */}
-            {/*{visibility === "private" && (*/}
-            {/*  <FormField*/}
-            {/*    control={form.control}*/}
-            {/*    name="embargoIntervalDays"*/}
-            {/*    render={({ field }) => (*/}
-            {/*      <FormItem>*/}
-            {/*        <FormLabel>{t("experimentSettings.embargoIntervalDays")}</FormLabel>*/}
-            {/*        <FormControl>*/}
-            {/*          <Input*/}
-            {/*            type="number"*/}
-            {/*            {...field}*/}
-            {/*            onChange={(e) => {*/}
-            {/*              const value = Number(e.target.value);*/}
-            {/*              if (value < 0) return field.onChange(0);*/}
-            {/*              return field.onChange(value);*/}
-            {/*            }}*/}
-            {/*            value={field.value}*/}
-            {/*          />*/}
-            {/*        </FormControl>*/}
-            {/*        <FormMessage />*/}
-            {/*      </FormItem>*/}
-            {/*    )}*/}
-            {/*  />*/}
-            {/*)}*/}
+            {visibility === "private" && (
+              <FormField
+                name="embargoUntil"
+                control={form.control}
+                render={({ field }) => {
+                  const selectedDate = isoToLocalCalendarDate(field.value);
+                  const helperText = embargoUntilHelperString(field.value, t);
+
+                  const setDate = (next?: Date) => {
+                    const iso = localCalendarDateToIsoEndOfDay(next);
+                    field.onChange(iso ?? "");
+                  };
+
+                  const buttonLabel = selectedDate
+                    ? selectedDate.toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })
+                    : t("experimentSettings.pickADate");
+
+                  return (
+                    <FormItem className="space-y-3">
+                      <FormLabel>{t("experimentSettings.embargoUntil")}</FormLabel>
+                      <FormControl>
+                        <div className="flex flex-col gap-3 sm:flex-row">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "justify-start text-left font-normal",
+                                  !selectedDate && "text-muted-foreground",
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {buttonLabel}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={selectedDate}
+                                onSelect={setDate}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </FormControl>
+                      {helperText && (
+                        <div className="text-muted-foreground pl-1 pt-1 text-xs">{helperText}</div>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+            )}
 
             <div className="flex justify-end">
               <Button type="submit" disabled={isUpdating}>
