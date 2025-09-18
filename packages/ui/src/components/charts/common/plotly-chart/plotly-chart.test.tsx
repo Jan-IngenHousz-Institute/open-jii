@@ -14,18 +14,21 @@ vi.mock("react-plotly.js", () => ({
   default: (props: any) => mockPlotComponent(props),
 }));
 
-// Mock next/dynamic
-vi.mock("next/dynamic", () => ({
-  __esModule: true,
-  default: (importFn: any, options: any) => {
-    return (props: any) => {
-      if (options?.loading && props.loading) {
-        return options.loading();
-      }
-      return mockPlotComponent(props);
-    };
-  },
-}));
+// Mock React.lazy to return our mock component directly
+vi.mock("react", async () => {
+  const actual = await vi.importActual("react");
+  return {
+    ...actual,
+    lazy: vi.fn((fn) => {
+      // Return a component that behaves like our mock
+      return (props: any) => mockPlotComponent(props);
+    }),
+    Suspense: ({ children, fallback }: any) => {
+      // For testing, we'll just render children directly or fallback if loading
+      return children || fallback;
+    },
+  };
+});
 
 // Mock the utils module
 const mockUtils = {

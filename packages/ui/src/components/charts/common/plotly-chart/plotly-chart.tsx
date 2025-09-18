@@ -1,8 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import type { Layout, Config, PlotData, Data, PlotMarker, ColorScale, Font } from "plotly.js";
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, Suspense, lazy } from "react";
 import type { PlotParams } from "react-plotly.js";
 
 import { cn } from "../../../../lib/utils";
@@ -41,11 +40,13 @@ type StandardTraceType = "scatter" | "bar" | "line" | "area" | "pie" | "box" | "
 
 type PlotlyTraceType = WebGLTraceType | StandardTraceType | string;
 
-// Dynamically import Plotly to avoid SSR issues
-const Plot = dynamic(() => import("react-plotly.js"), {
-  ssr: false,
-  loading: () => <div className="flex h-96 items-center justify-center">Loading chart...</div>,
-});
+// Lazy load Plotly to avoid SSR issues
+const Plot = lazy(() => import("react-plotly.js"));
+
+// Loading component for the lazy-loaded Plot
+const PlotLoadingComponent = () => (
+  <div className="flex h-96 items-center justify-center">Loading chart...</div>
+);
 
 // Hook to detect if we're on the client side
 const useIsClient = () => {
@@ -413,27 +414,29 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
 
     return (
       <div ref={ref} className={cn("plotly-container w-full", className)}>
-        <Plot
-          data={safeData}
-          layout={safeLayout}
-          config={safeConfig}
-          {...plotProps}
-          style={{
-            width: "100%",
-            height: "100%",
-            ...plotProps.style,
-          }}
-          onError={(error: PlotlyErrorEvent) => {
-            console.error("Plotly chart error:", error);
-            setLocalError(`Rendering error: ${error.message || "Unknown error"}`);
+        <Suspense fallback={<PlotLoadingComponent />}>
+          <Plot
+            data={safeData}
+            layout={safeLayout}
+            config={safeConfig}
+            {...plotProps}
+            style={{
+              width: "100%",
+              height: "100%",
+              ...plotProps.style,
+            }}
+            onError={(error: PlotlyErrorEvent) => {
+              console.error("Plotly chart error:", error);
+              setLocalError(`Rendering error: ${error.message || "Unknown error"}`);
 
-            // If it's a WebGL error, try fallback
-            if (error.message?.includes("gl-") || error.message?.includes("WebGL")) {
-              setIsWebGLEnabled(false);
-            }
-          }}
-          useResizeHandler={true}
-        />
+              // If it's a WebGL error, try fallback
+              if (error.message?.includes("gl-") || error.message?.includes("WebGL")) {
+                setIsWebGLEnabled(false);
+              }
+            }}
+            useResizeHandler={true}
+          />
+        </Suspense>
       </div>
     );
   },

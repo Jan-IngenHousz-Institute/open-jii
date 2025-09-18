@@ -93,10 +93,18 @@ export function createBaseLayout(config: PlotlyChartConfig): Partial<Layout> {
   const { width, height } = config;
 
   const isDark = theme === "dark";
-  const gridColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
-  const textColor = isDark ? "#ffffff" : "#000000";
-  const bgColor = backgroundColor || "rgba(0,0,0,0)";
-  const paperBgColor = backgroundColor || (isDark ? "#0f0f0f" : "#ffffff");
+
+  const colorScheme: Record<"dark" | "light" | "auto", { grid: string; text: string; bg: string }> =
+    {
+      dark: { grid: "rgba(255,255,255,0.1)", text: "#ffffff", bg: "#0f0f0f" },
+      light: { grid: "rgba(0,0,0,0.1)", text: "#000000", bg: "#ffffff" },
+      auto: { grid: "rgba(0,0,0,0.1)", text: "#000000", bg: "#ffffff" }, // Default to light
+    };
+
+  const gridColor = colorScheme[theme ?? "auto"].grid;
+  const textColor = colorScheme[theme ?? "auto"].text;
+  const bgColor = colorScheme[theme ?? "auto"].bg;
+  const paperBgColor = colorScheme[theme ?? "auto"].bg;
 
   return {
     title: title
