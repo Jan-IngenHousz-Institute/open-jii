@@ -296,6 +296,7 @@
     "previous": "Vorige",
     "next": "Volgende",
     "table": "Tabel",
-    "details": "Toon tabeldetails"
+    "details": "Toon tabeldetails",
+    "download": "Tabel downloaden"
   }
 }

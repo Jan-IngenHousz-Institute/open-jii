@@ -34,6 +34,7 @@ vi.mock("@repo/i18n", () => ({
         "experimentDataTable.previous": "Previous",
         "experimentDataTable.next": "Next",
         "experimentDataTable.noResults": "No results found",
+        "experimentDataTable.download": "Download",
       };
       return translations[key] || key;
     },
@@ -42,6 +43,48 @@ vi.mock("@repo/i18n", () => ({
 
 // Mock UI components
 vi.mock("@repo/ui/components", () => ({
+  Button: ({
+    children,
+    onClick,
+    className,
+    ...props
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    variant?: string;
+    size?: string;
+    className?: string;
+  }) => (
+    <button onClick={onClick} className={className} {...props}>
+      {children}
+    </button>
+  ),
+  Dialog: ({
+    children,
+    open,
+    onOpenChange: _onOpenChange,
+  }: {
+    children: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+  }) => (open ? <div data-testid="dialog">{children}</div> : null),
+  DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div className={className} data-testid="dialog-content">
+      {children}
+    </div>
+  ),
+  DialogDescription: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-description">{children}</div>
+  ),
+  DialogFooter: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-footer">{children}</div>
+  ),
+  DialogHeader: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-header">{children}</div>
+  ),
+  DialogTitle: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-title">{children}</div>
+  ),
   Label: ({ children }: { children: React.ReactNode }) => <label>{children}</label>,
   Pagination: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={className}>{children}</div>
@@ -126,6 +169,48 @@ vi.mock("@repo/ui/components", () => ({
   Skeleton: ({ className }: { className?: string }) => (
     <div data-testid="skeleton" className={className} />
   ),
+  Form: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
+    <div {...props}>{children}</div>
+  ),
+  FormField: ({
+    render,
+  }: {
+    render: (field: {
+      field: { value: string; onChange: (value: string) => void };
+    }) => React.ReactNode;
+  }) => {
+    const field = { value: "csv", onChange: vi.fn() };
+    return <>{render({ field })}</>;
+  },
+  FormItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  FormLabel: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <label className={className}>{children}</label>
+  ),
+  FormControl: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  FormMessage: () => <div />,
+}));
+
+// Mock DataDownloadModal
+vi.mock("./data-download-modal/data-download-modal", () => ({
+  DataDownloadModal: ({
+    open,
+    onOpenChange,
+    experimentId,
+    tableName,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    experimentId: string;
+    tableName: string;
+  }) =>
+    open ? (
+      <div data-testid="data-download-modal">
+        <div>
+          Download Modal for {tableName} - {experimentId}
+        </div>
+        <button onClick={() => onOpenChange(false)}>Close</button>
+      </div>
+    ) : null,
 }));
 
 // Mock cn utility
@@ -424,5 +509,30 @@ describe("ExperimentDataTable", () => {
       queryKey: ["experiment", "experiment-123", 1, 20, "test_table"],
       staleTime: 120000,
     });
+  });
+
+  it("should render download button and open modal", async () => {
+    const user = userEvent.setup();
+    const mockUseQuery = vi.fn().mockReturnValue({
+      data: mockResponse,
+      isLoading: false,
+      error: null,
+    });
+    mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
+
+    render(
+      <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+      { wrapper: createWrapper() },
+    );
+
+    // Find and click download button
+    const downloadButton = screen.getByText("Download");
+    expect(downloadButton).toBeInTheDocument();
+
+    await user.click(downloadButton);
+
+    // Check that modal appears
+    expect(screen.getByTestId("data-download-modal")).toBeInTheDocument();
+    expect(screen.getByText("Download Modal for test_table - experiment-123")).toBeInTheDocument();
   });
 });

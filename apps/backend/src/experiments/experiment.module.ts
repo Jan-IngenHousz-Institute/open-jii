@@ -8,6 +8,7 @@ import { EmbargoProcessorService } from "./application/services/embargo-processo
 // Use Cases
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "./application/use-cases/delete-experiment/delete-experiment";
+import { DownloadExperimentDataUseCase } from "./application/use-cases/experiment-data/download-experiment-data";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data";
 import { UploadAmbyteDataUseCase } from "./application/use-cases/experiment-data/upload-ambyte-data";
 import { AddExperimentMembersUseCase } from "./application/use-cases/experiment-members/add-experiment-members";
@@ -77,6 +78,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     // Experiment data use cases
     GetExperimentDataUseCase,
     UploadAmbyteDataUseCase,
+    DownloadExperimentDataUseCase,
 
     // Experiment member use cases
     ListExperimentMembersUseCase,

@@ -6,7 +6,12 @@ import { getAxiosErrorMessage } from "../../../../utils/axios-error";
 import { Result, AppError, tryCatch, failure, apiErrorMapper } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
-import { ExecuteStatementRequest, SchemaData, StatementResponse } from "./sql.types";
+import {
+  ExecuteStatementRequest,
+  SchemaData,
+  StatementResponse,
+  DownloadLinksData,
+} from "./sql.types";
 
 @Injectable()
 export class DatabricksSqlService {
@@ -20,7 +25,12 @@ export class DatabricksSqlService {
     private readonly configService: DatabricksConfigService,
   ) {}
 
-  async executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {
+  async executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+    disposition: "INLINE" | "EXTERNAL_LINKS" = "INLINE",
+    format: "JSON_ARRAY" | "ARROW_STREAM" | "CSV" = "JSON_ARRAY",
+  ): Promise<Result<SchemaData | DownloadLinksData>> {
     return await tryCatch(
       async () => {
         const tokenResult = await this.authService.getAccessToken();
@@ -29,7 +39,9 @@ export class DatabricksSqlService {
         }
 
         const token = tokenResult.value;
-        this.logger.debug(`Executing SQL query in schema ${schemaName}: ${sqlStatement}`);
+        this.logger.debug(
+          `Executing SQL query in schema ${schemaName} with ${disposition}: ${sqlStatement}`,
+        );
 
         const host = this.configService.getHost();
         const statementUrl = `${host}${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`;
@@ -39,9 +51,14 @@ export class DatabricksSqlService {
           schema: schemaName,
           catalog: this.configService.getCatalogName(),
           wait_timeout: "50s", // Maximum supported wait time
-          disposition: "INLINE", // We want the data inline with the response
-          format: "JSON_ARRAY",
+          disposition,
+          format,
         };
+
+        // Add byte limit for EXTERNAL_LINKS
+        if (disposition === "EXTERNAL_LINKS") {
+          requestBody.byte_limit = 100 * 1024 * 1024 * 1024; // 100 GiB
+        }
 
         try {
           const response: AxiosResponse<StatementResponse> = await this.httpService.axiosRef.post(
@@ -60,7 +77,9 @@ export class DatabricksSqlService {
 
           // Check if the statement is in a terminal state
           if (statementResponse.status.state === "SUCCEEDED") {
-            return this.formatExperimentDataResponse(statementResponse);
+            return disposition === "EXTERNAL_LINKS"
+              ? this.formatDownloadLinksResponse(statementResponse)
+              : this.formatExperimentDataResponse(statementResponse);
           } else if (["FAILED", "CANCELED", "CLOSED"].includes(statementResponse.status.state)) {
             if (statementResponse.status.error) {
               throw AppError.internal(
@@ -82,7 +101,9 @@ export class DatabricksSqlService {
             throw pollResult.error;
           }
 
-          return this.formatExperimentDataResponse(pollResult.value);
+          return disposition === "EXTERNAL_LINKS"
+            ? this.formatDownloadLinksResponse(pollResult.value)
+            : this.formatExperimentDataResponse(pollResult.value);
         } catch (error) {
           this.logger.error(`Error executing SQL query: ${getAxiosErrorMessage(error)}`);
           throw error instanceof AppError
@@ -177,6 +198,22 @@ export class DatabricksSqlService {
       rows: response.result.data_array ?? [],
       totalRows: response.manifest.total_row_count ?? response.result.row_count,
       truncated: response.manifest.truncated ?? false,
+    };
+  }
+
+  private formatDownloadLinksResponse(response: StatementResponse): DownloadLinksData {
+    if (!response.manifest || !response.result) {
+      throw AppError.internal("Invalid SQL statement response: missing manifest or result data");
+    }
+
+    if (!response.result.external_links || response.result.external_links.length === 0) {
+      throw AppError.internal("External links not found in response");
+    }
+
+    return {
+      external_links: response.result.external_links,
+      totalRows: response.manifest.total_row_count ?? 0,
+      format: response.manifest.format ?? "JSON_ARRAY",
     };
   }
 }
