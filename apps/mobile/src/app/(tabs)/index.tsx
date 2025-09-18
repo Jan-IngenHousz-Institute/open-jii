@@ -50,7 +50,7 @@ export default function HomeScreen() {
             },
           ]}
         >
-          Welcome to MultiSpeq
+          Welcome to MultispeQ
         </Text>
         <Text
           style={[

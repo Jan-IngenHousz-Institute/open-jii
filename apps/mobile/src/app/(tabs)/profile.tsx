@@ -185,7 +185,7 @@ export default function ProfileScreen() {
           },
         ]}
       >
-        MultiSpeq App v{packageJson.version}
+        MultispeQ App v{packageJson.version}
       </Text>
 
       <Toast

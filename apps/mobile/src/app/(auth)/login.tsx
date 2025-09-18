@@ -92,7 +92,7 @@ export default function LoginScreen() {
                 },
               ]}
             >
-              MultiSpeq
+              MultispeQ
             </Text>
             <Text
               style={[
