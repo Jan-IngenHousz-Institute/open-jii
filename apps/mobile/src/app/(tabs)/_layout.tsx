@@ -2,6 +2,7 @@ import { Tabs } from "expo-router";
 import { Home, User, FlaskConical, Activity } from "lucide-react-native";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { DeviceConnectionWidget } from "~/components/device-connection-widget";
 import { useTheme } from "~/hooks/use-theme";
 
 export default function TabLayout() {
@@ -31,6 +32,7 @@ export default function TabLayout() {
             fontWeight: "bold",
           },
           headerShadowVisible: false,
+          headerRight: () => <DeviceConnectionWidget />,
         }}
       >
         <Tabs.Screen

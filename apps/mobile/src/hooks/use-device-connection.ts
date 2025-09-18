@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAsyncCallback } from "react-async-hook";
 import { useToast } from "~/context/toast-context";
+import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
 import { Device } from "~/hooks/use-devices";
 import { getProtocolDefinition, ProtocolName } from "~/protocols/definitions";
 import { bluetoothDeviceToMultispeqStream } from "~/services/multispeq-communication/android-bluetooth-connection/bluetooth-device-to-multispeq-stream";
@@ -36,6 +37,7 @@ export function useDeviceConnection() {
   const [multispeqExecutor, setMultispeqExecutor] = useState<IMultispeqCommandExecutor>();
   const [measurementTimestamp, setMeasurementTimestamp] = useState<string>();
   const { showToast } = useToast();
+  const { setConnectionType, setBatteryLevel } = useDeviceConnectionStore();
 
   const { error: connectError, execute: connect } = useAsyncCallback(async (device: Device) => {
     setconnectingDeviceId(device.id);
@@ -48,6 +50,7 @@ export function useDeviceConnection() {
 
     try {
       setMultispeqExecutor(await connectToDevice(device));
+      setConnectionType(device.type);
     } finally {
       setconnectingDeviceId(undefined);
     }
@@ -59,11 +62,13 @@ export function useDeviceConnection() {
     loading: isScanning,
     result: measurementData,
   } = useAsyncCallback(async ({ analyze, protocol }) => {
-    const result = await multispeqExecutor?.execute(protocol);
+    const result: any = await multispeqExecutor?.execute(protocol);
 
     if (typeof result !== "object") {
       return result;
     }
+
+    setBatteryLevel(result.device_battery);
 
     if (!("sample" in result)) {
       return result;
