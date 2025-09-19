@@ -36,6 +36,37 @@ export const zLocationInput = z.object({
 
 export const zLocationList = z.array(zLocation);
 
+// --- Location Search Schemas ---
+export const zPlaceSearchResult = z.object({
+  label: z.string(),
+  latitude: z.number(),
+  longitude: z.number(),
+  country: z.string().optional(),
+  region: z.string().optional(),
+  municipality: z.string().optional(),
+  postalCode: z.string().optional(),
+});
+
+export const zPlaceSearchQuery = z.object({
+  query: z.string().min(1, "Search query is required"),
+  maxResults: z.coerce.number().min(1).max(50).optional().default(10),
+});
+
+export const zPlaceSearchResponse = z.array(zPlaceSearchResult);
+
+export const zGeocodeQuery = z.object({
+  latitude: z.coerce
+    .number()
+    .min(-90, "Latitude must be between -90 and 90")
+    .max(90, "Latitude must be between -90 and 90"),
+  longitude: z.coerce
+    .number()
+    .min(-180, "Longitude must be between -180 and 180")
+    .max(180, "Longitude must be between -180 and 180"),
+});
+
+export const zGeocodeResponse = z.array(zPlaceSearchResult);
+
 export const zAddExperimentLocationsBody = z.object({
   locations: z.array(zLocationInput),
 });
@@ -289,6 +320,11 @@ export type UpsertFlowBody = z.infer<typeof zUpsertFlowBody>;
 export type Location = z.infer<typeof zLocation>;
 export type LocationInput = z.infer<typeof zLocationInput>;
 export type LocationList = z.infer<typeof zLocationList>;
+export type PlaceSearchResult = z.infer<typeof zPlaceSearchResult>;
+export type PlaceSearchQuery = z.infer<typeof zPlaceSearchQuery>;
+export type PlaceSearchResponse = z.infer<typeof zPlaceSearchResponse>;
+export type GeocodeQuery = z.infer<typeof zGeocodeQuery>;
+export type GeocodeResponse = z.infer<typeof zGeocodeResponse>;
 
 // Define request and response types
 // Shared embargo date validation function

@@ -290,5 +290,10 @@ export const experimentLocations = pgTable("experiment_locations", {
   name: varchar("name", { length: 255 }).notNull(),
   latitude: decimal("latitude", { precision: 10, scale: 8 }).notNull(),
   longitude: decimal("longitude", { precision: 11, scale: 8 }).notNull(),
+  country: varchar("country", { length: 100 }),
+  region: varchar("region", { length: 100 }),
+  municipality: varchar("municipality", { length: 100 }),
+  postalCode: varchar("postal_code", { length: 20 }),
+  addressLabel: text("address_label"),
   ...timestamps,
 });

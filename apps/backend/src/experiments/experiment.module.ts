@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common";
 
 // Adapters & External Modules
+import { AwsAdapter } from "../common/modules/aws/aws.adapter";
+import { AwsModule } from "../common/modules/aws/aws.module";
 import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
 // Services
@@ -12,7 +14,9 @@ import { DownloadExperimentDataUseCase } from "./application/use-cases/experimen
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data";
 import { UploadAmbyteDataUseCase } from "./application/use-cases/experiment-data/upload-ambyte-data";
 import { AddExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/add-experiment-locations";
+import { GeocodeLocationUseCase } from "./application/use-cases/experiment-locations/geocode-location";
 import { GetExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/get-experiment-locations";
+import { SearchPlacesUseCase } from "./application/use-cases/experiment-locations/search-places";
 import { UpdateExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/update-experiment-locations";
 import { AddExperimentMembersUseCase } from "./application/use-cases/experiment-members/add-experiment-members";
 import { ListExperimentMembersUseCase } from "./application/use-cases/experiment-members/list-experiment-members";
@@ -29,6 +33,7 @@ import { ListExperimentsUseCase } from "./application/use-cases/list-experiments
 import { UpdateExperimentUseCase } from "./application/use-cases/update-experiment/update-experiment";
 import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-provisioning-status/update-provisioning-status";
 // Ports
+import { AWS_PORT } from "./core/ports/aws.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
 // Repositories
@@ -46,7 +51,7 @@ import { ExperimentWebhookController } from "./presentation/experiment-webhook.c
 import { ExperimentController } from "./presentation/experiment.controller";
 
 @Module({
-  imports: [DatabricksModule],
+  imports: [DatabricksModule, AwsModule],
   controllers: [
     ExperimentController,
     ExperimentDataController,
@@ -61,6 +66,10 @@ import { ExperimentController } from "./presentation/experiment.controller";
     {
       provide: DATABRICKS_PORT,
       useExisting: DatabricksAdapter,
+    },
+    {
+      provide: AWS_PORT,
+      useExisting: AwsAdapter,
     },
 
     // Repositories
@@ -96,6 +105,8 @@ import { ExperimentController } from "./presentation/experiment.controller";
     GetExperimentLocationsUseCase,
     AddExperimentLocationsUseCase,
     UpdateExperimentLocationsUseCase,
+    SearchPlacesUseCase,
+    GeocodeLocationUseCase,
 
     // Experiment protocol use cases
     AddExperimentProtocolsUseCase,

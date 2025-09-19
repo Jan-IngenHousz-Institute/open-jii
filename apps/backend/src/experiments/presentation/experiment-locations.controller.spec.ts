@@ -10,8 +10,11 @@ import type {
 } from "@repo/api";
 import { contract } from "@repo/api";
 
+import { success, failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
+import { GeocodeLocationUseCase } from "../application/use-cases/experiment-locations/geocode-location";
+import { SearchPlacesUseCase } from "../application/use-cases/experiment-locations/search-places";
 import type { CreateLocationDto } from "../core/models/experiment-locations.model";
 import { LocationRepository } from "../core/repositories/experiment-location.repository";
 
@@ -523,6 +526,200 @@ describe("ExperimentLocationsController", () => {
       });
 
       await testApp.put(path).withoutAuth().send(validRequest).expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+
+  describe("searchPlaces", () => {
+    it("should search for places and return results", async () => {
+      const mockSearchResults = [
+        {
+          label: "New York City, NY, USA",
+          latitude: 40.7128,
+          longitude: -74.006,
+          country: "USA",
+          region: "NY",
+          municipality: "New York City",
+          postalCode: "10001",
+        },
+        {
+          label: "London, UK",
+          latitude: 51.5074,
+          longitude: -0.1276,
+          country: "GBR",
+          region: "England",
+          municipality: "London",
+          postalCode: "E1 6AN",
+        },
+      ];
+
+      // Mock the search places use case
+      const searchPlacesUseCase = testApp.module.get(SearchPlacesUseCase);
+      vi.spyOn(searchPlacesUseCase, "execute").mockResolvedValue(success(mockSearchResults));
+
+      const path = "/api/v1/locations/search";
+
+      const response: SuperTestResponse<typeof contract.experiments.searchPlaces> = await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .query({ query: "New York", maxResults: 10 })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual(mockSearchResults);
+
+      expect(response.body).toEqual(mockSearchResults);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(searchPlacesUseCase.execute).toHaveBeenCalledWith({
+        query: "New York",
+        maxResults: 10,
+      });
+    });
+
+    it("should return empty array when no places found", async () => {
+      const searchPlacesUseCase = testApp.module.get(SearchPlacesUseCase);
+      vi.spyOn(searchPlacesUseCase, "execute").mockResolvedValue(success([]));
+
+      const path = "/api/v1/locations/search";
+
+      const response: SuperTestResponse<typeof contract.experiments.searchPlaces> = await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .query({ query: "NonexistentPlace" })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual([]);
+    });
+
+    it("should return error when search fails", async () => {
+      const searchPlacesUseCase = testApp.module.get(SearchPlacesUseCase);
+      vi.spyOn(searchPlacesUseCase, "execute").mockResolvedValue(
+        failure(AppError.internal("Search failed")),
+      );
+
+      const path = "/api/v1/locations/search";
+
+      const response: SuperTestResponse<ErrorResponse> = await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .query({ query: "test" })
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+
+      expect(response.body.message).toBe("Search failed");
+    });
+
+    it("should require authentication", async () => {
+      const path = "/api/v1/locations/search";
+
+      await testApp
+        .get(path)
+        .withoutAuth()
+        .query({ query: "test" })
+        .expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+
+  describe("geocodeLocation", () => {
+    it("should geocode coordinates and return place information", async () => {
+      const mockGeocodeResults = [
+        {
+          label: "123 Main St, New York, NY 10001, USA",
+          latitude: 40.7128,
+          longitude: -74.006,
+          country: "USA",
+          region: "NY",
+          municipality: "New York",
+          postalCode: "10001",
+        },
+      ];
+
+      // Mock the geocode location use case
+      const geocodeLocationUseCase = testApp.module.get(GeocodeLocationUseCase);
+      vi.spyOn(geocodeLocationUseCase, "execute").mockResolvedValue(success(mockGeocodeResults));
+
+      const path = "/api/v1/locations/geocode";
+
+      const response: SuperTestResponse<typeof contract.experiments.geocodeLocation> = await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .query({ latitude: 40.7128, longitude: -74.006 })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual(mockGeocodeResults);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(geocodeLocationUseCase.execute).toHaveBeenCalledWith({
+        latitude: 40.7128,
+        longitude: -74.006,
+      });
+    });
+
+    it("should return empty array when no places found for coordinates", async () => {
+      const geocodeLocationUseCase = testApp.module.get(GeocodeLocationUseCase);
+      vi.spyOn(geocodeLocationUseCase, "execute").mockResolvedValue(success([]));
+
+      const path = "/api/v1/locations/geocode";
+
+      const response: SuperTestResponse<typeof contract.experiments.geocodeLocation> = await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .query({ latitude: 0, longitude: 0 })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual([]);
+    });
+
+    it("should return error when geocoding fails", async () => {
+      const geocodeLocationUseCase = testApp.module.get(GeocodeLocationUseCase);
+      vi.spyOn(geocodeLocationUseCase, "execute").mockResolvedValue(
+        failure(AppError.internal("Geocoding failed")),
+      );
+
+      const path = "/api/v1/locations/geocode";
+
+      const response: SuperTestResponse<ErrorResponse> = await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .query({ latitude: 40.7128, longitude: -74.006 })
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+
+      expect(response.body.message).toBe("Geocoding failed");
+    });
+
+    it("should handle edge case coordinates", async () => {
+      const mockGeocodeResults = [
+        {
+          label: "Antarctica",
+          latitude: -90,
+          longitude: 0,
+          country: "Antarctica",
+        },
+      ];
+
+      const geocodeLocationUseCase = testApp.module.get(GeocodeLocationUseCase);
+      vi.spyOn(geocodeLocationUseCase, "execute").mockResolvedValue(success(mockGeocodeResults));
+
+      const path = "/api/v1/locations/geocode";
+
+      const response: SuperTestResponse<typeof contract.experiments.geocodeLocation> = await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .query({ latitude: -90, longitude: 0 })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual(mockGeocodeResults);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(geocodeLocationUseCase.execute).toHaveBeenCalledWith({
+        latitude: -90,
+        longitude: 0,
+      });
+    });
+
+    it("should require authentication", async () => {
+      const path = "/api/v1/locations/geocode";
+
+      await testApp
+        .get(path)
+        .withoutAuth()
+        .query({ latitude: "40.7128", longitude: "-74.006" })
+        .expect(StatusCodes.UNAUTHORIZED);
     });
   });
 });

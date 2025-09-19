@@ -10,7 +10,9 @@ import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDates } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { AddExperimentLocationsUseCase } from "../application/use-cases/experiment-locations/add-experiment-locations";
+import { GeocodeLocationUseCase } from "../application/use-cases/experiment-locations/geocode-location";
 import { GetExperimentLocationsUseCase } from "../application/use-cases/experiment-locations/get-experiment-locations";
+import { SearchPlacesUseCase } from "../application/use-cases/experiment-locations/search-places";
 import { UpdateExperimentLocationsUseCase } from "../application/use-cases/experiment-locations/update-experiment-locations";
 
 @Controller()
@@ -22,6 +24,8 @@ export class ExperimentLocationsController {
     private readonly getExperimentLocationsUseCase: GetExperimentLocationsUseCase,
     private readonly addExperimentLocationsUseCase: AddExperimentLocationsUseCase,
     private readonly updateExperimentLocationsUseCase: UpdateExperimentLocationsUseCase,
+    private readonly searchPlacesUseCase: SearchPlacesUseCase,
+    private readonly geocodeLocationUseCase: GeocodeLocationUseCase,
   ) {}
 
   @TsRestHandler(contract.experiments.getExperimentLocations)
@@ -146,5 +150,51 @@ export class ExperimentLocationsController {
         return handleFailure(result, this.logger);
       },
     );
+  }
+
+  @TsRestHandler(contract.experiments.searchPlaces)
+  searchPlaces() {
+    return tsRestHandler(contract.experiments.searchPlaces, async ({ query }) => {
+      const result = await this.searchPlacesUseCase.execute({
+        query: query.query,
+        maxResults: query.maxResults,
+      });
+
+      if (result.isSuccess()) {
+        this.logger.log(
+          `Place search completed: query="${query.query}", results=${result.value.length}`,
+        );
+
+        return {
+          status: StatusCodes.OK as const,
+          body: result.value,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.experiments.geocodeLocation)
+  geocodeLocation() {
+    return tsRestHandler(contract.experiments.geocodeLocation, async ({ query }) => {
+      const result = await this.geocodeLocationUseCase.execute({
+        latitude: query.latitude,
+        longitude: query.longitude,
+      });
+
+      if (result.isSuccess()) {
+        this.logger.log(
+          `Geocoding completed: lat=${query.latitude}, lon=${query.longitude}, results=${result.value.length}`,
+        );
+
+        return {
+          status: StatusCodes.OK as const,
+          body: result.value,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
   }
 }

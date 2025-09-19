@@ -4,6 +4,11 @@ CREATE TABLE "experiment_locations" (
 	"name" varchar(255) NOT NULL,
 	"latitude" numeric(10, 8) NOT NULL,
 	"longitude" numeric(11, 8) NOT NULL,
+	"country" varchar(100),
+	"region" varchar(100),
+	"municipality" varchar(100),
+	"postal_code" varchar(20),
+	"address_label" text,
 	"created_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL,
 	"updated_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL
 );
