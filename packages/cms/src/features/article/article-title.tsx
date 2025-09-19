@@ -7,6 +7,7 @@ import {
 import Link from "next/link";
 import type { HTMLProps } from "react";
 
+import { Card } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
 
 import type { PageBlogPostFieldsFragment } from "../../lib/__generated/sdk";
@@ -17,20 +18,72 @@ import { ArticleAuthor } from "./article-author";
 interface ArticleTileProps extends HTMLProps<HTMLDivElement> {
   article: PageBlogPostFieldsFragment;
   locale: string;
+  /** When true, render the horizontal (list) layout; otherwise vertical (grid) */
+  horizontal?: boolean;
 }
 
-export const ArticleTile = ({ article, className, locale }: ArticleTileProps) => {
+export const ArticleTile = ({
+  article,
+  className,
+  locale,
+  horizontal = false,
+}: ArticleTileProps) => {
   const { featuredImage, publishedDate, slug, title } = useContentfulLiveUpdates(article) as {
     featuredImage?: PageBlogPostFieldsFragment["featuredImage"];
     publishedDate?: string;
     slug?: string;
     title?: string;
   };
-  const safePublishedDate: Date | undefined = publishedDate ? new Date(publishedDate) : undefined;
-  const inspectorProps = useContentfulInspectorMode({
-    entryId: article.sys.id,
-  });
 
+  const safePublishedDate: Date | undefined = publishedDate ? new Date(publishedDate) : undefined;
+  const inspectorProps = useContentfulInspectorMode({ entryId: article.sys.id });
+
+  if (horizontal) {
+    // --- HORIZONTAL
+    return (
+      <Link className="flex" href={`/${locale}/blog/${slug}`}>
+        <Card className={cn("flex flex-1 flex-row overflow-hidden p-0", className)}>
+          {featuredImage && (
+            <div
+              {...inspectorProps({ fieldId: "featuredImage" })}
+              className="flex h-full w-1/3 min-w-[120px] max-w-[180px] items-center justify-center"
+            >
+              <CtfImage
+                nextImageProps={{
+                  className: "object-cover w-full h-full rounded-l-xl",
+                }}
+                {...featuredImage}
+              />
+            </div>
+          )}
+
+          <div className="flex flex-1 flex-col px-4 py-3 md:px-5 md:py-4 lg:px-7 lg:py-5">
+            <div
+              className={cn("text-gray600 mb-2 text-left text-xs")}
+              {...inspectorProps({ fieldId: "publishedDate" })}
+            >
+              <FormatDate date={safePublishedDate} />
+            </div>
+
+            {title && (
+              <p
+                className="h3 text-gray800 mb-2 text-left text-lg font-medium md:mb-3 md:text-xl"
+                {...inspectorProps({ fieldId: "title" })}
+              >
+                {title}
+              </p>
+            )}
+
+            <div className="mt-auto flex flex-col items-start gap-2">
+              <ArticleAuthor article={article} />
+            </div>
+          </div>
+        </Card>
+      </Link>
+    );
+  }
+
+  // --- VERTICAL
   return (
     <Link className="flex flex-col" href={`/${locale}/blog/${slug}`}>
       <div

@@ -48,6 +48,7 @@ interface NavigationItem {
 }
 
 interface NavigationData {
+  navDashboard: NavigationItem[];
   navExperiments: NavigationItem[];
   navHardware: NavigationItem[];
   navMacros: NavigationItem[];
@@ -87,6 +88,11 @@ export function AppSidebar({
   navigationData: NavigationData;
   translations: Translations;
 }) {
+  const processedNavDashboard = navigationData.navDashboard.map((item) => ({
+    ...item,
+    icon: iconMap[item.icon as keyof typeof iconMap],
+  }));
+
   // Convert string-based icons to actual icon components
   const processedNavExperiments = navigationData.navExperiments.map((item) => ({
     ...item,
@@ -118,9 +124,10 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavItems items={processedNavExperiments} title={translations.experimentsTitle} />
-        <NavItems items={processedNavHardware} title={translations.hardwareTitle} />
-        <NavItems items={processedNavMacros} title={translations.macrosTitle} />
+        <NavItems items={processedNavDashboard} />
+        <NavItems items={processedNavExperiments} />
+        <NavItems items={processedNavHardware} />
+        <NavItems items={processedNavMacros} />
       </SidebarContent>
       <SidebarFooter>
         {user ? (

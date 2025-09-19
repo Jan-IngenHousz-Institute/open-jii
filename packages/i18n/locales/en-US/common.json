@@ -178,6 +178,9 @@
     "title": "Dashboard",
     "welcome": "Welcome to OpenJII",
     "recentExperiments": "Recent Experiments",
+    "recentArticles": "Recent blog posts",
+    "yourExperiments": "Your recent experiments",
+    "seeAll": "See all",
     "statistics": "Statistics",
     "quickActions": "Quick Actions"
   },

@@ -25,6 +25,15 @@ export async function AppSidebarWrapper({
 
   // Prepare navigation data server-side
   const navigationData = {
+    navDashboard: [
+      {
+        title: tCommon("dashboard.title"),
+        url: `/${locale}/platform`,
+        icon: "Home",
+        isActive: true,
+        items: [],
+      },
+    ],
     navExperiments: [
       {
         title: tNavigation("sidebar.experiments"),
