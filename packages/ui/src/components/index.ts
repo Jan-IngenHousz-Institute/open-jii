@@ -51,4 +51,17 @@ export * from "./toaster";
 export * from "./toggle-group";
 export * from "./toggle";
 export * from "./tooltip";
-export * from "./rich-text-renderer";
+
+// Export map components
+export * from "./map";
+export { Map } from "./enhanced-map";
+export * from "./location-search";
+export * from "./location-sidebar";
+
+// Export Plotly chart components
+export * from "./charts/basic";
+// export * from "./charts/statistical";
+// export * from "./charts/scientific";
+// export * from "./charts/3d";
+// export * from "./charts/common";
+export * from "./charts";

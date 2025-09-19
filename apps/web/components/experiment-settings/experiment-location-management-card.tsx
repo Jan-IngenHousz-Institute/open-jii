@@ -18,7 +18,9 @@ import type { LocationPoint } from "@repo/ui/components/map";
 import { useExperimentLocations } from "../../hooks/experiment/useExperimentLocations/useExperimentLocations";
 import { useExperimentLocationsUpdate } from "../../hooks/experiment/useExperimentLocationsUpdate/useExperimentLocationsUpdate";
 
-const Map = dynamic(() => import("@repo/ui/components/map"), { ssr: false });
+const Map = dynamic(() => import("@repo/ui/components").then((mod) => ({ default: mod.Map })), {
+  ssr: false,
+});
 
 interface ExperimentLocationManagementProps {
   experimentId: string;
@@ -148,6 +150,8 @@ export function ExperimentLocationManagement({ experimentId }: ExperimentLocatio
               showZoomControl={true}
               showScale={true}
               showSidebar={true}
+              showLocationSearch={true}
+              showDistances={false}
               sidebarTitle={t("settings.locations.editMode")}
             />
           </div>
