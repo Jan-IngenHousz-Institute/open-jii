@@ -330,49 +330,6 @@ const validateEmbargoDate = (
   }
 };
 
-export const zCreateExperimentBody = z
-  .object({
-    name: z
-      .string()
-      .trim()
-      .min(1, "The name of the experiment is required")
-      .max(255, "The name must be at most 255 characters")
-      .describe("The name of the experiment"),
-    description: z.string().optional().describe("Optional description of the experiment"),
-    status: zExperimentStatus.optional().describe("Initial status of the experiment"),
-    visibility: zExperimentVisibility.optional().describe("Experiment visibility setting"),
-    embargoUntil: z
-      .string()
-      .datetime()
-      .optional()
-      .describe(
-        "Embargo end date and time (ISO datetime string, will be stored as UTC in database)",
-      ),
-    members: z
-      .array(
-        z.object({
-          userId: z.string().uuid(),
-          role: zExperimentMemberRole.optional(),
-        }),
-      )
-      .optional()
-      .describe("Optional array of member objects with userId and role"),
-    protocols: z
-      .array(
-        z.object({
-          protocolId: z.string().uuid(),
-          order: z.number().int().optional(),
-        }),
-      )
-      .optional()
-      .describe(
-        "Optional array of protocol objects with protocolId and order to associate with the experiment",
-      ),
-  })
-  .superRefine((val, ctx) => {
-    validateEmbargoDate(val.embargoUntil, ctx, ["embargoUntil"]);
-  });
-  
 export const zCreateExperimentBody = z.object({
   name: z
     .string()
