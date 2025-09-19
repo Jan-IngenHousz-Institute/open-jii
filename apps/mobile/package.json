@@ -10,7 +10,7 @@
     "prebuild": "expo prebuild",
     "build-apk": "echo 'node-linker=hoisted' > .npmrc && dotenv -- eas build -p android --profile preview --local && rm .npmrc",
     "build-aab": "echo 'node-linker=hoisted' > .npmrc && dotenv -- eas build -p android --profile production --local && rm .npmrc",
-    "lint": "eslint src/**/*",
+    "lint": "eslint 'src/**/*'",
     "typecheck": "tsc --noEmit",
     "postinstall": "cd ../../packages/api && pnpm run build"
   },

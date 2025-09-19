@@ -1,18 +1,30 @@
-import { useState } from "react";
+import React, { useState } from "react";
+import { ScrollView, StyleSheet } from "react-native";
 import { useToast } from "~/context/toast-context";
+import { useTheme } from "~/hooks/use-theme";
 
 import {
-  CalibrationStep,
+  CalibrationProtocol,
   MeasurementData,
   ProcessedCalibrationOutput,
-  getSpadSteps,
-  getGainStep,
-  generateAutoBlankCommands,
-  generateMeasurementCommand,
+  generateDeviceCommand,
   simulateDataProcessing,
-} from "../utils/calibration-protocol";
+} from "../utils/load-protocol";
+import { CompletionStep } from "./CompletionStep";
+import { GainCalibrationStep } from "./GainCalibrationStep";
+import { MeasurementsStep } from "./MeasurementsStep";
+import { ProcessingStep } from "./ProcessingStep";
+import { SetupStep } from "./SetupStep";
 
-export function useCalibrationState() {
+export type CalibrationStep = "setup" | "gain" | "measurements" | "processing" | "complete";
+
+interface CalibrationFlowProps {
+  protocol: CalibrationProtocol;
+}
+
+export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
+  const theme = useTheme();
+  const { colors } = theme;
   const { showToast } = useToast();
 
   const [currentStep, setCurrentStep] = useState<CalibrationStep>("setup");
@@ -22,8 +34,9 @@ export function useCalibrationState() {
   const [currentSpadValue, setCurrentSpadValue] = useState("");
   const [processedOutput, setProcessedOutput] = useState<ProcessedCalibrationOutput | null>(null);
 
-  const spadSteps = getSpadSteps();
-  const gainStep = getGainStep();
+  // Extract steps from protocol
+  const spadSteps = protocol._protocol_set_.filter((step) => step.label === "spad");
+  const gainStep = protocol._protocol_set_.find((step) => step.label === "gain");
 
   const handleStartCalibration = () => {
     console.log("Starting calibration process...");
@@ -35,15 +48,14 @@ export function useCalibrationState() {
   };
 
   const handleGainCalibration = async () => {
+    if (!gainStep) return;
+
     console.log("Starting gain calibration (auto-blanking)...");
-    console.log("Auto-blank parameters:", gainStep?.auto_blank);
+    console.log("Auto-blank parameters:", gainStep.auto_blank);
 
-    // Generate auto-blank commands
-    const autoBlankCommands = gainStep?.auto_blank
-      ? generateAutoBlankCommands(gainStep.auto_blank)
-      : [];
-
-    console.log("Sending auto-blank commands to device:", autoBlankCommands);
+    // Generate device command
+    const deviceCommand = generateDeviceCommand(gainStep);
+    console.log("Sending auto-blank commands to device:", deviceCommand);
 
     // Simulate device processing time
     setIsProcessing(true);
@@ -56,15 +68,15 @@ export function useCalibrationState() {
   };
 
   const handleMeasurement = async (panelNumber: number) => {
-    console.log(`Taking measurement for panel #${panelNumber}...`);
     const currentStepData = spadSteps[currentMeasurementIndex];
-    console.log("SPAD parameters:", currentStepData?.spad);
+    if (!currentStepData) return;
 
-    // Generate measurement command
-    const measurementCommand = currentStepData?.spad
-      ? generateMeasurementCommand(currentStepData.spad)
-      : "";
-    console.log("Sending measurement command to device:", measurementCommand);
+    console.log(`Taking measurement for panel #${panelNumber}...`);
+    console.log("SPAD parameters:", currentStepData.spad);
+
+    // Generate device command
+    const deviceCommand = generateDeviceCommand(currentStepData);
+    console.log("Sending measurement command to device:", deviceCommand);
 
     // Simulate device processing time
     setIsProcessing(true);
@@ -73,8 +85,8 @@ export function useCalibrationState() {
 
     // Store measurement data
     const measurementData: MeasurementData = {
-      panelNumber,
-      spadValue: currentSpadValue,
+      stepIndex: currentMeasurementIndex,
+      userInput: currentSpadValue,
       measurementData: {
         // Simulated measurement data
         absorbance: [
@@ -83,6 +95,7 @@ export function useCalibrationState() {
         ],
         timestamp: new Date().toISOString(),
       },
+      timestamp: new Date().toISOString(),
     };
 
     setMeasurements((prev) => [...prev, measurementData]);
@@ -107,7 +120,7 @@ export function useCalibrationState() {
     setIsProcessing(true);
 
     try {
-      const output = await simulateDataProcessing(measurements);
+      const output = await simulateDataProcessing(measurements, protocol);
       setProcessedOutput(output);
 
       console.log("Processed calibration output:", output);
@@ -144,31 +157,70 @@ export function useCalibrationState() {
     return ((currentMeasurementIndex + 1) / spadSteps.length) * 100;
   };
 
-  const isLastMeasurement = () => {
-    return currentMeasurementIndex >= spadSteps.length - 1;
+  const renderCurrentStep = () => {
+    switch (currentStep) {
+      case "setup":
+        return <SetupStep onStartCalibration={handleStartCalibration} />;
+
+      case "gain":
+        return (
+          <GainCalibrationStep
+            alertMessage={gainStep?.alert ?? ""}
+            isProcessing={isProcessing}
+            onStartGainCalibration={handleGainCalibration}
+          />
+        );
+
+      case "measurements":
+        return (
+          <MeasurementsStep
+            currentMeasurementIndex={currentMeasurementIndex}
+            totalMeasurements={spadSteps.length}
+            currentPanelNumber={getCurrentPanelNumber()}
+            prompt={spadSteps[currentMeasurementIndex]?.prompt ?? ""}
+            currentSpadValue={currentSpadValue}
+            isProcessing={isProcessing}
+            progressPercentage={getProgressPercentage()}
+            onSpadValueChange={setCurrentSpadValue}
+            onTakeMeasurement={handleMeasurement}
+          />
+        );
+
+      case "processing":
+        return <ProcessingStep />;
+
+      case "complete":
+        return (
+          <CompletionStep
+            measurements={measurements}
+            processedOutput={processedOutput}
+            onStartNewCalibration={handleReset}
+          />
+        );
+
+      default:
+        return <SetupStep onStartCalibration={handleStartCalibration} />;
+    }
   };
 
-  return {
-    // State
-    currentStep,
-    isProcessing,
-    measurements,
-    currentMeasurementIndex,
-    currentSpadValue,
-    processedOutput,
-    spadSteps,
-    gainStep,
-
-    // Computed values
-    currentPanelNumber: getCurrentPanelNumber(),
-    progressPercentage: getProgressPercentage(),
-    isLastMeasurement: isLastMeasurement(),
-
-    // Actions
-    setCurrentSpadValue,
-    handleStartCalibration,
-    handleGainCalibration,
-    handleMeasurement,
-    handleReset,
-  };
+  return (
+    <ScrollView
+      style={[
+        styles.container,
+        { backgroundColor: theme.isDark ? colors.dark.background : colors.light.background },
+      ]}
+      contentContainerStyle={styles.contentContainer}
+    >
+      {renderCurrentStep()}
+    </ScrollView>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: 16,
+  },
+});
