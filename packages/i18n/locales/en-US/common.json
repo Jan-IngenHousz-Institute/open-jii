@@ -203,6 +203,7 @@
     "loginWith": "Sign in with {{provider}}",
     "loginWith-github": "Sign in with GitHub",
     "loginWith-nodemailer": "Sign in with Email",
+    "loginWith-orcid": "Sign in with ORCID",
     "verifyRequest": "We emailed you a sign in link",
     "verifyRequestDetails": "We sent you an email to your email address. Tap the button in the email to continue.",
     "verifyRequestDetailsJunk": "If you don’t see the email, check your spam or junk folder.",
