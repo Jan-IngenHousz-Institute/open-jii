@@ -79,7 +79,6 @@ vi.mock("@repo/ui/components", () => ({
 vi.mock("../nav-items", () => ({
   NavItems: ({
     items,
-    title,
   }: {
     items: {
       title: string;
@@ -88,9 +87,8 @@ vi.mock("../nav-items", () => ({
       isActive?: boolean;
       items: { title: string; url: string }[];
     }[];
-    title: string;
   }) => (
-    <div data-testid="nav-items" data-title={title}>
+    <div data-testid="nav-items">
       {items.map((item, i) => (
         <div key={i} data-item-title={item.title}>
           <item.icon data-testid="item-icon" />
@@ -140,6 +138,15 @@ describe("<AppSidebar />", () => {
   };
 
   const mockNavigationData = {
+    navDashboard: [
+      {
+        title: "Dashboard",
+        url: "/platform/",
+        icon: "Home",
+        isActive: true,
+        items: [],
+      },
+    ],
     navExperiments: [
       {
         title: "Experiments",
@@ -208,23 +215,6 @@ describe("<AppSidebar />", () => {
     expect(image).toHaveAttribute("data-src", "/logo.png");
     expect(image).toHaveAttribute("data-alt", "Open JII Logo");
     expect(screen.getByText("Open JII")).toBeInTheDocument();
-  });
-
-  it("renders navigation items with correct titles", () => {
-    render(
-      <AppSidebar
-        user={mockUser}
-        locale="en-US"
-        navigationData={mockNavigationData}
-        translations={mockTranslations}
-      />,
-    );
-
-    const navItems = screen.getAllByTestId("nav-items");
-    expect(navItems).toHaveLength(3);
-    expect(navItems[0]).toHaveAttribute("data-title", "Experiments");
-    expect(navItems[1]).toHaveAttribute("data-title", "Hardware");
-    expect(navItems[2]).toHaveAttribute("data-title", "Macros");
   });
 
   it("renders NavUser component when user is provided", () => {

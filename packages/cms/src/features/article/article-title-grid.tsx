@@ -8,12 +8,14 @@ import { ArticleTile } from "./article-title";
 interface ArticleTileGridProps extends HTMLProps<HTMLDivElement> {
   articles?: (PageBlogPostFieldsFragment | null)[];
   locale: string;
+  horizontal?: boolean;
 }
 
 export const ArticleTileGrid = ({
   articles,
   className,
   locale,
+  horizontal = false,
   ...props
 }: ArticleTileGridProps) => {
   return articles && articles.length > 0 ? (
@@ -24,11 +26,16 @@ export const ArticleTileGrid = ({
       )}
       {...props}
     >
-      {articles.map((article) => {
-        return article ? (
-          <ArticleTile key={article.sys.id} article={article} locale={locale} />
-        ) : null;
-      })}
+      {articles.map((article) =>
+        article ? (
+          <ArticleTile
+            key={article.sys.id}
+            article={article}
+            locale={locale}
+            horizontal={horizontal}
+          />
+        ) : null,
+      )}
     </div>
   ) : null;
 };
