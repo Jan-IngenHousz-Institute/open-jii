@@ -113,7 +113,7 @@ interface MapExpandedContentProps {
   cellRef: React.RefObject<HTMLDivElement | null>;
 }
 
-function MapExpandedContent({ entries, cellRef }: MapExpandedContentProps) {
+export function MapExpandedContent({ entries, cellRef }: MapExpandedContentProps) {
   useEffect(() => {
     const cellElement = cellRef.current;
     if (!cellElement) return;

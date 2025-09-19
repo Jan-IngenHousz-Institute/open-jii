@@ -1,8 +1,9 @@
 "use client";
 
-import { Pin } from "lucide-react";
+import { Pin, X } from "lucide-react";
 import React from "react";
 
+import { useTranslation } from "@repo/i18n";
 import type { LineSeriesData } from "@repo/ui/components";
 import { LineChart } from "@repo/ui/components";
 
@@ -21,6 +22,8 @@ export function ExperimentDataTableChart({
   isClicked,
   onClose,
 }: ExperimentDataTableChartProps) {
+  const { t } = useTranslation("common");
+
   // Early return if not visible
   if (!visible) return null;
 
@@ -59,7 +62,8 @@ export function ExperimentDataTableChart({
             className="text-muted-foreground hover:text-foreground rounded px-2 py-1 text-sm transition-colors hover:bg-gray-100"
             type="button"
           >
-            ✕ Close
+            <X className="h-4 w-4" />
+            {t("close")}
           </button>
         </div>
       )}

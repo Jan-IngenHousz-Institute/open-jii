@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
-import { ExperimentDataTableChartCell } from "../experiment-data-table-chart-cell";
+import { ExperimentDataTableChartCell } from "./experiment-data-table-chart-cell";
 
 describe("ExperimentDataTableChartCell", () => {
   const mockColumnName = "test_column";
@@ -125,7 +125,7 @@ describe("ExperimentDataTableChartCell", () => {
       />,
     );
 
-    const chartContainer = document.querySelector("svg").parentElement;
+    const chartContainer = document.querySelector("svg")?.parentElement;
     if (chartContainer) {
       fireEvent.mouseEnter(chartContainer);
     }
@@ -144,7 +144,7 @@ describe("ExperimentDataTableChartCell", () => {
       />,
     );
 
-    const chartContainer = document.querySelector("svg").parentElement;
+    const chartContainer = document.querySelector("svg")?.parentElement;
     if (chartContainer) {
       fireEvent.mouseEnter(chartContainer);
     }
@@ -163,7 +163,7 @@ describe("ExperimentDataTableChartCell", () => {
       />,
     );
 
-    const chartContainer = document.querySelector("svg").parentElement;
+    const chartContainer = document.querySelector("svg")?.parentElement;
     if (chartContainer) {
       fireEvent.mouseEnter(chartContainer);
     }
