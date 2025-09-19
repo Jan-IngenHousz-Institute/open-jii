@@ -200,6 +200,7 @@ module "server_function" {
     DB_SECRET_ARN         = var.db_credentials_secret_arn
     OAUTH_SECRET_ARN      = var.oauth_secret_arn
     CONTENTFUL_SECRET_ARN = var.contentful_secret_arn
+    #SES_SECRET_ARN        = var.ses_secret_arn
   }, var.server_environment_variables)
 
   tags = local.common_tags
