@@ -11,7 +11,7 @@ from typing import Dict, Any
 
 # Import PyMiniRacer for JavaScript execution
 try:
-    from py_mini_racer import py_mini_racer
+    from py_mini_racer import MiniRacer
     JS_AVAILABLE = True
     print(f"[JS_EXECUTOR] Using PyMiniRacer (V8) for JavaScript execution")
 except ImportError:
@@ -40,7 +40,7 @@ def execute_javascript_macro(
         print(f"[JS_EXECUTOR] Read JavaScript script, {len(script_code)} characters")
         
         # Create V8 context
-        ctx = py_mini_racer.MiniRacer()
+        ctx = MiniRacer()
         
         # Convert input_data string to object
         try:

@@ -3,7 +3,7 @@
 # Implementation of experiment-specific medallion architecture pipeline
 # Processes data from central silver layer into experiment-specific bronze/silver/gold tables
 
-%pip install py-mini-racer numpy scipy
+%pip install mini-racer numpy scipy
 
 # COMMAND ----------
 
@@ -129,7 +129,13 @@ def sample():
                     )
                 """)
             ).alias("measurement_sets"),
-            F.hash(F.col("device_id"), F.col("sample_data_str")).alias("sample_id"),
+            F.abs(
+                F.hash(
+                    F.lit(EXPERIMENT_ID),
+                    F.col("device_id"),
+                    F.col("sample_data_str")
+                )
+            ).alias("sample_id"),
             F.current_timestamp().alias("processed_timestamp")
         )
         .withColumn("measurement_set_types", 
@@ -350,7 +356,6 @@ def macro_{macro_name}_table():
             if output:
                 # Add metadata to output
                 output["macro_name"] = "{macro_name}"
-                output["experiment_id"] = EXPERIMENT_ID
                 
                 # Process output for Spark compatibility using library function
                 processed_output = process_macro_output_for_spark(output)
@@ -361,9 +366,7 @@ def macro_{macro_name}_table():
             continue
     
     if processed_rows:
-        # Create DataFrame from processed rows
         df = spark.createDataFrame(processed_rows)
-        # Add processed timestamp
         return df.withColumn("processed_timestamp", F.current_timestamp())
     else:
         # Return empty DataFrame with minimal schema
