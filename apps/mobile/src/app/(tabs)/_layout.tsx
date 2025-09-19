@@ -2,8 +2,8 @@ import { Tabs } from "expo-router";
 import { Home, User, FlaskConical, Activity } from "lucide-react-native";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { DeviceConnectionWidget } from "~/components/device-connection-widget";
 import { useTheme } from "~/hooks/use-theme";
+import { DeviceConnectionWidget } from "~/widgets/device-connection-widget";
 
 export default function TabLayout() {
   const theme = useTheme();
