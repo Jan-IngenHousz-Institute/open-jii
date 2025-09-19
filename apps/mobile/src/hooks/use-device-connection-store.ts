@@ -32,9 +32,9 @@ export const useDeviceConnectionStore = create<DeviceConnectionState & DeviceCon
     setDeviceType: (deviceType) => set({ deviceType }),
     setBatteryLevel: (batteryLevel) => set({ batteryLevel }),
     setDeviceName: (deviceName) => set({ deviceName }),
-    
+
     setDeviceInfo: (info) => set((state) => ({ ...state, ...info })),
-    
+
     clearConnection: () =>
       set({
         connectionType: undefined,
