@@ -36,6 +36,7 @@ import {
 import { cn } from "@repo/ui/lib/utils";
 
 import { DataDownloadModal } from "./data-download-modal/data-download-modal";
+import { ExperimentDataTableChart } from "./experiment-data-table-chart";
 
 export function ExperimentDataTable({
   experimentId,
@@ -49,7 +50,48 @@ export function ExperimentDataTable({
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
   const [persistedMetaData, setPersistedMetaData] = useState<TableMetadata>();
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+
+  // Chart state - much simpler
+  const [chartDisplay, setChartDisplay] = useState<{
+    data: number[];
+    columnName: string;
+    isPinned: boolean;
+  } | null>(null);
+
   const { t } = useTranslation();
+
+  // Show chart on hover (only if not pinned)
+  const showChartOnHover = useCallback((data: number[], columnName: string) => {
+    setChartDisplay((current) => {
+      if (current?.isPinned) return current;
+      return { data, columnName, isPinned: false };
+    });
+  }, []);
+
+  // Hide chart on leave (only if not pinned)
+  const hideChartOnLeave = useCallback(() => {
+    setChartDisplay((current) => {
+      if (current?.isPinned) return current;
+      return null;
+    });
+  }, []);
+
+  // Toggle chart pinning on click
+  const toggleChartPin = useCallback((data: number[], columnName: string) => {
+    setChartDisplay((prev) => {
+      // If clicking the same pinned chart, unpin it
+      if (prev?.isPinned && prev.columnName === columnName) {
+        return null;
+      }
+      // Otherwise, pin this chart
+      return { data, columnName, isPinned: true };
+    });
+  }, []);
+
+  // Close pinned chart
+  const closePinnedChart = useCallback(() => {
+    setChartDisplay(null);
+  }, []);
 
   // Use traditional pagination with improved column persistence
   const { tableMetadata, tableRows, isLoading, error } = useExperimentData(
@@ -58,6 +100,9 @@ export function ExperimentDataTable({
     pagination.pageSize,
     tableName,
     formatValue,
+    showChartOnHover,
+    hideChartOnLeave,
+    toggleChartPin,
   );
 
   const onPaginationChange = useCallback(
@@ -151,7 +196,7 @@ export function ExperimentDataTable({
           {t("experimentDataTable.download")}
         </Button>
       </div>
-      <div className="text-muted-foreground rounded-md border">
+      <div className="text-muted-foreground relative overflow-visible rounded-md border">
         <Table>
           <ExperimentTableHeader headerGroups={table.getHeaderGroups()} />
           <TableBody>
@@ -228,6 +273,18 @@ export function ExperimentDataTable({
         open={downloadModalOpen}
         onOpenChange={setDownloadModalOpen}
       />
+
+      {chartDisplay && (
+        <div className="mt-6">
+          <ExperimentDataTableChart
+            data={chartDisplay.data}
+            columnName={chartDisplay.columnName}
+            visible={true}
+            isClicked={chartDisplay.isPinned}
+            onClose={closePinnedChart}
+          />
+        </div>
+      )}
     </div>
   );
 }
