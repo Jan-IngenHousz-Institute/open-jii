@@ -26,6 +26,10 @@ import {
   zLocationList,
   zAddExperimentLocationsBody,
   zUpdateExperimentLocationsBody,
+  zPlaceSearchQuery,
+  zPlaceSearchResponse,
+  zGeocodeQuery,
+  zGeocodeResponse,
 } from "../schemas/experiment.schema";
 import { zFlow, zUpsertFlowBody } from "../schemas/experiment.schema";
 import {
@@ -345,5 +349,30 @@ export const experimentContract = c.router({
     },
     summary: "Update experiment locations",
     description: "Replaces all locations associated with an experiment.",
+  },
+
+  // --- Location Search Endpoints ---
+  searchPlaces: {
+    method: "GET",
+    path: "/api/v1/locations/search",
+    query: zPlaceSearchQuery,
+    responses: {
+      200: zPlaceSearchResponse,
+      400: zErrorResponse,
+    },
+    summary: "Search for places",
+    description: "Search for places using text query through AWS Location Service.",
+  },
+
+  geocodeLocation: {
+    method: "GET",
+    path: "/api/v1/locations/geocode",
+    query: zGeocodeQuery,
+    responses: {
+      200: zGeocodeResponse,
+      400: zErrorResponse,
+    },
+    summary: "Reverse geocode coordinates",
+    description: "Get place information for given coordinates through AWS Location Service.",
   },
 });
