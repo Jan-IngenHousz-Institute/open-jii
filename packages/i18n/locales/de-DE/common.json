@@ -176,7 +176,9 @@
     "yourExperiments": "Ihre neuesten Experimente",
     "seeAll": "Alle ansehen",
     "statistics": "Statistiken",
-    "quickActions": "Schnellaktionen"
+    "quickActions": "Schnellaktionen",
+    "noBlogPosts": "Keine Blogbeiträge vorhanden",
+    "errorLoadingBlogPosts": "Fehler beim Laden der Blogbeiträge"
   },
   "auth": {
     "login": "Anmelden",

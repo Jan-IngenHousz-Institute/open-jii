@@ -182,7 +182,9 @@
     "yourExperiments": "Your recent experiments",
     "seeAll": "See all",
     "statistics": "Statistics",
-    "quickActions": "Quick Actions"
+    "quickActions": "Quick Actions",
+    "noBlogPosts": "No blog posts available",
+    "errorLoadingBlogPosts": "Error loading blog posts"
   },
   "auth": {
     "login": "Sign in",
