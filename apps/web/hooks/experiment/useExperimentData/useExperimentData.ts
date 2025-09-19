@@ -38,15 +38,16 @@ function createTableColumns(
       case "TIMESTAMP":
         return 1;
       case "STRING":
-        return 2;
+        return 3;
       case "DOUBLE":
       case "INT":
       case "LONG":
       case "BIGINT":
-        return 3;
+        return 4;
       default:
-        if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 4;
-        return 5; // Other types at the end
+        if (typeName === "MAP" || typeName.startsWith("MAP<")) return 2;
+        if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 5;
+        return 6; // Other types at the end
     }
   };
 
@@ -62,10 +63,14 @@ function createTableColumns(
     const isArrayColumn =
       dataColumn.type_name === "ARRAY" || dataColumn.type_name.startsWith("ARRAY<");
 
+    // Set medium width for map columns that contain collapsible content
+    const isMapColumn =
+      dataColumn.type_name === "MAP" || dataColumn.type_name.startsWith("MAP<STRING,");
+
     columns.push(
       columnHelper.accessor(dataColumn.name, {
         header: dataColumn.name,
-        size: isArrayColumn ? 120 : undefined,
+        size: isArrayColumn ? 120 : isMapColumn ? 200 : undefined,
         meta: {
           type: dataColumn.type_name,
         },

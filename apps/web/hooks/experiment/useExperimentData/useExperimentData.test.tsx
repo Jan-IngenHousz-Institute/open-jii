@@ -241,6 +241,7 @@ describe("useExperimentData", () => {
           { name: "chart_data", type_name: "ARRAY<DOUBLE>", type_text: "Array of Doubles" },
           { name: "id", type_name: "INT", type_text: "Integer" },
           { name: "timestamp", type_name: "TIMESTAMP", type_text: "Timestamp" },
+          { name: "map_data", type_name: "MAP<STRING,STRING>", type_text: "Map of Strings" },
           { name: "name", type_name: "STRING", type_text: "String" },
           { name: "value", type_name: "DOUBLE", type_text: "Double" },
           { name: "other", type_name: "UNKNOWN", type_text: "Unknown Type" },
@@ -250,6 +251,7 @@ describe("useExperimentData", () => {
             chart_data: "[1,2,3]",
             id: "1",
             timestamp: "2023-01-01T10:00:00",
+            map_data: '{"key1": "value1", "key2": "value2"}',
             name: "Test",
             value: "10.5",
             other: "something",
@@ -288,15 +290,16 @@ describe("useExperimentData", () => {
       expect(columns).toBeDefined();
 
       // Verify columns are sorted by type precedence:
-      // 1. TIMESTAMP, 2. STRING, 3. DOUBLE/INT, 4. ARRAY, 5. Others
+      // 1. TIMESTAMP, 2. MAP, 3. STRING, 4. DOUBLE/INT, 5. ARRAY, 6. Others
       const columnOrder = columns?.map((col) => col.accessorKey);
       expect(columnOrder).toEqual([
         "timestamp", // TIMESTAMP (precedence 1)
-        "name", // STRING (precedence 2)
-        "id", // INT (precedence 3)
-        "value", // DOUBLE (precedence 3)
-        "chart_data", // ARRAY<DOUBLE> (precedence 4)
-        "other", // UNKNOWN (precedence 5)
+        "map_data", // MAP<STRING,STRING> (precedence 2)
+        "name", // STRING (precedence 3)
+        "id", // INT (precedence 4)
+        "value", // DOUBLE (precedence 4)
+        "chart_data", // ARRAY<DOUBLE> (precedence 5)
+        "other", // UNKNOWN (precedence 6)
       ]);
     });
 

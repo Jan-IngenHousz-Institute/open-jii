@@ -7,6 +7,7 @@ import { useTranslation } from "@repo/i18n";
 import { Skeleton, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components";
 
 import { ExperimentDataTableChartCell } from "./experiment-data-table-chart-cell";
+import { ExperimentDataTableMapCell } from "./experiment-data-table-map-cell";
 
 export function formatValue(
   value: unknown,
@@ -39,6 +40,13 @@ export function formatValue(
         />
       );
     default: {
+      // Check if the type contains MAP
+      if (type.includes("MAP<STRING,") || type === "MAP") {
+        return (
+          <ExperimentDataTableMapCell data={value as string} _columnName={columnName ?? "Map"} />
+        );
+      }
+
       // Check if the type contains ARRAY and appears to be numeric
       if (
         type.includes("ARRAY") &&

@@ -196,7 +196,7 @@ export function ExperimentDataTable({
           {t("experimentDataTable.download")}
         </Button>
       </div>
-      <div className="text-muted-foreground rounded-md border">
+      <div className="text-muted-foreground relative overflow-visible rounded-md border">
         <Table>
           <ExperimentTableHeader headerGroups={table.getHeaderGroups()} />
           <TableBody>
