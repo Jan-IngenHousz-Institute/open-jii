@@ -6,7 +6,17 @@ import type { DataRow } from "~/hooks/experiment/useExperimentData/useExperiment
 import { useTranslation } from "@repo/i18n";
 import { Skeleton, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components";
 
-export function formatValue(value: unknown, type: string) {
+import { ExperimentDataTableChartCell } from "./experiment-data-table-chart-cell";
+import { ExperimentDataTableMapCell } from "./experiment-data-table-map-cell";
+
+export function formatValue(
+  value: unknown,
+  type: string,
+  columnName?: string,
+  onChartHover?: (data: number[], columnName: string) => void,
+  onChartLeave?: () => void,
+  onChartClick?: (data: number[], columnName: string) => void,
+) {
   switch (type) {
     case "DOUBLE":
     case "INT":
@@ -15,7 +25,46 @@ export function formatValue(value: unknown, type: string) {
       return <div className="text-right tabular-nums">{value as number}</div>;
     case "TIMESTAMP":
       return (value as string).substring(0, 19).replace("T", " ");
+    case "ARRAY":
+    case "ARRAY<DOUBLE>":
+    case "ARRAY<REAL>":
+    case "ARRAY<FLOAT>":
+    case "ARRAY<NUMERIC>":
+      return (
+        <ExperimentDataTableChartCell
+          data={value as string} // Pass the raw string value to be parsed
+          columnName={columnName ?? "Chart"}
+          onHover={onChartHover}
+          onLeave={onChartLeave}
+          onClick={onChartClick}
+        />
+      );
     default: {
+      // Check if the type contains MAP
+      if (type.includes("MAP<STRING,") || type === "MAP") {
+        return (
+          <ExperimentDataTableMapCell data={value as string} _columnName={columnName ?? "Map"} />
+        );
+      }
+
+      // Check if the type contains ARRAY and appears to be numeric
+      if (
+        type.includes("ARRAY") &&
+        (type.includes("DOUBLE") ||
+          type.includes("REAL") ||
+          type.includes("FLOAT") ||
+          type.includes("NUMERIC"))
+      ) {
+        return (
+          <ExperimentDataTableChartCell
+            data={value as string}
+            columnName={columnName ?? "Chart"}
+            onHover={onChartHover}
+            onLeave={onChartLeave}
+            onClick={onChartClick}
+          />
+        );
+      }
       return value as string;
     }
   }
