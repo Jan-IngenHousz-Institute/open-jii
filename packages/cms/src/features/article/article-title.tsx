@@ -7,7 +7,6 @@ import {
 import Link from "next/link";
 import type { HTMLProps } from "react";
 
-import { Card } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
 
 import type { PageBlogPostFieldsFragment } from "../../lib/__generated/sdk";
@@ -42,7 +41,12 @@ export const ArticleTile = ({
     // --- HORIZONTAL
     return (
       <Link className="flex" href={`/${locale}/blog/${slug}`}>
-        <Card className={cn("flex flex-1 flex-row overflow-hidden p-0", className)}>
+        <div
+          className={cn(
+            "border-gray300 flex flex-1 flex-row overflow-hidden rounded-2xl border shadow-lg",
+            className,
+          )}
+        >
           {featuredImage && (
             <div
               {...inspectorProps({ fieldId: "featuredImage" })}
@@ -78,7 +82,7 @@ export const ArticleTile = ({
               <ArticleAuthor article={article} />
             </div>
           </div>
-        </Card>
+        </div>
       </Link>
     );
   }
