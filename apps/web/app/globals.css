@@ -4,6 +4,71 @@
   box-shadow: none !important;
   background: transparent !important;
 }
+
+/* Plotly mode bar styling - stronger selectors to override inline styles */
+.modebar-container .modebar {
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: calc(var(--radius) - 2px) !important;
+  box-shadow:
+    0 1px 3px 0 rgb(0 0 0 / 0.1),
+    0 1px 2px -1px rgb(0 0 0 / 0.1) !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 2px !important;
+}
+
+.modebar-container .modebar-group {
+  background: transparent !important;
+  border: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: contents !important;
+}
+
+.modebar-container .modebar-btn {
+  background: transparent !important;
+  border: none !important;
+  border-radius: calc(var(--radius) - 4px) !important;
+  transition: all 0.2s ease !important;
+  margin: 0 2px !important;
+  padding: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.modebar-container .modebar-btn:hover {
+  background: hsl(var(--accent)) !important;
+}
+
+.modebar-container .modebar-btn svg,
+.modebar-container .modebar-btn svg path {
+  fill: hsl(var(--foreground)) !important;
+  opacity: 0.8 !important;
+  transition: all 0.2s ease !important;
+}
+
+.modebar-container .modebar-btn:hover svg,
+.modebar-container .modebar-btn:hover svg path {
+  fill: hsl(var(--foreground)) !important;
+  opacity: 1 !important;
+}
+
+.modebar-container .modebar-btn.active svg,
+.modebar-container .modebar-btn.active svg path {
+  fill: hsl(var(--primary)) !important;
+  opacity: 1 !important;
+}
+
+.dark .modebar-container .modebar {
+  background: hsl(var(--card)) !important;
+  border-color: hsl(var(--border)) !important;
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.3),
+    0 2px 4px -2px rgb(0 0 0 / 0.3) !important;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

@@ -7,6 +7,7 @@ import type {
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import type { PaginationState, Updater } from "@tanstack/react-table";
 import { getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
+import { Download } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ExperimentDataRows,
@@ -17,6 +18,7 @@ import {
 
 import { useTranslation } from "@repo/i18n";
 import {
+  Button,
   Label,
   Pagination,
   PaginationContent,
@@ -33,6 +35,8 @@ import {
 } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
 
+import { DataDownloadModal } from "./data-download-modal/data-download-modal";
+
 export function ExperimentDataTable({
   experimentId,
   tableName,
@@ -44,6 +48,7 @@ export function ExperimentDataTable({
 }) {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
   const [persistedMetaData, setPersistedMetaData] = useState<TableMetadata>();
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
   const { t } = useTranslation();
 
   // Use traditional pagination with improved column persistence
@@ -132,9 +137,20 @@ export function ExperimentDataTable({
 
   return (
     <div>
-      <h5 className="mb-4 text-base font-medium">
-        {t("experimentDataTable.table")} {tableName}
-      </h5>
+      <div className="mb-4 flex items-center justify-between">
+        <h5 className="text-base font-medium">
+          {t("experimentDataTable.table")} {tableName}
+        </h5>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setDownloadModalOpen(true)}
+          className="flex items-center gap-2"
+        >
+          <Download className="h-4 w-4" />
+          {t("experimentDataTable.download")}
+        </Button>
+      </div>
       <div className="text-muted-foreground rounded-md border">
         <Table>
           <ExperimentTableHeader headerGroups={table.getHeaderGroups()} />
@@ -205,6 +221,13 @@ export function ExperimentDataTable({
           </PaginationContent>
         </Pagination>
       </div>
+
+      <DataDownloadModal
+        experimentId={experimentId}
+        tableName={tableName}
+        open={downloadModalOpen}
+        onOpenChange={setDownloadModalOpen}
+      />
     </div>
   );
 }

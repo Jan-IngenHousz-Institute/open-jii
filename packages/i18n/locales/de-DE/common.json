@@ -309,7 +309,8 @@
     "previous": "Zurück",
     "next": "Weiter",
     "table": "Tabelle",
-    "details": "Tabellendetails anzeigen"
+    "details": "Tabellendetails anzeigen",
+    "download": "Tabelle herunterladen"
   },
   "landingPage": {
     "latestArticles": "Neueste artikel"

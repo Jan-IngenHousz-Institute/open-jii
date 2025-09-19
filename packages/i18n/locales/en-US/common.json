@@ -317,7 +317,8 @@
     "previous": "Previous",
     "next": "Next",
     "table": "Table",
-    "details": "Show table details"
+    "details": "Show table details",
+    "download": "Download table"
   },
   "landingPage": {
     "latestArticles": "Latest articles"

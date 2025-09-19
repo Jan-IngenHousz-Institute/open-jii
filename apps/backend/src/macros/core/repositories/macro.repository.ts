@@ -1,6 +1,8 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, desc, eq, ilike, macros, users } from "@repo/database";
+import { UserProfileDto } from "src/users/core/models/user.model";
+
+import { and, desc, eq, ilike, macros, profiles } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -42,7 +44,7 @@ export class MacroRepository {
       let query = this.database
         .select()
         .from(macros)
-        .innerJoin(users, eq(macros.createdBy, users.id))
+        .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
         .orderBy(desc(macros.updatedAt));
 
       // Build array of conditions for filters
@@ -65,8 +67,12 @@ export class MacroRepository {
 
       const results = await query;
       return results.map((result) => {
-        const augmentedResult = result.macros as unknown as MacroDto;
-        augmentedResult.createdByName = result.users.name ?? undefined;
+        const augmentedResult = result.macros as MacroDto;
+        const profile = result.profiles as Partial<UserProfileDto>;
+        augmentedResult.createdByName =
+          profile.firstName && profile.lastName
+            ? `${profile.firstName} ${profile.lastName}`
+            : undefined;
         return augmentedResult;
       });
     });
@@ -77,7 +83,7 @@ export class MacroRepository {
       const result = await this.database
         .select()
         .from(macros)
-        .innerJoin(users, eq(macros.createdBy, users.id))
+        .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
         .where(eq(macros.id, id))
         .limit(1);
 
@@ -85,8 +91,12 @@ export class MacroRepository {
         return null;
       }
 
-      const augmentedResult = result[0].macros as unknown as MacroDto;
-      augmentedResult.createdByName = result[0].users.name ?? undefined;
+      const augmentedResult = result[0].macros as MacroDto;
+      const profile = result[0].profiles as Partial<UserProfileDto>;
+      augmentedResult.createdByName =
+        profile.firstName && profile.lastName
+          ? `${profile.firstName} ${profile.lastName}`
+          : undefined;
       return augmentedResult;
     });
   }
