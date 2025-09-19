@@ -761,14 +761,6 @@ module "backend_ecs" {
       valueFrom = "${module.auth_secrets.secret_arn}:AUTH_SECRET::"
     },
     {
-      name      = "AUTH_ORCID_ID"
-      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_ORCID_ID::"
-    },
-    {
-      name      = "AUTH_ORCID_SECRET"
-      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_ORCID_SECRET::"
-    },
-    {
       name      = "DATABRICKS_CLIENT_ID"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_CLIENT_ID::"
     },
