@@ -7,7 +7,9 @@ import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
 import type { LocationPoint } from "@repo/ui/components/map";
 
-const Map = dynamic(() => import("@repo/ui/components/map"), { ssr: false });
+const Map = dynamic(() => import("@repo/ui/components").then((mod) => ({ default: mod.Map })), {
+  ssr: false,
+});
 
 interface ExperimentLocationsDisplayProps {
   locations: LocationList;
@@ -108,6 +110,8 @@ export function ExperimentLocationsDisplay({
             showZoomControl={true}
             showScale={true}
             showSidebar={true}
+            showLocationSearch={true}
+            showDistances={false}
             sidebarTitle={t("details.locations.locationsTitle")}
             disabled={false}
             className="border-0"

@@ -57,6 +57,4 @@ export * from "./tooltip";
 export * from "./charts/basic";
 export * from "./charts/scientific";
 export * from "./charts/statistical";
-// export * from "./charts/3d";
-// export * from "./charts/common";
 export * from "./charts";
