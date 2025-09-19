@@ -59,7 +59,7 @@ export const ArticleTile = ({
 
           <div className="flex flex-1 flex-col px-4 py-3 md:px-5 md:py-4 lg:px-7 lg:py-5">
             <div
-              className={cn("text-gray600 mb-2 text-left text-xs")}
+              className={cn("mb-2 text-left text-xs text-gray-600")}
               {...inspectorProps({ fieldId: "publishedDate" })}
             >
               <FormatDate date={safePublishedDate} />
@@ -67,7 +67,7 @@ export const ArticleTile = ({
 
             {title && (
               <p
-                className="h3 text-gray800 mb-2 text-left text-lg font-medium md:mb-3 md:text-xl"
+                className="h3 mb-2 text-left text-lg font-medium text-gray-800 md:mb-3 md:text-xl"
                 {...inspectorProps({ fieldId: "title" })}
               >
                 {title}
@@ -105,7 +105,7 @@ export const ArticleTile = ({
         <div className="flex flex-1 flex-col px-4 py-3 md:px-5 md:py-4 lg:px-7 lg:py-5">
           {title && (
             <p
-              className="h3 text-gray800 mb-2 text-lg font-medium md:mb-3 md:text-xl"
+              className="h3 mb-2 text-lg font-medium text-gray-800 md:mb-3 md:text-xl"
               {...inspectorProps({ fieldId: "title" })}
             >
               {title}
@@ -115,7 +115,7 @@ export const ArticleTile = ({
           <div className="mt-auto flex items-center">
             <ArticleAuthor article={article} />
             <div
-              className={cn("text-gray600 ml-auto pl-2 text-xs")}
+              className={cn("ml-auto pl-2 text-xs text-gray-600")}
               {...inspectorProps({ fieldId: "publishedDate" })}
             >
               <FormatDate date={safePublishedDate} />
