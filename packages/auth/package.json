@@ -46,6 +46,7 @@
     "@auth/express": "^0.11.0",
     "@react-email/components": "catalog:react-email",
     "@repo/database": "workspace:*",
+    "@repo/transactional": "workspace:*",
     "next": "^15.3.3",
     "next-auth": "5.0.0-beta.29",
     "nodemailer": "catalog:",
@@ -60,7 +61,6 @@
     "@types/node": "catalog:",
     "@types/nodemailer": "catalog:",
     "eslint": "catalog:",
-    "transactional": "workspace:*",
     "typescript": "catalog:"
   }
 }
