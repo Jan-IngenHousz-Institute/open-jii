@@ -11,7 +11,7 @@ export interface ORCIDTokens extends Record<string, unknown> {
 }
 
 export interface ORCIDProfile extends Record<string, unknown> {
-  "orcid-identifier": {
+  "orcid-identifier"?: {
     uri: string;
     path: string;
     host: string;
@@ -132,7 +132,7 @@ export default function ORCID<P extends ORCIDProfile>(
     },
     token: {
       url: `${baseUrl}/oauth/token`,
-      async request({ params }: { params: any }) {
+      async request({ params }: { params: Record<string, string> }) {
         // Make the token request
         const response = await fetch(`${baseUrl}/oauth/token`, {
           method: "POST",
@@ -140,14 +140,14 @@ export default function ORCID<P extends ORCIDProfile>(
             "Content-Type": "application/x-www-form-urlencoded",
             Accept: "application/json",
           },
-          body: new URLSearchParams(params as Record<string, string>),
+          body: new URLSearchParams(params),
         });
 
         if (!response.ok) {
           throw new Error(`Token request failed: ${response.status}`);
         }
 
-        const tokens = await response.json();
+        const tokens = (await response.json()) as ORCIDTokens;
 
         return tokens;
       },
@@ -164,7 +164,7 @@ export default function ORCID<P extends ORCIDProfile>(
             Accept: "application/json",
           },
         });
-        return await res.json();
+        return (await res.json()) as ORCIDProfile;
       },
     },
     profile(profile: P) {
@@ -176,16 +176,17 @@ export default function ORCID<P extends ORCIDProfile>(
       // Extract ORCID iD from the API response
       // The ORCID API returns it in the 'orcid-identifier' field (note the hyphen)
       const orcidIdentifier = profile["orcid-identifier"];
-      const orcidId = orcidIdentifier?.uri || orcidIdentifier?.path;
+      const orcidId = orcidIdentifier?.uri ?? orcidIdentifier?.path ?? "";
 
-      const orcidIdParts = orcidId?.split("/") || [];
+      const orcidIdParts = orcidId ? orcidId.split("/") : [];
       const orcidPath = orcidIdParts[orcidIdParts.length - 1];
 
       // Use credit name, constructed full name, or fallback to ORCID iD
-      const displayName =
-        profile.person?.name?.["credit-name"]?.value ?? fullName ?? orcidPath ?? orcidId ?? null;
+      const creditName = profile.person?.name?.["credit-name"]?.value;
+      const nonEmptyFullName = fullName || undefined;
+      const displayName = creditName ?? nonEmptyFullName ?? orcidPath;
 
-      const email = profile.person?.emails?.email?.[0]?.email ?? null;
+      const email = profile.person?.emails?.email[0]?.email ?? null;
 
       return {
         id: orcidPath || orcidId,
