@@ -294,7 +294,7 @@ resource "aws_iam_access_key" "ses_smtp" {
 resource "aws_iam_policy" "ses_sending" {
   count       = var.create_smtp_user ? 1 : 0
   name        = "${var.environment}-ses-sending-policy"
-  description = "Allow SES sending with from-address guard and config set"
+  description = "Allow SES sending with from-address guard"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -305,13 +305,10 @@ resource "aws_iam_policy" "ses_sending" {
           "ses:SendEmail",
           "ses:SendRawEmail"
         ]
-        Resource = "*"
+        Resource = "arn:aws:ses:${local.region}:${data.aws_caller_identity.current.account_id}:identity/${local.from_domain}"
         Condition = {
           "ForAnyValue:StringEquals" = {
             "ses:FromAddress" = var.allowed_from_addresses
-          }
-          StringLike = {
-            "ses:ConfigurationSet" = aws_ses_configuration_set.main.name
           }
         }
       }
