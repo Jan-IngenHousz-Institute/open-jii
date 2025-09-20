@@ -23,6 +23,13 @@ import {
   zUploadExperimentDataResponse,
   zDownloadExperimentDataQuery,
   zDownloadExperimentDataResponse,
+  zLocationList,
+  zAddExperimentLocationsBody,
+  zUpdateExperimentLocationsBody,
+  zPlaceSearchQuery,
+  zPlaceSearchResponse,
+  zGeocodeQuery,
+  zGeocodeResponse,
 } from "../schemas/experiment.schema";
 import { zFlow, zUpsertFlowBody } from "../schemas/experiment.schema";
 import {
@@ -293,12 +300,79 @@ export const experimentContract = c.router({
     query: zDownloadExperimentDataQuery,
     responses: {
       200: zDownloadExperimentDataResponse,
-      400: zErrorResponse,
       403: zErrorResponse,
       404: zErrorResponse,
     },
     summary: "Download experiment data",
     description:
       "Generates download links for complete table data using EXTERNAL_LINKS disposition",
+  },
+
+  getExperimentLocations: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/locations",
+    pathParams: zIdPathParam,
+    responses: {
+      200: zLocationList,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Get experiment locations",
+    description: "Returns all locations associated with the specified experiment.",
+  },
+
+  addExperimentLocations: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/locations",
+    pathParams: zIdPathParam,
+    body: zAddExperimentLocationsBody,
+    responses: {
+      201: zLocationList,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Add locations to an experiment",
+    description: "Associates one or more locations with an experiment.",
+  },
+
+  updateExperimentLocations: {
+    method: "PUT",
+    path: "/api/v1/experiments/:id/locations",
+    pathParams: zIdPathParam,
+    body: zUpdateExperimentLocationsBody,
+    responses: {
+      200: zLocationList,
+      400: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Update experiment locations",
+    description: "Replaces all locations associated with an experiment.",
+  },
+
+  // --- Location Search Endpoints ---
+  searchPlaces: {
+    method: "GET",
+    path: "/api/v1/locations/search",
+    query: zPlaceSearchQuery,
+    responses: {
+      200: zPlaceSearchResponse,
+      400: zErrorResponse,
+    },
+    summary: "Search for places",
+    description: "Search for places using text query through AWS Location Service.",
+  },
+
+  geocodeLocation: {
+    method: "GET",
+    path: "/api/v1/locations/geocode",
+    query: zGeocodeQuery,
+    responses: {
+      200: zGeocodeResponse,
+      400: zErrorResponse,
+    },
+    summary: "Reverse geocode coordinates",
+    description: "Get place information for given coordinates through AWS Location Service.",
   },
 });

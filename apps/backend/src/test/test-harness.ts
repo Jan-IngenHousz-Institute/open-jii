@@ -14,6 +14,7 @@ import * as authExpress from "@repo/auth/express";
 import type { DatabaseInstance } from "@repo/database";
 import {
   experimentMembers,
+  experimentLocations,
   experiments,
   users,
   auditLogs,
@@ -135,6 +136,7 @@ export class TestHarness {
     await this.database.delete(auditLogs).execute();
     await this.database.delete(experimentMembers).execute();
     await this.database.delete(experimentProtocols).execute();
+    await this.database.delete(experimentLocations).execute();
     // Flows reference experiments, so delete flows before experiments
     await this.database.delete(flows).execute();
     await this.database.delete(experiments).execute();

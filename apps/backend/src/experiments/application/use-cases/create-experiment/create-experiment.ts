@@ -4,6 +4,7 @@ import { Result, success, failure, AppError } from "../../../../common/utils/fp-
 import { CreateExperimentDto, ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import { LocationRepository } from "../../../core/repositories/experiment-location.repository";
 import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentProtocolRepository } from "../../../core/repositories/experiment-protocol.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -16,6 +17,7 @@ export class CreateExperimentUseCase {
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentMemberRepository: ExperimentMemberRepository,
     private readonly experimentProtocolRepository: ExperimentProtocolRepository,
+    private readonly locationRepository: LocationRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
 
@@ -86,6 +88,28 @@ export class CreateExperimentUseCase {
               return failure(
                 AppError.badRequest(
                   `Failed to associate protocols: ${addProtocolsResult.error.message}`,
+                ),
+              );
+            }
+          }
+
+          // Associate locations if provided
+          if (Array.isArray(data.locations) && data.locations.length > 0) {
+            const locationsWithExperimentId = data.locations.map((location) => ({
+              ...location,
+              experimentId: experiment.id,
+            }));
+
+            const addLocationsResult =
+              await this.locationRepository.createMany(locationsWithExperimentId);
+            if (addLocationsResult.isFailure()) {
+              this.logger.error(
+                `Failed to associate locations with experiment ${experiment.id}:`,
+                addLocationsResult.error.message,
+              );
+              return failure(
+                AppError.badRequest(
+                  `Failed to associate locations: ${addLocationsResult.error.message}`,
                 ),
               );
             }

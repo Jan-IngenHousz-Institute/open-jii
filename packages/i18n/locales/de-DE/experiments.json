@@ -70,6 +70,32 @@
   "created": "Erstellt",
   "updated": "Aktualisiert",
   "descriptionTitle": "Beschreibung",
+  "details": {
+    "locations": {
+      "locationsTitle": "Experiment-Standorte",
+      "locationsCount": "{{count}} Standort",
+      "locationsCount_plural": "{{count}} Standorte",
+      "noLocations": "Keine Standorte",
+      "noLocationsDescription": "Dieses Experiment hat keine konfigurierten Standorte."
+    }
+  },
+  "settings": {
+    "locations": {
+      "title": "Standort-Verwaltung",
+      "description": "Experiment-Standorte konfigurieren und verwalten",
+      "editLocations": "Standorte bearbeiten",
+      "count": "{{count}} Standort",
+      "count_plural": "{{count}} Standorte",
+      "noLocations": "Keine Standorte konfiguriert",
+      "noLocationsDescription": "Fügen Sie Standorte hinzu, um anzugeben, wo dieses Experiment stattfindet",
+      "viewMap": "Auf Karte anzeigen",
+      "mapPreview": "Standort-Kartenvorschau",
+      "editMode": "Standorte bearbeiten",
+      "editModeDescription": "Klicken Sie auf die Karte, um Standorte hinzuzufügen, klicken Sie auf vorhandene Markierungen, um sie zu bearbeiten oder zu entfernen",
+      "editingCount": "{{count}} Standort ausgewählt",
+      "editingCount_plural": "{{count}} Standorte ausgewählt"
+    }
+  },
   "manageExperimentDescription": "Experimentdetails, Daten, Flow und Einstellungen anzeigen und verwalten.",
   "loading": "Laden...",
   "failedToLoad": "Experiment konnte nicht geladen werden",
