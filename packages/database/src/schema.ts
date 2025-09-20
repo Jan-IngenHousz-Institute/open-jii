@@ -10,6 +10,7 @@ import {
   pgEnum,
   uuid,
   integer,
+  bigint,
 } from "drizzle-orm/pg-core";
 
 // UTC timestamps helper
@@ -44,7 +45,7 @@ export const accounts = pgTable(
     providerAccountId: text("providerAccountId").notNull(),
     refresh_token: text("refresh_token"),
     access_token: text("access_token"),
-    expires_at: integer("expires_at"),
+    expires_at: bigint("expires_at", { mode: "number" }),
     token_type: text("token_type"),
     scope: text("scope"),
     id_token: text("id_token"),

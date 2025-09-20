@@ -1,24 +1,87 @@
 import type { OAuthConfig, OAuthUserConfig } from "@auth/core/providers/oauth";
 
+export interface ORCIDTokens extends Record<string, unknown> {
+  access_token: string;
+  token_type: string;
+  refresh_token: string;
+  expires_in: number;
+  scope: string;
+  name: string;
+  orcid: string;
+}
+
 export interface ORCIDProfile extends Record<string, unknown> {
-  orcid_identifier: {
+  "orcid-identifier": {
     uri: string;
     path: string;
     host: string;
   };
-  person: {
-    name: {
-      "given-names": {
-        value: string;
-      } | null;
-      "family-name": {
-        value: string;
-      } | null;
-      "credit-name": {
-        value: string;
-      } | null;
-    } | null;
-  } | null;
+  preferences?: {
+    locale: string;
+  };
+  history?: {
+    "creation-method": string;
+    "completion-date": { value: number };
+    "submission-date": { value: number };
+    "last-modified-date": { value: number };
+    claimed: boolean;
+    source: null;
+    "deactivation-date": null;
+    "verified-email": boolean;
+    "verified-primary-email": boolean;
+  };
+  person?: {
+    "last-modified-date": { value: number };
+    name?: {
+      "created-date": { value: number };
+      "last-modified-date": { value: number };
+      "given-names": { value: string };
+      "family-name": { value: string };
+      "credit-name": null | { value: string };
+      source: null;
+      visibility: string;
+      path: string;
+    };
+    "other-names"?: {
+      "last-modified-date": { value: number };
+      "other-name": {
+        "created-date": { value: number };
+        "last-modified-date": { value: number };
+        source: unknown;
+        content: string;
+        visibility: string;
+        path: string;
+        "put-code": number;
+        "display-index": number;
+      }[];
+      path: string;
+    };
+    biography?: {
+      "created-date": { value: number };
+      "last-modified-date": { value: number };
+      content: string;
+      visibility: string;
+      path: string;
+    };
+    "researcher-urls"?: unknown;
+    emails?: {
+      "last-modified-date": null;
+      email: {
+        email: string;
+      }[];
+      path: string;
+    };
+    addresses?: {
+      "last-modified-date": null;
+      address: unknown[];
+      path: string;
+    };
+    keywords?: unknown;
+    "external-identifiers"?: unknown;
+    path: string;
+  };
+  "activities-summary"?: unknown;
+  path: string;
 }
 
 /**
@@ -60,52 +123,77 @@ export default function ORCID<P extends ORCIDProfile>(
     type: "oauth",
     issuer: baseUrl,
     authorization: {
-      url: `${baseUrl}/oauth/authorize`,
+      url: "https://orcid.org/oauth/authorize",
       params: {
         scope: "/authenticate",
         response_type: "code",
-        // Note: redirect_uri is automatically handled by Auth.js
-        // It will be added as: {baseUrl}/api/auth/callback/orcid
+        redirect_uri: "https://dev.openjii.org" + "/api/auth/callback/orcid",
       },
     },
-    token: `${baseUrl}/oauth/token`,
-    userinfo: {
-      url: `${baseUrl}/v3.0/`,
-      async request({ tokens }: { tokens: { access_token: string } }) {
-        // ORCID requires the bearer token to access user information
-        const tokensObj = tokens as { access_token: string };
-        const response = await fetch(`${baseUrl}/v3.0/${tokensObj.access_token}/record`, {
+    token: {
+      url: `${baseUrl}/oauth/token`,
+      async request({ params }: { params: any }) {
+        // Make the token request
+        const response = await fetch(`${baseUrl}/oauth/token`, {
+          method: "POST",
           headers: {
-            Authorization: `Bearer ${tokensObj.access_token}`,
+            "Content-Type": "application/x-www-form-urlencoded",
             Accept: "application/json",
           },
+          body: new URLSearchParams(params as Record<string, string>),
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch ORCID profile: ${response.status}`);
+          throw new Error(`Token request failed: ${response.status}`);
         }
 
-        return (await response.json()) as P;
+        const tokens = await response.json();
+
+        return tokens;
       },
     },
     client: {
       token_endpoint_auth_method: "client_secret_post",
     },
+    userinfo: {
+      url: "https://pub.orcid.org/v3.0/[ORCID]",
+      async request({ tokens }: { tokens: ORCIDTokens }) {
+        const res = await fetch(`https://pub.orcid.org/v3.0/${tokens.orcid}`, {
+          headers: {
+            Authorization: `Bearer ${tokens.access_token}`,
+            Accept: "application/json",
+          },
+        });
+        return await res.json();
+      },
+    },
     profile(profile: P) {
+      // Extract names from ORCID person data
       const givenName = profile.person?.name?.["given-names"]?.value ?? "";
       const familyName = profile.person?.name?.["family-name"]?.value ?? "";
       const fullName = `${givenName} ${familyName}`.trim();
 
+      // Extract ORCID iD from the API response
+      // The ORCID API returns it in the 'orcid-identifier' field (note the hyphen)
+      const orcidIdentifier = profile["orcid-identifier"];
+      const orcidId = orcidIdentifier?.uri || orcidIdentifier?.path;
+
+      const orcidIdParts = orcidId?.split("/") || [];
+      const orcidPath = orcidIdParts[orcidIdParts.length - 1];
+
+      // Use credit name, constructed full name, or fallback to ORCID iD
+      const displayName =
+        profile.person?.name?.["credit-name"]?.value ?? fullName ?? orcidPath ?? orcidId ?? null;
+
+      const email = profile.person?.emails?.email?.[0]?.email ?? null;
+
       return {
-        id: profile.orcid_identifier.path,
-        name:
-          profile.person?.name?.["credit-name"]?.value ??
-          (fullName || profile.orcid_identifier.path),
-        email: null, // ORCID doesn't provide email in the basic scope
-        image: null, // ORCID doesn't provide profile images
-        registered: false, // Will be set properly by the auth system
-        // Store the full ORCID iD for future reference
-        orcid: profile.orcid_identifier.uri,
+        id: orcidPath || orcidId,
+        name: displayName,
+        email,
+        image: null,
+        registered: false,
+        orcid: orcidId,
       };
     },
     options,
