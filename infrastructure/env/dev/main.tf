@@ -507,7 +507,7 @@ module "opennext" {
   db_credentials_secret_arn = module.aurora_db.master_user_secret_arn
   oauth_secret_arn          = module.auth_secrets.secret_arn
   contentful_secret_arn     = module.contentful_secrets.secret_arn
-  # ses_secret_arn            = module.ses_secrets.secret_arn
+  ses_secret_arn            = module.ses_secrets.secret_arn
 
   server_environment_variables = {
     COOKIE_DOMAIN = ".${var.environment}.${var.domain_name}"

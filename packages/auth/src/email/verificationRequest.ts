@@ -1,7 +1,8 @@
 import type { NodemailerConfig } from "@auth/core/providers/nodemailer";
 import { render } from "@react-email/components";
 import { createTransport } from "nodemailer";
-import VerificationRequest from "transactional/emails/verification-request";
+
+import { VerificationRequest } from "@repo/transactional/emails/verification-request";
 
 export async function sendVerificationRequest(params: {
   identifier: string;

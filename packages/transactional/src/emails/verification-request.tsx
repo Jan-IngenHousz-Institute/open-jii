@@ -57,5 +57,3 @@ export const VerificationRequest = ({ url }: VerificationRequestProps) => {
 VerificationRequest.PreviewProps = {
   url: "https://openjii.org/",
 };
-
-export default VerificationRequest;
