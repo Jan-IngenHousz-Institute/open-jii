@@ -235,6 +235,10 @@ module "centrum_pipeline" {
   development_mode = true
   serverless       = true
 
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
   providers = {
     databricks.workspace = databricks.workspace
   }

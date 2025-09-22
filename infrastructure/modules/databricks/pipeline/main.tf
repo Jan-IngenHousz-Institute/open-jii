@@ -70,4 +70,13 @@ resource "databricks_pipeline" "this" {
   # Development mode can be toggled
   development = var.development_mode
 
+  # Run as configuration - supports both service principal and user
+  dynamic "run_as" {
+    for_each = var.run_as != null ? [var.run_as] : []
+    content {
+      service_principal_name = run_as.value.service_principal_name
+      user_name             = run_as.value.user_name
+    }
+  }
+
 }

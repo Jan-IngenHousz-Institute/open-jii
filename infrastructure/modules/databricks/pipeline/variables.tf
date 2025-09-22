@@ -87,3 +87,20 @@ variable "catalog_name" {
   description = "Name of the Databricks catalog to use for the pipeline"
   type        = string
 }
+
+variable "run_as" {
+  description = "Configuration for the user or service principal to run the pipeline as"
+  type = object({
+    service_principal_name = optional(string)
+    user_name             = optional(string)
+  })
+  default = null
+  
+  validation {
+    condition = var.run_as == null || (
+      (var.run_as.service_principal_name != null && var.run_as.user_name == null) ||
+      (var.run_as.service_principal_name == null && var.run_as.user_name != null)
+    )
+    error_message = "Either service_principal_name or user_name must be specified, but not both."
+  }
+}
