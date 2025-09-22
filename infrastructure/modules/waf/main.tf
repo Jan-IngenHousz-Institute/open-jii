@@ -18,6 +18,36 @@ resource "aws_wafv2_web_acl" "main" {
     allow {}
   }
 
+  # Rule to block requests for sensitive paths like .git
+  rule {
+    name     = "BlockSensitivePaths"
+    priority = 0 # Highest priority to block these requests first
+
+    action {
+      block {}
+    }
+
+    statement {
+      byte_match_statement {
+        search_string         = "/.git"
+        positional_constraint = "STARTS_WITH"
+        field_to_match {
+          uri_path {}
+        }
+        text_transformation {
+          priority = 0
+          type     = "NONE"
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "BlockSensitivePathsMetric"
+      sampled_requests_enabled   = true
+    }
+  }
+
   # AWS Managed Core Rule Set - protects against OWASP Top 10 vulnerabilities
   # Includes protection against: SQL injection, XSS, path traversal, etc.
   # Maintained and updated by AWS security team - reduces management overhead
@@ -35,6 +65,17 @@ resource "aws_wafv2_web_acl" "main" {
       managed_rule_group_statement {
         name        = "AWSManagedRulesCommonRuleSet"
         vendor_name = "AWS"
+
+        # Exclude body size restriction rule for configured large body bypass routes
+        dynamic "rule_action_override" {
+          for_each = length(var.large_body_bypass_routes) > 0 ? [1] : []
+          content {
+            action_to_use {
+              count {}
+            }
+            name = "SizeRestrictions_BODY"
+          }
+        }
       }
     }
 
@@ -207,36 +248,6 @@ resource "aws_wafv2_web_acl" "main" {
     }
   }
 
-  # Rule to block requests for sensitive paths like .git
-  rule {
-    name     = "BlockSensitivePaths"
-    priority = 0 # Highest priority to block these requests first
-
-    action {
-      block {}
-    }
-
-    statement {
-      byte_match_statement {
-        search_string         = "/.git"
-        positional_constraint = "STARTS_WITH"
-        field_to_match {
-          uri_path {}
-        }
-        text_transformation {
-          priority = 0
-          type     = "NONE"
-        }
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "BlockSensitivePathsMetric"
-      sampled_requests_enabled   = true
-    }
-  }
-
   # Geographic blocking - optional security measure
   # Useful for compliance requirements or reducing attack surface
   # Only creates the rule if blocked_countries list is provided
@@ -244,7 +255,7 @@ resource "aws_wafv2_web_acl" "main" {
     for_each = length(var.blocked_countries) > 0 ? [1] : []
     content {
       name     = "GeoBlockRule"
-      priority = 5
+      priority = 6
 
       action {
         block {}
@@ -259,6 +270,146 @@ resource "aws_wafv2_web_acl" "main" {
       visibility_config {
         cloudwatch_metrics_enabled = true
         metric_name                = "GeoBlockRuleMetric"
+        sampled_requests_enabled   = true
+      }
+    }
+  }
+
+  # Allow rule for large body bypass routes - runs AFTER all security checks
+  # Only allows large body requests if they pass all other security rules first
+  dynamic "rule" {
+    for_each = length(var.large_body_bypass_routes) > 0 ? [1] : []
+    content {
+      name     = "AllowLargeBodyRule"
+      priority = 5 # Run after security checks but before geographic blocking
+
+      action {
+        allow {}
+      }
+
+      statement {
+        and_statement {
+          # First condition: Body size is over 8KB (8192 bytes)
+          statement {
+            size_constraint_statement {
+              field_to_match {
+                body {
+                  oversize_handling = "CONTINUE"
+                }
+              }
+              comparison_operator = "GT"
+              size                = 8192
+              text_transformation {
+                priority = 0
+                type     = "NONE"
+              }
+            }
+          }
+
+          # Second condition: Body size is under configured maximum
+          statement {
+            size_constraint_statement {
+              field_to_match {
+                body {
+                  oversize_handling = "CONTINUE"
+                }
+              }
+              comparison_operator = "LT"
+              size                = var.large_body_max_size
+              text_transformation {
+                priority = 0
+                type     = "NONE"
+              }
+            }
+          }
+
+          # Third condition: Request matches one of the bypass routes
+          statement {
+            # Handle single route case with AND statement
+            dynamic "and_statement" {
+              for_each = length(var.large_body_bypass_routes) == 1 ? [1] : []
+              content {
+                # Match the HTTP method for the first route
+                statement {
+                  byte_match_statement {
+                    search_string         = var.large_body_bypass_routes[0].method
+                    positional_constraint = "EXACTLY"
+                    field_to_match {
+                      method {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "NONE"
+                    }
+                  }
+                }
+                
+                # Match the URI path for the first route
+                statement {
+                  byte_match_statement {
+                    search_string         = var.large_body_bypass_routes[0].search_string
+                    positional_constraint = var.large_body_bypass_routes[0].positional_constraint
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "LOWERCASE"
+                    }
+                  }
+                }
+              }
+            }
+            
+            # Handle multiple routes case with OR statement
+            dynamic "or_statement" {
+              for_each = length(var.large_body_bypass_routes) >= 2 ? [1] : []
+              content {
+                # Create a statement for each configured route
+                dynamic "statement" {
+                  for_each = var.large_body_bypass_routes
+                  content {
+                    and_statement {
+                      # Match the HTTP method for this route
+                      statement {
+                        byte_match_statement {
+                          search_string         = statement.value.method
+                          positional_constraint = "EXACTLY"
+                          field_to_match {
+                            method {}
+                          }
+                          text_transformation {
+                            priority = 0
+                            type     = "NONE"
+                          }
+                        }
+                      }
+                      # Match the URI path with the configured constraint
+                      statement {
+                        byte_match_statement {
+                          search_string         = statement.value.search_string
+                          positional_constraint = statement.value.positional_constraint
+                          field_to_match {
+                            uri_path {}
+                          }
+                          text_transformation {
+                            priority = 0
+                            type     = "LOWERCASE"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "AllowLargeBodyRuleMetric"
         sampled_requests_enabled   = true
       }
     }
