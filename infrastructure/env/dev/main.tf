@@ -858,7 +858,7 @@ module "backend_waf" {
     },
     {
       search_string         = "/api/v1/macros"
-      positional_constraint = "EXACTLY"
+      positional_constraint = "STARTS_WITH"
       method                = "POST"
     }
   ]
