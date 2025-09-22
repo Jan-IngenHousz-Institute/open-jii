@@ -95,9 +95,9 @@ variable "large_body_bypass_routes" {
 }
 
 variable "large_body_max_size" {
-  description = "Maximum body size in bytes allowed for large body bypass routes (default: 1GB = 1073741824 bytes)"
+  description = "Maximum body size in bytes allowed for large body bypass routes (default: 128KB = 131072 bytes)"
   type        = number
-  default     = 1073741824
+  default     = 131072 # 128KB
 
   validation {
     condition     = var.large_body_max_size > 8192
