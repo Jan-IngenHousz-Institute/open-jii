@@ -8,7 +8,7 @@ export * from "./common";
 export * from "./basic";
 // export * from "./statistical";
 // export * from "./scientific";
-// export * from "./3d";
+export * from "./3d";
 
 // Subplot support
 // Note: Subplot functionality would be implemented here
