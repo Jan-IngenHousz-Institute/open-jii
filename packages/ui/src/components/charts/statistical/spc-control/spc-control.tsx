@@ -12,11 +12,6 @@ import {
   createBaseLayout,
 } from "../../common";
 
-export interface SPCDataSeriesData extends BaseSeries {
-  x: any[]; // Mixed types for time series, categories, or numeric data
-  y: number[];
-}
-
 export interface SPCSeriesData extends BaseSeries {
   x: any[]; // Mixed types for time series, categories, or numeric data
   y: number[];
@@ -82,8 +77,9 @@ export function SPCControlCharts({
 
   // Get x-axis range for control lines
   const allXValues = data.flatMap((series) => series.x);
-  const xMin = Math.min(...allXValues);
-  const xMax = Math.max(...allXValues);
+  const numericXValues = allXValues.filter((v) => typeof v === "number" && isFinite(v));
+  const xMin = Math.min(...numericXValues);
+  const xMax = Math.max(...numericXValues);
 
   const plotData: PlotData[] = [
     // Main data series
