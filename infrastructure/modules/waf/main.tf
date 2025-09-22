@@ -18,12 +18,152 @@ resource "aws_wafv2_web_acl" "main" {
     allow {}
   }
 
+  # Allow rule for large body bypass routes - runs BEFORE the Core Rule Set
+  # and explicitly allows requests matching the configured routes to bypass body size restrictions
+  dynamic "rule" {
+    for_each = length(var.large_body_bypass_routes) > 0 ? [1] : []
+    content {
+      name     = "AllowLargeBodyRule"
+      priority = 1 # Run after BlockSensitivePaths but before Core Rule Set
+
+      action {
+        allow {}
+      }
+
+      statement {
+        and_statement {
+          # First condition: Body size is over 8KB (8192 bytes)
+          statement {
+            size_constraint_statement {
+              field_to_match {
+                body {
+                  oversize_handling = "CONTINUE"
+                }
+              }
+              comparison_operator = "GT"
+              size                = 8192
+              text_transformation {
+                priority = 0
+                type     = "NONE"
+              }
+            }
+          }
+
+          # Second condition: Body size is under configured maximum
+          statement {
+            size_constraint_statement {
+              field_to_match {
+                body {
+                  oversize_handling = "CONTINUE"
+                }
+              }
+              comparison_operator = "LT"
+              size                = var.large_body_max_size
+              text_transformation {
+                priority = 0
+                type     = "NONE"
+              }
+            }
+          }
+
+          # Third condition: Request matches one of the bypass routes
+          statement {
+            # Handle single route case with AND statement
+            dynamic "and_statement" {
+              for_each = length(var.large_body_bypass_routes) == 1 ? [1] : []
+              content {
+                # Match the HTTP method for the first route
+                statement {
+                  byte_match_statement {
+                    search_string         = var.large_body_bypass_routes[0].method
+                    positional_constraint = "EXACTLY"
+                    field_to_match {
+                      method {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "NONE"
+                    }
+                  }
+                }
+                
+                # Match the URI path for the first route
+                statement {
+                  byte_match_statement {
+                    search_string         = var.large_body_bypass_routes[0].search_string
+                    positional_constraint = var.large_body_bypass_routes[0].positional_constraint
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "LOWERCASE"
+                    }
+                  }
+                }
+              }
+            }
+            
+            # Handle multiple routes case with OR statement
+            dynamic "or_statement" {
+              for_each = length(var.large_body_bypass_routes) >= 2 ? [1] : []
+              content {
+                # Create a statement for each configured route
+                dynamic "statement" {
+                  for_each = var.large_body_bypass_routes
+                  content {
+                    and_statement {
+                      # Match the HTTP method for this route
+                      statement {
+                        byte_match_statement {
+                          search_string         = statement.value.method
+                          positional_constraint = "EXACTLY"
+                          field_to_match {
+                            method {}
+                          }
+                          text_transformation {
+                            priority = 0
+                            type     = "NONE"
+                          }
+                        }
+                      }
+                      # Match the URI path with the configured constraint
+                      statement {
+                        byte_match_statement {
+                          search_string         = statement.value.search_string
+                          positional_constraint = statement.value.positional_constraint
+                          field_to_match {
+                            uri_path {}
+                          }
+                          text_transformation {
+                            priority = 0
+                            type     = "LOWERCASE"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "AllowLargeBodyRuleMetric"
+        sampled_requests_enabled   = true
+      }
+    }
+  }
+
   # AWS Managed Core Rule Set - protects against OWASP Top 10 vulnerabilities
   # Includes protection against: SQL injection, XSS, path traversal, etc.
   # Maintained and updated by AWS security team - reduces management overhead
   rule {
     name     = "AWSManagedRulesCommonRuleSet"
-    priority = 1
+    priority = 2
 
     # override_action "none" means apply all rules in the group as-is
     # Use "count" for monitoring mode without blocking
@@ -51,7 +191,7 @@ resource "aws_wafv2_web_acl" "main" {
   # Complements the Core Rule Set with additional threat intelligence
   rule {
     name     = "AWSManagedRulesKnownBadInputsRuleSet"
-    priority = 2
+    priority = 4
 
     override_action {
       none {}
@@ -76,7 +216,7 @@ resource "aws_wafv2_web_acl" "main" {
   # aggregate_key_type = "IP" means rate limit is per source IP address
   rule {
     name     = "RateLimitRule"
-    priority = 3
+    priority = 5
 
     action {
       block {} # Block requests that exceed the rate limit
@@ -104,7 +244,7 @@ resource "aws_wafv2_web_acl" "main" {
     for_each = length(var.restrictive_rate_limit_routes) > 0 ? [1] : []
     content {
       name     = "RestrictiveRateLimitRule"
-      priority = 4
+      priority = 6
 
       action {
         block {}
@@ -244,7 +384,7 @@ resource "aws_wafv2_web_acl" "main" {
     for_each = length(var.blocked_countries) > 0 ? [1] : []
     content {
       name     = "GeoBlockRule"
-      priority = 5
+      priority = 7
 
       action {
         block {}

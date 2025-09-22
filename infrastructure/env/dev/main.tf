@@ -850,6 +850,19 @@ module "backend_waf" {
   rate_limit         = 500
   log_retention_days = 30
 
+  large_body_bypass_routes = [
+    {
+      search_string         = "/upload"
+      positional_constraint = "ENDS_WITH"
+      method                = "POST"
+    },
+    {
+      search_string         = "/api/v1/macros"
+      positional_constraint = "EXACTLY"
+      method                = "POST"
+    }
+  ]
+
   tags = {
     Environment = "dev"
     Project     = "open-jii"
