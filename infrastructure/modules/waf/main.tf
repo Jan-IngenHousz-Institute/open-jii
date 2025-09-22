@@ -18,13 +18,270 @@ resource "aws_wafv2_web_acl" "main" {
     allow {}
   }
 
-  # Allow rule for large body bypass routes - runs BEFORE the Core Rule Set
-  # and explicitly allows requests matching the configured routes to bypass body size restrictions
+  # Rule to block requests for sensitive paths like .git
+  rule {
+    name     = "BlockSensitivePaths"
+    priority = 0 # Highest priority to block these requests first
+
+    action {
+      block {}
+    }
+
+    statement {
+      byte_match_statement {
+        search_string         = "/.git"
+        positional_constraint = "STARTS_WITH"
+        field_to_match {
+          uri_path {}
+        }
+        text_transformation {
+          priority = 0
+          type     = "NONE"
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "BlockSensitivePathsMetric"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # AWS Managed Core Rule Set - protects against OWASP Top 10 vulnerabilities
+  # Includes protection against: SQL injection, XSS, path traversal, etc.
+  # Maintained and updated by AWS security team - reduces management overhead
+  rule {
+    name     = "AWSManagedRulesCommonRuleSet"
+    priority = 1
+
+    # override_action "none" means apply all rules in the group as-is
+    # Use "count" for monitoring mode without blocking
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+
+        # Exclude body size restriction rule for configured large body bypass routes
+        dynamic "rule_action_override" {
+          for_each = length(var.large_body_bypass_routes) > 0 ? [1] : []
+          content {
+            action_to_use {
+              count {}
+            }
+            name = "SizeRestrictions_BODY"
+          }
+        }
+      }
+    }
+
+    # CloudWatch metrics for monitoring WAF effectiveness and false positives
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "CommonRuleSetMetric"
+      sampled_requests_enabled   = true # Logs sample of blocked/allowed requests
+    }
+  }
+
+  # AWS Managed Known Bad Inputs Rule Set - blocks requests with malicious patterns
+  # Protects against known malicious inputs, exploit attempts, and vulnerability scanners
+  # Complements the Core Rule Set with additional threat intelligence
+  rule {
+    name     = "AWSManagedRulesKnownBadInputsRuleSet"
+    priority = 2
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "KnownBadInputsRuleSetMetric"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # Rate limiting protection against DDoS and brute force attacks
+  # Blocks IP addresses that exceed the specified request rate within 5-minute windows
+  # aggregate_key_type = "IP" means rate limit is per source IP address
+  rule {
+    name     = "RateLimitRule"
+    priority = 3
+
+    action {
+      block {} # Block requests that exceed the rate limit
+    }
+
+    statement {
+      rate_based_statement {
+        limit              = var.rate_limit # Requests per 5-minute window per IP
+        aggregate_key_type = "IP"           # Rate limit per source IP
+        # Alternative: "FORWARDED_IP" for X-Forwarded-For header (behind proxy/CDN)
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "RateLimitRuleMetric"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # Restrictive rate limiting for specific sensitive routes
+  # Applies much lower rate limits to specific routes that may be sensitive or costly
+  # Each route can have its own method and positional constraint configuration
+  dynamic "rule" {
+    for_each = length(var.restrictive_rate_limit_routes) > 0 ? [1] : []
+    content {
+      name     = "RestrictiveRateLimitRule"
+      priority = 4
+
+      action {
+        block {}
+      }
+
+      statement {
+        rate_based_statement {
+          limit              = var.restrictive_rate_limit # Much lower limit (default: 5 requests per 5 minutes)
+          aggregate_key_type = "IP"
+
+          # Apply this rate limit to configured routes with their specific methods and constraints
+          scope_down_statement {
+            # Use an AND statement with OR inside for a single route, or direct OR statement for multiple routes
+            dynamic "and_statement" {
+              for_each = length(var.restrictive_rate_limit_routes) == 1 ? [1] : []
+              content {
+                # First condition - match the method for the first route
+                statement {
+                  byte_match_statement {
+                    search_string         = var.restrictive_rate_limit_routes[0].method
+                    positional_constraint = "EXACTLY"
+                    field_to_match {
+                      method {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "NONE"
+                    }
+                  }
+                }
+                
+                # Second condition - match the URI path for the first route
+                statement {
+                  byte_match_statement {
+                    search_string         = var.restrictive_rate_limit_routes[0].search_string
+                    positional_constraint = var.restrictive_rate_limit_routes[0].positional_constraint
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "LOWERCASE"
+                    }
+                  }
+                }
+              }
+            }
+            
+            # Use OR statement only when we have multiple routes
+            dynamic "or_statement" {
+              for_each = length(var.restrictive_rate_limit_routes) >= 2 ? [1] : []
+              content {
+                # Create a statement for each configured route
+                dynamic "statement" {
+                  for_each = var.restrictive_rate_limit_routes
+                  content {
+                    and_statement {
+                      # Match the HTTP method for this route
+                      statement {
+                        byte_match_statement {
+                          search_string         = statement.value.method
+                          positional_constraint = "EXACTLY"
+                          field_to_match {
+                            method {}
+                          }
+                          text_transformation {
+                            priority = 0
+                            type     = "NONE"
+                          }
+                        }
+                      }
+                      # Match the URI path with the configured constraint
+                      statement {
+                        byte_match_statement {
+                          search_string         = statement.value.search_string
+                          positional_constraint = statement.value.positional_constraint
+                          field_to_match {
+                            uri_path {}
+                          }
+                          text_transformation {
+                            priority = 0
+                            type     = "LOWERCASE"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "RestrictiveRateLimitRuleMetric"
+        sampled_requests_enabled   = true
+      }
+    }
+  }
+
+  # Geographic blocking - optional security measure
+  # Useful for compliance requirements or reducing attack surface
+  # Only creates the rule if blocked_countries list is provided
+  dynamic "rule" {
+    for_each = length(var.blocked_countries) > 0 ? [1] : []
+    content {
+      name     = "GeoBlockRule"
+      priority = 6
+
+      action {
+        block {}
+      }
+
+      statement {
+        geo_match_statement {
+          country_codes = var.blocked_countries # ISO 3166-1 alpha-2 country codes
+        }
+      }
+
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "GeoBlockRuleMetric"
+        sampled_requests_enabled   = true
+      }
+    }
+  }
+
+  # Allow rule for large body bypass routes - runs AFTER all security checks
+  # Only allows large body requests if they pass all other security rules first
   dynamic "rule" {
     for_each = length(var.large_body_bypass_routes) > 0 ? [1] : []
     content {
       name     = "AllowLargeBodyRule"
-      priority = 1 # Run after BlockSensitivePaths but before Core Rule Set
+      priority = 5 # Run after security checks but before geographic blocking
 
       action {
         allow {}
@@ -153,252 +410,6 @@ resource "aws_wafv2_web_acl" "main" {
       visibility_config {
         cloudwatch_metrics_enabled = true
         metric_name                = "AllowLargeBodyRuleMetric"
-        sampled_requests_enabled   = true
-      }
-    }
-  }
-
-  # AWS Managed Core Rule Set - protects against OWASP Top 10 vulnerabilities
-  # Includes protection against: SQL injection, XSS, path traversal, etc.
-  # Maintained and updated by AWS security team - reduces management overhead
-  rule {
-    name     = "AWSManagedRulesCommonRuleSet"
-    priority = 2
-
-    # override_action "none" means apply all rules in the group as-is
-    # Use "count" for monitoring mode without blocking
-    override_action {
-      none {}
-    }
-
-    statement {
-      managed_rule_group_statement {
-        name        = "AWSManagedRulesCommonRuleSet"
-        vendor_name = "AWS"
-      }
-    }
-
-    # CloudWatch metrics for monitoring WAF effectiveness and false positives
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "CommonRuleSetMetric"
-      sampled_requests_enabled   = true # Logs sample of blocked/allowed requests
-    }
-  }
-
-  # AWS Managed Known Bad Inputs Rule Set - blocks requests with malicious patterns
-  # Protects against known malicious inputs, exploit attempts, and vulnerability scanners
-  # Complements the Core Rule Set with additional threat intelligence
-  rule {
-    name     = "AWSManagedRulesKnownBadInputsRuleSet"
-    priority = 4
-
-    override_action {
-      none {}
-    }
-
-    statement {
-      managed_rule_group_statement {
-        name        = "AWSManagedRulesKnownBadInputsRuleSet"
-        vendor_name = "AWS"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "KnownBadInputsRuleSetMetric"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  # Rate limiting protection against DDoS and brute force attacks
-  # Blocks IP addresses that exceed the specified request rate within 5-minute windows
-  # aggregate_key_type = "IP" means rate limit is per source IP address
-  rule {
-    name     = "RateLimitRule"
-    priority = 5
-
-    action {
-      block {} # Block requests that exceed the rate limit
-    }
-
-    statement {
-      rate_based_statement {
-        limit              = var.rate_limit # Requests per 5-minute window per IP
-        aggregate_key_type = "IP"           # Rate limit per source IP
-        # Alternative: "FORWARDED_IP" for X-Forwarded-For header (behind proxy/CDN)
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "RateLimitRuleMetric"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  # Restrictive rate limiting for specific sensitive routes
-  # Applies much lower rate limits to specific routes that may be sensitive or costly
-  # Each route can have its own method and positional constraint configuration
-  dynamic "rule" {
-    for_each = length(var.restrictive_rate_limit_routes) > 0 ? [1] : []
-    content {
-      name     = "RestrictiveRateLimitRule"
-      priority = 6
-
-      action {
-        block {}
-      }
-
-      statement {
-        rate_based_statement {
-          limit              = var.restrictive_rate_limit # Much lower limit (default: 5 requests per 5 minutes)
-          aggregate_key_type = "IP"
-
-          # Apply this rate limit to configured routes with their specific methods and constraints
-          scope_down_statement {
-            # Use an AND statement with OR inside for a single route, or direct OR statement for multiple routes
-            dynamic "and_statement" {
-              for_each = length(var.restrictive_rate_limit_routes) == 1 ? [1] : []
-              content {
-                # First condition - match the method for the first route
-                statement {
-                  byte_match_statement {
-                    search_string         = var.restrictive_rate_limit_routes[0].method
-                    positional_constraint = "EXACTLY"
-                    field_to_match {
-                      method {}
-                    }
-                    text_transformation {
-                      priority = 0
-                      type     = "NONE"
-                    }
-                  }
-                }
-                
-                # Second condition - match the URI path for the first route
-                statement {
-                  byte_match_statement {
-                    search_string         = var.restrictive_rate_limit_routes[0].search_string
-                    positional_constraint = var.restrictive_rate_limit_routes[0].positional_constraint
-                    field_to_match {
-                      uri_path {}
-                    }
-                    text_transformation {
-                      priority = 0
-                      type     = "LOWERCASE"
-                    }
-                  }
-                }
-              }
-            }
-            
-            # Use OR statement only when we have multiple routes
-            dynamic "or_statement" {
-              for_each = length(var.restrictive_rate_limit_routes) >= 2 ? [1] : []
-              content {
-                # Create a statement for each configured route
-                dynamic "statement" {
-                  for_each = var.restrictive_rate_limit_routes
-                  content {
-                    and_statement {
-                      # Match the HTTP method for this route
-                      statement {
-                        byte_match_statement {
-                          search_string         = statement.value.method
-                          positional_constraint = "EXACTLY"
-                          field_to_match {
-                            method {}
-                          }
-                          text_transformation {
-                            priority = 0
-                            type     = "NONE"
-                          }
-                        }
-                      }
-                      # Match the URI path with the configured constraint
-                      statement {
-                        byte_match_statement {
-                          search_string         = statement.value.search_string
-                          positional_constraint = statement.value.positional_constraint
-                          field_to_match {
-                            uri_path {}
-                          }
-                          text_transformation {
-                            priority = 0
-                            type     = "LOWERCASE"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-
-      visibility_config {
-        cloudwatch_metrics_enabled = true
-        metric_name                = "RestrictiveRateLimitRuleMetric"
-        sampled_requests_enabled   = true
-      }
-    }
-  }
-
-  # Rule to block requests for sensitive paths like .git
-  rule {
-    name     = "BlockSensitivePaths"
-    priority = 0 # Highest priority to block these requests first
-
-    action {
-      block {}
-    }
-
-    statement {
-      byte_match_statement {
-        search_string         = "/.git"
-        positional_constraint = "STARTS_WITH"
-        field_to_match {
-          uri_path {}
-        }
-        text_transformation {
-          priority = 0
-          type     = "NONE"
-        }
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "BlockSensitivePathsMetric"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  # Geographic blocking - optional security measure
-  # Useful for compliance requirements or reducing attack surface
-  # Only creates the rule if blocked_countries list is provided
-  dynamic "rule" {
-    for_each = length(var.blocked_countries) > 0 ? [1] : []
-    content {
-      name     = "GeoBlockRule"
-      priority = 7
-
-      action {
-        block {}
-      }
-
-      statement {
-        geo_match_statement {
-          country_codes = var.blocked_countries # ISO 3166-1 alpha-2 country codes
-        }
-      }
-
-      visibility_config {
-        cloudwatch_metrics_enabled = true
-        metric_name                = "GeoBlockRuleMetric"
         sampled_requests_enabled   = true
       }
     }
