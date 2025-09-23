@@ -1,4 +1,3 @@
-import { GoBackButton } from "@/components/go-back-button";
 import { Home, Search, Sprout } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
