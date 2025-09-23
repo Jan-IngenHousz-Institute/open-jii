@@ -185,7 +185,17 @@
     "unauthorized": "Ongeautoriseerde toegang",
     "forbidden": "Toegang verboden",
     "failedToLoadProtocol": "Protocol kon niet worden geladen",
-    "loginRequired": "Log in om toegang te krijgen tot deze pagina"
+    "loginRequired": "Log in om toegang te krijgen tot deze pagina",
+    "notFoundTitle": "404",
+    "notFoundHeading": "Pagina niet gevonden",
+    "notFoundMessage": "De pagina die je zoekt bestaat niet. Deze is mogelijk verplaatst, verwijderd of je hebt een verkeerde URL ingevoerd.",
+    "whereToGo": "Waar wil je naartoe?",
+    "goToHomepage": "Naar startpagina",
+    "accessPlatform": "Platform openen",
+    "learnAboutUs": "Meer over ons",
+    "needHelp": "Hulp nodig? Probeer terug te gaan naar de vorige pagina of neem contact op met de support.",
+    "goBack": "Terug",
+    "brandTagline": "Jan IngenHousz Instituut - Fotosynthese verbeteren voor een duurzame toekomst"
   },
   "footer": {
     "aboutUs": "Over ons",
