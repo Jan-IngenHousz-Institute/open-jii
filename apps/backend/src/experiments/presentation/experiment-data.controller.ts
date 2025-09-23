@@ -31,7 +31,7 @@ export class ExperimentDataController {
   getExperimentData(@CurrentUser() user: { id: string }) {
     return tsRestHandler(contract.experiments.getExperimentData, async ({ params, query }) => {
       const { id: experimentId } = params;
-      const { page, pageSize, tableName } = query;
+      const { page, pageSize, tableName, columns } = query;
 
       this.logger.log(`Processing data request for experiment ${experimentId} by user ${user.id}`);
 
@@ -39,6 +39,7 @@ export class ExperimentDataController {
         page,
         pageSize,
         tableName,
+        columns,
       });
 
       if (result.isSuccess()) {

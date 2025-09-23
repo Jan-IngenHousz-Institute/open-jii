@@ -31,11 +31,23 @@ import {
   zGeocodeQuery,
   zGeocodeResponse,
 } from "../schemas/experiment.schema";
-import { zFlow, zUpsertFlowBody } from "../schemas/experiment.schema";
 import {
+  // Flow schemas
+  zFlow,
+  zUpsertFlowBody,
+  // Protocol schemas
   zExperimentProtocolList,
   zAddExperimentProtocolsBody,
   zExperimentProtocolPathParam,
+  // Visualization schemas
+  zExperimentVisualization,
+  zExperimentVisualizationList,
+  zCreateExperimentVisualizationBody,
+  zUpdateExperimentVisualizationBody,
+  zListExperimentVisualizationsQuery,
+  zExperimentVisualizationPathParam,
+  zCreateExperimentVisualizationResponse,
+  zUpdateExperimentVisualizationResponse,
 } from "../schemas/experiment.schema";
 
 const c = initContract();
@@ -374,5 +386,81 @@ export const experimentContract = c.router({
     },
     summary: "Reverse geocode coordinates",
     description: "Get place information for given coordinates through AWS Location Service.",
+  },
+  // --- Visualization Endpoints ---
+  listExperimentVisualizations: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/visualizations",
+    pathParams: zIdPathParam,
+    query: zListExperimentVisualizationsQuery,
+    responses: {
+      200: zExperimentVisualizationList,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "List experiment visualizations",
+    description: "Retrieves a list of visualizations for a specific experiment",
+  },
+
+  createExperimentVisualization: {
+    method: "POST",
+    path: "/api/v1/experiments/:id/visualizations",
+    pathParams: zIdPathParam,
+    body: zCreateExperimentVisualizationBody,
+    responses: {
+      201: zCreateExperimentVisualizationResponse,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Create experiment visualization",
+    description: "Creates a new visualization for an experiment with the provided configuration",
+  },
+
+  getExperimentVisualization: {
+    method: "GET",
+    path: "/api/v1/experiments/:id/visualizations/:visualizationId",
+    pathParams: zExperimentVisualizationPathParam,
+    responses: {
+      200: zExperimentVisualization,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Get experiment visualization",
+    description: "Retrieves a specific visualization by its ID",
+  },
+
+  updateExperimentVisualization: {
+    method: "PATCH",
+    path: "/api/v1/experiments/:id/visualizations/:visualizationId",
+    pathParams: zExperimentVisualizationPathParam,
+    body: zUpdateExperimentVisualizationBody,
+    responses: {
+      200: zUpdateExperimentVisualizationResponse,
+      400: zErrorResponse,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Update experiment visualization",
+    description: "Updates an existing visualization with the provided data",
+  },
+
+  deleteExperimentVisualization: {
+    method: "DELETE",
+    path: "/api/v1/experiments/:id/visualizations/:visualizationId",
+    pathParams: zExperimentVisualizationPathParam,
+    responses: {
+      204: null,
+      401: zErrorResponse,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Delete experiment visualization",
+    description: "Permanently deletes a visualization",
   },
 });

@@ -1,0 +1,311 @@
+{
+  "title": "Visualisierungen",
+  "subtitle": "Erstellen und verwalten Sie Datenvisualisierungen für Ihre Experimente",
+  "noVisualizations": "Noch keine Visualisierungen",
+  "createVisualizations": "Erstellen Sie Ihre erste Visualisierung, um Ihre Experimentdaten zu analysieren",
+  "noDescription": "Keine Beschreibung angegeben",
+  "view": "Anzeigen",
+  "edit": "Bearbeiten",
+  "duplicate": "Duplizieren",
+  "delete": "Löschen",
+  "deleteTitle": "Visualisierung löschen",
+  "deleteDescription": "Sind Sie sicher, dass Sie diese Visualisierung löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+  "deleteSuccess": "Visualisierung erfolgreich gelöscht",
+  "createSuccess": "Visualisierung erfolgreich erstellt",
+  "updateSuccess": "Visualisierung erfolgreich aktualisiert",
+
+  "details": "Visualisierungsdetails",
+  "detailsDescription": "Geben Sie grundlegende Informationen zu Ihrer Visualisierung an",
+  "name": "Name",
+  "namePlaceholder": "Visualisierungsname eingeben",
+  "description": "Beschreibung",
+  "descriptionPlaceholder": "Visualisierungsbeschreibung eingeben",
+  "descriptionHelp": "Optionale Beschreibung zur Identifizierung dieser Visualisierung",
+
+  "chartTypes": {
+    "line": "Liniendiagramm",
+    "bar": "Balkendiagramm",
+    "pie": "Kreisdiagramm",
+    "area": "Flächendiagramm",
+    "scatter": "Streudiagramm",
+    "dot-plot": "Punktdiagramm",
+    "heatmap": "Heatmap",
+    "contour": "Konturdiagramm",
+    "ternary": "Ternäres Diagramm",
+    "parallel-coordinates": "Parallele Koordinaten",
+    "radar": "Radardiagramm",
+    "polar": "Polardiagramm",
+    "wind-rose": "Windrose"
+  },
+
+  "chartFamilies": {
+    "all": "Alle",
+    "basic": "Grunddiagramme",
+    "scientific": "Wissenschaftliche Diagramme",
+    "3d": "3D-Diagramme",
+    "statistical": "Statistische Diagramme"
+  },
+
+  "configuration": {
+    "title": "Diagrammkonfiguration",
+    "selectChartType": "Diagrammtyp auswählen",
+    "selectChartTypeDescription": "Wählen Sie den Visualisierungstyp, der Ihre Daten am besten darstellt",
+    "dataSource": "Datenquelle",
+    "selectTable": "Tabelle auswählen",
+    "selectColumn": "Spalte auswählen",
+    "xAxis": "X-Achse",
+    "yAxis": "Y-Achse",
+    "yAxes": "Y-Achsen",
+    "addSeries": "Serie hinzufügen",
+    "removeSeries": "Serie entfernen",
+    "labels": "Beschriftungen",
+    "values": "Werte",
+    "columnTitle": "Spaltentitel",
+    "axisTitle": "Achsentitel",
+    "axisType": "Achsentyp",
+    "axisSide": "Achsenseite",
+    "color": "Farbe"
+  },
+
+  "newVisualization": "Neue Visualisierung",
+  "createNew": "Neue erstellen",
+  "all": "Alle",
+  "selectChartTypeHelp": "Wählen Sie den Visualisierungstyp, der Ihre Daten am besten darstellt",
+  "dataConfiguration": "Datenkonfiguration",
+  "selectDataSource": "Datenquelle auswählen",
+  "dataTable": "Datentabelle",
+  "xAxisConfiguration": "X-Achsen-Konfiguration",
+  "yAxesConfiguration": "Y-Achsen-Konfiguration",
+  "additionalSeries": "Zusätzliche Serien",
+  "series": "Serie",
+  "dataColumn": "Datenspalte",
+  "seriesName": "Serienname",
+  "enterSeriesName": "Serienname eingeben",
+  "seriesTitle": "Serientitel",
+  "enterSeriesTitle": "Serientitel eingeben",
+  "seriesColor": "Serienfarbe",
+  "areaColor": "Flächenfarbe",
+  "enterAxisTitle": "Achsentitel eingeben",
+  "xAxisTitle": "X-Achsentitel",
+  "yAxisSide": "Y-Achsenseite",
+  "left": "Links",
+  "right": "Rechts",
+  "areaOptions": "Flächenoptionen",
+  "lineMode": "Linienmodus",
+  "selectLineMode": "Linienmodus auswählen",
+  "lineModes": {
+    "lines": "Linien",
+    "markers": "Marker",
+    "lines+markers": "Linien + Marker"
+  },
+  "enterChartTitle": "Diagrammtitel eingeben",
+  "chartTitle": "Diagrammtitel",
+  "chartSubtitle": "Diagramm-Untertitel",
+  "enterChartSubtitle": "Diagramm-Untertitel eingeben",
+  "appearance": "Erscheinungsbild",
+  "colorSchemes": {
+    "default": "Standard"
+  },
+
+  "axisTypes": {
+    "linear": "Linear",
+    "log": "Logarithmisch",
+    "date": "Datum",
+    "category": "Kategorie"
+  },
+
+  "axisSides": {
+    "left": "Links",
+    "right": "Rechts",
+    "top": "Oben",
+    "bottom": "Unten"
+  },
+
+  "chartOptions": {
+    "title": "Diagrammoptionen",
+    "orientation": "Ausrichtung",
+    "barMode": "Balkenmodus",
+    "barWidth": "Balkenbreite",
+    "showValues": "Werte anzeigen",
+    "mode": "Anzeigemodus",
+    "connectGaps": "Lücken verbinden",
+    "smoothing": "Glättung",
+    "fillMode": "Füllmodus",
+    "fillOpacity": "Fülldeckkraft",
+    "stackGroup": "Stapelgruppe",
+    "markerSize": "Markergröße",
+    "markerShape": "Markerform",
+    "gridLines": "Gitternetzlinien",
+    "showLabels": "Beschriftungen anzeigen",
+    "showLegend": "Legende anzeigen",
+    "legendPosition": "Legendenposition",
+    "interactive": "Interaktiv",
+    "donutHole": "Donut-Loch",
+    "textPosition": "Textposition",
+    "pullSlices": "Segmente herausziehen",
+    "colorscale": "Farbskala",
+    "showText": "Text anzeigen",
+    "textTemplate": "Textvorlage",
+    "hoverongaps": "Über Lücken schweben",
+    "zSmooth": "Z-Glättung",
+    "colorbar": "Farbbalken",
+    "showColorbar": "Farbbalken anzeigen",
+    "xLabels": "X-Beschriftungen",
+    "yLabels": "Y-Beschriftungen",
+    "zValues": "Z-Werte",
+    "heatmapColorscale": "Heatmap-Farbskala"
+  },
+
+  "orientations": {
+    "vertical": "Vertikal",
+    "horizontal": "Horizontal"
+  },
+
+  "barModes": {
+    "group": "Gruppiert",
+    "stack": "Gestapelt",
+    "overlay": "Überlagert"
+  },
+
+  "displayModes": {
+    "lines": "Linien",
+    "markers": "Marker",
+    "lines+markers": "Linien + Marker"
+  },
+
+  "fillModes": {
+    "none": "Keine",
+    "tozeroy": "Zu Null Y",
+    "tonexty": "Zum nächsten Y",
+    "toself": "Zu sich selbst"
+  },
+
+  "markerShapes": {
+    "circle": "Kreis",
+    "square": "Quadrat",
+    "diamond": "Diamant",
+    "cross": "Kreuz",
+    "x": "X",
+    "triangle-up": "Dreieck nach oben",
+    "triangle-down": "Dreieck nach unten",
+    "triangle-left": "Dreieck nach links",
+    "triangle-right": "Dreieck nach rechts",
+    "pentagon": "Fünfeck",
+    "hexagon": "Sechseck",
+    "star": "Stern"
+  },
+
+  "gridOptions": {
+    "none": "Keine",
+    "horizontal": "Horizontal",
+    "vertical": "Vertikal",
+    "both": "Beide"
+  },
+
+  "legendPositions": {
+    "right": "Rechts",
+    "left": "Links",
+    "top": "Oben",
+    "bottom": "Unten"
+  },
+
+  "positions": {
+    "inside": "Innen",
+    "outside": "Außen",
+    "auto": "Automatisch"
+  },
+
+  "pullOptions": {
+    "none": "Keine",
+    "small": "Klein",
+    "medium": "Mittel",
+    "large": "Groß"
+  },
+
+  "colorscales": {
+    "viridis": "Viridis",
+    "plasma": "Plasma",
+    "inferno": "Inferno",
+    "magma": "Magma",
+    "cividis": "Cividis",
+    "hot": "Heiß",
+    "cool": "Kühl",
+    "spring": "Frühling",
+    "summer": "Sommer",
+    "autumn": "Herbst",
+    "winter": "Winter",
+    "rainbow": "Regenbogen",
+    "portland": "Portland",
+    "jet": "Jet",
+    "blackbody": "Schwarzkörper",
+    "earth": "Erde",
+    "electric": "Elektrisch",
+    "bluered": "Blau Rot",
+    "rdbu": "Rot Blau",
+    "rdylbu": "Rot Gelb Blau",
+    "spectral": "Spektral",
+    "greys": "Grautöne",
+    "blues": "Blautöne",
+    "greens": "Grüntöne",
+    "oranges": "Orangetöne",
+    "purples": "Violetttöne",
+    "reds": "Rottöne"
+  },
+
+  "smoothingOptions": {
+    "false": "Keine",
+    "best": "Beste"
+  },
+
+  "pie": "Torte",
+  "donut": "Donut",
+
+  "errors": {
+    "noData": "Keine Daten verfügbar",
+    "noDataDescription": "Stellen Sie sicher, dass Ihr Experiment Daten zum Visualisieren hat",
+    "configurationError": "Konfigurationsfehler",
+    "invalidConfiguration": "Ungültige Diagrammkonfiguration",
+    "xAxisNotConfigured": "X-Achsen-Spalte nicht konfiguriert",
+    "yAxisNotConfigured": "Y-Achsen-Spalte nicht konfiguriert",
+    "loadingData": "Diagrammdaten werden geladen...",
+    "failedToLoadData": "Daten konnten nicht geladen werden",
+    "failedToLoadDataDescription": "Experimentdaten für diese Visualisierung konnten nicht abgerufen werden",
+    "noDataFound": "Keine Daten für diese Visualisierung gefunden",
+    "unsupportedChartType": "Nicht unterstützter Diagrammtyp",
+    "chartTypeNotSupported": "wird nicht unterstützt",
+    "comingSoon": "Demnächst verfügbar",
+    "notYetImplemented": "Diagramme sind noch nicht implementiert"
+  },
+
+  "preview": {
+    "title": "Vorschau",
+    "loading": "Vorschau wird geladen...",
+    "noPreview": "Keine Vorschau verfügbar"
+  },
+
+  "chartFamily": "Diagrammfamilie",
+  "dataSelection": "Datenauswahl",
+  "xAxisValue": "X-Achsen-Wert",
+  "yAxisValue": "Y-Achsen-Wert",
+  "color": "Farbe",
+  "size": "Größe",
+  "zAxisValue": "Z-Achsen-Wert",
+  "selectVariable": "Variable auswählen",
+  "selectMultipleValues": "Mehrere Werte auswählen",
+  "colorScheme": "Farbschema",
+  "showDataLabels": "Datenbeschriftungen anzeigen",
+  "showLegend": "Legende anzeigen",
+  "showGridLines": "Gitterlinien anzeigen",
+  "smooth": "Glätten",
+  "opacity": "Transparenz",
+  "lineWidth": "Linienbreite",
+  "markerSize": "Markergröße",
+  "fillArea": "Bereich füllen",
+  "stackedBars": "Gestapelte Balken",
+  "innerRadius": "Innenradius",
+  "startAngle": "Startwinkel",
+  "donutThickness": "Donut-Dicke",
+  "titleText": "Titeltext",
+  "xAxisLabel": "X-Achsenbeschriftung",
+  "yAxisLabel": "Y-Achsenbeschriftung"
+}

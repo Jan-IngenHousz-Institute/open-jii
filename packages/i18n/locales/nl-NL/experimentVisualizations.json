@@ -1,0 +1,311 @@
+{
+  "title": "Visualisaties",
+  "subtitle": "Maak en beheer datavisualisaties voor uw experimenten",
+  "noVisualizations": "Nog geen visualisaties",
+  "createVisualizations": "Maak uw eerste visualisatie om uw experimentdata te analyseren",
+  "noDescription": "Geen beschrijving opgegeven",
+  "view": "Bekijken",
+  "edit": "Bewerken",
+  "duplicate": "Dupliceren",
+  "delete": "Verwijderen",
+  "deleteTitle": "Visualisatie verwijderen",
+  "deleteDescription": "Weet u zeker dat u deze visualisatie wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+  "deleteSuccess": "Visualisatie succesvol verwijderd",
+  "createSuccess": "Visualisatie succesvol aangemaakt",
+  "updateSuccess": "Visualisatie succesvol bijgewerkt",
+
+  "details": "Visualisatie Details",
+  "detailsDescription": "Geef basisinformatie over uw visualisatie",
+  "name": "Naam",
+  "namePlaceholder": "Voer visualisatienaam in",
+  "description": "Beschrijving",
+  "descriptionPlaceholder": "Voer visualisatiebeschrijving in",
+  "descriptionHelp": "Optionele beschrijving om deze visualisatie te identificeren",
+
+  "chartTypes": {
+    "line": "Lijndiagram",
+    "bar": "Staafdiagram",
+    "pie": "Cirkeldiagram",
+    "area": "Oppervlaktediagram",
+    "scatter": "Spreidingsdiagram",
+    "dot-plot": "Stippeldiagram",
+    "heatmap": "Warmtekaart",
+    "contour": "Contourdiagram",
+    "ternary": "Ternair diagram",
+    "parallel-coordinates": "Parallelle coördinaten",
+    "radar": "Radardiagram",
+    "polar": "Pooldiagram",
+    "wind-rose": "Windroos"
+  },
+
+  "chartFamilies": {
+    "all": "Alle",
+    "basic": "Basis Diagrammen",
+    "scientific": "Wetenschappelijke Diagrammen",
+    "3d": "3D Diagrammen",
+    "statistical": "Statistische Diagrammen"
+  },
+
+  "configuration": {
+    "title": "Diagramconfiguratie",
+    "selectChartType": "Selecteer Diagramtype",
+    "selectChartTypeDescription": "Kies het type visualisatie dat uw data het beste weergeeft",
+    "dataSource": "Gegevensbron",
+    "selectTable": "Selecteer Tabel",
+    "selectColumn": "Selecteer Kolom",
+    "xAxis": "X-As",
+    "yAxis": "Y-As",
+    "yAxes": "Y-Assen",
+    "addSeries": "Serie toevoegen",
+    "removeSeries": "Serie verwijderen",
+    "labels": "Labels",
+    "values": "Waarden",
+    "columnTitle": "Kolomtitel",
+    "axisTitle": "Astitel",
+    "axisType": "Astype",
+    "axisSide": "Aszijde",
+    "color": "Kleur"
+  },
+
+  "newVisualization": "Nieuwe Visualisatie",
+  "createNew": "Nieuwe maken",
+  "all": "Alle",
+  "selectChartTypeHelp": "Kies het type visualisatie dat uw data het beste weergeeft",
+  "dataConfiguration": "Dataconfiguratie",
+  "selectDataSource": "Selecteer Gegevensbron",
+  "dataTable": "Gegevenstabel",
+  "xAxisConfiguration": "X-As Configuratie",
+  "yAxesConfiguration": "Y-Assen Configuratie",
+  "additionalSeries": "Aanvullende Series",
+  "series": "Serie",
+  "dataColumn": "Gegevenskolom",
+  "seriesName": "Serienaam",
+  "enterSeriesName": "Voer serienaam in",
+  "seriesTitle": "Serietitel",
+  "enterSeriesTitle": "Voer serietitel in",
+  "seriesColor": "Seriekleur",
+  "areaColor": "Oppervlaktekleur",
+  "enterAxisTitle": "Voer astitel in",
+  "xAxisTitle": "X-As Titel",
+  "yAxisSide": "Y-As Zijde",
+  "left": "Links",
+  "right": "Rechts",
+  "areaOptions": "Oppervlakte Opties",
+  "lineMode": "Lijnmodus",
+  "selectLineMode": "Selecteer lijnmodus",
+  "lineModes": {
+    "lines": "Lijnen",
+    "markers": "Markeringen",
+    "lines+markers": "Lijnen + Markeringen"
+  },
+  "enterChartTitle": "Voer diagramtitel in",
+  "chartTitle": "Diagramtitel",
+  "chartSubtitle": "Diagram ondertitel",
+  "enterChartSubtitle": "Voer diagram ondertitel in",
+  "appearance": "Uiterlijk",
+  "colorSchemes": {
+    "default": "Standaard"
+  },
+
+  "axisTypes": {
+    "linear": "Lineair",
+    "log": "Logaritmisch",
+    "date": "Datum",
+    "category": "Categorie"
+  },
+
+  "axisSides": {
+    "left": "Links",
+    "right": "Rechts",
+    "top": "Boven",
+    "bottom": "Onder"
+  },
+
+  "chartOptions": {
+    "title": "Diagramopties",
+    "orientation": "Oriëntatie",
+    "barMode": "Staafmodus",
+    "barWidth": "Staafbreedte",
+    "showValues": "Waarden tonen",
+    "mode": "Weergavemodus",
+    "connectGaps": "Hiaten verbinden",
+    "smoothing": "Gladstrijken",
+    "fillMode": "Vulmodus",
+    "fillOpacity": "Vulopaciteit",
+    "stackGroup": "Stapelgroep",
+    "markerSize": "Markeringsgrootte",
+    "markerShape": "Markeringsvorm",
+    "gridLines": "Rasterlijnen",
+    "showLabels": "Labels tonen",
+    "showLegend": "Legenda tonen",
+    "legendPosition": "Legenda positie",
+    "interactive": "Interactief",
+    "donutHole": "Donutgat",
+    "textPosition": "Tekstpositie",
+    "pullSlices": "Segmenten uitrekken",
+    "colorscale": "Kleurschaal",
+    "showText": "Tekst tonen",
+    "textTemplate": "Tekstsjabloon",
+    "hoverongaps": "Zweven over hiaten",
+    "zSmooth": "Z Gladstrijken",
+    "colorbar": "Kleurbalk",
+    "showColorbar": "Kleurbalk tonen",
+    "xLabels": "X Labels",
+    "yLabels": "Y Labels",
+    "zValues": "Z Waarden",
+    "heatmapColorscale": "Warmtekaart Kleurschaal"
+  },
+
+  "orientations": {
+    "vertical": "Verticaal",
+    "horizontal": "Horizontaal"
+  },
+
+  "barModes": {
+    "group": "Gegroepeerd",
+    "stack": "Gestapeld",
+    "overlay": "Overlay"
+  },
+
+  "displayModes": {
+    "lines": "Lijnen",
+    "markers": "Markeringen",
+    "lines+markers": "Lijnen + Markeringen"
+  },
+
+  "fillModes": {
+    "none": "Geen",
+    "tozeroy": "Naar nul Y",
+    "tonexty": "Naar volgende Y",
+    "toself": "Naar zichzelf"
+  },
+
+  "markerShapes": {
+    "circle": "Cirkel",
+    "square": "Vierkant",
+    "diamond": "Diamant",
+    "cross": "Kruis",
+    "x": "X",
+    "triangle-up": "Driehoek omhoog",
+    "triangle-down": "Driehoek omlaag",
+    "triangle-left": "Driehoek links",
+    "triangle-right": "Driehoek rechts",
+    "pentagon": "Vijfhoek",
+    "hexagon": "Zeshoek",
+    "star": "Ster"
+  },
+
+  "gridOptions": {
+    "none": "Geen",
+    "horizontal": "Horizontaal",
+    "vertical": "Verticaal",
+    "both": "Beide"
+  },
+
+  "legendPositions": {
+    "right": "Rechts",
+    "left": "Links",
+    "top": "Boven",
+    "bottom": "Onder"
+  },
+
+  "positions": {
+    "inside": "Binnen",
+    "outside": "Buiten",
+    "auto": "Automatisch"
+  },
+
+  "pullOptions": {
+    "none": "Geen",
+    "small": "Klein",
+    "medium": "Middel",
+    "large": "Groot"
+  },
+
+  "colorscales": {
+    "viridis": "Viridis",
+    "plasma": "Plasma",
+    "inferno": "Inferno",
+    "magma": "Magma",
+    "cividis": "Cividis",
+    "hot": "Heet",
+    "cool": "Koel",
+    "spring": "Lente",
+    "summer": "Zomer",
+    "autumn": "Herfst",
+    "winter": "Winter",
+    "rainbow": "Regenboog",
+    "portland": "Portland",
+    "jet": "Jet",
+    "blackbody": "Zwart lichaam",
+    "earth": "Aarde",
+    "electric": "Elektrisch",
+    "bluered": "Blauw Rood",
+    "rdbu": "Rood Blauw",
+    "rdylbu": "Rood Geel Blauw",
+    "spectral": "Spectraal",
+    "greys": "Grijzen",
+    "blues": "Blauw",
+    "greens": "Groen",
+    "oranges": "Oranje",
+    "purples": "Paars",
+    "reds": "Rood"
+  },
+
+  "smoothingOptions": {
+    "false": "Geen",
+    "best": "Beste"
+  },
+
+  "pie": "Taart",
+  "donut": "Donut",
+
+  "errors": {
+    "noData": "Geen data beschikbaar",
+    "noDataDescription": "Zorg ervoor dat uw experiment data heeft om te visualiseren",
+    "configurationError": "Configuratiefout",
+    "invalidConfiguration": "Ongeldige diagramconfiguratie",
+    "xAxisNotConfigured": "X-as kolom niet geconfigureerd",
+    "yAxisNotConfigured": "Y-as kolom niet geconfigureerd",
+    "loadingData": "Diagramdata laden...",
+    "failedToLoadData": "Kan data niet laden",
+    "failedToLoadDataDescription": "Kan experimentdata voor deze visualisatie niet ophalen",
+    "noDataFound": "Geen data gevonden voor deze visualisatie",
+    "unsupportedChartType": "Niet ondersteund diagramtype",
+    "chartTypeNotSupported": "wordt niet ondersteund",
+    "comingSoon": "Binnenkort beschikbaar",
+    "notYetImplemented": "diagrammen zijn nog niet geïmplementeerd"
+  },
+
+  "preview": {
+    "title": "Voorbeeld",
+    "loading": "Voorbeeld laden...",
+    "noPreview": "Geen voorbeeld beschikbaar"
+  },
+
+  "chartFamily": "Diagramfamilie",
+  "dataSelection": "Dataselectie",
+  "xAxisValue": "X-as waarde",
+  "yAxisValue": "Y-as waarde",
+  "color": "Kleur",
+  "size": "Grootte",
+  "zAxisValue": "Z-as waarde",
+  "selectVariable": "Selecteer variabele",
+  "selectMultipleValues": "Selecteer meerdere waarden",
+  "colorScheme": "Kleurschema",
+  "showDataLabels": "Toon datalabels",
+  "showLegend": "Toon legenda",
+  "showGridLines": "Toon rasterlijnen",
+  "smooth": "Gladmaken",
+  "opacity": "Transparantie",
+  "lineWidth": "Lijndikte",
+  "markerSize": "Markergrootte",
+  "fillArea": "Vul gebied",
+  "stackedBars": "Gestapelde balken",
+  "innerRadius": "Binnenradius",
+  "startAngle": "Starthoek",
+  "donutThickness": "Donut dikte",
+  "titleText": "Titeltekst",
+  "xAxisLabel": "X-as label",
+  "yAxisLabel": "Y-as label"
+}

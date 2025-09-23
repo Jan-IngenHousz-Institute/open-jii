@@ -295,5 +295,47 @@ export const experimentLocations = pgTable("experiment_locations", {
   municipality: varchar("municipality", { length: 100 }),
   postalCode: varchar("postal_code", { length: 20 }),
   addressLabel: text("address_label"),
+});
+
+// Chart family enum for visualizations
+export const chartFamilyEnum = pgEnum("chart_family", ["basic", "scientific", "3d", "statistical"]);
+
+// Chart type enum for basic charts (extendable)
+export const chartTypeEnum = pgEnum("chart_type", [
+  "line",
+  "scatter",
+  "bar",
+  "pie",
+  "area",
+  "dot-plot",
+  // Scientific charts (for future expansion)
+  "heatmap",
+  "contour",
+  "carpet",
+  "ternary",
+  "parallel-coordinates",
+  "log-plot",
+  "wind-rose",
+  "radar",
+  "polar",
+]);
+
+// Experiment Visualizations Table - stores chart configurations for experiments
+export const experimentVisualizations = pgTable("experiment_visualizations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  experimentId: uuid("experiment_id")
+    .notNull()
+    .references(() => experiments.id, { onDelete: "cascade" }),
+  chartFamily: chartFamilyEnum("chart_family").notNull(),
+  chartType: chartTypeEnum("chart_type").notNull(),
+  // Configuration stored as JSONB for flexibility
+  config: jsonb("config").notNull(),
+  // Data source configuration - which tables and columns to use
+  dataConfig: jsonb("data_config").notNull(),
+  createdBy: uuid("created_by")
+    .references(() => users.id)
+    .notNull(),
   ...timestamps,
 });

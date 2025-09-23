@@ -1,0 +1,311 @@
+{
+  "title": "Visualizations",
+  "subtitle": "Create and manage data visualizations for your experiments",
+  "noVisualizations": "No visualizations yet",
+  "createVisualizations": "Create your first visualization to start analyzing your experiment data",
+  "noDescription": "No description provided",
+  "view": "View",
+  "edit": "Edit",
+  "duplicate": "Duplicate",
+  "delete": "Delete",
+  "deleteTitle": "Delete Visualization",
+  "deleteDescription": "Are you sure you want to delete this visualization? This action cannot be undone.",
+  "deleteSuccess": "Visualization deleted successfully",
+  "createSuccess": "Visualization created successfully",
+  "updateSuccess": "Visualization updated successfully",
+
+  "details": "Visualization Details",
+  "detailsDescription": "Provide basic information about your visualization",
+  "name": "Name",
+  "namePlaceholder": "Enter visualization name",
+  "description": "Description",
+  "descriptionPlaceholder": "Enter visualization description",
+  "descriptionHelp": "Optional description to help identify this visualization",
+
+  "chartTypes": {
+    "line": "Line Chart",
+    "bar": "Bar Chart",
+    "pie": "Pie Chart",
+    "area": "Area Chart",
+    "scatter": "Scatter Plot",
+    "dot-plot": "Dot Plot",
+    "heatmap": "Heatmap",
+    "contour": "Contour Plot",
+    "ternary": "Ternary Plot",
+    "parallel-coordinates": "Parallel Coordinates",
+    "radar": "Radar Plot",
+    "polar": "Polar Plot",
+    "wind-rose": "Wind Rose"
+  },
+
+  "chartFamilies": {
+    "all": "All",
+    "basic": "Basic Charts",
+    "scientific": "Scientific Charts",
+    "3d": "3D Charts",
+    "statistical": "Statistical Charts"
+  },
+
+  "configuration": {
+    "title": "Chart Configuration",
+    "selectChartType": "Select Chart Type",
+    "selectChartTypeDescription": "Choose the type of visualization that best represents your data",
+    "dataSource": "Data Source",
+    "selectTable": "Select Table",
+    "selectColumn": "Select Column",
+    "xAxis": "X-Axis",
+    "yAxis": "Y-Axis",
+    "yAxes": "Y-Axes",
+    "addSeries": "Add Series",
+    "removeSeries": "Remove Series",
+    "labels": "Labels",
+    "values": "Values",
+    "columnTitle": "Column Title",
+    "axisTitle": "Axis Title",
+    "axisType": "Axis Type",
+    "axisSide": "Axis Side",
+    "color": "Color"
+  },
+
+  "newVisualization": "New Visualization",
+  "createNew": "Create New",
+  "all": "All",
+  "selectChartTypeHelp": "Choose the type of visualization that best represents your data",
+  "dataConfiguration": "Data Configuration",
+  "selectDataSource": "Select Data Source",
+  "dataTable": "Data Table",
+  "xAxisConfiguration": "X-Axis Configuration",
+  "yAxesConfiguration": "Y-Axes Configuration",
+  "additionalSeries": "Additional Series",
+  "series": "Series",
+  "dataColumn": "Data Column",
+  "seriesName": "Series Name",
+  "enterSeriesName": "Enter series name",
+  "seriesTitle": "Series Title",
+  "enterSeriesTitle": "Enter series title",
+  "seriesColor": "Series Color",
+  "areaColor": "Area Color",
+  "enterAxisTitle": "Enter axis title",
+  "xAxisTitle": "X-Axis Title",
+  "yAxisSide": "Y-Axis Side",
+  "left": "Left",
+  "right": "Right",
+  "areaOptions": "Area Options",
+  "lineMode": "Line Mode",
+  "selectLineMode": "Select line mode",
+  "lineModes": {
+    "lines": "Lines",
+    "markers": "Markers",
+    "lines+markers": "Lines + Markers"
+  },
+  "enterChartTitle": "Enter chart title",
+  "chartTitle": "Chart Title",
+  "chartSubtitle": "Chart Subtitle",
+  "enterChartSubtitle": "Enter chart subtitle",
+  "appearance": "Appearance",
+  "colorSchemes": {
+    "default": "Default"
+  },
+
+  "axisTypes": {
+    "linear": "Linear",
+    "log": "Logarithmic",
+    "date": "Date",
+    "category": "Category"
+  },
+
+  "axisSides": {
+    "left": "Left",
+    "right": "Right",
+    "top": "Top",
+    "bottom": "Bottom"
+  },
+
+  "chartOptions": {
+    "title": "Chart Options",
+    "orientation": "Orientation",
+    "barMode": "Bar Mode",
+    "barWidth": "Bar Width",
+    "showValues": "Show Values",
+    "mode": "Display Mode",
+    "connectGaps": "Connect Gaps",
+    "smoothing": "Smoothing",
+    "fillMode": "Fill Mode",
+    "fillOpacity": "Fill Opacity",
+    "stackGroup": "Stack Group",
+    "markerSize": "Marker Size",
+    "markerShape": "Marker Shape",
+    "gridLines": "Grid Lines",
+    "showLabels": "Show Labels",
+    "showLegend": "Show Legend",
+    "legendPosition": "Legend Position",
+    "interactive": "Interactive",
+    "donutHole": "Donut Hole",
+    "textPosition": "Text Position",
+    "pullSlices": "Pull Slices",
+    "colorscale": "Color Scale",
+    "showText": "Show Text",
+    "textTemplate": "Text Template",
+    "hoverongaps": "Hover on Gaps",
+    "zSmooth": "Z Smoothing",
+    "colorbar": "Color Bar",
+    "showColorbar": "Show Color Bar",
+    "xLabels": "X Labels",
+    "yLabels": "Y Labels",
+    "zValues": "Z Values",
+    "heatmapColorscale": "Heatmap Color Scale"
+  },
+
+  "orientations": {
+    "vertical": "Vertical",
+    "horizontal": "Horizontal"
+  },
+
+  "barModes": {
+    "group": "Grouped",
+    "stack": "Stacked",
+    "overlay": "Overlay"
+  },
+
+  "displayModes": {
+    "lines": "Lines",
+    "markers": "Markers",
+    "lines+markers": "Lines + Markers"
+  },
+
+  "fillModes": {
+    "none": "None",
+    "tozeroy": "To Zero Y",
+    "tonexty": "To Next Y",
+    "toself": "To Self"
+  },
+
+  "markerShapes": {
+    "circle": "Circle",
+    "square": "Square",
+    "diamond": "Diamond",
+    "cross": "Cross",
+    "x": "X",
+    "triangle-up": "Triangle Up",
+    "triangle-down": "Triangle Down",
+    "triangle-left": "Triangle Left",
+    "triangle-right": "Triangle Right",
+    "pentagon": "Pentagon",
+    "hexagon": "Hexagon",
+    "star": "Star"
+  },
+
+  "gridOptions": {
+    "none": "None",
+    "horizontal": "Horizontal",
+    "vertical": "Vertical",
+    "both": "Both"
+  },
+
+  "legendPositions": {
+    "right": "Right",
+    "left": "Left",
+    "top": "Top",
+    "bottom": "Bottom"
+  },
+
+  "positions": {
+    "inside": "Inside",
+    "outside": "Outside",
+    "auto": "Auto"
+  },
+
+  "pullOptions": {
+    "none": "None",
+    "small": "Small",
+    "medium": "Medium",
+    "large": "Large"
+  },
+
+  "colorscales": {
+    "viridis": "Viridis",
+    "plasma": "Plasma",
+    "inferno": "Inferno",
+    "magma": "Magma",
+    "cividis": "Cividis",
+    "hot": "Hot",
+    "cool": "Cool",
+    "spring": "Spring",
+    "summer": "Summer",
+    "autumn": "Autumn",
+    "winter": "Winter",
+    "rainbow": "Rainbow",
+    "portland": "Portland",
+    "jet": "Jet",
+    "blackbody": "Blackbody",
+    "earth": "Earth",
+    "electric": "Electric",
+    "bluered": "Blue Red",
+    "rdbu": "Red Blue",
+    "rdylbu": "Red Yellow Blue",
+    "spectral": "Spectral",
+    "greys": "Greys",
+    "blues": "Blues",
+    "greens": "Greens",
+    "oranges": "Oranges",
+    "purples": "Purples",
+    "reds": "Reds"
+  },
+
+  "smoothingOptions": {
+    "false": "None",
+    "best": "Best"
+  },
+
+  "pie": "Pie",
+  "donut": "Donut",
+
+  "errors": {
+    "noData": "No Data Available",
+    "noDataDescription": "Please ensure your experiment has data to visualize",
+    "configurationError": "Configuration Error",
+    "invalidConfiguration": "Invalid chart configuration",
+    "xAxisNotConfigured": "X-axis column not configured",
+    "yAxisNotConfigured": "Y-axis column not configured",
+    "loadingData": "Loading chart data...",
+    "failedToLoadData": "Failed to load data",
+    "failedToLoadDataDescription": "Unable to fetch experiment data for this visualization",
+    "noDataFound": "No data found for this visualization",
+    "unsupportedChartType": "Unsupported Chart Type",
+    "chartTypeNotSupported": "is not supported",
+    "comingSoon": "Coming Soon",
+    "notYetImplemented": "charts are not yet implemented"
+  },
+
+  "preview": {
+    "title": "Preview",
+    "loading": "Loading preview...",
+    "noPreview": "No preview available"
+  },
+
+  "chartFamily": "Chart Family",
+  "dataSelection": "Data Selection",
+  "xAxisValue": "X-Axis Value",
+  "yAxisValue": "Y-Axis Value",
+  "color": "Color",
+  "size": "Size",
+  "zAxisValue": "Z-Axis Value",
+  "selectVariable": "Select Variable",
+  "selectMultipleValues": "Select Multiple Values",
+  "colorScheme": "Color Scheme",
+  "showDataLabels": "Show Data Labels",
+  "showLegend": "Show Legend",
+  "showGridLines": "Show Grid Lines",
+  "smooth": "Smooth",
+  "opacity": "Opacity",
+  "lineWidth": "Line Width",
+  "markerSize": "Marker Size",
+  "fillArea": "Fill Area",
+  "stackedBars": "Stacked Bars",
+  "innerRadius": "Inner Radius",
+  "startAngle": "Start Angle",
+  "donutThickness": "Donut Thickness",
+  "titleText": "Title Text",
+  "xAxisLabel": "X-Axis Label",
+  "yAxisLabel": "Y-Axis Label"
+}
