@@ -56,7 +56,16 @@
   "experimentData": {
     "title": "Experimentgegevens",
     "description": "Bekijk en beheer gegevens die bij dit experiment horen.",
-    "uploadData": "Gegevens uploaden"
+    "uploadData": "Gegevens uploaden",
+    "provisioning": {
+      "title": "Experiment wordt voorbereid",
+      "description": "De experimentinfrastructuur wordt momenteel opgezet. Gegevenstoegang wordt beschikbaar zodra de inrichting is voltooid.",
+      "tooltip": "Tijdens het inrichten maakt het systeem databaseschema's aan, stelt gegevenspijplijnen in en configureert toegangsrechten. Dit proces duurt meestal enkele minuten."
+    },
+    "provisioningFailed": {
+      "title": "Experiment-instelling mislukt",
+      "description": "Er was een probleem bij het opzetten van de experimentinfrastructuur. Neem contact op met de ondersteuning of probeer het experiment opnieuw aan te maken."
+    }
   },
   "experiment": "Experiment",
   "experimentId": "Experiment-ID",

@@ -63,7 +63,16 @@
   "experimentData": {
     "title": "Experimentdaten",
     "description": "Anzeigen und Verwalten von Daten, die mit diesem Experiment verbunden sind.",
-    "uploadData": "Daten hochladen"
+    "uploadData": "Daten hochladen",
+    "provisioning": {
+      "title": "Experiment wird vorbereitet",
+      "description": "Die Experiment-Infrastruktur wird derzeit eingerichtet. Der Datenzugang wird verfügbar sein, sobald die Bereitstellung abgeschlossen ist.",
+      "tooltip": "Während der Bereitstellung erstellt das System Datenbankschemas, richtet Daten-Pipelines ein und konfiguriert Zugriffsberechtigungen. Dieser Prozess dauert normalerweise einige Minuten."
+    },
+    "provisioningFailed": {
+      "title": "Experiment-Setup fehlgeschlagen",
+      "description": "Es gab ein Problem beim Einrichten der Experiment-Infrastruktur. Bitte kontaktieren Sie den Support oder versuchen Sie, das Experiment neu zu erstellen."
+    }
   },
   "experiment": "Experiment",
   "experimentId": "Experiment-ID",
