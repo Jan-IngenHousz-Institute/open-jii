@@ -311,6 +311,237 @@ export const zFlow = z.object({
 
 export const zUpsertFlowBody = zFlowGraph;
 
+// --- Visualization Schemas ---
+
+// Chart family enum
+export const zChartFamily = z.enum(["basic", "scientific", "3d", "statistical"]);
+
+// Chart type enum (matches database enum)
+export const zChartType = z.enum([
+  "line",
+  "scatter",
+  "bar",
+  "pie",
+  "area",
+  "dot-plot",
+  // Scientific charts (for future expansion)
+  "heatmap",
+  "contour",
+  "carpet",
+  "ternary",
+  "parallel-coordinates",
+  "log-plot",
+  "wind-rose",
+  "radar",
+  "polar",
+]);
+
+// Data source configuration schema
+export const zDataSourceConfig = z.object({
+  tableName: z.string(),
+  columnName: z.string(),
+  // Optional alias for display
+  alias: z.string().optional(),
+});
+
+// Axis configuration schema
+export const zAxisConfig = z.object({
+  // Data source for this axis
+  dataSource: zDataSourceConfig,
+  // Axis type/scale
+  type: z.enum(["linear", "log", "date", "category"]).default("linear"),
+  // Axis title (optional, defaults to column name or alias)
+  title: z.string().optional(),
+  // For multi-axis charts (left/right y-axis)
+  side: z.enum(["left", "right"]).optional(),
+  // Color for this data series
+  color: z.string().optional(),
+});
+
+// Shared chart display options
+export const zChartDisplayOptions = z
+  .object({
+    title: z.string().optional(),
+    showLegend: z.boolean().default(true),
+    legendPosition: z.enum(["top", "bottom", "left", "right"]).default("right"),
+    colorScheme: z.enum(["default", "pastel", "dark", "colorblind"]).default("default"),
+    interactive: z.boolean().default(true), // Whether chart allows zoom/pan
+  })
+  .optional();
+
+// Chart configuration schemas for different chart types
+export const zLineChartConfig = z.object({
+  xAxis: zAxisConfig,
+  yAxes: z.array(zAxisConfig).min(1),
+  // Line-specific options
+  mode: z.enum(["lines", "markers", "lines+markers"]).default("lines"),
+  connectGaps: z.boolean().default(true),
+  smoothing: z.number().min(0).max(1).default(0),
+  // Display options
+  gridLines: z.enum(["both", "x", "y", "none"]).default("both"),
+  display: zChartDisplayOptions,
+});
+
+export const zScatterChartConfig = z.object({
+  xAxis: zAxisConfig,
+  yAxes: z.array(zAxisConfig).min(1),
+  // Scatter-specific options
+  mode: z.enum(["markers", "lines+markers"]).default("markers"),
+  markerSize: z.number().min(1).max(20).default(6),
+  markerShape: z.enum(["circle", "square", "diamond", "triangle", "cross"]).default("circle"),
+  // Display options
+  gridLines: z.enum(["both", "x", "y", "none"]).default("both"),
+  display: zChartDisplayOptions,
+});
+
+export const zBarChartConfig = z.object({
+  xAxis: zAxisConfig,
+  yAxes: z.array(zAxisConfig).min(1),
+  // Bar-specific options
+  orientation: z.enum(["vertical", "horizontal"]).default("vertical"),
+  barMode: z.enum(["group", "stack", "overlay"]).default("group"),
+  barWidth: z.number().min(0).max(1).default(0.7), // Width as percentage of available space
+  // Display options
+  gridLines: z.enum(["both", "x", "y", "none"]).default("both"),
+  showValues: z.boolean().default(false), // Show values on bars
+  display: zChartDisplayOptions,
+});
+
+export const zPieChartConfig = z.object({
+  // Pie charts use different structure
+  labelSource: zDataSourceConfig,
+  valueSource: zDataSourceConfig,
+  // Pie-specific options
+  showLabels: z.boolean().default(true),
+  showValues: z.boolean().default(true),
+  hole: z.number().min(0).max(0.9).default(0), // 0 = pie, >0 = donut
+  textPosition: z.enum(["inside", "outside", "auto"]).default("auto"),
+  pull: z.number().min(0).max(0.5).default(0), // How much to pull slices apart
+  // Display options
+  display: zChartDisplayOptions,
+});
+
+export const zAreaChartConfig = z.object({
+  xAxis: zAxisConfig,
+  yAxes: z.array(zAxisConfig).min(1),
+  // Area-specific options
+  stackGroup: z.string().optional(),
+  fillMode: z.enum(["none", "tozeroy", "tonexty", "toself"]).default("tozeroy"),
+  fillOpacity: z.number().min(0).max(1).default(0.6),
+  // Display options
+  gridLines: z.enum(["both", "x", "y", "none"]).default("both"),
+  smoothing: z.number().min(0).max(1).default(0),
+  display: zChartDisplayOptions,
+});
+
+export const zDotPlotConfig = z.object({
+  xAxis: zAxisConfig,
+  yAxes: z.array(zAxisConfig).min(1),
+  // Dot plot specific options
+  markerSize: z.number().min(1).max(20).default(8),
+  markerShape: z.enum(["circle", "square", "diamond", "triangle", "cross"]).default("circle"),
+  // Display options
+  gridLines: z.enum(["both", "x", "y", "none"]).default("both"),
+  display: zChartDisplayOptions,
+});
+
+// Union type for all chart configurations
+export const zChartConfig = z.discriminatedUnion("chartType", [
+  z.object({ chartType: z.literal("line"), config: zLineChartConfig }),
+  z.object({ chartType: z.literal("scatter"), config: zScatterChartConfig }),
+  z.object({ chartType: z.literal("bar"), config: zBarChartConfig }),
+  z.object({ chartType: z.literal("pie"), config: zPieChartConfig }),
+  z.object({ chartType: z.literal("area"), config: zAreaChartConfig }),
+  z.object({ chartType: z.literal("dot-plot"), config: zDotPlotConfig }),
+]);
+
+// Data configuration schema for visualization data sources
+export const zChartDataConfig = z.object({
+  // Primary data table for the visualization
+  tableName: z.string().min(1),
+  // Additional data source configurations specific to chart type
+  dataSources: z.array(zDataSourceConfig).min(1),
+  // Optional filtering/aggregation settings
+  filters: z
+    .array(
+      z.object({
+        column: z.string(),
+        operator: z.enum(["equals", "not_equals", "greater_than", "less_than", "contains", "in"]),
+        value: z.union([z.string(), z.number(), z.boolean(), z.array(z.string())]),
+      }),
+    )
+    .optional(),
+  // Optional aggregation settings
+  aggregation: z
+    .object({
+      groupBy: z.array(z.string()).optional(),
+      functions: z
+        .array(
+          z.object({
+            column: z.string(),
+            function: z.enum(["sum", "avg", "count", "min", "max", "std", "var"]),
+            alias: z.string().optional(),
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
+});
+
+// Base visualization schema
+export const zExperimentVisualization = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(255),
+  description: z.string().nullable(),
+  experimentId: z.string().uuid(),
+  chartFamily: zChartFamily,
+  chartType: zChartType,
+  config: zChartConfig,
+  dataConfig: zChartDataConfig,
+  createdBy: z.string().uuid(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const zExperimentVisualizationList = z.array(zExperimentVisualization);
+
+// Create visualization request
+export const zCreateExperimentVisualizationBody = z.object({
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+  chartFamily: zChartFamily,
+  chartType: zChartType,
+  config: zChartConfig,
+  dataConfig: zChartDataConfig,
+});
+
+// Update visualization request
+export const zUpdateExperimentVisualizationBody = z.object({
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+  chartFamily: zChartFamily,
+  chartType: zChartType,
+  config: zChartConfig,
+  dataConfig: zChartDataConfig,
+});
+
+// List visualizations query parameters
+export const zListExperimentVisualizationsQuery = z.object({
+  chartFamily: zChartFamily.optional(),
+  limit: z.coerce.number().int().positive().max(100).default(50),
+  offset: z.coerce.number().int().nonnegative().default(0),
+});
+
+// Path parameters for visualizations
+export const zExperimentVisualizationPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+  visualizationId: z.string().uuid().describe("ID of the visualization"),
+});
+
+// Visualization responses
+export const zCreateExperimentVisualizationResponse = zExperimentVisualization;
+export const zUpdateExperimentVisualizationResponse = zExperimentVisualization;
+
 // Infer types from Zod schemas
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
 export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
@@ -491,6 +722,12 @@ export const zExperimentDataQuery = z.object({
     .string()
     .optional()
     .describe("Optional table name to filter results to a specific table"),
+  columns: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Specific columns to fetch. If provided with tableName, fetches full data for these columns only",
+    ),
 });
 
 export const zExperimentDataTableInfo = z.object({
@@ -631,3 +868,21 @@ export type ExperimentProvisioningStatusWebhookPayload = z.infer<
 export type ExperimentProvisioningStatus = ExperimentProvisioningStatusWebhookPayload["status"];
 export type ExperimentWebhookSuccessResponse = z.infer<typeof zExperimentWebhookSuccessResponse>;
 export type ExperimentWebhookErrorResponse = z.infer<typeof zExperimentWebhookErrorResponse>;
+
+// Visualization types
+export type ChartFamily = z.infer<typeof zChartFamily>;
+export type ChartType = z.infer<typeof zChartType>;
+export type DataSourceConfig = z.infer<typeof zDataSourceConfig>;
+export type AxisConfig = z.infer<typeof zAxisConfig>;
+export type LineChartConfig = z.infer<typeof zLineChartConfig>;
+export type ScatterChartConfig = z.infer<typeof zScatterChartConfig>;
+export type BarChartConfig = z.infer<typeof zBarChartConfig>;
+export type PieChartConfig = z.infer<typeof zPieChartConfig>;
+export type AreaChartConfig = z.infer<typeof zAreaChartConfig>;
+export type DotPlotConfig = z.infer<typeof zDotPlotConfig>;
+export type ChartConfig = z.infer<typeof zChartConfig>;
+export type ExperimentVisualization = z.infer<typeof zExperimentVisualization>;
+export type ExperimentVisualizationList = z.infer<typeof zExperimentVisualizationList>;
+export type CreateExperimentVisualizationBody = z.infer<typeof zCreateExperimentVisualizationBody>;
+export type UpdateExperimentVisualizationBody = z.infer<typeof zUpdateExperimentVisualizationBody>;
+export type ListExperimentVisualizationsQuery = z.infer<typeof zListExperimentVisualizationsQuery>;
