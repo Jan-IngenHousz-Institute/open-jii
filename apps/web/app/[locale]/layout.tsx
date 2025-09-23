@@ -2,6 +2,7 @@ import { TranslationsProvider } from "@/components/translations-provider";
 import type { Metadata } from "next";
 import { Poppins, Overpass } from "next/font/google";
 import { draftMode } from "next/headers";
+import React from "react";
 import type { ReactNode } from "react";
 
 import { SessionProvider } from "@repo/auth/client";

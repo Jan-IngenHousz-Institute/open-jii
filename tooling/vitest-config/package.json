@@ -18,6 +18,7 @@
     "view-report": "open coverage/report/index.html"
   },
   "dependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
     "vitest": "catalog:testing"
   },
   "devDependencies": {
