@@ -2,7 +2,7 @@
 
 import { ErrorDisplay } from "@/components/error-display";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
-import { AlertCircle, InfoIcon } from "lucide-react";
+import { AlertTriangle, Info, Loader2 } from "lucide-react";
 import { use, useMemo } from "react";
 import * as React from "react";
 
@@ -43,17 +43,23 @@ export default function DataLayout({ children, params }: DataLayoutProps) {
       return {
         title: t("experimentData.provisioning.title"),
         description: t("experimentData.provisioning.description"),
-        icon: <InfoIcon className="h-4 w-4" />,
+        icon: Loader2,
         variant: "default" as const,
+        tooltipText: t("experimentData.provisioning.tooltip"),
       };
-    } else {
+    }
+
+    if (experiment.status === "provisioning_failed") {
       return {
         title: t("experimentData.provisioningFailed.title"),
         description: t("experimentData.provisioningFailed.description"),
-        icon: <AlertCircle className="h-4 w-4" />,
+        icon: AlertTriangle,
         variant: "destructive" as const,
+        tooltipText: t("experimentData.provisioningFailed.tooltip"),
       };
     }
+
+    return null;
   }, [experiment, t]);
 
   if (isLoading) {
@@ -68,13 +74,8 @@ export default function DataLayout({ children, params }: DataLayoutProps) {
     return <div>{t("notFound")}</div>;
   }
 
-  if (!isProvisioningState) {
+  if (!isProvisioningState || !message) {
     return <>{children}</>;
-  }
-
-  // At this point we know experiment exists and is in provisioning state, so message won't be null
-  if (!message) {
-    return <div>{t("notFound")}</div>;
   }
 
   return (
@@ -87,7 +88,7 @@ export default function DataLayout({ children, params }: DataLayoutProps) {
       </div>
 
       <Alert variant={message.variant}>
-        {message.icon}
+        <message.icon className="h-4 w-4" />
         <AlertTitle>{message.title}</AlertTitle>
         <AlertDescription>
           {message.description}
@@ -95,7 +96,7 @@ export default function DataLayout({ children, params }: DataLayoutProps) {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <InfoIcon className="ml-2 inline h-4 w-4 cursor-help" />
+                  <Info className="ml-2 inline h-4 w-4 cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{t("experimentData.provisioning.tooltip")}</p>
