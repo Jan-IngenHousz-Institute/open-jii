@@ -27,10 +27,8 @@ interface RootLayoutProps {
  */
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html suppressHydrationWarning>
-      <body suppressHydrationWarning className="h-full">
-        {children}
-      </body>
+    <html>
+      <body className="h-full">{children}</body>
     </html>
   );
 }
