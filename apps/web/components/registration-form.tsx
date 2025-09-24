@@ -12,12 +12,6 @@ import { useTranslation } from "@repo/i18n";
 import {
   Button,
   Checkbox,
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  Label,
   Input,
   ScrollArea,
   Form,
@@ -26,10 +20,21 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-export function RegistrationForm({ callbackUrl }: { callbackUrl?: string }) {
+export function RegistrationForm({
+  callbackUrl,
+  termsData,
+}: {
+  callbackUrl?: string;
+  termsData: { title: React.ReactNode; content: React.ReactNode };
+}) {
   const { t } = useTranslation();
   const router = useRouter();
 
@@ -81,141 +86,131 @@ export function RegistrationForm({ callbackUrl }: { callbackUrl?: string }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>{t("registration.title")}</CardTitle>
-          <CardDescription>{t("registration.description")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="space-y-2">
-                <FormField
-                  control={form.control}
-                  name="firstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("registration.firstName")}</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder={t("registration.firstNamePlaceholder")} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="space-y-2">
-                <FormField
-                  control={form.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("registration.lastName")}</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder={t("registration.lastNamePlaceholder")} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+    <div className="bg-card text-card-foreground ring-border flex h-full min-h-[600px] w-full flex-col rounded-2xl p-6 shadow-lg ring-1 lg:w-[460px] lg:rounded-2xl lg:p-10 lg:shadow-lg lg:ring-1">
+      {/* Title */}
+      <div className="mb-4 text-center">
+        <h1 className="text-2xl font-bold">{t("registration.title")}</h1>
+        <p className="text-muted-foreground mt-2">{t("registration.description")}</p>
+      </div>
 
-              <div className="space-y-2">
-                <FormField
-                  control={form.control}
-                  name="organization"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("registration.organization")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder={t("registration.organizationPlaceholder")}
-                          trim
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* First name */}
+          <div className="space-y-2">
+            <FormField
+              control={form.control}
+              name="firstName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("registration.firstName")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder={t("registration.firstNamePlaceholder")}
+                      className="h-12 rounded-xl"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-              <div className="space-y-3">
-                <Label>{t("registration.termsAndConditions")}</Label>
-                <ScrollArea className="h-32 w-full rounded-md border p-4">
-                  <div className="text-muted-foreground space-y-2 text-sm">
-                    <p className="font-semibold">Lorem ipsum</p>
-                    <p>
-                      Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex
-                      sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis
-                      convallis. Tempus leo eu aenean sed diam urna tempor. Pulvinar vivamus
-                      fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada
-                      lacinia integer nunc posuere. Ut hendrerit semper vel class aptent taciti
-                      sociosqu. Ad litora torquent per conubia nostra inceptos himenaeos.
-                    </p>
-                    <p>
-                      Nostra hendrerit litora ullamcorper praesent ligula taciti dignissim lacus
-                      interdum. A gravida pharetra a himenaeos tincidunt. Tellus sociosqu elementum
-                      lobortis lacus arcu volutpat turpis nunc. Suspendisse torquent cras morbi
-                      habitant non id lacinia per ligula hendrerit nunc laoreet sollicitudin
-                      blandit.
-                    </p>
-                    <p>
-                      Congue inceptos condimentum adipiscing viverra vestibulum sociosqu conubia
-                      finibus nisi class nam. Quisque senectus massa convallis mollis gravida ipsum
-                      risus imperdiet quisque fermentum. Adipiscing ut dictum proin pulvinar
-                      sociosqu leo orci bibendum tempus rutrum sagittis eros mattis pulvinar.
-                    </p>
-                    <p>
-                      Class mauris donec mollis ipsum elit curae ligula convallis pretium et vitae.
-                      Donec posuere nisi odio mi felis venenatis habitasse orci. Duis feugiat
-                      scelerisque mauris per morbi habitant aptent elementum felis consequat id
-                      euismod leo mattis himenaeos. Congue sollicitudin aliquet eleifend platea
-                      scelerisque elit praesent vestibulum.
-                    </p>
-                    <p>
-                      Dictum facilisis sociosqu venenatis dignissim rutrum erat per porta urna
-                      aptent praesent quam finibus habitasse. Lorem placerat venenatis tellus eget
-                      eget ut blandit cras turpis hendrerit aliquam rutrum consectetur.
-                    </p>
-                  </div>
-                </ScrollArea>
+          {/* Last name */}
+          <div className="space-y-2">
+            <FormField
+              control={form.control}
+              name="lastName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("registration.lastName")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder={t("registration.lastNamePlaceholder")}
+                      className="h-12 rounded-xl"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-                <div className="flex items-center">
-                  <FormField
-                    control={form.control}
-                    name="acceptedTerms"
-                    render={({ field }) => (
-                      <FormItem className="space-x-2">
-                        <FormControl>
-                          <Checkbox
-                            id={field.name}
-                            name={field.name}
-                            checked={!!field.value}
-                            onCheckedChange={field.onChange}
-                            ref={field.ref}
-                            disabled={field.disabled}
-                            onBlur={field.onBlur}
-                          />
-                        </FormControl>
-                        <FormLabel className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                          {t("registration.acceptTerms")}
-                        </FormLabel>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
+          {/* Organization */}
+          <div className="space-y-2">
+            <FormField
+              control={form.control}
+              name="organization"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("registration.organization")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder={t("registration.organizationPlaceholder")}
+                      className="h-12 rounded-xl"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-              <Button type="submit" className="w-full">
-                {t("registration.register")}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+          {/* Terms */}
+          <div className="space-y-3">
+            <FormField
+              control={form.control}
+              name="acceptedTerms"
+              render={({ field }) => (
+                <FormItem className="flex items-end space-x-2">
+                  <FormControl>
+                    <Checkbox
+                      id={field.name}
+                      name={field.name}
+                      checked={!!field.value}
+                      onCheckedChange={field.onChange}
+                      ref={field.ref}
+                      disabled={field.disabled}
+                      onBlur={field.onBlur}
+                    />
+                  </FormControl>
+                  <FormLabel className="text-sm font-medium leading-none">
+                    {t("auth.termsPrefix")}
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <a className="cursor-pointer underline" href="#">
+                          {t("auth.terms")}
+                        </a>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-lg">
+                        <DialogHeader>
+                          <DialogTitle>{termsData.title}</DialogTitle>
+                        </DialogHeader>
+                        <ScrollArea className="h-64 w-full rounded-md border p-4">
+                          {termsData.content}
+                        </ScrollArea>
+                      </DialogContent>
+                    </Dialog>
+                  </FormLabel>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* Submit */}
+          <Button
+            type="submit"
+            className="bg-primary text-primary-foreground h-12 w-full rounded-xl hover:opacity-90"
+          >
+            {t("registration.register")}
+          </Button>
+        </form>
+      </Form>
+
+      <div className="flex-1" />
     </div>
   );
 }

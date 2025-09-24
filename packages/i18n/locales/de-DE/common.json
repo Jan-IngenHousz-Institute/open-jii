@@ -196,13 +196,13 @@
     "logoutSuccess": "Erfolgreich abgemeldet",
     "invalidCredentials": "Ungültige Anmeldedaten",
     "loggedInAs": "Angemeldet als {{name}}",
-    "loginToAccount": "In Konto anmelden",
+    "loginToAccount": "Anmelden oder registrieren",
     "continueWith": "Fortfahren mit",
     "orContinueWith": "Oder weiter mit",
-    "loginWith": "Anmelden mit {{provider}}",
-    "loginWith-github": "Mit GitHub anmelden",
-    "loginWith-nodemailer": "Mit E-Mail anmelden",
-    "loginWith-orcid": "Mit ORCID anmelden",
+    "loginWith": "Fortfahren mit {{provider}}",
+    "loginWith-github": "Mit GitHub fortfahren",
+    "loginWith-nodemailer": "Mit E-Mail fortfahren",
+    "loginWith-orcid": "Mit ORCID fortfahren",
     "verifyRequest": "Wir haben Ihnen per E-Mail einen Anmeldelink gesendet",
     "verifyRequestDetails": "Wir haben Ihnen eine E-Mail an Ihre E-Mail-Adresse gesendet. Tippen Sie auf die Schaltfläche in der E-Mail, um fortzufahren.",
     "verifyRequestDetailsJunk": "Wenn Sie die E-Mail nicht sehen, überprüfen Sie Ihren Spam- oder Junk-Ordner.",
@@ -215,7 +215,16 @@
     "errorMessage": "Beim Anmelden ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
     "account": "Konto",
     "userMenu": "Benutzermenü",
-    "signingOut": "Abmelden..."
+    "signingOut": "Abmelden...",
+    "heroTitle": "Offene Wissenschaft für Photosynthese",
+    "heroDescription": "Ermächtigung globaler Zusammenarbeit in der Pflanzenwissenschaft und Photosynthese-Forschung.",
+    "brandName": "OpenJII",
+    "poweredBy": "betrieben von",
+    "instituteAlt": "Jan IngenHousz Institut",
+    "continueWithEmail": "Mit E-Mail fortfahren",
+    "or": "ODER",
+    "termsPrefix": "Ich akzeptiere die ",
+    "terms": "Allgemeinen Geschäftsbedingungen"
   },
   "registration": {
     "title": "Registrierung",
@@ -264,7 +273,9 @@
     "unauthorized": "Unbefugter Zugriff",
     "forbidden": "Zugriff verboten",
     "failedToLoadProtocol": "Protokoll konnte nicht geladen werden",
-    "loginRequired": "Bitte melden Sie sich an, um auf diese Seite zuzugreifen"
+    "loginRequired": "Bitte melden Sie sich an, um auf diese Seite zuzugreifen",
+    "termsUnavailable": "Die Allgemeinen Geschäftsbedingungen können derzeit nicht geladen werden.",
+    "termsContentUnavailable": "Der Inhalt der Allgemeinen Geschäftsbedingungen ist nicht verfügbar."
   },
   "footer": {
     "aboutUs": "Über uns",

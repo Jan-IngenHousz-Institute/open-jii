@@ -55,7 +55,7 @@ vi.mock("react-i18next", () => ({
         "navigation.home": "Home",
         "navigation.about": "About",
         "navigation.blog": "Blog",
-        "navigation.platform": "Go to Platform",
+        "navigation.platform": "Platform",
         "navigation.menu": "Navigation menu",
         "auth.userMenu": "User menu",
         "auth.account": "Account",
@@ -233,7 +233,7 @@ describe("<UnifiedNavbar />", () => {
     expect(blog).toHaveAttribute("aria-current", "page");
   });
 
-  it("hides 'Platform' link for guests but shows 'Go to Platform' CTA", () => {
+  it("shows 'Platform' link for guests in navigation", () => {
     renderNavbar({ locale: "en-US", pathname: "/en-US" });
 
     // Scope into desktop links only
@@ -243,12 +243,9 @@ describe("<UnifiedNavbar />", () => {
 
     const utils = within(desktopLinks as HTMLElement);
 
-    // Desktop nav shouldn't include Platform for guests
-    expect(utils.queryByRole("link", { name: /Platform/i })).not.toBeInTheDocument();
-
-    // CTA button on the right (outside nav center) -> pick the first "Go to Platform"
-    const ctas = screen.getAllByRole("link", { name: /Go to Platform/i });
-    expect(ctas[0]).toHaveAttribute("href", "/en-US/platform");
+    // Desktop nav should include Platform for guests
+    const platformLink = utils.getByRole("link", { name: /Platform/i });
+    expect(platformLink).toHaveAttribute("href", "/en-US/platform");
   });
 
   it("shows 'Platform' in nav for authenticated users", () => {

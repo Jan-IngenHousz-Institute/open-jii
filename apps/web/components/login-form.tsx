@@ -5,6 +5,16 @@ import { AuthError } from "@repo/auth/next";
 import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { Button, Input, Label } from "@repo/ui/components";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@repo/ui/components";
+import { ScrollArea } from "@repo/ui/components";
+
+import { TermsAndConditionsDialog } from "./terms-and-conditions-dialog";
 
 const SIGNIN_ERROR_URL = "/error";
 
@@ -19,74 +29,124 @@ export async function LoginForm({
     locale,
     namespaces: ["common"],
   });
+
+  const emailProvider = providerMap.find((p) => p.id === "nodemailer");
+  const oauthProviders = providerMap.filter((p) => p.id !== "nodemailer");
+
+  // Fetch terms and conditions data
+  const termsData = await TermsAndConditionsDialog({ locale });
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col items-center gap-2 text-center">
+    <div className="bg-card text-card-foreground ring-border flex h-full min-h-[600px] w-full flex-col rounded-2xl p-6 shadow-lg ring-1 lg:w-[460px] lg:rounded-2xl lg:p-10 lg:shadow-lg lg:ring-1">
+      {/* Title */}
+      <div className="mb-4 text-center">
         <h1 className="text-2xl font-bold">{t("auth.loginToAccount")}</h1>
       </div>
-      <div className="grid gap-6">
-        <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
-          <span className="bg-background text-muted-foreground relative z-10 px-2">
-            {t("auth.continueWith")}
+
+      {/* Email block */}
+      {emailProvider && (
+        <form
+          className="mb-2"
+          action={async (formData) => {
+            "use server";
+            try {
+              const email = formData.get("email") as string | null;
+              if (!email) throw new Error("Email is required");
+              await signIn(emailProvider.id, {
+                redirectTo: callbackUrl,
+                email,
+              });
+            } catch (error) {
+              if (error instanceof AuthError) {
+                return redirect(`${SIGNIN_ERROR_URL}?error=${error.type}`);
+              }
+              throw error;
+            }
+          }}
+        >
+          <div className="grid gap-3">
+            <Label htmlFor="email" className="text-sm">
+              {t("auth.email", "Email address")}
+            </Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="m@example.com"
+              required
+              className="h-12 rounded-xl"
+            />
+          </div>
+
+          <Button
+            type="submit"
+            variant="default"
+            className="bg-primary text-primary-foreground mt-4 h-12 w-full rounded-xl hover:opacity-90"
+          >
+            {t("auth.continueWithEmail")}
+          </Button>
+        </form>
+      )}
+
+      {/* Divider */}
+      {oauthProviders.length > 0 && (
+        <div className="relative my-6">
+          <div className="border-border absolute inset-0 top-1/2 -translate-y-1/2 border-t" />
+          <span className="bg-card text-muted-foreground relative mx-auto block w-fit px-2 text-sm">
+            {t("auth.or")}
           </span>
         </div>
-        {providerMap.map((provider, index) => (
-          <div key={provider.id}>
-            {index > 1 && (
-              <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
-                <span className="bg-background text-muted-foreground relative z-10 px-2">
-                  {t("auth.orContinueWith")}
-                </span>
-              </div>
-            )}
-            <form
-              action={async (formData) => {
-                "use server";
-                try {
-                  const email = formData.get("email") as string | null;
-                  if (provider.id === "nodemailer" && !email) {
-                    throw new Error("Email is required");
-                  }
-                  await signIn(provider.id, {
-                    redirectTo: callbackUrl,
-                    ...(provider.id === "nodemailer" ? { email } : {}),
-                  });
-                } catch (error) {
-                  // Signin can fail for a number of reasons, such as the user
-                  // not existing, or the user not having the correct role.
-                  // In some cases, you may want to redirect to a custom error
-                  if (error instanceof AuthError) {
-                    return redirect(`${SIGNIN_ERROR_URL}?error=${error.type}`);
-                  }
+      )}
 
-                  // Otherwise if a redirects happens Next.js can handle it
-                  // so you can just re-thrown the error and let Next.js handle it.
-                  // Docs:
-                  // https://nextjs.org/docs/app/api-reference/functions/redirect#server-component
-                  throw error;
+      {/* OAuth providers */}
+      <div className="grid gap-3">
+        {oauthProviders.map((provider) => (
+          <form
+            key={provider.id}
+            action={async () => {
+              "use server";
+              try {
+                await signIn(provider.id, { redirectTo: callbackUrl });
+              } catch (error) {
+                if (error instanceof AuthError) {
+                  return redirect(`${SIGNIN_ERROR_URL}?error=${error.type}`);
                 }
-              }}
+                throw error;
+              }
+            }}
+          >
+            <Button
+              type="submit"
+              variant="outline"
+              className="bg-accent-light text-foreground hover:bg-accent h-12 w-full rounded-full"
             >
-              {provider.id === "nodemailer" && (
-                <div className="mb-4 mt-4 grid gap-3">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="m@example.com"
-                    required
-                  />
-                </div>
-              )}
-              <Button variant="outline" className="w-full" type="submit">
-                <ProviderImage id={provider.id} />
-                {t(`auth.loginWith-${provider.id}`)}
-              </Button>
-            </form>
-          </div>
+              <ProviderImage id={provider.id} />
+              {t(`auth.loginWith-${provider.id}`)}
+            </Button>
+          </form>
         ))}
       </div>
+
+      <div className="flex-1" />
+      {/* Terms and Conditions */}
+      <p className="text-muted-foreground text-center text-xs">
+        {t("auth.termsPrefix")}
+        <Dialog>
+          <DialogTrigger asChild>
+            <a className="cursor-pointer underline" href="#">
+              {t("auth.terms")}
+            </a>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{termsData.title}</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="h-64 w-full rounded-md border p-4">
+              {termsData.content}
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      </p>
     </div>
   );
 }
@@ -112,5 +172,4 @@ function ProviderImage({ id }: { id: string }) {
         </svg>
       );
   }
-  return null;
 }

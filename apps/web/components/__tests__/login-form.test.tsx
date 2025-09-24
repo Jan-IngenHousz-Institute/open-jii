@@ -44,6 +44,16 @@ vi.mock("@repo/i18n/server", () => ({
   ),
 }));
 
+// Mock TermsAndConditionsDialog
+vi.mock("../terms-and-conditions-dialog", () => ({
+  TermsAndConditionsDialog: vi.fn(() =>
+    Promise.resolve({
+      title: "Terms and Conditions",
+      content: "Mock terms and conditions content",
+    }),
+  ),
+}));
+
 // Mock UI components
 vi.mock("@repo/ui/components", () => ({
   Button: ({
@@ -88,6 +98,32 @@ vi.mock("@repo/ui/components", () => ({
       {children}
     </label>
   ),
+  Dialog: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog">{children}</div>
+  ),
+  DialogTrigger: ({
+    children,
+    asChild: _asChild,
+  }: {
+    children: React.ReactNode;
+    asChild?: boolean;
+  }) => <div data-testid="dialog-trigger">{children}</div>,
+  DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="dialog-content" className={className}>
+      {children}
+    </div>
+  ),
+  DialogHeader: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-header">{children}</div>
+  ),
+  DialogTitle: ({ children }: { children: React.ReactNode }) => (
+    <h2 data-testid="dialog-title">{children}</h2>
+  ),
+  ScrollArea: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="scroll-area" className={className}>
+      {children}
+    </div>
+  ),
 }));
 
 describe("LoginForm", () => {
@@ -104,20 +140,21 @@ describe("LoginForm", () => {
     render(await LoginForm(defaultProps));
 
     expect(screen.getByText("auth.loginToAccount")).toBeInTheDocument();
-    expect(screen.getByText("auth.continueWith")).toBeInTheDocument();
+    expect(screen.getByText("auth.continueWithEmail")).toBeInTheDocument();
     expect(screen.getByText("auth.loginWith-github")).toBeInTheDocument();
-    expect(screen.getByText("auth.loginWith-nodemailer")).toBeInTheDocument();
     expect(screen.getByText("auth.loginWith-orcid")).toBeInTheDocument();
   });
 
-  it("renders email input for nodemailer provider", async () => {
+  it("renders email input form for nodemailer provider", async () => {
     render(await LoginForm(defaultProps));
 
-    const emailInput = screen.getByLabelText("Email");
+    const emailInput = screen.getByLabelText("auth.email");
     expect(emailInput).toBeInTheDocument();
     expect(emailInput).toHaveAttribute("type", "email");
     expect(emailInput).toHaveAttribute("placeholder", "m@example.com");
     expect(emailInput).toBeRequired();
+    expect(emailInput).toHaveAttribute("name", "email");
+    expect(emailInput).toHaveAttribute("id", "email");
   });
 
   it("renders provider icons correctly", async () => {
@@ -136,12 +173,10 @@ describe("LoginForm", () => {
     expect(orcidSvg).toBeInTheDocument();
   });
 
-  it("renders 'Or continue with' separator after the first provider", async () => {
+  it("renders divider between email and OAuth providers", async () => {
     render(await LoginForm(defaultProps));
 
-    const separators = screen.getAllByText("auth.orContinueWith");
-    // Should appear after the first provider (index > 1 condition in the code)
-    expect(separators.length).toBeGreaterThan(0);
+    expect(screen.getByText("auth.or")).toBeInTheDocument();
   });
 
   it("renders all buttons with correct styling", async () => {
@@ -149,20 +184,26 @@ describe("LoginForm", () => {
 
     const buttons = screen.getAllByRole("button");
 
-    buttons.forEach((button) => {
+    // Email button should have default variant
+    expect(buttons[0]).toHaveAttribute("data-variant", "default");
+    expect(buttons[0]).toHaveClass("h-12", "w-full");
+    expect(buttons[0]).toHaveAttribute("type", "submit");
+
+    // OAuth buttons should have outline variant
+    buttons.slice(1).forEach((button) => {
       expect(button).toHaveAttribute("data-variant", "outline");
       expect(button).toHaveClass("w-full");
       expect(button).toHaveAttribute("type", "submit");
     });
   });
 
-  it("renders provider forms in correct order", async () => {
+  it("renders providers in correct order (email first, then OAuth)", async () => {
     render(await LoginForm(defaultProps));
 
     const buttons = screen.getAllByRole("button");
 
-    expect(buttons[0]).toHaveTextContent("auth.loginWith-github");
-    expect(buttons[1]).toHaveTextContent("auth.loginWith-nodemailer");
+    expect(buttons[0]).toHaveTextContent("auth.continueWithEmail");
+    expect(buttons[1]).toHaveTextContent("auth.loginWith-github");
     expect(buttons[2]).toHaveTextContent("auth.loginWith-orcid");
   });
 
@@ -189,8 +230,8 @@ describe("LoginForm", () => {
 
     // Should still render all the basic elements
     expect(screen.getByText("auth.loginToAccount")).toBeInTheDocument();
+    expect(screen.getByText("auth.continueWithEmail")).toBeInTheDocument();
     expect(screen.getByText("auth.loginWith-github")).toBeInTheDocument();
-    expect(screen.getByText("auth.loginWith-nodemailer")).toBeInTheDocument();
     expect(screen.getByText("auth.loginWith-orcid")).toBeInTheDocument();
   });
 
@@ -205,21 +246,12 @@ describe("LoginForm", () => {
     });
   });
 
-  it("renders email input with proper name attribute for form data", async () => {
+  it("only renders one email input", async () => {
     render(await LoginForm(defaultProps));
 
-    const emailInput = screen.getByLabelText("Email");
-    expect(emailInput).toHaveAttribute("name", "email");
-    expect(emailInput).toHaveAttribute("id", "email");
-  });
-
-  it("only renders email input for nodemailer provider", async () => {
-    render(await LoginForm(defaultProps));
-
-    // Should only have one email input (for nodemailer)
-    const emailInputs = screen.getAllByDisplayValue("");
-    const emailTypeInputs = emailInputs.filter((input) => input.getAttribute("type") === "email");
-    expect(emailTypeInputs).toHaveLength(1);
+    // Should only have one email input
+    const emailInputs = document.querySelectorAll('input[type="email"]');
+    expect(emailInputs).toHaveLength(1);
   });
 
   it("renders provider buttons with proper submit types", async () => {
@@ -234,15 +266,13 @@ describe("LoginForm", () => {
     });
   });
 
-  it("renders correct provider order with proper separation", async () => {
+  it("renders OAuth providers container", async () => {
     render(await LoginForm(defaultProps));
 
-    const container = document.querySelector(".grid.gap-6");
+    const container = document.querySelector(".grid.gap-3");
     expect(container).toBeInTheDocument();
 
-    // Check that we have the expected structure
-    const children = container?.children;
-    expect(children?.length).toBeGreaterThan(3); // Initial separator + providers + additional separators
+    expect(container?.children.length).toBe(2); // GitHub and ORCID
   });
 
   it("handles different locale", async () => {
@@ -299,14 +329,19 @@ describe("LoginForm", () => {
     expect(forms).toHaveLength(3);
   });
 
-  it("renders separators correctly based on provider index", async () => {
+  it("renders terms and conditions dialog", async () => {
     render(await LoginForm(defaultProps));
 
-    // The first separator should be "Continue with"
-    expect(screen.getByText("auth.continueWith")).toBeInTheDocument();
+    // Check for terms prefix text and link
+    expect(screen.getByText("auth.termsPrefix")).toBeInTheDocument();
+    expect(screen.getByText("auth.terms")).toBeInTheDocument();
 
-    // Should have at least one "Or continue with" separator (for providers after index 1)
-    const orSeparators = screen.getAllByText("auth.orContinueWith");
-    expect(orSeparators.length).toBeGreaterThanOrEqual(1);
+    // Check that dialog components are rendered
+    expect(screen.getByTestId("dialog")).toBeInTheDocument();
+    expect(screen.getByTestId("dialog-trigger")).toBeInTheDocument();
+    expect(screen.getByTestId("dialog-content")).toBeInTheDocument();
+    expect(screen.getByTestId("dialog-title")).toBeInTheDocument();
+    expect(screen.getByText("Terms and Conditions")).toBeInTheDocument();
+    expect(screen.getByText("Mock terms and conditions content")).toBeInTheDocument();
   });
 });

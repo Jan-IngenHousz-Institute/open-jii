@@ -212,9 +212,8 @@ describe("<AppSidebar />", () => {
     );
 
     const image = screen.getByTestId("next-image");
-    expect(image).toHaveAttribute("data-src", "/logo.png");
+    expect(image).toHaveAttribute("data-src", "/logo-light.png");
     expect(image).toHaveAttribute("data-alt", "Open JII Logo");
-    expect(screen.getByText("Open JII")).toBeInTheDocument();
   });
 
   it("renders NavUser component when user is provided", () => {

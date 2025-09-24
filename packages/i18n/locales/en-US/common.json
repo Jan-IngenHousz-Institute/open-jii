@@ -202,13 +202,13 @@
     "logoutSuccess": "Signed out successfully",
     "invalidCredentials": "Invalid credentials",
     "loggedInAs": "Signed in in as {{name}}",
-    "loginToAccount": "Sign in to your account",
+    "loginToAccount": "Log in or sign up",
     "continueWith": "Continue with",
     "orContinueWith": "Or continue with",
-    "loginWith": "Sign in with {{provider}}",
-    "loginWith-github": "Sign in with GitHub",
-    "loginWith-nodemailer": "Sign in with Email",
-    "loginWith-orcid": "Sign in with ORCID",
+    "loginWith": "Continue {{provider}}",
+    "loginWith-github": "Continue with GitHub",
+    "loginWith-nodemailer": "Continue with Email",
+    "loginWith-orcid": "Continue with ORCID",
     "verifyRequest": "We emailed you a sign in link",
     "verifyRequestDetails": "We sent you an email to your email address. Tap the button in the email to continue.",
     "verifyRequestDetailsJunk": "If you don’t see the email, check your spam or junk folder.",
@@ -221,7 +221,16 @@
     "errorMessage": "An error occurred during sign in. Please try again.",
     "account": "Account",
     "userMenu": "User menu",
-    "signingOut": "Signing out..."
+    "signingOut": "Signing out...",
+    "heroTitle": "Open Science for Photosynthesis",
+    "heroDescription": "Empowering global collaboration in plant science and photosynthesis research.",
+    "brandName": "OpenJII",
+    "poweredBy": "powered by",
+    "instituteAlt": "Jan Ingenhousz Institute",
+    "continueWithEmail": "Continue with Email",
+    "or": "OR",
+    "termsPrefix": "I accept the ",
+    "terms": "terms and conditions"
   },
   "registration": {
     "title": "Registration",
@@ -272,7 +281,9 @@
     "accessDenied": "Access Denied",
     "notFound": "Not Found",
     "failedToLoadProtocol": "Failed to load protocol",
-    "loginRequired": "Please log in to access this page"
+    "loginRequired": "Please log in to access this page",
+    "termsUnavailable": "Unable to load terms and conditions at this time.",
+    "termsContentUnavailable": "Terms and conditions content is not available."
   },
   "footer": {
     "aboutUs": "About Us",

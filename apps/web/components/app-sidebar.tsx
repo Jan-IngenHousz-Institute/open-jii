@@ -116,8 +116,7 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
               <Link href={`/platform/`} locale={locale}>
-                <Image src="/logo.png" alt={translations.logoAlt} width={50} height={50} />
-                <span className="text-base font-semibold">{translations.openJII}</span>
+                <Image src="/logo-light.png" alt={translations.logoAlt} width={50} height={50} />
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
