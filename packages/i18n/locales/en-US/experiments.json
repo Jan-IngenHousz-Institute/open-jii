@@ -63,7 +63,16 @@
   "experimentData": {
     "title": "Experiment Data",
     "description": "View and manage data associated with this experiment.",
-    "uploadData": "Upload Data"
+    "uploadData": "Upload Data",
+    "provisioning": {
+      "title": "Experiment is Being Prepared",
+      "description": "The experiment infrastructure is currently being set up. Data access will be available once provisioning is complete.",
+      "tooltip": "During provisioning, the system is creating database schemas, setting up data pipelines, and configuring access permissions. This process usually takes a few minutes."
+    },
+    "provisioningFailed": {
+      "title": "Experiment Setup Failed",
+      "description": "There was an issue setting up the experiment infrastructure. Please contact support or try recreating the experiment."
+    }
   },
   "experiment": "Experiment",
   "experimentId": "Experiment ID",
