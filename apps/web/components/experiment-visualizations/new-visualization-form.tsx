@@ -93,7 +93,7 @@ export default function NewVisualizationForm({
       },
       dataConfig: {
         tableName: "",
-        dataSources: [{ tableName: "", columnName: "", alias: "" }],
+        dataSources: [],
       },
     },
   });
