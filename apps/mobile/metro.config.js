@@ -12,6 +12,8 @@ const config = withTurborepoManagedCache(
   }),
 );
 
+config.resolver.assetExts.push("txt");
+
 module.exports = config;
 
 /**

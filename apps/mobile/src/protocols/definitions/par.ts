@@ -17,12 +17,12 @@ interface SensorData {
   b: number;
 }
 
-export function analyze(data: SensorData): Record<string, number> {
+export function analyze(json: SensorData): Record<string, number> {
   return {
-    PAR: data.light_intensity,
-    red: data.r,
-    green: data.g,
-    blue: data.b,
+    PAR: json.light_intensity,
+    red: json.r,
+    green: json.g,
+    blue: json.b,
   };
 }
 

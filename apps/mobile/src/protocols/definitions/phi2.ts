@@ -36,18 +36,18 @@ function mean(arr: number[]): number {
   return sum / arr.length;
 }
 
-export function analyze(data: RawData): Record<string, number> {
-  const fs = mean(data.data_raw.slice(1, 5)); // indexes 1 to 4
-  const fmp = mean(data.data_raw.slice(63, 68)); // indexes 63 to 67
+export function analyze(json: RawData): Record<string, number> {
+  const fs = mean(json.data_raw.slice(1, 5)); // indexes 1 to 4
+  const fmp = mean(json.data_raw.slice(63, 68)); // indexes 63 to 67
   const phi2 = (fmp - fs) / fmp;
-  const lef = phi2 * data.light_intensity * 0.45;
+  const lef = phi2 * json.light_intensity * 0.45;
 
   return {
     Fs: fs,
     Fmp: fmp,
     Phi2: phi2,
     LEF: lef,
-    PAR: data.light_intensity,
+    PAR: json.light_intensity,
   };
 }
 

@@ -39,7 +39,9 @@
       [
         "react-native-permissions",
         {
-          "iosPermissions": ["Bluetooth"]
+          "iosPermissions": [
+            "Bluetooth"
+          ]
         }
       ],
       [
@@ -47,12 +49,16 @@
         {
           "peripheralUsageDescription": "Allow myDevice to check bluetooth peripheral info",
           "alwaysUsageDescription": "Allow myDevice to always use bluetooth info",
-          "protocols": ["com.myCompany.p1", "com.myCompany.p2"]
+          "protocols": [
+            "com.myCompany.p1",
+            "com.myCompany.p2"
+          ]
         }
       ],
       "expo-router",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-asset"
     ],
     "extra": {
       "expo-router": {

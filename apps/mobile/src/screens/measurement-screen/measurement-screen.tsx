@@ -1,46 +1,48 @@
+import { useKeepAwake } from "expo-keep-awake";
 import React, { useRef } from "react";
 import { ActivityIndicator, Dimensions, StyleSheet, Text, View } from "react-native";
 import { Button } from "~/components/Button";
 import { Dropdown } from "~/components/Dropdown";
 import { MeasurementResult } from "~/components/MeasurementResult";
 import { useToast } from "~/context/toast-context";
-import { useExperimentsDropdownOptions } from "~/hooks/use-experiments-dropdown-options";
+import { useExperiments } from "~/hooks/use-experiments";
+import { useMacros } from "~/hooks/use-macros";
 import { useMeasurementUpload } from "~/hooks/use-measurement-upload";
+import { useProtocols } from "~/hooks/use-protocols";
 import { useTheme } from "~/hooks/use-theme";
-import { ProtocolName } from "~/protocols/definitions";
+import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-manager";
 import { useScanner } from "~/services/scan-manager/scan-manager";
 import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
+import { useMacroSelectionStore } from "~/stores/use-macro-selection-store";
 import { useProtocolSelectionStore } from "~/stores/use-protocol-selection-store";
-
-import { getProtocolsDropdownOptions } from "./utils/get-protocols-dropdown-options";
 
 const { height } = Dimensions.get("window");
 
 export function MeasurementScreen() {
+  useKeepAwake();
   const theme = useTheme();
   const { colors } = theme;
-  const { options } = useExperimentsDropdownOptions();
-  const {
-    executeScan,
-    isScanning,
-    reset: resetScan,
-    error: scanError,
-    result: scanResult,
-  } = useScanner();
+  const { experiments } = useExperiments();
+  const { macros } = useMacros();
+  const { protocols } = useProtocols();
+
+  const { executeScan, isScanning, reset: resetScan, result: scanResult } = useScanner();
+  const { data: device } = useConnectedDevice();
 
   const isCancellingRef = useRef(false);
 
-  const { selectedProtocolName, setSelectedProtocolName } = useProtocolSelectionStore();
+  const { selectedProtocolId, setSelectedProtocolId } = useProtocolSelectionStore();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
+  const { selectedMacroId, setSelectedMacroId } = useMacroSelectionStore();
 
   const timestamp = (scanResult as any)?.timestamp;
 
   const experimentName = selectedExperimentId
-    ? options.find((e) => e.value === selectedExperimentId)?.label
+    ? experiments.find((e) => e.value === selectedExperimentId)?.label
     : "N/A";
 
   const { isUploading, uploadMeasurement } = useMeasurementUpload({
-    protocolName: selectedProtocolName,
+    protocolName: selectedProtocolId,
     experimentId: selectedExperimentId,
     experimentName,
   });
@@ -56,24 +58,29 @@ export function MeasurementScreen() {
         },
       ]}
     >
-      <View style={styles.setupScrollContent}>
+      <View style={styles.measurementStepContainer}>
         <Dropdown
           label="Experiment"
-          options={options}
+          options={experiments}
           selectedValue={selectedExperimentId}
           onSelect={(value) => setSelectedExperimentId(value)}
           placeholder="Choose an experiment"
         />
-      </View>
-      <View style={styles.measurementStepContainer}>
         <Dropdown
           label="Protocol"
-          options={getProtocolsDropdownOptions()}
-          selectedValue={selectedProtocolName}
-          onSelect={(name) => {
-            setSelectedProtocolName(name as ProtocolName);
+          options={protocols}
+          selectedValue={selectedProtocolId}
+          onSelect={(value) => {
+            setSelectedProtocolId(value);
             resetScan();
           }}
+          placeholder="Select protocol"
+        />
+        <Dropdown
+          label="Macro"
+          options={macros}
+          selectedValue={selectedMacroId}
+          onSelect={(value) => setSelectedMacroId(value)}
           placeholder="Select protocol"
         />
 
@@ -93,18 +100,22 @@ export function MeasurementScreen() {
             title="Start Measurement"
             onPress={async () => {
               isCancellingRef.current = false;
-              if (!selectedProtocolName) {
+              if (!selectedProtocolId || !selectedMacroId) {
+                return;
+              }
+              if (!device) {
+                showToast("Not connected to sensor", "error");
                 return;
               }
               resetScan();
               try {
-                await executeScan(selectedProtocolName);
+                await executeScan(selectedProtocolId, selectedMacroId);
               } catch (error) {
                 console.log("scan error", error);
                 showToast("Scan error", "error");
               }
             }}
-            isDisabled={!selectedProtocolName || !selectedExperimentId}
+            isDisabled={!selectedProtocolId || !selectedExperimentId || !selectedMacroId}
             style={styles.startButton}
           />
         )}

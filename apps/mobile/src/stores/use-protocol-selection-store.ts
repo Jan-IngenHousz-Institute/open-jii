@@ -1,12 +1,11 @@
 import { create } from "zustand";
-import { ProtocolName } from "~/protocols/definitions";
 
 interface MeasurementStore {
-  selectedProtocolName?: ProtocolName;
-  setSelectedProtocolName: (name?: ProtocolName) => void;
+  selectedProtocolId?: string;
+  setSelectedProtocolId: (id?: string) => void;
 }
 
 export const useProtocolSelectionStore = create<MeasurementStore>((set) => ({
-  selectedProtocolName: undefined,
-  setSelectedProtocolName: (name) => set({ selectedProtocolName: name }),
+  selectedProtocolId: undefined,
+  setSelectedProtocolId: (selectedProtocolId) => set({ selectedProtocolId }),
 }));

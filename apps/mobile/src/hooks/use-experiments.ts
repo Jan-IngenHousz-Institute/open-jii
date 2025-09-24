@@ -3,7 +3,7 @@ import { DropdownOption } from "~/components/Dropdown";
 import { ellipsize } from "~/utils/ellipsize";
 import { extractTextFromHTML } from "~/utils/extract-text-from-html";
 
-export function useExperimentsDropdownOptions() {
+export function useExperiments() {
   const { data, isLoading, error } = tsr.experiments.listExperiments.useQuery({
     queryKey: ["experiments"],
     queryData: {
@@ -23,5 +23,5 @@ export function useExperimentsDropdownOptions() {
         : undefined,
     })) ?? [];
 
-  return { options, isLoading, error };
+  return { experiments: options, isLoading, error };
 }

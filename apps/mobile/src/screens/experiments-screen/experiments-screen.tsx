@@ -1,8 +1,8 @@
 import React from "react";
 import { View, Text, StyleSheet, FlatList, RefreshControl } from "react-native";
 import { Dropdown } from "~/components/Dropdown";
+import { useExperiments } from "~/hooks/use-experiments";
 import { useExperimentsData } from "~/hooks/use-experiments-data";
-import { useExperimentsDropdownOptions } from "~/hooks/use-experiments-dropdown-options";
 import { useTheme } from "~/hooks/use-theme";
 import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
 import { formatShortDate } from "~/utils/format-short-date";
@@ -19,7 +19,7 @@ export function ExperimentsScreen() {
     "silver_data_exp",
   );
 
-  const { options } = useExperimentsDropdownOptions();
+  const { experiments } = useExperiments();
 
   const renderTableHeader = () => (
     <View style={styles.tableRow}>
@@ -54,7 +54,7 @@ export function ExperimentsScreen() {
     >
       <View style={styles.dropdownContainer}>
         <Dropdown
-          options={options}
+          options={experiments}
           selectedValue={selectedExperimentId ?? undefined}
           onSelect={(experimentId) => setSelectedExperimentId(experimentId)}
           placeholder="Choose an experiment"

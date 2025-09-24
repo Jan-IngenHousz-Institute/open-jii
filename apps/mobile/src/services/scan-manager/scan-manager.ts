@@ -1,11 +1,14 @@
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import RNBluetoothClassic, { BluetoothDevice } from "react-native-bluetooth-classic";
+import { useMacros } from "~/hooks/use-macros";
+import { useProtocols } from "~/hooks/use-protocols";
+import { useSessionStore } from "~/hooks/use-session-store";
 import { getProtocolDefinition, ProtocolName } from "~/protocols/definitions";
 import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-manager";
 import { bluetoothDeviceToMultispeqStream } from "~/services/multispeq-communication/android-bluetooth-connection/bluetooth-device-to-multispeq-stream";
 import { MultispeqCommandExecutor } from "~/services/multispeq-communication/multispeq-command-executor";
 import { Device } from "~/types/device";
-import { processMeasurement } from "~/utils/process-measurement";
+import { processScan } from "~/utils/process-scan/process-scan";
 
 async function createBluetoothMultiseqCommandExecutor(device: Device | undefined) {
   if (!device) {
@@ -54,14 +57,26 @@ export function useScannerCommandExecutor() {
 
 export function useScanner() {
   const { executeCommand } = useScannerCommandExecutor();
+  const { macros } = useMacros();
+  const { session } = useSessionStore();
+  const { protocols } = useProtocols();
 
-  async function performScan(protocolName: ProtocolName) {
-    const { protocol, analyze } = getProtocolDefinition(protocolName);
-    const result = await executeCommand(protocol);
+  const userId = session?.data.user.id;
+
+  async function performScan(protocolId: string, macroId: string) {
+    const protocolCode = protocols?.find((p) => p.value === protocolId)?.code;
+    if (!protocolCode) {
+      return;
+    }
+
+    const macro = macros?.find((m) => m.value === macroId);
+
+    const result = await executeCommand(protocolCode);
     if (typeof result !== "object") {
       throw new Error("Invalid result");
     }
-    return processMeasurement(result, analyze as any);
+    console.log("got result, processing...");
+    return processScan(result, userId, macro?.filename, macro?.code);
   }
 
   const {

@@ -115,7 +115,7 @@ export function Dropdown({
             ]}
           >
             <TextInput
-              placeholder="Search experiments..."
+              placeholder={placeholder}
               placeholderTextColor={theme.isDark ? colors.dark.inactive : colors.light.inactive}
               style={[
                 styles.searchInput,
