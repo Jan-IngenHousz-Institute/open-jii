@@ -12,7 +12,7 @@ import {
   CardContent,
   Button,
 } from "@repo/ui/components";
-import type { LocationPoint } from "@repo/ui/components/enhanced-map";
+import type { LocationPoint } from "@repo/ui/components/map";
 import { toast } from "@repo/ui/hooks";
 
 import { useExperimentLocations } from "../../hooks/experiment/useExperimentLocations/useExperimentLocations";

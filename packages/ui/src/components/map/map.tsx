@@ -16,12 +16,12 @@ import {
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 
-import { cn } from "../lib/utils";
-import { LocationSearch } from "./location-search";
-import { LocationSidebar } from "./location-sidebar";
+import { cn } from "../../lib/utils";
+import { LocationSearch } from "../location-search";
+import { LocationSidebar } from "../location-sidebar";
 
 /**
- * Enhanced Map component with search functionality and improved location display
+ * Map component with search functionality and improved location display
  */
 
 export interface LocationPoint {
@@ -29,7 +29,6 @@ export interface LocationPoint {
   name: string;
   latitude: number;
   longitude: number;
-  // Enhanced location properties
   country?: string;
   region?: string;
   municipality?: string;
@@ -178,7 +177,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 };
 
 // Map component implementation
-export const EnhancedMap = ({
+export const Map = ({
   locations = [],
   onLocationsChange,
   onLocationAdd,
@@ -248,7 +247,6 @@ export const EnhancedMap = ({
       if (!selectionMode || disabled) return;
 
       if (onLocationAdd) {
-        // Call the callback to handle geocoding and get enhanced location data
         const enhancedLocation = await onLocationAdd(lat, lng);
         if (enhancedLocation) {
           const updatedLocations = [...locations, enhancedLocation];
@@ -300,7 +298,6 @@ export const EnhancedMap = ({
     [locations, onLocationsChange, selectionMode],
   );
 
-  // Prepare enhanced locations with distance calculations
   const enhancedLocations = locations.map((location) => ({
     ...location,
     distance:
@@ -544,4 +541,4 @@ export const EnhancedMap = ({
   );
 };
 
-export default EnhancedMap;
+export default Map;
