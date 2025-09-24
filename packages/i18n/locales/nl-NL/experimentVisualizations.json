@@ -46,7 +46,16 @@
     "parallel-coordinates": "Parallelle coördinaten",
     "radar": "Radardiagram",
     "polar": "Pooldiagram",
-    "wind-rose": "Windroos"
+    "wind-rose": "Windroos",
+    "violin-plot": "Vioolplot",
+    "error-bar": "Foutbalkendiagram",
+    "density-plot": "Dichtheidsplot",
+    "ridge-plot": "Ruggendiagram",
+    "histogram-2d": "2D Histogram",
+    "scatter2density": "Spreiding naar dichtheid",
+    "spc-control-chart": "SPC-controlekaart",
+    "carpet": "Tapijt diagram",
+    "alluvial": "Alluvialdiagram"
   },
 
   "chartFamilies": {

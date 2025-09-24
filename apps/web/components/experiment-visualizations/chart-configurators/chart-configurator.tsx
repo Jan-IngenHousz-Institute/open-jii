@@ -67,6 +67,7 @@ const CHART_TYPES_CONFIG: {
   family: ChartFamily;
   labelKey: string;
   icon: ReactNode;
+  disabled?: boolean;
 }[] = [
   // Basic Charts
   {
@@ -131,6 +132,56 @@ const CHART_TYPES_CONFIG: {
     labelKey: "chartTypes.histogram",
     icon: <BarChart3 className="h-5 w-5" />,
   },
+  // Disabled statistical charts
+  {
+    type: "violin-plot",
+    family: "statistical",
+    labelKey: "chartTypes.violin-plot",
+    icon: <BarChart3 className="h-5 w-5" />,
+    disabled: true,
+  },
+  {
+    type: "error-bar",
+    family: "statistical",
+    labelKey: "chartTypes.error-bar",
+    icon: <BarChart3 className="h-5 w-5" />,
+    disabled: true,
+  },
+  {
+    type: "density-plot",
+    family: "statistical",
+    labelKey: "chartTypes.density-plot",
+    icon: <Activity className="h-5 w-5" />,
+    disabled: true,
+  },
+  {
+    type: "ridge-plot",
+    family: "statistical",
+    labelKey: "chartTypes.ridge-plot",
+    icon: <Layers className="h-5 w-5" />,
+    disabled: true,
+  },
+  {
+    type: "histogram-2d",
+    family: "statistical",
+    labelKey: "chartTypes.histogram-2d",
+    icon: <Layers className="h-5 w-5" />,
+    disabled: true,
+  },
+  {
+    type: "scatter2density",
+    family: "statistical",
+    labelKey: "chartTypes.scatter2density",
+    icon: <ScatterChart className="h-5 w-5" />,
+    disabled: true,
+  },
+  {
+    type: "spc-control-chart",
+    family: "statistical",
+    labelKey: "chartTypes.spc-control-chart",
+    icon: <LineChart className="h-5 w-5" />,
+    disabled: true,
+  },
 
   // Scientific Charts
   {
@@ -180,12 +231,29 @@ const CHART_TYPES_CONFIG: {
     family: "scientific",
     labelKey: "chartTypes.polar",
     icon: <Activity className="h-5 w-5" />,
+    disabled: true,
   },
   {
     type: "wind-rose",
     family: "scientific",
     labelKey: "chartTypes.wind-rose",
     icon: <Activity className="h-5 w-5" />,
+    disabled: true,
+  },
+  // Disabled scientific charts
+  {
+    type: "carpet",
+    family: "scientific",
+    labelKey: "chartTypes.carpet",
+    icon: <Layers className="h-5 w-5" />,
+    disabled: true,
+  },
+  {
+    type: "alluvial",
+    family: "scientific",
+    labelKey: "chartTypes.alluvial",
+    icon: <Activity className="h-5 w-5" />,
+    disabled: true,
   },
 ];
 
@@ -203,6 +271,7 @@ export default function ChartConfigurator({
   onChartTypeSelect,
 }: ChartConfiguratorProps) {
   const { t } = useTranslation("experimentVisualizations");
+  const { t: tCommon } = useTranslation("common");
   const [selectedTableName, setSelectedTableName] = useState<string | undefined>(
     tables.length > 0 ? tables[0].name : undefined,
   );
@@ -404,7 +473,6 @@ export default function ChartConfigurator({
                   <RadioGroup
                     value={selectedChartType ?? ""}
                     onValueChange={(value: string) => onChartTypeSelect(value as ChartType)}
-                    onValueChange={(value) => onChartTypeSelect(value as ChartType)}
                     className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                   >
                     {chartsInFamily.map((chartType) => (
@@ -414,11 +482,16 @@ export default function ChartConfigurator({
                             value={chartType.type}
                             id={chartType.type}
                             className="peer sr-only"
+                            disabled={chartType.disabled}
                           />
                         </FormControl>
                         <FormLabel
                           htmlFor={chartType.type}
-                          className={`group relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 bg-white p-6 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md ${
+                          className={`group relative flex flex-col items-center justify-center rounded-xl border-2 bg-white p-6 shadow-sm transition-all duration-200 ${
+                            chartType.disabled
+                              ? "cursor-not-allowed opacity-50 grayscale"
+                              : "cursor-pointer hover:border-gray-300 hover:shadow-md"
+                          } ${
                             selectedChartType === chartType.type
                               ? "border-primary bg-primary/5 shadow-md"
                               : "border-gray-200"
@@ -434,14 +507,23 @@ export default function ChartConfigurator({
                             {chartType.icon}
                           </div>
                           <span
-                            className={`text-center text-sm font-medium transition-colors duration-200 group-hover:text-gray-900 ${
-                              selectedChartType === chartType.type
-                                ? "text-gray-900"
-                                : "text-gray-700"
+                            className={`text-center text-sm font-medium transition-colors duration-200 ${
+                              chartType.disabled
+                                ? "text-gray-500"
+                                : selectedChartType === chartType.type
+                                  ? "text-gray-900"
+                                  : "text-gray-700 group-hover:text-gray-900"
                             }`}
                           >
                             {t(chartType.labelKey)}
                           </span>
+                          {chartType.disabled && (
+                            <div className="absolute right-2 top-2">
+                              <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs text-yellow-800">
+                                {tCommon("common.comingSoon")}
+                              </span>
+                            </div>
+                          )}
                         </FormLabel>
                       </FormItem>
                     ))}
