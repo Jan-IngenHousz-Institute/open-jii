@@ -295,6 +295,7 @@ export const experimentLocations = pgTable("experiment_locations", {
   municipality: varchar("municipality", { length: 100 }),
   postalCode: varchar("postal_code", { length: 20 }),
   addressLabel: text("address_label"),
+  ...timestamps,
 });
 
 // Chart family enum for visualizations
