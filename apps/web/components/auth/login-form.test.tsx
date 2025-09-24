@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { Locale } from "@repo/i18n";
 
-import { LoginForm } from "../auth/login-form";
+import { LoginForm } from "./login-form";
 
 globalThis.React = React;
 
@@ -45,7 +45,7 @@ vi.mock("@repo/i18n/server", () => ({
 }));
 
 // Mock TermsAndConditionsDialog
-vi.mock("../terms-and-conditions-dialog", () => ({
+vi.mock("./terms-and-conditions-dialog", () => ({
   TermsAndConditionsDialog: vi.fn(() =>
     Promise.resolve({
       title: "Terms and Conditions",
