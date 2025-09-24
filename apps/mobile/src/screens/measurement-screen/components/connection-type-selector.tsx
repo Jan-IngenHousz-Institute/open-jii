@@ -2,8 +2,8 @@ import { Bluetooth, Radio, Usb, Bot } from "lucide-react-native";
 import React from "react";
 import { Platform, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { colors } from "~/constants/colors";
-import { DeviceType } from "~/hooks/use-devices";
 import { useTheme } from "~/hooks/use-theme";
+import { DeviceType } from "~/types/device";
 
 interface Props {
   type: DeviceType;

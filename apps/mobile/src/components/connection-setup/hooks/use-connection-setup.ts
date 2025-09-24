@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useToast } from "~/context/toast-context";
 import { useDeviceConnection } from "~/hooks/use-device-connection";
-import { Device, DeviceType, useDevices } from "~/hooks/use-devices";
+import { useDevices } from "~/hooks/use-devices";
+import { Device, DeviceType } from "~/types/device";
 
 interface HookResult {
   selectedConnectionType: DeviceType | undefined;

@@ -1,7 +1,9 @@
 import React from "react";
+import { useAsync } from "react-async-hook";
 import { View, Text, StyleSheet } from "react-native";
 import { Button } from "~/components/Button";
 import { useTheme } from "~/hooks/use-theme";
+import { getConnectedDevice } from "~/services/device-connection-manager/device-connection-manager";
 
 import { ConnectionTypeRow } from "./components/connection-type-row";
 import { DeviceList } from "./components/device-list";
@@ -19,6 +21,10 @@ export function ConnectionSetup() {
     handleScanForDevices,
     handleConnectToDevice,
   } = useConnectionSetup();
+
+  const { result, execute } = useAsync(() => getConnectedDevice(), []);
+
+  console.log("result", result);
 
   const showDeviceList = loadingDevices || !!devices?.length;
 
@@ -56,6 +62,8 @@ export function ConnectionSetup() {
           onConnect={handleConnectToDevice}
         />
       )}
+
+      <Button title="Refresh connection" onPress={() => execute()} style={styles.actionButton} />
     </View>
   );
 }

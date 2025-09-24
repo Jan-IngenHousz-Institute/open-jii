@@ -16,11 +16,12 @@ import { MeasurementResult } from "~/components/MeasurementResult";
 import { colors } from "~/constants/colors";
 import { useToast } from "~/context/toast-context";
 import { useDeviceConnection } from "~/hooks/use-device-connection";
-import { Device, DeviceType, useDevices } from "~/hooks/use-devices";
+import { useDevices } from "~/hooks/use-devices";
 import { useExperimentsDropdownOptions } from "~/hooks/use-experiments-dropdown-options";
 import { useMeasurementUpload } from "~/hooks/use-measurement-upload";
 import { useTheme } from "~/hooks/use-theme";
 import { ProtocolName } from "~/protocols/definitions";
+import { Device, DeviceType } from "~/types/device";
 
 import { ConnectionTypeSelector } from "./components/connection-type-selector";
 import { getProtocolsDropdownOptions } from "./utils/get-protocols-dropdown-options";

@@ -8,8 +8,8 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import type { Device } from "~/hooks/use-devices";
 import { useTheme } from "~/hooks/use-theme";
+import { Device } from "~/types/device";
 
 interface Props {
   devices: Device[];

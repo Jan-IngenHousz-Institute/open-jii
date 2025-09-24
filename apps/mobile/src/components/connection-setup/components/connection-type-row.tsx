@@ -1,7 +1,7 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import type { DeviceType } from "~/hooks/use-devices";
 import { ConnectionTypeSelector } from "~/screens/measurement-screen/components/connection-type-selector";
+import { DeviceType } from "~/types/device";
 
 interface Props {
   selectedType: DeviceType | undefined;

@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useAsyncCallback } from "react-async-hook";
 import { useToast } from "~/context/toast-context";
 import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
-import { Device } from "~/hooks/use-devices";
 import { getProtocolDefinition, ProtocolName } from "~/protocols/definitions";
 import { bluetoothDeviceToMultispeqStream } from "~/services/multispeq-communication/android-bluetooth-connection/bluetooth-device-to-multispeq-stream";
 import { connectWithBluetoothDevice } from "~/services/multispeq-communication/android-bluetooth-connection/connect-with-bluetooth-device";
@@ -13,6 +12,7 @@ import {
   IMultispeqCommandExecutor,
   MultispeqCommandExecutor,
 } from "~/services/multispeq-communication/multispeq-command-executor";
+import { Device } from "~/types/device";
 
 async function connectToDevice(device: Device) {
   if (device.type === "bluetooth-classic") {
@@ -103,11 +103,11 @@ export function useDeviceConnection() {
     return executeScan(protocolDefinition);
   }
 
-  useEffect(() => {
-    return () => {
-      multispeqExecutor?.destroy();
-    };
-  }, [multispeqExecutor]);
+  // useEffect(() => {
+  //   return () => {
+  //     multispeqExecutor?.destroy();
+  //   };
+  // }, [multispeqExecutor]);
 
   async function disconnect() {
     reset();
