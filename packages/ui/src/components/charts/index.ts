@@ -6,8 +6,8 @@ export * from "./common";
 
 // Chart families
 export * from "./basic";
-// export * from "./statistical";
-// export * from "./scientific";
+export * from "./scientific";
+export * from "./statistical";
 // export * from "./3d";
 
 // Subplot support
