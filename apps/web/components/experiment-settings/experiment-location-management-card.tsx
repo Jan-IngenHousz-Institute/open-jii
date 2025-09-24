@@ -204,7 +204,8 @@ export function ExperimentLocationManagement({ experimentId }: ExperimentLocatio
           </div>
 
           {/* Interactive Map for Editing */}
-          <div className="rounded border">
+
+          <div className="min-h-[400px] rounded border">
             <Map
               locations={editedLocations}
               onLocationsChange={handleLocationsChange}
@@ -238,13 +239,7 @@ export function ExperimentLocationManagement({ experimentId }: ExperimentLocatio
 
           {editedLocations.length > 0 && (
             <div className="text-sm text-gray-600">
-              {editedLocations.length === 1
-                ? t("settings.locations.editingCount", {
-                    count: editedLocations.length,
-                  })
-                : t("settings.locations.editingCount_plural", {
-                    count: editedLocations.length,
-                  })}
+              {t("settings.locations.editingCount", { count: editedLocations.length })}
             </div>
           )}
         </div>

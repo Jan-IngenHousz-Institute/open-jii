@@ -308,7 +308,7 @@ describe("ExperimentLocationManagement", () => {
     it("should display location count when locations exist", () => {
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
-      expect(screen.getByText("settings.locations.editingCount_plural")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.editingCount")).toBeInTheDocument();
     });
   });
 
@@ -367,7 +367,7 @@ describe("ExperimentLocationManagement", () => {
 
       // Verify the count updated
       await waitFor(() => {
-        expect(screen.getByText("settings.locations.editingCount_plural")).toBeInTheDocument();
+        expect(screen.getByText("settings.locations.editingCount")).toBeInTheDocument();
       });
     });
 
@@ -480,7 +480,7 @@ describe("ExperimentLocationManagement", () => {
 
       // Add a location through the map
       await user.click(screen.getByTestId("mock-add-location"));
-      expect(screen.getByText("settings.locations.editingCount_plural")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.editingCount")).toBeInTheDocument();
 
       // Click cancel
       const cancelButton = screen
@@ -492,7 +492,7 @@ describe("ExperimentLocationManagement", () => {
 
       // Verify locations reset to original state
       await waitFor(() => {
-        expect(screen.getByText("settings.locations.editingCount_plural")).toBeInTheDocument();
+        expect(screen.getByText("settings.locations.editingCount")).toBeInTheDocument();
       });
     });
 
@@ -518,7 +518,7 @@ describe("ExperimentLocationManagement", () => {
       );
 
       // Initial state
-      expect(screen.getByText("settings.locations.editingCount_plural")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.editingCount")).toBeInTheDocument();
 
       // Update mock data
       const newLocations = [mockLocations[0]]; // Only one location

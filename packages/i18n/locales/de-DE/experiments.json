@@ -101,8 +101,8 @@
       "mapPreview": "Standort-Kartenvorschau",
       "editMode": "Standorte bearbeiten",
       "editModeDescription": "Klicken Sie auf die Karte, um Standorte hinzuzufügen, klicken Sie auf vorhandene Markierungen, um sie zu bearbeiten oder zu entfernen",
-      "editingCount": "{{count}} Standort ausgewählt",
-      "editingCount_plural": "{{count}} Standorte ausgewählt"
+      "editingCount_one": "{{count}} Standort ausgewählt",
+      "editingCount_other": "{{count}} Standorte ausgewählt"
     }
   },
   "manageExperimentDescription": "Experimentdetails, Daten, Flow und Einstellungen anzeigen und verwalten.",

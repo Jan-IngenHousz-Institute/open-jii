@@ -94,8 +94,8 @@
       "mapPreview": "Locatie kaart voorbeeld",
       "editMode": "Locaties bewerken",
       "editModeDescription": "Klik op de kaart om locaties toe te voegen, klik op bestaande markeringen om ze te bewerken of te verwijderen",
-      "editingCount": "{{count}} locatie geselecteerd",
-      "editingCount_plural": "{{count}} locaties geselecteerd"
+      "editingCount_one": "{{count}} locatie geselecteerd",
+      "editingCount_other": "{{count}} locaties geselecteerd"
     }
   },
   "manageExperimentDescription": "Bekijk en beheer experimentdetails, gegevens, flow en instellingen.",
