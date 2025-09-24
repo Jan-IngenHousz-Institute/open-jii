@@ -36,17 +36,6 @@ export function MeasurementScreen() {
   const [selectedConnectionType, setSelectedConnectionType] = useState<DeviceType>();
 
   const { isLoading: loadingDevices, startScan, devices } = useDevices(selectedConnectionType);
-  const {
-    connect,
-    connectingDeviceId,
-    performMeasurement,
-    measurementData,
-    isScanning,
-    clearResult,
-    disconnect,
-    measurementTimestamp,
-    isConnected,
-  } = useDeviceConnection();
 
   const isCancellingRef = useRef(false);
 
@@ -67,370 +56,20 @@ export function MeasurementScreen() {
 
   const { showToast } = useToast();
 
-  const handleScanForDevices = async () => {
-    if (!selectedConnectionType) {
-      return showToast("Please select a connection type first", "info");
-    }
+  const isScanning = false;
 
-    const scanResult = await startScan();
-
-    if (scanResult.isError) {
-      return showToast("Failed to scan for devices", "error");
-    }
-
-    if (scanResult.data?.length === 0) {
-      showToast("No devices found", "info");
-    }
-  };
-
-  const handleConnectToDevice = async (device: Device) => {
-    try {
-      console.log("handleConnectToDevice", device);
-      await connect(device);
-      showToast(`Connected to ${device.name}`, "success");
-      setCurrentStep(2);
-    } catch {
-      console.log("connect error");
-      showToast("Connection failed", "error");
-    }
-  };
-
-  const handleDisconnect = async () => {
-    try {
-      await disconnect();
-      showToast("Disconnected successfully", "info");
-      setCurrentStep(1);
-    } catch {
-      showToast("Failed to disconnect", "error");
-    }
-  };
+  const measurementData = undefined;
+  const measurementTimestamp = "13.05.1990.";
 
   async function handleUpload() {
-    if (typeof measurementData !== "object") {
-      return showToast("Invalid data, upload failed", "error");
-    }
-    await uploadMeasurement(measurementData);
-    clearResult();
+    // if (typeof measurementData !== "object") {
+    //   return showToast("Invalid data, upload failed", "error");
+    // }
+    // await uploadMeasurement(measurementData);
+    // clearResult();
   }
 
   const showDeviceList = loadingDevices || !!devices;
-
-  const renderDeviceItem = ({ item }: { item: Device }) => (
-    <TouchableOpacity
-      style={[
-        styles.deviceItem,
-        {
-          backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
-        },
-      ]}
-      onPress={() => handleConnectToDevice(item)}
-    >
-      <View style={styles.deviceInfo}>
-        <Text
-          style={[
-            styles.deviceName,
-            {
-              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-            },
-          ]}
-        >
-          {item.name}
-        </Text>
-        {item.rssi && (
-          <Text
-            style={[
-              styles.deviceRssi,
-              {
-                color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-              },
-            ]}
-          >
-            Signal: {item.rssi > -70 ? "Strong" : item.rssi > -80 ? "Medium" : "Weak"}
-          </Text>
-        )}
-      </View>
-      <View style={styles.deviceTypeContainer}>
-        {item.id === connectingDeviceId ? (
-          <ActivityIndicator
-            size="small"
-            color={theme.isDark ? colors.light.onPrimary : colors.dark.onPrimary}
-          />
-        ) : (
-          <>
-            {item.type === "bluetooth-classic" && (
-              <Bluetooth size={16} color={colors.primary.dark} />
-            )}
-            {item.type === "ble" && <Radio size={16} color={colors.primary.dark} />}
-            {item.type === "usb" && <Usb size={16} color={colors.primary.dark} />}
-          </>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-
-  const renderSetupStep = () => (
-    <View style={styles.setupScrollContent}>
-      <View style={styles.experimentSection}>
-        <Text
-          style={[
-            styles.sectionTitle,
-            {
-              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-            },
-          ]}
-        >
-          Select Experiment
-        </Text>
-        <Dropdown
-          options={options}
-          selectedValue={selectedExperimentId}
-          onSelect={(value) => setSelectedExperimentId(value)}
-          placeholder="Choose an experiment"
-        />
-      </View>
-
-      {!selectedExperimentId && (
-        <Card style={styles.warningCard}>
-          <View style={styles.warningContent}>
-            <AlertTriangle size={20} color={colors.semantic.warning} />
-            <Text
-              style={[
-                styles.warningText,
-                {
-                  color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-                },
-              ]}
-            >
-              Please select an experiment before connecting to a device
-            </Text>
-          </View>
-        </Card>
-      )}
-
-      {selectedExperimentId && (
-        <>
-          <Text
-            style={[
-              styles.sectionTitle,
-              {
-                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-              },
-            ]}
-          >
-            Connection Type
-          </Text>
-          <View style={styles.connectionTypeContainer}>
-            <ConnectionTypeSelector
-              type="bluetooth-classic"
-              selected={selectedConnectionType === "bluetooth-classic"}
-              onSelect={() => setSelectedConnectionType("bluetooth-classic")}
-            />
-            {process.env.ENABLE_BLE && (
-              <ConnectionTypeSelector
-                type="ble"
-                selected={selectedConnectionType === "ble"}
-                onSelect={() => setSelectedConnectionType("ble")}
-              />
-            )}
-            <ConnectionTypeSelector
-              type="usb"
-              selected={selectedConnectionType === "usb"}
-              onSelect={() => setSelectedConnectionType("usb")}
-            />
-            <ConnectionTypeSelector
-              type="mock-device"
-              selected={selectedConnectionType === "mock-device"}
-              onSelect={() => setSelectedConnectionType("mock-device")}
-            />
-          </View>
-
-          <View style={styles.actionsContainer}>
-            <Button
-              title="Scan for Devices"
-              onPress={handleScanForDevices}
-              isLoading={loadingDevices}
-              isDisabled={!selectedConnectionType || !!connectingDeviceId}
-              style={styles.actionButton}
-            />
-          </View>
-
-          {showDeviceList && (
-            <View style={styles.deviceListContainer}>
-              <Text
-                style={[
-                  styles.deviceListTitle,
-                  {
-                    color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-                  },
-                ]}
-              >
-                {loadingDevices ? "Scanning for devices..." : "Available Devices"}
-              </Text>
-
-              {!loadingDevices && !devices?.length && (
-                <Text
-                  style={[
-                    styles.emptyDeviceList,
-                    {
-                      color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-                    },
-                  ]}
-                >
-                  No devices found. Try scanning again.
-                </Text>
-              )}
-
-              <FlatList
-                data={devices ?? []}
-                renderItem={renderDeviceItem}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.deviceList}
-              />
-            </View>
-          )}
-        </>
-      )}
-    </View>
-  );
-
-  const renderMeasurementStep = () => (
-    <View style={styles.measurementStepContainer}>
-      {/* Compact header with experiment name and back button */}
-      <View style={styles.compactHeader}>
-        <TouchableOpacity style={styles.backButton} onPress={handleDisconnect}>
-          <ArrowLeft size={18} color={colors.primary.dark} />
-          <Text style={[styles.backButtonText, { color: colors.primary.dark }]}>Back</Text>
-        </TouchableOpacity>
-
-        <View
-          style={[
-            styles.experimentBadge,
-            {
-              backgroundColor: colors.primary.dark + "20",
-              borderColor: colors.primary.dark,
-            },
-          ]}
-        >
-          <Text style={[styles.experimentBadgeText, { color: colors.primary.dark }]}>
-            {experimentName}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.protocolContainer}>
-        <Dropdown
-          label="Protocol"
-          options={getProtocolsDropdownOptions()}
-          selectedValue={selectedProtocolName}
-          onSelect={(name) => {
-            setSelectedProtocolName(name as ProtocolName);
-            clearResult();
-          }}
-          placeholder="Select protocol"
-        />
-
-        {isScanning ? (
-          <Button
-            title="Cancel Measurement"
-            onPress={() => {
-              isCancellingRef.current = true;
-              clearResult();
-            }}
-            variant="outline"
-            style={styles.startButton}
-            textStyle={{ color: colors.semantic.error }}
-          />
-        ) : (
-          <Button
-            title="Start Measurement"
-            onPress={() => {
-              isCancellingRef.current = false;
-              performMeasurement(selectedProtocolName);
-            }}
-            isDisabled={!isConnected || !selectedProtocolName}
-            style={styles.startButton}
-          />
-        )}
-      </View>
-
-      {/* Measurement result - takes most of the screen */}
-      <View style={styles.resultContainer}>
-        {isScanning ? (
-          <View
-            style={[
-              styles.noResultContainer,
-              {
-                backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
-              },
-            ]}
-          >
-            <ActivityIndicator size="large" color={colors.primary.dark} />
-            <Text
-              style={[
-                styles.noResultText,
-                {
-                  color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-                },
-              ]}
-            >
-              Measuring...
-            </Text>
-          </View>
-        ) : measurementData ? (
-          <View style={styles.resultContent}>
-            <Text
-              style={[
-                styles.resultTitle,
-                {
-                  color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-                },
-              ]}
-            >
-              Measurement Result
-            </Text>
-            <View style={styles.resultDataContainer}>
-              <MeasurementResult
-                data={measurementData}
-                timestamp={measurementTimestamp}
-                experimentName={experimentName}
-              />
-            </View>
-          </View>
-        ) : (
-          <View
-            style={[
-              styles.noResultContainer,
-              {
-                backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.noResultText,
-                {
-                  color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-                },
-              ]}
-            >
-              No measurement data yet. Start a measurement to see results here.
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Upload button at the bottom */}
-      <View style={styles.uploadContainer}>
-        <Button
-          title="Upload Measurement"
-          onPress={handleUpload}
-          isLoading={isUploading}
-          isDisabled={!measurementData}
-          style={styles.uploadButton}
-        />
-      </View>
-    </View>
-  );
 
   return (
     <View
@@ -441,7 +80,138 @@ export function MeasurementScreen() {
         },
       ]}
     >
-      {currentStep === 1 ? renderSetupStep() : renderMeasurementStep()}
+      <View style={styles.setupScrollContent}>
+        <View style={styles.experimentSection}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              {
+                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
+              },
+            ]}
+          >
+            Select Experiment
+          </Text>
+          <Dropdown
+            options={options}
+            selectedValue={selectedExperimentId}
+            onSelect={(value) => setSelectedExperimentId(value)}
+            placeholder="Choose an experiment"
+          />
+        </View>
+      </View>
+      <View style={styles.measurementStepContainer}>
+        <Dropdown
+          label="Protocol"
+          options={getProtocolsDropdownOptions()}
+          selectedValue={selectedProtocolName}
+          onSelect={(name) => {
+            setSelectedProtocolName(name as ProtocolName);
+            // clearResult();
+          }}
+          placeholder="Select protocol"
+        />
+
+        {isScanning ? (
+          <Button
+            title="Cancel Measurement"
+            onPress={() => {
+              isCancellingRef.current = true;
+              // clearResult();
+            }}
+            variant="outline"
+            style={styles.startButton}
+            textStyle={{ color: colors.semantic.error }}
+          />
+        ) : (
+          <Button
+            title="Start Measurement"
+            onPress={() => {
+              isCancellingRef.current = false;
+              // performMeasurement(selectedProtocolName);
+            }}
+            isDisabled={!selectedProtocolName}
+            style={styles.startButton}
+          />
+        )}
+
+        {/* Measurement result - takes most of the screen */}
+        <View style={styles.resultContainer}>
+          {isScanning ? (
+            <View
+              style={[
+                styles.noResultContainer,
+                {
+                  backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
+                },
+              ]}
+            >
+              <ActivityIndicator size="large" color={colors.primary.dark} />
+              <Text
+                style={[
+                  styles.noResultText,
+                  {
+                    color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
+                  },
+                ]}
+              >
+                Measuring...
+              </Text>
+            </View>
+          ) : measurementData ? (
+            <View style={styles.resultContent}>
+              <Text
+                style={[
+                  styles.resultTitle,
+                  {
+                    color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
+                  },
+                ]}
+              >
+                Measurement Result
+              </Text>
+              <View style={styles.resultDataContainer}>
+                <MeasurementResult
+                  data={measurementData}
+                  timestamp={measurementTimestamp}
+                  experimentName={experimentName}
+                />
+              </View>
+            </View>
+          ) : (
+            <View
+              style={[
+                styles.noResultContainer,
+                {
+                  backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.noResultText,
+                  {
+                    color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
+                  },
+                ]}
+              >
+                No measurement data yet. Start a measurement to see results here.
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Upload button at the bottom */}
+        <View style={styles.uploadContainer}>
+          <Button
+            title="Upload Measurement"
+            onPress={handleUpload}
+            isLoading={isUploading}
+            isDisabled={!measurementData}
+            style={styles.uploadButton}
+          />
+        </View>
+      </View>
     </View>
   );
 }
