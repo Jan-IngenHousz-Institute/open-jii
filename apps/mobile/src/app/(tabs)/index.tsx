@@ -44,56 +44,58 @@ export default function HomeScreen() {
         }
       >
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text
-              style={[
-                styles.sectionTitle,
-                {
-                  color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-                },
-              ]}
-            >
-              Unsynced Measurements
-            </Text>
-            {uploads.length > 0 && (
-              <Button
-                title="Sync All"
-                variant="outline"
-                size="sm"
-                onPress={handleSyncAll}
-                isLoading={isUploading}
-                icon={<UploadCloud size={16} color={colors.primary.dark} />}
-              />
-            )}
-          </View>
-
-          {uploads.length > 0 ? (
-            uploads.map((measurement) => (
-              <UnsyncedScanItem
-                key={measurement.key}
-                id={measurement.key}
-                timestamp={measurement.data.metadata.timestamp ?? "N/A"}
-                experimentName={measurement.data.metadata.experimentName ?? "N/A"}
-                onDelete={() => removeFailedUpload(measurement.key)}
-                onSync={() => uploadOne(measurement.key)}
-              />
-            ))
-          ) : (
-            <Text
-              style={[
-                styles.emptyText,
-                {
-                  color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-                },
-              ]}
-            >
-              No unsynced measurements
-            </Text>
-          )}
-        </View>
-        <View style={styles.section}>
           <ConnectionSetup />
         </View>
+        {uploads?.length && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  {
+                    color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
+                  },
+                ]}
+              >
+                Unsynced Measurements
+              </Text>
+              {uploads.length > 0 && (
+                <Button
+                  title="Sync All"
+                  variant="outline"
+                  size="sm"
+                  onPress={handleSyncAll}
+                  isLoading={isUploading}
+                  icon={<UploadCloud size={16} color={colors.primary.dark} />}
+                />
+              )}
+            </View>
+
+            {uploads.length > 0 ? (
+              uploads.map((measurement) => (
+                <UnsyncedScanItem
+                  key={measurement.key}
+                  id={measurement.key}
+                  timestamp={measurement.data.metadata.timestamp ?? "N/A"}
+                  experimentName={measurement.data.metadata.experimentName ?? "N/A"}
+                  onDelete={() => removeFailedUpload(measurement.key)}
+                  onSync={() => uploadOne(measurement.key)}
+                />
+              ))
+            ) : (
+              <Text
+                style={[
+                  styles.emptyText,
+                  {
+                    color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
+                  },
+                ]}
+              >
+                No unsynced measurements
+              </Text>
+            )}
+          </View>
+        )}
       </ScrollView>
     </View>
   );

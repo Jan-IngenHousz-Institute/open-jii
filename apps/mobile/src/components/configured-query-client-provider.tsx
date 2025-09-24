@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import { QueryClient, QueryCache } from "@tanstack/react-query";
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { QueryClient, QueryCache, QueryClientProvider } from "@tanstack/react-query";
+// import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import React, { useRef } from "react";
 import { useToast } from "~/context/toast-context";
 
@@ -42,11 +42,11 @@ export function ConfiguredQueryClientProvider({ children }) {
   }
 
   return (
-    <PersistQueryClientProvider
+    <QueryClientProvider
       client={queryClientRef.current}
-      persistOptions={{ persister: persistorRef.current }}
+      // persistOptions={{ persister: persistorRef.current }}
     >
       {children}
-    </PersistQueryClientProvider>
+    </QueryClientProvider>
   );
 }

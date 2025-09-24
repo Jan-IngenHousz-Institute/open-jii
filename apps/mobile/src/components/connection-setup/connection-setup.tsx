@@ -9,6 +9,7 @@ import {
   useConnectToDevice,
 } from "~/services/device-connection-manager/device-connection-manager";
 
+import { ConnectedDevice } from "./components/connected-device";
 import { DeviceList } from "./components/device-list";
 
 export function ConnectionSetup() {
@@ -26,12 +27,10 @@ export function ConnectionSetup() {
 
   const { data: device } = useConnectedDevice();
   const { data: devices = [], refetch: refreshDevices, isFetching } = useAllDevices();
-  const { connectToDevice, connectingDeviceId } = useConnectToDevice();
+  const { connectToDevice, connectingDeviceId, disconnectFromDevice } = useConnectToDevice();
   const { showToast } = useToast();
 
-  console.log("connectedDevice", device);
-
-  const showDeviceList = isFetching || !!devices?.length;
+  const showDeviceList = !device && (isFetching || !!devices?.length);
 
   return (
     <View>
@@ -41,17 +40,32 @@ export function ConnectionSetup() {
           { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
         ]}
       >
-        Connect to Device
+        Device connection
       </Text>
 
-      <View style={styles.actionsContainer}>
-        <Button
-          title="Scan for Devices"
-          onPress={() => refreshDevices()}
-          isLoading={isFetching}
-          isDisabled={isFetching}
-          style={styles.actionButton}
+      {device && (
+        <ConnectedDevice
+          device={device}
+          onDisconnect={async (device) => {
+            try {
+              await disconnectFromDevice(device);
+            } catch {
+              showToast("Could not disconnect", "error");
+            }
+          }}
         />
+      )}
+
+      <View style={styles.actionsContainer}>
+        {!device && (
+          <Button
+            title="Scan for Devices"
+            onPress={() => refreshDevices()}
+            isLoading={isFetching}
+            isDisabled={isFetching || !!connectingDeviceId}
+            style={styles.actionButton}
+          />
+        )}
       </View>
 
       {showDeviceList && (

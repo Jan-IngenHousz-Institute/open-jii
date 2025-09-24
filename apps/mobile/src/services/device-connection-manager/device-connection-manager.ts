@@ -42,6 +42,10 @@ export async function connectToDevice(device: Device) {
   await RNBluetoothClassic.connectToDevice(device.id);
 }
 
+export async function disconnectFromDevice(device: Device) {
+  await RNBluetoothClassic.disconnectFromDevice(device.id);
+}
+
 export function useConnectedDevice() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["connected-device"],
@@ -67,6 +71,12 @@ export function useConnectToDevice() {
       } finally {
         setConnectingDeviceId(undefined);
       }
+    },
+    async disconnectFromDevice(device: Device) {
+      await disconnectFromDevice(device);
+      await client.invalidateQueries({
+        queryKey: ["connected-device"],
+      });
     },
   };
 }
