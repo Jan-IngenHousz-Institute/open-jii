@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import RNBluetoothClassic from "react-native-bluetooth-classic";
+import RNBluetoothClassic, { BluetoothDevice } from "react-native-bluetooth-classic";
 import { requestBluetoothPermission } from "~/services/request-bluetooth-permissions";
 import { Device } from "~/types/device";
 
@@ -27,19 +27,33 @@ function isJiiDevice(device: { name: string }) {
   return name.includes("photo");
 }
 
+function bluetoothDeviceToDevice(d: BluetoothDevice): Device {
+  return {
+    id: d.address,
+    type: "bluetooth-classic",
+    name: d.name + " (" + d.id.slice(-11) + ")",
+  };
+}
+
 export async function getAllDevices(): Promise<Device[]> {
   await requestBluetoothPermission();
   const devices = await RNBluetoothClassic.startDiscovery();
 
-  return devices.filter(isJiiDevice).map((d) => ({
-    id: d.address,
-    type: "bluetooth-classic",
-    name: d.name + " (" + d.id.slice(-11) + ")",
-  }));
+  return devices.filter(isJiiDevice).map(bluetoothDeviceToDevice);
+}
+
+export async function getPairedDevices(): Promise<Device[]> {
+  const devices = await RNBluetoothClassic.getBondedDevices();
+
+  return devices.filter(isJiiDevice).map(bluetoothDeviceToDevice);
 }
 
 export async function connectToDevice(device: Device) {
-  await RNBluetoothClassic.connectToDevice(device.id);
+  if (device.type === "bluetooth-classic") {
+    await RNBluetoothClassic.connectToDevice(device.id);
+  }
+
+  throw new Error("Unsupported device type");
 }
 
 export async function disconnectFromDevice(device: Device) {
@@ -86,5 +100,12 @@ export function useAllDevices() {
     queryKey: ["all-devices"],
     queryFn: () => getAllDevices(),
     enabled: false,
+  });
+}
+
+export function usePairedDevices() {
+  return useQuery({
+    queryKey: ["paired-devices"],
+    queryFn: () => getPairedDevices(),
   });
 }

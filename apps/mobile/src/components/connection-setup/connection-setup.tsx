@@ -7,6 +7,7 @@ import {
   useAllDevices,
   useConnectedDevice,
   useConnectToDevice,
+  usePairedDevices,
 } from "~/services/device-connection-manager/device-connection-manager";
 
 import { ConnectedDevice } from "./components/connected-device";
@@ -15,20 +16,12 @@ import { DeviceList } from "./components/device-list";
 export function ConnectionSetup() {
   const theme = useTheme();
   const { colors } = theme;
-  // const {
-  //   selectedConnectionType,
-  //   setSelectedConnectionType,
-  //   loadingDevices,
-  //   connectingDeviceId,
-  //   // devices,
-  //   handleScanForDevices,
-  //   // handleConnectToDevice,
-  // } = useConnectionSetup();
 
   const { data: device } = useConnectedDevice();
   const { data: devices = [], refetch: refreshDevices, isFetching } = useAllDevices();
   const { connectToDevice, connectingDeviceId, disconnectFromDevice } = useConnectToDevice();
   const { showToast } = useToast();
+  const { data: pairedDevices } = usePairedDevices();
 
   const showDeviceList = !device && (isFetching || !!devices?.length);
 
@@ -73,6 +66,7 @@ export function ConnectionSetup() {
           devices={isFetching ? [] : devices}
           loading={isFetching}
           connectingDeviceId={connectingDeviceId}
+          title="Nearby Devices"
           onConnect={async (device) => {
             try {
               await connectToDevice(device);
@@ -82,6 +76,19 @@ export function ConnectionSetup() {
           }}
         />
       )}
+      <DeviceList
+        devices={pairedDevices ?? []}
+        title="Paired Devices"
+        loading={false}
+        connectingDeviceId={connectingDeviceId}
+        onConnect={async (device) => {
+          try {
+            await connectToDevice(device);
+          } catch {
+            showToast("Could not connect", "error");
+          }
+        }}
+      />
     </View>
   );
 }

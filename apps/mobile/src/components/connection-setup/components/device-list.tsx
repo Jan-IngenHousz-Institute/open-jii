@@ -16,9 +16,10 @@ interface Props {
   loading: boolean;
   connectingDeviceId?: string;
   onConnect: (device: Device) => void;
+  title: string;
 }
 
-export function DeviceList({ devices, loading, connectingDeviceId, onConnect }: Props) {
+export function DeviceList({ devices, loading, connectingDeviceId, onConnect, title }: Props) {
   const theme = useTheme();
   const { colors } = theme;
 
@@ -30,7 +31,7 @@ export function DeviceList({ devices, loading, connectingDeviceId, onConnect }: 
           { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
         ]}
       >
-        {loading ? "Scanning for devices..." : "Available Devices"}
+        {loading ? "Scanning for devices..." : title}
       </Text>
 
       {!loading && devices.length === 0 && (
