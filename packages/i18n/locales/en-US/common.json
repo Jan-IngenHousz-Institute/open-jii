@@ -43,7 +43,8 @@
     "lines": "lines",
     "bytes": "B",
     "kilobytes": "KB",
-    "megabytes": "MB"
+    "megabytes": "MB",
+    "comingSoon": "Coming Soon"
   },
   "navigation": {
     "experiments": "Experiments",

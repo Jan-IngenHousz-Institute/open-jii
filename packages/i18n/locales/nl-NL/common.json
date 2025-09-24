@@ -41,7 +41,8 @@
     "lines": "regels",
     "bytes": "B",
     "kilobytes": "KB",
-    "megabytes": "MB"
+    "megabytes": "MB",
+    "comingSoon": "Binnenkort"
   },
   "navigation": {
     "experiments": "Experimenten",

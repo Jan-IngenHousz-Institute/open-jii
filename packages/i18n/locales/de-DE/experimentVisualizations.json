@@ -60,7 +60,16 @@
     "parallel-coordinates": "Parallele Koordinaten",
     "radar": "Radardiagramm",
     "polar": "Polardiagramm",
-    "wind-rose": "Windrose"
+    "wind-rose": "Windrose",
+    "violin-plot": "Violinplot",
+    "error-bar": "Fehlerbalkendiagramm",
+    "density-plot": "Dichteplot",
+    "ridge-plot": "Rückendiagramm",
+    "histogram-2d": "2D-Histogramm",
+    "scatter2density": "Streuung zu Dichte",
+    "spc-control-chart": "SPC-Kontrollkarte",
+    "carpet": "Teppichdiagramm",
+    "alluvial": "Alluvialdiagramm"
   },
 
   "chartFamilies": {

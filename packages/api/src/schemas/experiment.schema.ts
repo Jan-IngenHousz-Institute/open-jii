@@ -329,6 +329,13 @@ export const zChartType = z.enum([
   // Statistical charts
   "box-plot",
   "histogram",
+  "violin-plot",
+  "error-bar",
+  "density-plot",
+  "ridge-plot",
+  "histogram-2d",
+  "scatter2density",
+  "spc-control-chart",
   // Scientific charts (for future expansion)
   "heatmap",
   "contour",
@@ -340,6 +347,7 @@ export const zChartType = z.enum([
   "radar",
   "polar",
   "correlation-matrix",
+  "alluvial",
 ]);
 
 // Data source configuration schema
