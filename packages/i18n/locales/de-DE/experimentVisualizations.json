@@ -50,6 +50,7 @@
     "dot-plot": "Punktdiagramm",
     "bubble": "Blasendiagramm",
     "lollipop": "Lollipop-Diagramm",
+    "boxPlot": "Boxplot",
     "heatmap": "Heatmap",
     "contour": "Konturdiagramm",
     "ternary": "Ternäres Diagramm",

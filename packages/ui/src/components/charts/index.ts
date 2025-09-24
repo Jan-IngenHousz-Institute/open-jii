@@ -1,6 +1,6 @@
 // Chart families
 export * from "./basic";
-// export * from "./statistical";
+export * from "./statistical";
 export * from "./scientific";
 // export * from "./3d";
 // Note: PlotlyChart is the base component in the parent directory

@@ -13,4 +13,5 @@ export { default as CorrelationMatrixChartConfigurator } from "./chart-types/cor
 export { default as LogPlotChartConfigurator } from "./chart-types/log-plot-chart-configurator";
 export { default as ParallelCoordinatesChartConfigurator } from "./chart-types/parallel-coordinates-chart-configurator";
 export { default as RadarChartConfigurator } from "./chart-types/radar-chart-configurator";
+export { default as BoxPlotConfigurator } from "./chart-types/box-plot-configurator";
 // Add more chart configurators as they are developed

@@ -4,10 +4,16 @@ import dynamic from "next/dynamic";
 import React from "react";
 
 import type { ExperimentVisualization } from "@repo/api";
+import { useTranslation } from "@repo/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components";
 
 import { AreaChartRenderer } from "./chart-renderers/area-chart-renderer";
 import { BarChartRenderer } from "./chart-renderers/bar-chart-renderer";
+import { BoxPlotRenderer } from "./chart-renderers/box-plot-renderer";
+import { BubbleChartRenderer } from "./chart-renderers/bubble-chart-renderer";
+import { ContourChartRenderer } from "./chart-renderers/contour-chart-renderer";
+import { DotPlotRenderer } from "./chart-renderers/dot-plot-renderer";
+import { HeatmapChartRenderer } from "./chart-renderers/heatmap-chart-renderer";
 import { LineChartRenderer } from "./chart-renderers/line-chart-renderer";
 import { LogPlotChartRenderer } from "./chart-renderers/log-plot-chart-renderer";
 import { LollipopChartRenderer } from "./chart-renderers/lollipop-chart-renderer";
@@ -15,6 +21,7 @@ import { ParallelCoordinatesChartRenderer } from "./chart-renderers/parallel-coo
 import { PieChartRenderer } from "./chart-renderers/pie-chart-renderer";
 import { RadarChartRenderer } from "./chart-renderers/radar-chart-renderer";
 import { ScatterChartRenderer } from "./chart-renderers/scatter-chart-renderer";
+import { TernaryChartRenderer } from "./chart-renderers/ternary-chart-renderer";
 
 // Dynamic import for better performance
 const LazyChartWrapper = dynamic(
@@ -48,6 +55,8 @@ export default function ExperimentVisualizationRenderer({
   showDescription = true,
   isPreview = false,
 }: ExperimentVisualizationRendererProps) {
+  const { t } = useTranslation("experimentVisualizations");
+
   const renderChart = () => {
     // Common props for all chart renderers
     const commonProps = {
@@ -75,6 +84,8 @@ export default function ExperimentVisualizationRenderer({
         return <BubbleChartRenderer {...commonProps} />;
       case "lollipop":
         return <LollipopChartRenderer {...commonProps} />;
+      case "box-plot":
+        return <BoxPlotRenderer {...commonProps} />;
       case "heatmap":
         return <HeatmapChartRenderer {...commonProps} />;
       case "contour":
@@ -91,8 +102,11 @@ export default function ExperimentVisualizationRenderer({
         return (
           <div className="bg-destructive/10 text-destructive flex h-full items-center justify-center rounded-lg border">
             <div className="text-center">
-              <div className="mb-2 text-lg font-medium">Unsupported Chart Type</div>
-              <div className="text-sm">Chart type "{visualization.chartType}" is not supported</div>
+              <div className="mb-2 text-lg font-medium">{t("errors.unsupportedChartType")}</div>
+              <div className="text-sm">
+                {t("chartTypes." + visualization.config.chartType, visualization.config.chartType)}{" "}
+                {t("errors.chartTypeNotSupported")}
+              </div>
             </div>
           </div>
         );

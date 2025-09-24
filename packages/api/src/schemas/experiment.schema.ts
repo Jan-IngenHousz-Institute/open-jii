@@ -324,6 +324,10 @@ export const zChartType = z.enum([
   "pie",
   "area",
   "dot-plot",
+  "bubble",
+  "lollipop",
+  // Statistical charts
+  "box-plot",
   // Scientific charts (for future expansion)
   "heatmap",
   "contour",
@@ -339,8 +343,8 @@ export const zChartType = z.enum([
 
 // Data source configuration schema
 export const zDataSourceConfig = z.object({
-  tableName: z.string(),
-  columnName: z.string(),
+  tableName: z.string().min(1, "Table name is required"),
+  columnName: z.string().min(1, "Column name is required"),
   // Optional alias for display
   alias: z.string().optional(),
 });
@@ -432,6 +436,27 @@ export const zAreaChartConfig = z.object({
   // Display options
   gridLines: z.enum(["both", "x", "y", "none"]).default("both"),
   smoothing: z.number().min(0).max(1).default(0),
+  display: zChartDisplayOptions,
+});
+
+export const zBoxPlotConfig = z.object({
+  xAxis: zAxisConfig,
+  yAxes: z.array(zAxisConfig).min(1),
+  // Box plot specific options
+  orientation: z.enum(["v", "h"]).default("v"),
+  boxMode: z.enum(["group", "overlay"]).default("group"),
+  boxPoints: z.enum(["all", "outliers", "suspectedoutliers", "false"]).default("outliers"),
+  jitter: z.number().min(0).max(1).default(0.3),
+  pointPos: z.number().min(-2).max(2).default(-1.8),
+  notched: z.boolean().default(false),
+  notchWidth: z.number().min(0).max(1).default(0.25),
+  boxMean: z.enum(["true", "sd", "false"]).default("false"),
+  // Visual options
+  markerSize: z.number().min(1).max(20).default(6),
+  lineWidth: z.number().min(0.5).max(10).default(2),
+  fillOpacity: z.number().min(0).max(1).default(0.5),
+  // Display options
+  gridLines: z.enum(["both", "x", "y", "none"]).default("both"),
   display: zChartDisplayOptions,
 });
 
@@ -901,6 +926,7 @@ export const zChartConfig = z.discriminatedUnion("chartType", [
   z.object({ chartType: z.literal("bar"), config: zBarChartConfig }),
   z.object({ chartType: z.literal("pie"), config: zPieChartConfig }),
   z.object({ chartType: z.literal("area"), config: zAreaChartConfig }),
+  z.object({ chartType: z.literal("box-plot"), config: zBoxPlotConfig }),
   z.object({ chartType: z.literal("dot-plot"), config: zDotPlotConfig }),
   z.object({ chartType: z.literal("bubble"), config: zBubbleChartConfig }),
   z.object({ chartType: z.literal("lollipop"), config: zLollipopChartConfig }),

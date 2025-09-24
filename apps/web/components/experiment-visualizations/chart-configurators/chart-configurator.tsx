@@ -9,6 +9,9 @@ import {
   Layers,
   Activity,
   BarChart,
+  BubblesIcon,
+  TriangleDashed,
+  Radar,
 } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
@@ -53,6 +56,7 @@ import {
   LogPlotChartConfigurator,
   ParallelCoordinatesChartConfigurator,
   RadarChartConfigurator,
+  BoxPlotConfigurator,
 } from "./index";
 import type { ChartFormValues, SampleTable } from "./types";
 
@@ -100,6 +104,26 @@ const CHART_TYPES_CONFIG: {
     labelKey: "chartTypes.dot-plot",
     icon: <ScatterChart className="h-5 w-5" />,
   },
+  {
+    type: "bubble",
+    family: "basic",
+    labelKey: "chartTypes.bubble",
+    icon: <BubblesIcon className="h-5 w-5" />,
+  },
+  {
+    type: "lollipop",
+    family: "basic",
+    labelKey: "chartTypes.lollipop",
+    icon: <BarChart className="h-5 w-5" />,
+  },
+
+  // Statistical Charts
+  {
+    type: "box-plot",
+    family: "statistical",
+    labelKey: "chartTypes.boxPlot",
+    icon: <BarChart3 className="h-5 w-5" />,
+  },
 
   // Scientific Charts
   {
@@ -118,7 +142,7 @@ const CHART_TYPES_CONFIG: {
     type: "ternary",
     family: "scientific",
     labelKey: "chartTypes.ternary",
-    icon: <ScatterChart className="h-5 w-5" />,
+    icon: <TriangleDashed className="h-5 w-5" />,
   },
   {
     type: "correlation-matrix",
@@ -142,7 +166,7 @@ const CHART_TYPES_CONFIG: {
     type: "radar",
     family: "scientific",
     labelKey: "chartTypes.radar",
-    icon: <Activity className="h-5 w-5" />,
+    icon: <Radar className="h-5 w-5" />,
   },
   {
     type: "polar",
@@ -201,6 +225,8 @@ export default function ChartConfigurator({
         case "scatter":
         case "area":
         case "dot-plot":
+        case "lollipop":
+        case "box-plot":
           form.setValue("config.config.xAxis.dataSource.tableName", tableName);
           form.setValue("config.config.yAxes.0.dataSource.tableName", tableName);
           break;
@@ -294,6 +320,13 @@ export default function ChartConfigurator({
           { tableName: selectedTableName ?? "", columnName },
         ]);
         break;
+      case "size":
+        form.setValue("config.config.sizeAxis.dataSource.columnName", columnName);
+        form.setValue("dataConfig.dataSources", [
+          ...filteredSources,
+          { tableName: selectedTableName ?? "", columnName },
+        ]);
+        break;
       default:
         // Handle parallel coordinates dimensions (dimension-0, dimension-1, etc.)
         if (columnType.startsWith("dimension-") && selectedChartType === "parallel-coordinates") {
@@ -345,8 +378,8 @@ export default function ChartConfigurator({
       {/* Chart Type Selection */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("selectChartType")}</CardTitle>
-          <CardDescription>{t("selectChartTypeHelp")}</CardDescription>
+          <CardTitle>{t("configuration.selectChartType")}</CardTitle>
+          <CardDescription>{t("configuration.selectChartTypeDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
@@ -364,6 +397,7 @@ export default function ChartConfigurator({
                   <RadioGroup
                     value={selectedChartType ?? ""}
                     onValueChange={(value: string) => onChartTypeSelect(value as ChartType)}
+                    onValueChange={(value) => onChartTypeSelect(value as ChartType)}
                     className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                   >
                     {chartsInFamily.map((chartType) => (
@@ -377,10 +411,30 @@ export default function ChartConfigurator({
                         </FormControl>
                         <FormLabel
                           htmlFor={chartType.type}
-                          className="border-muted hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary flex flex-col items-center justify-between rounded-md border-2 bg-transparent p-4"
+                          className={`group relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 bg-white p-6 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md ${
+                            selectedChartType === chartType.type
+                              ? "border-primary bg-primary/5 shadow-md"
+                              : "border-gray-200"
+                          }`}
                         >
-                          {chartType.icon}
-                          <span className="mt-2">{t(chartType.labelKey)}</span>
+                          <div
+                            className={`mb-3 transition-colors duration-200 group-hover:text-gray-700 ${
+                              selectedChartType === chartType.type
+                                ? "text-gray-700"
+                                : "text-gray-600"
+                            }`}
+                          >
+                            {chartType.icon}
+                          </div>
+                          <span
+                            className={`text-center text-sm font-medium transition-colors duration-200 group-hover:text-gray-900 ${
+                              selectedChartType === chartType.type
+                                ? "text-gray-900"
+                                : "text-gray-700"
+                            }`}
+                          >
+                            {t(chartType.labelKey)}
+                          </span>
                         </FormLabel>
                       </FormItem>
                     ))}
@@ -513,6 +567,16 @@ export default function ChartConfigurator({
                       form={form}
                       table={selectedTable}
                       onColumnSelect={(columnType: string, columnName: string) => {
+                        handleColumnSelect(columnType, columnName);
+                      }}
+                    />
+                  )}
+
+                  {selectedChartType === "box-plot" && (
+                    <BoxPlotConfigurator
+                      form={form}
+                      table={selectedTable}
+                      onColumnSelect={(columnType: "x" | "y", columnName: string) => {
                         handleColumnSelect(columnType, columnName);
                       }}
                     />

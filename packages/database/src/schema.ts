@@ -308,6 +308,10 @@ export const chartTypeEnum = pgEnum("chart_type", [
   "pie",
   "area",
   "dot-plot",
+  "bubble",
+  "lollipop",
+  // Statistical charts
+  "box-plot",
   // Scientific charts (for future expansion)
   "heatmap",
   "contour",
