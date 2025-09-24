@@ -105,15 +105,14 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
 
     if (currentMeasurementIndex < measurementSteps.length - 1) {
       setCurrentMeasurementIndex((prev) => prev + 1);
-      const nextPanelNumber = measurementSteps[currentMeasurementIndex + 1]?.prompt?.match(/#(\d+)/)?.[1];
+      const nextPanelNumber =
+        measurementSteps[currentMeasurementIndex + 1]?.prompt?.match(/#(\d+)/)?.[1];
       showToast(`Panel #${panelNumber} measured. Next: Panel #${nextPanelNumber}`, "info");
     } else {
       setCurrentStep("processing");
       handleDataProcessing();
     }
   };
-
-  
 
   const handleDataProcessing = async () => {
     console.log("Processing calibration data...");

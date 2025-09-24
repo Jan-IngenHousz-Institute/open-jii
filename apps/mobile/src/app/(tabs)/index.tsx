@@ -3,6 +3,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from "react-native";
 import { Button } from "~/components/Button";
 import { UnsyncedScanItem } from "~/components/UnsyncedScanItem";
+import { ConnectionSetup } from "~/components/connection-setup";
 import { useToast } from "~/context/toast-context";
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { useTheme } from "~/hooks/use-theme";
@@ -42,27 +43,6 @@ export default function HomeScreen() {
           />
         }
       >
-        <Text
-          style={[
-            styles.welcomeText,
-            {
-              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-            },
-          ]}
-        >
-          Welcome to MultispeQ
-        </Text>
-        <Text
-          style={[
-            styles.subtitleText,
-            {
-              color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-            },
-          ]}
-        >
-          Collect and analyze sensor data with ease
-        </Text>
-
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text
@@ -111,28 +91,8 @@ export default function HomeScreen() {
             </Text>
           )}
         </View>
-
         <View style={styles.section}>
-          <Text
-            style={[
-              styles.sectionTitle,
-              {
-                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-              },
-            ]}
-          >
-            Recent Activity
-          </Text>
-          <Text
-            style={[
-              styles.emptyText,
-              {
-                color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-              },
-            ]}
-          >
-            No recent activity
-          </Text>
+          <ConnectionSetup />
         </View>
       </ScrollView>
     </View>
@@ -150,10 +110,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 8,
-  },
-  subtitleText: {
-    fontSize: 16,
-    marginBottom: 24,
   },
   section: {
     marginBottom: 24,
