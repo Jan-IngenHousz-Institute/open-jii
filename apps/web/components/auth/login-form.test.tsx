@@ -181,16 +181,16 @@ describe("LoginForm", () => {
 
   it("renders all buttons with correct styling", async () => {
     render(await LoginForm(defaultProps));
+    // Find the email submit button by its accessible name
+    const emailButton = screen.getByRole("button", { name: "auth.continueWithEmail" });
+    expect(emailButton).toHaveAttribute("data-variant", "default");
+    expect(emailButton).toHaveClass("h-12", "w-full");
+    expect(emailButton).toHaveAttribute("type", "submit");
 
-    const buttons = screen.getAllByRole("button");
+    const githubButton = screen.getByRole("button", { name: /auth\.loginWith-github/i });
+    const orcidButton = screen.getByRole("button", { name: /auth\.loginWith-orcid/i });
 
-    // Email button should have default variant
-    expect(buttons[0]).toHaveAttribute("data-variant", "default");
-    expect(buttons[0]).toHaveClass("h-12", "w-full");
-    expect(buttons[0]).toHaveAttribute("type", "submit");
-
-    // OAuth buttons should have outline variant
-    buttons.slice(1).forEach((button) => {
+    [githubButton, orcidButton].forEach((button) => {
       expect(button).toHaveAttribute("data-variant", "outline");
       expect(button).toHaveClass("w-full");
       expect(button).toHaveAttribute("type", "submit");
@@ -298,7 +298,8 @@ describe("LoginForm", () => {
 
     // Should still render all elements
     expect(screen.getByText("auth.loginToAccount")).toBeInTheDocument();
-    expect(screen.getAllByRole("button")).toHaveLength(3);
+    const submitButtons = document.querySelectorAll('button[type="submit"]');
+    expect(submitButtons).toHaveLength(3);
   });
 
   it("renders provider image components correctly", async () => {
@@ -321,8 +322,8 @@ describe("LoginForm", () => {
     render(await LoginForm(defaultProps));
 
     // Should have exactly 3 providers as mocked
-    const buttons = screen.getAllByRole("button");
-    expect(buttons).toHaveLength(3);
+    const submitButtons = document.querySelectorAll('button[type="submit"]');
+    expect(submitButtons).toHaveLength(3);
 
     // Should have exactly 3 forms
     const forms = document.querySelectorAll("form");

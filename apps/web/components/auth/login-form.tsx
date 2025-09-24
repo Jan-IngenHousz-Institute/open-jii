@@ -133,9 +133,9 @@ export async function LoginForm({
         {t("auth.termsPrefix")}
         <Dialog>
           <DialogTrigger asChild>
-            <a className="cursor-pointer underline" href="#">
+            <button type="button" className="cursor-pointer underline">
               {t("auth.terms")}
-            </a>
+            </button>
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>

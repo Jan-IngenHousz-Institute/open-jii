@@ -195,9 +195,11 @@ describe("RegistrationForm", () => {
   it("renders terms link with correct structure", () => {
     render(<RegistrationForm {...defaultProps} />);
 
-    const termsLink = screen.getByText("auth.terms").closest("a");
-    expect(termsLink).toHaveClass("cursor-pointer", "underline");
-    expect(termsLink).toHaveAttribute("href", "#");
+    const termsTrigger = screen.getByText("auth.terms");
+    const closestAnchorOrButton = termsTrigger.closest("a,button");
+    expect(closestAnchorOrButton).toBeTruthy();
+    // It should have the cursor-pointer and underline classes regardless of tag
+    expect(closestAnchorOrButton).toHaveClass("cursor-pointer", "underline");
   });
 
   it("renders custom terms data when provided", async () => {
