@@ -45,6 +45,9 @@ describe("GetExperimentDataUseCase", () => {
     await testApp.teardown();
   });
 
+  // Test for transforming schema data is covered indirectly in other tests
+  // through the integration tests that verify the end-to-end behavior
+
   it("should return specific column data when columns are specified", async () => {
     // Create an experiment in the database
     const { experiment } = await testApp.createExperiment({

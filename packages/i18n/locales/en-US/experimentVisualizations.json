@@ -348,15 +348,6 @@
     "gridLines": "Grid Lines"
   },
 
-  "lollipop": {
-    "orientation": "Orientation",
-    "vertical": "Vertical",
-    "horizontal": "Horizontal",
-    "stemWidth": "Stem Width",
-    "dotSize": "Dot Size",
-    "gridLines": "Grid Lines"
-  },
-
   "orientations": {
     "vertical": "Vertical",
     "horizontal": "Horizontal"

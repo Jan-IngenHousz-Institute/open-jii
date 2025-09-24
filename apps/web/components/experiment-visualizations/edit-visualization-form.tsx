@@ -106,28 +106,31 @@ export default function EditVisualizationForm({
     switch (chartType) {
       case "line":
         form.setValue("config", {
-          chartType: "line",
+          chartType: "line" as const,
           config: {
             xAxis: {
-              type: "linear",
+              type: "linear" as const,
               dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
             },
             yAxes: [
               {
-                type: "linear",
-                dataSource: { tableName: selectedTableName, columnName: "" },
-                side: "left",
+                type: "linear" as const,
+                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
+                title: "",
+                side: "left" as const,
+                color: "#3b82f6",
               },
             ],
-            mode: "lines",
+            mode: "lines" as const,
             connectGaps: true,
             smoothing: 0,
-            gridLines: "both",
+            gridLines: "both" as const,
             display: {
               title: "",
               showLegend: true,
-              legendPosition: "right",
-              colorScheme: "default",
+              legendPosition: "right" as const,
+              colorScheme: "default" as const,
               interactive: true,
             },
           },
@@ -140,28 +143,31 @@ export default function EditVisualizationForm({
 
       case "scatter":
         form.setValue("config", {
-          chartType: "scatter",
+          chartType: "scatter" as const,
           config: {
             xAxis: {
-              type: "linear",
+              type: "linear" as const,
               dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
             },
             yAxes: [
               {
-                type: "linear",
-                dataSource: { tableName: selectedTableName, columnName: "" },
-                side: "left",
+                type: "linear" as const,
+                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
+                title: "",
+                side: "left" as const,
+                color: "#3b82f6",
               },
             ],
-            mode: "markers",
+            mode: "markers" as const,
             markerSize: 6,
-            markerShape: "circle",
-            gridLines: "both",
+            markerShape: "circle" as const,
+            gridLines: "both" as const,
             display: {
               title: "",
               showLegend: true,
-              legendPosition: "right",
-              colorScheme: "default",
+              legendPosition: "right" as const,
+              colorScheme: "default" as const,
               interactive: true,
             },
           },
@@ -174,29 +180,32 @@ export default function EditVisualizationForm({
 
       case "bar":
         form.setValue("config", {
-          chartType: "bar",
+          chartType: "bar" as const,
           config: {
             xAxis: {
-              type: "category", // Bar charts typically have categorical x-axis
+              type: "category" as const, // Bar charts typically have categorical x-axis
               dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
             },
             yAxes: [
               {
-                type: "linear", // Bar charts typically have linear y-axis
-                dataSource: { tableName: selectedTableName, columnName: "" },
-                side: "left",
+                type: "linear" as const, // Bar charts typically have linear y-axis
+                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
+                title: "",
+                side: "left" as const,
+                color: "#3b82f6",
               },
             ],
-            orientation: "vertical",
-            barMode: "group",
+            orientation: "vertical" as const,
+            barMode: "group" as const,
             barWidth: 0.7,
-            gridLines: "both",
+            gridLines: "both" as const,
             showValues: false,
             display: {
               title: "",
               showLegend: true,
-              legendPosition: "right",
-              colorScheme: "default",
+              legendPosition: "right" as const,
+              colorScheme: "default" as const,
               interactive: true,
             },
           },
@@ -209,28 +218,31 @@ export default function EditVisualizationForm({
 
       case "area":
         form.setValue("config", {
-          chartType: "area",
+          chartType: "area" as const,
           config: {
             xAxis: {
-              type: "linear", // Area charts typically use continuous x-axis (time series, etc.)
+              type: "linear" as const, // Area charts typically use continuous x-axis (time series, etc.)
               dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
             },
             yAxes: [
               {
-                type: "linear", // Area charts typically use linear y-axis
-                dataSource: { tableName: selectedTableName, columnName: "" },
-                side: "left",
+                type: "linear" as const, // Area charts typically use linear y-axis
+                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
+                title: "",
+                side: "left" as const,
+                color: "#3b82f6",
               },
             ],
-            fillMode: "tozeroy",
+            fillMode: "tozeroy" as const,
             fillOpacity: 0.6,
-            gridLines: "both",
+            gridLines: "both" as const,
             smoothing: 0,
             display: {
               title: "",
               showLegend: true,
-              legendPosition: "right",
-              colorScheme: "default",
+              legendPosition: "right" as const,
+              colorScheme: "default" as const,
               interactive: true,
             },
           },
@@ -243,20 +255,20 @@ export default function EditVisualizationForm({
 
       case "pie":
         form.setValue("config", {
-          chartType: "pie",
+          chartType: "pie" as const,
           config: {
             labelSource: { tableName: selectedTableName, columnName: "" },
             valueSource: { tableName: selectedTableName, columnName: "" },
             showLabels: true,
             showValues: true,
             hole: 0,
-            textPosition: "auto",
+            textPosition: "auto" as const,
             pull: 0,
             display: {
               title: "",
               showLegend: true,
-              legendPosition: "right",
-              colorScheme: "default",
+              legendPosition: "right" as const,
+              colorScheme: "default" as const,
               interactive: true,
             },
           },
@@ -269,27 +281,30 @@ export default function EditVisualizationForm({
 
       case "dot-plot":
         form.setValue("config", {
-          chartType: "dot-plot",
+          chartType: "dot-plot" as const,
           config: {
             xAxis: {
-              type: "category", // Dot plots often use categorical x-axis for grouping
+              type: "category" as const, // Dot plots often use categorical x-axis for grouping
               dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
             },
             yAxes: [
               {
-                type: "linear", // Dot plots typically use linear y-axis for values
-                dataSource: { tableName: selectedTableName, columnName: "" },
-                side: "left",
+                type: "linear" as const, // Dot plots typically use linear y-axis for values
+                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
+                title: "",
+                side: "left" as const,
+                color: "#3b82f6",
               },
             ],
             markerSize: 8,
-            markerShape: "circle",
-            gridLines: "both",
+            markerShape: "circle" as const,
+            gridLines: "both" as const,
             display: {
               title: "",
               showLegend: true,
-              legendPosition: "right",
-              colorScheme: "default",
+              legendPosition: "right" as const,
+              colorScheme: "default" as const,
               interactive: true,
             },
           },
@@ -302,31 +317,31 @@ export default function EditVisualizationForm({
 
       case "lollipop":
         form.setValue("config", {
-          chartType: "lollipop",
+          chartType: "lollipop" as const,
           config: {
             xAxis: {
-              type: "category",
+              type: "category" as const,
               dataSource: { tableName: selectedTableName, columnName: "" },
               title: "",
             },
             yAxes: [
               {
-                type: "linear",
+                type: "linear" as const,
                 dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
-                side: "left",
+                side: "left" as const,
                 title: "",
                 color: "#3b82f6",
               },
             ],
-            orientation: "v",
+            orientation: "v" as const,
             stemWidth: 3,
             dotSize: 15,
-            gridLines: "both",
+            gridLines: "both" as const,
             display: {
               title: "",
               showLegend: true,
-              legendPosition: "right",
-              colorScheme: "default",
+              legendPosition: "right" as const,
+              colorScheme: "default" as const,
               interactive: true,
             },
           },
@@ -340,28 +355,31 @@ export default function EditVisualizationForm({
       default:
         // For chart types that don't have configurators yet, fall back to line chart config
         form.setValue("config", {
-          chartType: "line",
+          chartType: "line" as const,
           config: {
             xAxis: {
-              type: "linear",
+              type: "linear" as const,
               dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
             },
             yAxes: [
               {
-                type: "linear",
-                dataSource: { tableName: selectedTableName, columnName: "" },
-                side: "left",
+                type: "linear" as const,
+                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
+                title: "",
+                side: "left" as const,
+                color: "#3b82f6",
               },
             ],
-            mode: "lines",
+            mode: "lines" as const,
             connectGaps: true,
             smoothing: 0,
-            gridLines: "both",
+            gridLines: "both" as const,
             display: {
               title: "",
               showLegend: true,
-              legendPosition: "right",
-              colorScheme: "default",
+              legendPosition: "right" as const,
+              colorScheme: "default" as const,
               interactive: true,
             },
           },

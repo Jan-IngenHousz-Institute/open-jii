@@ -313,6 +313,13 @@ export const chartTypeEnum = pgEnum("chart_type", [
   // Statistical charts
   "box-plot",
   "histogram",
+  "violin-plot",
+  "error-bar",
+  "density-plot",
+  "ridge-plot",
+  "histogram-2d",
+  "scatter2density",
+  "spc-control-chart",
   // Scientific charts (for future expansion)
   "heatmap",
   "contour",
@@ -324,6 +331,7 @@ export const chartTypeEnum = pgEnum("chart_type", [
   "radar",
   "polar",
   "correlation-matrix",
+  "alluvial",
 ]);
 
 // Experiment Visualizations Table - stores chart configurations for experiments
