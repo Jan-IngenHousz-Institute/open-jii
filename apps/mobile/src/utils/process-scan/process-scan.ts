@@ -1,22 +1,21 @@
-// import { Asset } from "expo-asset";
+import { Asset } from "expo-asset";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
-// import mathLibResource from "./math.lib.js.txt";
+import mathLibResource from "./math.lib.js.txt";
 
-// async function loadMathLib() {
-//   const asset = Asset.fromModule(mathLibResource);
-//   await asset.downloadAsync(); // ensures it’s available
-//   const response = await fetch(asset.uri);
-//   return await response.text();
-// }
+async function loadMathLib() {
+  const asset = Asset.fromModule(mathLibResource);
+  await asset.downloadAsync(); // ensures it’s available
+  const response = await fetch(asset.uri);
+  return await response.text();
+}
 
-const mathLibSource = "";
+let mathLibSource = "";
 
-// loadMathLib().then((source) => {
-//   mathLibSource = source;
-//   console.log("mathLibSource", mathLibSource);
-// });
+loadMathLib().then((source) => {
+  mathLibSource = source;
+});
 
 export function processScan(
   result: object,
@@ -57,7 +56,7 @@ export function processScan(
 
 export function executeMacro(code: string, json: object) {
   const macroSource = mathLibSource + "\n\n\n" + code;
-  console.log("macroSource", macroSource);
+
   // eslint-disable-next-line @typescript-eslint/no-implied-eval
   const fn = new Function("json", macroSource);
   return fn(json);

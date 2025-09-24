@@ -43,6 +43,7 @@ export async function getAllDevices(): Promise<Device[]> {
 }
 
 export async function getPairedDevices(): Promise<Device[]> {
+  await requestBluetoothPermission();
   const devices = await RNBluetoothClassic.getBondedDevices();
 
   return devices.filter(isJiiDevice).map(bluetoothDeviceToDevice);
@@ -59,7 +60,11 @@ export async function unpairDevice(device: Device) {
 
 export async function connectToDevice(device: Device) {
   if (device.type === "bluetooth-classic") {
-    await RNBluetoothClassic.connectToDevice(device.id);
+    try {
+      await RNBluetoothClassic.connectToDevice(device.id);
+    } catch {
+      await RNBluetoothClassic.connectToDevice(device.id);
+    }
     return;
   }
 
