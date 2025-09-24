@@ -2,19 +2,32 @@ import { Battery, Unplug } from "lucide-react-native";
 import { View, Text, StyleSheet, Dimensions } from "react-native";
 import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
 import { useTheme } from "~/hooks/use-theme";
+import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-manager";
 
 export function DeviceConnectionWidget() {
   const theme = useTheme();
   const { colors, typography } = theme;
-  const { connectionType, batteryLevel } = useDeviceConnectionStore();
+  const { batteryLevel } = useDeviceConnectionStore();
+
+  const { data: connectedDevice } = useConnectedDevice();
+
   const screenWidth = Dimensions.get("window").width;
 
-  const isConnected = connectionType !== undefined;
+  const isConnected = !!connectedDevice;
 
   const getBatteryColor = () => {
-    if (batteryLevel === undefined) return colors.semantic.warning;
-    if (batteryLevel > 50) return colors.semantic.success;
-    if (batteryLevel > 20) return colors.semantic.warning;
+    if (batteryLevel === undefined) {
+      return colors.semantic.warning;
+    }
+
+    if (batteryLevel > 50) {
+      return colors.semantic.success;
+    }
+
+    if (batteryLevel > 20) {
+      return colors.semantic.warning;
+    }
+
     return colors.semantic.error;
   };
 

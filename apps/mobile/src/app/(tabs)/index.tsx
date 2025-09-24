@@ -33,16 +33,7 @@ export default function HomeScreen() {
         },
       ]}
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={isUploading}
-            tintColor={colors.primary.dark}
-            colors={[colors.primary.dark]}
-          />
-        }
-      >
+      <View style={styles.scrollContent}>
         <View style={styles.section}>
           <ConnectionSetup />
         </View>
@@ -96,7 +87,7 @@ export default function HomeScreen() {
             )}
           </View>
         )}
-      </ScrollView>
+      </View>
     </View>
   );
 }

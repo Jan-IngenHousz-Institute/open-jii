@@ -19,7 +19,8 @@ export function ConnectionSetup() {
 
   const { data: device } = useConnectedDevice();
   const { data: devices = [], refetch: refreshDevices, isFetching } = useAllDevices();
-  const { connectToDevice, connectingDeviceId, disconnectFromDevice } = useConnectToDevice();
+  const { connectToDevice, connectingDeviceId, disconnectFromDevice, unpairDevice } =
+    useConnectToDevice();
   const { showToast } = useToast();
   const { data: pairedDevices } = usePairedDevices();
 
@@ -42,7 +43,8 @@ export function ConnectionSetup() {
           onDisconnect={async (device) => {
             try {
               await disconnectFromDevice(device);
-            } catch {
+            } catch (e) {
+              console.log("connection error", e);
               showToast("Could not disconnect", "error");
             }
           }}
@@ -70,8 +72,9 @@ export function ConnectionSetup() {
           onConnect={async (device) => {
             try {
               await connectToDevice(device);
-            } catch {
-              showToast("Could not connect", "error");
+            } catch (e) {
+              console.log("connection error", e);
+              showToast("Could not disconnect", "error");
             }
           }}
         />
@@ -81,6 +84,7 @@ export function ConnectionSetup() {
         title="Paired Devices"
         loading={false}
         connectingDeviceId={connectingDeviceId}
+        onDelete={(device) => unpairDevice(device)}
         onConnect={async (device) => {
           try {
             await connectToDevice(device);

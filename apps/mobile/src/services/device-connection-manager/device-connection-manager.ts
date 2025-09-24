@@ -48,9 +48,19 @@ export async function getPairedDevices(): Promise<Device[]> {
   return devices.filter(isJiiDevice).map(bluetoothDeviceToDevice);
 }
 
+export async function unpairDevice(device: Device) {
+  if (device.type === "bluetooth-classic") {
+    await RNBluetoothClassic.unpairDevice(device.id);
+    return;
+  }
+
+  throw new Error("Unsupported device type");
+}
+
 export async function connectToDevice(device: Device) {
   if (device.type === "bluetooth-classic") {
     await RNBluetoothClassic.connectToDevice(device.id);
+    return;
   }
 
   throw new Error("Unsupported device type");
@@ -82,6 +92,9 @@ export function useConnectToDevice() {
         await client.invalidateQueries({
           queryKey: ["connected-device"],
         });
+        await client.invalidateQueries({
+          queryKey: ["paired-devices"],
+        });
       } finally {
         setConnectingDeviceId(undefined);
       }
@@ -90,6 +103,17 @@ export function useConnectToDevice() {
       await disconnectFromDevice(device);
       await client.invalidateQueries({
         queryKey: ["connected-device"],
+      });
+    },
+    async unpairDevice(device: Device) {
+      await unpairDevice(device);
+
+      await client.invalidateQueries({
+        queryKey: ["connected-device"],
+      });
+
+      await client.invalidateQueries({
+        queryKey: ["paired-devices"],
       });
     },
   };
