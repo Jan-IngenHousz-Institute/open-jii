@@ -477,158 +477,8 @@ export default function ChartConfigurator({
    * Update data sources and form values when a column is selected
    */
   const handleColumnSelect = (columnType: string, columnName: string) => {
-    // Get all currently active data sources from configuration
-    const getAllActiveColumnPaths = (): Record<string, string> => {
-      // This map will store the relationship between config paths and their column values
-      const activeColumns: Record<string, string> = {};
-      
-      if (!selectedChartType) return activeColumns;
-      
-      // Helper function to get a value safely
-      const safeGetValue = (path: string): string | undefined => {
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const value = form.getValues(path as any);
-          return typeof value === "string" ? value : undefined;
-        } catch {
-          return undefined;
-        }
-      };
-
-      // Check for common axes based on chart type
-      switch (selectedChartType) {
-        // XY based charts
-        case "line":
-        case "bar":
-        case "area":
-        case "scatter":
-        case "dot-plot":
-        case "lollipop":
-        case "log-plot":
-          {
-            const xColumn = safeGetValue("config.config.xAxis.dataSource.columnName");
-            if (xColumn) activeColumns["config.config.xAxis.dataSource.columnName"] = xColumn;
-            
-            // Check for y-axes (may be multiple)
-            const yColumn = safeGetValue("config.config.yAxes.0.dataSource.columnName");
-            if (yColumn) activeColumns["config.config.yAxes.0.dataSource.columnName"] = yColumn;
-            
-            // Check for color axis in scatter plots
-            if (selectedChartType === "scatter") {
-              const colorColumn = safeGetValue("config.config.colorAxis.dataSource.columnName");
-              if (colorColumn) activeColumns["config.config.colorAxis.dataSource.columnName"] = colorColumn;
-            }
-          }
-          break;
-
-        case "bubble":
-          {
-            const xColumn = safeGetValue("config.config.xAxis.dataSource.columnName");
-            if (xColumn) activeColumns["config.config.xAxis.dataSource.columnName"] = xColumn;
-            
-            const yColumn = safeGetValue("config.config.yAxes.0.dataSource.columnName");
-            if (yColumn) activeColumns["config.config.yAxes.0.dataSource.columnName"] = yColumn;
-            
-            const sizeColumn = safeGetValue("config.config.sizeAxis.dataSource.columnName");
-            if (sizeColumn) activeColumns["config.config.sizeAxis.dataSource.columnName"] = sizeColumn;
-          }
-          break;
-          
-        case "pie":
-          {
-            const labelColumn = safeGetValue("config.config.labelSource.columnName");
-            if (labelColumn) activeColumns["config.config.labelSource.columnName"] = labelColumn;
-            
-            const valueColumn = safeGetValue("config.config.valueSource.columnName");
-            if (valueColumn) activeColumns["config.config.valueSource.columnName"] = valueColumn;
-          }
-          break;
-          
-        case "box-plot":
-        case "histogram":
-          {
-            const seriesColumn = safeGetValue("config.config.series.0.dataSource.columnName");
-            if (seriesColumn) activeColumns["config.config.series.0.dataSource.columnName"] = seriesColumn;
-          }
-          break;
-          
-        // Advanced charts
-        case "heatmap":
-        case "contour":
-          {
-            const xColumn = safeGetValue("config.config.xAxis.dataSource.columnName");
-            if (xColumn) activeColumns["config.config.xAxis.dataSource.columnName"] = xColumn;
-            
-            const yColumn = safeGetValue("config.config.yAxis.dataSource.columnName");
-            if (yColumn) activeColumns["config.config.yAxis.dataSource.columnName"] = yColumn;
-            
-            const zColumn = safeGetValue("config.config.zAxis.dataSource.columnName");
-            if (zColumn) activeColumns["config.config.zAxis.dataSource.columnName"] = zColumn;
-          }
-          break;
-          
-        case "parallel-coordinates":
-          // Handle dimensions
-          {
-            const dimensions = form.getValues("config.config.dimensions");
-            if (Array.isArray(dimensions)) {
-              dimensions.forEach((_, index) => {
-                const dimensionColumn = safeGetValue(`config.config.dimensions.${index}.dataSource.columnName`);
-                if (dimensionColumn) {
-                  activeColumns[`config.config.dimensions.${index}.dataSource.columnName`] = dimensionColumn;
-                }
-              });
-            }
-          }
-          break;
-          
-        case "radar":
-          {
-            const categoryColumn = safeGetValue("config.config.categoryAxis.dataSource.columnName");
-            if (categoryColumn) activeColumns["config.config.categoryAxis.dataSource.columnName"] = categoryColumn;
-            
-            // Handle series
-            const series = form.getValues("config.config.series");
-            if (Array.isArray(series)) {
-              series.forEach((_, index) => {
-                const seriesColumn = safeGetValue(`config.config.series.${index}.dataSource.columnName`);
-                if (seriesColumn) {
-                  activeColumns[`config.config.series.${index}.dataSource.columnName`] = seriesColumn;
-                }
-              });
-            }
-          }
-          break;
-          
-        case "ternary":
-          {
-            const aColumn = safeGetValue("config.config.aAxis.dataSource.columnName");
-            if (aColumn) activeColumns["config.config.aAxis.dataSource.columnName"] = aColumn;
-            
-            const bColumn = safeGetValue("config.config.bAxis.dataSource.columnName");
-            if (bColumn) activeColumns["config.config.bAxis.dataSource.columnName"] = bColumn;
-            
-            const cColumn = safeGetValue("config.config.cAxis.dataSource.columnName");
-            if (cColumn) activeColumns["config.config.cAxis.dataSource.columnName"] = cColumn;
-          }
-          break;
-          
-        case "correlation-matrix":
-          {
-            const variables = form.getValues("config.config.variables");
-            if (Array.isArray(variables)) {
-              variables.forEach((variable, index) => {
-                if (variable && typeof variable === "object" && "columnName" in variable) {
-                  activeColumns[`config.config.variables.${index}.columnName`] = variable.columnName as string;
-                }
-              });
-            }
-          }
-          break;
-      }
-      
-      return activeColumns;
-    };
+    // Get current data sources and form values to determine what to replace
+    const currentDataSources = form.getValues("dataConfig.dataSources");
 
     // Helper function to get the current column name for a given axis path
     const getCurrentColumnForPath = (configPath: string): string | undefined => {
@@ -644,28 +494,26 @@ export default function ChartConfigurator({
     const updateFormValues = (configPath: string) => {
       // Get the current column name that's being replaced
       const currentColumn = getCurrentColumnForPath(configPath);
-      
-      // Get all active columns from the chart configuration
-      const activeColumns = getAllActiveColumnPaths();
-      
-      // Update the active columns map with the new selection
-      activeColumns[configPath] = columnName;
-      
-      // Build a fresh list of data sources from the active columns
-      const newDataSources = Object.values(activeColumns).map(col => ({
-        tableName: selectedTableName ?? "",
-        columnName: col
-      }));
-      
-      // Ensure we don't have duplicate entries (same column used for multiple axes)
-      const uniqueDataSources = newDataSources.filter((source, index, self) => 
-        index === self.findIndex(s => s.columnName === source.columnName)
-      );
-      
+
+      // Filter out data sources: remove the old column for this axis and any duplicate of the new column
+      const filteredSources = Array.isArray(currentDataSources)
+        ? currentDataSources.filter((s) => {
+            if (typeof s !== "object" || !("columnName" in s)) return false;
+            // Remove the current column that's being replaced for this axis
+            if (currentColumn && s.columnName === currentColumn) return false;
+            // Remove any existing entry for the new column to avoid duplicates
+            if (s.columnName === columnName) return false;
+            return true;
+          })
+        : [];
+
+      // Create a new data source entry
+      const newDataSource = { tableName: selectedTableName ?? "", columnName };
+
       // Update form values
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       form.setValue(configPath as any, columnName);
-      form.setValue("dataConfig.dataSources", uniqueDataSources);
+      form.setValue("dataConfig.dataSources", [...filteredSources, newDataSource]);
     };
 
     // Handle standard axis types
