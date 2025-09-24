@@ -7,9 +7,12 @@ import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
 import type { LocationPoint } from "@repo/ui/components/map";
 
-const Map = dynamic(() => import("@repo/ui/components").then((mod) => ({ default: mod.Map })), {
-  ssr: false,
-});
+const EnhancedMap = dynamic(
+  () => import("@repo/ui/components").then((mod) => ({ default: mod.EnhancedMap })),
+  {
+    ssr: false,
+  },
+);
 
 interface ExperimentLocationsDisplayProps {
   locations: LocationList;
@@ -99,7 +102,7 @@ export function ExperimentLocationsDisplay({
       <CardContent className="space-y-4">
         {/* Map Display */}
         <div className="overflow-hidden rounded-lg border">
-          <Map
+          <EnhancedMap
             locations={mapLocations}
             selectionMode={false}
             height="400px"

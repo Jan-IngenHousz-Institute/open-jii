@@ -2,8 +2,8 @@
 
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -12,16 +12,14 @@ import {
   useMapEvents,
   ZoomControl,
   ScaleControl,
-  useMap,
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 
 import { cn } from "../lib/utils";
-import { LocationSearch } from "./location-search";
-import { LocationSidebar } from "./location-sidebar";
 
 /**
- * Map component with search functionality and improved location display
+ * Map component for selecting and displaying locations
+ * Uses OpenStreetMap with Leaflet
  */
 
 export interface LocationPoint {
@@ -29,12 +27,6 @@ export interface LocationPoint {
   name: string;
   latitude: number;
   longitude: number;
-  country?: string;
-  region?: string;
-  municipality?: string;
-  postalCode?: string;
-  address?: string;
-  lastUpdated?: string;
 }
 
 export interface MapProps {
@@ -50,10 +42,6 @@ export interface MapProps {
    * Whether the map is in selection mode (allows adding new locations)
    */
   selectionMode?: boolean;
-  /**
-   * Whether to show the location search component
-   */
-  showLocationSearch?: boolean;
   /**
    * Default center of the map
    */
@@ -106,58 +94,13 @@ export interface MapProps {
    * Whether the sidebar starts collapsed
    */
   sidebarCollapsed?: boolean;
-  /**
-   * Whether to show distances from a reference point
-   */
-  showDistances?: boolean;
-  /**
-   * Reference point for distance calculations
-   */
-  referencePoint?: [number, number];
 }
-
-// Component to handle map view changes
-const MapViewController = ({
-  center,
-  zoom,
-  shouldPan,
-}: {
-  center: [number, number];
-  zoom?: number;
-  shouldPan: boolean;
-}) => {
-  const map = useMap();
-
-  useEffect(() => {
-    if (shouldPan) {
-      map.setView(center, zoom || map.getZoom(), { animate: true });
-    }
-  }, [map, center, zoom, shouldPan]);
-
-  return null;
-};
-
-// Calculate distance between two points in kilometers
-const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-  const R = 6371; // Earth's radius in kilometers
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
 
 // Map component implementation
 export const Map = ({
   locations = [],
   onLocationsChange,
   selectionMode = false,
-  showLocationSearch = false,
   center = [40.7128, -74.006],
   zoom = 10,
   minZoom = 1,
@@ -171,35 +114,26 @@ export const Map = ({
   showSidebar = false,
   sidebarTitle = "Locations",
   sidebarCollapsed = false,
-  showDistances = false,
-  referencePoint,
 }: MapProps) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(sidebarCollapsed);
-  const [selectedLocation, setSelectedLocation] = useState<LocationPoint | undefined>();
-  const [mapCenter, setMapCenter] = useState<[number, number]>(center);
-  const [mapZoom, setMapZoom] = useState(zoom);
-  const [shouldPanToLocation, setShouldPanToLocation] = useState(false);
 
-  // Create a custom marker icon
-  const createCustomMarker = useCallback(
-    (color: string = "#ef4444", isSelected: boolean = false) => {
-      const svgIcon = `
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="${isSelected ? 3 : 2}" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+  // Create a custom marker icon using Lucide MapPin-style SVG
+  const createCustomMarker = useCallback((color: string = "#ef4444") => {
+    const svgIcon = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="2" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
         <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
         <circle cx="12" cy="10" r="3"/>
       </svg>
     `;
 
-      return L.divIcon({
-        html: svgIcon,
-        className: "custom-marker",
-        iconSize: [24, 24],
-        iconAnchor: [12, 24],
-        popupAnchor: [0, -24],
-      });
-    },
-    [],
-  );
+    return L.divIcon({
+      html: svgIcon,
+      className: "custom-marker",
+      iconSize: [24, 24],
+      iconAnchor: [12, 24],
+      popupAnchor: [0, -24],
+    });
+  }, []);
 
   // Map click handler for adding new locations
   const MapClickHandler = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
@@ -213,7 +147,7 @@ export const Map = ({
     return null;
   };
 
-  // Handle adding new location from map click
+  // Handle adding new location
   const handleMapClick = useCallback(
     (lat: number, lng: number) => {
       if (!selectionMode || disabled) return;
@@ -223,7 +157,6 @@ export const Map = ({
         name: `Location ${locations.length + 1}`,
         latitude: lat,
         longitude: lng,
-        lastUpdated: new Date().toISOString(),
       };
 
       const updatedLocations = [...locations, newLocation];
@@ -232,99 +165,46 @@ export const Map = ({
     [locations, onLocationsChange, selectionMode, disabled],
   );
 
-  // Handle adding location from search
-  const handleLocationSearchSelect = useCallback(
-    (searchResult: any) => {
-      const newLocation: LocationPoint = {
-        id: Date.now().toString(),
-        name: searchResult.label,
-        latitude: searchResult.latitude,
-        longitude: searchResult.longitude,
-        country: searchResult.country,
-        region: searchResult.region,
-        municipality: searchResult.municipality,
-        postalCode: searchResult.postalCode,
-        lastUpdated: new Date().toISOString(),
-      };
-
-      if (selectionMode) {
-        const updatedLocations = [...locations, newLocation];
-        onLocationsChange?.(updatedLocations);
-      }
-
-      // Pan to the selected location
-      setMapCenter([searchResult.latitude, searchResult.longitude]);
-      setMapZoom(14);
-      setShouldPanToLocation(true);
-      setTimeout(() => setShouldPanToLocation(false), 100);
+  // Handle location name change
+  const handleLocationNameChange = useCallback(
+    (locationId: string, newName: string) => {
+      const updatedLocations = locations.map((location) =>
+        location.id === locationId ? { ...location, name: newName } : location,
+      );
+      onLocationsChange?.(updatedLocations);
     },
-    [locations, onLocationsChange, selectionMode],
+    [locations, onLocationsChange],
   );
 
-  // Handle location selection from sidebar
-  const handleLocationSelect = useCallback((location: LocationPoint) => {
-    setSelectedLocation(location);
-    setMapCenter([location.latitude, location.longitude]);
-    setMapZoom(14);
-    setShouldPanToLocation(true);
-    setTimeout(() => setShouldPanToLocation(false), 100);
-  }, []);
+  // Handle location removal
+  const handleLocationRemove = useCallback(
+    (locationId: string) => {
+      const updatedLocations = locations.filter((location) => location.id !== locationId);
+      onLocationsChange?.(updatedLocations);
+    },
+    [locations, onLocationsChange],
+  );
 
-  // Handle navigation to location
-  const handleLocationNavigate = useCallback((location: LocationPoint) => {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}`;
-    window.open(url, "_blank");
-  }, []);
-
-  // Prepare locations with distance calculations
-  const enhancedLocations = locations.map((location) => ({
-    ...location,
-    distance:
-      showDistances && referencePoint
-        ? calculateDistance(
-            referencePoint[0],
-            referencePoint[1],
-            location.latitude,
-            location.longitude,
-          )
-        : undefined,
-  }));
-
-  // Handle location selection from sidebar
-  const handleLocationSelectFromSidebar = useCallback((location: LocationPoint) => {
-    setSelectedLocation(location);
-    setMapCenter([location.latitude, location.longitude]);
-    setMapZoom(14);
-    setShouldPanToLocation(true);
-    setTimeout(() => setShouldPanToLocation(false), 100);
-  }, []);
-
-  // Handle navigation to location from sidebar
-  const handleLocationNavigateFromSidebar = useCallback((location: LocationPoint) => {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}`;
-    window.open(url, "_blank");
-  }, []);
+  // Handle marker drag end
+  const handleMarkerDragEnd = useCallback(
+    (locationId: string, newPosition: any) => {
+      const updatedLocations = locations.map((location) =>
+        location.id === locationId
+          ? { ...location, latitude: newPosition.lat, longitude: newPosition.lng }
+          : location,
+      );
+      onLocationsChange?.(updatedLocations);
+    },
+    [locations, onLocationsChange],
+  );
 
   return (
     <div className={cn("relative", className)}>
-      {/* Location Search Overlay */}
-      {showLocationSearch && (
-        <div className="absolute left-1/2 top-4 z-[1000] w-full max-w-md -translate-x-1/2 transform px-4">
-          <LocationSearch
-            onLocationSelect={handleLocationSearchSelect}
-            placeholder="Search for locations..."
-            className="w-full"
-            disabled={disabled}
-          />
-        </div>
-      )}
-
       {/* Sidebar Overlay */}
       {showSidebar && (
         <div
           className={cn(
             "absolute left-2 top-2 z-[900] flex flex-col transition-all duration-300 ease-in-out",
-            showLocationSearch && "top-20", // Adjust for search component
             isSidebarCollapsed ? "w-auto min-w-32" : "bottom-2 w-80",
           )}
         >
@@ -356,14 +236,51 @@ export const Map = ({
             {/* Sidebar Content */}
             {!isSidebarCollapsed && (
               <div className="flex min-h-0 flex-1 flex-col p-3">
-                <div className="flex-1 overflow-y-auto">
-                  <LocationSidebar
-                    locations={enhancedLocations}
-                    selectedLocation={selectedLocation}
-                    onLocationSelect={handleLocationSelectFromSidebar}
-                    onLocationNavigate={handleLocationNavigateFromSidebar}
-                    showDistances={showDistances}
-                  />
+                <div className="flex-1 space-y-2 overflow-y-auto">
+                  {locations.length === 0 ? (
+                    <p className="py-4 text-center text-sm text-gray-500">
+                      {selectionMode
+                        ? "Click on the map to add locations"
+                        : "No locations to display"}
+                    </p>
+                  ) : (
+                    locations.map((location, index) => (
+                      <div
+                        key={location.id || index}
+                        className="space-y-2 rounded-lg border border-gray-200 p-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={location.name}
+                            onChange={(e) =>
+                              location.id && handleLocationNameChange(location.id, e.target.value)
+                            }
+                            className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            disabled={disabled}
+                            placeholder="Location name"
+                          />
+                          {selectionMode && !disabled && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                location.id && handleLocationRemove(location.id);
+                              }}
+                              className="rounded p-1 text-red-500 transition-colors hover:bg-red-50 hover:text-red-600"
+                              title="Remove location"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          Lat: {location.latitude.toFixed(6)}, Lng: {location.longitude.toFixed(6)}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -392,8 +309,6 @@ export const Map = ({
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
 
-          <MapViewController center={mapCenter} zoom={mapZoom} shouldPan={shouldPanToLocation} />
-
           {showZoomControl && <ZoomControl position="topright" />}
           {showScale && <ScaleControl position="bottomright" />}
 
@@ -411,76 +326,102 @@ export const Map = ({
                 });
               }}
             >
-              {locations.map((location, index) => {
-                const isSelected = selectedLocation?.id === location.id;
-                return (
-                  <Marker
-                    key={location.id || index}
-                    position={[location.latitude, location.longitude]}
-                    icon={createCustomMarker(isSelected ? "#2563eb" : "#ef4444", isSelected)}
-                    draggable={selectionMode && !disabled}
-                    eventHandlers={{
-                      click: () => setSelectedLocation(location),
-                    }}
-                  >
-                    <Popup>
-                      <div className="min-w-0 space-y-2">
-                        <div className="font-semibold">{location.name}</div>
-                        {location.address && (
-                          <div className="text-sm text-gray-600">{location.address}</div>
-                        )}
-                        <div className="text-xs text-gray-500">
-                          {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
-                        </div>
-                        {[location.municipality, location.region, location.country].filter(Boolean)
-                          .length > 0 && (
-                          <div className="text-xs text-gray-500">
-                            {[location.municipality, location.region, location.country]
-                              .filter(Boolean)
-                              .join(", ")}
-                          </div>
-                        )}
-                      </div>
-                    </Popup>
-                  </Marker>
-                );
-              })}
-            </MarkerClusterGroup>
-          ) : (
-            locations.map((location, index) => {
-              const isSelected = selectedLocation?.id === location.id;
-              return (
+              {locations.map((location, index) => (
                 <Marker
                   key={location.id || index}
                   position={[location.latitude, location.longitude]}
-                  icon={createCustomMarker(isSelected ? "#2563eb" : "#ef4444", isSelected)}
+                  icon={createCustomMarker()}
                   draggable={selectionMode && !disabled}
                   eventHandlers={{
-                    click: () => setSelectedLocation(location),
+                    dragend: (event: any) => {
+                      const marker = event.target;
+                      const position = marker.getLatLng();
+                      if (location.id) {
+                        handleMarkerDragEnd(location.id, position);
+                      }
+                    },
                   }}
                 >
                   <Popup>
-                    <div className="min-w-0 space-y-2">
-                      <div className="font-semibold">{location.name}</div>
-                      {location.address && (
-                        <div className="text-sm text-gray-600">{location.address}</div>
-                      )}
-                      <div className="text-xs text-gray-500">
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={location.name}
+                        onChange={(e) =>
+                          location.id && handleLocationNameChange(location.id, e.target.value)
+                        }
+                        className="w-full rounded border px-2 py-1 text-sm"
+                        disabled={disabled}
+                      />
+                      <div className="text-xs text-gray-600">
                         {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
                       </div>
-                      {[location.municipality, location.region, location.country].filter(Boolean)
-                        .length > 0 && (
-                        <div className="text-xs text-gray-500">
-                          {[location.municipality, location.region, location.country]
-                            .filter(Boolean)
-                            .join(", ")}
-                        </div>
+                      {selectionMode && !disabled && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            location.id && handleLocationRemove(location.id);
+                          }}
+                          className="w-full rounded bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
+                        >
+                          Remove
+                        </button>
                       )}
                     </div>
                   </Popup>
                 </Marker>
-              );
-            })
+              ))}
+            </MarkerClusterGroup>
+          ) : (
+            locations.map((location, index) => (
+              <Marker
+                key={location.id || index}
+                position={[location.latitude, location.longitude]}
+                icon={createCustomMarker()}
+                draggable={selectionMode && !disabled}
+                eventHandlers={{
+                  dragend: (event: any) => {
+                    const marker = event.target;
+                    const position = marker.getLatLng();
+                    if (location.id) {
+                      handleMarkerDragEnd(location.id, position);
+                    }
+                  },
+                }}
+              >
+                <Popup>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={location.name}
+                      onChange={(e) =>
+                        location.id && handleLocationNameChange(location.id, e.target.value)
+                      }
+                      className="w-full rounded border px-2 py-1 text-sm"
+                      disabled={disabled}
+                    />
+                    <div className="text-xs text-gray-600">
+                      {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                    </div>
+                    {selectionMode && !disabled && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          location.id && handleLocationRemove(location.id);
+                        }}
+                        className="w-full rounded bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </Popup>
+              </Marker>
+            ))
           )}
         </MapContainer>
       </div>

@@ -18,9 +18,12 @@ import type { LocationPoint } from "@repo/ui/components/map";
 import { useExperimentLocations } from "../../hooks/experiment/useExperimentLocations/useExperimentLocations";
 import { useExperimentLocationsUpdate } from "../../hooks/experiment/useExperimentLocationsUpdate/useExperimentLocationsUpdate";
 
-const Map = dynamic(() => import("@repo/ui/components").then((mod) => ({ default: mod.Map })), {
-  ssr: false,
-});
+const EnhancedMap = dynamic(
+  () => import("@repo/ui/components").then((mod) => ({ default: mod.EnhancedMap })),
+  {
+    ssr: false,
+  },
+);
 
 interface ExperimentLocationManagementProps {
   experimentId: string;
@@ -129,7 +132,7 @@ export function ExperimentLocationManagement({ experimentId }: ExperimentLocatio
 
           {/* Interactive Map for Editing */}
           <div className="rounded border">
-            <Map
+            <EnhancedMap
               locations={editedLocations}
               onLocationsChange={handleLocationsChange}
               selectionMode={true}
