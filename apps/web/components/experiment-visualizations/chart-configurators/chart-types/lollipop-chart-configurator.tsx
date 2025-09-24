@@ -1,12 +1,13 @@
 "use client";
 
-import { Plus, Trash2, TrendingUp, Layers, Eye, Palette, Database } from "lucide-react";
-import type { UseFormReturn } from "react-hook-form";
+import { Layers, Eye, Plus, Trash2, Palette, Database } from "lucide-react";
 import { useFieldArray } from "react-hook-form";
+import type { UseFormReturn } from "react-hook-form";
 
 import type { DataColumn } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
+  Badge,
   Button,
   Card,
   CardContent,
@@ -25,26 +26,25 @@ import {
   SelectValue,
   Separator,
   Slider,
-  Badge,
 } from "@repo/ui/components";
 
 import type { ChartFormValues, SampleTable } from "../types";
 
-interface AreaChartConfiguratorProps {
+interface LollipopChartConfiguratorProps {
   form: UseFormReturn<ChartFormValues>;
   table: SampleTable;
-  onColumnSelect: (columnType: "x" | "y", columnName: string) => void;
+  onColumnSelect: (columnType: string, columnName: string) => void;
 }
 
-export default function AreaChartConfigurator({
+export default function LollipopChartConfigurator({
   form,
   table,
   onColumnSelect,
-}: AreaChartConfiguratorProps) {
+}: LollipopChartConfiguratorProps) {
   const { t } = useTranslation("experimentVisualizations");
   const { t: tCommon } = useTranslation("common");
 
-  // Hook for managing Y-axes array
+  // Use field array for multiple Y-axis series
   const {
     fields: yAxesFields,
     append: appendYAxis,
@@ -54,14 +54,17 @@ export default function AreaChartConfigurator({
     name: "config.config.yAxes",
   });
 
-  // Function to add a new Y-axis series
   const addYAxisSeries = () => {
     appendYAxis({
-      dataSource: { columnName: "", tableName: "", alias: "" },
+      dataSource: {
+        tableName: form.watch("dataConfig.tableName") || "",
+        columnName: "",
+        alias: "",
+      },
       type: "linear",
-      title: "",
       side: "left",
-      color: `hsl(${(yAxesFields.length * 137.5) % 360}, 70%, 50%)`,
+      title: "",
+      color: "#3b82f6",
     });
   };
 
@@ -81,7 +84,7 @@ export default function AreaChartConfigurator({
             <h4 className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
               {t("xAxisConfiguration")}
             </h4>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <FormField
                 control={form.control}
                 name="config.config.xAxis.dataSource.columnName"
@@ -137,6 +140,30 @@ export default function AreaChartConfigurator({
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="config.config.xAxis.type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">
+                      {t("configuration.axisType")}
+                    </FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="h-10 bg-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="linear">{t("axisTypes.linear")}</SelectItem>
+                        <SelectItem value="category">Category</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
           </div>
 
@@ -185,7 +212,7 @@ export default function AreaChartConfigurator({
                       {/* Data Column */}
                       <FormField
                         control={form.control}
-                        name={`config.config.yAxes.${index}.dataSource.columnName`}
+                        name={`config.config.yAxes.${index}.dataSource.columnName` as const}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">{t("dataColumn")}</FormLabel>
@@ -222,7 +249,7 @@ export default function AreaChartConfigurator({
                       {/* Series Name */}
                       <FormField
                         control={form.control}
-                        name={`config.config.yAxes.${index}.dataSource.alias`}
+                        name={`config.config.yAxes.${index}.dataSource.alias` as const}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">{t("seriesName")}</FormLabel>
@@ -245,12 +272,12 @@ export default function AreaChartConfigurator({
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       <FormField
                         control={form.control}
-                        name={`config.config.yAxes.${index}.color`}
+                        name={`config.config.yAxes.${index}.color` as const}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="flex items-center gap-2 text-sm font-medium">
                               <Palette className="h-3.5 w-3.5" />
-                              {t("areaColor")}
+                              {t("chartOptions.pointColor")}
                             </FormLabel>
                             <FormControl>
                               <div className="flex items-center gap-2">
@@ -274,7 +301,7 @@ export default function AreaChartConfigurator({
 
                       <FormField
                         control={form.control}
-                        name={`config.config.yAxes.${index}.type`}
+                        name={`config.config.yAxes.${index}.type` as const}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">
@@ -299,7 +326,7 @@ export default function AreaChartConfigurator({
 
                       <FormField
                         control={form.control}
-                        name={`config.config.yAxes.${index}.side`}
+                        name={`config.config.yAxes.${index}.side` as const}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">{t("yAxisSide")}</FormLabel>
@@ -324,7 +351,7 @@ export default function AreaChartConfigurator({
                     {index === 0 && (
                       <FormField
                         control={form.control}
-                        name={`config.config.yAxes.${index}.title`}
+                        name={`config.config.yAxes.${index}.title` as const}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">{t("yAxisTitle")}</FormLabel>
@@ -348,14 +375,14 @@ export default function AreaChartConfigurator({
         </CardContent>
       </Card>
 
-      {/* Area Chart Options & Appearance */}
+      {/* Lollipop Chart Options & Display */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Appearance */}
         <Card className="bg-white shadow-sm">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
               <Eye className="text-primary h-5 w-5" />
-              <CardTitle className="text-lg font-semibold">{t("appearance")}</CardTitle>
+              <CardTitle className="text-lg font-semibold">Appearance</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
@@ -428,91 +455,35 @@ export default function AreaChartConfigurator({
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="config.config.gridLines"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">
-                      {t("chartOptions.gridLines")}
-                    </FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger className="h-10 bg-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="both">{t("gridOptions.both")}</SelectItem>
-                        <SelectItem value="x">{t("gridOptions.xOnly")}</SelectItem>
-                        <SelectItem value="y">{t("gridOptions.yOnly")}</SelectItem>
-                        <SelectItem value="none">{t("gridOptions.none")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="config.config.display.colorScheme"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("colorScheme")}</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger className="h-10 bg-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="default">{t("colorSchemes.default")}</SelectItem>
-                        <SelectItem value="pastel">{t("colorSchemes.pastel")}</SelectItem>
-                        <SelectItem value="dark">{t("colorSchemes.dark")}</SelectItem>
-                        <SelectItem value="colorblind">{t("colorSchemes.colorblind")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
           </CardContent>
         </Card>
 
-        {/* Area Chart Options */}
+        {/* Lollipop Chart Options */}
         <Card className="bg-white shadow-sm">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
-              <TrendingUp className="text-primary h-5 w-5" />
-              <CardTitle className="text-lg font-semibold">
-                {t("chartOptions.areaChartOptions")}
-              </CardTitle>
+              <Palette className="text-primary h-5 w-5" />
+              <CardTitle className="text-lg font-semibold">Lollipop Chart Options</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 gap-6">
               <FormField
                 control={form.control}
-                name="config.config.fillMode"
+                name="config.config.orientation"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">
-                      {t("chartOptions.fillMode")}
-                    </FormLabel>
+                    <FormLabel className="text-sm font-medium">Orientation</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="h-10 bg-white">
-                          <SelectValue placeholder={t("selectFillMode")} />
+                          <SelectValue placeholder="Select orientation" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="none">{t("fillModes.none")}</SelectItem>
-                        <SelectItem value="tozeroy">{t("fillModes.tozeroy")}</SelectItem>
-                        <SelectItem value="tonexty">{t("fillModes.tonexty")}</SelectItem>
-                        <SelectItem value="toself">{t("fillModes.toself")}</SelectItem>
+                        <SelectItem value="v">Vertical</SelectItem>
+                        <SelectItem value="h">Horizontal</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -522,45 +493,23 @@ export default function AreaChartConfigurator({
 
               <FormField
                 control={form.control}
-                name="config.config.stackGroup"
+                name="config.config.stemWidth"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">
-                      {t("chartOptions.stackGroup")}
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t("enterStackGroup")}
-                        className="h-10 bg-white"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="config.config.fillOpacity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">
-                      {t("chartOptions.fillOpacity")}
-                    </FormLabel>
+                    <FormLabel className="text-sm font-medium">Stem Width</FormLabel>
                     <FormControl>
                       <div className="space-y-3">
                         <Slider
-                          min={0}
-                          max={1}
-                          step={0.05}
-                          value={[field.value || 0.6]}
+                          min={1}
+                          max={10}
+                          step={1}
+                          value={[field.value]}
                           onValueChange={(values) => field.onChange(values[0])}
                           className="w-full"
                         />
                         <div className="flex items-center justify-center">
                           <Badge variant="outline" className="font-mono text-xs">
-                            {Math.round((field.value || 0.6) * 100)}%
+                            {field.value}px
                           </Badge>
                         </div>
                       </div>
@@ -572,29 +521,51 @@ export default function AreaChartConfigurator({
 
               <FormField
                 control={form.control}
-                name="config.config.smoothing"
+                name="config.config.dotSize"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">
-                      {t("chartOptions.smoothing")}
-                    </FormLabel>
+                    <FormLabel className="text-sm font-medium">Dot Size</FormLabel>
                     <FormControl>
                       <div className="space-y-3">
                         <Slider
-                          min={0}
-                          max={1}
-                          step={0.05}
-                          value={[field.value || 0]}
+                          min={5}
+                          max={30}
+                          step={1}
+                          value={[field.value]}
                           onValueChange={(values) => field.onChange(values[0])}
                           className="w-full"
                         />
                         <div className="flex items-center justify-center">
                           <Badge variant="outline" className="font-mono text-xs">
-                            {Math.round((field.value || 0) * 100)}%
+                            {field.value}px
                           </Badge>
                         </div>
                       </div>
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="config.config.gridLines"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">Grid Lines</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="h-10 bg-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="both">{t("gridLines.both")}</SelectItem>
+                        <SelectItem value="x">{t("gridLines.x")}</SelectItem>
+                        <SelectItem value="y">{t("gridLines.y")}</SelectItem>
+                        <SelectItem value="none">{t("gridLines.none")}</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

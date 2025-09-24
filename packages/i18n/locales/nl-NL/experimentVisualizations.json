@@ -14,6 +14,11 @@
   "createSuccess": "Visualisatie succesvol aangemaakt",
   "updateSuccess": "Visualisatie succesvol bijgewerkt",
 
+  "editVisualization": "Visualisatie bewerken",
+  "editDetails": "Visualisatie Details bewerken",
+  "editDetailsDescription": "Werk de informatie over uw visualisatie bij",
+  "back": "Terug",
+
   "details": "Visualisatie Details",
   "detailsDescription": "Geef basisinformatie over uw visualisatie",
   "name": "Naam",
@@ -29,7 +34,9 @@
     "area": "Oppervlaktediagram",
     "scatter": "Spreidingsdiagram",
     "dot-plot": "Stippeldiagram",
-    "heatmap": "Warmtekaart",
+    "bubble": "Bellendiagram",
+    "lollipop": "Lollipop-diagram",
+    "heatmap": "Heatmap",
     "contour": "Contourdiagram",
     "ternary": "Ternair diagram",
     "parallel-coordinates": "Parallelle coördinaten",
@@ -64,17 +71,18 @@
     "axisTitle": "Astitel",
     "axisType": "Astype",
     "axisSide": "Aszijde",
-    "color": "Kleur"
+    "color": "Kleur",
+    "sizeAxisConfiguration": "Grootte-As Configuratie"
   },
 
   "newVisualization": "Nieuwe Visualisatie",
   "createNew": "Nieuwe maken",
   "all": "Alle",
-  "selectChartTypeHelp": "Kies het type visualisatie dat uw data het beste weergeeft",
   "dataConfiguration": "Dataconfiguratie",
   "selectDataSource": "Selecteer Gegevensbron",
   "dataTable": "Gegevenstabel",
   "xAxisConfiguration": "X-As Configuratie",
+  "yAxisConfiguration": "Y-As Configuratie",
   "yAxesConfiguration": "Y-Assen Configuratie",
   "additionalSeries": "Aanvullende Series",
   "series": "Serie",
@@ -104,7 +112,12 @@
   "enterChartSubtitle": "Voer diagram ondertitel in",
   "appearance": "Uiterlijk",
   "colorSchemes": {
-    "default": "Standaard"
+    "default": "Standaard",
+    "pastel": "Pastel",
+    "dark": "Donker",
+    "colorblind": "Kleurenblind",
+    "viridis": "Viridis",
+    "plasma": "Plasma"
   },
 
   "axisTypes": {
@@ -153,7 +166,9 @@
     "xLabels": "X Labels",
     "yLabels": "Y Labels",
     "zValues": "Z Waarden",
-    "heatmapColorscale": "Warmtekaart Kleurschaal"
+    "heatmapColorscale": "Warmtekaart Kleurschaal",
+    "bubbleChartOptions": "Bellendiagram Opties",
+    "seriesStyling": "Serie Styling"
   },
 
   "orientations": {
@@ -192,7 +207,8 @@
     "triangle-right": "Driehoek rechts",
     "pentagon": "Vijfhoek",
     "hexagon": "Zeshoek",
-    "star": "Ster"
+    "star": "Ster",
+    "triangle": "Driehoek"
   },
 
   "gridOptions": {
@@ -274,7 +290,8 @@
     "unsupportedChartType": "Niet ondersteund diagramtype",
     "chartTypeNotSupported": "wordt niet ondersteund",
     "comingSoon": "Binnenkort beschikbaar",
-    "notYetImplemented": "diagrammen zijn nog niet geïmplementeerd"
+    "notYetImplemented": "diagrammen zijn nog niet geïmplementeerd",
+    "sizeAxisNotConfigured": "Grootte-as kolom niet geconfigureerd"
   },
 
   "preview": {
@@ -295,6 +312,101 @@
   "colorScheme": "Kleurschema",
   "showDataLabels": "Toon datalabels",
   "showLegend": "Toon legenda",
+
+  "heatmapValuesConfiguration": "Heatmap Waarden Configuratie",
+  "heatmapValues": "Heatmap Waarden",
+  "selectNumericColumn": "Selecteer numerieke kolom",
+  "noNumericColumns": "Geen numerieke kolommen beschikbaar",
+  "valuesLabel": "Waarden Label",
+  "enterValuesLabel": "Voer waarden label in",
+  "colorConfiguration": "Kleur Configuratie",
+  "colorScale": "Kleurschaal",
+  "heatmapOptions": "Heatmap Opties",
+  "colorbarTitle": "Kleurenbalk Titel",
+  "enterColorbarTitle": "Voer kleurenbalk titel in",
+  "showColorScale": "Toon Kleurschaal",
+  "showColorScaleDescription": "Toon de kleurschaal legende naast de heatmap",
+  "showTextValues": "Toon Tekstwaarden",
+  "showTextValuesDescription": "Toon waarden als tekst in de heatmap cellen",
+  "textTemplate": "Tekstsjabloon",
+  "textTemplateDescription": "Formaat voor het weergeven van tekstwaarden (bijv. %{z} voor waarden, %{x} voor x-as, %{y} voor y-as)",
+  "textColor": "Tekstkleur",
+  "fontSize": "Lettergrootte",
+
+  "contourValuesConfiguration": "Contour Waarden Configuratie",
+  "contourValues": "Contour Waarden",
+  "contourOptions": "Contour Opties",
+  "contourColoring": "Contour Kleuring",
+  "contourColoringLines": "Lijnen",
+  "contourColoringFill": "Vulling",
+  "contourColoringHeatmap": "Heatmap",
+  "contourColoringNone": "Geen",
+  "showContourLines": "Toon Contourlijnen",
+  "showContourLinesDescription": "Toon contourlijnen op de grafiek",
+  "showContourLabels": "Toon Contour Labels",
+  "showContourLabelsDescription": "Toon labels op contourlijnen",
+  "numberOfContours": "Aantal Contouren",
+  "contourStartValue": "Startwaarde",
+  "contourStartValuePlaceholder": "Voer startwaarde in",
+  "contourEndValue": "Eindwaarde",
+  "contourEndValuePlaceholder": "Voer eindwaarde in",
+  "contourSize": "Contour Stapgrootte",
+  "contourSizePlaceholder": "Voer stapgrootte in",
+
+  "ternary": {
+    "aAxisConfiguration": "A-As Configuratie (Component A)",
+    "componentA": "Component A",
+    "aAxisTitle": "Component A Titel",
+    "bAxisConfiguration": "B-As Configuratie (Component B)",
+    "componentB": "Component B",
+    "bAxisTitle": "Component B Titel",
+    "cAxisConfiguration": "C-As Configuratie (Component C)",
+    "componentC": "Component C",
+    "cAxisTitle": "Component C Titel",
+    "chartOptions": "Diagramopties",
+    "sum": "Normalisatiesom",
+    "sumDescription": "Totaalsom waaraan componenten moeten optellen (meestal 100 voor percentages)",
+    "displayMode": "Weergavemodus",
+    "markers": "Markers",
+    "lines": "Lijnen",
+    "linesMarkers": "Lijnen + Markers",
+    "axisAppearance": "As-uiterlijk",
+    "gridOptions": "Rasteropties",
+    "showGridLines": "Toon Rasterlijnen",
+    "showGridLinesDescription": "Toon rasterlijnen op het ternaire diagram",
+    "showAxisLines": "Toon Aslijnen",
+    "showAxisLinesDescription": "Toon de hoofdaslijnen van de ternaire driehoek",
+    "showTickLabels": "Toon Schaallabels",
+    "showTickLabelsDescription": "Toon numerieke labels op de schaaltekens",
+    "gridColor": "Rasterkleur",
+    "lineColor": "Aslijnkleur",
+    "boundaries": "Grenzen",
+    "addBoundary": "Grens Toevoegen",
+    "boundary": "Grens",
+    "boundaryName": "Grensnaam",
+    "enterBoundaryName": "Voer grensnaam in",
+    "lineStyle": "Lijnstijl",
+    "lineDash": "Lijnstijl",
+    "lineWidth": "Lijndikte",
+    "solid": "Vast",
+    "dot": "Punt",
+    "dash": "Streep",
+    "longdash": "Lange Streep",
+    "dashdot": "Streep Punt",
+    "longdashdot": "Lange Streep Punt",
+    "ternaryChartOptions": "Ternaire Diagram Opties",
+    "fillStyle": "Vulstijl",
+    "fillColor": "Vulkleur",
+    "optionalFillColor": "Optionele vulkleur",
+    "noBoundaries": "Geen grenzen geconfigureerd",
+    "noBoundariesDescription": "Voeg grenzen toe om gebieden op uw ternaire diagram te markeren"
+  },
+
+  "colors": {
+    "white": "Wit",
+    "black": "Zwart",
+    "auto": "Automatisch"
+  },
   "showGridLines": "Toon rasterlijnen",
   "smooth": "Gladmaken",
   "opacity": "Transparantie",
@@ -307,5 +419,15 @@
   "donutThickness": "Donut dikte",
   "titleText": "Titeltekst",
   "xAxisLabel": "X-as label",
-  "yAxisLabel": "Y-as label"
+  "yAxisLabel": "Y-as label",
+  "column": "Kolom",
+
+  "lollipop": {
+    "orientation": "Oriëntatie",
+    "vertical": "Verticaal",
+    "horizontal": "Horizontaal",
+    "stemWidth": "Stengelbreedte",
+    "dotSize": "Puntgrootte",
+    "gridLines": "Rasterlijnen"
+  }
 }

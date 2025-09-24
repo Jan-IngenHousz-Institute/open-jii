@@ -113,8 +113,15 @@ export function LineChartRenderer({
         line: {
           color: yAxis.color ?? `hsl(${index * 60}, 70%, 50%)`,
           width: 2,
+          // Add support for smoothing
+          shape:
+            lineConfig.smoothing && lineConfig.smoothing > 0
+              ? ("spline" as const)
+              : ("linear" as const),
         },
         marker: lineConfig.mode.includes("markers") ? { size: 6 } : undefined,
+        // Add support for connectGaps
+        connectgaps: lineConfig.connectGaps,
       };
     });
 
@@ -124,7 +131,17 @@ export function LineChartRenderer({
       yAxisTitle: lineConfig.yAxes[0]?.title ?? "Values",
       useWebGL: !isPreview && chartData.length > 1000,
       showLegend: lineConfig.display?.showLegend ?? true,
-      interactive: lineConfig.display?.interactive ?? true,
+      // Note: gridLines support would need UI component enhancement
+      // layout: {
+      //   xaxis: {
+      //     showgrid: lineConfig.gridLines === "both" || lineConfig.gridLines === "x",
+      //     zeroline: false,
+      //   },
+      //   yaxis: {
+      //     showgrid: lineConfig.gridLines === "both" || lineConfig.gridLines === "y",
+      //     zeroline: false,
+      //   },
+      // },
     };
 
     return <LineChart data={chartSeries} config={chartConfig} />;

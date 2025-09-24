@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash2, BarChart3, Layers, Eye, Palette } from "lucide-react";
+import { Plus, Trash2, BarChart3, Layers, Eye, Palette, Database } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useFieldArray } from "react-hook-form";
 
@@ -42,6 +42,7 @@ export default function BarChartConfigurator({
   onColumnSelect,
 }: BarChartConfiguratorProps) {
   const { t } = useTranslation("experimentVisualizations");
+  const { t: tCommon } = useTranslation("common");
 
   // Hook for managing Y-axes array
   const {
@@ -56,7 +57,7 @@ export default function BarChartConfigurator({
   // Function to add a new Y-axis series
   const addYAxisSeries = () => {
     appendYAxis({
-      dataSource: { columnName: "", tableName: "" },
+      dataSource: { columnName: "", tableName: "", alias: "" },
       type: "linear",
       title: "",
       side: "left",
@@ -70,7 +71,7 @@ export default function BarChartConfigurator({
       <Card className="shadow-sm">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-2">
-            <BarChart3 className="text-primary h-5 w-5" />
+            <Database className="text-primary h-5 w-5" />
             <CardTitle className="text-lg font-semibold">{t("dataConfiguration")}</CardTitle>
           </div>
         </CardHeader>
@@ -86,7 +87,9 @@ export default function BarChartConfigurator({
                 name="config.config.xAxis.dataSource.columnName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("xAxis")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("configuration.xAxis")}
+                    </FormLabel>
                     <Select
                       value={field.value}
                       onValueChange={(value) => {
@@ -96,7 +99,7 @@ export default function BarChartConfigurator({
                     >
                       <FormControl>
                         <SelectTrigger className="h-10 bg-white">
-                          <SelectValue placeholder={t("selectColumn")} />
+                          <SelectValue placeholder={t("configuration.selectColumn")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -151,7 +154,7 @@ export default function BarChartConfigurator({
                 className="h-8 px-3"
               >
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
-                {t("addSeries")}
+                {t("configuration.addSeries")}
               </Button>
             </div>
 
@@ -195,7 +198,7 @@ export default function BarChartConfigurator({
                             >
                               <FormControl>
                                 <SelectTrigger className="h-10 bg-white">
-                                  <SelectValue placeholder={t("selectColumn")} />
+                                  <SelectValue placeholder={t("configuration.selectColumn")} />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
@@ -274,7 +277,9 @@ export default function BarChartConfigurator({
                         name={`config.config.yAxes.${index}.type` as const}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-medium">{t("axisType")}</FormLabel>
+                            <FormLabel className="text-sm font-medium">
+                              {t("configuration.axisType")}
+                            </FormLabel>
                             <Select value={field.value} onValueChange={field.onChange}>
                               <FormControl>
                                 <SelectTrigger className="h-10 bg-white">
@@ -284,8 +289,6 @@ export default function BarChartConfigurator({
                               <SelectContent>
                                 <SelectItem value="linear">{t("axisTypes.linear")}</SelectItem>
                                 <SelectItem value="log">{t("axisTypes.log")}</SelectItem>
-                                <SelectItem value="date">{t("axisTypes.date")}</SelectItem>
-                                <SelectItem value="category">{t("axisTypes.category")}</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -316,24 +319,26 @@ export default function BarChartConfigurator({
                       />
                     </div>
 
-                    {/* Axis Title */}
-                    <FormField
-                      control={form.control}
-                      name={`config.config.yAxes.${index}.title` as const}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm font-medium">{t("yAxisTitle")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={t("enterAxisTitle")}
-                              className="h-10 bg-white"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {/* Y-axis Title - only show for first axis */}
+                    {index === 0 && (
+                      <FormField
+                        control={form.control}
+                        name={`config.config.yAxes.${index}.title` as const}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium">{t("yAxisTitle")}</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder={t("enterAxisTitle")}
+                                className="h-10 bg-white"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -388,8 +393,8 @@ export default function BarChartConfigurator({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="true">{t("common.yes")}</SelectItem>
-                        <SelectItem value="false">{t("common.no")}</SelectItem>
+                        <SelectItem value="true">{tCommon("common.yes")}</SelectItem>
+                        <SelectItem value="false">{tCommon("common.no")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -402,7 +407,9 @@ export default function BarChartConfigurator({
                 name="config.config.display.legendPosition"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("legendPosition")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("chartOptions.legendPosition")}
+                    </FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="h-10 bg-white">
@@ -426,7 +433,9 @@ export default function BarChartConfigurator({
                 name="config.config.gridLines"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("gridLines")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("chartOptions.gridLines")}
+                    </FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="h-10 bg-white">
@@ -477,7 +486,9 @@ export default function BarChartConfigurator({
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
               <BarChart3 className="text-primary h-5 w-5" />
-              <CardTitle className="text-lg font-semibold">{t("barChartOptions")}</CardTitle>
+              <CardTitle className="text-lg font-semibold">
+                {t("chartOptions.barChartOptions")}
+              </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
@@ -487,11 +498,13 @@ export default function BarChartConfigurator({
                 name="config.config.orientation"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("orientation")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("chartOptions.orientation")}
+                    </FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="h-10 bg-white">
-                          <SelectValue placeholder={t("selectOrientation")} />
+                          <SelectValue placeholder={t("chartOptions.selectOrientation")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -509,11 +522,13 @@ export default function BarChartConfigurator({
                 name="config.config.barMode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("barMode")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("chartOptions.barMode")}
+                    </FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="h-10 bg-white">
-                          <SelectValue placeholder={t("selectBarMode")} />
+                          <SelectValue placeholder={t("chartOptions.selectBarMode")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -531,7 +546,9 @@ export default function BarChartConfigurator({
                 name="config.config.barWidth"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("barWidth")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("chartOptions.barWidth")}
+                    </FormLabel>
                     <FormControl>
                       <div className="space-y-3">
                         <Slider
@@ -559,7 +576,9 @@ export default function BarChartConfigurator({
                 name="config.config.showValues"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("showValues")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("chartOptions.showValues")}
+                    </FormLabel>
                     <Select
                       value={field.value ? "true" : "false"}
                       onValueChange={(value) => field.onChange(value === "true")}
@@ -570,8 +589,8 @@ export default function BarChartConfigurator({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="true">{t("common.yes")}</SelectItem>
-                        <SelectItem value="false">{t("common.no")}</SelectItem>
+                        <SelectItem value="true">{tCommon("common.yes")}</SelectItem>
+                        <SelectItem value="false">{tCommon("common.no")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

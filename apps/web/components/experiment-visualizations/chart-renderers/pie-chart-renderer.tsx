@@ -100,8 +100,21 @@ export function PieChartRenderer({
         values,
         type: "pie" as const,
         hole: pieConfig.hole,
-        textinfo: pieConfig.showLabels ? ("label+percent" as const) : ("percent" as const),
+        // Enhanced textinfo to support showValues
+        textinfo: (() => {
+          if (pieConfig.showLabels && pieConfig.showValues) {
+            return "label+value+percent" as const;
+          } else if (pieConfig.showLabels) {
+            return "label+percent" as const;
+          } else if (pieConfig.showValues) {
+            return "value+percent" as const;
+          } else {
+            return "percent" as const;
+          }
+        })(),
         textposition: pieConfig.textPosition,
+        // Add support for pull (slice separation)
+        pull: pieConfig.pull > 0 ? Array(labels.length).fill(pieConfig.pull) : undefined,
       },
     ];
 

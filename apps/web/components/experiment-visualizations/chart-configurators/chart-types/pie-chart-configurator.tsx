@@ -1,6 +1,6 @@
 "use client";
 
-import { PieChart, Eye } from "lucide-react";
+import { PieChart, Eye, Database } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 
 import type { DataColumn } from "@repo/api";
@@ -39,6 +39,7 @@ export default function PieChartConfigurator({
   onColumnSelect,
 }: PieChartConfiguratorProps) {
   const { t } = useTranslation("experimentVisualizations");
+  const { t: tCommon } = useTranslation("common");
 
   return (
     <div className="space-y-8">
@@ -46,7 +47,7 @@ export default function PieChartConfigurator({
       <Card className="shadow-sm">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-2">
-            <PieChart className="text-primary h-5 w-5" />
+            <Database className="text-primary h-5 w-5" />
             <CardTitle className="text-lg font-semibold">{t("dataConfiguration")}</CardTitle>
           </div>
         </CardHeader>
@@ -63,7 +64,9 @@ export default function PieChartConfigurator({
                 name="config.config.labelSource.columnName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("labels")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("configuration.labels")}
+                    </FormLabel>
                     <Select
                       value={field.value}
                       onValueChange={(value) => {
@@ -73,7 +76,7 @@ export default function PieChartConfigurator({
                     >
                       <FormControl>
                         <SelectTrigger className="h-10 bg-white">
-                          <SelectValue placeholder={t("selectColumn")} />
+                          <SelectValue placeholder={t("configuration.selectColumn")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -100,7 +103,9 @@ export default function PieChartConfigurator({
                 name="config.config.valueSource.columnName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("values")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("configuration.values")}
+                    </FormLabel>
                     <Select
                       value={field.value}
                       onValueChange={(value) => {
@@ -110,7 +115,7 @@ export default function PieChartConfigurator({
                     >
                       <FormControl>
                         <SelectTrigger className="h-10 bg-white">
-                          <SelectValue placeholder={t("selectColumn")} />
+                          <SelectValue placeholder={t("configuration.selectColumn")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -182,8 +187,8 @@ export default function PieChartConfigurator({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="true">{t("common.yes")}</SelectItem>
-                        <SelectItem value="false">{t("common.no")}</SelectItem>
+                        <SelectItem value="true">{tCommon("common.yes")}</SelectItem>
+                        <SelectItem value="false">{tCommon("common.no")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -196,7 +201,9 @@ export default function PieChartConfigurator({
                 name="config.config.display.legendPosition"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("legendPosition")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("chartOptions.legendPosition")}
+                    </FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="h-10 bg-white">
@@ -247,7 +254,9 @@ export default function PieChartConfigurator({
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
               <PieChart className="text-primary h-5 w-5" />
-              <CardTitle className="text-lg font-semibold">{t("pieChartOptions")}</CardTitle>
+              <CardTitle className="text-lg font-semibold">
+                {t("chartOptions.pieChartOptions")}
+              </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
@@ -257,7 +266,9 @@ export default function PieChartConfigurator({
                 name="config.config.showLabels"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("showLabels")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("chartOptions.showLabels")}
+                    </FormLabel>
                     <Select
                       value={field.value ? "true" : "false"}
                       onValueChange={(value) => field.onChange(value === "true")}
@@ -268,8 +279,8 @@ export default function PieChartConfigurator({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="true">{t("common.yes")}</SelectItem>
-                        <SelectItem value="false">{t("common.no")}</SelectItem>
+                        <SelectItem value="true">{tCommon("common.yes")}</SelectItem>
+                        <SelectItem value="false">{tCommon("common.no")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -282,7 +293,9 @@ export default function PieChartConfigurator({
                 name="config.config.showValues"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("showValues")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("chartOptions.showValues")}
+                    </FormLabel>
                     <Select
                       value={field.value ? "true" : "false"}
                       onValueChange={(value) => field.onChange(value === "true")}
@@ -293,8 +306,8 @@ export default function PieChartConfigurator({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="true">{t("common.yes")}</SelectItem>
-                        <SelectItem value="false">{t("common.no")}</SelectItem>
+                        <SelectItem value="true">{tCommon("common.yes")}</SelectItem>
+                        <SelectItem value="false">{tCommon("common.no")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -307,7 +320,9 @@ export default function PieChartConfigurator({
                 name="config.config.hole"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("donutHole")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("chartOptions.donutHole")}
+                    </FormLabel>
                     <FormControl>
                       <div className="space-y-3">
                         <Slider
@@ -335,7 +350,9 @@ export default function PieChartConfigurator({
                 name="config.config.textPosition"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("textPosition")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("chartOptions.textPosition")}
+                    </FormLabel>
                     <Select
                       value={typeof field.value === "string" ? field.value : "auto"}
                       onValueChange={field.onChange}
@@ -361,7 +378,9 @@ export default function PieChartConfigurator({
                 name="config.config.pull"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("pullSlices")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("chartOptions.pullSlices")}
+                    </FormLabel>
                     <FormControl>
                       <div className="space-y-3">
                         <Slider

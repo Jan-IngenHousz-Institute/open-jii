@@ -14,6 +14,25 @@
   "createSuccess": "Visualisierung erfolgreich erstellt",
   "updateSuccess": "Visualisierung erfolgreich aktualisiert",
 
+  "editVisualization": "Visualisierung bearbeiten",
+  "editDetails": "Visualisierung Details bearbeiten",
+  "editDetailsDescription": "Werk die informatie over uw visualisatie bij",
+  "back": "Zurück",
+  "export": "Exportieren",
+  "deleting": "Löschen...",
+  "loadingVisualization": "Visualisierung wird geladen...",
+  "failedToLoadVisualization": "Fehler beim Laden der Visualisierung",
+  "chartPreview": "Diagramm-Vorschau",
+  "chartInfo": "Diagrammtyp: {{type}}, Datenquelle: {{table}}",
+  "dataSource": "Datenquelle",
+  "table": "Tabelle",
+  "columns": "Spalten",
+  "chartConfiguration": "Diagramm-Konfiguration",
+  "chartType": "Diagrammtyp",
+  "configurationDetails": "Konfiguration",
+  "createdAt": "Erstellt",
+  "updatedAt": "Zuletzt aktualisiert",
+
   "details": "Visualisierungsdetails",
   "detailsDescription": "Geben Sie grundlegende Informationen zu Ihrer Visualisierung an",
   "name": "Name",
@@ -29,6 +48,8 @@
     "area": "Flächendiagramm",
     "scatter": "Streudiagramm",
     "dot-plot": "Punktdiagramm",
+    "bubble": "Blasendiagramm",
+    "lollipop": "Lollipop-Diagramm",
     "heatmap": "Heatmap",
     "contour": "Konturdiagramm",
     "ternary": "Ternäres Diagramm",
@@ -64,18 +85,33 @@
     "axisTitle": "Achsentitel",
     "axisType": "Achsentyp",
     "axisSide": "Achsenseite",
-    "color": "Farbe"
+    "color": "Farbe",
+    "sizeVariable": "Größenvariable",
+    "sizeAxisTitle": "Größenachsentitel",
+    "selectAxisType": "Achsentyp auswählen",
+    "selectAxisSide": "Achsenseite auswählen",
+    "selectLegendPosition": "Legendenposition auswählen",
+    "selectGridLines": "Gitternetzlinien auswählen",
+    "selectColorScheme": "Farbschema auswählen",
+    "selectDisplayMode": "Anzeigemodus auswählen",
+    "markersOnly": "Nur Markierungen",
+    "markersWithText": "Markierungen mit Text",
+    "minBubbleSize": "Minimale Blasengröße",
+    "maxBubbleSize": "Maximale Blasengröße"
   },
 
   "newVisualization": "Neue Visualisierung",
   "createNew": "Neue erstellen",
   "all": "Alle",
-  "selectChartTypeHelp": "Wählen Sie den Visualisierungstyp, der Ihre Daten am besten darstellt",
+  "noChartTypesAvailable": "Keine Diagrammtypen verfügbar",
   "dataConfiguration": "Datenkonfiguration",
   "selectDataSource": "Datenquelle auswählen",
   "dataTable": "Datentabelle",
   "xAxisConfiguration": "X-Achsen-Konfiguration",
+  "yAxisConfiguration": "Y-Achsen-Konfiguration",
   "yAxesConfiguration": "Y-Achsen-Konfiguration",
+  "yAxesSeries": "Y-Achsen-Serien",
+  "yAxisSeries": "Y-Achsen-Serie",
   "additionalSeries": "Zusätzliche Serien",
   "series": "Serie",
   "dataColumn": "Datenspalte",
@@ -84,6 +120,7 @@
   "seriesTitle": "Serientitel",
   "enterSeriesTitle": "Serientitel eingeben",
   "seriesColor": "Serienfarbe",
+  "barColor": "Balkenfarbe",
   "areaColor": "Flächenfarbe",
   "enterAxisTitle": "Achsentitel eingeben",
   "xAxisTitle": "X-Achsentitel",
@@ -93,6 +130,16 @@
   "areaOptions": "Flächenoptionen",
   "lineMode": "Linienmodus",
   "selectLineMode": "Linienmodus auswählen",
+  "selectAxisType": "Achsentyp auswählen",
+  "selectFillMode": "Füllmodus auswählen",
+  "selectGridLines": "Gitterlinien auswählen",
+  "selectMarkerShape": "Markerform auswählen",
+  "enterStackGroup": "Stapelgruppe eingeben",
+  "chartTitlePlaceholder": "Diagrammtitel eingeben",
+  "seriesTitlePlaceholder": "Serientitel eingeben",
+  "displayOptions": "Anzeigeoptionen",
+  "sizeAxisConfiguration": "Größenachsen-Konfiguration",
+  "bubbleChartOptions": "Blasendiagramm-Optionen",
   "lineModes": {
     "lines": "Linien",
     "markers": "Marker",
@@ -104,7 +151,12 @@
   "enterChartSubtitle": "Diagramm-Untertitel eingeben",
   "appearance": "Erscheinungsbild",
   "colorSchemes": {
-    "default": "Standard"
+    "default": "Standard",
+    "pastel": "Pastell",
+    "dark": "Dunkel",
+    "colorblind": "Farbenblind",
+    "viridis": "Viridis",
+    "plasma": "Plasma"
   },
 
   "axisTypes": {
@@ -123,11 +175,26 @@
 
   "chartOptions": {
     "title": "Diagrammoptionen",
+    "scatterOptions": "Streudiagramm-Optionen",
+    "pieChartOptions": "Kreisdiagramm-Optionen",
+    "barChartOptions": "Balkendiagramm-Optionen",
+    "lineChartOptions": "Liniendiagramm-Optionen",
+    "areaChartOptions": "Flächendiagramm-Optionen",
+    "displayOptions": "Anzeigeoptionen",
+    "markerConfiguration": "Marker-Konfiguration",
+    "seriesStyling": "Serie Styling",
+    "pointColor": "Punktfarbe",
+    "lineColor": "Linienfarbe",
+    "yAxisTitle": "Y-Achsen-Titel",
     "orientation": "Ausrichtung",
     "barMode": "Balkenmodus",
     "barWidth": "Balkenbreite",
     "showValues": "Werte anzeigen",
     "mode": "Anzeigemodus",
+    "scatterMode": "Streudiagramm-Modus",
+    "selectMode": "Modus auswählen",
+    "selectOrientation": "Ausrichtung auswählen",
+    "selectBarMode": "Balkenmodus auswählen",
     "connectGaps": "Lücken verbinden",
     "smoothing": "Glättung",
     "fillMode": "Füllmodus",
@@ -173,6 +240,11 @@
     "lines+markers": "Linien + Marker"
   },
 
+  "scatterModes": {
+    "markers": "Marker",
+    "linesMarkers": "Linien + Marker"
+  },
+
   "fillModes": {
     "none": "Keine",
     "tozeroy": "Zu Null Y",
@@ -195,11 +267,39 @@
     "star": "Stern"
   },
 
+  "shapes": {
+    "circle": "Kreis",
+    "square": "Quadrat",
+    "diamond": "Diamant",
+    "cross": "Kreuz",
+    "triangle": "Dreieck"
+  },
+
   "gridOptions": {
     "none": "Keine",
     "horizontal": "Horizontal",
     "vertical": "Vertikal",
+    "both": "Beide",
+    "x": "Horizontal",
+    "y": "Vertikal",
+    "xOnly": "Nur X",
+    "yOnly": "Nur Y"
+  },
+
+  "gridLineOptions": {
+    "none": "Keine",
+    "x": "Horizontal",
+    "y": "Vertikal",
     "both": "Beide"
+  },
+
+  "gridLines": {
+    "none": "Keine",
+    "horizontal": "Horizontal",
+    "vertical": "Vertikal",
+    "both": "Beide",
+    "x": "Horizontal",
+    "y": "Vertikal"
   },
 
   "legendPositions": {
@@ -210,6 +310,10 @@
   },
 
   "positions": {
+    "right": "Rechts",
+    "left": "Links",
+    "top": "Oben",
+    "bottom": "Unten",
     "inside": "Innen",
     "outside": "Außen",
     "auto": "Automatisch"
@@ -267,6 +371,7 @@
     "invalidConfiguration": "Ungültige Diagrammkonfiguration",
     "xAxisNotConfigured": "X-Achsen-Spalte nicht konfiguriert",
     "yAxisNotConfigured": "Y-Achsen-Spalte nicht konfiguriert",
+    "sizeAxisNotConfigured": "Größenachsen-Spalte nicht konfiguriert",
     "loadingData": "Diagrammdaten werden geladen...",
     "failedToLoadData": "Daten konnten nicht geladen werden",
     "failedToLoadDataDescription": "Experimentdaten für diese Visualisierung konnten nicht abgerufen werden",
@@ -274,7 +379,8 @@
     "unsupportedChartType": "Nicht unterstützter Diagrammtyp",
     "chartTypeNotSupported": "wird nicht unterstützt",
     "comingSoon": "Demnächst verfügbar",
-    "notYetImplemented": "Diagramme sind noch nicht implementiert"
+    "notYetImplemented": "Diagramme sind noch nicht implementiert",
+    "exportComingSoon": "Export-Funktionalität kommt bald"
   },
 
   "preview": {
@@ -295,6 +401,101 @@
   "colorScheme": "Farbschema",
   "showDataLabels": "Datenbeschriftungen anzeigen",
   "showLegend": "Legende anzeigen",
+
+  "heatmapValuesConfiguration": "Heatmap-Werte-Konfiguration",
+  "heatmapValues": "Heatmap-Werte",
+  "selectNumericColumn": "Numerische Spalte auswählen",
+  "noNumericColumns": "Keine numerischen Spalten verfügbar",
+  "valuesLabel": "Werte-Beschriftung",
+  "enterValuesLabel": "Werte-Beschriftung eingeben",
+  "colorConfiguration": "Farbkonfiguration",
+  "colorScale": "Farbskala",
+  "heatmapOptions": "Heatmap-Optionen",
+  "colorbarTitle": "Farbbalken-Titel",
+  "enterColorbarTitle": "Farbbalken-Titel eingeben",
+  "showColorScale": "Farbskala anzeigen",
+  "showColorScaleDescription": "Die Farbskala-Legende neben der Heatmap anzeigen",
+  "showTextValues": "Textwerte anzeigen",
+  "showTextValuesDescription": "Werte als Text in den Heatmap-Zellen anzeigen",
+  "textTemplate": "Textvorlage",
+  "textTemplateDescription": "Format für die Anzeige von Textwerten (z.B. %{z} für Werte, %{x} für X-Achse, %{y} für Y-Achse)",
+  "textColor": "Textfarbe",
+  "fontSize": "Schriftgröße",
+
+  "contourValuesConfiguration": "Kontur-Werte-Konfiguration",
+  "contourValues": "Kontur-Werte",
+  "contourOptions": "Kontur-Optionen",
+  "contourColoring": "Kontur-Färbung",
+  "contourColoringLines": "Linien",
+  "contourColoringFill": "Füllung",
+  "contourColoringHeatmap": "Heatmap",
+  "contourColoringNone": "Keine",
+  "showContourLines": "Konturlinien anzeigen",
+  "showContourLinesDescription": "Konturlinien im Diagramm anzeigen",
+  "showContourLabels": "Kontur-Beschriftungen anzeigen",
+  "showContourLabelsDescription": "Beschriftungen auf Konturlinien anzeigen",
+  "numberOfContours": "Anzahl der Konturen",
+  "contourStartValue": "Startwert",
+  "contourStartValuePlaceholder": "Startwert eingeben",
+  "contourEndValue": "Endwert",
+  "contourEndValuePlaceholder": "Endwert eingeben",
+  "contourSize": "Kontur-Schrittgröße",
+  "contourSizePlaceholder": "Schrittgröße eingeben",
+
+  "ternary": {
+    "aAxisConfiguration": "A-Achsen-Konfiguration (Komponente A)",
+    "componentA": "Komponente A",
+    "aAxisTitle": "Komponente A Titel",
+    "bAxisConfiguration": "B-Achsen-Konfiguration (Komponente B)",
+    "componentB": "Komponente B",
+    "bAxisTitle": "Komponente B Titel",
+    "cAxisConfiguration": "C-Achsen-Konfiguration (Komponente C)",
+    "componentC": "Komponente C",
+    "cAxisTitle": "Komponente C Titel",
+    "chartOptions": "Diagrammoptionen",
+    "sum": "Normalisierungssumme",
+    "sumDescription": "Gesamtsumme, zu der die Komponenten addiert werden sollen (typischerweise 100 für Prozentsätze)",
+    "displayMode": "Anzeigemodus",
+    "markers": "Markierungen",
+    "lines": "Linien",
+    "linesMarkers": "Linien + Markierungen",
+    "axisAppearance": "Achsen-Erscheinung",
+    "gridOptions": "Gitteroptionen",
+    "showGridLines": "Gitterlinien anzeigen",
+    "showGridLinesDescription": "Gitterlinien im ternären Diagramm anzeigen",
+    "showAxisLines": "Achsenlinien anzeigen",
+    "showAxisLinesDescription": "Die Hauptachsenlinien des ternären Dreiecks anzeigen",
+    "showTickLabels": "Skalenbeschriftungen anzeigen",
+    "showTickLabelsDescription": "Numerische Beschriftungen an den Skalenstrichen anzeigen",
+    "gridColor": "Gitterfarbe",
+    "lineColor": "Achsenlinienfarbe",
+    "boundaries": "Grenzen",
+    "addBoundary": "Grenze hinzufügen",
+    "boundary": "Grenze",
+    "boundaryName": "Grenzname",
+    "enterBoundaryName": "Grenzname eingeben",
+    "lineStyle": "Linienstil",
+    "lineDash": "Linienstil",
+    "lineWidth": "Linienbreite",
+    "solid": "Durchgehend",
+    "dot": "Punkt",
+    "dash": "Strich",
+    "longdash": "Langer Strich",
+    "dashdot": "Strich Punkt",
+    "longdashdot": "Langer Strich Punkt",
+    "ternaryChartOptions": "Ternares Diagramm Optionen",
+    "fillStyle": "Füllstil",
+    "fillColor": "Füllfarbe",
+    "optionalFillColor": "Optionale Füllfarbe",
+    "noBoundaries": "Keine Grenzen konfiguriert",
+    "noBoundariesDescription": "Fügen Sie Grenzen hinzu, um Bereiche in Ihrem ternären Diagramm hervorzuheben"
+  },
+
+  "colors": {
+    "white": "Weiß",
+    "black": "Schwarz",
+    "auto": "Automatisch"
+  },
   "showGridLines": "Gitterlinien anzeigen",
   "smooth": "Glätten",
   "opacity": "Transparenz",
@@ -307,5 +508,15 @@
   "donutThickness": "Donut-Dicke",
   "titleText": "Titeltext",
   "xAxisLabel": "X-Achsenbeschriftung",
-  "yAxisLabel": "Y-Achsenbeschriftung"
+  "yAxisLabel": "Y-Achsenbeschriftung",
+  "column": "Spalte",
+
+  "lollipop": {
+    "orientation": "Ausrichtung",
+    "vertical": "Vertikal",
+    "horizontal": "Horizontal",
+    "stemWidth": "Stielbreite",
+    "dotSize": "Punktgröße",
+    "gridLines": "Gitterlinien"
+  }
 }
