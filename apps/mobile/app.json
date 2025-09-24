@@ -1,7 +1,7 @@
 {
   "expo": {
     "scheme": "photosynq",
-    "name": "photosynq",
+    "name": "OpenJII",
     "slug": "photosynq",
     "version": "1.0.1",
     "orientation": "portrait",
@@ -21,7 +21,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#49e06d"
+        "backgroundColor": "#D3D3D3"
       },
       "permissions": [
         "android.permission.BLUETOOTH",
