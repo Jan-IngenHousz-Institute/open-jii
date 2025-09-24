@@ -221,3 +221,9 @@ variable "enable_circuit_breaker_with_rollback" {
   type        = bool
   default     = false
 }
+
+variable "additional_task_role_policy_arns" {
+  description = "List of additional IAM policy ARNs to attach to the ECS task role"
+  type        = list(string)
+  default     = []
+}

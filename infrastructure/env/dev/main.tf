@@ -831,7 +831,20 @@ module "backend_ecs" {
     {
       name  = "COOKIE_DOMAIN"
       value = ".${var.environment}.${var.domain_name}"
+    },
+    {
+      name  = "AWS_LOCATION_PLACE_INDEX_NAME"
+      value = module.location_service.place_index_name
+    },
+    {
+      name  = "AWS_REGION"
+      value = var.aws_region
     }
+  ]
+
+  # Additional IAM policies for the task role
+  additional_task_role_policy_arns = [
+    module.location_service.iam_policy_arn
   ]
 
   tags = {
@@ -967,5 +980,23 @@ module "route53" {
   tags = {
     Environment = "dev"
     ManagedBy   = "Terraform"
+  }
+}
+
+# AWS Location Service for search and geocoding
+module "location_service" {
+  source = "../../modules/location-service"
+
+  place_index_name = "open-jii-${var.environment}-places-index"
+  data_source      = "Esri"
+  description      = "Place Index for OpenJII search and geocoding operations"
+  intended_use     = "SingleUse"
+  iam_policy_name  = "OpenJII-${var.environment}-LocationServicePolicy"
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "location-service"
   }
 }
