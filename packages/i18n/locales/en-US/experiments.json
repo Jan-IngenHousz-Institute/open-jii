@@ -101,8 +101,8 @@
       "mapPreview": "Location Map Preview",
       "editMode": "Edit Locations",
       "editModeDescription": "Click on the map to add locations, click existing markers to edit or remove them",
-      "editingCount": "{{count}} location selected",
-      "editingCount_plural": "{{count}} locations selected"
+      "editingCount_one": "{{count}} location selected",
+      "editingCount_other": "{{count}} locations selected"
     }
   },
   "manageExperimentDescription": "View and manage experiment details, data, flow, and settings.",
