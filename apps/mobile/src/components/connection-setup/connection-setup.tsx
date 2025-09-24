@@ -1,32 +1,37 @@
 import React from "react";
-import { useAsync } from "react-async-hook";
 import { View, Text, StyleSheet } from "react-native";
 import { Button } from "~/components/Button";
+import { useToast } from "~/context/toast-context";
 import { useTheme } from "~/hooks/use-theme";
-import { getConnectedDevice } from "~/services/device-connection-manager/device-connection-manager";
+import {
+  useAllDevices,
+  useConnectedDevice,
+  useConnectToDevice,
+} from "~/services/device-connection-manager/device-connection-manager";
 
-import { ConnectionTypeRow } from "./components/connection-type-row";
 import { DeviceList } from "./components/device-list";
-import { useConnectionSetup } from "./hooks/use-connection-setup";
 
 export function ConnectionSetup() {
   const theme = useTheme();
   const { colors } = theme;
-  const {
-    selectedConnectionType,
-    setSelectedConnectionType,
-    loadingDevices,
-    connectingDeviceId,
-    devices,
-    handleScanForDevices,
-    handleConnectToDevice,
-  } = useConnectionSetup();
+  // const {
+  //   selectedConnectionType,
+  //   setSelectedConnectionType,
+  //   loadingDevices,
+  //   connectingDeviceId,
+  //   // devices,
+  //   handleScanForDevices,
+  //   // handleConnectToDevice,
+  // } = useConnectionSetup();
 
-  const { result, execute } = useAsync(() => getConnectedDevice(), []);
+  const { data: device } = useConnectedDevice();
+  const { data: devices = [], refetch: refreshDevices, isFetching } = useAllDevices();
+  const { connectToDevice, connectingDeviceId } = useConnectToDevice();
+  const { showToast } = useToast();
 
-  console.log("result", result);
+  console.log("connectedDevice", device);
 
-  const showDeviceList = loadingDevices || !!devices?.length;
+  const showDeviceList = isFetching || !!devices?.length;
 
   return (
     <View>
@@ -39,31 +44,30 @@ export function ConnectionSetup() {
         Connect to Device
       </Text>
 
-      <ConnectionTypeRow
-        selectedType={selectedConnectionType}
-        onSelectType={setSelectedConnectionType}
-      />
-
       <View style={styles.actionsContainer}>
         <Button
           title="Scan for Devices"
-          onPress={handleScanForDevices}
-          isLoading={loadingDevices}
-          isDisabled={!selectedConnectionType || !!connectingDeviceId}
+          onPress={() => refreshDevices()}
+          isLoading={isFetching}
+          isDisabled={isFetching}
           style={styles.actionButton}
         />
       </View>
 
       {showDeviceList && (
         <DeviceList
-          devices={devices ?? []}
-          loading={loadingDevices}
+          devices={isFetching ? [] : devices}
+          loading={isFetching}
           connectingDeviceId={connectingDeviceId}
-          onConnect={handleConnectToDevice}
+          onConnect={async (device) => {
+            try {
+              await connectToDevice(device);
+            } catch {
+              showToast("Could not connect", "error");
+            }
+          }}
         />
       )}
-
-      <Button title="Refresh connection" onPress={() => execute()} style={styles.actionButton} />
     </View>
   );
 }

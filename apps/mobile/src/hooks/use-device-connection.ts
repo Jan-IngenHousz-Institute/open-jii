@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAsyncCallback } from "react-async-hook";
 import { useToast } from "~/context/toast-context";
 import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
