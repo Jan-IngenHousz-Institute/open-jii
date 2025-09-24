@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React from "react";
 import { View, Text, StyleSheet, FlatList, RefreshControl } from "react-native";
 import { Dropdown } from "~/components/Dropdown";
 import { useExperimentsData } from "~/hooks/use-experiments-data";
 import { useExperimentsDropdownOptions } from "~/hooks/use-experiments-dropdown-options";
 import { useTheme } from "~/hooks/use-theme";
+import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
 import { formatShortDate } from "~/utils/format-short-date";
 import { MeasurementRecord } from "~/utils/map-rows-to-measurements";
 
@@ -11,7 +12,7 @@ export function ExperimentsScreen() {
   const theme = useTheme();
   const { colors } = theme;
 
-  const [selectedExperimentId, setSelectedExperimentId] = useState<string>();
+  const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
 
   const { measurements, isFetching, refetch } = useExperimentsData(
     selectedExperimentId,

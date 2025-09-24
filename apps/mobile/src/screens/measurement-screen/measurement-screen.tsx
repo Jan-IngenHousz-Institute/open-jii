@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef } from "react";
 import { ActivityIndicator, Dimensions, StyleSheet, Text, View } from "react-native";
 import { Button } from "~/components/Button";
 import { Dropdown } from "~/components/Dropdown";
@@ -8,6 +8,9 @@ import { useExperimentsDropdownOptions } from "~/hooks/use-experiments-dropdown-
 import { useMeasurementUpload } from "~/hooks/use-measurement-upload";
 import { useTheme } from "~/hooks/use-theme";
 import { ProtocolName } from "~/protocols/definitions";
+import { useScanner } from "~/services/scan-manager/scan-manager";
+import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
+import { useProtocolSelectionStore } from "~/stores/use-protocol-selection-store";
 
 import { getProtocolsDropdownOptions } from "./utils/get-protocols-dropdown-options";
 
@@ -17,12 +20,20 @@ export function MeasurementScreen() {
   const theme = useTheme();
   const { colors } = theme;
   const { options } = useExperimentsDropdownOptions();
+  const {
+    executeScan,
+    isScanning,
+    reset: resetScan,
+    error: scanError,
+    result: scanResult,
+  } = useScanner();
 
   const isCancellingRef = useRef(false);
 
-  const [selectedProtocolName, setSelectedProtocolName] = useState<ProtocolName>();
+  const { selectedProtocolName, setSelectedProtocolName } = useProtocolSelectionStore();
+  const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
 
-  const [selectedExperimentId, setSelectedExperimentId] = useState<string>();
+  const timestamp = (scanResult as any)?.timestamp;
 
   const experimentName = selectedExperimentId
     ? options.find((e) => e.value === selectedExperimentId)?.label
@@ -34,22 +45,7 @@ export function MeasurementScreen() {
     experimentName,
   });
 
-  const [currentStep, setCurrentStep] = useState(1);
-
   const { showToast } = useToast();
-
-  const isScanning = false;
-
-  const measurementData = undefined;
-  const measurementTimestamp = "13.05.1990.";
-
-  async function handleUpload() {
-    // if (typeof measurementData !== "object") {
-    //   return showToast("Invalid data, upload failed", "error");
-    // }
-    // await uploadMeasurement(measurementData);
-    // clearResult();
-  }
 
   return (
     <View
@@ -76,7 +72,7 @@ export function MeasurementScreen() {
           selectedValue={selectedProtocolName}
           onSelect={(name) => {
             setSelectedProtocolName(name as ProtocolName);
-            // clearResult();
+            resetScan();
           }}
           placeholder="Select protocol"
         />
@@ -86,7 +82,7 @@ export function MeasurementScreen() {
             title="Cancel Measurement"
             onPress={() => {
               isCancellingRef.current = true;
-              // clearResult();
+              resetScan();
             }}
             variant="outline"
             style={styles.startButton}
@@ -95,9 +91,18 @@ export function MeasurementScreen() {
         ) : (
           <Button
             title="Start Measurement"
-            onPress={() => {
+            onPress={async () => {
               isCancellingRef.current = false;
-              // performMeasurement(selectedProtocolName);
+              if (!selectedProtocolName) {
+                return;
+              }
+              resetScan();
+              try {
+                await executeScan(selectedProtocolName);
+              } catch (error) {
+                console.log("scan error", error);
+                showToast("Scan error", "error");
+              }
             }}
             isDisabled={!selectedProtocolName || !selectedExperimentId}
             style={styles.startButton}
@@ -126,7 +131,7 @@ export function MeasurementScreen() {
                 Measuring...
               </Text>
             </View>
-          ) : measurementData ? (
+          ) : scanResult ? (
             <View style={styles.resultContent}>
               <Text
                 style={[
@@ -140,8 +145,8 @@ export function MeasurementScreen() {
               </Text>
               <View style={styles.resultDataContainer}>
                 <MeasurementResult
-                  data={measurementData}
-                  timestamp={measurementTimestamp}
+                  data={scanResult}
+                  timestamp={timestamp}
                   experimentName={experimentName}
                 />
               </View>
@@ -169,13 +174,18 @@ export function MeasurementScreen() {
           )}
         </View>
 
-        {/* Upload button at the bottom */}
         <View style={styles.uploadContainer}>
           <Button
             title="Upload Measurement"
-            onPress={handleUpload}
+            onPress={async () => {
+              if (typeof scanResult !== "object") {
+                return showToast("Invalid data, upload failed", "error");
+              }
+              await uploadMeasurement(scanResult);
+              resetScan();
+            }}
             isLoading={isUploading}
-            isDisabled={!measurementData}
+            isDisabled={!scanResult}
             style={styles.uploadButton}
           />
         </View>
