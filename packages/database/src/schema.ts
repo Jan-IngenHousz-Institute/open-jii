@@ -312,6 +312,7 @@ export const chartTypeEnum = pgEnum("chart_type", [
   "lollipop",
   // Statistical charts
   "box-plot",
+  "histogram",
   // Scientific charts (for future expansion)
   "heatmap",
   "contour",

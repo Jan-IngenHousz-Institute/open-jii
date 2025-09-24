@@ -328,6 +328,7 @@ export const zChartType = z.enum([
   "lollipop",
   // Statistical charts
   "box-plot",
+  "histogram",
   // Scientific charts (for future expansion)
   "heatmap",
   "contour",
@@ -390,10 +391,36 @@ export const zLineChartConfig = z.object({
 export const zScatterChartConfig = z.object({
   xAxis: zAxisConfig,
   yAxes: z.array(zAxisConfig).min(1),
+  // Optional color axis for color dimension mapping
+  colorAxis: zAxisConfig.optional(),
   // Scatter-specific options
   mode: z.enum(["markers", "lines+markers"]).default("markers"),
   markerSize: z.number().min(1).max(20).default(6),
   markerShape: z.enum(["circle", "square", "diamond", "triangle", "cross"]).default("circle"),
+  // Color mapping options
+  colorScale: z
+    .enum([
+      "viridis",
+      "plasma",
+      "inferno",
+      "magma",
+      "cividis",
+      "blues",
+      "greens",
+      "reds",
+      "oranges",
+      "purples",
+      "rainbow",
+      "jet",
+      "hot",
+      "cool",
+      "spring",
+      "summer",
+      "autumn",
+      "winter",
+    ])
+    .default("viridis"),
+  showColorBar: z.boolean().default(true),
   // Display options
   gridLines: z.enum(["both", "x", "y", "none"]).default("both"),
   display: zChartDisplayOptions,
@@ -404,7 +431,7 @@ export const zBarChartConfig = z.object({
   yAxes: z.array(zAxisConfig).min(1),
   // Bar-specific options
   orientation: z.enum(["vertical", "horizontal"]).default("vertical"),
-  barMode: z.enum(["group", "stack", "overlay"]).default("group"),
+  barMode: z.enum(["group", "stack", "overlay"]).default("overlay"),
   barWidth: z.number().min(0).max(1).default(0.7), // Width as percentage of available space
   // Display options
   gridLines: z.enum(["both", "x", "y", "none"]).default("both"),
@@ -455,6 +482,42 @@ export const zBoxPlotConfig = z.object({
   markerSize: z.number().min(1).max(20).default(6),
   lineWidth: z.number().min(0.5).max(10).default(2),
   fillOpacity: z.number().min(0).max(1).default(0.5),
+  // Display options
+  gridLines: z.enum(["both", "x", "y", "none"]).default("both"),
+  display: zChartDisplayOptions,
+});
+
+// Histogram series configuration
+export const zHistogramSeries = z.object({
+  dataSource: zDataSourceConfig,
+  name: z.string().optional(), // Series name for legend
+  // Histogram function and normalization can be per-series
+  histfunc: z.enum(["count", "sum", "avg", "min", "max"]).default("count").optional(),
+  histnorm: z
+    .enum(["", "percent", "probability", "density", "probability density"])
+    .default("")
+    .optional(),
+  // Visual options per series
+  color: z.string().default("#3b82f6"),
+  opacity: z.number().min(0).max(1).default(0.7),
+});
+
+export const zHistogramConfig = z.object({
+  // Multiple data series for overlaid histograms
+  series: z.array(zHistogramSeries).min(1),
+  // Global histogram options
+  nbins: z.number().min(5).max(100).default(20), // Number of bins
+  autobinx: z.boolean().default(true), // Automatic binning
+  orientation: z.enum(["v", "h"]).default("v"), // Vertical or horizontal bars
+  barmode: z.enum(["overlay", "group", "stack"]).default("overlay"), // How to display multiple series
+  // Binning configuration (applies to all series)
+  xbins: z
+    .object({
+      start: z.number().optional(),
+      end: z.number().optional(),
+      size: z.number().optional(),
+    })
+    .optional(),
   // Display options
   gridLines: z.enum(["both", "x", "y", "none"]).default("both"),
   display: zChartDisplayOptions,
@@ -927,6 +990,7 @@ export const zChartConfig = z.discriminatedUnion("chartType", [
   z.object({ chartType: z.literal("pie"), config: zPieChartConfig }),
   z.object({ chartType: z.literal("area"), config: zAreaChartConfig }),
   z.object({ chartType: z.literal("box-plot"), config: zBoxPlotConfig }),
+  z.object({ chartType: z.literal("histogram"), config: zHistogramConfig }),
   z.object({ chartType: z.literal("dot-plot"), config: zDotPlotConfig }),
   z.object({ chartType: z.literal("bubble"), config: zBubbleChartConfig }),
   z.object({ chartType: z.literal("lollipop"), config: zLollipopChartConfig }),
@@ -1366,6 +1430,8 @@ export type ScatterChartConfig = z.infer<typeof zScatterChartConfig>;
 export type BarChartConfig = z.infer<typeof zBarChartConfig>;
 export type PieChartConfig = z.infer<typeof zPieChartConfig>;
 export type AreaChartConfig = z.infer<typeof zAreaChartConfig>;
+export type BoxPlotConfig = z.infer<typeof zBoxPlotConfig>;
+export type HistogramConfig = z.infer<typeof zHistogramConfig>;
 export type DotPlotConfig = z.infer<typeof zDotPlotConfig>;
 export type BubbleChartConfig = z.infer<typeof zBubbleChartConfig>;
 export type LollipopChartConfig = z.infer<typeof zLollipopChartConfig>;

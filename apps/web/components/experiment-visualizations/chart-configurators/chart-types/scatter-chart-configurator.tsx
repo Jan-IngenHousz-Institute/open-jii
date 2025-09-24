@@ -33,7 +33,7 @@ import type { ChartFormValues, SampleTable } from "../types";
 interface ScatterChartConfiguratorProps {
   form: UseFormReturn<ChartFormValues>;
   table: SampleTable;
-  onColumnSelect: (columnType: string, columnName: string) => void;
+  onColumnSelect: (columnType: "x" | "y" | "color", columnName: string) => void;
 }
 
 export default function ScatterChartConfigurator({
@@ -373,6 +373,137 @@ export default function ScatterChartConfigurator({
               ))}
             </div>
           </div>
+
+          {/* Color Dimension Configuration */}
+          <div className="rounded-lg border bg-white p-4">
+            <h4 className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
+              {t("colorDimensionConfiguration")}
+            </h4>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="config.config.colorAxis.dataSource.columnName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">
+                      {t("configuration.colorColumn")}
+                    </FormLabel>
+                    <Select
+                      value={field.value || "none"}
+                      onValueChange={(value) => {
+                        if (value === "none") {
+                          // Clear the color axis when "None" is selected
+                          form.setValue("config.config.colorAxis", undefined);
+                        } else {
+                          // Set up the color axis configuration
+                          form.setValue("config.config.colorAxis", {
+                            dataSource: {
+                              tableName: form.watch("dataConfig.tableName") || "",
+                              columnName: value,
+                              alias: "",
+                            },
+                            type: "linear",
+                            title: "",
+                          });
+                          onColumnSelect("color", value);
+                        }
+                      }}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-10 bg-white">
+                          <SelectValue placeholder={t("configuration.selectColorColumn")} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">
+                          <span className="text-muted-foreground italic">
+                            {t("configuration.noColorMapping")}
+                          </span>
+                        </SelectItem>
+                        {table.columns.map((column: DataColumn) => (
+                          <SelectItem key={column.name} value={column.name}>
+                            <div className="flex items-center gap-2">
+                              <span>{column.name}</span>
+                              <Badge variant="secondary" className="text-xs">
+                                {column.type_name}
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Color Scale Selection - only show when colorAxis is configured */}
+              {form.watch("config.config.colorAxis.dataSource.columnName") &&
+                form.watch("config.config.colorAxis.dataSource.columnName") !== "none" && (
+                  <FormField
+                    control={form.control}
+                    name="config.config.colorScale"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">
+                          {t("configuration.colorScale")}
+                        </FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger className="h-10 bg-white">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="viridis">{t("colorscales.viridis")}</SelectItem>
+                            <SelectItem value="plasma">{t("colorscales.plasma")}</SelectItem>
+                            <SelectItem value="inferno">{t("colorscales.inferno")}</SelectItem>
+                            <SelectItem value="magma">{t("colorscales.magma")}</SelectItem>
+                            <SelectItem value="cividis">{t("colorscales.cividis")}</SelectItem>
+                            <SelectItem value="blues">{t("colorscales.blues")}</SelectItem>
+                            <SelectItem value="greens">{t("colorscales.greens")}</SelectItem>
+                            <SelectItem value="reds">{t("colorscales.reds")}</SelectItem>
+                            <SelectItem value="oranges">{t("colorscales.oranges")}</SelectItem>
+                            <SelectItem value="purples">{t("colorscales.purples")}</SelectItem>
+                            <SelectItem value="rainbow">{t("colorscales.rainbow")}</SelectItem>
+                            <SelectItem value="jet">{t("colorscales.jet")}</SelectItem>
+                            <SelectItem value="hot">{t("colorscales.hot")}</SelectItem>
+                            <SelectItem value="cool">{t("colorscales.cool")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+            </div>
+
+            {/* Color Axis Title - only show when colorAxis is configured */}
+            {form.watch("config.config.colorAxis.dataSource.columnName") &&
+              form.watch("config.config.colorAxis.dataSource.columnName") !== "none" && (
+                <div className="mt-4">
+                  <FormField
+                    control={form.control}
+                    name="config.config.colorAxis.title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">
+                          {t("configuration.colorAxisTitle")}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder={t("enterColorAxisTitle")}
+                            className="h-10 bg-white"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+          </div>
         </CardContent>
       </Card>
 
@@ -498,6 +629,37 @@ export default function ScatterChartConfigurator({
                   </FormItem>
                 )}
               />
+
+              {/* Show Color Bar - only when color mapping is configured */}
+              {form.watch("config.config.colorAxis.dataSource.columnName") &&
+                form.watch("config.config.colorAxis.dataSource.columnName") !== "none" && (
+                  <FormField
+                    control={form.control}
+                    name="config.config.showColorBar"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">
+                          {t("chartOptions.showColorbar")}
+                        </FormLabel>
+                        <Select
+                          value={field.value ? "true" : "false"}
+                          onValueChange={(value) => field.onChange(value === "true")}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="h-10 bg-white">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="true">{tCommon("common.yes")}</SelectItem>
+                            <SelectItem value="false">{tCommon("common.no")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
             </div>
           </CardContent>
         </Card>

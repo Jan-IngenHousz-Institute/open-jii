@@ -14,3 +14,4 @@ export { LogPlotChartRenderer } from "./log-plot-chart-renderer";
 export { ParallelCoordinatesChartRenderer } from "./parallel-coordinates-chart-renderer";
 export { RadarChartRenderer } from "./radar-chart-renderer";
 export { BoxPlotRenderer } from "./box-plot-renderer";
+export { HistogramChartRenderer } from "./histogram-chart-renderer";

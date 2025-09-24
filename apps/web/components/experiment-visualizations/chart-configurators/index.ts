@@ -14,4 +14,5 @@ export { default as LogPlotChartConfigurator } from "./chart-types/log-plot-char
 export { default as ParallelCoordinatesChartConfigurator } from "./chart-types/parallel-coordinates-chart-configurator";
 export { default as RadarChartConfigurator } from "./chart-types/radar-chart-configurator";
 export { default as BoxPlotConfigurator } from "./chart-types/box-plot-configurator";
+export { default as HistogramChartConfigurator } from "./chart-types/histogram-chart-configurator";
 // Add more chart configurators as they are developed

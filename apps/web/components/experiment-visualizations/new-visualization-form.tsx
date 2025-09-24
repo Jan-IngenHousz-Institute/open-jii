@@ -172,9 +172,14 @@ export default function NewVisualizationForm({
                 color: "#3b82f6",
               },
             ],
-            mode: "markers",
+            // Color dimension configuration (optional)
+            colorAxis: undefined,
+            mode: "markers" as const,
             markerSize: 6,
-            markerShape: "circle",
+            markerShape: "circle" as const,
+            // Color mapping options
+            colorScale: "viridis" as const,
+            showColorBar: true,
             gridLines: "both",
             display: {
               title: "",
@@ -210,7 +215,7 @@ export default function NewVisualizationForm({
               },
             ],
             orientation: "vertical",
-            barMode: "group",
+            barMode: "overlay",
             barWidth: 0.7,
             gridLines: "both",
             showValues: false,
@@ -402,6 +407,38 @@ export default function NewVisualizationForm({
             markerSize: 6,
             lineWidth: 2,
             fillOpacity: 0.7,
+            gridLines: "both",
+            display: {
+              title: "",
+              showLegend: true,
+              legendPosition: "right",
+              colorScheme: "default",
+              interactive: true,
+            },
+          },
+        });
+        form.setValue("dataConfig", {
+          tableName: selectedTableName,
+          dataSources: [],
+        });
+        break;
+
+      case "histogram":
+        form.setValue("config", {
+          chartType: "histogram",
+          config: {
+            series: [
+              {
+                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
+                name: "Series 1",
+                color: "#3b82f6",
+                opacity: 0.7,
+              },
+            ],
+            nbins: 20,
+            autobinx: true,
+            orientation: "v",
+            barmode: "overlay",
             gridLines: "both",
             display: {
               title: "",
