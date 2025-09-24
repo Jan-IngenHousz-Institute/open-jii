@@ -2,7 +2,8 @@
 
 import { ArrowLeft, Download, Edit, Trash2 } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useLocale } from "~/hooks/useLocale";
 
 import { useTranslation } from "@repo/i18n";
 import {
@@ -44,8 +45,7 @@ export default function ExperimentVisualizationDetailPage({
 }: ExperimentVisualizationDetailPageProps) {
   const { t } = useTranslation("experimentVisualizations");
   const router = useRouter();
-  const params = useParams();
-  const locale = Array.isArray(params.locale) ? params.locale[0] : params.locale;
+  const locale = useLocale();
 
   // Fetch visualization data
   const {

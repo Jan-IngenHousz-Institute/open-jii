@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
-import type { ChartFamily, ChartType, CreateExperimentVisualizationBody } from "@repo/api";
+import type { ChartType, CreateExperimentVisualizationBody } from "@repo/api";
 import { zCreateExperimentVisualizationBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -52,35 +52,44 @@ export default function NewVisualizationForm({
   const { t: tCommon } = useTranslation("common");
   const [selectedChartType, setSelectedChartType] = useState<ChartType | null>(null);
 
-  // Form setup
+  // Form setup with properly typed default values
   const form = useForm<CreateExperimentVisualizationBody>({
     resolver: zodResolver(zCreateExperimentVisualizationBody),
     defaultValues: {
       name: "",
       description: "",
-      chartFamily: "basic" as ChartFamily,
-      chartType: "line" as ChartType,
+      chartFamily: "basic",
+      chartType: "line",
       config: {
         chartType: "line" as const,
         config: {
           xAxis: {
+            type: "linear", // Required field in schema
             dataSource: { tableName: "", columnName: "" },
-            type: "linear" as const,
             title: "",
           },
           yAxes: [
             {
+              type: "linear", // Required field in schema
               dataSource: { tableName: "", columnName: "", alias: "" },
-              type: "linear" as const,
               title: "",
-              side: "left" as const,
+              side: "left",
               color: "#3b82f6",
             },
           ],
-          mode: "lines" as const,
+          mode: "lines",
           connectGaps: true,
           smoothing: 0,
-          gridLines: "both" as const,
+          gridLines: "both",
+          display: {
+            title: "",
+            showLegend: true,
+            legendPosition: "right",
+            colorScheme: "default",
+            interactive: true, // Required in schema
+          },
+          colorScale: "viridis", // Required for line charts
+          showColorBar: true, // Required for line charts
         },
       },
       dataConfig: { tableName: "", dataSources: [] },
