@@ -264,7 +264,17 @@
     "unauthorized": "Unbefugter Zugriff",
     "forbidden": "Zugriff verboten",
     "failedToLoadProtocol": "Protokoll konnte nicht geladen werden",
-    "loginRequired": "Bitte melden Sie sich an, um auf diese Seite zuzugreifen"
+    "loginRequired": "Bitte melden Sie sich an, um auf diese Seite zuzugreifen",
+    "notFoundTitle": "404",
+    "notFoundHeading": "Seite nicht gefunden",
+    "notFoundMessage": "Die gesuchte Seite existiert nicht. Sie wurde möglicherweise verschoben, gelöscht oder Sie haben eine falsche URL eingegeben.",
+    "whereToGo": "Wohin möchten Sie gehen?",
+    "goToHomepage": "Zur Startseite",
+    "accessPlatform": "Plattform aufrufen",
+    "learnAboutUs": "Über uns erfahren",
+    "needHelp": "Brauchen Sie Hilfe? Versuchen Sie, zur vorherigen Seite zurückzugehen oder kontaktieren Sie den Support.",
+    "goBack": "Zurück",
+    "brandTagline": "Jan IngenHousz Institut - Photosynthese für eine nachhaltige Zukunft verbessern"
   },
   "footer": {
     "aboutUs": "Über uns",
