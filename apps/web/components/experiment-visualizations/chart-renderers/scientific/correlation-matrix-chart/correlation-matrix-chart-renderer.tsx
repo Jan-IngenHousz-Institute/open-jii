@@ -50,33 +50,27 @@ export function CorrelationMatrixChartRenderer({
     }));
 
     // Extract numeric values from data and filter out non-numeric values
-    const validRowIndices: number[] = [];
-    data.forEach((row, rowIndex) => {
-      let isValidRow = true;
-
-      variables.forEach((variable) => {
+    const validRows = data.filter((row) => {
+      return variables.every((variable) => {
         const value = row[variable.columnName];
         const numericValue = Number(value);
-
-        if (value == null || isNaN(numericValue)) {
-          isValidRow = false;
-        }
+        return value != null && !isNaN(numericValue);
       });
-
-      if (isValidRow) {
-        validRowIndices.push(rowIndex);
-        variables.forEach((variable) => {
-          const value = row[variable.columnName];
-          variable.values.push(Number(value));
-        });
-      }
     });
 
-    if (validRowIndices.length === 0) {
+    // Second pass: extract numeric values from valid rows
+    validRows.forEach((row) => {
+      variables.forEach((variable) => {
+        const value = row[variable.columnName];
+        variable.values.push(Number(value));
+      });
+    });
+
+    if (validRows.length === 0) {
       throw new Error("No valid numeric data found for correlation analysis");
     }
 
-    if (validRowIndices.length < 2) {
+    if (validRows.length < 2) {
       throw new Error("At least 2 data points are required for correlation analysis");
     }
 

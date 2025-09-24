@@ -42,9 +42,58 @@ describe("CreateExperimentVisualizationUseCase", () => {
   describe("execute", () => {
     const mockRequest: CreateExperimentVisualizationDto = {
       name: "Test Visualization",
-      type: "bar",
-      dataConfig: { table: "test_table", columns: ["col1", "col2"] },
-      visualConfig: { title: "Test Visualization" },
+      chartFamily: "basic" as const,
+      chartType: "bar" as const,
+      dataConfig: {
+        tableName: "test_table",
+        dataSources: [
+          {
+            tableName: "test_table",
+            columnName: "col1",
+            alias: "X Column",
+          },
+          {
+            tableName: "test_table",
+            columnName: "col2",
+            alias: "Y Column",
+          },
+        ],
+      },
+      config: {
+        chartType: "bar" as const,
+        config: {
+          xAxis: {
+            dataSource: {
+              tableName: "test_table",
+              columnName: "col1",
+            },
+            type: "category" as const,
+            title: "X Axis",
+          },
+          yAxes: [
+            {
+              dataSource: {
+                tableName: "test_table",
+                columnName: "col2",
+              },
+              type: "linear" as const,
+              title: "Y Axis",
+            },
+          ],
+          orientation: "vertical" as const,
+          barMode: "overlay" as const,
+          barWidth: 0.7,
+          gridLines: "both" as const,
+          showValues: false,
+          display: {
+            title: "Test Visualization",
+            showLegend: true,
+            legendPosition: "right" as const,
+            colorScheme: "default" as const,
+            interactive: true,
+          },
+        },
+      },
     };
 
     const experimentId = faker.string.uuid();
@@ -60,6 +109,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             description: "Test Description",
             status: "active",
             visibility: "private",
+            embargoUntil: new Date(),
             createdBy: testUserId,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -81,9 +131,11 @@ describe("CreateExperimentVisualizationUseCase", () => {
               id: visualizationId,
               experimentId,
               name: mockRequest.name,
-              type: mockRequest.type,
+              description: null,
+              chartFamily: mockRequest.chartFamily,
+              chartType: mockRequest.chartType,
+              config: mockRequest.config,
               dataConfig: mockRequest.dataConfig,
-              visualConfig: mockRequest.visualConfig,
               createdBy: testUserId,
               createdAt: new Date(),
               updatedAt: new Date(),
@@ -101,9 +153,10 @@ describe("CreateExperimentVisualizationUseCase", () => {
         id: visualizationId,
         experimentId,
         name: mockRequest.name,
-        type: mockRequest.type,
+        chartFamily: mockRequest.chartFamily,
+        chartType: mockRequest.chartType,
+        config: mockRequest.config,
         dataConfig: mockRequest.dataConfig,
-        visualConfig: mockRequest.visualConfig,
         createdBy: testUserId,
       });
 
@@ -168,6 +221,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             description: "Test Description",
             status: "active",
             visibility: "private",
+            embargoUntil: new Date(),
             createdBy: faker.string.uuid(), // Different user
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -196,6 +250,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             description: "Test Description",
             status: "active",
             visibility: "private",
+            embargoUntil: new Date(),
             createdBy: testUserId,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -233,6 +288,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             description: "Test Description",
             status: "active",
             visibility: "private",
+            embargoUntil: new Date(),
             createdBy: testUserId,
             createdAt: new Date(),
             updatedAt: new Date(),

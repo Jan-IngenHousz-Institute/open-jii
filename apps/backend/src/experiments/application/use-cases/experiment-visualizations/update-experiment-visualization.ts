@@ -32,7 +32,7 @@ export class UpdateExperimentVisualizationUseCase {
     const visualizationResult =
       await this.experimentVisualizationRepository.findById(visualizationId);
 
-    return visualizationResult.chain(async (visualization) => {
+    return visualizationResult.chain(async (visualization: ExperimentVisualizationDto | null) => {
       if (!visualization) {
         this.logger.warn(`Attempt to update non-existent visualization with ID ${visualizationId}`);
         return failure(AppError.notFound(`Visualization with ID ${visualizationId} not found`));
@@ -101,7 +101,7 @@ export class UpdateExperimentVisualizationUseCase {
             data,
           );
 
-          return updateResult.chain(async (updatedVisualizations: ExperimentVisualizationDto[]) => {
+          return updateResult.chain((updatedVisualizations: ExperimentVisualizationDto[]) => {
             if (updatedVisualizations.length === 0) {
               this.logger.error(
                 `Failed to update visualization ${visualizationId} by user ${userId}`,

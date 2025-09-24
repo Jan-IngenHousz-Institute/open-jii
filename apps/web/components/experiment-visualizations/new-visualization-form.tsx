@@ -1,14 +1,14 @@
 "use client";
 
-// Import the SampleTable type from the API
 import type { SampleTable } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentVisualizationCreate } from "@/hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import type { UseFormReturn } from "react-hook-form";
 import { useForm } from "react-hook-form";
 
-import type { ChartType, CreateExperimentVisualizationBody } from "@repo/api";
+import type { ChartType } from "@repo/api";
 import { zCreateExperimentVisualizationBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -30,8 +30,8 @@ import {
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-// Import components
 import ChartConfigurator from "./chart-configurators/chart-configurator";
+import type { ChartFormValues } from "./chart-configurators/types";
 
 interface NewVisualizationFormProps {
   experimentId: string;
@@ -53,7 +53,7 @@ export default function NewVisualizationForm({
   const [selectedChartType, setSelectedChartType] = useState<ChartType | null>(null);
 
   // Form setup with properly typed default values
-  const form = useForm<CreateExperimentVisualizationBody>({
+  const form = useForm({
     resolver: zodResolver(zCreateExperimentVisualizationBody),
     defaultValues: {
       name: "",
@@ -61,10 +61,10 @@ export default function NewVisualizationForm({
       chartFamily: "basic",
       chartType: "line",
       config: {
-        chartType: "line" as const,
+        chartType: "line",
         config: {
           xAxis: {
-            type: "linear", // Required field in schema
+            type: "linear",
             dataSource: { tableName: "", columnName: "" },
             title: "",
           },
@@ -88,11 +88,12 @@ export default function NewVisualizationForm({
             colorScheme: "default",
             interactive: true, // Required in schema
           },
-          colorScale: "viridis", // Required for line charts
-          showColorBar: true, // Required for line charts
         },
       },
-      dataConfig: { tableName: "", dataSources: [] },
+      dataConfig: {
+        tableName: "",
+        dataSources: [{ tableName: "", columnName: "", alias: "" }],
+      },
     },
   });
 
@@ -159,7 +160,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
@@ -183,11 +184,11 @@ export default function NewVisualizationForm({
             ],
             // Color dimension configuration (optional)
             colorAxis: undefined,
-            mode: "markers" as const,
+            mode: "markers",
             markerSize: 6,
-            markerShape: "circle" as const,
+            markerShape: "circle",
             // Color mapping options
-            colorScale: "viridis" as const,
+            colorScale: "viridis",
             showColorBar: true,
             gridLines: "both",
             display: {
@@ -201,7 +202,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
@@ -239,7 +240,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
@@ -275,7 +276,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
@@ -301,7 +302,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
@@ -337,7 +338,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
@@ -383,7 +384,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
@@ -391,6 +392,11 @@ export default function NewVisualizationForm({
         form.setValue("config", {
           chartType: "box-plot",
           config: {
+            xAxis: {
+              type: "category",
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
+            },
             yAxes: [
               {
                 type: "linear",
@@ -400,11 +406,6 @@ export default function NewVisualizationForm({
                 color: "#3b82f6",
               },
             ],
-            categoryAxis: {
-              type: "category",
-              dataSource: { tableName: selectedTableName, columnName: "" },
-              title: "",
-            },
             orientation: "v",
             boxMode: "group",
             boxPoints: "outliers",
@@ -428,7 +429,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
@@ -460,7 +461,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
@@ -504,7 +505,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
@@ -554,7 +555,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
@@ -591,7 +592,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
@@ -653,7 +654,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
@@ -688,7 +689,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
@@ -727,7 +728,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
@@ -747,16 +748,14 @@ export default function NewVisualizationForm({
                 side: "left",
                 title: "",
                 color: "#3b82f6",
+                mode: "markers",
+                marker: {
+                  size: 8,
+                  symbol: "circle",
+                },
               },
             ],
-            mode: "markers",
-            markerSize: 8,
-            markerShape: "circle",
             gridLines: "both",
-            logBase: {
-              x: 10,
-              y: 10,
-            },
             display: {
               title: "",
               showLegend: true,
@@ -768,7 +767,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
@@ -815,7 +814,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
@@ -850,7 +849,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
     }
@@ -911,7 +910,7 @@ export default function NewVisualizationForm({
 
         {/* Chart Configuration - using the new modular approach */}
         <ChartConfigurator
-          form={form}
+          form={form as UseFormReturn<ChartFormValues>}
           tables={sampleTables}
           selectedChartType={selectedChartType}
           onChartTypeSelect={handleChartTypeSelect}

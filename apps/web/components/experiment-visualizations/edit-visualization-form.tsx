@@ -1,18 +1,14 @@
 "use client";
 
-// Import the SampleTable type from the API
 import type { SampleTable } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentVisualizationUpdate } from "@/hooks/experiment/useExperimentVisualizationUpdate/useExperimentVisualizationUpdate";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import type { UseFormReturn } from "react-hook-form";
 import { useForm } from "react-hook-form";
 
-import type {
-  ChartType,
-  ExperimentVisualization,
-  UpdateExperimentVisualizationBody,
-} from "@repo/api";
+import type { ChartType, ExperimentVisualization } from "@repo/api";
 import { zUpdateExperimentVisualizationBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -34,8 +30,8 @@ import {
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-// Import components
 import ChartConfigurator from "./chart-configurators/chart-configurator";
+import type { ChartFormValues } from "./chart-configurators/types";
 
 interface EditVisualizationFormProps {
   experimentId: string;
@@ -61,7 +57,7 @@ export default function EditVisualizationForm({
   );
 
   // Form setup with existing visualization data
-  const form = useForm<UpdateExperimentVisualizationBody>({
+  const form = useForm({
     resolver: zodResolver(zUpdateExperimentVisualizationBody),
     defaultValues: {
       name: visualization.name,
@@ -106,287 +102,725 @@ export default function EditVisualizationForm({
     switch (chartType) {
       case "line":
         form.setValue("config", {
-          chartType: "line" as const,
+          chartType: "line",
           config: {
             xAxis: {
-              type: "linear" as const,
+              type: "linear",
               dataSource: { tableName: selectedTableName, columnName: "" },
               title: "",
             },
             yAxes: [
               {
-                type: "linear" as const,
+                type: "linear",
                 dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
                 title: "",
-                side: "left" as const,
+                side: "left",
                 color: "#3b82f6",
               },
             ],
-            mode: "lines" as const,
+            mode: "lines",
             connectGaps: true,
             smoothing: 0,
-            gridLines: "both" as const,
+            gridLines: "both",
             display: {
               title: "",
               showLegend: true,
-              legendPosition: "right" as const,
-              colorScheme: "default" as const,
+              legendPosition: "right",
+              colorScheme: "default",
               interactive: true,
             },
           },
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
       case "scatter":
         form.setValue("config", {
-          chartType: "scatter" as const,
+          chartType: "scatter",
           config: {
             xAxis: {
-              type: "linear" as const,
+              type: "linear",
               dataSource: { tableName: selectedTableName, columnName: "" },
               title: "",
             },
             yAxes: [
               {
-                type: "linear" as const,
+                type: "linear",
                 dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
                 title: "",
-                side: "left" as const,
+                side: "left",
                 color: "#3b82f6",
               },
             ],
-            mode: "markers" as const,
+            colorAxis: undefined,
+            mode: "markers",
             markerSize: 6,
-            markerShape: "circle" as const,
-            gridLines: "both" as const,
+            markerShape: "circle",
+            colorScale: "viridis",
+            showColorBar: true,
+            gridLines: "both",
             display: {
               title: "",
               showLegend: true,
-              legendPosition: "right" as const,
-              colorScheme: "default" as const,
+              legendPosition: "right",
+              colorScheme: "default",
               interactive: true,
             },
           },
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
       case "bar":
         form.setValue("config", {
-          chartType: "bar" as const,
+          chartType: "bar",
           config: {
             xAxis: {
-              type: "category" as const, // Bar charts typically have categorical x-axis
+              type: "category", // Bar charts typically have categorical x-axis
               dataSource: { tableName: selectedTableName, columnName: "" },
               title: "",
             },
             yAxes: [
               {
-                type: "linear" as const, // Bar charts typically have linear y-axis
+                type: "linear", // Bar charts typically have linear y-axis
                 dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
                 title: "",
-                side: "left" as const,
+                side: "left",
                 color: "#3b82f6",
               },
             ],
-            orientation: "vertical" as const,
-            barMode: "group" as const,
+            orientation: "vertical",
+            barMode: "overlay",
             barWidth: 0.7,
-            gridLines: "both" as const,
+            gridLines: "both",
             showValues: false,
             display: {
               title: "",
               showLegend: true,
-              legendPosition: "right" as const,
-              colorScheme: "default" as const,
+              legendPosition: "right",
+              colorScheme: "default",
               interactive: true,
             },
           },
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
       case "area":
         form.setValue("config", {
-          chartType: "area" as const,
+          chartType: "area",
           config: {
             xAxis: {
-              type: "linear" as const, // Area charts typically use continuous x-axis (time series, etc.)
+              type: "linear", // Area charts typically use continuous x-axis (time series, etc.)
               dataSource: { tableName: selectedTableName, columnName: "" },
               title: "",
             },
             yAxes: [
               {
-                type: "linear" as const, // Area charts typically use linear y-axis
-                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
+                type: "linear", // Area charts typically use linear y-axis
+                dataSource: { tableName: selectedTableName, columnName: "" },
                 title: "",
-                side: "left" as const,
-                color: "#3b82f6",
+                side: "left",
               },
             ],
-            fillMode: "tozeroy" as const,
+            fillMode: "tozeroy",
             fillOpacity: 0.6,
-            gridLines: "both" as const,
+            gridLines: "both",
             smoothing: 0,
             display: {
               title: "",
               showLegend: true,
-              legendPosition: "right" as const,
-              colorScheme: "default" as const,
+              legendPosition: "right",
+              colorScheme: "default",
               interactive: true,
             },
           },
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
       case "pie":
         form.setValue("config", {
-          chartType: "pie" as const,
+          chartType: "pie",
           config: {
             labelSource: { tableName: selectedTableName, columnName: "" },
             valueSource: { tableName: selectedTableName, columnName: "" },
             showLabels: true,
             showValues: true,
             hole: 0,
-            textPosition: "auto" as const,
+            textPosition: "auto",
             pull: 0,
             display: {
               title: "",
               showLegend: true,
-              legendPosition: "right" as const,
-              colorScheme: "default" as const,
+              legendPosition: "right",
+              colorScheme: "default",
               interactive: true,
             },
           },
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
       case "dot-plot":
         form.setValue("config", {
-          chartType: "dot-plot" as const,
+          chartType: "dot-plot",
           config: {
             xAxis: {
-              type: "category" as const, // Dot plots often use categorical x-axis for grouping
+              type: "category", // Dot plots often use categorical x-axis for grouping
               dataSource: { tableName: selectedTableName, columnName: "" },
               title: "",
             },
             yAxes: [
               {
-                type: "linear" as const, // Dot plots typically use linear y-axis for values
+                type: "linear", // Dot plots typically use linear y-axis for values
                 dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
                 title: "",
-                side: "left" as const,
+                side: "left",
                 color: "#3b82f6",
               },
             ],
             markerSize: 8,
-            markerShape: "circle" as const,
-            gridLines: "both" as const,
+            markerShape: "circle",
+            gridLines: "both",
             display: {
               title: "",
               showLegend: true,
-              legendPosition: "right" as const,
-              colorScheme: "default" as const,
+              legendPosition: "right",
+              colorScheme: "default",
               interactive: true,
             },
           },
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
       case "lollipop":
         form.setValue("config", {
-          chartType: "lollipop" as const,
+          chartType: "lollipop",
           config: {
             xAxis: {
-              type: "category" as const,
+              type: "category",
               dataSource: { tableName: selectedTableName, columnName: "" },
               title: "",
             },
             yAxes: [
               {
-                type: "linear" as const,
+                type: "linear",
                 dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
-                side: "left" as const,
+                side: "left",
                 title: "",
                 color: "#3b82f6",
               },
             ],
-            orientation: "v" as const,
+            orientation: "v",
             stemWidth: 3,
             dotSize: 15,
-            gridLines: "both" as const,
+            gridLines: "both",
             display: {
               title: "",
               showLegend: true,
-              legendPosition: "right" as const,
-              colorScheme: "default" as const,
+              legendPosition: "right",
+              colorScheme: "default",
               interactive: true,
             },
           },
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+        });
+        break;
+
+      case "bubble":
+        form.setValue("config", {
+          chartType: "bubble",
+          config: {
+            xAxis: {
+              type: "linear",
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
+            },
+            yAxes: [
+              {
+                type: "linear",
+                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
+                side: "left",
+                title: "",
+                color: "#3b82f6",
+              },
+            ],
+            sizeAxis: {
+              type: "linear",
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
+            },
+            mode: "markers",
+            markerSizeScale: {
+              min: 5,
+              max: 50,
+            },
+            markerShape: "circle",
+            opacity: 0.8,
+            gridLines: "both",
+            display: {
+              title: "",
+              showLegend: true,
+              legendPosition: "right",
+              colorScheme: "default",
+              interactive: true,
+            },
+          },
+        });
+        form.setValue("dataConfig", {
+          tableName: selectedTableName,
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+        });
+        break;
+
+      case "box-plot":
+        form.setValue("config", {
+          chartType: "box-plot",
+          config: {
+            xAxis: {
+              type: "category",
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
+            },
+            yAxes: [
+              {
+                type: "linear",
+                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
+                side: "left",
+                title: "",
+                color: "#3b82f6",
+              },
+            ],
+            orientation: "v",
+            boxMode: "group",
+            boxPoints: "outliers",
+            notched: false,
+            boxMean: "false",
+            jitter: 0.3,
+            pointPos: -1.8,
+            notchWidth: 0.25,
+            markerSize: 6,
+            lineWidth: 2,
+            fillOpacity: 0.5,
+            gridLines: "both",
+            display: {
+              title: "",
+              showLegend: true,
+              legendPosition: "right",
+              colorScheme: "default",
+              interactive: true,
+            },
+          },
+        });
+        form.setValue("dataConfig", {
+          tableName: selectedTableName,
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+        });
+        break;
+
+      case "histogram":
+        form.setValue("config", {
+          chartType: "histogram",
+          config: {
+            series: [
+              {
+                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
+                name: "Series 1",
+                color: "#3b82f6",
+                opacity: 0.7,
+              },
+            ],
+            nbins: 20,
+            autobinx: true,
+            orientation: "v",
+            barmode: "overlay",
+            gridLines: "both",
+            display: {
+              title: "",
+              showLegend: true,
+              legendPosition: "right",
+              colorScheme: "default",
+              interactive: true,
+            },
+          },
+        });
+        form.setValue("dataConfig", {
+          tableName: selectedTableName,
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+        });
+        break;
+
+      case "heatmap":
+        form.setValue("config", {
+          chartType: "heatmap",
+          config: {
+            xAxis: {
+              type: "category",
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
+            },
+            yAxis: {
+              type: "category",
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
+            },
+            zAxis: {
+              type: "linear",
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
+            },
+            colorscale: "viridis",
+            showScale: true,
+            showText: false,
+            connectGaps: true,
+            textTemplate: "%{z}",
+            textFont: {
+              color: "white",
+              size: 12,
+            },
+            colorbarTitle: "",
+            display: {
+              title: "",
+              showLegend: false,
+              legendPosition: "right",
+              colorScheme: "default",
+              interactive: true,
+            },
+          },
+        });
+        form.setValue("dataConfig", {
+          tableName: selectedTableName,
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+        });
+        break;
+
+      case "contour":
+        form.setValue("config", {
+          chartType: "contour",
+          config: {
+            xAxis: {
+              type: "linear",
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
+            },
+            yAxis: {
+              type: "linear",
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
+            },
+            zAxis: {
+              type: "linear",
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
+            },
+            colorscale: "viridis",
+            showScale: true,
+            colorbarTitle: "",
+            contours: {
+              coloring: "lines",
+              showlines: true,
+              showlabels: true,
+              labelfont: {
+                size: 12,
+                color: "black",
+              },
+            },
+            ncontours: 15,
+            autocontour: true,
+            connectgaps: false,
+            smoothing: 1,
+            display: {
+              title: "",
+              showLegend: false,
+              legendPosition: "right",
+              colorScheme: "default",
+              interactive: true,
+            },
+          },
+        });
+        form.setValue("dataConfig", {
+          tableName: selectedTableName,
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+        });
+        break;
+
+      case "ternary":
+        form.setValue("config", {
+          chartType: "ternary",
+          config: {
+            aAxis: {
+              type: "linear",
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "Component A",
+            },
+            bAxis: {
+              type: "linear",
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "Component B",
+            },
+            cAxis: {
+              type: "linear",
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "Component C",
+            },
+            aAxisProps: {
+              title: "Component A",
+              showgrid: true,
+              showline: true,
+              showticklabels: true,
+              gridcolor: "#E6E6E6",
+              linecolor: "#444",
+            },
+            bAxisProps: {
+              title: "Component B",
+              showgrid: true,
+              showline: true,
+              showticklabels: true,
+              gridcolor: "#E6E6E6",
+              linecolor: "#444",
+            },
+            cAxisProps: {
+              title: "Component C",
+              showgrid: true,
+              showline: true,
+              showticklabels: true,
+              gridcolor: "#E6E6E6",
+              linecolor: "#444",
+            },
+            sum: 100,
+            mode: "markers",
+            boundaries: [],
+            bgcolor: "white",
+            display: {
+              title: "",
+              showLegend: true,
+              legendPosition: "right",
+              colorScheme: "default",
+              interactive: true,
+            },
+          },
+        });
+        form.setValue("dataConfig", {
+          tableName: selectedTableName,
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+        });
+        break;
+
+      case "correlation-matrix":
+        form.setValue("config", {
+          chartType: "correlation-matrix",
+          config: {
+            variables: [
+              {
+                tableName: selectedTableName,
+                columnName: "",
+                alias: "",
+              },
+              {
+                tableName: selectedTableName,
+                columnName: "",
+                alias: "",
+              },
+            ],
+            colorscale: "viridis",
+            showValues: true,
+            showScale: true,
+            colorbarTitle: "",
+            display: {
+              title: "",
+              showLegend: false,
+              legendPosition: "right",
+              colorScheme: "default",
+              interactive: true,
+            },
+          },
+        });
+        form.setValue("dataConfig", {
+          tableName: selectedTableName,
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+        });
+        break;
+
+      case "parallel-coordinates":
+        form.setValue("config", {
+          chartType: "parallel-coordinates",
+          config: {
+            dimensions: [
+              {
+                dataSource: {
+                  tableName: selectedTableName,
+                  columnName: "",
+                  alias: "",
+                },
+                label: "",
+                visible: true,
+                multiselect: true,
+              },
+            ],
+            line: {
+              color: "#3b82f6",
+              colorscale: "viridis",
+              width: 1,
+              opacity: 1,
+              showscale: true,
+            },
+            labelside: "top",
+            labelangle: 0,
+            display: {
+              title: "",
+              showLegend: true,
+              legendPosition: "right",
+              colorScheme: "default",
+            },
+          },
+        });
+        form.setValue("dataConfig", {
+          tableName: selectedTableName,
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+        });
+        break;
+
+      case "log-plot":
+        form.setValue("config", {
+          chartType: "log-plot",
+          config: {
+            xAxis: {
+              type: "linear",
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
+            },
+            yAxes: [
+              {
+                type: "log",
+                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
+                side: "left",
+                title: "",
+                color: "#3b82f6",
+                mode: "markers",
+                marker: {
+                  size: 8,
+                  symbol: "circle",
+                },
+              },
+            ],
+            gridLines: "both",
+            display: {
+              title: "",
+              showLegend: true,
+              legendPosition: "right",
+              colorScheme: "default",
+              interactive: true,
+            },
+          },
+        });
+        form.setValue("dataConfig", {
+          tableName: selectedTableName,
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+        });
+        break;
+
+      case "radar":
+        form.setValue("config", {
+          chartType: "radar",
+          config: {
+            categoryAxis: {
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
+            },
+            series: [
+              {
+                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
+                name: "Series 1",
+                color: "#3b82f6",
+                fill: "toself",
+                mode: "lines+markers",
+                opacity: 0.6,
+                line: {
+                  width: 2,
+                  dash: "solid",
+                },
+                marker: {
+                  size: 6,
+                  symbol: "circle",
+                },
+              },
+            ],
+            rangeMode: "normal",
+            gridShape: "circular",
+            tickAngle: 0,
+            showTickLabels: true,
+            radialAxisVisible: true,
+            angularAxisVisible: true,
+            display: {
+              title: "",
+              showLegend: true,
+              legendPosition: "right",
+              colorScheme: "default",
+              interactive: true,
+            },
+          },
+        });
+        form.setValue("dataConfig", {
+          tableName: selectedTableName,
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
 
       default:
         // For chart types that don't have configurators yet, fall back to line chart config
         form.setValue("config", {
-          chartType: "line" as const,
+          chartType: "line",
           config: {
             xAxis: {
-              type: "linear" as const,
+              type: "linear",
               dataSource: { tableName: selectedTableName, columnName: "" },
-              title: "",
             },
             yAxes: [
               {
-                type: "linear" as const,
-                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
-                title: "",
-                side: "left" as const,
-                color: "#3b82f6",
+                type: "linear",
+                dataSource: { tableName: selectedTableName, columnName: "" },
+                side: "left",
               },
             ],
-            mode: "lines" as const,
+            mode: "lines",
             connectGaps: true,
             smoothing: 0,
-            gridLines: "both" as const,
+            gridLines: "both",
             display: {
               title: "",
               showLegend: true,
-              legendPosition: "right" as const,
-              colorScheme: "default" as const,
+              legendPosition: "right",
+              colorScheme: "default",
               interactive: true,
             },
           },
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [],
+          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
         });
         break;
     }
@@ -447,7 +881,7 @@ export default function EditVisualizationForm({
 
         {/* Chart Configuration - using the new modular approach */}
         <ChartConfigurator
-          form={form}
+          form={form as UseFormReturn<ChartFormValues>}
           tables={sampleTables}
           selectedChartType={selectedChartType}
           onChartTypeSelect={handleChartTypeSelect}

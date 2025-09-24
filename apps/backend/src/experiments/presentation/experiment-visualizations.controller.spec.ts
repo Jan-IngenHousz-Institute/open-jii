@@ -134,10 +134,12 @@ describe("ExperimentVisualizationsController", () => {
       // Assert
       expect(response.body).toBeInstanceOf(Array);
       expect(response.body).toHaveLength(2);
-      expect(response.body[0]).toHaveProperty("id", mockVisualizations[0].id);
-      expect(response.body[0]).toHaveProperty("name", mockVisualizations[0].name);
-      expect(response.body[1]).toHaveProperty("id", mockVisualizations[1].id);
-      expect(response.body[1]).toHaveProperty("name", mockVisualizations[1].name);
+      const [firstViz, secondViz] = response.body as ExperimentVisualizationDto[];
+      const [firstMock, secondMock] = mockVisualizations;
+      expect(firstViz).toHaveProperty("id", firstMock.id);
+      expect(firstViz).toHaveProperty("name", firstMock.name);
+      expect(secondViz).toHaveProperty("id", secondMock.id);
+      expect(secondViz).toHaveProperty("name", secondMock.name);
     });
 
     it("should handle errors when listing visualizations", async () => {
