@@ -334,6 +334,7 @@ export const zChartType = z.enum([
   "wind-rose",
   "radar",
   "polar",
+  "correlation-matrix",
 ]);
 
 // Data source configuration schema
@@ -445,6 +446,454 @@ export const zDotPlotConfig = z.object({
   display: zChartDisplayOptions,
 });
 
+export const zBubbleChartConfig = z.object({
+  xAxis: zAxisConfig,
+  yAxes: z.array(zAxisConfig).min(1),
+  // Bubble-specific options - size axis for bubble size
+  sizeAxis: zAxisConfig,
+  // Bubble visual options
+  mode: z.enum(["markers", "markers+text"]).default("markers"),
+  markerSizeScale: z.object({
+    min: z.number().min(1).max(50).default(5),
+    max: z.number().min(1).max(100).default(50),
+  }),
+  markerShape: z.enum(["circle", "square", "diamond", "triangle"]).default("circle"),
+  opacity: z.number().min(0).max(1).default(0.8),
+  // Display options
+  gridLines: z.enum(["both", "x", "y", "none"]).default("both"),
+  display: zChartDisplayOptions,
+});
+
+export const zLollipopChartConfig = z.object({
+  xAxis: zAxisConfig,
+  yAxes: z.array(zAxisConfig).min(1),
+  // Lollipop specific options
+  orientation: z.enum(["v", "h"]).default("v"),
+  stemWidth: z.number().min(1).max(10).default(3),
+  dotSize: z.number().min(5).max(30).default(15),
+  // Display options
+  gridLines: z.enum(["both", "x", "y", "none"]).default("both"),
+  display: zChartDisplayOptions,
+});
+
+export const zHeatmapChartConfig = z.object({
+  xAxis: zAxisConfig,
+  yAxis: zAxisConfig,
+  zAxis: zAxisConfig, // For the heatmap values
+  // Heatmap-specific options
+  colorscale: z
+    .enum([
+      "viridis",
+      "plasma",
+      "inferno",
+      "magma",
+      "cividis",
+      "blues",
+      "greens",
+      "reds",
+      "oranges",
+      "purples",
+      "greys",
+      "hot",
+      "cool",
+      "rainbow",
+      "jet",
+      "custom",
+    ])
+    .default("viridis"),
+  // Custom colorscale for when colorscale is "custom"
+  // customColorscale: z.array(z.tuple([z.number(), z.string()])).optional(),
+  showScale: z.boolean().default(true),
+  colorbarTitle: z.string().optional(),
+  // Text display options
+  showText: z.boolean().default(true),
+  textTemplate: z.string().default("%{z}"),
+  textFont: z
+    .object({
+      size: z.number().min(8).max(24).default(12),
+      color: z.string().default("white"),
+    })
+    .optional(),
+  // Heatmap visual options
+  connectGaps: z.boolean().default(false),
+  hoverTemplate: z.string().optional(),
+  // Display options
+  display: zChartDisplayOptions,
+});
+
+export const zContourChartConfig = z.object({
+  xAxis: zAxisConfig,
+  yAxis: zAxisConfig,
+  zAxis: zAxisConfig, // For the contour values
+  // Contour-specific options
+  colorscale: z
+    .enum([
+      "viridis",
+      "plasma",
+      "inferno",
+      "magma",
+      "cividis",
+      "blues",
+      "greens",
+      "reds",
+      "oranges",
+      "purples",
+      "greys",
+      "hot",
+      "cool",
+      "rainbow",
+      "jet",
+      "earth",
+      "custom",
+    ])
+    .default("viridis"),
+  // Custom colorscale for when colorscale is "custom"
+  // customColorscale: z.array(z.tuple([z.number(), z.string()])).optional(),
+  showScale: z.boolean().default(true),
+  colorbarTitle: z.string().optional(),
+  // Contour-specific options
+  contours: z
+    .object({
+      coloring: z.enum(["fill", "heatmap", "lines", "none"]).default("lines"),
+      showlines: z.boolean().default(true),
+      showlabels: z.boolean().default(false),
+      start: z.number().optional(),
+      end: z.number().optional(),
+      size: z.number().optional(),
+      labelfont: z
+        .object({
+          size: z.number().min(8).max(24).default(12),
+          color: z.string().default("black"),
+        })
+        .optional(),
+    })
+    .default({}),
+  ncontours: z.number().min(5).max(50).default(15),
+  autocontour: z.boolean().default(true),
+  connectgaps: z.boolean().default(false),
+  smoothing: z.number().min(0).max(2).default(1),
+  hoverTemplate: z.string().optional(),
+  // Display options
+  display: zChartDisplayOptions,
+});
+
+export const zTernaryChartConfig = z.object({
+  aAxis: zAxisConfig, // Component A (e.g., Sand %)
+  bAxis: zAxisConfig, // Component B (e.g., Clay %)
+  cAxis: zAxisConfig, // Component C (e.g., Silt %)
+  // Ternary-specific options
+  sum: z.number().positive().default(100), // Normalization sum (typically 100 for percentages)
+  mode: z.enum(["markers", "lines", "lines+markers"]).default("markers"),
+  // Series configuration for multiple data sets
+  series: z
+    .array(
+      z.object({
+        name: z.string(),
+        color: z.string().optional(),
+        marker: z
+          .object({
+            size: z.number().min(4).max(20).default(8),
+            symbol: z
+              .enum(["circle", "square", "diamond", "triangle-up", "triangle-down", "cross", "x"])
+              .default("circle"),
+            opacity: z.number().min(0).max(1).default(1),
+          })
+          .optional(),
+        line: z
+          .object({
+            width: z.number().min(1).max(10).default(2),
+            dash: z
+              .enum(["solid", "dot", "dash", "longdash", "dashdot", "longdashdot"])
+              .default("solid"),
+          })
+          .optional(),
+      }),
+    )
+    .optional(),
+  // Boundary/region configuration
+  boundaries: z
+    .array(
+      z.object({
+        name: z.string(),
+        a: z.object({
+          dataSource: zDataSourceConfig,
+        }),
+        b: z.object({
+          dataSource: zDataSourceConfig,
+        }),
+        c: z.object({
+          dataSource: zDataSourceConfig,
+        }),
+        line: z
+          .object({
+            color: z.string().default("#333"),
+            width: z.number().min(1).max(5).default(2),
+            dash: z
+              .enum(["solid", "dot", "dash", "longdash", "dashdot", "longdashdot"])
+              .default("solid"),
+          })
+          .optional(),
+        fillcolor: z.string().optional(),
+        opacity: z.number().min(0).max(1).default(0.3),
+      }),
+    )
+    .optional(),
+  // Axis configuration
+  aAxisProps: z
+    .object({
+      title: z.string().optional(),
+      showgrid: z.boolean().default(true),
+      showline: z.boolean().default(true),
+      showticklabels: z.boolean().default(true),
+      gridcolor: z.string().default("#E6E6E6"),
+      linecolor: z.string().default("#444"),
+    })
+    .optional(),
+  bAxisProps: z
+    .object({
+      title: z.string().optional(),
+      showgrid: z.boolean().default(true),
+      showline: z.boolean().default(true),
+      showticklabels: z.boolean().default(true),
+      gridcolor: z.string().default("#E6E6E6"),
+      linecolor: z.string().default("#444"),
+    })
+    .optional(),
+  cAxisProps: z
+    .object({
+      title: z.string().optional(),
+      showgrid: z.boolean().default(true),
+      showline: z.boolean().default(true),
+      showticklabels: z.boolean().default(true),
+      gridcolor: z.string().default("#E6E6E6"),
+      linecolor: z.string().default("#444"),
+    })
+    .optional(),
+  bgcolor: z.string().default("white"),
+  hoverTemplate: z.string().optional(),
+  // Display options
+  display: zChartDisplayOptions,
+});
+
+export const zCorrelationMatrixChartConfig = z.object({
+  // Variables configuration - which columns to include in correlation analysis
+  variables: z
+    .array(zDataSourceConfig)
+    .min(2, "At least 2 variables are required for correlation analysis"),
+  // Correlation matrix display options
+  colorscale: z
+    .enum([
+      "RdBu",
+      "viridis",
+      "plasma",
+      "inferno",
+      "magma",
+      "cividis",
+      "blues",
+      "greens",
+      "reds",
+      "oranges",
+      "purples",
+      "greys",
+      "hot",
+      "cool",
+      "rainbow",
+      "jet",
+    ])
+    .default("RdBu"),
+  showValues: z.boolean().default(true),
+  showScale: z.boolean().default(true),
+  colorbarTitle: z.string().default("Correlation"),
+  // Text display options
+  textFont: z
+    .object({
+      size: z.number().min(8).max(24).default(12),
+      color: z.string().default("black"),
+    })
+    .optional(),
+  // Hover template
+  hoverTemplate: z.string().optional(),
+  // Display options
+  display: zChartDisplayOptions,
+});
+
+export const zLogPlotChartConfig = z.object({
+  xAxis: zAxisConfig.extend({
+    type: z.enum(["linear", "log", "date", "category"]).default("linear"),
+    logBase: z.number().int().min(2).default(10).optional(),
+  }),
+  yAxes: z
+    .array(
+      zAxisConfig.extend({
+        type: z.enum(["linear", "log"]).default("log"),
+        logBase: z.number().int().min(2).default(10).optional(),
+        // Log plot specific series options
+        mode: z
+          .enum([
+            "lines",
+            "markers",
+            "lines+markers",
+            "text",
+            "markers+text",
+            "lines+text",
+            "lines+markers+text",
+          ])
+          .default("lines+markers"),
+        line: z
+          .object({
+            width: z.number().min(0.5).max(10).default(2),
+            dash: z.enum(["solid", "dash", "dot", "dashdot"]).default("solid"),
+          })
+          .optional(),
+        marker: z
+          .object({
+            size: z.number().min(2).max(20).default(6),
+            symbol: z
+              .enum([
+                "circle",
+                "square",
+                "diamond",
+                "triangle-up",
+                "triangle-down",
+                "cross",
+                "x",
+                "star",
+              ])
+              .default("circle"),
+          })
+          .optional(),
+      }),
+    )
+    .min(1),
+  // Display options
+  gridLines: z.enum(["both", "x", "y", "none"]).default("both"),
+  display: zChartDisplayOptions,
+});
+
+export const zParallelCoordinatesChartConfig = z.object({
+  // Dimensions configuration - each dimension is a column from the data
+  dimensions: z
+    .array(
+      z.object({
+        dataSource: zDataSourceConfig,
+        label: z.string().optional(), // Override default column name
+        range: z.array(z.number()).length(2).optional(), // Value range [min, max]
+        tickvals: z.array(z.number()).optional(), // Custom tick values
+        ticktext: z.array(z.string()).optional(), // Custom tick labels
+        constraintrange: z
+          .union([
+            z.array(z.number()).length(2), // Single constraint range
+            z.array(z.array(z.number()).length(2)), // Multiple constraint ranges
+          ])
+          .optional(),
+        multiselect: z.boolean().default(true), // Allow multiple range selections
+        visible: z.boolean().default(true),
+      }),
+    )
+    .min(2), // At least 2 dimensions required for parallel coordinates
+  // Line styling
+  line: z
+    .object({
+      color: z.string().optional(), // Static color or column reference for color mapping
+      colorscale: z
+        .enum([
+          "viridis",
+          "plasma",
+          "inferno",
+          "magma",
+          "cividis",
+          "blues",
+          "greens",
+          "reds",
+          "oranges",
+          "purples",
+          "greys",
+          "hot",
+          "cool",
+          "rainbow",
+          "jet",
+        ])
+        .default("viridis"),
+      showscale: z.boolean().default(true), // Show color scale
+      width: z.number().min(0.5).max(5).default(1),
+      opacity: z.number().min(0.1).max(1).default(1),
+      // Color bar configuration
+      colorbar: z
+        .object({
+          title: z.string().optional(),
+          titleside: z.enum(["right", "top", "bottom"]).default("right"),
+          thickness: z.number().min(5).max(30).default(15),
+          len: z.number().min(0.1).max(1).default(1),
+          x: z.number().min(-2).max(3).default(1.02),
+          y: z.number().min(-2).max(3).default(0.5),
+        })
+        .optional(),
+    })
+    .optional(),
+  // Label configuration
+  labelangle: z.number().min(-90).max(90).default(0),
+  labelside: z.enum(["top", "bottom"]).default("top"),
+  // Font configuration
+  rangefont: z
+    .object({
+      family: z.string().default("Arial, sans-serif"),
+      size: z.number().min(8).max(18).default(12),
+      color: z.string().default("#444"),
+    })
+    .optional(),
+  tickfont: z
+    .object({
+      family: z.string().default("Arial, sans-serif"),
+      size: z.number().min(8).max(16).default(10),
+      color: z.string().default("#444"),
+    })
+    .optional(),
+  // Display options
+  display: zChartDisplayOptions,
+});
+
+export const zRadarChartConfig = z.object({
+  // Category labels for the angular axis
+  categoryAxis: zAxisConfig, // Column containing category labels
+  // Series configuration - multiple radar series
+  series: z
+    .array(
+      z.object({
+        dataSource: zDataSourceConfig, // Column containing values for this series
+        name: z.string().optional(), // Series name (defaults to column name/alias)
+        color: z.string().optional(), // Series color
+        fill: z.enum(["none", "toself", "tonext"]).default("toself"),
+        fillcolor: z.string().optional(), // Fill color (defaults to series color with opacity)
+        mode: z.enum(["lines", "markers", "lines+markers"]).default("lines+markers"),
+        opacity: z.number().min(0).max(1).default(0.6),
+        // Line styling
+        line: z
+          .object({
+            width: z.number().min(1).max(8).default(2),
+            dash: z.enum(["solid", "dash", "dot", "dashdot"]).default("solid"),
+          })
+          .optional(),
+        // Marker styling
+        marker: z
+          .object({
+            size: z.number().min(3).max(15).default(6),
+            symbol: z.enum(["circle", "square", "diamond", "triangle", "cross"]).default("circle"),
+          })
+          .optional(),
+      }),
+    )
+    .min(1),
+  // Radar-specific options
+  rangeMode: z.enum(["normal", "tozero", "nonnegative"]).default("tozero"),
+  gridShape: z.enum(["circular", "linear"]).default("circular"),
+  showTickLabels: z.boolean().default(true),
+  tickAngle: z.number().min(-180).max(180).default(0),
+  radialAxisVisible: z.boolean().default(true),
+  angularAxisVisible: z.boolean().default(true),
+  // Display options
+  display: zChartDisplayOptions,
+});
+
 // Union type for all chart configurations
 export const zChartConfig = z.discriminatedUnion("chartType", [
   z.object({ chartType: z.literal("line"), config: zLineChartConfig }),
@@ -453,6 +902,18 @@ export const zChartConfig = z.discriminatedUnion("chartType", [
   z.object({ chartType: z.literal("pie"), config: zPieChartConfig }),
   z.object({ chartType: z.literal("area"), config: zAreaChartConfig }),
   z.object({ chartType: z.literal("dot-plot"), config: zDotPlotConfig }),
+  z.object({ chartType: z.literal("bubble"), config: zBubbleChartConfig }),
+  z.object({ chartType: z.literal("lollipop"), config: zLollipopChartConfig }),
+  z.object({ chartType: z.literal("heatmap"), config: zHeatmapChartConfig }),
+  z.object({ chartType: z.literal("contour"), config: zContourChartConfig }),
+  z.object({ chartType: z.literal("ternary"), config: zTernaryChartConfig }),
+  z.object({ chartType: z.literal("correlation-matrix"), config: zCorrelationMatrixChartConfig }),
+  z.object({ chartType: z.literal("log-plot"), config: zLogPlotChartConfig }),
+  z.object({
+    chartType: z.literal("parallel-coordinates"),
+    config: zParallelCoordinatesChartConfig,
+  }),
+  z.object({ chartType: z.literal("radar"), config: zRadarChartConfig }),
 ]);
 
 // Data configuration schema for visualization data sources
@@ -880,6 +1341,15 @@ export type BarChartConfig = z.infer<typeof zBarChartConfig>;
 export type PieChartConfig = z.infer<typeof zPieChartConfig>;
 export type AreaChartConfig = z.infer<typeof zAreaChartConfig>;
 export type DotPlotConfig = z.infer<typeof zDotPlotConfig>;
+export type BubbleChartConfig = z.infer<typeof zBubbleChartConfig>;
+export type LollipopChartConfig = z.infer<typeof zLollipopChartConfig>;
+export type HeatmapChartConfig = z.infer<typeof zHeatmapChartConfig>;
+export type ContourChartConfig = z.infer<typeof zContourChartConfig>;
+export type TernaryChartConfig = z.infer<typeof zTernaryChartConfig>;
+export type CorrelationMatrixChartConfig = z.infer<typeof zCorrelationMatrixChartConfig>;
+export type LogPlotChartConfig = z.infer<typeof zLogPlotChartConfig>;
+export type ParallelCoordinatesChartConfig = z.infer<typeof zParallelCoordinatesChartConfig>;
+export type RadarChartConfig = z.infer<typeof zRadarChartConfig>;
 export type ChartConfig = z.infer<typeof zChartConfig>;
 export type ExperimentVisualization = z.infer<typeof zExperimentVisualization>;
 export type ExperimentVisualizationList = z.infer<typeof zExperimentVisualizationList>;

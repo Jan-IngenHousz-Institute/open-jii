@@ -4,6 +4,7 @@
     "language": "Taal",
     "languageDrawer": "Taallade schakelen",
     "regionalSettings": "Regionale instellingen",
+    "currentValue": "Huidige waarde:",
     "loading": "Laden...",
     "error": "Fout",
     "success": "Succes",

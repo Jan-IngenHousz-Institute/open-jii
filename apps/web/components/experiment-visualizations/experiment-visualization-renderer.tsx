@@ -9,7 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components";
 import { AreaChartRenderer } from "./chart-renderers/area-chart-renderer";
 import { BarChartRenderer } from "./chart-renderers/bar-chart-renderer";
 import { LineChartRenderer } from "./chart-renderers/line-chart-renderer";
+import { LogPlotChartRenderer } from "./chart-renderers/log-plot-chart-renderer";
+import { LollipopChartRenderer } from "./chart-renderers/lollipop-chart-renderer";
+import { ParallelCoordinatesChartRenderer } from "./chart-renderers/parallel-coordinates-chart-renderer";
 import { PieChartRenderer } from "./chart-renderers/pie-chart-renderer";
+import { RadarChartRenderer } from "./chart-renderers/radar-chart-renderer";
 import { ScatterChartRenderer } from "./chart-renderers/scatter-chart-renderer";
 
 // Dynamic import for better performance
@@ -66,17 +70,23 @@ export default function ExperimentVisualizationRenderer({
       case "scatter":
         return <ScatterChartRenderer {...commonProps} />;
       case "dot-plot":
-        // TODO: Implement dot-plot chart type
-        return (
-          <div className="bg-muted/20 flex h-full items-center justify-center rounded-lg border-2 border-dashed">
-            <div className="text-center">
-              <div className="text-muted-foreground mb-2 text-lg font-medium">Dot Plot Chart</div>
-              <div className="text-muted-foreground text-sm">
-                Coming Soon - dot-plot charts are not yet implemented
-              </div>
-            </div>
-          </div>
-        );
+        return <DotPlotRenderer {...commonProps} />;
+      case "bubble":
+        return <BubbleChartRenderer {...commonProps} />;
+      case "lollipop":
+        return <LollipopChartRenderer {...commonProps} />;
+      case "heatmap":
+        return <HeatmapChartRenderer {...commonProps} />;
+      case "contour":
+        return <ContourChartRenderer {...commonProps} />;
+      case "ternary":
+        return <TernaryChartRenderer {...commonProps} />;
+      case "log-plot":
+        return <LogPlotChartRenderer {...commonProps} />;
+      case "parallel-coordinates":
+        return <ParallelCoordinatesChartRenderer {...commonProps} />;
+      case "radar":
+        return <RadarChartRenderer {...commonProps} />;
       default:
         return (
           <div className="bg-destructive/10 text-destructive flex h-full items-center justify-center rounded-lg border">

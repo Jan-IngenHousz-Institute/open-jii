@@ -4,6 +4,7 @@
     "by": "von",
     "homepage": "Startseite",
     "language": "Sprache",
+    "currentValue": "Aktueller Wert:",
     "languageDrawer": "Sprachschublade umschalten",
     "regionalSettings": "Regionale Einstellungen",
     "loading": "Laden...",
