@@ -35,7 +35,7 @@ export default function NewVisualizationPage() {
         <div className="flex items-center space-x-2">
           <Button variant="ghost" size="sm" onClick={handleCancel}>
             <ChevronLeft className="mr-1 h-4 w-4" />
-            {t("common.back")}
+            {t("back")}
           </Button>
           <h1 className="text-2xl font-bold tracking-tight">{t("newVisualization")}</h1>
         </div>

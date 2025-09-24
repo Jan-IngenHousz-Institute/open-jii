@@ -1,7 +1,7 @@
 "use client";
 
 import { useExperimentVisualizationDelete } from "@/hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete";
-import { AreaChart, Calendar, Trash2 } from "lucide-react";
+import { AreaChart, Calendar, Edit, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -73,6 +73,11 @@ export default function ExperimentVisualizationsList({
     router.push(`/platform/experiments/${experimentId}/visualizations/${visualization.id}`);
   };
 
+  const handleEditVisualization = (visualization: ExperimentVisualization) => {
+    // Navigate to the visualization edit page
+    router.push(`/platform/experiments/${experimentId}/visualizations/${visualization.id}/edit`);
+  };
+
   const getChartIcon = (_chartType: string) => {
     // You can customize this based on chart types
     return <AreaChart className="h-5 w-5" />;
@@ -98,14 +103,24 @@ export default function ExperimentVisualizationsList({
                 <Badge variant="outline" className="mb-2">
                   {visualization.chartFamily} / {visualization.chartType}
                 </Badge>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => handleOpenDeleteDialog(visualization)}
-                >
-                  <Trash2 className="text-muted-foreground h-4 w-4" />
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleEditVisualization(visualization)}
+                  >
+                    <Edit className="text-muted-foreground h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleOpenDeleteDialog(visualization)}
+                  >
+                    <Trash2 className="text-muted-foreground h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <CardTitle className="line-clamp-1">{visualization.name}</CardTitle>
               <CardDescription className="line-clamp-2">
@@ -125,13 +140,20 @@ export default function ExperimentVisualizationsList({
                 </div>
               </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex gap-2">
               <Button
                 variant="secondary"
-                className="w-full"
+                className="flex-1"
                 onClick={() => handleViewVisualization(visualization)}
               >
                 {t("view")}
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => handleEditVisualization(visualization)}
+              >
+                {t("edit")}
               </Button>
             </CardFooter>
           </Card>

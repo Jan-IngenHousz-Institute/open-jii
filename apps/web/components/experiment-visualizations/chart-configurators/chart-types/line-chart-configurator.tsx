@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash2, TrendingUp, Layers, Eye, Palette } from "lucide-react";
+import { Plus, Trash2, Layers, Eye, Palette, Database, LineChart } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useFieldArray } from "react-hook-form";
 
@@ -42,6 +42,7 @@ export default function LineChartConfigurator({
   onColumnSelect,
 }: LineChartConfiguratorProps) {
   const { t } = useTranslation("experimentVisualizations");
+  const { t: tCommon } = useTranslation("common");
 
   // Hook for managing Y-axes array
   const {
@@ -56,7 +57,7 @@ export default function LineChartConfigurator({
   // Function to add a new Y-axis series
   const addYAxisSeries = () => {
     appendYAxis({
-      dataSource: { columnName: "", tableName: "" },
+      dataSource: { columnName: "", tableName: "", alias: "" },
       type: "linear",
       title: "",
       side: "left",
@@ -70,7 +71,7 @@ export default function LineChartConfigurator({
       <Card className="shadow-sm">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-2">
-            <TrendingUp className="text-primary h-5 w-5" />
+            <Database className="text-primary h-5 w-5" />
             <CardTitle className="text-lg font-semibold">{t("dataConfiguration")}</CardTitle>
           </div>
         </CardHeader>
@@ -86,7 +87,9 @@ export default function LineChartConfigurator({
                 name="config.config.xAxis.dataSource.columnName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("xAxis")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("configuration.xAxis")}
+                    </FormLabel>
                     <Select
                       value={field.value}
                       onValueChange={(value) => {
@@ -96,7 +99,7 @@ export default function LineChartConfigurator({
                     >
                       <FormControl>
                         <SelectTrigger className="h-10 bg-white">
-                          <SelectValue placeholder={t("selectColumn")} />
+                          <SelectValue placeholder={t("configuration.selectColumn")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -151,7 +154,7 @@ export default function LineChartConfigurator({
                 className="h-8 px-3"
               >
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
-                {t("addSeries")}
+                {t("configuration.addSeries")}
               </Button>
             </div>
 
@@ -195,7 +198,7 @@ export default function LineChartConfigurator({
                             >
                               <FormControl>
                                 <SelectTrigger className="h-10 bg-white">
-                                  <SelectValue placeholder={t("selectColumn")} />
+                                  <SelectValue placeholder={t("configuration.selectColumn")} />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
@@ -247,7 +250,7 @@ export default function LineChartConfigurator({
                           <FormItem>
                             <FormLabel className="flex items-center gap-2 text-sm font-medium">
                               <Palette className="h-3.5 w-3.5" />
-                              {t("lineColor")}
+                              {t("chartOptions.lineColor")}
                             </FormLabel>
                             <FormControl>
                               <div className="flex items-center gap-2">
@@ -274,7 +277,9 @@ export default function LineChartConfigurator({
                         name={`config.config.yAxes.${index}.type` as const}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-medium">{t("axisType")}</FormLabel>
+                            <FormLabel className="text-sm font-medium">
+                              {t("configuration.axisType")}
+                            </FormLabel>
                             <Select value={field.value} onValueChange={field.onChange}>
                               <FormControl>
                                 <SelectTrigger className="h-10 bg-white">
@@ -285,7 +290,6 @@ export default function LineChartConfigurator({
                                 <SelectItem value="linear">{t("axisTypes.linear")}</SelectItem>
                                 <SelectItem value="log">{t("axisTypes.log")}</SelectItem>
                                 <SelectItem value="date">{t("axisTypes.date")}</SelectItem>
-                                <SelectItem value="category">{t("axisTypes.category")}</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -316,24 +320,26 @@ export default function LineChartConfigurator({
                       />
                     </div>
 
-                    {/* Axis Title */}
-                    <FormField
-                      control={form.control}
-                      name={`config.config.yAxes.${index}.title` as const}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm font-medium">{t("yAxisTitle")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={t("enterAxisTitle")}
-                              className="h-10 bg-white"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {/* Y-axis Title - only show for first axis */}
+                    {index === 0 && (
+                      <FormField
+                        control={form.control}
+                        name={`config.config.yAxes.${index}.title` as const}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium">{t("yAxisTitle")}</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder={t("enterAxisTitle")}
+                                className="h-10 bg-white"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -388,8 +394,8 @@ export default function LineChartConfigurator({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="true">{t("common.yes")}</SelectItem>
-                        <SelectItem value="false">{t("common.no")}</SelectItem>
+                        <SelectItem value="true">{tCommon("common.yes")}</SelectItem>
+                        <SelectItem value="false">{tCommon("common.no")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -402,7 +408,9 @@ export default function LineChartConfigurator({
                 name="config.config.display.legendPosition"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("legendPosition")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("chartOptions.legendPosition")}
+                    </FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="h-10 bg-white">
@@ -426,7 +434,9 @@ export default function LineChartConfigurator({
                 name="config.config.gridLines"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("gridLines")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("chartOptions.gridLines")}
+                    </FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="h-10 bg-white">
@@ -476,8 +486,10 @@ export default function LineChartConfigurator({
         <Card className="bg-white shadow-sm">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
-              <TrendingUp className="text-primary h-5 w-5" />
-              <CardTitle className="text-lg font-semibold">{t("lineChartOptions")}</CardTitle>
+              <LineChart className="text-primary h-5 w-5" />
+              <CardTitle className="text-lg font-semibold">
+                {t("chartOptions.lineChartOptions")}
+              </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
@@ -487,7 +499,7 @@ export default function LineChartConfigurator({
                 name="config.config.mode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("lineMode")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">{t("chartOptions.mode")}</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="h-10 bg-white">
@@ -510,7 +522,9 @@ export default function LineChartConfigurator({
                 name="config.config.connectGaps"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("connectGaps")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("chartOptions.connectGaps")}
+                    </FormLabel>
                     <Select
                       value={field.value ? "true" : "false"}
                       onValueChange={(value) => field.onChange(value === "true")}
@@ -521,8 +535,8 @@ export default function LineChartConfigurator({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="true">{t("common.yes")}</SelectItem>
-                        <SelectItem value="false">{t("common.no")}</SelectItem>
+                        <SelectItem value="true">{tCommon("common.yes")}</SelectItem>
+                        <SelectItem value="false">{tCommon("common.no")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -535,7 +549,9 @@ export default function LineChartConfigurator({
                 name="config.config.smoothing"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("smoothing")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t("chartOptions.smoothing")}
+                    </FormLabel>
                     <FormControl>
                       <div className="space-y-3">
                         <Slider

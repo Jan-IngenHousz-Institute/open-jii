@@ -1,7 +1,8 @@
 import React from "react";
 
 import type { ExperimentVisualization } from "@repo/api";
-import { BarChart, PlotlyChartConfig } from "@repo/ui/components";
+import type { PlotlyChartConfig } from "@repo/ui/components";
+import { BarChart } from "@repo/ui/components";
 
 import { useExperimentVisualizationData } from "../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 
@@ -104,8 +105,17 @@ export function BarChartRenderer({
         color: yAxis.color ?? `hsl(${index * 60}, 70%, 50%)`,
         type: "bar" as const,
         orientation,
+        // Add support for showValues configuration
+        text: barConfig.showValues ? yData.map(String) : undefined,
+        textposition: barConfig.showValues ? ("auto" as const) : undefined,
+        // Add support for barWidth configuration
+        width: barConfig.barWidth,
       };
     });
+
+    // Note: barMode support would need UI component enhancement
+    // const barMode = barConfig.barMode === "stack" ? "stack" :
+    //                 barConfig.barMode === "overlay" ? "overlay" : "group";
 
     const chartConfig: PlotlyChartConfig = {
       title: barConfig.display?.title ?? visualization.name,
@@ -113,6 +123,7 @@ export function BarChartRenderer({
       yAxisTitle: barConfig.yAxes[0]?.title ?? "Values",
       useWebGL: !isPreview && chartData.length > 1000,
       showLegend: barConfig.display?.showLegend ?? true,
+      // Note: barmode and gridLines support would need UI component enhancement
     };
 
     return <BarChart data={chartSeries} config={chartConfig} />;

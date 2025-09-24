@@ -42,7 +42,7 @@ export default function ExperimentVisualizationDetailPage({
   visualizationId,
   experimentId,
 }: ExperimentVisualizationDetailPageProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation("experimentVisualizations");
   const router = useRouter();
   const params = useParams();
   const locale = Array.isArray(params.locale) ? params.locale[0] : params.locale;
@@ -88,7 +88,7 @@ export default function ExperimentVisualizationDetailPage({
     if (!visualization) return;
     // TODO: Implement chart export functionality
     toast({
-      description: "Export functionality coming soon",
+      description: t("errors.exportComingSoon"),
     });
   };
 
@@ -110,7 +110,7 @@ export default function ExperimentVisualizationDetailPage({
   if (isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
-        <div className="text-muted-foreground">Loading visualization...</div>
+        <div className="text-muted-foreground">{t("loadingVisualization")}</div>
       </div>
     );
   }
@@ -119,10 +119,10 @@ export default function ExperimentVisualizationDetailPage({
   if (visualizationError || !visualization) {
     return (
       <div className="flex h-[50vh] flex-col items-center justify-center gap-4">
-        <div className="text-destructive">Failed to load visualization</div>
+        <div className="text-destructive">{t("failedToLoadVisualization")}</div>
         <Button onClick={handleBack} variant="outline">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          {t("common.back")}
+          {t("back")}
         </Button>
       </div>
     );
@@ -134,7 +134,7 @@ export default function ExperimentVisualizationDetailPage({
         <div className="flex items-center gap-4">
           <Button onClick={handleBack} variant="outline" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            {t("common.back")}
+            {t("back")}
           </Button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{visualization.name}</h1>
@@ -147,15 +147,15 @@ export default function ExperimentVisualizationDetailPage({
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="mr-2 h-4 w-4" />
-            {t("common.export")}
+            {t("export")}
           </Button>
           <Button variant="outline" size="sm" onClick={handleEdit}>
             <Edit className="mr-2 h-4 w-4" />
-            {t("common.edit")}
+            {t("edit")}
           </Button>
           <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isDeleting}>
             <Trash2 className="mr-2 h-4 w-4" />
-            {isDeleting ? t("common.deleting") : t("common.delete")}
+            {isDeleting ? t("deleting") : t("delete")}
           </Button>
         </div>
       </div>
@@ -165,10 +165,10 @@ export default function ExperimentVisualizationDetailPage({
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>{t("experimentVisualizations.chartPreview")}</CardTitle>
+              <CardTitle>{t("chartPreview")}</CardTitle>
               <CardDescription>
-                {t("experimentVisualizations.chartInfo", {
-                  type: visualization.chartType,
+                {t("chartInfo", {
+                  type: visualization.config.chartType,
                   table: visualization.dataConfig.tableName,
                 })}
               </CardDescription>
@@ -188,27 +188,23 @@ export default function ExperimentVisualizationDetailPage({
           {/* Data Source */}
           <Card>
             <CardHeader>
-              <CardTitle>{t("experimentVisualizations.dataSource")}</CardTitle>
+              <CardTitle>{t("dataSource")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium">{t("experimentVisualizations.table")}</label>
+                <label className="text-sm font-medium">{t("table")}</label>
                 <p className="text-muted-foreground text-sm">
                   {visualization.dataConfig.tableName}
                 </p>
               </div>
 
               {isDataLoading && (
-                <div className="text-muted-foreground text-sm">
-                  {t("experimentVisualizations.loadingData")}
-                </div>
+                <div className="text-muted-foreground text-sm">{t("errors.loadingData")}</div>
               )}
 
               {visualizationData && (
                 <div>
-                  <label className="text-sm font-medium">
-                    {t("experimentVisualizations.columns")}
-                  </label>
+                  <label className="text-sm font-medium">{t("columns")}</label>
                   <div className="mt-1 space-y-1">
                     {visualization.dataConfig.dataSources.map((ds, index) => (
                       <div
@@ -227,24 +223,20 @@ export default function ExperimentVisualizationDetailPage({
           {/* Chart Configuration */}
           <Card>
             <CardHeader>
-              <CardTitle>{t("experimentVisualizations.chartConfiguration")}</CardTitle>
+              <CardTitle>{t("chartConfiguration")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium">
-                  {t("experimentVisualizations.chartType")}
-                </label>
+                <label className="text-sm font-medium">{t("chartType")}</label>
                 <p className="text-muted-foreground text-sm">
-                  {visualization.chartType} ({visualization.chartFamily} family)
+                  {visualization.config.chartType} ({visualization.chartFamily} family)
                 </p>
               </div>
 
               <Separator />
 
               <div>
-                <label className="text-sm font-medium">
-                  {t("experimentVisualizations.configuration")}
-                </label>
+                <label className="text-sm font-medium">{t("configurationDetails")}</label>
                 <div className="bg-muted/50 mt-2 rounded p-3">
                   <pre className="max-h-40 overflow-auto text-xs">
                     {JSON.stringify(visualization.config.config, null, 2)}
@@ -253,14 +245,12 @@ export default function ExperimentVisualizationDetailPage({
               </div>
 
               <div className="text-muted-foreground text-xs">
-                {t("experimentVisualizations.createdAt")}:{" "}
-                {new Date(visualization.createdAt).toLocaleString()}
+                {t("createdAt")}: {new Date(visualization.createdAt).toLocaleString()}
               </div>
 
               {visualization.updatedAt !== visualization.createdAt && (
                 <div className="text-muted-foreground text-xs">
-                  {t("experimentVisualizations.updatedAt")}:{" "}
-                  {new Date(visualization.updatedAt).toLocaleString()}
+                  {t("updatedAt")}: {new Date(visualization.updatedAt).toLocaleString()}
                 </div>
               )}
             </CardContent>
