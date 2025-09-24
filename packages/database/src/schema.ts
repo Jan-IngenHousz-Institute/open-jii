@@ -128,6 +128,7 @@ export const profiles = pgTable("profiles", {
   avatarUrl: varchar("avatar_url", { length: 500 }),
   userId: uuid("user_id")
     .references(() => users.id)
+    .unique()
     .notNull(),
   organizationId: uuid("organization_id").references(() => organizations.id),
   ...timestamps,
