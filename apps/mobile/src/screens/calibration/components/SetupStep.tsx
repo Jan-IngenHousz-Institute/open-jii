@@ -19,7 +19,7 @@ export function SetupStep({ onStartCalibration }: SetupStepProps) {
           { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
         ]}
       >
-        SPAD Calibration Setup
+        Device Calibration Setup
       </Text>
       <Text
         style={[
@@ -27,7 +27,7 @@ export function SetupStep({ onStartCalibration }: SetupStepProps) {
           { color: theme.isDark ? colors.dark.inactive : colors.light.inactive },
         ]}
       >
-        This calibration process will help ensure accurate SPAD measurements. You'll need:
+        This calibration process will help ensure accurate device measurements. You'll need:
       </Text>
       <View style={styles.requirementsList}>
         <Text
@@ -52,7 +52,7 @@ export function SetupStep({ onStartCalibration }: SetupStepProps) {
             { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
           ]}
         >
-          • Known SPAD values for each calibration card
+          • Known reference values for each calibration card
         </Text>
       </View>
       <Button title="Start Calibration" onPress={onStartCalibration} style={styles.actionButton} />

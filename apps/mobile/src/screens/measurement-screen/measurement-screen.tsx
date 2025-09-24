@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowLeft, Bluetooth, Radio, Usb } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -46,6 +46,8 @@ export function MeasurementScreen() {
     measurementTimestamp,
     isConnected,
   } = useDeviceConnection();
+
+  const isCancellingRef = useRef(false);
 
   const [selectedProtocolName, setSelectedProtocolName] = useState<ProtocolName>();
   const [selectedExperimentId, setSelectedExperimentId] = useState<string>();
@@ -326,18 +328,54 @@ export function MeasurementScreen() {
           placeholder="Select protocol"
         />
 
-        <Button
-          title="Start Measurement"
-          onPress={() => performMeasurement(selectedProtocolName)}
-          isLoading={isScanning}
-          isDisabled={!isConnected || !selectedProtocolName}
-          style={styles.startButton}
-        />
+        {isScanning ? (
+          <Button
+            title="Cancel Measurement"
+            onPress={() => {
+              isCancellingRef.current = true;
+              clearResult();
+            }}
+            variant="outline"
+            style={styles.startButton}
+            textStyle={{ color: colors.semantic.error }}
+          />
+        ) : (
+          <Button
+            title="Start Measurement"
+            onPress={() => {
+              isCancellingRef.current = false;
+              performMeasurement(selectedProtocolName);
+            }}
+            isDisabled={!isConnected || !selectedProtocolName}
+            style={styles.startButton}
+          />
+        )}
       </View>
 
       {/* Measurement result - takes most of the screen */}
       <View style={styles.resultContainer}>
-        {measurementData ? (
+        {isScanning ? (
+          <View
+            style={[
+              styles.noResultContainer,
+              {
+                backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
+              },
+            ]}
+          >
+            <ActivityIndicator size="large" color={colors.primary.dark} />
+            <Text
+              style={[
+                styles.noResultText,
+                {
+                  color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
+                },
+              ]}
+            >
+              Measuring...
+            </Text>
+          </View>
+        ) : measurementData ? (
           <View style={styles.resultContent}>
             <Text
               style={[

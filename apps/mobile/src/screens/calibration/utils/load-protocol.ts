@@ -43,7 +43,7 @@ export const generateDeviceCommand = (step: ProtocolStep): string => {
     case "spad":
     case "measurement":
       if (step.spad && Array.isArray(step.spad)) {
-        return `spad_measurement:${step.spad[0]?.join(",")}`;
+        return `measurement:${step.spad[0]?.join(",")}`;
       }
       return `measurement:${JSON.stringify(step)}`;
 

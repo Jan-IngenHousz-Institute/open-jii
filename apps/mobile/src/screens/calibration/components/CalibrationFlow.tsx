@@ -31,11 +31,11 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [measurements, setMeasurements] = useState<MeasurementData[]>([]);
   const [currentMeasurementIndex, setCurrentMeasurementIndex] = useState(0);
-  const [currentSpadValue, setCurrentSpadValue] = useState("");
+  const [currentUserInput, setCurrentUserInput] = useState("");
   const [processedOutput, setProcessedOutput] = useState<ProcessedCalibrationOutput | null>(null);
 
   // Extract steps from protocol
-  const spadSteps = protocol._protocol_set_.filter((step) => step.label === "spad");
+  const measurementSteps = protocol._protocol_set_.filter((step) => step.label === "spad");
   const gainStep = protocol._protocol_set_.find((step) => step.label === "gain");
 
   const handleStartCalibration = () => {
@@ -68,11 +68,11 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
   };
 
   const handleMeasurement = async (panelNumber: number) => {
-    const currentStepData = spadSteps[currentMeasurementIndex];
+    const currentStepData = measurementSteps[currentMeasurementIndex];
     if (!currentStepData) return;
 
     console.log(`Taking measurement for panel #${panelNumber}...`);
-    console.log("SPAD parameters:", currentStepData.spad);
+    console.log("Measurement parameters:", currentStepData.spad);
 
     // Generate device command
     const deviceCommand = generateDeviceCommand(currentStepData);
@@ -86,7 +86,7 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
     // Store measurement data
     const measurementData: MeasurementData = {
       stepIndex: currentMeasurementIndex,
-      userInput: currentSpadValue,
+      userInput: currentUserInput,
       measurementData: {
         // Simulated measurement data
         absorbance: [
@@ -99,19 +99,21 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
     };
 
     setMeasurements((prev) => [...prev, measurementData]);
-    setCurrentSpadValue("");
+    setCurrentUserInput("");
 
     console.log(`Measurement completed for panel #${panelNumber}:`, measurementData);
 
-    if (currentMeasurementIndex < spadSteps.length - 1) {
+    if (currentMeasurementIndex < measurementSteps.length - 1) {
       setCurrentMeasurementIndex((prev) => prev + 1);
-      const nextPanelNumber = spadSteps[currentMeasurementIndex + 1]?.prompt?.match(/#(\d+)/)?.[1];
+      const nextPanelNumber = measurementSteps[currentMeasurementIndex + 1]?.prompt?.match(/#(\d+)/)?.[1];
       showToast(`Panel #${panelNumber} measured. Next: Panel #${nextPanelNumber}`, "info");
     } else {
       setCurrentStep("processing");
       handleDataProcessing();
     }
   };
+
+  
 
   const handleDataProcessing = async () => {
     console.log("Processing calibration data...");
@@ -143,18 +145,18 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
     setCurrentStep("setup");
     setMeasurements([]);
     setCurrentMeasurementIndex(0);
-    setCurrentSpadValue("");
+    setCurrentUserInput("");
     setIsProcessing(false);
     setProcessedOutput(null);
   };
 
   const getCurrentPanelNumber = () => {
-    const currentStepData = spadSteps[currentMeasurementIndex];
+    const currentStepData = measurementSteps[currentMeasurementIndex];
     return currentStepData?.prompt?.match(/#(\d+)/)?.[1];
   };
 
   const getProgressPercentage = () => {
-    return ((currentMeasurementIndex + 1) / spadSteps.length) * 100;
+    return ((currentMeasurementIndex + 1) / measurementSteps.length) * 100;
   };
 
   const renderCurrentStep = () => {
@@ -175,13 +177,13 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
         return (
           <MeasurementsStep
             currentMeasurementIndex={currentMeasurementIndex}
-            totalMeasurements={spadSteps.length}
+            totalMeasurements={measurementSteps.length}
             currentPanelNumber={getCurrentPanelNumber()}
-            prompt={spadSteps[currentMeasurementIndex]?.prompt ?? ""}
-            currentSpadValue={currentSpadValue}
+            prompt={measurementSteps[currentMeasurementIndex]?.prompt ?? ""}
+            currentUserInput={currentUserInput}
             isProcessing={isProcessing}
             progressPercentage={getProgressPercentage()}
-            onSpadValueChange={setCurrentSpadValue}
+            onUserInputChange={setCurrentUserInput}
             onTakeMeasurement={handleMeasurement}
           />
         );

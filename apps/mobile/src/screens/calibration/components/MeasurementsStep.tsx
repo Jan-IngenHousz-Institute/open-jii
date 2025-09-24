@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, TextInput } from "react-native";
+import { View, Text, StyleSheet, TextInput, ActivityIndicator } from "react-native";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
 import { useTheme } from "~/hooks/use-theme";
@@ -9,11 +9,12 @@ interface MeasurementsStepProps {
   totalMeasurements: number;
   currentPanelNumber: string | undefined;
   prompt: string;
-  currentSpadValue: string;
+  currentUserInput: string;
   isProcessing: boolean;
   progressPercentage: number;
-  onSpadValueChange: (value: string) => void;
+  onUserInputChange: (value: string) => void;
   onTakeMeasurement: (panelNumber: number) => void;
+  onCancelMeasurement: () => void;
 }
 
 export function MeasurementsStep({
@@ -21,11 +22,12 @@ export function MeasurementsStep({
   totalMeasurements,
   currentPanelNumber,
   prompt,
-  currentSpadValue,
+  currentUserInput,
   isProcessing,
   progressPercentage,
-  onSpadValueChange,
+  onUserInputChange,
   onTakeMeasurement,
+  onCancelMeasurement,
 }: MeasurementsStepProps) {
   const theme = useTheme();
   const { colors } = theme;
@@ -44,7 +46,7 @@ export function MeasurementsStep({
           { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
         ]}
       >
-        SPAD Measurements ({currentMeasurementIndex + 1}/{totalMeasurements})
+        Calibration Measurements ({currentMeasurementIndex + 1}/{totalMeasurements})
       </Text>
       <Text
         style={[
@@ -62,32 +64,47 @@ export function MeasurementsStep({
             { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
           ]}
         >
-          Panel #{currentPanelNumber} SPAD Value:
+          Panel #{currentPanelNumber} Value:
         </Text>
-        <TextInput
-          style={[
-            styles.spadInput,
-            {
-              backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
-              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-              borderColor: theme.isDark ? colors.dark.border : colors.light.border,
-            },
-          ]}
-          value={currentSpadValue}
-          onChangeText={onSpadValueChange}
-          placeholder="Enter SPAD value"
-          placeholderTextColor={theme.isDark ? colors.dark.inactive : colors.light.inactive}
-          keyboardType="numeric"
-        />
+        {isProcessing ? (
+          <View style={styles.spinnerContainer}>
+            <ActivityIndicator size="large" color={colors.primary.dark} />
+          </View>
+        ) : (
+          <TextInput
+            style={[
+              styles.userInput,
+              {
+                backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
+                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
+                borderColor: theme.isDark ? colors.dark.border : colors.light.border,
+              },
+            ]}
+            value={currentUserInput}
+            onChangeText={onUserInputChange}
+            placeholder="Enter value"
+            placeholderTextColor={theme.isDark ? colors.dark.inactive : colors.light.inactive}
+            keyboardType="numeric"
+          />
+        )}
       </Card>
 
-      <Button
-        title={isProcessing ? "Measuring..." : "Take Measurement"}
-        onPress={handleTakeMeasurement}
-        isLoading={isProcessing}
-        isDisabled={!currentSpadValue.trim()}
-        style={styles.actionButton}
-      />
+      {isProcessing ? (
+        <Button
+          title={"Cancel Measurement"}
+          onPress={onCancelMeasurement}
+          variant="outline"
+          style={[styles.actionButton, styles.cancelButton] as any}
+          textStyle={styles.cancelButtonText}
+        />
+      ) : (
+        <Button
+          title={"Start Measurement"}
+          onPress={handleTakeMeasurement}
+          isDisabled={!currentUserInput.trim()}
+          style={styles.actionButton}
+        />
+      )}
 
       <View style={styles.progressContainer}>
         <View
@@ -141,7 +158,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 12,
   },
-  spadInput: {
+  userInput: {
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
@@ -165,5 +182,16 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     marginTop: 16,
+  },
+  spinnerContainer: {
+    paddingVertical: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelButton: {
+    borderColor: "#e11d48",
+  },
+  cancelButtonText: {
+    color: "#e11d48",
   },
 });
