@@ -97,6 +97,13 @@ resource "aws_iam_role" "ecs_task_role" {
   )
 }
 
+# Attach additional IAM policies to the task role
+resource "aws_iam_role_policy_attachment" "additional_task_role_policies" {
+  count      = length(var.additional_task_role_policy_arns)
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = var.additional_task_role_policy_arns[count.index]
+}
+
 ##### AWS ECS Cluster #####
 resource "aws_ecs_cluster" "ecs_cluster" {
   name = "${var.service_name}-cluster-${var.environment}"
