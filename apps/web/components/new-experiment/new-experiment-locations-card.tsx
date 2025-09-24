@@ -9,12 +9,9 @@ import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components";
 import type { LocationPoint } from "@repo/ui/components/map";
 
-const EnhancedMap = dynamic(
-  () => import("@repo/ui/components").then((mod) => ({ default: mod.EnhancedMap })),
-  {
-    ssr: false,
-  },
-);
+const Map = dynamic(() => import("@repo/ui/components").then((mod) => ({ default: mod.Map })), {
+  ssr: false,
+});
 
 interface NewExperimentLocationsCardProps {
   form: UseFormReturn<CreateExperimentBody>;
@@ -39,7 +36,7 @@ export function NewExperimentLocationsCard({ form }: NewExperimentLocationsCardP
         <CardDescription>{t("newExperiment.addLocationsDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <EnhancedMap
+        <Map
           locations={locations}
           onLocationsChange={handleLocationsChange}
           selectionMode={true}
