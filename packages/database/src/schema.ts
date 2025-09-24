@@ -318,6 +318,7 @@ export const chartTypeEnum = pgEnum("chart_type", [
   "wind-rose",
   "radar",
   "polar",
+  "correlation-matrix",
 ]);
 
 // Experiment Visualizations Table - stores chart configurations for experiments

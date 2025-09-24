@@ -43,6 +43,16 @@ import {
   PieChartConfigurator,
   AreaChartConfigurator,
   ScatterChartConfigurator,
+  DotPlotConfigurator,
+  BubbleChartConfigurator,
+  LollipopChartConfigurator,
+  HeatmapChartConfigurator,
+  ContourChartConfigurator,
+  TernaryChartConfigurator,
+  CorrelationMatrixChartConfigurator,
+  LogPlotChartConfigurator,
+  ParallelCoordinatesChartConfigurator,
+  RadarChartConfigurator,
 } from "./index";
 import type { ChartFormValues, SampleTable } from "./types";
 
@@ -109,6 +119,18 @@ const CHART_TYPES_CONFIG: {
     family: "scientific",
     labelKey: "chartTypes.ternary",
     icon: <ScatterChart className="h-5 w-5" />,
+  },
+  {
+    type: "correlation-matrix",
+    family: "scientific",
+    labelKey: "chartTypes.correlation-matrix",
+    icon: <Layers className="h-5 w-5" />,
+  },
+  {
+    type: "log-plot",
+    family: "scientific",
+    labelKey: "chartTypes.log-plot",
+    icon: <TrendingUp className="h-5 w-5" />,
   },
   {
     type: "parallel-coordinates",
@@ -182,6 +204,47 @@ export default function ChartConfigurator({
           form.setValue("config.config.xAxis.dataSource.tableName", tableName);
           form.setValue("config.config.yAxes.0.dataSource.tableName", tableName);
           break;
+        case "bubble":
+          form.setValue("config.config.xAxis.dataSource.tableName", tableName);
+          form.setValue("config.config.yAxes.0.dataSource.tableName", tableName);
+          form.setValue("config.config.sizeAxis.dataSource.tableName", tableName);
+          break;
+        case "heatmap":
+        case "contour":
+          form.setValue("config.config.xAxis.dataSource.tableName", tableName);
+          form.setValue("config.config.yAxis.dataSource.tableName", tableName);
+          form.setValue("config.config.zAxis.dataSource.tableName", tableName);
+          break;
+        case "ternary":
+          form.setValue("config.config.aAxis.dataSource.tableName", tableName);
+          form.setValue("config.config.bAxis.dataSource.tableName", tableName);
+          form.setValue("config.config.cAxis.dataSource.tableName", tableName);
+          break;
+        case "correlation-matrix": {
+          // Correlation matrix uses variables array, set table name for each variable
+          const currentVariables = form.getValues("config.config.variables");
+          currentVariables.forEach((_: unknown, index: number) => {
+            form.setValue(`config.config.variables.${index}.tableName`, tableName);
+          });
+          break;
+        }
+        case "parallel-coordinates": {
+          // Parallel coordinates uses dimensions array, set table name for each dimension
+          const currentDimensions = form.getValues("config.config.dimensions");
+          currentDimensions.forEach((_: unknown, index: number) => {
+            form.setValue(`config.config.dimensions.${index}.dataSource.tableName`, tableName);
+          });
+          break;
+        }
+        case "radar": {
+          // Radar chart uses categoryAxis and series array, set table name for each
+          form.setValue("config.config.categoryAxis.dataSource.tableName", tableName);
+          const currentSeries = form.getValues("config.config.series");
+          currentSeries.forEach((_: unknown, index: number) => {
+            form.setValue(`config.config.series.${index}.dataSource.tableName`, tableName);
+          });
+          break;
+        }
         case "pie":
           form.setValue("config.config.labelSource.tableName", tableName);
           form.setValue("config.config.valueSource.tableName", tableName);
@@ -232,6 +295,47 @@ export default function ChartConfigurator({
         ]);
         break;
       default:
+        // Handle parallel coordinates dimensions (dimension-0, dimension-1, etc.)
+        if (columnType.startsWith("dimension-") && selectedChartType === "parallel-coordinates") {
+          const dimensionIndex = parseInt(columnType.split("-")[1] ?? "0", 10);
+          form.setValue(
+            `config.config.dimensions.${dimensionIndex}.dataSource.columnName`,
+            columnName,
+          );
+          form.setValue("dataConfig.dataSources", [
+            ...filteredSources,
+            { tableName: selectedTableName ?? "", columnName },
+          ]);
+        }
+        // Handle radar chart category axis
+        if (columnType === "category" && selectedChartType === "radar") {
+          form.setValue("config.config.categoryAxis.dataSource.columnName", columnName);
+          form.setValue("dataConfig.dataSources", [
+            ...filteredSources,
+            { tableName: selectedTableName ?? "", columnName },
+          ]);
+        }
+        // Handle radar chart series (series-0, series-1, etc.)
+        if (columnType.startsWith("series-") && selectedChartType === "radar") {
+          const seriesIndex = parseInt(columnType.split("-")[1] ?? "0", 10);
+          form.setValue(`config.config.series.${seriesIndex}.dataSource.columnName`, columnName);
+          form.setValue("dataConfig.dataSources", [
+            ...filteredSources,
+            { tableName: selectedTableName ?? "", columnName },
+          ]);
+        }
+        // Handle general series column type for radar
+        if (columnType === "series" && selectedChartType === "radar") {
+          // Add to the first available series or create a new one
+          const currentSeries = form.getValues("config.config.series");
+          if (currentSeries.length > 0) {
+            form.setValue(`config.config.series.0.dataSource.columnName`, columnName);
+          }
+          form.setValue("dataConfig.dataSources", [
+            ...filteredSources,
+            { tableName: selectedTableName ?? "", columnName },
+          ]);
+        }
         break;
     }
   };
@@ -259,8 +363,8 @@ export default function ChartConfigurator({
 
                   <RadioGroup
                     value={selectedChartType ?? ""}
-                    onValueChange={(value) => onChartTypeSelect(value as ChartType)}
-                    className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4"
+                    onValueChange={(value: string) => onChartTypeSelect(value as ChartType)}
+                    className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                   >
                     {chartsInFamily.map((chartType) => (
                       <FormItem key={chartType.type}>
@@ -301,13 +405,15 @@ export default function ChartConfigurator({
               <FormField
                 control={form.control}
                 name="dataConfig.tableName"
-                render={({ field }) => (
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                render={({ field }: any) => (
                   <FormItem>
                     <FormLabel>{t("dataTable")}</FormLabel>
                     <Select
                       value={selectedTableName}
-                      onValueChange={(value) => {
+                      onValueChange={(value: string) => {
                         handleTableChange(value);
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                         field.onChange(value);
                       }}
                     >
@@ -374,6 +480,106 @@ export default function ChartConfigurator({
 
                   {selectedChartType === "scatter" && (
                     <ScatterChartConfigurator
+                      form={form}
+                      table={selectedTable}
+                      onColumnSelect={(columnType: string, columnName: string) => {
+                        handleColumnSelect(columnType, columnName);
+                      }}
+                    />
+                  )}
+
+                  {selectedChartType === "dot-plot" && (
+                    <DotPlotConfigurator
+                      form={form}
+                      table={selectedTable}
+                      onColumnSelect={(columnType: string, columnName: string) => {
+                        handleColumnSelect(columnType, columnName);
+                      }}
+                    />
+                  )}
+
+                  {selectedChartType === "bubble" && (
+                    <BubbleChartConfigurator
+                      form={form}
+                      table={selectedTable}
+                      onColumnSelect={(columnType: "x" | "y" | "size", columnName: string) => {
+                        handleColumnSelect(columnType, columnName);
+                      }}
+                    />
+                  )}
+
+                  {selectedChartType === "lollipop" && (
+                    <LollipopChartConfigurator
+                      form={form}
+                      table={selectedTable}
+                      onColumnSelect={(columnType: string, columnName: string) => {
+                        handleColumnSelect(columnType, columnName);
+                      }}
+                    />
+                  )}
+
+                  {selectedChartType === "heatmap" && (
+                    <HeatmapChartConfigurator
+                      form={form}
+                      table={selectedTable}
+                      onColumnSelect={(columnType: "x" | "y" | "z", columnName: string) => {
+                        handleColumnSelect(columnType, columnName);
+                      }}
+                    />
+                  )}
+
+                  {selectedChartType === "contour" && (
+                    <ContourChartConfigurator
+                      form={form}
+                      table={selectedTable}
+                      onColumnSelect={(columnType: "x" | "y" | "z", columnName: string) => {
+                        handleColumnSelect(columnType, columnName);
+                      }}
+                    />
+                  )}
+
+                  {selectedChartType === "ternary" && (
+                    <TernaryChartConfigurator
+                      form={form}
+                      table={selectedTable}
+                      onColumnSelect={(columnType: "a" | "b" | "c", columnName: string) => {
+                        handleColumnSelect(columnType, columnName);
+                      }}
+                    />
+                  )}
+
+                  {selectedChartType === "log-plot" && (
+                    <LogPlotChartConfigurator
+                      form={form}
+                      table={selectedTable}
+                      onColumnSelect={(columnType: "x" | "y", columnName: string) => {
+                        handleColumnSelect(columnType, columnName);
+                      }}
+                    />
+                  )}
+
+                  {selectedChartType === "correlation-matrix" && (
+                    <CorrelationMatrixChartConfigurator
+                      form={form}
+                      table={selectedTable}
+                      onColumnSelect={(_columnType: string, _columnName: string) => {
+                        // Correlation matrix uses multiple variables, no single column selection needed
+                      }}
+                    />
+                  )}
+
+                  {selectedChartType === "parallel-coordinates" && (
+                    <ParallelCoordinatesChartConfigurator
+                      form={form}
+                      table={selectedTable}
+                      onColumnSelect={(columnType: string, columnName: string) => {
+                        handleColumnSelect(columnType, columnName);
+                      }}
+                    />
+                  )}
+
+                  {selectedChartType === "radar" && (
+                    <RadarChartConfigurator
                       form={form}
                       table={selectedTable}
                       onColumnSelect={(columnType: string, columnName: string) => {

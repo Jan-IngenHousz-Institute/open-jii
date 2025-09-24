@@ -4,6 +4,7 @@
     "by": "by",
     "homepage": "Homepage",
     "language": "Language",
+    "currentValue": "Current value:",
     "languageDrawer": "Toggle language drawer",
     "regionalSettings": "Regional Settings",
     "loading": "Loading...",
