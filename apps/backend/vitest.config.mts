@@ -26,7 +26,7 @@ export default mergeConfig(
           // Backend-specific exclusions (extends base config)
           "src/main.ts", // Application entry point
           "src/**/models/**", // Model files (type definitions only)
-          "src/app.e2e-spec.ts", // End-to-end test file
+          "**/*.e2e-spec.ts", // End-to-end test file
           "src/test/**", // Test utilities and setup
           "**/*.spec.ts", // Test files
           "**/*.test.ts", // Test files

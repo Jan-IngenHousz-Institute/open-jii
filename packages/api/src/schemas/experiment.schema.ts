@@ -1,5 +1,90 @@
 import { z } from "zod";
 
+// --- Location Schemas ---
+export const zLocation = z.object({
+  id: z.string().uuid(),
+  name: z
+    .string()
+    .min(1, "Location name is required")
+    .max(255, "Location name must be 255 characters or less"),
+  latitude: z
+    .number()
+    .min(-90, "Latitude must be between -90 and 90")
+    .max(90, "Latitude must be between -90 and 90"),
+  longitude: z
+    .number()
+    .min(-180, "Longitude must be between -180 and 180")
+    .max(180, "Longitude must be between -180 and 180"),
+  country: z.string().optional(),
+  region: z.string().optional(),
+  municipality: z.string().optional(),
+  postalCode: z.string().optional(),
+  addressLabel: z.string().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const zLocationInput = z.object({
+  name: z
+    .string()
+    .min(1, "Location name is required")
+    .max(255, "Location name must be 255 characters or less"),
+  latitude: z
+    .number()
+    .min(-90, "Latitude must be between -90 and 90")
+    .max(90, "Latitude must be between -90 and 90"),
+  longitude: z
+    .number()
+    .min(-180, "Longitude must be between -180 and 180")
+    .max(180, "Longitude must be between -180 and 180"),
+  country: z.string().optional(),
+  region: z.string().optional(),
+  municipality: z.string().optional(),
+  postalCode: z.string().optional(),
+  addressLabel: z.string().optional(),
+});
+
+export const zLocationList = z.array(zLocation);
+
+// --- Location Search Schemas ---
+export const zPlaceSearchResult = z.object({
+  label: z.string(),
+  latitude: z.number(),
+  longitude: z.number(),
+  country: z.string().optional(),
+  region: z.string().optional(),
+  municipality: z.string().optional(),
+  postalCode: z.string().optional(),
+});
+
+export const zPlaceSearchQuery = z.object({
+  query: z.string().min(1, "Search query is required"),
+  maxResults: z.coerce.number().min(1).max(50).optional().default(10),
+});
+
+export const zPlaceSearchResponse = z.array(zPlaceSearchResult);
+
+export const zGeocodeQuery = z.object({
+  latitude: z.coerce
+    .number()
+    .min(-90, "Latitude must be between -90 and 90")
+    .max(90, "Latitude must be between -90 and 90"),
+  longitude: z.coerce
+    .number()
+    .min(-180, "Longitude must be between -180 and 180")
+    .max(180, "Longitude must be between -180 and 180"),
+});
+
+export const zGeocodeResponse = z.array(zPlaceSearchResult);
+
+export const zAddExperimentLocationsBody = z.object({
+  locations: z.array(zLocationInput),
+});
+
+export const zUpdateExperimentLocationsBody = z.object({
+  locations: z.array(zLocationInput),
+});
+
 // --- Protocol Association Schemas ---
 export const zExperimentProtocolDetails = z.object({
   id: z.string().uuid(),
@@ -71,6 +156,7 @@ export const zExperiment = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   data: zExperimentData.optional(),
+  locations: zLocationList.optional(),
 });
 
 export const zExperimentList = z.array(zExperiment);
@@ -241,6 +327,14 @@ export type FlowNodeType = z.infer<typeof zFlowNodeType>;
 export type FlowGraph = z.infer<typeof zFlowGraph>;
 export type Flow = z.infer<typeof zFlow>;
 export type UpsertFlowBody = z.infer<typeof zUpsertFlowBody>;
+export type Location = z.infer<typeof zLocation>;
+export type LocationInput = z.infer<typeof zLocationInput>;
+export type LocationList = z.infer<typeof zLocationList>;
+export type PlaceSearchResult = z.infer<typeof zPlaceSearchResult>;
+export type PlaceSearchQuery = z.infer<typeof zPlaceSearchQuery>;
+export type PlaceSearchResponse = z.infer<typeof zPlaceSearchResponse>;
+export type GeocodeQuery = z.infer<typeof zGeocodeQuery>;
+export type GeocodeResponse = z.infer<typeof zGeocodeResponse>;
 
 // Define request and response types
 // Shared embargo date validation function
@@ -320,6 +414,10 @@ export const zCreateExperimentBody = z
       .describe(
         "Optional array of protocol objects with protocolId and order to associate with the experiment",
       ),
+    locations: z
+      .array(zLocationInput)
+      .optional()
+      .describe("Optional array of locations associated with the experiment"),
   })
   .superRefine((val, ctx) => {
     validateEmbargoDate(val.embargoUntil, ctx, ["embargoUntil"]);
@@ -343,6 +441,10 @@ export const zUpdateExperimentBody = z.object({
     .describe(
       "Updated embargo end date and time (ISO datetime string, will be stored as UTC in database)",
     ),
+  locations: z
+    .array(zLocationInput)
+    .optional()
+    .describe("Updated locations associated with the experiment"),
 });
 
 export const visibilitySchema = zUpdateExperimentBody
@@ -507,6 +609,8 @@ export const zDownloadExperimentDataResponse = z.object({
 export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;
 export type UpdateExperimentBody = z.infer<typeof zUpdateExperimentBody>;
 export type AddExperimentMembersBody = z.infer<typeof zAddExperimentMembersBody>;
+export type AddExperimentLocationsBody = z.infer<typeof zAddExperimentLocationsBody>;
+export type UpdateExperimentLocationsBody = z.infer<typeof zUpdateExperimentLocationsBody>;
 export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;
 export type ExperimentFilter = ExperimentFilterQuery["filter"];
 export type CreateExperimentResponse = z.infer<typeof zCreateExperimentResponse>;

@@ -166,7 +166,13 @@
     "addProtocolsTitle": "Protokolle hinzufügen",
     "addProtocolsDescription": "Verwalten und ordnen Sie die Experimentprotokolle",
     "addProtocolsPlaceholder": "Protokoll hinzufügen",
-    "embargoUntilHelperString": "Dieses Experiment wird am {{date}} öffentlich."
+    "embargoUntilHelperString": "Dieses Experiment wird am {{date}} öffentlich.",
+    "locationsTitle": "Experimentstandorte",
+    "locationsDescription": "Wählen Sie geografische Standorte aus, an denen dieses Experiment stattfinden wird",
+    "selectLocations": "Standorte auswählen",
+    "addLocationsTitle": "Standorte hinzufügen",
+    "addLocationsDescription": "Klicken Sie auf die Karte, um Experimentstandorte hinzuzufügen",
+    "locationsListTitle": "Ausgewählte Standorte"
   },
   "dashboard": {
     "title": "Dashboard",

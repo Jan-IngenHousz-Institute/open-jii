@@ -27,13 +27,35 @@ export const createExperimentSchema = createInsertSchema(experiments)
     protocols: z
       .array(z.object({ protocolId: z.string(), order: z.number().optional() }))
       .optional(),
+    locations: z
+      .array(
+        z.object({
+          name: z.string(),
+          latitude: z.number(),
+          longitude: z.number(),
+        }),
+      )
+      .optional(),
   });
-export const updateExperimentSchema = createInsertSchema(experiments).partial().omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  createdBy: true,
-});
+export const updateExperimentSchema = createInsertSchema(experiments)
+  .partial()
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    createdBy: true,
+  })
+  .extend({
+    locations: z
+      .array(
+        z.object({
+          name: z.string(),
+          latitude: z.number(),
+          longitude: z.number(),
+        }),
+      )
+      .optional(),
+  });
 export const selectExperimentSchema = createSelectSchema(experiments);
 
 // Define the types
