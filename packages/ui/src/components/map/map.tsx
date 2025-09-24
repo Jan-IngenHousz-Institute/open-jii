@@ -17,8 +17,8 @@ import {
 import MarkerClusterGroup from "react-leaflet-cluster";
 
 import { cn } from "../../lib/utils";
-import { LocationSearch } from "../location-search";
-import { LocationSidebar } from "../location-sidebar";
+import { LocationSearch } from "./location-search";
+import { LocationSidebar } from "./location-sidebar";
 
 /**
  * Map component with search functionality and improved location display
@@ -247,10 +247,15 @@ export const Map = ({
       if (!selectionMode || disabled) return;
 
       if (onLocationAdd) {
-        const enhancedLocation = await onLocationAdd(lat, lng);
-        if (enhancedLocation) {
-          const updatedLocations = [...locations, enhancedLocation];
-          onLocationsChange?.(updatedLocations);
+        try {
+          const enhancedLocation = await onLocationAdd(lat, lng);
+          if (enhancedLocation) {
+            const updatedLocations = [...locations, enhancedLocation];
+            onLocationsChange?.(updatedLocations);
+          }
+        } catch (error) {
+          // Handle error gracefully - could add error callback or logging
+          console.error("Failed to add location:", error);
         }
       } else {
         // Fallback to basic location creation if no callback provided
@@ -416,6 +421,7 @@ export const Map = ({
                     onLocationRemove={handleLocationRemoveFromSidebar}
                     showDistances={showDistances}
                     selectionMode={selectionMode}
+                    disabled={disabled}
                   />
                 </div>
               </div>

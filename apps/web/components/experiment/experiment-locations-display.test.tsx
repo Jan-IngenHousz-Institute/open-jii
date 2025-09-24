@@ -3,9 +3,22 @@ import { render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { LocationList } from "@repo/api";
-
 import { ExperimentLocationsDisplay } from "./experiment-locations-display";
+
+// Define the type locally for testing
+type LocationList = {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  country?: string;
+  region?: string;
+  municipality?: string;
+  postalCode?: string;
+  addressLabel?: string;
+  createdAt: string;
+  updatedAt: string;
+}[];
 
 globalThis.React = React;
 
@@ -40,7 +53,7 @@ vi.mock("next/dynamic", () => ({
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
     t: (key: string, options?: { count?: number }) => {
-      if (key === "experimentDetails.locationsCount") {
+      if (key.includes("locationsCount")) {
         return `${options?.count ?? 0} locations found`;
       }
       return key;
@@ -133,7 +146,7 @@ describe("ExperimentLocationsDisplay", () => {
       expect(screen.getByTestId("card")).toBeInTheDocument();
       expect(screen.getByTestId("card-header")).toBeInTheDocument();
       expect(screen.getByTestId("card-title")).toBeInTheDocument();
-      expect(screen.getByText("experimentDetails.locationsTitle")).toBeInTheDocument();
+      expect(screen.getByText("details.locations.locationsTitle")).toBeInTheDocument();
       expect(screen.getByTestId("map-pin-icon")).toBeInTheDocument();
 
       // Check for loading skeleton
@@ -157,11 +170,13 @@ describe("ExperimentLocationsDisplay", () => {
 
       expect(screen.getByTestId("card")).toBeInTheDocument();
       expect(screen.getByTestId("card-header")).toBeInTheDocument();
-      expect(screen.getByText("experimentDetails.locationsTitle")).toBeInTheDocument();
+      expect(screen.getByText("experiments.details.location.locationsTitle")).toBeInTheDocument();
 
       // Check for empty state content
-      expect(screen.getByText("experimentDetails.noLocations")).toBeInTheDocument();
-      expect(screen.getByText("experimentDetails.noLocationsDescription")).toBeInTheDocument();
+      expect(screen.getByText("experiments.details.location.noLocations")).toBeInTheDocument();
+      expect(
+        screen.getByText("experiments.details.location.noLocationsDescription"),
+      ).toBeInTheDocument();
 
       // Should have map pin icon in both header and empty state
       const mapIcons = screen.getAllByTestId("map-pin-icon");
@@ -192,7 +207,7 @@ describe("ExperimentLocationsDisplay", () => {
 
       expect(screen.getByTestId("card")).toBeInTheDocument();
       expect(screen.getByTestId("card-header")).toBeInTheDocument();
-      expect(screen.getAllByText("experimentDetails.locationsTitle")).toHaveLength(2);
+      expect(screen.getAllByText("details.locations.locationsTitle")).toHaveLength(2);
       expect(screen.getByText("3 locations found")).toBeInTheDocument();
 
       // Should render map component
@@ -227,7 +242,7 @@ describe("ExperimentLocationsDisplay", () => {
       expect(screen.getByTestId("map-height")).toHaveTextContent("400px");
       expect(screen.getByTestId("map-show-sidebar")).toHaveTextContent("true");
       expect(screen.getByTestId("map-sidebar-title")).toHaveTextContent(
-        "experimentDetails.locationsTitle",
+        "details.locations.locationsTitle",
       );
     });
 
@@ -342,7 +357,7 @@ describe("ExperimentLocationsDisplay", () => {
     it("should handle empty locations with isLoading false", () => {
       render(<ExperimentLocationsDisplay locations={[]} isLoading={false} />);
 
-      expect(screen.getByText("experimentDetails.noLocations")).toBeInTheDocument();
+      expect(screen.getByText("experiments.details.location.noLocations")).toBeInTheDocument();
       expect(screen.queryByTestId("map-component")).not.toBeInTheDocument();
     });
 
@@ -350,7 +365,9 @@ describe("ExperimentLocationsDisplay", () => {
       render(<ExperimentLocationsDisplay locations={[]} isLoading={true} />);
 
       expect(document.querySelector(".animate-pulse")).toBeInTheDocument();
-      expect(screen.queryByText("experimentDetails.noLocations")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("experiments.details.location.noLocations"),
+      ).not.toBeInTheDocument();
       expect(screen.queryByTestId("map-component")).not.toBeInTheDocument();
     });
   });
@@ -359,15 +376,17 @@ describe("ExperimentLocationsDisplay", () => {
     it("should use translation keys for all text content", () => {
       render(<ExperimentLocationsDisplay locations={mockLocations} isLoading={false} />);
 
-      expect(screen.getAllByText("experimentDetails.locationsTitle")).toHaveLength(2);
+      expect(screen.getAllByText("details.locations.locationsTitle")).toHaveLength(2);
       expect(screen.getByText("3 locations found")).toBeInTheDocument();
     });
 
     it("should use translation keys in empty state", () => {
       render(<ExperimentLocationsDisplay locations={[]} isLoading={false} />);
 
-      expect(screen.getByText("experimentDetails.noLocations")).toBeInTheDocument();
-      expect(screen.getByText("experimentDetails.noLocationsDescription")).toBeInTheDocument();
+      expect(screen.getByText("experiments.details.location.noLocations")).toBeInTheDocument();
+      expect(
+        screen.getByText("experiments.details.location.noLocationsDescription"),
+      ).toBeInTheDocument();
     });
   });
 });

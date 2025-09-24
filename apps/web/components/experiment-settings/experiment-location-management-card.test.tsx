@@ -52,6 +52,20 @@ vi.mock("@/lib/tsr", () => ({
       updateExperimentLocations: {
         useMutation: vi.fn(() => useExperimentLocationsUpdateMock() as unknown),
       },
+      geocodeLocation: {
+        useQuery: vi.fn(() => ({
+          data: null,
+          isLoading: false,
+          error: null,
+        })),
+      },
+      searchPlaces: {
+        useQuery: vi.fn(() => ({
+          data: null,
+          isLoading: false,
+          error: null,
+        })),
+      },
     },
   },
 }));
@@ -109,12 +123,7 @@ vi.mock("../../hooks/experiment/useExperimentLocationsUpdate/useExperimentLocati
 // Mock translation
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
-    t: (key: string, options?: { count?: number }) => {
-      if (key === "experimentSettings.locations.editingCount") {
-        return `Editing ${options?.count ?? 0} locations`;
-      }
-      return key;
-    },
+    t: (key: string) => key,
   }),
 }));
 
@@ -241,7 +250,7 @@ describe("ExperimentLocationManagement", () => {
 
       expect(screen.getByTestId("card")).toBeInTheDocument();
       expect(screen.getByTestId("card-header")).toBeInTheDocument();
-      expect(screen.getByText("experimentSettings.locations.title")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.title")).toBeInTheDocument();
 
       // Check for loading skeleton
       const content = screen.getByTestId("card-content");
@@ -269,8 +278,8 @@ describe("ExperimentLocationManagement", () => {
       expect(screen.getByTestId("card")).toBeInTheDocument();
       expect(screen.getByTestId("card-header")).toBeInTheDocument();
       expect(screen.getByTestId("card-title")).toBeInTheDocument();
-      expect(screen.getByText("experimentSettings.locations.title")).toBeInTheDocument();
-      expect(screen.getByText("experimentSettings.locations.description")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.title")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.description")).toBeInTheDocument();
       expect(screen.getByTestId("map-pin-icon")).toBeInTheDocument();
     });
 
@@ -299,7 +308,7 @@ describe("ExperimentLocationManagement", () => {
     it("should display location count when locations exist", () => {
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
-      expect(screen.getByText("Editing 2 locations")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.editingCount_plural")).toBeInTheDocument();
     });
   });
 
@@ -358,7 +367,7 @@ describe("ExperimentLocationManagement", () => {
 
       // Verify the count updated
       await waitFor(() => {
-        expect(screen.getByText("Editing 3 locations")).toBeInTheDocument();
+        expect(screen.getByText("settings.locations.editingCount_plural")).toBeInTheDocument();
       });
     });
 
@@ -371,7 +380,7 @@ describe("ExperimentLocationManagement", () => {
 
       // Verify the count updated
       await waitFor(() => {
-        expect(screen.getByText("Editing 1 locations")).toBeInTheDocument();
+        expect(screen.getByText("settings.locations.editingCount")).toBeInTheDocument();
       });
     });
   });
@@ -471,7 +480,7 @@ describe("ExperimentLocationManagement", () => {
 
       // Add a location through the map
       await user.click(screen.getByTestId("mock-add-location"));
-      expect(screen.getByText("Editing 3 locations")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.editingCount_plural")).toBeInTheDocument();
 
       // Click cancel
       const cancelButton = screen
@@ -483,7 +492,7 @@ describe("ExperimentLocationManagement", () => {
 
       // Verify locations reset to original state
       await waitFor(() => {
-        expect(screen.getByText("Editing 2 locations")).toBeInTheDocument();
+        expect(screen.getByText("settings.locations.editingCount_plural")).toBeInTheDocument();
       });
     });
 
@@ -509,7 +518,7 @@ describe("ExperimentLocationManagement", () => {
       );
 
       // Initial state
-      expect(screen.getByText("Editing 2 locations")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.editingCount_plural")).toBeInTheDocument();
 
       // Update mock data
       const newLocations = [mockLocations[0]]; // Only one location
@@ -520,7 +529,7 @@ describe("ExperimentLocationManagement", () => {
 
       rerender(<ExperimentLocationManagement experimentId={experimentId} />);
 
-      expect(screen.getByText("Editing 1 locations")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.editingCount")).toBeInTheDocument();
     });
 
     it("should handle empty locations from API", () => {
@@ -534,7 +543,7 @@ describe("ExperimentLocationManagement", () => {
       // When there are no locations, the count section should not be displayed at all
       expect(screen.queryByText(/Editing 0 locations/)).not.toBeInTheDocument();
       expect(
-        screen.queryByText(/experimentSettings.locations.editingCount/),
+        screen.queryByText(/settings.locations.editingCount/),
       ).not.toBeInTheDocument();
     });
   });
@@ -578,7 +587,7 @@ describe("ExperimentLocationManagement", () => {
         showZoomControl: true,
         showScale: true,
         showSidebar: true,
-        sidebarTitle: "experimentSettings.locations.editMode",
+        sidebarTitle: "settings.locations.editMode",
       });
     });
   });
@@ -595,7 +604,7 @@ describe("ExperimentLocationManagement", () => {
       // When data.body is undefined, no count should be displayed
       expect(screen.queryByText(/Editing 0 locations/)).not.toBeInTheDocument();
       // But the component should still render properly
-      expect(screen.getByText("experimentSettings.locations.title")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.title")).toBeInTheDocument();
     });
 
     it("should handle null data gracefully", () => {
@@ -609,7 +618,7 @@ describe("ExperimentLocationManagement", () => {
       // When data is null, no count should be displayed
       expect(screen.queryByText(/Editing 0 locations/)).not.toBeInTheDocument();
       // But the component should still render properly
-      expect(screen.getByText("experimentSettings.locations.title")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.title")).toBeInTheDocument();
     });
   });
 
@@ -617,12 +626,12 @@ describe("ExperimentLocationManagement", () => {
     it("should use translation keys for all text content", () => {
       renderWithQueryClient(<ExperimentLocationManagement experimentId={experimentId} />);
 
-      expect(screen.getByText("experimentSettings.locations.title")).toBeInTheDocument();
-      expect(screen.getByText("experimentSettings.locations.description")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.title")).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.description")).toBeInTheDocument();
       // Use getAllByText for duplicate text that appears in multiple places
-      expect(screen.getAllByText("experimentSettings.locations.editMode")).toHaveLength(2);
+      expect(screen.getAllByText("settings.locations.editMode")).toHaveLength(2);
       expect(
-        screen.getByText("experimentSettings.locations.editModeDescription"),
+        screen.getByText("settings.locations.editModeDescription"),
       ).toBeInTheDocument();
       expect(screen.getByText("common.cancel")).toBeInTheDocument();
       expect(screen.getByText("common.save")).toBeInTheDocument();
