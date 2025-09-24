@@ -80,3 +80,18 @@ resource "databricks_pipeline" "this" {
   }
 
 }
+
+# Grant pipeline permissions to principals if provided
+resource "databricks_permissions" "pipeline" {
+  count       = length(var.permissions)
+  provider    = databricks.workspace
+  pipeline_id = databricks_pipeline.this.id
+
+  dynamic "access_control" {
+    for_each = [var.permissions[count.index]]
+    content {
+      service_principal_name = access_control.value.principal_application_id
+      permission_level       = access_control.value.permission_level
+    }
+  }
+}

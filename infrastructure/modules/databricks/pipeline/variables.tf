@@ -104,3 +104,19 @@ variable "run_as" {
     error_message = "Either service_principal_name or user_name must be specified, but not both."
   }
 }
+
+variable "permissions" {
+  description = "List of permissions to grant on the pipeline. Each object should have principal_application_id and permission_level."
+  type = list(object({
+    principal_application_id = string
+    permission_level         = string
+  }))
+  default = []
+  
+  validation {
+    condition = alltrue([
+      for p in var.permissions : contains(["CAN_VIEW", "CAN_RUN", "CAN_MANAGE", "IS_OWNER"], p.permission_level)
+    ])
+    error_message = "permission_level must be one of: CAN_VIEW, CAN_RUN, CAN_MANAGE, IS_OWNER"
+  }
+}

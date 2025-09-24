@@ -239,6 +239,13 @@ module "centrum_pipeline" {
     service_principal_name = module.node_service_principal.service_principal_application_id
   }
 
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_RUN"
+    }
+  ]
+
   providers = {
     databricks.workspace = databricks.workspace
   }
