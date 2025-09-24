@@ -421,7 +421,6 @@ export const Map = ({
                     onLocationRemove={handleLocationRemoveFromSidebar}
                     showDistances={showDistances}
                     selectionMode={selectionMode}
-                    disabled={disabled}
                   />
                 </div>
               </div>
