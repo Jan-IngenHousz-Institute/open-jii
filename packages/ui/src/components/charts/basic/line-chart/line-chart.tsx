@@ -10,7 +10,13 @@ import type {
   MarkerConfig,
   ErrorBarConfig,
 } from "../../common";
-import { PlotlyChart, createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "../../common";
+import {
+  PlotlyChart,
+  createBaseLayout,
+  createPlotlyConfig,
+  getRenderer,
+  getPlotType,
+} from "../../common";
 
 export interface LineSeriesData extends BaseSeries {
   x: (string | number | Date)[];
@@ -111,6 +117,18 @@ export function LineChart({
 
   const layout = createBaseLayout(config);
   const plotConfig = createPlotlyConfig(config);
+
+  // Check if we have categorical x data (non-numeric strings)
+  const hasCategoricalX = data.some(
+    (series) => series.x && series.x.some((val) => typeof val === "string" && isNaN(Number(val))),
+  );
+  if (hasCategoricalX) {
+    layout.xaxis = {
+      ...layout.xaxis,
+      type: "category",
+      categoryorder: "category ascending",
+    };
+  }
 
   return (
     <div className={className}>
