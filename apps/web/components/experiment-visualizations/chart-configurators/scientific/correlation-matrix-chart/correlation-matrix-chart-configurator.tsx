@@ -72,34 +72,34 @@ export default function CorrelationMatrixChartConfigurator({
   // Colorscale gradients based on Plotly's colorscales
   const getColorscaleGradient = (colorscale: string): string => {
     const gradients: Record<string, string> = {
-      viridis:
+      Viridis:
         "linear-gradient(to right, #440154, #482878, #3e4989, #31688e, #26828e, #1f9e89, #35b779, #6ece58, #b5de2b, #fde725)",
-      plasma:
+      Plasma:
         "linear-gradient(to right, #0d0887, #46039f, #7201a8, #9c179e, #bd3786, #d8576b, #ed7953, #fb9f3a, #fdca26, #f0f921)",
-      inferno:
+      Inferno:
         "linear-gradient(to right, #000004, #1b0c41, #4a0c6b, #781c6d, #a52c60, #cf4446, #ed6925, #fb9b06, #f7d13d, #fcffa4)",
-      magma:
+      Magma:
         "linear-gradient(to right, #000004, #180f3d, #440f76, #721f81, #9e2f7f, #cd4071, #f1605d, #fd9567, #feca57, #fcfdbf)",
-      cividis:
+      Cividis:
         "linear-gradient(to right, #00224e, #123570, #3b496c, #575d6d, #707173, #8a8678, #a59c74, #c3b369, #e1cc55, #fde725)",
-      blues:
+      Blues:
         "linear-gradient(to right, #f7fbff, #deebf7, #c6dbef, #9ecae1, #6baed6, #4292c6, #2171b5, #08519c, #08306b)",
-      greens:
+      Greens:
         "linear-gradient(to right, #f7fcf5, #e5f5e0, #c7e9c0, #a1d99b, #74c476, #41ab5d, #238b45, #006d2c, #00441b)",
-      reds: "linear-gradient(to right, #fff5f0, #fee0d2, #fcbba1, #fc9272, #fb6a4a, #ef3b2c, #cb181d, #a50f15, #67000d)",
-      oranges:
+      Reds: "linear-gradient(to right, #fff5f0, #fee0d2, #fcbba1, #fc9272, #fb6a4a, #ef3b2c, #cb181d, #a50f15, #67000d)",
+      Oranges:
         "linear-gradient(to right, #fff5eb, #fee6ce, #fdd0a2, #fdae6b, #fd8d3c, #f16913, #d94801, #a63603, #7f2704)",
-      purples:
+      Purples:
         "linear-gradient(to right, #fcfbfd, #efedf5, #dadaeb, #bcbddc, #9e9ac8, #807dba, #6a51a3, #54278f, #3f007d)",
-      greys:
+      Greys:
         "linear-gradient(to right, #ffffff, #f0f0f0, #d9d9d9, #bdbdbd, #969696, #737373, #525252, #252525, #000000)",
-      hot: "linear-gradient(to right, #000000, #ff0000, #ffff00, #ffffff)",
-      cool: "linear-gradient(to right, #00ffff, #0080ff, #0000ff, #8000ff, #ff00ff)",
-      rainbow:
+      Hot: "linear-gradient(to right, #000000, #ff0000, #ffff00, #ffffff)",
+      Cool: "linear-gradient(to right, #00ffff, #0080ff, #0000ff, #8000ff, #ff00ff)",
+      Rainbow:
         "linear-gradient(to right, #ff0000, #ff8000, #ffff00, #80ff00, #00ff00, #00ff80, #00ffff, #0080ff, #0000ff, #8000ff, #ff00ff)",
-      jet: "linear-gradient(to right, #000080, #0000ff, #0080ff, #00ffff, #80ff00, #ffff00, #ff8000, #ff0000, #800000)",
+      Jet: "linear-gradient(to right, #000080, #0000ff, #0080ff, #00ffff, #80ff00, #ffff00, #ff8000, #ff0000, #800000)",
     };
-    return gradients[colorscale] || gradients.viridis;
+    return gradients[colorscale] || gradients.Viridis;
   };
 
   return (
@@ -252,166 +252,166 @@ export default function CorrelationMatrixChartConfigurator({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="viridis">
+                      <SelectItem value="Viridis">
                         <div className="flex items-center gap-3">
                           <div
                             className="h-4 w-8 rounded border"
                             style={{
-                              background: getColorscaleGradient("viridis"),
+                              background: getColorscaleGradient("Viridis"),
                             }}
                           />
                           Viridis
                         </div>
                       </SelectItem>
-                      <SelectItem value="plasma">
+                      <SelectItem value="Plasma">
                         <div className="flex items-center gap-3">
                           <div
                             className="h-4 w-8 rounded border"
                             style={{
-                              background: getColorscaleGradient("plasma"),
+                              background: getColorscaleGradient("Plasma"),
                             }}
                           />
                           Plasma
                         </div>
                       </SelectItem>
-                      <SelectItem value="inferno">
+                      <SelectItem value="Inferno">
                         <div className="flex items-center gap-3">
                           <div
                             className="h-4 w-8 rounded border"
                             style={{
-                              background: getColorscaleGradient("inferno"),
+                              background: getColorscaleGradient("Inferno"),
                             }}
                           />
                           Inferno
                         </div>
                       </SelectItem>
-                      <SelectItem value="magma">
+                      <SelectItem value="Magma">
                         <div className="flex items-center gap-3">
                           <div
                             className="h-4 w-8 rounded border"
                             style={{
-                              background: getColorscaleGradient("magma"),
+                              background: getColorscaleGradient("Magma"),
                             }}
                           />
                           Magma
                         </div>
                       </SelectItem>
-                      <SelectItem value="cividis">
+                      <SelectItem value="Cividis">
                         <div className="flex items-center gap-3">
                           <div
                             className="h-4 w-8 rounded border"
                             style={{
-                              background: getColorscaleGradient("cividis"),
+                              background: getColorscaleGradient("Cividis"),
                             }}
                           />
                           Cividis
                         </div>
                       </SelectItem>
-                      <SelectItem value="blues">
+                      <SelectItem value="Blues">
                         <div className="flex items-center gap-3">
                           <div
                             className="h-4 w-8 rounded border"
                             style={{
-                              background: getColorscaleGradient("blues"),
+                              background: getColorscaleGradient("Blues"),
                             }}
                           />
                           Blues
                         </div>
                       </SelectItem>
-                      <SelectItem value="greens">
+                      <SelectItem value="Greens">
                         <div className="flex items-center gap-3">
                           <div
                             className="h-4 w-8 rounded border"
                             style={{
-                              background: getColorscaleGradient("greens"),
+                              background: getColorscaleGradient("Greens"),
                             }}
                           />
                           Greens
                         </div>
                       </SelectItem>
-                      <SelectItem value="reds">
+                      <SelectItem value="Reds">
                         <div className="flex items-center gap-3">
                           <div
                             className="h-4 w-8 rounded border"
                             style={{
-                              background: getColorscaleGradient("reds"),
+                              background: getColorscaleGradient("Reds"),
                             }}
                           />
                           Reds
                         </div>
                       </SelectItem>
-                      <SelectItem value="oranges">
+                      <SelectItem value="Oranges">
                         <div className="flex items-center gap-3">
                           <div
                             className="h-4 w-8 rounded border"
                             style={{
-                              background: getColorscaleGradient("oranges"),
+                              background: getColorscaleGradient("Oranges"),
                             }}
                           />
                           Oranges
                         </div>
                       </SelectItem>
-                      <SelectItem value="purples">
+                      <SelectItem value="Purples">
                         <div className="flex items-center gap-3">
                           <div
                             className="h-4 w-8 rounded border"
                             style={{
-                              background: getColorscaleGradient("purples"),
+                              background: getColorscaleGradient("Purples"),
                             }}
                           />
                           Purples
                         </div>
                       </SelectItem>
-                      <SelectItem value="greys">
+                      <SelectItem value="Greys">
                         <div className="flex items-center gap-3">
                           <div
                             className="h-4 w-8 rounded border"
                             style={{
-                              background: getColorscaleGradient("greys"),
+                              background: getColorscaleGradient("Greys"),
                             }}
                           />
                           Greys
                         </div>
                       </SelectItem>
-                      <SelectItem value="hot">
+                      <SelectItem value="Hot">
                         <div className="flex items-center gap-3">
                           <div
                             className="h-4 w-8 rounded border"
                             style={{
-                              background: getColorscaleGradient("hot"),
+                              background: getColorscaleGradient("Hot"),
                             }}
                           />
                           Hot
                         </div>
                       </SelectItem>
-                      <SelectItem value="cool">
+                      <SelectItem value="Cool">
                         <div className="flex items-center gap-3">
                           <div
                             className="h-4 w-8 rounded border"
                             style={{
-                              background: getColorscaleGradient("cool"),
+                              background: getColorscaleGradient("Cool"),
                             }}
                           />
                           Cool
                         </div>
                       </SelectItem>
-                      <SelectItem value="rainbow">
+                      <SelectItem value="Rainbow">
                         <div className="flex items-center gap-3">
                           <div
                             className="h-4 w-8 rounded border"
                             style={{
-                              background: getColorscaleGradient("rainbow"),
+                              background: getColorscaleGradient("Rainbow"),
                             }}
                           />
                           Rainbow
                         </div>
                       </SelectItem>
-                      <SelectItem value="jet">
+                      <SelectItem value="Jet">
                         <div className="flex items-center gap-3">
                           <div
                             className="h-4 w-8 rounded border"
                             style={{
-                              background: getColorscaleGradient("jet"),
+                              background: getColorscaleGradient("Jet"),
                             }}
                           />
                           Jet

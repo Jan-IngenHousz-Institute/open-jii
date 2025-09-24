@@ -55,6 +55,7 @@ export default function NewVisualizationForm({
   // Form setup with properly typed default values
   const form = useForm({
     resolver: zodResolver(zCreateExperimentVisualizationBody),
+    mode: "onChange", // Enable validation on change
     defaultValues: {
       name: "",
       description: "",
@@ -107,12 +108,37 @@ export default function NewVisualizationForm({
   });
 
   // Handle form submission
-  const onSubmit = form.handleSubmit((data) => {
-    createVisualization({
-      params: { id: experimentId },
-      body: data,
-    });
-  });
+  const onSubmit = form.handleSubmit(
+    (data) => {
+      // Filter out empty dataSources before submission
+      const cleanedData = {
+        ...data,
+        dataConfig: {
+          ...data.dataConfig,
+          dataSources: data.dataConfig.dataSources.filter(
+            (dataSource) => dataSource.columnName && dataSource.columnName.trim() !== "",
+          ),
+        },
+      };
+
+      createVisualization({
+        params: { id: experimentId },
+        body: cleanedData,
+      });
+    },
+    (errors) => {
+      console.log("=== FORM VALIDATION ERRORS ===");
+      console.log("Errors:", errors);
+
+      // Show a toast with validation error info
+      toast({
+        description:
+          "Please fill in all required fields. You need to select columns for your chart axes.",
+        title: "Validation Error",
+        variant: "destructive",
+      });
+    },
+  );
 
   // We no longer need the handleFamilyChange function since we're selecting chart types directly
 
@@ -202,7 +228,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [], // Let ChartConfigurator populate this based on selected columns
         });
         break;
 
@@ -461,7 +487,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [],
         });
         break;
 
@@ -915,6 +941,40 @@ export default function NewVisualizationForm({
           selectedChartType={selectedChartType}
           onChartTypeSelect={handleChartTypeSelect}
         />
+
+        {/* Add debugging to monitor form changes */}
+        <div className="hidden">
+          {JSON.stringify(form.watch("dataConfig.dataSources"), null, 2)}
+        </div>
+
+        {/* Debug info for current form state */}
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardHeader>
+            <CardTitle className="text-sm text-yellow-800">Debug Info</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-xs text-yellow-700">
+              <div>
+                <strong>Selected Chart Type:</strong> {selectedChartType ?? "None"}
+              </div>
+              <div>
+                <strong>Form Valid:</strong> {form.formState.isValid ? "Yes" : "No"}
+              </div>
+              <div>
+                <strong>Data Sources:</strong>
+              </div>
+              <pre className="max-h-32 overflow-auto rounded bg-blue-100 p-2 text-xs">
+                {JSON.stringify(form.watch("dataConfig.dataSources"), null, 2)}
+              </pre>
+              <div>
+                <strong>Form Errors:</strong>
+              </div>
+              <pre className="max-h-32 overflow-auto rounded bg-yellow-100 p-2 text-xs">
+                {JSON.stringify(form.formState.errors, null, 2)}
+              </pre>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="flex justify-between">
           <Button type="button" variant="outline" onClick={onCancel}>

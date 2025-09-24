@@ -28,7 +28,7 @@ export const useExperimentVisualizationData = (
       params: { id: experimentId },
       query: {
         tableName: dataConfig.tableName,
-        columns: dataConfig.columns, // Use server-side column filtering for efficiency
+        columns: dataConfig.columns?.join(","), // Use server-side column filtering for efficiency
       },
     },
     queryKey: [

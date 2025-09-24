@@ -408,26 +408,26 @@ export const zScatterChartConfig = z.object({
   // Color mapping options
   colorScale: z
     .enum([
-      "viridis",
-      "plasma",
-      "inferno",
-      "magma",
-      "cividis",
-      "blues",
-      "greens",
-      "reds",
-      "oranges",
-      "purples",
-      "rainbow",
-      "jet",
-      "hot",
-      "cool",
-      "spring",
-      "summer",
-      "autumn",
-      "winter",
+      "Viridis",
+      "Plasma",
+      "Inferno",
+      "Magma",
+      "Cividis",
+      "Blues",
+      "Greens",
+      "Reds",
+      "Oranges",
+      "Purples",
+      "Rainbow",
+      "Jet",
+      "Hot",
+      "Cool",
+      "Spring",
+      "Summer",
+      "Autumn",
+      "Winter",
     ])
-    .default("viridis"),
+    .default("Viridis"),
   showColorBar: z.boolean().default(true),
   // Display options
   gridLines: z.enum(["both", "x", "y", "none"]).default("both"),
@@ -579,24 +579,24 @@ export const zHeatmapChartConfig = z.object({
   // Heatmap-specific options
   colorscale: z
     .enum([
-      "viridis",
-      "plasma",
-      "inferno",
-      "magma",
-      "cividis",
-      "blues",
-      "greens",
-      "reds",
-      "oranges",
-      "purples",
-      "greys",
-      "hot",
-      "cool",
-      "rainbow",
-      "jet",
-      "custom",
+      "Viridis",
+      "Plasma",
+      "Inferno",
+      "Magma",
+      "Cividis",
+      "Blues",
+      "Greens",
+      "Reds",
+      "Oranges",
+      "Purples",
+      "Greys",
+      "Hot",
+      "Cool",
+      "Rainbow",
+      "Jet",
+      "Custom",
     ])
-    .default("viridis"),
+    .default("Viridis"),
   // Custom colorscale for when colorscale is "custom"
   // customColorscale: z.array(z.tuple([z.number(), z.string()])).optional(),
   showScale: z.boolean().default(true),
@@ -624,25 +624,25 @@ export const zContourChartConfig = z.object({
   // Contour-specific options
   colorscale: z
     .enum([
-      "viridis",
-      "plasma",
-      "inferno",
-      "magma",
-      "cividis",
-      "blues",
-      "greens",
-      "reds",
-      "oranges",
-      "purples",
-      "greys",
-      "hot",
-      "cool",
-      "rainbow",
-      "jet",
-      "earth",
-      "custom",
+      "Viridis",
+      "Plasma",
+      "Inferno",
+      "Magma",
+      "Cividis",
+      "Blues",
+      "Greens",
+      "Reds",
+      "Oranges",
+      "Purples",
+      "Greys",
+      "Hot",
+      "Cool",
+      "Rainbow",
+      "Jet",
+      "Earth",
+      "Custom",
     ])
-    .default("viridis"),
+    .default("Viridis"),
   // Custom colorscale for when colorscale is "custom"
   // customColorscale: z.array(z.tuple([z.number(), z.string()])).optional(),
   showScale: z.boolean().default(true),
@@ -780,21 +780,21 @@ export const zCorrelationMatrixChartConfig = z.object({
   colorscale: z
     .enum([
       "RdBu",
-      "viridis",
-      "plasma",
-      "inferno",
-      "magma",
-      "cividis",
-      "blues",
-      "greens",
-      "reds",
-      "oranges",
-      "purples",
-      "greys",
-      "hot",
-      "cool",
-      "rainbow",
-      "jet",
+      "Viridis",
+      "Plasma",
+      "Inferno",
+      "Magma",
+      "Cividis",
+      "Blues",
+      "Greens",
+      "Reds",
+      "Oranges",
+      "Purples",
+      "Greys",
+      "Hot",
+      "Cool",
+      "Rainbow",
+      "Jet",
     ])
     .default("RdBu"),
   showValues: z.boolean().default(true),
@@ -893,23 +893,23 @@ export const zParallelCoordinatesChartConfig = z.object({
       color: z.string().optional(), // Static color or column reference for color mapping
       colorscale: z
         .enum([
-          "viridis",
-          "plasma",
-          "inferno",
-          "magma",
-          "cividis",
-          "blues",
-          "greens",
-          "reds",
-          "oranges",
-          "purples",
-          "greys",
-          "hot",
-          "cool",
-          "rainbow",
-          "jet",
+          "Viridis",
+          "Plasma",
+          "Inferno",
+          "Magma",
+          "Cividis",
+          "Blues",
+          "Greens",
+          "Reds",
+          "Oranges",
+          "Purples",
+          "Greys",
+          "Hot",
+          "Cool",
+          "Rainbow",
+          "Jet",
         ])
-        .default("viridis"),
+        .default("Viridis"),
       showscale: z.boolean().default(true), // Show color scale
       width: z.number().min(0.5).max(5).default(1),
       opacity: z.number().min(0.1).max(1).default(1),
@@ -1268,21 +1268,14 @@ export const zExperimentFilterQuery = z.object({
 });
 
 export const zExperimentDataQuery = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1).describe("Page number for pagination"),
-  pageSize: z.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(100)
-    .optional()
-    .default(5)
-    .describe("Number of rows per page"),
+  page: z.coerce.number().int().min(1).optional().describe("Page number for pagination"),
+  pageSize: z.coerce.number().int().min(1).max(100).optional().describe("Number of rows per page"),
   tableName: z
     .string()
     .optional()
     .describe("Optional table name to filter results to a specific table"),
   columns: z
-    .array(z.string())
+    .string()
     .optional()
     .describe(
       "Specific columns to fetch. If provided with tableName, fetches full data for these columns only",

@@ -141,7 +141,7 @@ export default function HistogramChartConfigurator({
                               value={field.value}
                               onValueChange={(value) => {
                                 field.onChange(value);
-                                onColumnSelect("data", value);
+                                onColumnSelect("series", value);
                               }}
                             >
                               <FormControl>
