@@ -477,43 +477,98 @@ export default function ChartConfigurator({
    * Update data sources and form values when a column is selected
    */
   const handleColumnSelect = (columnType: string, columnName: string) => {
-    // Get current data sources and form values to determine what to replace
-    const currentDataSources = form.getValues("dataConfig.dataSources");
+    // Helper to collect all currently selected columns for the chart config
+    const collectCurrentColumns = (): { tableName: string; columnName: string }[] => {
+      const sources: { tableName: string; columnName: string }[] = [];
+      const tableName = selectedTableName ?? "";
 
-    // Helper function to get the current column name for a given axis path
-    const getCurrentColumnForPath = (configPath: string): string | undefined => {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return form.getValues(configPath as any) as string | undefined;
-      } catch {
-        return undefined;
+      // Helper to push if value exists
+      const pushIf = (col: string | undefined) => {
+        if (col) sources.push({ tableName, columnName: col });
+      };
+
+      switch (selectedChartType) {
+        case "line":
+        case "bar":
+        case "area":
+        case "dot-plot":
+        case "lollipop":
+        case "box-plot":
+        case "log-plot":
+          pushIf(form.getValues("config.config.xAxis.dataSource.columnName"));
+          pushIf(form.getValues("config.config.yAxes.0.dataSource.columnName"));
+          break;
+        case "scatter":
+          pushIf(form.getValues("config.config.xAxis.dataSource.columnName"));
+          pushIf(form.getValues("config.config.yAxes.0.dataSource.columnName"));
+          pushIf(form.getValues("config.config.colorAxis.dataSource.columnName"));
+          break;
+        case "bubble":
+          pushIf(form.getValues("config.config.xAxis.dataSource.columnName"));
+          pushIf(form.getValues("config.config.yAxes.0.dataSource.columnName"));
+          pushIf(form.getValues("config.config.sizeAxis.dataSource.columnName"));
+          break;
+        case "heatmap":
+        case "contour":
+          pushIf(form.getValues("config.config.xAxis.dataSource.columnName"));
+          pushIf(form.getValues("config.config.yAxis.dataSource.columnName"));
+          pushIf(form.getValues("config.config.zAxis.dataSource.columnName"));
+          break;
+        case "histogram":
+          pushIf(form.getValues("config.config.series.0.dataSource.columnName"));
+          break;
+        case "ternary":
+          pushIf(form.getValues("config.config.aAxis.dataSource.columnName"));
+          pushIf(form.getValues("config.config.bAxis.dataSource.columnName"));
+          pushIf(form.getValues("config.config.cAxis.dataSource.columnName"));
+          break;
+        case "correlation-matrix": {
+          const variables = form.getValues("config.config.variables");
+          if (Array.isArray(variables)) {
+            variables.forEach((_: unknown, i: number) => {
+              pushIf(form.getValues(`config.config.variables.${i}.columnName`));
+            });
+          }
+          break;
+        }
+        case "parallel-coordinates": {
+          const dims = form.getValues("config.config.dimensions");
+          if (Array.isArray(dims)) {
+            dims.forEach((_: unknown, i: number) => {
+              pushIf(form.getValues(`config.config.dimensions.${i}.dataSource.columnName`));
+            });
+          }
+          break;
+        }
+        case "radar": {
+          pushIf(form.getValues("config.config.categoryAxis.dataSource.columnName"));
+          const series = form.getValues("config.config.series");
+          if (Array.isArray(series)) {
+            series.forEach((_: unknown, i: number) => {
+              pushIf(form.getValues(`config.config.series.${i}.dataSource.columnName`));
+            });
+          }
+          break;
+        }
+        case "pie":
+          pushIf(form.getValues("config.config.labelSource.columnName"));
+          pushIf(form.getValues("config.config.valueSource.columnName"));
+          break;
+        default:
+          break;
       }
+      return sources.filter((s) => s.columnName);
     };
 
     // Helper function to update form values and data sources
     const updateFormValues = (configPath: string) => {
-      // Get the current column name that's being replaced
-      const currentColumn = getCurrentColumnForPath(configPath);
-
-      // Filter out data sources: remove the old column for this axis and any duplicate of the new column
-      const filteredSources = Array.isArray(currentDataSources)
-        ? currentDataSources.filter((s) => {
-            if (typeof s !== "object" || !("columnName" in s)) return false;
-            // Remove the current column that's being replaced for this axis
-            if (currentColumn && s.columnName === currentColumn) return false;
-            // Remove any existing entry for the new column to avoid duplicates
-            if (s.columnName === columnName) return false;
-            return true;
-          })
-        : [];
-
-      // Create a new data source entry
-      const newDataSource = { tableName: selectedTableName ?? "", columnName };
-
-      // Update form values
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       form.setValue(configPath as any, columnName);
-      form.setValue("dataConfig.dataSources", [...filteredSources, newDataSource]);
+      // After setting, collect all current columns and set as data sources
+      setTimeout(() => {
+        const sources = collectCurrentColumns();
+        form.setValue("dataConfig.dataSources", sources);
+      }, 0);
     };
 
     // Handle standard axis types

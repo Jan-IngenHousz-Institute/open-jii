@@ -186,7 +186,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [],
         });
         break;
 
@@ -266,7 +266,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [],
         });
         break;
 
@@ -302,7 +302,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [],
         });
         break;
 
@@ -328,7 +328,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [],
         });
         break;
 
@@ -364,7 +364,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [],
         });
         break;
 
@@ -410,7 +410,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [],
         });
         break;
 
@@ -455,7 +455,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [],
         });
         break;
 
@@ -531,7 +531,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [],
         });
         break;
 
@@ -581,7 +581,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [],
         });
         break;
 
@@ -618,7 +618,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [],
         });
         break;
 
@@ -680,7 +680,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [],
         });
         break;
 
@@ -715,7 +715,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [],
         });
         break;
 
@@ -754,7 +754,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [],
         });
         break;
 
@@ -793,7 +793,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [],
         });
         break;
 
@@ -840,7 +840,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [],
         });
         break;
 
@@ -875,7 +875,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [{ tableName: selectedTableName, columnName: "", alias: "" }],
+          dataSources: [],
         });
         break;
     }
