@@ -1,4 +1,5 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { z } from "zod";
 
 import { experimentLocations } from "@repo/database";
 
@@ -17,6 +18,11 @@ export interface CreateLocationDto {
   name: string;
   latitude: number;
   longitude: number;
+  country?: string;
+  region?: string;
+  municipality?: string;
+  postalCode?: string;
+  addressLabel?: string;
 }
 
 // Define output type from database

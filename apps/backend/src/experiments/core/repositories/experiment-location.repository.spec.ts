@@ -53,12 +53,21 @@ describe("LocationRepository", () => {
           name: "Berlin Office",
           latitude: 52.52,
           longitude: 13.405,
+          country: "Germany",
+          region: "Berlin",
+          municipality: "Berlin",
+          postalCode: "10117",
+          addressLabel: "Brandenburg Gate, Pariser Platz, Berlin, Germany",
         },
         {
           experimentId,
           name: "London Office",
           latitude: 51.5074,
           longitude: -0.1278,
+          country: "United Kingdom",
+          region: "England",
+          municipality: "London",
+          postalCode: "SW1A 1AA",
         },
       ];
 
@@ -79,12 +88,22 @@ describe("LocationRepository", () => {
             name: "Berlin Office",
             latitude: "52.52000000",
             longitude: "13.40500000",
+            country: "Germany",
+            region: "Berlin",
+            municipality: "Berlin",
+            postalCode: "10117",
+            addressLabel: "Brandenburg Gate, Pariser Platz, Berlin, Germany",
             experimentId,
           }),
           expect.objectContaining({
             name: "London Office",
             latitude: "51.50740000",
             longitude: "-0.12780000",
+            country: "United Kingdom",
+            region: "England",
+            municipality: "London",
+            postalCode: "SW1A 1AA",
+            addressLabel: null, // This one doesn't have addressLabel set
             experimentId,
           }),
         ]),
@@ -117,6 +136,10 @@ describe("LocationRepository", () => {
         name: "Test Location",
         latitude: 40.7128,
         longitude: -74.006,
+        country: "United States",
+        region: "New York",
+        municipality: "New York",
+        postalCode: "10001",
       };
 
       // Act
@@ -133,6 +156,11 @@ describe("LocationRepository", () => {
         name: "Test Location",
         latitude: "40.71280000",
         longitude: "-74.00600000",
+        country: "United States",
+        region: "New York",
+        municipality: "New York",
+        postalCode: "10001",
+        addressLabel: null,
         experimentId,
       });
       expect(location.id).toBeDefined();

@@ -1,10 +1,12 @@
 import {
   LocationClient,
-  SearchPlaceIndexForTextCommand,
+  SearchPlaceIndexForSuggestionsCommand,
+  GetPlaceCommand,
   SearchPlaceIndexForPositionCommand,
 } from "@aws-sdk/client-location";
 import type {
-  SearchPlaceIndexForTextCommandInput,
+  SearchPlaceIndexForSuggestionsCommandInput,
+  GetPlaceCommandInput,
   SearchPlaceIndexForPositionCommandInput,
   Place,
 } from "@aws-sdk/client-location";
@@ -30,23 +32,55 @@ export class AwsLocationService {
   }
 
   /**
-   * Search for places using text query
+   * Search for places using text query with suggestions and detailed place info
    */
   async searchPlaces(request: SearchPlacesRequest): Promise<PlaceSearchResult[]> {
     try {
-      const input: SearchPlaceIndexForTextCommandInput = {
+      // First, get suggestions
+      const suggestionsInput: SearchPlaceIndexForSuggestionsCommandInput = {
         IndexName: this.configService.placeIndexName,
         Text: request.query,
         MaxResults: request.maxResults ?? 10,
       };
 
-      const command = new SearchPlaceIndexForTextCommand(input);
-      const response = await this.locationClient.send(command);
+      const suggestionsCommand = new SearchPlaceIndexForSuggestionsCommand(suggestionsInput);
+      const suggestionsResponse = await this.locationClient.send(suggestionsCommand);
 
-      const results = this.transformPlacesToResults(response.Results ?? []);
+      const suggestions = suggestionsResponse.Results ?? [];
+
+      // Get detailed place information for each suggestion
+      const placeDetails = await Promise.all(
+        suggestions.map(async (suggestion) => {
+          if (!suggestion.PlaceId) {
+            return null;
+          }
+
+          try {
+            const placeInput: GetPlaceCommandInput = {
+              IndexName: this.configService.placeIndexName,
+              PlaceId: suggestion.PlaceId,
+            };
+
+            const placeCommand = new GetPlaceCommand(placeInput);
+            const placeResponse = await this.locationClient.send(placeCommand);
+
+            return placeResponse.Place;
+          } catch (error) {
+            this.logger.warn(
+              `Failed to get place details for PlaceId: ${suggestion.PlaceId}`,
+              error,
+            );
+            return null;
+          }
+        }),
+      );
+
+      // Filter out null results and transform to our format
+      const validPlaces = placeDetails.filter((place): place is Place => place !== null);
+      const results = this.transformPlacesToResults(validPlaces.map((place) => ({ Place: place })));
 
       this.logger.debug(
-        `Place search completed: query="${request.query}", results=${results.length}`,
+        `Place search completed: query="${request.query}", suggestions=${suggestions.length}, results=${results.length}`,
       );
 
       return results;

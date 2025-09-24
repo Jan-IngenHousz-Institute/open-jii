@@ -15,6 +15,11 @@ export const zLocation = z.object({
     .number()
     .min(-180, "Longitude must be between -180 and 180")
     .max(180, "Longitude must be between -180 and 180"),
+  country: z.string().optional(),
+  region: z.string().optional(),
+  municipality: z.string().optional(),
+  postalCode: z.string().optional(),
+  addressLabel: z.string().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -32,6 +37,11 @@ export const zLocationInput = z.object({
     .number()
     .min(-180, "Longitude must be between -180 and 180")
     .max(180, "Longitude must be between -180 and 180"),
+  country: z.string().optional(),
+  region: z.string().optional(),
+  municipality: z.string().optional(),
+  postalCode: z.string().optional(),
+  addressLabel: z.string().optional(),
 });
 
 export const zLocationList = z.array(zLocation);

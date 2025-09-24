@@ -33,6 +33,11 @@ export class LocationRepository {
           name: createLocationDto.name,
           latitude: createLocationDto.latitude.toString(),
           longitude: createLocationDto.longitude.toString(),
+          country: createLocationDto.country,
+          region: createLocationDto.region,
+          municipality: createLocationDto.municipality,
+          postalCode: createLocationDto.postalCode,
+          addressLabel: createLocationDto.addressLabel,
         })
         .returning(),
     );
@@ -48,6 +53,11 @@ export class LocationRepository {
       name: dto.name,
       latitude: dto.latitude.toString(),
       longitude: dto.longitude.toString(),
+      country: dto.country,
+      region: dto.region,
+      municipality: dto.municipality,
+      postalCode: dto.postalCode,
+      addressLabel: dto.addressLabel,
     }));
 
     return tryCatch(() => this.database.insert(experimentLocations).values(values).returning());
@@ -84,6 +94,11 @@ export class LocationRepository {
             name: dto.name,
             latitude: dto.latitude.toString(),
             longitude: dto.longitude.toString(),
+            country: dto.country,
+            region: dto.region,
+            municipality: dto.municipality,
+            postalCode: dto.postalCode,
+            addressLabel: dto.addressLabel,
           })),
         )
         .returning();

@@ -58,12 +58,21 @@ describe("ExperimentLocationsController", () => {
           name: "Berlin Office",
           latitude: 52.52,
           longitude: 13.405,
+          country: "Germany",
+          region: "Berlin",
+          municipality: "Berlin",
+          postalCode: "10117",
+          addressLabel: "Brandenburg Gate, Pariser Platz, Berlin, Germany",
         },
         {
           experimentId: experiment.id,
           name: "London Office",
           latitude: 51.5074,
           longitude: -0.1278,
+          country: "United Kingdom",
+          region: "England",
+          municipality: "London",
+          postalCode: "SW1A 1AA",
         },
       ];
 
@@ -92,6 +101,11 @@ describe("ExperimentLocationsController", () => {
         name: "Berlin Office",
         latitude: 52.52,
         longitude: 13.405,
+        country: "Germany",
+        region: "Berlin",
+        municipality: "Berlin",
+        postalCode: "10117",
+        addressLabel: "Brandenburg Gate, Pariser Platz, Berlin, Germany",
       });
       expect(berlinLocation!.id).toBeDefined();
       expect(berlinLocation!.createdAt).toBeDefined();
@@ -102,6 +116,10 @@ describe("ExperimentLocationsController", () => {
         name: "London Office",
         latitude: 51.5074,
         longitude: -0.1278,
+        country: "United Kingdom",
+        region: "England",
+        municipality: "London",
+        postalCode: "SW1A 1AA",
       });
       expect(londonLocation!.id).toBeDefined();
       expect(londonLocation!.createdAt).toBeDefined();
