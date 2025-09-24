@@ -14,6 +14,7 @@ import { BubbleChartRenderer } from "./chart-renderers/bubble-chart-renderer";
 import { ContourChartRenderer } from "./chart-renderers/contour-chart-renderer";
 import { DotPlotRenderer } from "./chart-renderers/dot-plot-renderer";
 import { HeatmapChartRenderer } from "./chart-renderers/heatmap-chart-renderer";
+import { HistogramChartRenderer } from "./chart-renderers/histogram-chart-renderer";
 import { LineChartRenderer } from "./chart-renderers/line-chart-renderer";
 import { LogPlotChartRenderer } from "./chart-renderers/log-plot-chart-renderer";
 import { LollipopChartRenderer } from "./chart-renderers/lollipop-chart-renderer";
@@ -88,6 +89,8 @@ export default function ExperimentVisualizationRenderer({
         return <BoxPlotRenderer {...commonProps} />;
       case "heatmap":
         return <HeatmapChartRenderer {...commonProps} />;
+      case "histogram":
+        return <HistogramChartRenderer {...commonProps} />;
       case "contour":
         return <ContourChartRenderer {...commonProps} />;
       case "ternary":

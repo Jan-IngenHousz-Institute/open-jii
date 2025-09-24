@@ -37,6 +37,7 @@
     "bubble": "Bellendiagram",
     "lollipop": "Lollipop-diagram",
     "boxPlot": "Boxplot",
+    "histogram": "Histogram",
     "heatmap": "Heatmap",
     "contour": "Contourdiagram",
     "ternary": "Ternair diagram",
@@ -91,6 +92,10 @@
     "colorScale": "Kleurschaal",
     "showColorScale": "Kleurschaal tonen",
     "displayColorScaleBar": "Kleurschaal balk weergeven",
+    "colorColumn": "Kleurkolom",
+    "selectColorColumn": "Selecteer kleurkolom",
+    "colorAxisTitle": "Kleuras Titel",
+    "noColorMapping": "Geen kleurtoewijzing",
     "lineWidth": "Lijnbreedte",
     "lineOpacity": "Lijndoorzichtigheid",
     "labelConfiguration": "Labelconfiguratie",
@@ -99,7 +104,14 @@
     "bottom": "Onder",
     "labelAngle": "Labelhoek",
     "configureDimensionSettings": "Configureer instellingen voor deze dimensie",
-    "column": "Kolom"
+    "column": "Kolom",
+    "dataColumn": "Gegevenskolom",
+    "histogramFunction": "Histogramfunctie",
+    "normalization": "Normalisatie",
+    "numberOfBins": "Aantal bakken",
+    "barMode": "Balkstand",
+    "automaticBinning": "Automatische binning",
+    "automaticBinningDescription": "Bepaal automatisch de breedte en posities van de bakken"
   },
 
   "newVisualization": "Nieuwe Visualisatie",
@@ -113,6 +125,7 @@
   "xAxisConfiguration": "X-As Configuratie",
   "yAxisConfiguration": "Y-As Configuratie",
   "yAxesConfiguration": "Y-Assen Configuratie",
+  "colorDimensionConfiguration": "Kleurdimensie Configuratie",
   "additionalSeries": "Aanvullende Series",
   "series": "Serie",
   "dataColumn": "Gegevenskolom",
@@ -125,6 +138,7 @@
   "seriesColor": "Seriekleur",
   "areaColor": "Oppervlaktekleur",
   "enterAxisTitle": "Voer astitel in",
+  "enterColorAxisTitle": "Voer kleuras titel in",
   "xAxisTitle": "X-As Titel",
   "yAxisSide": "Y-As Zijde",
   "left": "Links",
@@ -477,5 +491,20 @@
     "colorbarTitle": "Kleurbalk Titel",
     "enterColorbarTitle": "Voer kleurbalk titel in",
     "showColorScale": "Toon Kleurschaal"
+  },
+
+  "enterSeriesLabel": "Voer serie label in",
+  "histogramFunction": {
+    "count": "Aantal",
+    "sum": "Som",
+    "avg": "Gemiddelde",
+    "min": "Minimum",
+    "max": "Maximum"
+  },
+  "normalization": {
+    "percent": "Percentage",
+    "probability": "Waarschijnlijkheid",
+    "density": "Dichtheid",
+    "probabilityDensity": "Waarschijnlijkheidsdichtheid"
   }
 }

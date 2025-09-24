@@ -57,16 +57,58 @@ export function ScatterChartRenderer({
         return typeof value === "string" || typeof value === "number" ? value : String(value);
       });
 
+      // Prepare marker configuration
+      let markerConfig: {
+        size: number;
+        symbol: string;
+        color?: string | number[];
+        colorscale?: string;
+        showscale?: boolean;
+        colorbar?: {
+          title?: string;
+          titleside?: "right" | "top" | "bottom";
+          thickness?: number;
+          len?: number;
+        };
+      } = {
+        size: config.markerSize,
+        symbol: config.markerShape,
+      };
+
+      if (config.colorAxis?.dataSource.columnName) {
+        // Extract color dimension values as numbers
+        const colorValues = data.map((row) => {
+          const value = row[config.colorAxis?.dataSource.columnName ?? ""];
+          return typeof value === "number"
+            ? value
+            : typeof value === "string" && !isNaN(Number(value))
+              ? Number(value)
+              : 0; // Default to 0 for non-numeric values
+        });
+
+        markerConfig = {
+          ...markerConfig,
+          color: colorValues,
+          colorscale: config.colorScale,
+          showscale: config.showColorBar,
+          colorbar: config.showColorBar
+            ? {
+                title: config.colorAxis.title ?? config.colorAxis.dataSource.columnName,
+                titleside: "right" as const,
+              }
+            : undefined,
+        };
+      } else {
+        // Use solid color when no color dimension is configured
+        markerConfig.color = yAxis.color ?? `hsl(${(index * 137.5) % 360}, 70%, 50%)`;
+      }
+
       return {
         x: xValues,
         y: yValues,
         name: yAxis.dataSource.alias ?? yAxis.dataSource.columnName,
         mode: config.mode,
-        marker: {
-          size: config.markerSize,
-          color: yAxis.color ?? `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
-          symbol: config.markerShape,
-        },
+        marker: markerConfig,
         type: "scatter" as const,
       };
     });

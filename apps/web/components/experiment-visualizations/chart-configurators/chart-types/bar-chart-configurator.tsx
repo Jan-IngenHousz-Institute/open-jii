@@ -532,6 +532,7 @@ export default function BarChartConfigurator({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <SelectItem value="overlay">{t("barModes.overlay")}</SelectItem>
                         <SelectItem value="group">{t("barModes.group")}</SelectItem>
                         <SelectItem value="stack">{t("barModes.stack")}</SelectItem>
                       </SelectContent>

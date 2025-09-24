@@ -51,6 +51,7 @@
     "bubble": "Bubble Chart",
     "lollipop": "Lollipop Chart",
     "boxPlot": "Box Plot",
+    "histogram": "Histogram",
     "heatmap": "Heatmap",
     "contour": "Contour Plot",
     "ternary": "Ternary Plot",
@@ -117,6 +118,10 @@
     "colorScale": "Color Scale",
     "showColorScale": "Show Color Scale",
     "displayColorScaleBar": "Display color scale bar",
+    "colorColumn": "Color Column",
+    "selectColorColumn": "Select color column",
+    "colorAxisTitle": "Color Axis Title",
+    "noColorMapping": "No color mapping",
     "lineWidth": "Line Width",
     "lineOpacity": "Line Opacity",
     "labelConfiguration": "Label Configuration",
@@ -147,7 +152,14 @@
     "symbolDiamond": "Diamond",
     "symbolTriangle": "Triangle",
     "symbolCross": "Cross",
-    "showLegend": "Show Legend"
+    "showLegend": "Show Legend",
+    "dataColumn": "Data Column",
+    "histogramFunction": "Histogram Function",
+    "normalization": "Normalization",
+    "numberOfBins": "Number of Bins",
+    "barMode": "Bar Mode",
+    "automaticBinning": "Automatic Binning",
+    "automaticBinningDescription": "Automatically determine bin width and positions"
   },
 
   "newVisualization": "New Visualization",
@@ -161,6 +173,7 @@
   "yAxisConfiguration": "Y-Axis Configuration",
   "yAxesConfiguration": "Y-Axes Configuration",
   "yAxesSeries": "Y-Axes Series",
+  "colorDimensionConfiguration": "Color Dimension Configuration",
   "yAxisSeries": "Y-Axis Series",
   "additionalSeries": "Additional Series",
   "series": "Series",
@@ -176,6 +189,7 @@
   "barColor": "Bar Color",
   "areaColor": "Area Color",
   "enterAxisTitle": "Enter axis title",
+  "enterColorAxisTitle": "Enter color axis title",
   "xAxisTitle": "X-Axis Title",
   "yAxisSide": "Y-Axis Side",
   "yAxisTitle": "Y-Axis Title",
@@ -657,5 +671,20 @@
   "gridShape": "Grid Shape",
   "gridCircular": "Circular",
   "gridLinear": "Linear",
-  "tickAngle": "Tick Angle"
+  "tickAngle": "Tick Angle",
+
+  "enterSeriesLabel": "Enter series label",
+  "histogramFunction": {
+    "count": "Count",
+    "sum": "Sum",
+    "avg": "Average",
+    "min": "Minimum",
+    "max": "Maximum"
+  },
+  "normalization": {
+    "percent": "Percent",
+    "probability": "Probability",
+    "density": "Density",
+    "probabilityDensity": "Probability Density"
+  }
 }

@@ -51,6 +51,7 @@
     "bubble": "Blasendiagramm",
     "lollipop": "Lollipop-Diagramm",
     "boxPlot": "Boxplot",
+    "histogram": "Histogramm",
     "heatmap": "Heatmap",
     "contour": "Konturdiagramm",
     "ternary": "Ternäres Diagramm",
@@ -116,6 +117,10 @@
     "colorScale": "Farbskala",
     "showColorScale": "Farbskala anzeigen",
     "displayColorScaleBar": "Farbskala-Balken anzeigen",
+    "colorColumn": "Farbspalte",
+    "selectColorColumn": "Farbspalte auswählen",
+    "colorAxisTitle": "Farb-Achsentitel",
+    "noColorMapping": "Keine Farbzuordnung",
     "lineWidth": "Linienbreite",
     "lineOpacity": "Linientransparenz",
     "labelConfiguration": "Beschriftungskonfiguration",
@@ -124,7 +129,14 @@
     "bottom": "Unten",
     "labelAngle": "Etikettenwinkel",
     "configureDimensionSettings": "Einstellungen für diese Dimension konfigurieren",
-    "column": "Spalte"
+    "column": "Spalte",
+    "dataColumn": "Datenspalte",
+    "histogramFunction": "Histogramm-Funktion",
+    "normalization": "Normalisierung",
+    "numberOfBins": "Anzahl der Bins",
+    "barMode": "Balkenmodus",
+    "automaticBinning": "Automatische Binning",
+    "automaticBinningDescription": "Automatische Bestimmung der Bin-Breite und -Positionen"
   },
 
   "newVisualization": "Neue Visualisierung",
@@ -138,6 +150,7 @@
   "yAxisConfiguration": "Y-Achsen-Konfiguration",
   "yAxesConfiguration": "Y-Achsen-Konfiguration",
   "yAxesSeries": "Y-Achsen-Serien",
+  "colorDimensionConfiguration": "Farbdimensions-Konfiguration",
   "yAxisSeries": "Y-Achsen-Serie",
   "additionalSeries": "Zusätzliche Serien",
   "series": "Serie",
@@ -152,6 +165,7 @@
   "barColor": "Balkenfarbe",
   "areaColor": "Flächenfarbe",
   "enterAxisTitle": "Achsentitel eingeben",
+  "enterColorAxisTitle": "Farb-Achsentitel eingeben",
   "xAxisTitle": "X-Achsentitel",
   "yAxisSide": "Y-Achsenseite",
   "left": "Links",
@@ -565,5 +579,20 @@
     "colorbarTitle": "Farbbalken-Titel",
     "enterColorbarTitle": "Farbbalken-Titel eingeben",
     "showColorScale": "Farbskala anzeigen"
+  },
+
+  "enterSeriesLabel": "Serie-Label eingeben",
+  "histogramFunction": {
+    "count": "Anzahl",
+    "sum": "Summe",
+    "avg": "Durchschnitt",
+    "min": "Minimum",
+    "max": "Maximum"
+  },
+  "normalization": {
+    "percent": "Prozent",
+    "probability": "Wahrscheinlichkeit",
+    "density": "Dichte",
+    "probabilityDensity": "Wahrscheinlichkeitsdichte"
   }
 }

@@ -57,6 +57,7 @@ import {
   ParallelCoordinatesChartConfigurator,
   RadarChartConfigurator,
   BoxPlotConfigurator,
+  HistogramChartConfigurator,
 } from "./index";
 import type { ChartFormValues, SampleTable } from "./types";
 
@@ -122,6 +123,12 @@ const CHART_TYPES_CONFIG: {
     type: "box-plot",
     family: "statistical",
     labelKey: "chartTypes.boxPlot",
+    icon: <BarChart3 className="h-5 w-5" />,
+  },
+  {
+    type: "histogram",
+    family: "statistical",
+    labelKey: "chartTypes.histogram",
     icon: <BarChart3 className="h-5 w-5" />,
   },
 
@@ -644,6 +651,16 @@ export default function ChartConfigurator({
 
                   {selectedChartType === "radar" && (
                     <RadarChartConfigurator
+                      form={form}
+                      table={selectedTable}
+                      onColumnSelect={(columnType: string, columnName: string) => {
+                        handleColumnSelect(columnType, columnName);
+                      }}
+                    />
+                  )}
+
+                  {selectedChartType === "histogram" && (
+                    <HistogramChartConfigurator
                       form={form}
                       table={selectedTable}
                       onColumnSelect={(columnType: string, columnName: string) => {
