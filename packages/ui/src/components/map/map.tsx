@@ -420,7 +420,7 @@ export const Map = ({
                     onLocationNavigate={handleLocationNavigateFromSidebar}
                     onLocationRemove={handleLocationRemoveFromSidebar}
                     showDistances={showDistances}
-                    selectionMode={selectionMode}
+                    selectionMode={!disabled && selectionMode}
                   />
                 </div>
               </div>
