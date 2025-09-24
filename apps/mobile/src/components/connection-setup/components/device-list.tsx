@@ -70,52 +70,50 @@ export function DeviceList({
                 </TouchableOpacity>
               )}
             >
-              {
-                <TouchableOpacity
-                  style={[
-                    styles.deviceItem,
-                    { backgroundColor: theme.isDark ? colors.dark.card : colors.light.card },
-                  ]}
-                  onPress={() => onConnect(item)}
-                >
-                  <View style={styles.deviceInfo}>
+              <TouchableOpacity
+                style={[
+                  styles.deviceItem,
+                  { backgroundColor: theme.isDark ? colors.dark.card : colors.light.card },
+                ]}
+                onPress={() => onConnect(item)}
+              >
+                <View style={styles.deviceInfo}>
+                  <Text
+                    style={[
+                      styles.deviceName,
+                      { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
+                    ]}
+                  >
+                    {item.name ?? "N/A"}
+                  </Text>
+                  {item.rssi && (
                     <Text
                       style={[
-                        styles.deviceName,
-                        { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
+                        styles.deviceRssi,
+                        { color: theme.isDark ? colors.dark.inactive : colors.light.inactive },
                       ]}
                     >
-                      {item.name ?? "N/A"}
+                      Signal: {item.rssi > -70 ? "Strong" : item.rssi > -80 ? "Medium" : "Weak"}
                     </Text>
-                    {item.rssi && (
-                      <Text
-                        style={[
-                          styles.deviceRssi,
-                          { color: theme.isDark ? colors.dark.inactive : colors.light.inactive },
-                        ]}
-                      >
-                        Signal: {item.rssi > -70 ? "Strong" : item.rssi > -80 ? "Medium" : "Weak"}
-                      </Text>
-                    )}
-                  </View>
-                  <View style={styles.deviceTypeContainer}>
-                    {item.id === connectingDeviceId ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={theme.isDark ? colors.light.onPrimary : colors.dark.onPrimary}
-                      />
-                    ) : (
-                      <>
-                        {item.type === "bluetooth-classic" && (
-                          <Bluetooth size={16} color={colors.primary.dark} />
-                        )}
-                        {item.type === "ble" && <Radio size={16} color={colors.primary.dark} />}
-                        {item.type === "usb" && <Usb size={16} color={colors.primary.dark} />}
-                      </>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              }
+                  )}
+                </View>
+                <View style={styles.deviceTypeContainer}>
+                  {item.id === connectingDeviceId ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={theme.isDark ? colors.light.onPrimary : colors.dark.onPrimary}
+                    />
+                  ) : (
+                    <>
+                      {item.type === "bluetooth-classic" && (
+                        <Bluetooth size={16} color={colors.primary.dark} />
+                      )}
+                      {item.type === "ble" && <Radio size={16} color={colors.primary.dark} />}
+                      {item.type === "usb" && <Usb size={16} color={colors.primary.dark} />}
+                    </>
+                  )}
+                </View>
+              </TouchableOpacity>
             </Swipeable>
           );
         }}
