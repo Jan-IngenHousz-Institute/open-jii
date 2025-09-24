@@ -4,6 +4,7 @@ import React from "react";
 
 import type { ExperimentVisualization } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
+import type { BoxSeriesData } from "@repo/ui/components";
 import { BoxPlot } from "@repo/ui/components";
 
 export interface BoxPlotRendererProps {
@@ -50,7 +51,7 @@ export function BoxPlotRenderer({
     }
 
     // Prepare box plot data
-    const boxData = config.yAxes.map((yAxis, index) => {
+    const boxData: BoxSeriesData[] = config.yAxes.map((yAxis, index) => {
       // For box plots, we need to handle both grouped and ungrouped data
       if (config.xAxis.type === "category") {
         // Group data by x-axis categories
@@ -84,7 +85,7 @@ export function BoxPlotRenderer({
           x: xValues,
           y: yValues,
           name: yAxis.dataSource.alias ?? yAxis.dataSource.columnName,
-          boxpoints: config.boxPoints === "false" ? false : config.boxPoints,
+          boxpoints: config.boxPoints,
           jitter: config.jitter,
           pointpos: config.pointPos,
           notched: config.notched,
@@ -124,7 +125,7 @@ export function BoxPlotRenderer({
         return {
           y: yValues,
           name: yAxis.dataSource.alias ?? yAxis.dataSource.columnName,
-          boxpoints: config.boxPoints === "false" ? false : config.boxPoints,
+          boxpoints: config.boxPoints,
           jitter: config.jitter,
           pointpos: config.pointPos,
           notched: config.notched,

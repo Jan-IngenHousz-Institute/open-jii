@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
+import { ExperimentVisualizationDto } from "../../../core/models/experiment-visualization.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentVisualizationRepository } from "../../../core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -21,7 +22,7 @@ export class DeleteExperimentVisualizationUseCase {
     const visualizationResult =
       await this.experimentVisualizationRepository.findById(visualizationId);
 
-    return visualizationResult.chain(async (visualization) => {
+    return visualizationResult.chain(async (visualization: ExperimentVisualizationDto | null) => {
       if (!visualization) {
         this.logger.warn(`Attempt to delete non-existent visualization with ID ${visualizationId}`);
         return failure(AppError.notFound(`Visualization with ID ${visualizationId} not found`));
