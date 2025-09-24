@@ -47,7 +47,7 @@ export function ScatterChartRenderer({
     }
 
     // Prepare scatter plot data
-    const scatterData = config.yAxes.map((yAxis, index) => {
+    const scatterData = config.yAxes.map((yAxis) => {
       const xValues = data.map((row) => {
         const value = row[config.xAxis.dataSource.columnName];
         return typeof value === "string" || typeof value === "number" ? value : String(value);
@@ -79,12 +79,15 @@ export function ScatterChartRenderer({
         // Extract color dimension values as numbers
         const colorValues = data.map((row) => {
           const value = row[config.colorAxis?.dataSource.columnName ?? ""];
+
           return typeof value === "number"
             ? value
             : typeof value === "string" && !isNaN(Number(value))
               ? Number(value)
               : 0; // Default to 0 for non-numeric values
         });
+
+        console.log(config.colorScale);
 
         markerConfig = {
           ...markerConfig,
@@ -100,7 +103,7 @@ export function ScatterChartRenderer({
         };
       } else {
         // Use solid color when no color dimension is configured
-        markerConfig.color = yAxis.color ?? `hsl(${(index * 137.5) % 360}, 70%, 50%)`;
+        markerConfig.color = yAxis.color;
       }
 
       return {

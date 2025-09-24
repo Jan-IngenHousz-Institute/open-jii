@@ -525,8 +525,8 @@ export default function BubbleChartConfigurator({
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="default">{t("colorSchemes.default")}</SelectItem>
-                        <SelectItem value="viridis">{t("colorSchemes.viridis")}</SelectItem>
-                        <SelectItem value="plasma">{t("colorSchemes.plasma")}</SelectItem>
+                        <SelectItem value="Viridis">{t("colorSchemes.viridis")}</SelectItem>
+                        <SelectItem value="Plasma">{t("colorSchemes.plasma")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

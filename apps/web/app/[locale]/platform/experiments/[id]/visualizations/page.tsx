@@ -3,28 +3,11 @@
 import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
 import { useLocale } from "@/hooks/useLocale";
 import { Loader2, PlusCircle } from "lucide-react";
-import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
+import ExperimentVisualizationsList from "~/components/experiment-visualizations/experiment-visualizations-list";
 
-import type { ChartFamily } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@repo/ui/components";
-
-// Import dynamically to avoid path issues
-const ExperimentVisualizationsList = dynamic(
-  () => import("@/components/experiment-visualizations/experiment-visualizations-list"),
-  { ssr: false },
-);
+import { Button, Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components";
 
 export default function ExperimentVisualizationsPage() {
   const { t } = useTranslation("experimentVisualizations");
@@ -32,13 +15,9 @@ export default function ExperimentVisualizationsPage() {
   const router = useRouter();
   const locale = useLocale();
 
-  const {
-    data: visualizationsData,
-    isLoading,
-    chartFamily,
-    setChartFamily,
-  } = useExperimentVisualizations({
+  const { data: visualizationsData, isLoading } = useExperimentVisualizations({
     experimentId: id,
+    initialChartFamily: undefined,
   });
 
   return (
@@ -58,33 +37,16 @@ export default function ExperimentVisualizationsPage() {
           <CardTitle>{t("all")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs
-            value={chartFamily ?? "all"}
-            onValueChange={(value) =>
-              setChartFamily(value !== "all" ? (value as ChartFamily) : undefined)
-            }
-          >
-            <TabsList className="mb-4">
-              <TabsTrigger value="all">{t("chartFamilies.all")}</TabsTrigger>
-              <TabsTrigger value="basic">{t("chartFamilies.basic")}</TabsTrigger>
-              <TabsTrigger value="scientific">{t("chartFamilies.scientific")}</TabsTrigger>
-              <TabsTrigger value="3d">{t("chartFamilies.3d")}</TabsTrigger>
-              <TabsTrigger value="statistical">{t("chartFamilies.statistical")}</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value={chartFamily ?? "all"} className="mt-0">
-              {isLoading ? (
-                <div className="flex justify-center py-10">
-                  <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-                </div>
-              ) : (
-                <ExperimentVisualizationsList
-                  visualizations={visualizationsData?.body ?? []}
-                  experimentId={id}
-                />
-              )}
-            </TabsContent>
-          </Tabs>
+          {isLoading ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+            </div>
+          ) : (
+            <ExperimentVisualizationsList
+              visualizations={visualizationsData?.body ?? []}
+              experimentId={id}
+            />
+          )}
         </CardContent>
       </Card>
     </div>

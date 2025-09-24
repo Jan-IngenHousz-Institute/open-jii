@@ -79,15 +79,29 @@ export default function EditVisualizationForm({
   });
 
   // Handle form submission
-  const onSubmit = form.handleSubmit((data) => {
-    updateVisualization({
-      params: {
-        id: experimentId,
-        visualizationId: visualization.id,
-      },
-      body: data,
-    });
-  });
+  const onSubmit = form.handleSubmit(
+    (data) => {
+      updateVisualization({
+        params: {
+          id: experimentId,
+          visualizationId: visualization.id,
+        },
+        body: data,
+      });
+    },
+    (errors) => {
+      console.log("=== FORM VALIDATION ERRORS ===");
+      console.log("Errors:", errors);
+
+      // Show a toast with validation error info
+      toast({
+        description:
+          "Please fill in all required fields. You need to select columns for your chart axes.",
+        title: "Validation Error",
+        variant: "destructive",
+      });
+    },
+  );
 
   // Handle chart type selection
   const handleChartTypeSelect = (chartType: ChartType) => {
