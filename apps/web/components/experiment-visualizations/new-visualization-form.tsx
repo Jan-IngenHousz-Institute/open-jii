@@ -6,10 +6,9 @@ import { useExperimentVisualizationCreate } from "@/hooks/experiment/useExperime
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import type { UseFormReturn } from "react-hook-form";
 import { useForm } from "react-hook-form";
 
-import type { ChartFamily, ChartType } from "@repo/api";
+import type { ChartFamily, ChartType, CreateExperimentVisualizationBody } from "@repo/api";
 import { zCreateExperimentVisualizationBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -33,7 +32,6 @@ import { toast } from "@repo/ui/hooks";
 
 // Import components
 import ChartConfigurator from "./chart-configurators/chart-configurator";
-import type { ChartFormValues } from "./chart-configurators/types";
 
 interface NewVisualizationFormProps {
   experimentId: string;
@@ -55,7 +53,7 @@ export default function NewVisualizationForm({
   const [selectedChartType, setSelectedChartType] = useState<ChartType | null>(null);
 
   // Form setup
-  const form = useForm({
+  const form = useForm<CreateExperimentVisualizationBody>({
     resolver: zodResolver(zCreateExperimentVisualizationBody),
     defaultValues: {
       name: "",
@@ -68,11 +66,15 @@ export default function NewVisualizationForm({
           xAxis: {
             dataSource: { tableName: "", columnName: "" },
             type: "linear" as const,
+            title: "",
           },
           yAxes: [
             {
-              dataSource: { tableName: "", columnName: "" },
+              dataSource: { tableName: "", columnName: "", alias: "" },
               type: "linear" as const,
+              title: "",
+              side: "left" as const,
+              color: "#3b82f6",
             },
           ],
           mode: "lines" as const,
@@ -122,11 +124,15 @@ export default function NewVisualizationForm({
             xAxis: {
               type: "linear",
               dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
             },
             yAxes: [
               {
                 type: "linear",
-                dataSource: { tableName: selectedTableName, columnName: "" },
+                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
+                side: "left",
+                title: "",
+                color: "#3b82f6",
               },
             ],
             mode: "lines",
@@ -148,18 +154,59 @@ export default function NewVisualizationForm({
         });
         break;
 
+      case "scatter":
+        form.setValue("config", {
+          chartType: "scatter",
+          config: {
+            xAxis: {
+              type: "linear",
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
+            },
+            yAxes: [
+              {
+                type: "linear",
+                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
+                side: "left",
+                title: "",
+                color: "#3b82f6",
+              },
+            ],
+            mode: "markers",
+            markerSize: 6,
+            markerShape: "circle",
+            gridLines: "both",
+            display: {
+              title: "",
+              showLegend: true,
+              legendPosition: "right",
+              colorScheme: "default",
+              interactive: true,
+            },
+          },
+        });
+        form.setValue("dataConfig", {
+          tableName: selectedTableName,
+          dataSources: [],
+        });
+        break;
+
       case "bar":
         form.setValue("config", {
           chartType: "bar",
           config: {
             xAxis: {
-              type: "category",
+              type: "category", // Bar charts typically have categorical x-axis
               dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
             },
             yAxes: [
               {
-                type: "linear",
-                dataSource: { tableName: selectedTableName, columnName: "" },
+                type: "linear", // Bar charts typically have linear y-axis
+                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
+                side: "left",
+                title: "",
+                color: "#3b82f6",
               },
             ],
             orientation: "vertical",
@@ -167,6 +214,42 @@ export default function NewVisualizationForm({
             barWidth: 0.7,
             gridLines: "both",
             showValues: false,
+            display: {
+              title: "",
+              showLegend: true,
+              legendPosition: "right",
+              colorScheme: "default",
+              interactive: true,
+            },
+          },
+        });
+        form.setValue("dataConfig", {
+          tableName: selectedTableName,
+          dataSources: [],
+        });
+        break;
+
+      case "area":
+        form.setValue("config", {
+          chartType: "area",
+          config: {
+            xAxis: {
+              type: "linear", // Area charts typically use continuous x-axis (time series, etc.)
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
+            },
+            yAxes: [
+              {
+                type: "linear", // Area charts typically use linear y-axis
+                dataSource: { tableName: selectedTableName, columnName: "" },
+                side: "left",
+                title: "",
+              },
+            ],
+            fillMode: "tozeroy",
+            fillOpacity: 0.6,
+            gridLines: "both",
+            smoothing: 0,
             display: {
               title: "",
               showLegend: true,
@@ -274,6 +357,51 @@ export default function NewVisualizationForm({
             },
             markerShape: "circle",
             opacity: 0.8,
+            gridLines: "both",
+            display: {
+              title: "",
+              showLegend: true,
+              legendPosition: "right",
+              colorScheme: "default",
+              interactive: true,
+            },
+          },
+        });
+        form.setValue("dataConfig", {
+          tableName: selectedTableName,
+          dataSources: [],
+        });
+        break;
+
+      case "box-plot":
+        form.setValue("config", {
+          chartType: "box-plot",
+          config: {
+            yAxes: [
+              {
+                type: "linear",
+                dataSource: { tableName: selectedTableName, columnName: "", alias: "" },
+                side: "left",
+                title: "",
+                color: "#3b82f6",
+              },
+            ],
+            categoryAxis: {
+              type: "category",
+              dataSource: { tableName: selectedTableName, columnName: "" },
+              title: "",
+            },
+            orientation: "v",
+            boxMode: "group",
+            boxPoints: "outliers",
+            notched: false,
+            boxMean: "false",
+            jitter: 0.3,
+            pointPos: 0,
+            notchWidth: 0.25,
+            markerSize: 6,
+            lineWidth: 2,
+            fillOpacity: 0.7,
             gridLines: "both",
             display: {
               title: "",
@@ -646,6 +774,38 @@ export default function NewVisualizationForm({
         break;
 
       default:
+        // For chart types that don't have configurators yet, fall back to line chart config
+        form.setValue("config", {
+          chartType: "line",
+          config: {
+            xAxis: {
+              type: "linear",
+              dataSource: { tableName: selectedTableName, columnName: "" },
+            },
+            yAxes: [
+              {
+                type: "linear",
+                dataSource: { tableName: selectedTableName, columnName: "" },
+                side: "left",
+              },
+            ],
+            mode: "lines",
+            connectGaps: true,
+            smoothing: 0,
+            gridLines: "both",
+            display: {
+              title: "",
+              showLegend: true,
+              legendPosition: "right",
+              colorScheme: "default",
+              interactive: true,
+            },
+          },
+        });
+        form.setValue("dataConfig", {
+          tableName: selectedTableName,
+          dataSources: [],
+        });
         break;
     }
   };
@@ -705,7 +865,7 @@ export default function NewVisualizationForm({
 
         {/* Chart Configuration - using the new modular approach */}
         <ChartConfigurator
-          form={form as unknown as UseFormReturn<ChartFormValues>}
+          form={form}
           tables={sampleTables}
           selectedChartType={selectedChartType}
           onChartTypeSelect={handleChartTypeSelect}
@@ -713,16 +873,16 @@ export default function NewVisualizationForm({
 
         <div className="flex justify-between">
           <Button type="button" variant="outline" onClick={onCancel}>
-            {tCommon("cancel")}
+            {tCommon("common.cancel")}
           </Button>
           <Button type="submit" disabled={isPending || !selectedChartType}>
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {tCommon("creating")}
+                {tCommon("common.creating")}
               </>
             ) : (
-              tCommon("create")
+              tCommon("common.create")
             )}
           </Button>
         </div>

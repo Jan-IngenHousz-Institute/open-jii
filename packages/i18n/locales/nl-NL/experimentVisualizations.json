@@ -36,6 +36,7 @@
     "dot-plot": "Stippeldiagram",
     "bubble": "Bellendiagram",
     "lollipop": "Lollipop-diagram",
+    "boxPlot": "Boxplot",
     "heatmap": "Heatmap",
     "contour": "Contourdiagram",
     "ternary": "Ternair diagram",
