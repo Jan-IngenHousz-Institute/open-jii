@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Calendar, ExternalLink, Navigation2 } from "lucide-react";
+import { MapPin, ExternalLink, Navigation2, Trash2 } from "lucide-react";
 
 interface EnhancedLocationInfo {
   id?: string;
@@ -21,7 +21,9 @@ interface LocationSidebarEntryProps {
   isSelected?: boolean;
   onClick?: () => void;
   onNavigate?: () => void;
+  onRemove?: () => void;
   showDistance?: boolean;
+  selectionMode?: boolean;
 }
 
 const formatDistance = (distance: number): string => {
@@ -42,7 +44,9 @@ export const LocationSidebarEntry = ({
   isSelected = false,
   onClick,
   onNavigate,
+  onRemove,
   showDistance = false,
+  selectionMode = false,
 }: LocationSidebarEntryProps) => {
   const {
     name,
@@ -85,41 +89,51 @@ export const LocationSidebarEntry = ({
             </div>
           </div>
 
-          {/* Address Information */}
-          {(address || fullAddress) && (
-            <div className="mt-2 text-sm text-gray-600">
-              <div className="truncate" title={address || fullAddress}>
-                {address || fullAddress}
+          {/* Location Details */}
+          <div className="mt-2 space-y-1 text-sm text-gray-600">
+            {/* City and Region */}
+            {(municipality || region) && (
+              <div className="truncate">{[municipality, region].filter(Boolean).join(", ")}</div>
+            )}
+
+            {/* Country */}
+            {country && <div className="text-xs text-gray-500">{country}</div>}
+
+            {/* Coordinates, Distance, and Postal Code */}
+            <div className="flex items-center justify-between pt-1 text-xs text-gray-500">
+              <span className="font-mono">{coordinates}</span>
+              <div className="flex items-center gap-2">
+                {showDistance && distance !== undefined && (
+                  <span className="inline-flex items-center gap-1 font-medium">
+                    <Navigation2 className="h-3 w-3" />
+                    {formatDistance(distance)}
+                  </span>
+                )}
+                {postalCode && (
+                  <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-gray-700">
+                    {postalCode}
+                  </span>
+                )}
               </div>
-              {postalCode && <div className="mt-1 text-xs text-gray-500">{postalCode}</div>}
-            </div>
-          )}
-
-          {/* Coordinates */}
-          <div className="mt-2 font-mono text-xs text-gray-500">{coordinates}</div>
-
-          {/* Distance and Last Updated */}
-          <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-            <div className="flex items-center gap-3">
-              {showDistance && distance !== undefined && (
-                <span className="inline-flex items-center gap-1">
-                  <Navigation2 className="h-3 w-3" />
-                  {formatDistance(distance)}
-                </span>
-              )}
-              {lastUpdated && (
-                <span className="inline-flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  {new Date(lastUpdated).toLocaleDateString()}
-                </span>
-              )}
             </div>
           </div>
         </div>
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-2">
-          {onNavigate && (
+          {selectionMode && onRemove && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+              }}
+              className="rounded p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+              title="Remove location"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+          {!selectionMode && onNavigate && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -131,6 +145,7 @@ export const LocationSidebarEntry = ({
               <Navigation2 className="h-4 w-4" />
             </button>
           )}
+          {/* Always show Google Maps link */}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -153,7 +168,9 @@ interface LocationSidebarProps {
   selectedLocation?: EnhancedLocationInfo;
   onLocationSelect?: (location: EnhancedLocationInfo) => void;
   onLocationNavigate?: (location: EnhancedLocationInfo) => void;
+  onLocationRemove?: (location: EnhancedLocationInfo) => void;
   showDistances?: boolean;
+  selectionMode?: boolean;
   className?: string;
 }
 
@@ -162,7 +179,9 @@ export const LocationSidebar = ({
   selectedLocation,
   onLocationSelect,
   onLocationNavigate,
+  onLocationRemove,
   showDistances = false,
+  selectionMode = false,
   className = "",
 }: LocationSidebarProps) => {
   return (
@@ -185,7 +204,9 @@ export const LocationSidebar = ({
             }
             onClick={() => onLocationSelect?.(location)}
             onNavigate={() => onLocationNavigate?.(location)}
+            onRemove={() => onLocationRemove?.(location)}
             showDistance={showDistances}
+            selectionMode={selectionMode}
           />
         ))
       )}

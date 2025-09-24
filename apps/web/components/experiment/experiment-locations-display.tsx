@@ -1,15 +1,12 @@
 import { MapPinIcon } from "lucide-react";
-import dynamic from "next/dynamic";
 import React from "react";
 
 import type { LocationList } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components";
-import type { LocationPoint } from "@repo/ui/components/map";
+import type { LocationPoint } from "@repo/ui/components/enhanced-map";
 
-const Map = dynamic(() => import("@repo/ui/components").then((mod) => ({ default: mod.Map })), {
-  ssr: false,
-});
+import { Map } from "../map";
 
 interface ExperimentLocationsDisplayProps {
   locations: LocationList;
@@ -71,6 +68,11 @@ export function ExperimentLocationsDisplay({
     name: location.name,
     latitude: location.latitude,
     longitude: location.longitude,
+    country: location.country,
+    region: location.region,
+    municipality: location.municipality,
+    postalCode: location.postalCode,
+    address: location.addressLabel,
   }));
 
   // Calculate center point for the map based on all locations
@@ -110,7 +112,7 @@ export function ExperimentLocationsDisplay({
             showZoomControl={true}
             showScale={true}
             showSidebar={true}
-            showLocationSearch={true}
+            showLocationSearch={false}
             showDistances={false}
             sidebarTitle={t("details.locations.locationsTitle")}
             disabled={false}

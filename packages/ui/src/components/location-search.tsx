@@ -17,88 +17,35 @@ interface LocationSearchProps {
   onLocationSelect: (location: LocationSearchResult) => void;
   placeholder?: string;
   className?: string;
-  debounceMs?: number;
   disabled?: boolean;
-  useLocationSearchHook?: (
-    query: string,
-    maxResults?: number,
-    enabled?: boolean,
-  ) => {
-    data?: { body: LocationSearchResult[] };
-    isLoading: boolean;
-    error?: Error;
-  };
+  onSearch?: (query: string) => void;
+  searchResults?: LocationSearchResult[];
+  searchLoading?: boolean;
 }
-
-// Default mock implementation - this should be replaced when the hook is provided
-const defaultLocationSearchHook = (query: string, maxResults?: number, enabled: boolean = true) => {
-  const [data, setData] = useState<{ body: LocationSearchResult[] } | undefined>();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | undefined>();
-
-  useEffect(() => {
-    if (!enabled || query.length < 3) {
-      setData(undefined);
-      setIsLoading(false);
-      setError(undefined);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(undefined);
-
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setData({
-        body: [
-          {
-            label: `${query} - Sample Location`,
-            latitude: 40.7128,
-            longitude: -74.006,
-            country: "United States",
-            region: "New York",
-            municipality: "New York City",
-            postalCode: "10001",
-          },
-        ],
-      });
-      setIsLoading(false);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [query, enabled, maxResults]);
-
-  return { data, isLoading, error };
-};
 
 export const LocationSearch = ({
   onLocationSelect,
   placeholder = "Search for locations...",
   className = "",
-  debounceMs = 300,
   disabled = false,
-  useLocationSearchHook = defaultLocationSearchHook,
+  onSearch,
+  searchResults = [],
+  searchLoading = false,
 }: LocationSearchProps) => {
   const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
-  // Debounce the search query
+  // Call onSearch when query changes
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(query);
-    }, debounceMs);
+    if (onSearch) {
+      onSearch(query);
+    }
+  }, [query, onSearch]);
 
-    return () => clearTimeout(timer);
-  }, [query, debounceMs]);
-
-  const { data, isLoading } = useLocationSearchHook(
-    debouncedQuery,
-    undefined,
-    debouncedQuery.length >= 3,
-  );
-  const results = data?.body ?? [];
+  // Use the provided search results and loading state
+  const results = searchResults;
+  const isLoading = searchLoading;
 
   // Handle location selection
   const handleLocationSelect = useCallback(
