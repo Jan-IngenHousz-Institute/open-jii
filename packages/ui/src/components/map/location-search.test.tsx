@@ -35,28 +35,20 @@ describe("LocationSearch", () => {
 
   it("renders with default placeholder", () => {
     render(<LocationSearch onLocationSelect={mockOnLocationSelect} />);
-    
+
     expect(screen.getByPlaceholderText("Search for locations...")).toBeInTheDocument();
   });
 
   it("renders with custom placeholder", () => {
     render(
-      <LocationSearch
-        onLocationSelect={mockOnLocationSelect}
-        placeholder="Find a place..."
-      />
+      <LocationSearch onLocationSelect={mockOnLocationSelect} placeholder="Find a place..." />,
     );
-    
+
     expect(screen.getByPlaceholderText("Find a place...")).toBeInTheDocument();
   });
 
   it("calls onSearch when typing", async () => {
-    render(
-      <LocationSearch
-        onLocationSelect={mockOnLocationSelect}
-        onSearch={mockOnSearch}
-      />
-    );
+    render(<LocationSearch onLocationSelect={mockOnLocationSelect} onSearch={mockOnSearch} />);
 
     const input = screen.getByPlaceholderText("Search for locations...");
     await user.type(input, "Berlin");
@@ -68,10 +60,7 @@ describe("LocationSearch", () => {
 
   it("shows loading state when searchLoading is true", () => {
     const { container } = render(
-      <LocationSearch
-        onLocationSelect={mockOnLocationSelect}
-        searchLoading={true}
-      />
+      <LocationSearch onLocationSelect={mockOnLocationSelect} searchLoading={true} />,
     );
 
     // Check for loading spinner in the input - should be the first animate-spin element
@@ -82,10 +71,7 @@ describe("LocationSearch", () => {
 
   it("shows search results when query is 3+ characters", async () => {
     render(
-      <LocationSearch
-        onLocationSelect={mockOnLocationSelect}
-        searchResults={mockSearchResults}
-      />
+      <LocationSearch onLocationSelect={mockOnLocationSelect} searchResults={mockSearchResults} />,
     );
 
     const input = screen.getByPlaceholderText("Search for locations...");
@@ -99,10 +85,7 @@ describe("LocationSearch", () => {
 
   it("does not show results dropdown when query is less than 3 characters", async () => {
     render(
-      <LocationSearch
-        onLocationSelect={mockOnLocationSelect}
-        searchResults={mockSearchResults}
-      />
+      <LocationSearch onLocationSelect={mockOnLocationSelect} searchResults={mockSearchResults} />,
     );
 
     const input = screen.getByPlaceholderText("Search for locations...");
@@ -114,10 +97,7 @@ describe("LocationSearch", () => {
 
   it("calls onLocationSelect when a result is clicked", async () => {
     render(
-      <LocationSearch
-        onLocationSelect={mockOnLocationSelect}
-        searchResults={mockSearchResults}
-      />
+      <LocationSearch onLocationSelect={mockOnLocationSelect} searchResults={mockSearchResults} />,
     );
 
     const input = screen.getByPlaceholderText("Search for locations...");
@@ -134,10 +114,7 @@ describe("LocationSearch", () => {
 
   it("updates input value when location is selected", async () => {
     render(
-      <LocationSearch
-        onLocationSelect={mockOnLocationSelect}
-        searchResults={mockSearchResults}
-      />
+      <LocationSearch onLocationSelect={mockOnLocationSelect} searchResults={mockSearchResults} />,
     );
 
     const input = screen.getByPlaceholderText("Search for locations...");
@@ -154,10 +131,7 @@ describe("LocationSearch", () => {
 
   it("supports keyboard navigation", async () => {
     render(
-      <LocationSearch
-        onLocationSelect={mockOnLocationSelect}
-        searchResults={mockSearchResults}
-      />
+      <LocationSearch onLocationSelect={mockOnLocationSelect} searchResults={mockSearchResults} />,
     );
 
     const input = screen.getByPlaceholderText("Search for locations...");
@@ -169,14 +143,14 @@ describe("LocationSearch", () => {
 
     // Arrow down to select first item
     fireEvent.keyDown(input, { key: "ArrowDown" });
-    
+
     // First item should be highlighted
     const firstResult = screen.getByText("Berlin, Germany").closest("button");
     expect(firstResult).toHaveClass("bg-blue-50");
 
     // Arrow down to select second item
     fireEvent.keyDown(input, { key: "ArrowDown" });
-    
+
     // Second item should be highlighted
     const secondResult = screen.getByText("Berlin, NH, USA").closest("button");
     expect(secondResult).toHaveClass("bg-blue-50");
@@ -188,10 +162,7 @@ describe("LocationSearch", () => {
 
   it("selects highlighted item with Enter key", async () => {
     render(
-      <LocationSearch
-        onLocationSelect={mockOnLocationSelect}
-        searchResults={mockSearchResults}
-      />
+      <LocationSearch onLocationSelect={mockOnLocationSelect} searchResults={mockSearchResults} />,
     );
 
     const input = screen.getByPlaceholderText("Search for locations...");
@@ -210,10 +181,7 @@ describe("LocationSearch", () => {
 
   it("closes dropdown with Escape key", async () => {
     render(
-      <LocationSearch
-        onLocationSelect={mockOnLocationSelect}
-        searchResults={mockSearchResults}
-      />
+      <LocationSearch onLocationSelect={mockOnLocationSelect} searchResults={mockSearchResults} />,
     );
 
     const input = screen.getByPlaceholderText("Search for locations...");
@@ -231,12 +199,7 @@ describe("LocationSearch", () => {
   });
 
   it("shows loading state in dropdown", async () => {
-    render(
-      <LocationSearch
-        onLocationSelect={mockOnLocationSelect}
-        searchLoading={true}
-      />
-    );
+    render(<LocationSearch onLocationSelect={mockOnLocationSelect} searchLoading={true} />);
 
     const input = screen.getByPlaceholderText("Search for locations...");
     await user.type(input, "Berlin");
@@ -247,12 +210,7 @@ describe("LocationSearch", () => {
   });
 
   it("shows no results message when no results found", async () => {
-    render(
-      <LocationSearch
-        onLocationSelect={mockOnLocationSelect}
-        searchResults={[]}
-      />
-    );
+    render(<LocationSearch onLocationSelect={mockOnLocationSelect} searchResults={[]} />);
 
     const input = screen.getByPlaceholderText("Search for locations...");
     await user.type(input, "Unknown Place");
@@ -263,12 +221,7 @@ describe("LocationSearch", () => {
   });
 
   it("can be disabled", () => {
-    render(
-      <LocationSearch
-        onLocationSelect={mockOnLocationSelect}
-        disabled={true}
-      />
-    );
+    render(<LocationSearch onLocationSelect={mockOnLocationSelect} disabled={true} />);
 
     const input = screen.getByPlaceholderText("Search for locations...");
     expect(input).toBeDisabled();
@@ -277,10 +230,7 @@ describe("LocationSearch", () => {
 
   it("applies custom className", () => {
     const { container } = render(
-      <LocationSearch
-        onLocationSelect={mockOnLocationSelect}
-        className="custom-class"
-      />
+      <LocationSearch onLocationSelect={mockOnLocationSelect} className="custom-class" />,
     );
 
     // The custom class should be on the outermost div
@@ -290,10 +240,7 @@ describe("LocationSearch", () => {
 
   it("displays location details correctly", async () => {
     render(
-      <LocationSearch
-        onLocationSelect={mockOnLocationSelect}
-        searchResults={mockSearchResults}
-      />
+      <LocationSearch onLocationSelect={mockOnLocationSelect} searchResults={mockSearchResults} />,
     );
 
     const input = screen.getByPlaceholderText("Search for locations...");
@@ -316,10 +263,7 @@ describe("LocationSearch", () => {
 
   it("highlights item on mouse enter", async () => {
     render(
-      <LocationSearch
-        onLocationSelect={mockOnLocationSelect}
-        searchResults={mockSearchResults}
-      />
+      <LocationSearch onLocationSelect={mockOnLocationSelect} searchResults={mockSearchResults} />,
     );
 
     const input = screen.getByPlaceholderText("Search for locations...");
@@ -338,10 +282,7 @@ describe("LocationSearch", () => {
 
   it("closes dropdown on blur with delay", async () => {
     render(
-      <LocationSearch
-        onLocationSelect={mockOnLocationSelect}
-        searchResults={mockSearchResults}
-      />
+      <LocationSearch onLocationSelect={mockOnLocationSelect} searchResults={mockSearchResults} />,
     );
 
     const input = screen.getByPlaceholderText("Search for locations...");
@@ -357,8 +298,11 @@ describe("LocationSearch", () => {
     expect(screen.getByText("Berlin, Germany")).toBeInTheDocument();
 
     // Should close after delay
-    await waitFor(() => {
-      expect(screen.queryByText("Berlin, Germany")).not.toBeInTheDocument();
-    }, { timeout: 300 });
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Berlin, Germany")).not.toBeInTheDocument();
+      },
+      { timeout: 300 },
+    );
   });
 });

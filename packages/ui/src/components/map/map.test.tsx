@@ -1,7 +1,9 @@
-import React from "react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import React from "react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+import { Map, LocationPoint, MapProps } from "./map";
 
 // Mock Leaflet and related dependencies - must be hoisted
 const mockLeaflet = vi.hoisted(() => ({
@@ -13,8 +15,6 @@ const mockLeaflet = vi.hoisted(() => ({
 
 vi.mock("leaflet", () => mockLeaflet);
 vi.mock("leaflet/dist/leaflet.css", () => ({}));
-
-import { Map, LocationPoint, MapProps } from "./map";
 
 // Mock react-leaflet components
 vi.mock("react-leaflet", () => ({
@@ -205,9 +205,7 @@ describe("Map Component", () => {
     });
 
     it("should render with custom height and className", () => {
-      const { container } = render(
-        <Map height="500px" className="custom-map-class" />,
-      );
+      const { container } = render(<Map height="500px" className="custom-map-class" />);
 
       const mapWrapper = container.querySelector(".custom-map-class");
       expect(mapWrapper).toBeInTheDocument();
@@ -298,14 +296,12 @@ describe("Map Component", () => {
 
     it("should handle map clicks in selection mode", async () => {
       const mockOnLocationsChange = vi.fn();
-      render(
-        <Map {...defaultProps} selectionMode onLocationsChange={mockOnLocationsChange} />,
-      );
+      render(<Map {...defaultProps} selectionMode onLocationsChange={mockOnLocationsChange} />);
 
       // Simulate map click through the stored handler
       const mockEvent = { latlng: { lat: 41.0, lng: -74.0 } };
       const clickHandler = (globalThis as any).__mapClickHandler;
-      
+
       if (clickHandler) {
         await clickHandler(mockEvent);
 
@@ -345,7 +341,7 @@ describe("Map Component", () => {
 
       const mockEvent = { latlng: { lat: 41.0, lng: -74.0 } };
       const clickHandler = (globalThis as any).__mapClickHandler;
-      
+
       if (clickHandler) {
         await clickHandler(mockEvent);
 
@@ -369,20 +365,15 @@ describe("Map Component", () => {
     it("should not handle map clicks when disabled", async () => {
       const mockOnLocationsChange = vi.fn();
       render(
-        <Map
-          {...defaultProps}
-          selectionMode
-          disabled
-          onLocationsChange={mockOnLocationsChange}
-        />,
+        <Map {...defaultProps} selectionMode disabled onLocationsChange={mockOnLocationsChange} />,
       );
 
       const mockEvent = { latlng: { lat: 41.0, lng: -74.0 } };
       const clickHandler = (globalThis as any).__mapClickHandler;
-      
+
       if (clickHandler) {
         await clickHandler(mockEvent);
-        
+
         // Should not be called when disabled
         expect(mockOnLocationsChange).not.toHaveBeenCalled();
       }
@@ -422,12 +413,7 @@ describe("Map Component", () => {
       ];
 
       render(
-        <Map
-          {...defaultProps}
-          showLocationSearch
-          searchResults={searchResults}
-          searchLoading
-        />,
+        <Map {...defaultProps} showLocationSearch searchResults={searchResults} searchLoading />,
       );
 
       const locationSearch = screen.getByTestId("location-search");
@@ -577,14 +563,7 @@ describe("Map Component", () => {
 
   describe("Distance Calculations", () => {
     it("should calculate and display distances when enabled", () => {
-      render(
-        <Map
-          {...defaultProps}
-          showSidebar
-          showDistances
-          referencePoint={[40.0, -74.0]}
-        />,
-      );
+      render(<Map {...defaultProps} showSidebar showDistances referencePoint={[40.0, -74.0]} />);
 
       expect(screen.getByTestId("distance-loc-1")).toBeInTheDocument();
       expect(screen.getByTestId("distance-loc-2")).toBeInTheDocument();
@@ -706,38 +685,39 @@ describe("Map Component", () => {
       expect(screen.queryByTestId("marker")).not.toBeInTheDocument();
     });
 
-  it("should handle onLocationAdd rejection gracefully", async () => {
-    // Mock console.error to suppress error logs
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    
-    const mockOnLocationAdd = vi.fn().mockRejectedValue(new Error("Geocoding failed"));
-    const mockOnLocationsChange = vi.fn();
+    it("should handle onLocationAdd rejection gracefully", async () => {
+      // Mock console.error to suppress error logs
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    render(
-      <Map
-        {...defaultProps}
-        selectionMode
-        onLocationAdd={mockOnLocationAdd}
-        onLocationsChange={mockOnLocationsChange}
-      />,
-    );
+      const mockOnLocationAdd = vi.fn().mockRejectedValue(new Error("Geocoding failed"));
+      const mockOnLocationsChange = vi.fn();
 
-    const mockEvent = { latlng: { lat: 41.0, lng: -74.0 } };
-    const clickHandler = (globalThis as any).__mapClickHandler;
-    
-    if (clickHandler) {
-      // Call the click handler and wait for async operation to complete
-      await clickHandler(mockEvent);
+      render(
+        <Map
+          {...defaultProps}
+          selectionMode
+          onLocationAdd={mockOnLocationAdd}
+          onLocationsChange={mockOnLocationsChange}
+        />,
+      );
 
-      expect(mockOnLocationAdd).toHaveBeenCalledWith(41.0, -74.0);
-      // Should not update locations on error
-      expect(mockOnLocationsChange).not.toHaveBeenCalled();
-      // Should log the error
-      expect(consoleSpy).toHaveBeenCalledWith("Failed to add location:", expect.any(Error));
-    }
-    
-    consoleSpy.mockRestore();
-  });    it("should handle onLocationAdd returning void", async () => {
+      const mockEvent = { latlng: { lat: 41.0, lng: -74.0 } };
+      const clickHandler = (globalThis as any).__mapClickHandler;
+
+      if (clickHandler) {
+        // Call the click handler and wait for async operation to complete
+        await clickHandler(mockEvent);
+
+        expect(mockOnLocationAdd).toHaveBeenCalledWith(41.0, -74.0);
+        // Should not update locations on error
+        expect(mockOnLocationsChange).not.toHaveBeenCalled();
+        // Should log the error
+        expect(consoleSpy).toHaveBeenCalledWith("Failed to add location:", expect.any(Error));
+      }
+
+      consoleSpy.mockRestore();
+    });
+    it("should handle onLocationAdd returning void", async () => {
       const mockOnLocationAdd = vi.fn().mockResolvedValue(undefined);
       const mockOnLocationsChange = vi.fn();
 
@@ -752,7 +732,7 @@ describe("Map Component", () => {
 
       const mockEvent = { latlng: { lat: 41.0, lng: -74.0 } };
       const clickHandler = (globalThis as any).__mapClickHandler;
-      
+
       if (clickHandler) {
         await clickHandler(mockEvent);
 
@@ -771,12 +751,12 @@ describe("Map Component", () => {
     });
 
     it("should have proper button roles for location actions", () => {
-    render(<Map {...defaultProps} showSidebar selectionMode />);
+      render(<Map {...defaultProps} showSidebar selectionMode />);
 
-    // Check that buttons exist and are clickable
-    expect(screen.getByTestId("select-location-loc-1")).toBeInTheDocument();
-    expect(screen.getByTestId("navigate-location-loc-1")).toBeInTheDocument();
-    expect(screen.getByTestId("remove-location-loc-1")).toBeInTheDocument();
-  });
+      // Check that buttons exist and are clickable
+      expect(screen.getByTestId("select-location-loc-1")).toBeInTheDocument();
+      expect(screen.getByTestId("navigate-location-loc-1")).toBeInTheDocument();
+      expect(screen.getByTestId("remove-location-loc-1")).toBeInTheDocument();
+    });
   });
 });

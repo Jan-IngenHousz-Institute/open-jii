@@ -542,9 +542,7 @@ describe("ExperimentLocationManagement", () => {
 
       // When there are no locations, the count section should not be displayed at all
       expect(screen.queryByText(/Editing 0 locations/)).not.toBeInTheDocument();
-      expect(
-        screen.queryByText(/settings.locations.editingCount/),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/settings.locations.editingCount/)).not.toBeInTheDocument();
     });
   });
 
@@ -630,9 +628,7 @@ describe("ExperimentLocationManagement", () => {
       expect(screen.getByText("settings.locations.description")).toBeInTheDocument();
       // Use getAllByText for duplicate text that appears in multiple places
       expect(screen.getAllByText("settings.locations.editMode")).toHaveLength(2);
-      expect(
-        screen.getByText("settings.locations.editModeDescription"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("settings.locations.editModeDescription")).toBeInTheDocument();
       expect(screen.getByText("common.cancel")).toBeInTheDocument();
       expect(screen.getByText("common.save")).toBeInTheDocument();
     });
