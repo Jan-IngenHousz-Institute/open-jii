@@ -42,8 +42,7 @@ export async function TermsAndConditionsDialog({ locale }: TermsAndConditionsDia
         />
       ),
     };
-  } catch (error) {
-    console.error("Failed to fetch terms and conditions:", error);
+  } catch {
     return {
       title: t("registration.termsAndConditions"),
       content: (

@@ -171,5 +171,7 @@ function ProviderImage({ id }: { id: string }) {
           />
         </svg>
       );
+    default:
+      return null;
   }
 }
