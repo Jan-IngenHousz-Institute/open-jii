@@ -9,7 +9,7 @@ import type { Session } from "@repo/auth/types";
 import type { Locale } from "@repo/i18n";
 
 // ---- SUT ----
-import { UnifiedNavbar } from "../unified-navbar";
+import { UnifiedNavbar } from "./unified-navbar";
 
 globalThis.React = React;
 

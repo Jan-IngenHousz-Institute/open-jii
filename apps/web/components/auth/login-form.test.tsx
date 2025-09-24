@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { Locale } from "@repo/i18n";
 
-import { LoginForm } from "../login-form";
+import { LoginForm } from "../auth/login-form";
 
 globalThis.React = React;
 

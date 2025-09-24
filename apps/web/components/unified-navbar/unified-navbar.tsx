@@ -22,8 +22,8 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui/components";
 
-import { handleLogout } from "../app/actions/auth";
-import { useGetUserProfile } from "../hooks/profile/useGetUserProfile/useGetUserProfile";
+import { handleLogout } from "../../app/actions/auth";
+import { useGetUserProfile } from "../../hooks/profile/useGetUserProfile/useGetUserProfile";
 
 interface UnifiedNavbarProps {
   locale: Locale;
