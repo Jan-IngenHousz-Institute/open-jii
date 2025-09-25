@@ -90,7 +90,7 @@ export class GetExperimentDataUseCase {
         const { page = 1, pageSize = 5, tableName, columns } = query;
 
         let fetchMode: "paginated" | "sampling" | "full-columns";
-        if (tableName && columns) {
+        if (tableName && columns && columns.length > 0) {
           fetchMode = "full-columns"; // Specific columns from a table, full data
         } else if (tableName) {
           fetchMode = "paginated"; // Single table with pagination
@@ -99,12 +99,12 @@ export class GetExperimentDataUseCase {
         }
 
         // Form the schema name based on experiment ID and name
-        const schemaName = `exp_predemo_24092025_433f6a3e-2781-47fe-a272-9a7faaf73621`;
+        const schemaName = `exp_${experiment.name}_${experimentId}`;
 
         this.logger.debug(
           `Fetching data for experiment ${experimentId} in ${fetchMode} mode${
             tableName ? ` (table: ${tableName})` : ""
-          }${columns && columns.length > 0 ? ` (columns: ${columns})` : ""}`,
+          }${columns && columns.length > 0 ? ` (columns: ${columns.join(", ")})` : ""}`,
         );
 
         switch (fetchMode) {
@@ -145,7 +145,7 @@ export class GetExperimentDataUseCase {
    */
   private async fetchSpecificColumns(
     tableName: string,
-    columns: string,
+    columns: string[],
     schemaName: string,
     experiment: ExperimentDto,
     experimentId: string,
@@ -157,10 +157,7 @@ export class GetExperimentDataUseCase {
     }
 
     // Build SQL query with specific columns
-    const columnList = columns
-      .split(",")
-      .map((col) => `\`${col.trim()}\``)
-      .join(", ");
+    const columnList = columns.map((col) => `\`${col}\``).join(", ");
     const sqlQuery = `SELECT ${columnList} FROM ${tableName}`;
 
     this.logger.debug(`Executing SQL query: ${sqlQuery}`);

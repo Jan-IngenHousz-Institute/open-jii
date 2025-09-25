@@ -124,8 +124,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     }
 
     // Check if columns exist in the table by querying the table schema
-    // const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
-    const schemaName = `exp_predemo_24092025_433f6a3e-2781-47fe-a272-9a7faaf73621`;
+    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+    const schemaName = `exp_${cleanName}_${experimentId}`;
     const schemaQuery = `DESCRIBE ${dataConfig.tableName}`;
 
     this.logger.debug(`Executing schema query: ${schemaQuery} in schema: ${schemaName}`);
