@@ -1,23 +1,50 @@
 import React from "react";
+import { useAsync } from "react-async-hook";
 import { View, Text, StyleSheet } from "react-native";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
+import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
 import { useTheme } from "~/hooks/use-theme";
+import { useScannerCommandExecutor } from "~/services/scan-manager/scan-manager";
 import type { Device } from "~/types/device";
+import { delay } from "~/utils/delay";
 
 interface Props {
   device: Device;
   onDisconnect?: (device: Device) => void | Promise<void>;
 }
 
+const dummyProtocol = [
+  {
+    _protocol_set_: [
+      {
+        label: "spad",
+        spad: [[2, 3, 6], [-1]],
+        protocol_repeats: 1,
+      },
+    ],
+  },
+];
+
 export function ConnectedDevice(props: Props) {
   const { device, onDisconnect } = props;
   const theme = useTheme();
   const { colors, isDark } = theme;
+  const { executeCommand } = useScannerCommandExecutor();
+  const { setBatteryLevel } = useDeviceConnectionStore();
+
+  useAsync(async () => {
+    await delay(1000);
+    const response = await executeCommand(dummyProtocol);
+    if (!response) {
+      return;
+    }
+    setBatteryLevel((response as any).device_batery);
+  }, []);
 
   const onSurface = isDark ? colors.dark.onSurface : colors.light.onSurface;
   const surface = isDark ? colors.dark.surface : colors.light.surface;
-  const accent = isDark ? colors.dark.primary : colors.light.primary;
+  const accent = isDark ? colors.primary.bright : colors.primary.dark;
 
   return (
     <Card style={[styles.card, { backgroundColor: surface }]}>
