@@ -1,7 +1,9 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 import { ParsedTableData, formatCellValue, getTableSummary } from "~/utils/parse-experiment-data";
+
+import { TableDetailModal } from "./table-detail-modal";
 
 interface DataTableProps {
   table: ParsedTableData;
@@ -10,6 +12,7 @@ interface DataTableProps {
 export function DataTable({ table }: DataTableProps) {
   const theme = useTheme();
   const { colors } = theme;
+  const [modalVisible, setModalVisible] = useState(false);
 
   function renderCell(value: any, column: ParsedTableData["columns"][0]) {
     const formattedValue = formatCellValue(value, column.isArray, column.isObject);
@@ -29,83 +32,93 @@ export function DataTable({ table }: DataTableProps) {
   }
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface },
-      ]}
-    >
-      <View style={styles.header}>
-        <Text
-          style={[
-            styles.tableTitle,
-            { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
-          ]}
-        >
-          {table.displayName}
-        </Text>
-        <Text
-          style={[
-            styles.tableSummary,
-            { color: theme.isDark ? colors.dark.inactive : colors.light.inactive },
-          ]}
-        >
-          {getTableSummary(table)}
-        </Text>
-      </View>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={styles.table}>
-          {/* Header Row */}
-          <View
+    <>
+      <TouchableOpacity
+        style={[
+          styles.container,
+          { backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface },
+        ]}
+        onPress={() => setModalVisible(true)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.header}>
+          <Text
             style={[
-              styles.headerRow,
-              { borderBottomColor: theme.isDark ? colors.dark.border : colors.light.border },
+              styles.tableTitle,
+              { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
             ]}
           >
-            {table.columns.map((column) => (
-              <View key={column.name} style={styles.headerCell}>
-                <Text
-                  style={[
-                    styles.headerText,
-                    { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
-                  ]}
-                >
-                  {column.displayName}
-                </Text>
-                {column.isArray && (
-                  <Text style={[styles.typeIndicator, { color: colors.primary.dark }]}>
-                    [Array]
-                  </Text>
-                )}
-                {column.isObject && (
-                  <Text style={[styles.typeIndicator, { color: colors.primary.dark }]}>
-                    [Object]
-                  </Text>
-                )}
-              </View>
-            ))}
-          </View>
+            {table.displayName}
+          </Text>
+          <Text
+            style={[
+              styles.tableSummary,
+              { color: theme.isDark ? colors.dark.inactive : colors.light.inactive },
+            ]}
+          >
+            {getTableSummary(table)}
+          </Text>
+        </View>
 
-          {/* Data Rows */}
-          {table.rows.map((row, rowIndex) => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={styles.table}>
+            {/* Header Row */}
             <View
-              key={rowIndex}
               style={[
-                styles.dataRow,
+                styles.headerRow,
                 { borderBottomColor: theme.isDark ? colors.dark.border : colors.light.border },
               ]}
             >
               {table.columns.map((column) => (
-                <View key={column.name} style={styles.cellContainer}>
-                  {renderCell(row[column.name], column)}
+                <View key={column.name} style={styles.headerCell}>
+                  <Text
+                    style={[
+                      styles.headerText,
+                      { color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface },
+                    ]}
+                  >
+                    {column.displayName}
+                  </Text>
+                  {column.isArray && (
+                    <Text style={[styles.typeIndicator, { color: colors.primary.dark }]}>
+                      [Array]
+                    </Text>
+                  )}
+                  {column.isObject && (
+                    <Text style={[styles.typeIndicator, { color: colors.primary.dark }]}>
+                      [Object]
+                    </Text>
+                  )}
                 </View>
               ))}
             </View>
-          ))}
-        </View>
-      </ScrollView>
-    </View>
+
+            {/* Data Rows */}
+            {table.rows.map((row, rowIndex) => (
+              <View
+                key={rowIndex}
+                style={[
+                  styles.dataRow,
+                  { borderBottomColor: theme.isDark ? colors.dark.border : colors.light.border },
+                ]}
+              >
+                {table.columns.map((column) => (
+                  <View key={column.name} style={styles.cellContainer}>
+                    {renderCell(row[column.name], column)}
+                  </View>
+                ))}
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      </TouchableOpacity>
+
+      <TableDetailModal
+        visible={modalVisible}
+        table={table}
+        onClose={() => setModalVisible(false)}
+      />
+    </>
   );
 }
 
