@@ -107,7 +107,7 @@ export default function EditVisualizationForm({
         body: updatedData,
       });
     },
-    (errors) => {
+    () => {
       // Show a toast with validation error info
       toast({
         description:

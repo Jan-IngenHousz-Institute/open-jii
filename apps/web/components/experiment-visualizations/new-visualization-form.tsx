@@ -950,7 +950,7 @@ export default function NewVisualizationForm({
           <Button type="button" variant="outline" onClick={onCancel}>
             {tCommon("common.cancel")}
           </Button>
-          <Button type="submit" disabled={isPending ?? !selectedChartType}>
+          <Button type="submit" disabled={isPending}>
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
