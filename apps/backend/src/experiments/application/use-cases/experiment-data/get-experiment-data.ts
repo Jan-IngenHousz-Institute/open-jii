@@ -99,7 +99,8 @@ export class GetExperimentDataUseCase {
         }
 
         // Form the schema name based on experiment ID and name
-        const schemaName = `exp_${experiment.name}_${experimentId}`;
+        const cleanName = experiment.name.toLowerCase().trim().replace(/ /g, "_");
+        const schemaName = `exp_${cleanName}_${experimentId}`;
 
         this.logger.debug(
           `Fetching data for experiment ${experimentId} in ${fetchMode} mode${

@@ -119,7 +119,6 @@ export default function NewVisualizationForm({
     (data) => {
       // Explicitly collect all data sources before submission
       const allDataSources = collectAllDataSources();
-      console.log("All collected data sources before submission:", allDataSources);
 
       const cleanedData = {
         ...data,
@@ -134,10 +133,7 @@ export default function NewVisualizationForm({
         body: cleanedData,
       });
     },
-    (errors) => {
-      console.log("=== FORM VALIDATION ERRORS ===");
-      console.log("Errors:", errors);
-
+    (_errors) => {
       // Show a toast with validation error info
       toast({
         description:
@@ -950,45 +946,11 @@ export default function NewVisualizationForm({
           onChartTypeSelect={handleChartTypeSelect}
         />
 
-        {/* Add debugging to monitor form changes */}
-        <div className="hidden">
-          {JSON.stringify(form.watch("dataConfig.dataSources"), null, 2)}
-        </div>
-
-        {/* Debug info for current form state */}
-        <Card className="border-yellow-200 bg-yellow-50">
-          <CardHeader>
-            <CardTitle className="text-sm text-yellow-800">Debug Info</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 text-xs text-yellow-700">
-              <div>
-                <strong>Selected Chart Type:</strong> {selectedChartType ?? "None"}
-              </div>
-              <div>
-                <strong>Form Valid:</strong> {form.formState.isValid ? "Yes" : "No"}
-              </div>
-              <div>
-                <strong>Data Sources:</strong>
-              </div>
-              <pre className="max-h-32 overflow-auto rounded bg-blue-100 p-2 text-xs">
-                {JSON.stringify(form.watch("dataConfig.dataSources"), null, 2)}
-              </pre>
-              <div>
-                <strong>Form Errors:</strong>
-              </div>
-              <pre className="max-h-32 overflow-auto rounded bg-yellow-100 p-2 text-xs">
-                {JSON.stringify(form.formState.errors, null, 2)}
-              </pre>
-            </div>
-          </CardContent>
-        </Card>
-
         <div className="flex justify-between">
           <Button type="button" variant="outline" onClick={onCancel}>
             {tCommon("common.cancel")}
           </Button>
-          <Button type="submit" disabled={isPending || !selectedChartType}>
+          <Button type="submit" disabled={isPending ?? !selectedChartType}>
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

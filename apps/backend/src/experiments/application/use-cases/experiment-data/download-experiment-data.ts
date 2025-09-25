@@ -66,7 +66,9 @@ export class DownloadExperimentDataUseCase {
         this.logger.warn(`Access denied for user ${userId} to experiment ${experimentId}`);
         return failure(AppError.forbidden("Access denied to this experiment"));
       }
-      const schemaName = `exp_${experiment.name}_${experiment.id}`;
+
+      const cleanName = experiment.name.toLowerCase().trim().replace(/ /g, "_");
+      const schemaName = `exp_${cleanName}_${experiment.id}`;
 
       this.logger.debug(`Using schema: ${schemaName} for data download`);
 
