@@ -89,7 +89,6 @@ export function ConnectionSetup() {
         onDelete={(device) => unpairDevice(device)}
         onConnect={async (device) => {
           try {
-            console.log("device", device);
             await connectToDevice(device);
           } catch {
             showToast("Could not connect", "error");

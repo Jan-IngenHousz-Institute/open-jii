@@ -62,7 +62,5 @@ export async function openSerialPortConnection(deviceId: number) {
     await usbSerialPort.send(toHex(data));
   });
 
-  console.log("got usb serial port", usbSerialPort);
-
   return emitter;
 }
