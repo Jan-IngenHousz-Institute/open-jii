@@ -112,12 +112,10 @@ export default function ExperimentVisualizationsList({
         </div>
         <div className="mt-8">
           <Button
-            onClick={() =>
-              router.push(`/platform/experiments/${experimentId}/visualizations/create`)
-            }
+            onClick={() => router.push(`/platform/experiments/${experimentId}/visualizations/new`)}
             className="font-medium"
           >
-            Create Your First Visualization
+            {t("createFirstVisualization")}
           </Button>
         </div>
       </div>

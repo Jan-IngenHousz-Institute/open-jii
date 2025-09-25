@@ -1,0 +1,2 @@
+ALTER TABLE "experiment_locations" ADD COLUMN "created_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL;--> statement-breakpoint
+ALTER TABLE "experiment_locations" ADD COLUMN "updated_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL;
