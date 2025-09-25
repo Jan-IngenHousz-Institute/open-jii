@@ -399,8 +399,8 @@ export const zLineChartConfig = z.object({
 export const zScatterChartConfig = z.object({
   xAxis: zAxisConfig,
   yAxes: z.array(zAxisConfig).min(1),
-  // Optional color axis for color dimension mapping
-  colorAxis: zAxisConfig.optional(),
+  // Optional color axis for color dimension mapping - can be completely undefined
+  colorAxis: zAxisConfig.optional().nullable(),
   // Scatter-specific options
   mode: z.enum(["markers", "lines+markers"]).default("markers"),
   markerSize: z.number().min(1).max(20).default(6),

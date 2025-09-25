@@ -30,7 +30,9 @@ import {
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-import ChartConfigurator from "./chart-configurators/chart-configurator";
+import ChartConfigurator, {
+  collectAllChartDataSources,
+} from "./chart-configurators/chart-configurator";
 import type { ChartFormValues } from "./chart-configurators/types";
 
 interface EditVisualizationFormProps {
@@ -78,15 +80,32 @@ export default function EditVisualizationForm({
     },
   });
 
+  // Use the imported collectAllChartDataSources function
+  const collectAllDataSources = () => {
+    return collectAllChartDataSources(form);
+  };
+
   // Handle form submission
   const onSubmit = form.handleSubmit(
     (data) => {
+      // Explicitly collect all data sources before submission
+      const allDataSources = collectAllDataSources();
+      console.log("All collected data sources before submission:", allDataSources);
+
+      const updatedData = {
+        ...data,
+        dataConfig: {
+          ...data.dataConfig,
+          dataSources: allDataSources,
+        },
+      };
+
       updateVisualization({
         params: {
           id: experimentId,
           visualizationId: visualization.id,
         },
-        body: data,
+        body: updatedData,
       });
     },
     (errors) => {
@@ -169,11 +188,11 @@ export default function EditVisualizationForm({
                 color: "#3b82f6",
               },
             ],
-            colorAxis: undefined,
+            colorAxis: null,
             mode: "markers",
             markerSize: 6,
             markerShape: "circle",
-            colorScale: "viridis",
+            colorScale: "Viridis",
             showColorBar: true,
             gridLines: "both",
             display: {
@@ -506,7 +525,7 @@ export default function EditVisualizationForm({
               dataSource: { tableName: selectedTableName, columnName: "" },
               title: "",
             },
-            colorscale: "viridis",
+            colorscale: "Viridis",
             showScale: true,
             showText: false,
             connectGaps: true,
@@ -550,7 +569,7 @@ export default function EditVisualizationForm({
               dataSource: { tableName: selectedTableName, columnName: "" },
               title: "",
             },
-            colorscale: "viridis",
+            colorscale: "Viridis",
             showScale: true,
             colorbarTitle: "",
             contours: {
@@ -659,7 +678,7 @@ export default function EditVisualizationForm({
                 alias: "",
               },
             ],
-            colorscale: "viridis",
+            colorscale: "Viridis",
             showValues: true,
             showScale: true,
             colorbarTitle: "",
@@ -696,7 +715,7 @@ export default function EditVisualizationForm({
             ],
             line: {
               color: "#3b82f6",
-              colorscale: "viridis",
+              colorscale: "Viridis",
               width: 1,
               opacity: 1,
               showscale: true,
@@ -905,7 +924,7 @@ export default function EditVisualizationForm({
           <Button type="button" variant="outline" onClick={onCancel}>
             {tCommon("cancel")}
           </Button>
-          <Button type="submit" disabled={isPending || !selectedChartType}>
+          <Button type="submit" disabled={isPending ?? !selectedChartType}>
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

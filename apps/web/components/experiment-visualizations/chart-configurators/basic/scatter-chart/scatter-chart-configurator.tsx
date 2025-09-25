@@ -33,7 +33,7 @@ import type { ChartFormValues, SampleTable } from "../../types";
 interface ScatterChartConfiguratorProps {
   form: UseFormReturn<ChartFormValues>;
   table: SampleTable;
-  onColumnSelect: (columnType: "x" | "y" | "color", columnName: string) => void;
+  onColumnSelect: (columnType: string, columnName: string) => void;
 }
 
 export default function ScatterChartConfigurator({
@@ -254,7 +254,7 @@ export default function ScatterChartConfigurator({
                               value={field.value}
                               onValueChange={(value) => {
                                 field.onChange(value);
-                                onColumnSelect("y", value);
+                                onColumnSelect(`y-${index}`, value);
                               }}
                             >
                               <FormControl>
@@ -415,18 +415,18 @@ export default function ScatterChartConfigurator({
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <FormField
                 control={form.control}
-                name="config.config.colorAxis.dataSource.columnName"
+                name="config.config.colorAxis"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium">
                       {t("configuration.colorColumn")}
                     </FormLabel>
                     <Select
-                      value={field.value || "none"}
+                      value={field.value?.dataSource.columnName ?? "none"}
                       onValueChange={(value) => {
                         if (value === "none") {
                           // Clear the color axis when "None" is selected
-                          form.setValue("config.config.colorAxis", undefined);
+                          form.setValue("config.config.colorAxis", null);
                         } else {
                           // Set up the color axis configuration
                           form.setValue("config.config.colorAxis", {
@@ -453,7 +453,7 @@ export default function ScatterChartConfigurator({
                             {t("configuration.noColorMapping")}
                           </span>
                         </SelectItem>
-                        {table.columns.map((column: DataColumn) => (
+                        {table.columns.map((column) => (
                           <SelectItem key={column.name} value={column.name}>
                             <div className="flex items-center gap-2">
                               <span>{column.name}</span>
@@ -471,236 +471,234 @@ export default function ScatterChartConfigurator({
               />
 
               {/* Color Scale Selection - only show when colorAxis is configured */}
-              {form.watch("config.config.colorAxis.dataSource.columnName") &&
-                form.watch("config.config.colorAxis.dataSource.columnName") !== "none" && (
-                  <FormField
-                    control={form.control}
-                    name="config.config.colorScale"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium">
-                          {t("configuration.colorScale")}
-                        </FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger className="h-10 bg-white">
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Viridis">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="h-4 w-8 rounded border"
-                                  style={{
-                                    background: getColorscaleGradient("Viridis"),
-                                  }}
-                                />
-                                {t("colorscales.viridis")}
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Plasma">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="h-4 w-8 rounded border"
-                                  style={{
-                                    background: getColorscaleGradient("Plasma"),
-                                  }}
-                                />
-                                {t("colorscales.plasma")}
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Inferno">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="h-4 w-8 rounded border"
-                                  style={{
-                                    background: getColorscaleGradient("Inferno"),
-                                  }}
-                                />
-                                {t("colorscales.inferno")}
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Magma">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="h-4 w-8 rounded border"
-                                  style={{
-                                    background: getColorscaleGradient("Magma"),
-                                  }}
-                                />
-                                {t("colorscales.magma")}
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Cividis">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="h-4 w-8 rounded border"
-                                  style={{
-                                    background: getColorscaleGradient("Cividis"),
-                                  }}
-                                />
-                                {t("colorscales.cividis")}
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Blues">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="h-4 w-8 rounded border"
-                                  style={{
-                                    background: getColorscaleGradient("Blues"),
-                                  }}
-                                />
-                                {t("colorscales.blues")}
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Greens">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="h-4 w-8 rounded border"
-                                  style={{
-                                    background: getColorscaleGradient("Greens"),
-                                  }}
-                                />
-                                {t("colorscales.greens")}
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Reds">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="h-4 w-8 rounded border"
-                                  style={{
-                                    background: getColorscaleGradient("Reds"),
-                                  }}
-                                />
-                                {t("colorscales.reds")}
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Oranges">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="h-4 w-8 rounded border"
-                                  style={{
-                                    background: getColorscaleGradient("Oranges"),
-                                  }}
-                                />
-                                {t("colorscales.oranges")}
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Purples">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="h-4 w-8 rounded border"
-                                  style={{
-                                    background: getColorscaleGradient("Purples"),
-                                  }}
-                                />
-                                {t("colorscales.purples")}
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Greys">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="h-4 w-8 rounded border"
-                                  style={{
-                                    background: getColorscaleGradient("Greys"),
-                                  }}
-                                />
-                                {t("colorscales.greys")}
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Hot">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="h-4 w-8 rounded border"
-                                  style={{
-                                    background: getColorscaleGradient("Hot"),
-                                  }}
-                                />
-                                {t("colorscales.hot")}
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Cool">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="h-4 w-8 rounded border"
-                                  style={{
-                                    background: getColorscaleGradient("Cool"),
-                                  }}
-                                />
-                                {t("colorscales.cool")}
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Rainbow">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="h-4 w-8 rounded border"
-                                  style={{
-                                    background: getColorscaleGradient("Rainbow"),
-                                  }}
-                                />
-                                {t("colorscales.rainbow")}
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="Jet">
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className="h-4 w-8 rounded border"
-                                  style={{
-                                    background: getColorscaleGradient("Jet"),
-                                  }}
-                                />
-                                {t("colorscales.jet")}
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
+              {form.watch("config.config.colorAxis")?.dataSource?.columnName && (
+                <FormField
+                  control={form.control}
+                  name="config.config.colorScale"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">
+                        {t("configuration.colorScale")}
+                      </FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className="h-10 bg-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Viridis">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="h-4 w-8 rounded border"
+                                style={{
+                                  background: getColorscaleGradient("Viridis"),
+                                }}
+                              />
+                              {t("colorscales.viridis")}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Plasma">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="h-4 w-8 rounded border"
+                                style={{
+                                  background: getColorscaleGradient("Plasma"),
+                                }}
+                              />
+                              {t("colorscales.plasma")}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Inferno">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="h-4 w-8 rounded border"
+                                style={{
+                                  background: getColorscaleGradient("Inferno"),
+                                }}
+                              />
+                              {t("colorscales.inferno")}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Magma">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="h-4 w-8 rounded border"
+                                style={{
+                                  background: getColorscaleGradient("Magma"),
+                                }}
+                              />
+                              {t("colorscales.magma")}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Cividis">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="h-4 w-8 rounded border"
+                                style={{
+                                  background: getColorscaleGradient("Cividis"),
+                                }}
+                              />
+                              {t("colorscales.cividis")}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Blues">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="h-4 w-8 rounded border"
+                                style={{
+                                  background: getColorscaleGradient("Blues"),
+                                }}
+                              />
+                              {t("colorscales.blues")}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Greens">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="h-4 w-8 rounded border"
+                                style={{
+                                  background: getColorscaleGradient("Greens"),
+                                }}
+                              />
+                              {t("colorscales.greens")}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Reds">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="h-4 w-8 rounded border"
+                                style={{
+                                  background: getColorscaleGradient("Reds"),
+                                }}
+                              />
+                              {t("colorscales.reds")}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Oranges">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="h-4 w-8 rounded border"
+                                style={{
+                                  background: getColorscaleGradient("Oranges"),
+                                }}
+                              />
+                              {t("colorscales.oranges")}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Purples">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="h-4 w-8 rounded border"
+                                style={{
+                                  background: getColorscaleGradient("Purples"),
+                                }}
+                              />
+                              {t("colorscales.purples")}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Greys">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="h-4 w-8 rounded border"
+                                style={{
+                                  background: getColorscaleGradient("Greys"),
+                                }}
+                              />
+                              {t("colorscales.greys")}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Hot">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="h-4 w-8 rounded border"
+                                style={{
+                                  background: getColorscaleGradient("Hot"),
+                                }}
+                              />
+                              {t("colorscales.hot")}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Cool">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="h-4 w-8 rounded border"
+                                style={{
+                                  background: getColorscaleGradient("Cool"),
+                                }}
+                              />
+                              {t("colorscales.cool")}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Rainbow">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="h-4 w-8 rounded border"
+                                style={{
+                                  background: getColorscaleGradient("Rainbow"),
+                                }}
+                              />
+                              {t("colorscales.rainbow")}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="Jet">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="h-4 w-8 rounded border"
+                                style={{
+                                  background: getColorscaleGradient("Jet"),
+                                }}
+                              />
+                              {t("colorscales.jet")}
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
 
-                        {/* Colorscale Preview */}
-                        <div className="mt-2">
-                          <div className="text-muted-foreground mb-1 text-xs">
-                            {t("preview.title")}
-                          </div>
-                          <div
-                            className="h-6 w-full rounded border"
-                            style={{
-                              background: getColorscaleGradient(field.value),
-                            }}
-                          />
+                      {/* Colorscale Preview */}
+                      <div className="mt-2">
+                        <div className="text-muted-foreground mb-1 text-xs">
+                          {t("preview.title")}
                         </div>
+                        <div
+                          className="h-6 w-full rounded border"
+                          style={{
+                            background: getColorscaleGradient(field.value),
+                          }}
+                        />
+                      </div>
 
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
 
             {/* Color Axis Title - only show when colorAxis is configured */}
-            {form.watch("config.config.colorAxis.dataSource.columnName") &&
-              form.watch("config.config.colorAxis.dataSource.columnName") !== "none" && (
-                <div className="mt-4">
-                  <FormField
-                    control={form.control}
-                    name="config.config.colorAxis.title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium">
-                          {t("configuration.colorAxisTitle")}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={t("enterColorAxisTitle")}
-                            className="h-10 bg-white"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
+            {form.watch("config.config.colorAxis")?.dataSource?.columnName && (
+              <div className="mt-4">
+                <FormField
+                  control={form.control}
+                  name="config.config.colorAxis.title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">
+                        {t("configuration.colorAxisTitle")}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t("enterColorAxisTitle")}
+                          className="h-10 bg-white"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -829,35 +827,34 @@ export default function ScatterChartConfigurator({
               />
 
               {/* Show Color Bar - only when color mapping is configured */}
-              {form.watch("config.config.colorAxis.dataSource.columnName") &&
-                form.watch("config.config.colorAxis.dataSource.columnName") !== "none" && (
-                  <FormField
-                    control={form.control}
-                    name="config.config.showColorBar"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium">
-                          {t("chartOptions.showColorbar")}
-                        </FormLabel>
-                        <Select
-                          value={field.value ? "true" : "false"}
-                          onValueChange={(value) => field.onChange(value === "true")}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="h-10 bg-white">
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="true">{tCommon("common.yes")}</SelectItem>
-                            <SelectItem value="false">{tCommon("common.no")}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+              {form.watch("config.config.colorAxis")?.dataSource?.columnName && (
+                <FormField
+                  control={form.control}
+                  name="config.config.showColorBar"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">
+                        {t("chartOptions.showColorbar")}
+                      </FormLabel>
+                      <Select
+                        value={field.value ? "true" : "false"}
+                        onValueChange={(value) => field.onChange(value === "true")}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-10 bg-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="true">{tCommon("common.yes")}</SelectItem>
+                          <SelectItem value="false">{tCommon("common.no")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
           </CardContent>
         </Card>

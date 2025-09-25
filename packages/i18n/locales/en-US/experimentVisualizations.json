@@ -259,6 +259,9 @@
 
   "chartOptions": {
     "title": "Chart Options",
+    "groupingOptions": "Grouping Options",
+    "enableGrouping": "Enable Grouping",
+    "groupingColumn": "Grouping Column",
     "scatterOptions": "Scatter Options",
     "pieChartOptions": "Pie Chart Options",
     "barChartOptions": "Bar Chart Options",

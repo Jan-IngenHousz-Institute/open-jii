@@ -28,6 +28,7 @@
   margin: 0 !important;
   padding: 0 !important;
   display: contents !important;
+  top: -50px !important; /* Move out of view by default */
 }
 
 .modebar-container .modebar-btn {

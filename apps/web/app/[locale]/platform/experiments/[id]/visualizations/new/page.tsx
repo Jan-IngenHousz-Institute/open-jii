@@ -21,8 +21,10 @@ export default function NewVisualizationPage() {
   // Use the sample tables directly from the API
   // This simplifies our code and avoids unnecessary transformations
 
-  const handleSuccess = (_visualizationId: string) => {
-    router.push(`/${locale}/platform/experiments/${experimentId}/visualizations`);
+  const handleSuccess = (visualizationId: string) => {
+    router.push(
+      `/${locale}/platform/experiments/${experimentId}/visualizations/${visualizationId}`,
+    );
   };
 
   const handleCancel = () => {

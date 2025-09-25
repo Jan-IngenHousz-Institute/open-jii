@@ -30,7 +30,9 @@ import {
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-import ChartConfigurator from "./chart-configurators/chart-configurator";
+import ChartConfigurator, {
+  collectAllChartDataSources,
+} from "./chart-configurators/chart-configurator";
 import type { ChartFormValues } from "./chart-configurators/types";
 
 interface NewVisualizationFormProps {
@@ -107,17 +109,23 @@ export default function NewVisualizationForm({
     },
   });
 
+  // Use the imported collectAllChartDataSources function
+  const collectAllDataSources = () => {
+    return collectAllChartDataSources(form);
+  };
+
   // Handle form submission
   const onSubmit = form.handleSubmit(
     (data) => {
-      // Filter out empty dataSources before submission
+      // Explicitly collect all data sources before submission
+      const allDataSources = collectAllDataSources();
+      console.log("All collected data sources before submission:", allDataSources);
+
       const cleanedData = {
         ...data,
         dataConfig: {
           ...data.dataConfig,
-          dataSources: data.dataConfig.dataSources.filter(
-            (dataSource) => dataSource.columnName && dataSource.columnName.trim() !== "",
-          ),
+          dataSources: allDataSources,
         },
       };
 
@@ -209,12 +217,12 @@ export default function NewVisualizationForm({
               },
             ],
             // Color dimension configuration (optional)
-            colorAxis: undefined,
+            colorAxis: null,
             mode: "markers",
             markerSize: 6,
             markerShape: "circle",
             // Color mapping options
-            colorScale: "viridis",
+            colorScale: "Viridis",
             showColorBar: true,
             gridLines: "both",
             display: {
@@ -228,7 +236,7 @@ export default function NewVisualizationForm({
         });
         form.setValue("dataConfig", {
           tableName: selectedTableName,
-          dataSources: [], // Let ChartConfigurator populate this based on selected columns
+          dataSources: [],
         });
         break;
 
@@ -510,7 +518,7 @@ export default function NewVisualizationForm({
               dataSource: { tableName: selectedTableName, columnName: "" },
               title: "",
             },
-            colorscale: "viridis",
+            colorscale: "Viridis",
             showScale: true,
             showText: false,
             connectGaps: true,
@@ -554,7 +562,7 @@ export default function NewVisualizationForm({
               dataSource: { tableName: selectedTableName, columnName: "" },
               title: "",
             },
-            colorscale: "viridis",
+            colorscale: "Viridis",
             showScale: true,
             colorbarTitle: "",
             contours: {
@@ -700,7 +708,7 @@ export default function NewVisualizationForm({
                 alias: "",
               },
             ],
-            colorscale: "viridis",
+            colorscale: "Viridis",
             showValues: true,
             showScale: true,
             colorbarTitle: "",
@@ -737,7 +745,7 @@ export default function NewVisualizationForm({
             ],
             line: {
               color: "#3b82f6",
-              colorscale: "viridis",
+              colorscale: "Viridis",
               width: 1,
               opacity: 1,
               showscale: true,
@@ -980,7 +988,7 @@ export default function NewVisualizationForm({
           <Button type="button" variant="outline" onClick={onCancel}>
             {tCommon("common.cancel")}
           </Button>
-          <Button type="submit" disabled={isPending || !selectedChartType}>
+          <Button type="submit" disabled={isPending ?? !selectedChartType}>
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
