@@ -135,7 +135,7 @@ export default function ExperimentVisualizationRenderer({
         </CardHeader>
       )}
       <CardContent>
-        <div className="w-full" style={{ height: `${height}px` }}>
+        <div className="w-full pt-6" style={{ height: `${height}px` }}>
           <LazyChartWrapper>{renderChart()}</LazyChartWrapper>
         </div>
       </CardContent>

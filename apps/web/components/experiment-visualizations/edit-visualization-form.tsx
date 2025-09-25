@@ -90,7 +90,6 @@ export default function EditVisualizationForm({
     (data) => {
       // Explicitly collect all data sources before submission
       const allDataSources = collectAllDataSources();
-      console.log("All collected data sources before submission:", allDataSources);
 
       const updatedData = {
         ...data,
@@ -109,9 +108,6 @@ export default function EditVisualizationForm({
       });
     },
     (errors) => {
-      console.log("=== FORM VALIDATION ERRORS ===");
-      console.log("Errors:", errors);
-
       // Show a toast with validation error info
       toast({
         description:

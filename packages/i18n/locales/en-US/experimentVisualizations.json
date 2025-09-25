@@ -689,5 +689,13 @@
     "probability": "Probability",
     "density": "Density",
     "probabilityDensity": "Probability Density"
+  },
+
+  "selector": {
+    "title": "Experiment Visualizations",
+    "description": "View and interact with visualizations for this experiment",
+    "selectVisualization": "Select a visualization",
+    "placeholder": "Choose a visualization to display...",
+    "noVisualizations": "No visualizations available for this experiment"
   }
 }
