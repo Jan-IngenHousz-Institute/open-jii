@@ -10,6 +10,7 @@ import { useMacros } from "~/hooks/use-macros";
 import { useMeasurementUpload } from "~/hooks/use-measurement-upload";
 import { useProtocols } from "~/hooks/use-protocols";
 import { useTheme } from "~/hooks/use-theme";
+import { demoResult } from "~/screens/measurement-screen/utils/demo-result";
 import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-manager";
 import { useScanner } from "~/services/scan-manager/scan-manager";
 import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
@@ -26,10 +27,13 @@ export function MeasurementScreen() {
   const { macros } = useMacros();
   const { protocols } = useProtocols();
 
-  const { executeScan, isScanning, reset: resetScan, result: scanResult } = useScanner();
+  const {
+    executeScan,
+    isScanning,
+    reset: resetScan,
+    result: scanResult = demoResult,
+  } = useScanner();
   const { data: device } = useConnectedDevice();
-
-  console.log("scanResult.output", (scanResult as any)?.output);
 
   const isCancellingRef = useRef(false);
 
