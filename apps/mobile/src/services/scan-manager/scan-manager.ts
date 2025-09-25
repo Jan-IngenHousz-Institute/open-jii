@@ -64,7 +64,13 @@ export function useScanner() {
 
   const userId = session?.data.user.id;
 
-  async function performScan(protocolId: string, macroId: string) {
+  const {
+    execute: executeScan,
+    reset,
+    loading: isScanning,
+    error,
+    result,
+  } = useAsyncCallback(async (protocolId: string, macroId: string) => {
     const protocolCode = protocols?.find((p) => p.value === protocolId)?.code;
     if (!protocolCode) {
       return;
@@ -79,15 +85,7 @@ export function useScanner() {
     }
     console.log("got result, processing...");
     return processScan(result, userId, macro?.filename, macro?.code);
-  }
-
-  const {
-    execute: executeScan,
-    reset,
-    loading: isScanning,
-    error,
-    result,
-  } = useAsyncCallback(performScan);
+  });
 
   return {
     executeScan,
@@ -95,5 +93,6 @@ export function useScanner() {
     isScanning,
     error,
     result,
+    executeCommand,
   };
 }

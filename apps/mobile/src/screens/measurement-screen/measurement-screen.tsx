@@ -1,5 +1,5 @@
 import { useKeepAwake } from "expo-keep-awake";
-import React, { useRef } from "react";
+import React from "react";
 import { ActivityIndicator, Dimensions, StyleSheet, Text, View } from "react-native";
 import { Button } from "~/components/Button";
 import { Dropdown } from "~/components/Dropdown";
@@ -10,7 +10,10 @@ import { useMacros } from "~/hooks/use-macros";
 import { useMeasurementUpload } from "~/hooks/use-measurement-upload";
 import { useProtocols } from "~/hooks/use-protocols";
 import { useTheme } from "~/hooks/use-theme";
-import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-manager";
+import {
+  useConnectedDevice,
+  useConnectToDevice,
+} from "~/services/device-connection-manager/device-connection-manager";
 import { useScanner } from "~/services/scan-manager/scan-manager";
 import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
 import { useMacroSelectionStore } from "~/stores/use-macro-selection-store";
@@ -26,14 +29,19 @@ export function MeasurementScreen() {
   const { macros } = useMacros();
   const { protocols } = useProtocols();
 
-  const { executeScan, isScanning, reset: resetScan, result: scanResult } = useScanner();
+  const {
+    executeCommand,
+    executeScan,
+    isScanning,
+    reset: resetScan,
+    result: scanResult,
+  } = useScanner();
   const { data: device } = useConnectedDevice();
-
-  const isCancellingRef = useRef(false);
 
   const { selectedProtocolId, setSelectedProtocolId } = useProtocolSelectionStore();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
   const { selectedMacroId, setSelectedMacroId } = useMacroSelectionStore();
+  const { disconnectFromDevice } = useConnectToDevice();
 
   const timestamp = (scanResult as any)?.timestamp;
 
@@ -87,9 +95,12 @@ export function MeasurementScreen() {
         {isScanning ? (
           <Button
             title="Cancel Measurement"
-            onPress={() => {
-              isCancellingRef.current = true;
+            onPress={async () => {
               resetScan();
+              showToast("Press the MultispeQ button and reconnect", "info");
+              if (device) {
+                await disconnectFromDevice(device);
+              }
             }}
             variant="outline"
             style={styles.startButton}
@@ -99,7 +110,6 @@ export function MeasurementScreen() {
           <Button
             title="Start Measurement"
             onPress={async () => {
-              isCancellingRef.current = false;
               if (!selectedProtocolId || !selectedMacroId) {
                 return;
               }
