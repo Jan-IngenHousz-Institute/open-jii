@@ -1,12 +1,13 @@
 import React from "react";
-import { View, Text, StyleSheet, FlatList, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, RefreshControl } from "react-native";
 import { Dropdown } from "~/components/Dropdown";
+import { useExperimentMeasurements } from "~/hooks/use-experiment-measurements";
 import { useExperiments } from "~/hooks/use-experiments";
-import { useExperimentsData } from "~/hooks/use-experiments-data";
 import { useTheme } from "~/hooks/use-theme";
 import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
-import { formatShortDate } from "~/utils/format-short-date";
-import { MeasurementRecord } from "~/utils/map-rows-to-measurements";
+import { parseExperimentData } from "~/utils/parse-experiment-data";
+
+import { ExperimentTables } from "./components";
 
 export function ExperimentsScreen() {
   const theme = useTheme();
@@ -14,34 +15,10 @@ export function ExperimentsScreen() {
 
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
 
-  const { measurements, isFetching, refetch } = useExperimentsData(
-    selectedExperimentId,
-    "silver_data_exp",
-  );
-
+  const { data, isFetching, refetch } = useExperimentMeasurements(selectedExperimentId);
   const { experiments } = useExperiments();
 
-  const renderTableHeader = () => (
-    <View style={styles.tableRow}>
-      <Text style={[styles.headerCell, styles.flex2]}>Protocol</Text>
-      <Text style={[styles.headerCell, styles.flex3]}>Measurement Value</Text>
-      <Text style={[styles.headerCell, styles.flex3]}>Timestamp</Text>
-    </View>
-  );
-
-  const renderTableRow = ({ item }: { item: MeasurementRecord }) => (
-    <View style={styles.tableRow}>
-      <Text style={[styles.cell, styles.flex2]} numberOfLines={1} ellipsizeMode="tail">
-        {item.measurement_type}
-      </Text>
-      <Text style={[styles.cell, styles.flex3]} numberOfLines={1} ellipsizeMode="tail">
-        {item.measurement_value}
-      </Text>
-      <Text style={[styles.cell, styles.flex3]} numberOfLines={1} ellipsizeMode="tail">
-        {formatShortDate(item.timestamp)}
-      </Text>
-    </View>
-  );
+  const parsedTables = data?.body ? parseExperimentData(data.body) : [];
 
   return (
     <View
@@ -63,46 +40,7 @@ export function ExperimentsScreen() {
 
       {selectedExperimentId ? (
         <View style={styles.measurementsContainer}>
-          <Text
-            style={[
-              styles.sectionTitle,
-              {
-                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-              },
-            ]}
-          >
-            Measurements
-          </Text>
-
-          <FlatList
-            data={measurements}
-            keyExtractor={(item) => item.id}
-            ListHeaderComponent={renderTableHeader}
-            renderItem={renderTableRow}
-            contentContainerStyle={styles.measurementsList}
-            refreshControl={
-              <RefreshControl
-                refreshing={isFetching}
-                onRefresh={refetch}
-                tintColor={colors.primary.dark}
-                colors={[colors.primary.dark]}
-              />
-            }
-            ListEmptyComponent={
-              isFetching ? null : (
-                <Text
-                  style={[
-                    styles.emptyText,
-                    {
-                      color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-                    },
-                  ]}
-                >
-                  No measurements found for this experiment
-                </Text>
-              )
-            }
-          />
+          <ExperimentTables tables={parsedTables} isLoading={isFetching} />
         </View>
       ) : (
         <View style={styles.placeholderContainer}>
@@ -114,7 +52,7 @@ export function ExperimentsScreen() {
               },
             ]}
           >
-            Select an experiment to view measurements
+            Select an experiment to view data
           </Text>
         </View>
       )}
@@ -133,14 +71,6 @@ const styles = StyleSheet.create({
   measurementsContainer: {
     flex: 1,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 16,
-  },
-  measurementsList: {
-    flexGrow: 1,
-  },
   placeholderContainer: {
     flex: 1,
     justifyContent: "center",
@@ -149,29 +79,5 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: 16,
     textAlign: "center",
-  },
-  emptyText: {
-    textAlign: "center",
-    padding: 24,
-  },
-  tableRow: {
-    flexDirection: "row",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderColor: "#ccc",
-  },
-  headerCell: {
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  cell: {
-    fontSize: 13,
-    overflow: "hidden",
-  },
-  flex2: {
-    flex: 2,
-  },
-  flex3: {
-    flex: 3,
   },
 });

@@ -8,7 +8,7 @@ import { formatIsoDateString } from "~/utils/format-iso-date-string";
 export function MeasurementJsonPreview({ data, timestamp, experimentName, onClose }) {
   const theme = useTheme();
   const { colors } = theme;
-  
+
   return (
     <View
       style={[

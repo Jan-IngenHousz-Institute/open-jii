@@ -1,6 +1,7 @@
 import React from "react";
 import { ScrollView, Text, View, StyleSheet } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
+
 import { Chart } from "./chart";
 import { KeyValue } from "./key-value";
 import { MeasurementHeader } from "./measurement-header";
@@ -32,7 +33,11 @@ export function MeasurementOutputPreview({
           },
         ]}
       >
-        <MeasurementHeader timestamp={timestamp} experimentName={experimentName} onClose={onClose} />
+        <MeasurementHeader
+          timestamp={timestamp}
+          experimentName={experimentName}
+          onClose={onClose}
+        />
         <View style={styles.noDataContainer}>
           <Text style={styles.noDataText}>No Data Available</Text>
         </View>

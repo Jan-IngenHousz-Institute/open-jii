@@ -56,11 +56,7 @@ export function Chart({ name, values }: ChartProps) {
           },
         ]}
       >
-        <CartesianChart
-          data={chartData}
-          xKey="x"
-          yKeys={["y"]}
-        >
+        <CartesianChart data={chartData} xKey="x" yKeys={["y"]}>
           {({ points }) => <Line points={points.y} color={colors.primary.dark} strokeWidth={2} />}
         </CartesianChart>
       </View>

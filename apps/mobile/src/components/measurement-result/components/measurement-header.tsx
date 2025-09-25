@@ -41,7 +41,10 @@ export function MeasurementHeader({ timestamp, experimentName, onClose }: Measur
 
         {timestamp && (
           <View style={styles.timestampContainer}>
-            <Calendar size={14} color={theme.isDark ? colors.dark.inactive : colors.light.inactive} />
+            <Calendar
+              size={14}
+              color={theme.isDark ? colors.dark.inactive : colors.light.inactive}
+            />
             <Text
               style={[
                 styles.timestamp,
