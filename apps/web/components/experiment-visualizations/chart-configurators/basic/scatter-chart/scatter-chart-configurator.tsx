@@ -422,7 +422,7 @@ export default function ScatterChartConfigurator({
                       {t("configuration.colorColumn")}
                     </FormLabel>
                     <Select
-                      value={field.value?.dataSource.columnName ?? "none"}
+                      value={field.value?.dataSource?.columnName ?? "none"}
                       onValueChange={(value) => {
                         if (value === "none") {
                           // Clear the color axis when "None" is selected

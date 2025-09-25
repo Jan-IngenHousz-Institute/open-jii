@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Download, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useLocale } from "~/hooks/useLocale";
