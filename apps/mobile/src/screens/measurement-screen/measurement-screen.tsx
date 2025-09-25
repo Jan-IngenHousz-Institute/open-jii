@@ -29,13 +29,7 @@ export function MeasurementScreen() {
   const { macros } = useMacros();
   const { protocols } = useProtocols();
 
-  const {
-    executeCommand,
-    executeScan,
-    isScanning,
-    reset: resetScan,
-    result: scanResult,
-  } = useScanner();
+  const { executeScan, isScanning, reset: resetScan, result: scanResult } = useScanner();
   const { data: device } = useConnectedDevice();
 
   const { selectedProtocolId, setSelectedProtocolId } = useProtocolSelectionStore();

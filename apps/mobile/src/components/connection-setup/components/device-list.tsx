@@ -59,7 +59,7 @@ export function DeviceList({
         renderItem={({ item }) => {
           return (
             <Swipeable
-              enabled={!!onDelete}
+              enabled={!!onDelete && item.type !== "usb"}
               renderRightActions={() => (
                 <TouchableOpacity
                   style={[styles.deleteAction, { backgroundColor: colors.semantic.error }]}

@@ -4,8 +4,12 @@ import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
 import { useMacros } from "~/hooks/use-macros";
 import { useProtocols } from "~/hooks/use-protocols";
 import { useSessionStore } from "~/hooks/use-session-store";
-import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-manager";
+import {
+  getConnectedSerialPortConnection,
+  useConnectedDevice,
+} from "~/services/device-connection-manager/device-connection-manager";
 import { bluetoothDeviceToMultispeqStream } from "~/services/multispeq-communication/android-bluetooth-connection/bluetooth-device-to-multispeq-stream";
+import { serialPortToMultispeqStream } from "~/services/multispeq-communication/android-serial-port-connection/serial-port-to-multispeq-stream";
 import { MultispeqCommandExecutor } from "~/services/multispeq-communication/multispeq-command-executor";
 import { Device } from "~/types/device";
 import { processScan } from "~/utils/process-scan/process-scan";
@@ -19,6 +23,15 @@ async function createBluetoothMultiseqCommandExecutor(device: Device | undefined
   return new MultispeqCommandExecutor(bluetoothDeviceToMultispeqStream(bluetoothDevice));
 }
 
+function createSerialPortCommandExecutor() {
+  const connection = getConnectedSerialPortConnection();
+  if (!connection) {
+    return undefined;
+  }
+
+  return new MultispeqCommandExecutor(serialPortToMultispeqStream(connection));
+}
+
 async function createMultispeqCommandExecutor(device: Device | undefined) {
   if (!device) {
     return undefined;
@@ -26,6 +39,10 @@ async function createMultispeqCommandExecutor(device: Device | undefined) {
 
   if (device.type === "bluetooth-classic") {
     return createBluetoothMultiseqCommandExecutor(device);
+  }
+
+  if (device.type === "usb") {
+    return createSerialPortCommandExecutor();
   }
 
   throw new Error("Unsupported device type");

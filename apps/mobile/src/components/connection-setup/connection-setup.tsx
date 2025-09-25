@@ -8,6 +8,7 @@ import {
   useConnectedDevice,
   useConnectToDevice,
   usePairedDevices,
+  useSerialDevices,
 } from "~/services/device-connection-manager/device-connection-manager";
 
 import { ConnectedDevice } from "./components/connected-device";
@@ -22,7 +23,8 @@ export function ConnectionSetup() {
   const { connectToDevice, connectingDeviceId, disconnectFromDevice, unpairDevice } =
     useConnectToDevice();
   const { showToast } = useToast();
-  const { data: pairedDevices } = usePairedDevices();
+  const { data: pairedDevices = [] } = usePairedDevices();
+  const { data: serialDevices = [] } = useSerialDevices();
 
   const showDeviceList = !device && (isFetching || !!devices?.length);
 
@@ -80,13 +82,14 @@ export function ConnectionSetup() {
         />
       )}
       <DeviceList
-        devices={pairedDevices ?? []}
+        devices={[...pairedDevices, ...serialDevices]}
         title="Paired Devices"
         loading={false}
         connectingDeviceId={connectingDeviceId}
         onDelete={(device) => unpairDevice(device)}
         onConnect={async (device) => {
           try {
+            console.log("device", device);
             await connectToDevice(device);
           } catch {
             showToast("Could not connect", "error");
