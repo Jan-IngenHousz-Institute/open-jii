@@ -1,14 +1,14 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { useTheme } from "~/hooks/use-theme";
-import { Card } from "~/components/Card";
-import type { Device } from "~/types/device";
 import { Button } from "~/components/Button";
+import { Card } from "~/components/Card";
+import { useTheme } from "~/hooks/use-theme";
+import type { Device } from "~/types/device";
 
-type Props = {
+interface Props {
   device: Device;
   onDisconnect?: (device: Device) => void | Promise<void>;
-};
+}
 
 export function ConnectedDevice(props: Props) {
   const { device, onDisconnect } = props;
@@ -77,5 +77,3 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 });
-
-

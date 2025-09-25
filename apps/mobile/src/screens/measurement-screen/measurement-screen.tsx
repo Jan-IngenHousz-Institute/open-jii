@@ -3,7 +3,7 @@ import React, { useRef } from "react";
 import { ActivityIndicator, Dimensions, StyleSheet, Text, View } from "react-native";
 import { Button } from "~/components/Button";
 import { Dropdown } from "~/components/Dropdown";
-import { MeasurementResult } from "~/components/MeasurementResult";
+import { MeasurementResult } from "~/components/measurement-result";
 import { useToast } from "~/context/toast-context";
 import { useExperiments } from "~/hooks/use-experiments";
 import { useMacros } from "~/hooks/use-macros";

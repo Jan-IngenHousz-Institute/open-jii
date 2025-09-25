@@ -1,6 +1,6 @@
 import { UploadCloud } from "lucide-react-native";
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { Button } from "~/components/Button";
 import { UnsyncedScanItem } from "~/components/UnsyncedScanItem";
 import { ConnectionSetup } from "~/components/connection-setup";
