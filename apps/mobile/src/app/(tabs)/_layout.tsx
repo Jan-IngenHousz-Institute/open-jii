@@ -45,14 +45,14 @@ export default function TabLayout() {
         <Tabs.Screen
           name="experiments"
           options={{
-            title: "Experiments",
+            title: "Data",
             tabBarIcon: ({ color, size }) => <FlaskConical size={size} color={color} />,
           }}
         />
         <Tabs.Screen
           name="measurement"
           options={{
-            title: "Measurement",
+            title: "Scan",
             tabBarIcon: ({ color, size }) => <Activity size={size} color={color} />,
           }}
         />
