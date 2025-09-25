@@ -8,6 +8,7 @@ import { formatIsoDateString } from "~/utils/format-iso-date-string";
 export function MeasurementJsonPreview({ data, timestamp, experimentName, onClose }) {
   const theme = useTheme();
   const { colors } = theme;
+  
   return (
     <View
       style={[
@@ -102,7 +103,7 @@ export function MeasurementJsonPreview({ data, timestamp, experimentName, onClos
               },
             ]}
           >
-            {data}
+            {JSON.stringify(data, null, 2)}
           </Text>
         </ScrollView>
       </View>

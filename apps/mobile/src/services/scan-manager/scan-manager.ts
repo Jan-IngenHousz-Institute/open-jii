@@ -1,5 +1,6 @@
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import RNBluetoothClassic, { BluetoothDevice } from "react-native-bluetooth-classic";
+import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
 import { useMacros } from "~/hooks/use-macros";
 import { useProtocols } from "~/hooks/use-protocols";
 import { useSessionStore } from "~/hooks/use-session-store";
@@ -60,6 +61,7 @@ export function useScanner() {
   const { macros } = useMacros();
   const { session } = useSessionStore();
   const { protocols } = useProtocols();
+  const { setBatteryLevel } = useDeviceConnectionStore();
 
   const userId = session?.data.user.id;
 
@@ -72,6 +74,7 @@ export function useScanner() {
     const macro = macros?.find((m) => m.value === macroId);
 
     const result = await executeCommand(protocolCode);
+    setBatteryLevel((result as any)?.device_battery);
     if (typeof result !== "object") {
       throw new Error("Invalid result");
     }
