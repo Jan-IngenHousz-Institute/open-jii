@@ -22,6 +22,7 @@
     "@react-navigation/native": "^7.1.6",
     "@react-navigation/native-stack": "^7.3.10",
     "@repo/api": "workspace:*",
+    "@shopify/react-native-skia": "v2.0.0-next.4",
     "@tanstack/query-async-storage-persister": "catalog:react-query",
     "@tanstack/react-query": "catalog:react-query",
     "@tanstack/react-query-persist-client": "catalog:react-query",
@@ -67,6 +68,7 @@
     "react-native-vector-icons": "^10.2.0",
     "tailwindcss": "catalog:",
     "uuid": "^11.1.0",
+    "victory-native": "^41.20.1",
     "with-rn-bluetooth-classic": "^1.0.5",
     "zustand": "^5.0.5"
   },
