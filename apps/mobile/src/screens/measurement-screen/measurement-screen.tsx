@@ -29,6 +29,8 @@ export function MeasurementScreen() {
   const { executeScan, isScanning, reset: resetScan, result: scanResult } = useScanner();
   const { data: device } = useConnectedDevice();
 
+  console.log("scanResult.output", (scanResult as any)?.output);
+
   const isCancellingRef = useRef(false);
 
   const { selectedProtocolId, setSelectedProtocolId } = useProtocolSelectionStore();
