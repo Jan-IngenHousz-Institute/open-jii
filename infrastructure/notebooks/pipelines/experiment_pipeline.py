@@ -28,6 +28,10 @@ sys.path.append("/Workspace/Shared/notebooks/lib/multispeq/macro")
 # Import our macro processing library
 from macro import execute_macro_script, get_available_macros, process_macro_output_for_spark
 
+sys.path.append("/Workspace/Shared/notebooks/lib/ambyte")
+# Import the FMP2 calculation module
+from fmp2 import apply_fmp2_calculations
+
 # COMMAND ----------
 
 # DBTITLE 1,Pipeline Configuration
@@ -100,17 +104,38 @@ def device():
 )
 def sample():
     """Extract sample metadata and create references to measurement sets from central silver table"""
-    return (
+    base_df = (
         spark.read.table(f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}")
         .filter(F.col("experiment_id") == EXPERIMENT_ID)  # Filter for specific experiment
+    )
+    
+    # Get user_answers columns from the central table (they're already extracted there)
+    # Legacy feature - these columns will eventually be removed
+    user_answers_df = (
+        base_df
+        .select(
+            F.col("device_id"),
+            F.col("plot_number"),
+            F.col("plant"),
+            F.col("stem_count"),
+            F.col("timestamp")
+        )
+        .dropDuplicates(["device_id", "timestamp"])
+    )
+    
+    # Process sample data as before
+    sample_df = (
+        base_df
         .select(
             F.col("device_id"),
             F.col("device_name"),
+            F.col("timestamp"),
             F.explode(F.from_json(F.col("sample"), "array<string>")).alias("sample_data_str")
         )
         .select(
             F.col("device_id"),
             F.col("device_name"),
+            F.col("timestamp"),
             F.get_json_object(F.col("sample_data_str"), "$.v_arrays").alias("v_arrays"),
             F.get_json_object(F.col("sample_data_str"), "$.set_repeats").cast("int").alias("set_repeats"),
             F.get_json_object(F.col("sample_data_str"), "$.protocol_id").alias("protocol_id"),
@@ -144,6 +169,31 @@ def sample():
                           F.expr("transform(measurement_sets, x -> get_json_object(x, '$.label'))"))
                    .otherwise(F.lit(None)))
             .otherwise(F.array())
+        )
+    )
+    
+    # Join with user_answers to add the user response columns
+    return (
+        sample_df
+        .join(
+            user_answers_df,
+            on=["device_id", "timestamp"],
+            how="left"
+        )
+        .select(
+            F.col("device_id"),
+            F.col("device_name"),
+            F.col("v_arrays"),
+            F.col("set_repeats"),
+            F.col("protocol_id"),
+            F.col("macros"),
+            F.col("measurement_sets"),
+            F.col("measurement_set_types"),
+            F.col("sample_id"),
+            F.col("plot_number"),
+            F.col("plant"),
+            F.col("stem_count"),
+            F.col("processed_timestamp")
         )
     )
 
@@ -272,6 +322,265 @@ def raw_ambyte_data():
 
 # COMMAND ----------
 
+# DBTITLE 1,Silver Ambyte Data Table
+@dlt.table(
+    name="silver_ambyte_data",
+    comment="Clean ambyte data with outlier filtering, calibrations, and FMP2 calculations applied",
+    table_properties={
+        "quality": "silver",
+        "pipelines.autoOptimize.managed": "true"
+    }
+)
+def silver_ambyte_data():
+    """
+    Transform raw ambyte data into clean silver data following exact notebook processing logic.
+    
+    This function applies the exact same transformations as the pandas notebook:
+    1. Calculate actinic quiet time
+    2. Filter data after 2023
+    3. Apply outlier detection and removal
+    4. Subtract dark values
+    5. Clean 7s/7r signals
+    6. Apply PAR factor scaling to Leaf
+    7. Calculate FMP2 values (Fs, Fmp, Fmp_T)
+    """
+    from pyspark.sql.window import Window
+    
+    # Read raw ambyte data
+    raw_df = spark.read.table(f"{CATALOG_NAME}.{EXPERIMENT_SCHEMA}.{RAW_AMBYTE_TABLE}")
+    
+    # Step 1: Calculate actinic quiet time (exact match to notebook)
+    # df.loc[df['Type'] == 'qE1', 'Act_time'] = df['Time']
+    # df['Act_time'] = df['Act_time'].ffill()
+    # df.loc[df['Act_time'].isna(), 'Act_time'] = df['Time']
+    # df['Act_time'] = ((df['Time'] - df['Act_time']).astype(int) / 1e6).astype(np.int32)
+    
+    window_spec = Window.orderBy("Time").rowsBetween(Window.unboundedPreceding, Window.currentRow)
+    
+    df = (raw_df
+          .withColumn("Act_time_temp", 
+                     F.when(F.col("Type") == "qE1", F.col("Time")).otherwise(None))
+          .withColumn("Act_time_filled", 
+                     F.last("Act_time_temp", ignorenulls=True).over(window_spec))
+          .withColumn("Act_time", 
+                     F.coalesce(F.col("Act_time_filled"), F.col("Time")))
+          .withColumn("Act_time", 
+                     ((F.unix_timestamp("Time") - F.unix_timestamp("Act_time")) * 1000000).cast("integer"))
+          .drop("Act_time_temp", "Act_time_filled"))
+    
+    # Step 2: Convert PAR to float (matching notebook)
+    df = df.withColumn("PAR", F.col("PAR").cast("float"))
+    
+    # Step 3: Filter data after 2023 (exact match to notebook)
+    # dfi = df[df['Time'] > "2023"]
+    df = df.filter(F.col("Time") > F.lit("2023-01-01"))
+    
+    # Step 4: Apply outlier detection and removal for SigF and RefF (exact match to notebook)
+    # data_mask = (dfi['SigF'] < dfi['SigF'].quantile(.01) - 50) | (dfi['SigF'] > dfi['SigF'].quantile(.99) + 500) | (dfi['RefF'] < dfi['RefF'].quantile(.01) - 50)
+    # data_mask |= (dfi['SigF'] < dfi.attrs['Dark'])
+    # dfi.loc[data_mask, "SigF"] = pd.NA
+    
+    sigf_q01 = df.stat.approxQuantile("SigF", [0.01], 0.01)[0]
+    sigf_q99 = df.stat.approxQuantile("SigF", [0.99], 0.01)[0]
+    reff_q01 = df.stat.approxQuantile("RefF", [0.01], 0.01)[0]
+    
+    df = (df
+          .withColumn("SigF", 
+                     F.when((F.col("SigF") < F.lit(sigf_q01 - 50)) |
+                           (F.col("SigF") > F.lit(sigf_q99 + 500)) |
+                           (F.col("RefF") < F.lit(reff_q01 - 50)) |
+                           (F.col("SigF") < F.col("meta_Dark")), 
+                           None)
+                     .otherwise(F.col("SigF"))))
+    
+    # Step 5: Subtract dark values (exact match to notebook)
+    # dfi.loc[:, "SigF"] -= dfi.attrs['Dark']
+    df = df.withColumn("SigF", F.col("SigF") - F.col("meta_Dark"))
+    
+    # Step 6: Apply outlier detection and removal for Sig7 and Ref7 (exact match to notebook)
+    # data_mask = (dfi['Sig7'] < dfi['Sig7'].quantile(.05)) | (dfi['Sig7'] > dfi['Sig7'].quantile(.95)) | (dfi['Ref7'] < dfi['Ref7'].quantile(.1))
+    # dfi.loc[data_mask, ["Ref7", "Sig7"]] = pd.NA
+    # dfi.loc[dfi['Actinic'] > 5, "Leaf"] = pd.NA
+    
+    sig7_q05 = df.stat.approxQuantile("Sig7", [0.05], 0.01)[0]
+    sig7_q95 = df.stat.approxQuantile("Sig7", [0.95], 0.01)[0]
+    ref7_q10 = df.stat.approxQuantile("Ref7", [0.1], 0.01)[0]
+    
+    df = (df
+          .withColumn("Sig7", 
+                     F.when((F.col("Sig7") < F.lit(sig7_q05)) |
+                           (F.col("Sig7") > F.lit(sig7_q95)) |
+                           (F.col("Ref7") < F.lit(ref7_q10)), 
+                           None)
+                     .otherwise(F.col("Sig7")))
+          .withColumn("Ref7", 
+                     F.when((F.col("Sig7") < F.lit(sig7_q05)) |
+                           (F.col("Sig7") > F.lit(sig7_q95)) |
+                           (F.col("Ref7") < F.lit(ref7_q10)), 
+                           None)
+                     .otherwise(F.col("Ref7")))
+          .withColumn("Leaf", 
+                     F.when(F.col("Actinic") > 5, None)
+                     .otherwise(F.col("Leaf"))))
+    
+    # Step 7: Calculate PAR factor and scale Leaf (exact match to notebook)
+    # par_factor = dfi.loc[dfi['PAR'] > 2, 'PAR'].mean() / dfi.loc[dfi['Leaf'] > 2, 'Leaf'].mean()
+    # dfi['Leaf'] *= par_factor
+    
+    par_mean = df.filter(F.col("PAR") > 2).agg(F.mean("PAR")).collect()[0][0]
+    leaf_mean = df.filter(F.col("Leaf") > 2).agg(F.mean("Leaf")).collect()[0][0]
+    
+    if par_mean is not None and leaf_mean is not None and leaf_mean != 0:
+        par_factor = par_mean / leaf_mean
+        df = df.withColumn("Leaf", F.col("Leaf") * F.lit(par_factor))
+    
+    # Step 8: Apply FMP2 calculations using extracted module
+    # This matches: MPF_idx = df_ph2.groupby('Type', observed=True).get_group('MPF2').groupby('Count').apply(calc_FMP2, df.attrs['Actinic'])
+    df = apply_fmp2_calculations(df)
+    
+    return df.withColumn("processed_timestamp", F.current_timestamp())
+
+
+# COMMAND ----------
+
+# DBTITLE 1,Plotting Ambyte Data Table (Gold Layer)
+@dlt.table(
+    name="plotting_ambyte_data",
+    comment="Pre-aggregated ambyte data optimized for plotting and visualization",
+    table_properties={
+        "quality": "gold",
+        "pipelines.autoOptimize.managed": "true"
+    }
+)
+def plotting_ambyte_data():
+    """
+    Create plotting-ready data that matches the exact structure needed for the notebook visualizations.
+    
+    This table pre-calculates all the aggregations and ratios needed for the matplotlib plots:
+    1. Resampled time series (1s intervals) for temperature and light
+    2. Actinic-grouped fluorescence data with color mapping
+    3. Filtered MPF2 data points for special markers
+    4. Pre-calculated ratios and derived values
+    """
+    
+    # Read silver ambyte data
+    silver_df = spark.read.table(f"{CATALOG_NAME}.{EXPERIMENT_SCHEMA}.silver_ambyte_data")
+    
+    # Create the main plotting dataset
+    # Add derived columns that are frequently used in plotting
+    plotting_df = (silver_df
+                  .withColumn("fluor_ratio", F.col("SigF") / F.col("RefF"))
+                  .withColumn("leaf_sqrt", F.pow(F.col("Leaf"), 0.5))
+                  .withColumn("fmp_ratio", (F.col("Fmp") - F.col("Fs")) / F.col("Fmp"))
+                  .withColumn("actinic_color", (F.pow(F.col("Actinic"), 0.5) / 20.0 + 0.1)))
+    
+    # Create time series resampled data for temperature and light plots
+    non_mpf2_df = plotting_df.filter(F.col("Type") != "MPF2")
+    
+    # Create 1-second time windows for resampling
+    resampled_df = (non_mpf2_df
+                   .withColumn("time_window", F.window(F.col("Time"), "1 second"))
+                   .groupBy("time_window", "ambit_index")
+                   .agg(F.mean("Leaf").alias("leaf_mean"),
+                        F.mean("Actinic").alias("actinic_mean"),
+                        F.mean("Temp").alias("temp_mean"))
+                   .withColumn("leaf_sqrt_mean", F.pow(F.col("leaf_mean"), 0.5))
+                   .withColumn("time_start", F.col("time_window.start"))
+                   .select("time_start", "ambit_index", "leaf_sqrt_mean", "temp_mean", "actinic_mean")
+                   .withColumn("data_type", F.lit("resampled_timeseries")))
+    
+    # Create actinic-grouped fluorescence data 
+    actinic_grouped_df = (plotting_df
+                         .withColumn("pts_diff", 
+                                   F.col("PTS") - F.lag("PTS").over(Window.partitionBy("Count").orderBy("Time")))
+                         .withColumn("fluor_ratio_clean", 
+                                   F.when(F.col("pts_diff") == 1, F.col("fluor_ratio")).otherwise(None))
+                         .select("Time", "ambit_index", "Actinic", "fluor_ratio_clean", "actinic_color")
+                         .filter(F.col("fluor_ratio_clean").isNotNull())
+                         .withColumn("data_type", F.lit("actinic_grouped_fluor")))
+    
+    # Create MPF2 special marker data
+    mpf2_markers_df = (plotting_df
+                      .filter((F.col("Type") == "MPF2") & 
+                             (F.col("Full") == True) & 
+                             (F.col("Act_time") > 900) & 
+                             (F.col("PTS") > 200) & 
+                             (F.col("PTS") < 220))
+                      .groupBy("Count", "ambit_index")
+                      .agg(F.mean("Time").alias("time_mean"),
+                           F.mean("fluor_ratio").alias("fluor_ratio_mean"),
+                           F.count("SigF").alias("sigf_count"))
+                      .filter(F.col("sigf_count") >= 10)
+                      .select("time_mean", "ambit_index", "fluor_ratio_mean")
+                      .withColumn("data_type", F.lit("mpf2_markers")))
+    
+    # Create FMP time series data
+    fmp_timeseries_df = (plotting_df
+                        .select("Time", "ambit_index", "Fs", "Fmp", "fmp_ratio")
+                        .filter((F.col("Fs").isNotNull()) | (F.col("Fmp").isNotNull()))
+                        .withColumn("data_type", F.lit("fmp_timeseries")))
+    
+    # Combine all plotting datasets with a unified schema
+    # Each dataset type has different columns, so we'll create a flexible schema
+    
+    # Union all datasets with properly named columns for direct plotting use
+    final_df = (
+        # Resampled timeseries data - for temperature and light plots
+        resampled_df
+        .select(F.col("time_start").alias("time"),
+               F.col("ambit_index"),
+               F.col("data_type"),
+               F.col("leaf_sqrt_mean").alias("leaf_sqrt"),  # Pre-computed (Leaf^0.5) - no algebra needed
+               F.col("temp_mean").alias("temp"),            # Temperature for green dots
+               F.col("actinic_mean").alias("actinic"),      # Actinic levels
+               F.lit(None).cast("float").alias("value4"),
+               F.lit(None).cast("float").alias("value5"))
+        
+        .union(
+            # Actinic grouped fluorescence - for colored fluorescence lines
+            actinic_grouped_df
+            .select(F.col("Time").alias("time"),
+                   F.col("ambit_index"),
+                   F.col("data_type"),
+                   F.col("Actinic").cast("float").alias("actinic"),          # Actinic level for grouping
+                   F.col("fluor_ratio_clean").alias("fluor_ratio"),          # Pre-computed SigF/RefF ratio
+                   F.col("actinic_color").alias("color_value"),              # Pre-computed color mapping
+                   F.lit(None).cast("float").alias("value4"),
+                   F.lit(None).cast("float").alias("value5"))
+        )
+        
+        .union(
+            # MPF2 markers - for yellow marker dots
+            mpf2_markers_df
+            .select(F.col("time_mean").alias("time"),
+                   F.col("ambit_index"),
+                   F.col("data_type"),
+                   F.col("fluor_ratio_mean").alias("fluor_ratio_mean"),      # Pre-computed mean fluorescence ratio
+                   F.lit(None).cast("float").alias("value2"),
+                   F.lit(None).cast("float").alias("value3"),
+                   F.lit(None).cast("float").alias("value4"),
+                   F.lit(None).cast("float").alias("value5"))
+        )
+        
+        .union(
+            # FMP timeseries - for Fs/Fmp trend lines and efficiency calculation
+            fmp_timeseries_df
+            .select(F.col("Time").alias("time"),
+                   F.col("ambit_index"),
+                   F.col("data_type"),
+                   F.col("Fs").alias("Fs"),                                  # Fs values for magenta line
+                   F.col("Fmp").alias("Fmp"),                                # Fmp values for default line
+                   F.col("fmp_ratio").alias("fmp_ratio"),                    # Pre-computed (Fmp-Fs)/Fmp efficiency
+                   F.lit(None).cast("float").alias("value4"),
+                   F.lit(None).cast("float").alias("value5"))
+        )
+    )
+    
+    return final_df.withColumn("processed_timestamp", F.current_timestamp())
+
+
+# COMMAND ----------
+
 # DBTITLE 1,Macro Processing Pipeline
 def create_macro_tables():
     """
@@ -356,6 +665,11 @@ def macro_{macro_name}_table():
             if output:
                 # Add metadata to output
                 output["macro_name"] = "{macro_name}"
+
+                # Add user_answers columns to output
+                output["plot_number"] = getattr(row, 'plot_number', None)
+                output["plant"] = getattr(row, 'plant', None)
+                output["stem_count"] = getattr(row, 'stem_count', None)
                 
                 # Process output for Spark compatibility using library function
                 processed_output = process_macro_output_for_spark(output)
