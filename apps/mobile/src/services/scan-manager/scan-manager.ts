@@ -1,10 +1,9 @@
 import { useAsync, useAsyncCallback } from "react-async-hook";
-import RNBluetoothClassic, { BluetoothDevice } from "react-native-bluetooth-classic";
+import RNBluetoothClassic from "react-native-bluetooth-classic";
 import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
 import { useMacros } from "~/hooks/use-macros";
 import { useProtocols } from "~/hooks/use-protocols";
 import { useSessionStore } from "~/hooks/use-session-store";
-import { getProtocolDefinition, ProtocolName } from "~/protocols/definitions";
 import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-manager";
 import { bluetoothDeviceToMultispeqStream } from "~/services/multispeq-communication/android-bluetooth-connection/bluetooth-device-to-multispeq-stream";
 import { MultispeqCommandExecutor } from "~/services/multispeq-communication/multispeq-command-executor";
