@@ -92,7 +92,7 @@ export default function LoginScreen() {
                 },
               ]}
             >
-              MultispeQ
+              OpenJII
             </Text>
             <Text
               style={[
