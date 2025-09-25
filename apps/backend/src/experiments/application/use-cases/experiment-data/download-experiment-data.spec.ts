@@ -96,7 +96,7 @@ describe("DownloadExperimentDataUseCase", () => {
           {
             name: "bronze_data",
             catalog_name: MOCK_CATALOG_NAME,
-            schema_name: `exp_${experiment.name}_${experiment.id}`,
+            schema_name: `exp_download_test_experiment_${experiment.id}`,
           },
         ],
       });
@@ -106,7 +106,7 @@ describe("DownloadExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT * FROM bronze_data",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_${experiment.name}_${experiment.id}`,
+        schema: `exp_download_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
