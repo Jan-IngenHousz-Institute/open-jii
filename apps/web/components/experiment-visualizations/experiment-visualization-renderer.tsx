@@ -51,7 +51,7 @@ export default function ExperimentVisualizationRenderer({
   visualization,
   experimentId,
   data,
-  height = 400,
+  height = 450,
   showTitle = true,
   showDescription = true,
   isPreview = false,

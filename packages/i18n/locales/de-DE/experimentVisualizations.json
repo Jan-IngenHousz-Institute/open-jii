@@ -228,6 +228,9 @@
 
   "chartOptions": {
     "title": "Diagrammoptionen",
+    "groupingOptions": "Gruppierungsoptionen",
+    "enableGrouping": "Gruppierung aktivieren",
+    "groupingColumn": "Gruppierungsspalte",
     "scatterOptions": "Streudiagramm-Optionen",
     "pieChartOptions": "Kreisdiagramm-Optionen",
     "barChartOptions": "Balkendiagramm-Optionen",

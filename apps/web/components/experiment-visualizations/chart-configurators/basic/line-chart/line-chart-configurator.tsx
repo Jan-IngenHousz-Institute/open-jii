@@ -33,7 +33,7 @@ import type { ChartFormValues, SampleTable } from "../../types";
 interface LineChartConfiguratorProps {
   form: UseFormReturn<ChartFormValues>;
   table: SampleTable;
-  onColumnSelect: (columnType: "x" | "y", columnName: string) => void;
+  onColumnSelect: (columnType: string, columnName: string) => void;
 }
 
 export default function LineChartConfigurator({
@@ -56,8 +56,9 @@ export default function LineChartConfigurator({
 
   // Function to add a new Y-axis series
   const addYAxisSeries = () => {
+    const selectedTableName = form.getValues("dataConfig.tableName") || table.name;
     appendYAxis({
-      dataSource: { columnName: "", tableName: "", alias: "" },
+      dataSource: { columnName: "", tableName: selectedTableName, alias: "" },
       type: "linear",
       title: "",
       side: "left",
@@ -193,7 +194,7 @@ export default function LineChartConfigurator({
                               value={field.value}
                               onValueChange={(value) => {
                                 field.onChange(value);
-                                onColumnSelect("y", value);
+                                onColumnSelect(`y-${index}`, value);
                               }}
                             >
                               <FormControl>

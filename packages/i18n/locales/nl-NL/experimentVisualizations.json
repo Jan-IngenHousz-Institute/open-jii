@@ -190,6 +190,9 @@
 
   "chartOptions": {
     "title": "Diagramopties",
+    "groupingOptions": "Groeperingsopties",
+    "enableGrouping": "Groepering inschakelen",
+    "groupingColumn": "Groeperingskolom",
     "orientation": "Oriëntatie",
     "barMode": "Staafmodus",
     "barWidth": "Staafbreedte",
