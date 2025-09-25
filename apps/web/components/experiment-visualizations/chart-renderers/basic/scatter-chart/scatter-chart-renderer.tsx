@@ -75,10 +75,10 @@ export function ScatterChartRenderer({
         symbol: config.markerShape,
       };
 
-      if (config.colorAxis?.dataSource.columnName) {
+      if (config.colorAxis?.dataSource?.columnName) {
         // Extract color dimension values as numbers
         const colorValues = data.map((row) => {
-          const value = row[config.colorAxis?.dataSource.columnName ?? ""];
+          const value = row[config.colorAxis?.dataSource?.columnName ?? ""];
 
           return typeof value === "number"
             ? value

@@ -82,7 +82,7 @@ export default function EditVisualizationForm({
 
   // Use the imported collectAllChartDataSources function
   const collectAllDataSources = () => {
-    return collectAllChartDataSources(form);
+    return collectAllChartDataSources(form as UseFormReturn<ChartFormValues>);
   };
 
   // Handle form submission
@@ -924,7 +924,7 @@ export default function EditVisualizationForm({
           <Button type="button" variant="outline" onClick={onCancel}>
             {tCommon("cancel")}
           </Button>
-          <Button type="submit" disabled={isPending ?? !selectedChartType}>
+          <Button type="submit" disabled={isPending || !selectedChartType}>
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -358,10 +358,32 @@ export const zDataSourceConfig = z.object({
   alias: z.string().optional(),
 });
 
+// Optional data source configuration schema (for optional axes)
+export const zOptionalDataSourceConfig = z.object({
+  tableName: z.string().optional(),
+  columnName: z.string().optional(),
+  // Optional alias for display
+  alias: z.string().optional(),
+});
+
 // Axis configuration schema
 export const zAxisConfig = z.object({
   // Data source for this axis
   dataSource: zDataSourceConfig,
+  // Axis type/scale
+  type: z.enum(["linear", "log", "date", "category"]).default("linear"),
+  // Axis title (optional, defaults to column name or alias)
+  title: z.string().optional(),
+  // For multi-axis charts (left/right y-axis)
+  side: z.enum(["left", "right"]).optional(),
+  // Color for this data series
+  color: z.string().optional(),
+});
+
+// Optional axis configuration schema (for colorAxis)
+export const zOptionalAxisConfig = z.object({
+  // Data source for this axis - optional for color axis
+  dataSource: zOptionalDataSourceConfig.optional(),
   // Axis type/scale
   type: z.enum(["linear", "log", "date", "category"]).default("linear"),
   // Axis title (optional, defaults to column name or alias)
@@ -400,7 +422,7 @@ export const zScatterChartConfig = z.object({
   xAxis: zAxisConfig,
   yAxes: z.array(zAxisConfig).min(1),
   // Optional color axis for color dimension mapping - can be completely undefined
-  colorAxis: zAxisConfig.optional().nullable(),
+  colorAxis: zOptionalAxisConfig.nullable(),
   // Scatter-specific options
   mode: z.enum(["markers", "lines+markers"]).default("markers"),
   markerSize: z.number().min(1).max(20).default(6),

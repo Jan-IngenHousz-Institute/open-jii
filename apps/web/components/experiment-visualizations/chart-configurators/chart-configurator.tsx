@@ -399,7 +399,11 @@ export default function ChartConfigurator({
         form.setValue("config.config.yAxes.0.dataSource.tableName", tableName);
       }
 
-      form.setValue("config.config.colorAxis.dataSource.tableName", tableName);
+      // Update colorAxis table name only if it exists
+      const colorAxis = form.getValues("config.config.colorAxis");
+      if (colorAxis?.dataSource) {
+        form.setValue("config.config.colorAxis.dataSource.tableName", tableName);
+      }
     };
 
     const updateXYZChartTables = (tableName: string) => {
@@ -513,7 +517,7 @@ export default function ChartConfigurator({
     };
 
     // Determine the correct path to update based on column type
-    let configPath: string;
+    let configPath: string | undefined;
 
     // Handle column types with indexed components (e.g., "y-0", "series-2", etc.)
     if (columnType.includes("-")) {
@@ -543,9 +547,17 @@ export default function ChartConfigurator({
         case "y": // Default to first Y-axis for backwards compatibility
           configPath = "config.config.yAxes.0.dataSource.columnName";
           break;
-        case "color":
-          configPath = "config.config.colorAxis.dataSource.columnName";
+        case "color": {
+          // Only set if colorAxis exists
+          const colorAxis = form.getValues("config.config.colorAxis");
+          if (colorAxis) {
+            configPath = "config.config.colorAxis.dataSource.columnName";
+          } else {
+            // No colorAxis configured, return early
+            return;
+          }
           break;
+        }
         case "size":
           configPath = "config.config.sizeAxis.dataSource.columnName";
           break;
@@ -789,8 +801,11 @@ export function collectAllChartDataSources(form: UseFormReturn<ChartFormValues>)
         });
       }
 
-      // Add color axis
-      pushIf(form.getValues("config.config.colorAxis.dataSource.columnName"));
+      // Add color axis - safely handle optional colorAxis
+      const colorAxis = form.getValues("config.config.colorAxis");
+      if (colorAxis?.dataSource?.columnName) {
+        pushIf(colorAxis.dataSource.columnName);
+      }
       break;
     }
 
