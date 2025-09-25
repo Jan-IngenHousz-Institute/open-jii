@@ -90,13 +90,30 @@ export default function ExperimentVisualizationSelector({
         <CardDescription>{t("selector.description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="max-w-sm space-y-3">
+        <div className="space-y-3">
           <label htmlFor="visualization-select" className="text-sm font-medium">
             {t("selector.selectVisualization")}
           </label>
           <Select value={selectedVisualizationId} onValueChange={setSelectedVisualizationId}>
-            <SelectTrigger id="visualization-select" className="w-full">
-              <SelectValue placeholder={t("selector.placeholder")} />
+            <SelectTrigger
+              id="visualization-select"
+              className="h-auto min-h-[2.5rem] w-full max-w-2xl py-2 text-left"
+            >
+              {selectedVisualization ? (
+                <div className="flex flex-col items-start gap-1 text-left">
+                  <span className="text-sm font-medium leading-tight">
+                    {selectedVisualization.name}
+                  </span>
+                  <span className="text-muted-foreground text-xs capitalize">
+                    {t(
+                      `chartTypes.${selectedVisualization.chartType}`,
+                      selectedVisualization.chartType,
+                    )}
+                  </span>
+                </div>
+              ) : (
+                <SelectValue placeholder={t("selector.placeholder")} />
+              )}
             </SelectTrigger>
             <SelectContent>
               {visualizations.map((visualization) => (
