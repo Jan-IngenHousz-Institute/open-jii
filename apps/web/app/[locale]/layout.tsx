@@ -2,11 +2,11 @@ import { TranslationsProvider } from "@/components/translations-provider";
 import type { Metadata } from "next";
 import { Poppins, Overpass, Inter, Noto_Sans } from "next/font/google";
 import { draftMode } from "next/headers";
+import React from "react";
 import type { ReactNode } from "react";
 
 import { SessionProvider } from "@repo/auth/client";
 import { ContentfulPreviewProvider } from "@repo/cms/contentful";
-import { dir } from "@repo/i18n";
 import type { Locale } from "@repo/i18n";
 import { namespaces } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
@@ -72,32 +72,27 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   });
 
   return (
-    <html lang={locale} dir={dir(locale)} className="h-full">
-      <head>
-        <meta name="robots" content="noindex, nofollow" />
-      </head>
-      <body
-        className={cn(
-          "bg-background font-inter flex min-h-screen flex-col antialiased",
-          poppins.variable,
-          overpass.variable,
-          inter.variable,
-          notoSans.variable,
-        )}
+    <div
+      className={cn(
+        "bg-background font-inter flex h-full min-h-screen flex-col antialiased",
+        poppins.variable,
+        overpass.variable,
+        inter.variable,
+        notoSans.variable,
+      )}
+    >
+      <ContentfulPreviewProvider
+        locale={locale}
+        enableInspectorMode={preview}
+        enableLiveUpdates={preview}
+        targetOrigin={allowedOriginList}
       >
-        <ContentfulPreviewProvider
-          locale={locale}
-          enableInspectorMode={preview}
-          enableLiveUpdates={preview}
-          targetOrigin={allowedOriginList}
-        >
-          <TranslationsProvider locale={locale} namespaces={[...namespaces]} resources={resources}>
-            <SessionProvider>
-              <QueryProvider>{children}</QueryProvider>
-            </SessionProvider>
-          </TranslationsProvider>
-        </ContentfulPreviewProvider>
-      </body>
-    </html>
+        <TranslationsProvider locale={locale} namespaces={[...namespaces]} resources={resources}>
+          <SessionProvider>
+            <QueryProvider>{children}</QueryProvider>
+          </SessionProvider>
+        </TranslationsProvider>
+      </ContentfulPreviewProvider>
+    </div>
   );
 }

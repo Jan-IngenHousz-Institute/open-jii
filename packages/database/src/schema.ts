@@ -11,6 +11,7 @@ import {
   uuid,
   integer,
   bigint,
+  decimal,
 } from "drizzle-orm/pg-core";
 
 // UTC timestamps helper
@@ -128,6 +129,7 @@ export const profiles = pgTable("profiles", {
   avatarUrl: varchar("avatar_url", { length: 500 }),
   userId: uuid("user_id")
     .references(() => users.id)
+    .unique()
     .notNull(),
   organizationId: uuid("organization_id").references(() => organizations.id),
   ...timestamps,
@@ -276,5 +278,22 @@ export const flows = pgTable("flows", {
     .references(() => experiments.id, { onDelete: "cascade" })
     .unique(),
   graph: jsonb("graph").notNull(),
+  ...timestamps,
+});
+
+// Experiment Locations Table - stores locations directly tied to experiments
+export const experimentLocations = pgTable("experiment_locations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  experimentId: uuid("experiment_id")
+    .references(() => experiments.id, { onDelete: "cascade" })
+    .notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  latitude: decimal("latitude", { precision: 10, scale: 8 }).notNull(),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }).notNull(),
+  country: varchar("country", { length: 100 }),
+  region: varchar("region", { length: 100 }),
+  municipality: varchar("municipality", { length: 100 }),
+  postalCode: varchar("postal_code", { length: 20 }),
+  addressLabel: text("address_label"),
   ...timestamps,
 });

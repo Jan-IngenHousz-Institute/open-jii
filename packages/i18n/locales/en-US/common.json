@@ -120,7 +120,13 @@
     "pickADate": "Pick a date",
     "embargoUntil": "Embargo until",
     "visibilityCannotBeChanged": "Once public, visibility cannot be changed back to private.",
-    "embargoUntilHelperString": "This experiment will become public on {{date}}."
+    "embargoUntilHelperString": "This experiment will become public on {{date}}.",
+    "locationsTitle": "Experiment Locations",
+    "locationsDescription": "Select geographic locations where this experiment will take place",
+    "selectLocations": "Select Locations",
+    "addLocationsTitle": "Add Locations",
+    "addLocationsDescription": "Click on the map to add experiment locations",
+    "locationsListTitle": "Selected Locations"
   },
 
   "experimentSettings": {
@@ -284,6 +290,16 @@
     "notFound": "Not Found",
     "failedToLoadProtocol": "Failed to load protocol",
     "loginRequired": "Please log in to access this page",
+    "notFoundTitle": "404",
+    "notFoundHeading": "Page Not Found",
+    "notFoundMessage": "The page you're looking for doesn't exist. It might have been moved, deleted, or you entered the wrong URL.",
+    "whereToGo": "Where would you like to go?",
+    "goToHomepage": "Go to Homepage",
+    "accessPlatform": "Access Platform",
+    "learnAboutUs": "Learn About Us",
+    "needHelp": "Need help? Try going back to the previous page or contact support.",
+    "goBack": "Go Back",
+    "brandTagline": "Jan IngenHousz Institute - Improving photosynthesis for a sustainable future",
     "termsUnavailable": "Unable to load terms and conditions at this time.",
     "termsContentUnavailable": "Terms and conditions content is not available."
   },

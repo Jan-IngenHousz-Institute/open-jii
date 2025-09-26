@@ -166,7 +166,13 @@
     "addProtocolsTitle": "Protokolle hinzufügen",
     "addProtocolsDescription": "Verwalten und ordnen Sie die Experimentprotokolle",
     "addProtocolsPlaceholder": "Protokoll hinzufügen",
-    "embargoUntilHelperString": "Dieses Experiment wird am {{date}} öffentlich."
+    "embargoUntilHelperString": "Dieses Experiment wird am {{date}} öffentlich.",
+    "locationsTitle": "Experimentstandorte",
+    "locationsDescription": "Wählen Sie geografische Standorte aus, an denen dieses Experiment stattfinden wird",
+    "selectLocations": "Standorte auswählen",
+    "addLocationsTitle": "Standorte hinzufügen",
+    "addLocationsDescription": "Klicken Sie auf die Karte, um Experimentstandorte hinzuzufügen",
+    "locationsListTitle": "Ausgewählte Standorte"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -276,6 +282,16 @@
     "forbidden": "Zugriff verboten",
     "failedToLoadProtocol": "Protokoll konnte nicht geladen werden",
     "loginRequired": "Bitte melden Sie sich an, um auf diese Seite zuzugreifen",
+    "notFoundTitle": "404",
+    "notFoundHeading": "Seite nicht gefunden",
+    "notFoundMessage": "Die gesuchte Seite existiert nicht. Sie wurde möglicherweise verschoben, gelöscht oder Sie haben eine falsche URL eingegeben.",
+    "whereToGo": "Wohin möchten Sie gehen?",
+    "goToHomepage": "Zur Startseite",
+    "accessPlatform": "Plattform aufrufen",
+    "learnAboutUs": "Über uns erfahren",
+    "needHelp": "Brauchen Sie Hilfe? Versuchen Sie, zur vorherigen Seite zurückzugehen oder kontaktieren Sie den Support.",
+    "goBack": "Zurück",
+    "brandTagline": "Jan IngenHousz Institut - Photosynthese für eine nachhaltige Zukunft verbessern",
     "termsUnavailable": "Die Allgemeinen Geschäftsbedingungen können derzeit nicht geladen werden.",
     "termsContentUnavailable": "Der Inhalt der Allgemeinen Geschäftsbedingungen ist nicht verfügbar."
   },

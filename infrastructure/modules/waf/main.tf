@@ -176,7 +176,7 @@ resource "aws_wafv2_web_acl" "main" {
                     }
                   }
                 }
-                
+
                 # Second condition - match the URI path for the first route
                 statement {
                   byte_match_statement {
@@ -193,7 +193,7 @@ resource "aws_wafv2_web_acl" "main" {
                 }
               }
             }
-            
+
             # Use OR statement only when we have multiple routes
             dynamic "or_statement" {
               for_each = length(var.restrictive_rate_limit_routes) >= 2 ? [1] : []
