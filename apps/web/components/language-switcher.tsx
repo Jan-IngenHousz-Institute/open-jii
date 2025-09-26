@@ -1,6 +1,6 @@
 "use client";
 
-import { Languages } from "lucide-react";
+import { Globe } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -25,7 +25,6 @@ interface LanguageSwitcherProps {
 
 export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
   const pathname = usePathname();
-  const currentLocale = locales.find((l) => l.code === locale) ?? locales[0];
 
   // Generate language switch URL
   const getLanguageSwitchUrl = (newLocale: Locale) => {
@@ -39,9 +38,8 @@ export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-2" aria-label="Switch language">
-          <Languages className="h-4 w-4" />
-          <span>{currentLocale.flag}</span>
+        <Button variant="ghost" size="sm" aria-label="Switch language">
+          <Globe className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

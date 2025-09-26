@@ -1,4 +1,4 @@
-import { UnifiedNavbar } from "@/components/unified-navbar";
+import { UnifiedNavbar } from "@/components/unified-navbar/unified-navbar";
 import { auth } from "@/lib/auth";
 import { draftMode } from "next/headers";
 import React from "react";
