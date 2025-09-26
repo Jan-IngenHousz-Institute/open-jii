@@ -32,7 +32,8 @@ export class DatabricksTablesService {
 
         const token = tokenResult.value;
         const host = this.configService.getHost();
-        const schemaName = `exp_${experimentName}_${experimentId}`;
+        const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+        const schemaName = `exp_${cleanName}_${experimentId}`;
         const apiUrl = `${host}${DatabricksTablesService.TABLES_ENDPOINT}`;
 
         this.logger.debug(`Listing tables for schema ${schemaName}`);
