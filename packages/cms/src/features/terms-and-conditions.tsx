@@ -52,7 +52,7 @@ export const TermsAndConditionsContent: React.FC<TermsAndConditionsContentProps>
   });
 
   return (
-    <div className="text-muted-foreground space-y-2 text-sm">
+    <div className="space-y-2 text-sm">
       {currentTermsAndConditions.content?.json ? (
         <div {...inspectorProps({ fieldId: "content" })}>
           {documentToReactComponents(currentTermsAndConditions.content.json as Document)}

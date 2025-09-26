@@ -20,11 +20,11 @@ export async function AuthHeroSection({ locale }: AuthHeroSectionProps) {
         {t("auth.heroTitle").split(" ").slice(0, 3).join(" ")} <br />{" "}
         {t("auth.heroTitle").split(" ").slice(3).join(" ")}
       </h2>
-      <p className="mt-5 max-w-2xl text-lg text-white/80 sm:text-xl md:text-2xl">
+      <p className="mt-5 max-w-2xl text-lg text-white sm:text-xl md:text-2xl">
         {t("auth.heroDescription")}
       </p>
 
-      <div className="mt-10 flex items-center space-x-3 text-white/70">
+      <div className="mt-10 flex items-center space-x-3 text-white">
         <span className="text-base font-semibold sm:text-lg">{t("auth.brandName")}</span>
         <span className="text-sm sm:text-base">{t("auth.poweredBy")}</span>
         <Image

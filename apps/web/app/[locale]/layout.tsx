@@ -1,6 +1,6 @@
 import { TranslationsProvider } from "@/components/translations-provider";
 import type { Metadata } from "next";
-import { Poppins, Overpass } from "next/font/google";
+import { Poppins, Overpass, Inter, Noto_Sans } from "next/font/google";
 import { draftMode } from "next/headers";
 import type { ReactNode } from "react";
 
@@ -25,6 +25,18 @@ const overpass = Overpass({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
   variable: "--font-overpass",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+  variable: "--font-inter",
+});
+
+const notoSans = Noto_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-noto-sans",
 });
 
 interface LocaleLayoutProps {
@@ -66,9 +78,11 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       </head>
       <body
         className={cn(
-          "bg-background font-overpass flex min-h-screen flex-col antialiased",
+          "bg-background font-inter flex min-h-screen flex-col antialiased",
           poppins.variable,
           overpass.variable,
+          inter.variable,
+          notoSans.variable,
         )}
       >
         <ContentfulPreviewProvider

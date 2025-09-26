@@ -51,7 +51,7 @@ export default async function VerifyRequestPage(props: {
                       </span>
                     </div>
                     {/* Title */}
-                    <div className="mb-6 text-center">
+                    <div className="mb-6 text-left">
                       <h1 className="text-3xl font-bold tracking-tight">
                         {t("auth.verifyRequest")}
                       </h1>
@@ -63,7 +63,7 @@ export default async function VerifyRequestPage(props: {
                     </div>
 
                     {/* Message content */}
-                    <div className="space-y-6 text-center">
+                    <div className="space-y-6 text-left">
                       <p className="text-primary text-lg font-medium">
                         {t("auth.verifyRequestDetails")}
                       </p>

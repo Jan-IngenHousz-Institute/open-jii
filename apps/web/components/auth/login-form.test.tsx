@@ -141,8 +141,8 @@ describe("LoginForm", () => {
 
     expect(screen.getByText("auth.loginToAccount")).toBeInTheDocument();
     expect(screen.getByText("auth.continueWithEmail")).toBeInTheDocument();
-    expect(screen.getByText("auth.loginWith-github")).toBeInTheDocument();
-    expect(screen.getByText("auth.loginWith-orcid")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "github" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "orcid" })).toBeInTheDocument();
   });
 
   it("renders email input form for nodemailer provider", async () => {
@@ -151,7 +151,7 @@ describe("LoginForm", () => {
     const emailInput = screen.getByLabelText("auth.email");
     expect(emailInput).toBeInTheDocument();
     expect(emailInput).toHaveAttribute("type", "email");
-    expect(emailInput).toHaveAttribute("placeholder", "m@example.com");
+    expect(emailInput).toHaveAttribute("placeholder", "auth.emailPlaceholder");
     expect(emailInput).toBeRequired();
     expect(emailInput).toHaveAttribute("name", "email");
     expect(emailInput).toHaveAttribute("id", "email");
@@ -161,15 +161,11 @@ describe("LoginForm", () => {
     render(await LoginForm(defaultProps));
 
     // Check for GitHub SVG
-    const githubSvg = screen
-      .getByRole("button", { name: /auth\.loginWith-github/i })
-      .querySelector("svg");
+    const githubSvg = screen.getByRole("button", { name: "github" }).querySelector("svg");
     expect(githubSvg).toBeInTheDocument();
 
     // Check for ORCID SVG
-    const orcidSvg = screen
-      .getByRole("button", { name: /auth\.loginWith-orcid/i })
-      .querySelector("svg");
+    const orcidSvg = screen.getByRole("button", { name: "orcid" }).querySelector("svg");
     expect(orcidSvg).toBeInTheDocument();
   });
 
@@ -187,8 +183,8 @@ describe("LoginForm", () => {
     expect(emailButton).toHaveClass("h-12", "w-full");
     expect(emailButton).toHaveAttribute("type", "submit");
 
-    const githubButton = screen.getByRole("button", { name: /auth\.loginWith-github/i });
-    const orcidButton = screen.getByRole("button", { name: /auth\.loginWith-orcid/i });
+    const githubButton = screen.getByRole("button", { name: "github" });
+    const orcidButton = screen.getByRole("button", { name: "orcid" });
 
     [githubButton, orcidButton].forEach((button) => {
       expect(button).toHaveAttribute("data-variant", "outline");
@@ -202,9 +198,14 @@ describe("LoginForm", () => {
 
     const buttons = screen.getAllByRole("button");
 
+    // Email first
     expect(buttons[0]).toHaveTextContent("auth.continueWithEmail");
-    expect(buttons[1]).toHaveTextContent("auth.loginWith-github");
-    expect(buttons[2]).toHaveTextContent("auth.loginWith-orcid");
+
+    // Github button
+    expect(screen.getByRole("button", { name: "github" })).toBeInTheDocument();
+
+    // Orcid button
+    expect(screen.getByRole("button", { name: "orcid" })).toBeInTheDocument();
   });
 
   it("renders forms with correct structure", async () => {
@@ -231,8 +232,8 @@ describe("LoginForm", () => {
     // Should still render all the basic elements
     expect(screen.getByText("auth.loginToAccount")).toBeInTheDocument();
     expect(screen.getByText("auth.continueWithEmail")).toBeInTheDocument();
-    expect(screen.getByText("auth.loginWith-github")).toBeInTheDocument();
-    expect(screen.getByText("auth.loginWith-orcid")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "github" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "orcid" })).toBeInTheDocument();
   });
 
   it("renders forms with proper action attributes", async () => {
@@ -285,7 +286,7 @@ describe("LoginForm", () => {
 
     // Should still render (translations will return keys with our mock)
     expect(screen.getByText("auth.loginToAccount")).toBeInTheDocument();
-    expect(screen.getByText("auth.loginWith-github")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "github" })).toBeInTheDocument();
   });
 
   it("renders with empty string callbackUrl", async () => {
@@ -306,13 +307,13 @@ describe("LoginForm", () => {
     render(await LoginForm(defaultProps));
 
     // Check that GitHub icon has the correct path content
-    const githubButton = screen.getByRole("button", { name: /auth\.loginWith-github/i });
+    const githubButton = screen.getByRole("button", { name: "github" });
     const githubSvg = githubButton.querySelector("svg");
     const githubPath = githubSvg?.querySelector("path");
     expect(githubPath).toHaveAttribute("fill", "currentColor");
 
     // Check that ORCID icon has the correct path content and fill color
-    const orcidButton = screen.getByRole("button", { name: /auth\.loginWith-orcid/i });
+    const orcidButton = screen.getByRole("button", { name: "orcid" });
     const orcidSvg = orcidButton.querySelector("svg");
     const orcidPath = orcidSvg?.querySelector("path");
     expect(orcidPath).toHaveAttribute("fill", "#A6CE39");
@@ -334,7 +335,7 @@ describe("LoginForm", () => {
     render(await LoginForm(defaultProps));
 
     // Check for terms prefix text and link
-    expect(screen.getByText("auth.termsPrefix")).toBeInTheDocument();
+    expect(screen.getByText("auth.continueTermsPrefix")).toBeInTheDocument();
     expect(screen.getByText("auth.terms")).toBeInTheDocument();
 
     // Check that dialog components are rendered

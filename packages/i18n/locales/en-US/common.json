@@ -189,7 +189,7 @@
   "auth": {
     "login": "Sign in",
     "logout": "Sign out",
-    "email": "Email",
+    "email": "Email address",
     "password": "Password",
     "forgotPassword": "Forgot Password?",
     "rememberMe": "Remember Me",
@@ -217,6 +217,7 @@
     "loginEmailNotClickable": "If the button above is not clickable, copy-paste the following url into your web browser:",
     "loginEmailNotRequested": "If you didn't request this email, there's nothing to worry about - you can safely ignore it.",
     "noAccount": "No account?",
+    "emailPlaceholder": "Enter your email...",
     "createAccount": "Create an account",
     "errorMessage": "An error occurred during sign in. Please try again.",
     "account": "Account",
@@ -228,8 +229,9 @@
     "poweredBy": "powered by",
     "instituteAlt": "Jan Ingenhousz Institute",
     "continueWithEmail": "Continue with Email",
-    "or": "OR",
+    "or": "or continue with",
     "termsPrefix": "I accept the ",
+    "continueTermsPrefix": "By continuing you accept the ",
     "terms": "terms and conditions"
   },
   "registration": {

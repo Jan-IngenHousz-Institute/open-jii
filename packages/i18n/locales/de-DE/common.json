@@ -183,7 +183,7 @@
   "auth": {
     "login": "Anmelden",
     "logout": "Abmelden",
-    "email": "E-Mail",
+    "email": "E-Mail Adresse",
     "password": "Passwort",
     "forgotPassword": "Passwort vergessen?",
     "rememberMe": "Angemeldet bleiben",
@@ -211,6 +211,7 @@
     "loginEmailNotClickable": "Wenn die Schaltfläche oben nicht angeklickt werden kann, kopieren Sie die folgende URL und fügen Sie sie in Ihren Webbrowser ein:",
     "loginEmailNotRequested": "Wenn Sie diese E-Mail nicht angefordert haben, besteht kein Grund zur Sorge – Sie können sie getrost ignorieren.",
     "noAccount": "Kein Konto?",
+    "emailPlaceholder": "Geben Sie Ihre E-Mail ein...",
     "createAccount": "Konto erstellen",
     "errorMessage": "Beim Anmelden ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
     "account": "Konto",
@@ -222,8 +223,9 @@
     "poweredBy": "betrieben von",
     "instituteAlt": "Jan IngenHousz Institut",
     "continueWithEmail": "Mit E-Mail fortfahren",
-    "or": "ODER",
+    "or": "oder fortfahren mit",
     "termsPrefix": "Ich akzeptiere die ",
+    "continueTermsPrefix": "Indem Sie fortfahren, akzeptieren Sie die ",
     "terms": "Allgemeinen Geschäftsbedingungen"
   },
   "registration": {

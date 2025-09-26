@@ -88,7 +88,7 @@ export function RegistrationForm({
   return (
     <div className="bg-card text-card-foreground ring-border flex h-full min-h-[600px] w-full flex-col rounded-2xl p-6 shadow-lg ring-1 lg:w-[460px] lg:rounded-2xl lg:p-10 lg:shadow-lg lg:ring-1">
       {/* Title */}
-      <div className="mb-4 text-center">
+      <div className="mb-4 text-left">
         <h1 className="text-2xl font-bold">{t("registration.title")}</h1>
         <p className="text-muted-foreground mt-2">{t("registration.description")}</p>
       </div>
@@ -176,7 +176,7 @@ export function RegistrationForm({
                       onBlur={field.onBlur}
                     />
                   </FormControl>
-                  <FormLabel className="text-sm font-medium leading-none">
+                  <FormLabel className="left text-sm font-medium leading-none">
                     {t("auth.termsPrefix")}
                     <Dialog>
                       <DialogTrigger asChild>
@@ -203,7 +203,7 @@ export function RegistrationForm({
           {/* Submit */}
           <Button
             type="submit"
-            className="bg-primary text-primary-foreground h-12 w-full rounded-xl hover:opacity-90"
+            className="bg-primary text-primary-foreground hover:bg-primary-light active:bg-primary-dark h-12 w-full rounded-xl"
           >
             {t("registration.register")}
           </Button>
