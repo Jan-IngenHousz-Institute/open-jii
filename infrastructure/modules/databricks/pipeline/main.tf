@@ -70,4 +70,28 @@ resource "databricks_pipeline" "this" {
   # Development mode can be toggled
   development = var.development_mode
 
+  # Run as configuration - supports both service principal and user
+  dynamic "run_as" {
+    for_each = var.run_as != null ? [var.run_as] : []
+    content {
+      service_principal_name = run_as.value.service_principal_name
+      user_name             = run_as.value.user_name
+    }
+  }
+
+}
+
+# Grant pipeline permissions to principals if provided
+resource "databricks_permissions" "pipeline" {
+  count       = length(var.permissions)
+  provider    = databricks.workspace
+  pipeline_id = databricks_pipeline.this.id
+
+  dynamic "access_control" {
+    for_each = [var.permissions[count.index]]
+    content {
+      service_principal_name = access_control.value.principal_application_id
+      permission_level       = access_control.value.permission_level
+    }
+  }
 }
