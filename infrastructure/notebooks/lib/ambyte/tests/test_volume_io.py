@@ -9,7 +9,7 @@ import os
 import unittest
 from datetime import datetime
 from unittest.mock import Mock, patch, MagicMock
-from volume_io import find_upload_directories, parse_upload_time, discover_and_validate_upload_directories
+from infrastructure.notebooks.lib.ambyte.volume_io import find_upload_directories, parse_upload_time, discover_and_validate_upload_directories
 
 
 class TestFindUploadDirectories(unittest.TestCase):
