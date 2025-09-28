@@ -191,7 +191,7 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
       }`}
     >
       <nav
-        className={`container mx-auto grid h-16 grid-cols-3 items-center px-4 ${
+        className={`font-notosans container mx-auto grid h-16 grid-cols-3 items-center px-4 ${
           isLightNavbar ? "text-black" : "text-white"
         }`}
       >
@@ -279,7 +279,7 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
                   <Menu className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuContent align="end" className="font-notosans w-56">
                 {/* Navigation items */}
                 {navItems.map((item) => {
                   const Icon = item.icon;
