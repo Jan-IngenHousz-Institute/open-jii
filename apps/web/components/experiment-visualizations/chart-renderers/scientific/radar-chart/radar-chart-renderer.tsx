@@ -35,27 +35,33 @@ export function RadarChartRenderer({
 
   try {
     // Type-safe config access
-    if (visualization.config.chartType !== "radar") {
+    if (!visualization.config || visualization.chartType !== "radar") {
       throw new Error("Invalid chart type for radar renderer");
     }
 
-    const config = visualization.config.config;
+    // Get role-based data sources
+    const labelsDataSources = visualization.dataConfig.dataSources.filter(
+      (ds) => ds.role === "labels",
+    );
+    const valuesDataSources = visualization.dataConfig.dataSources.filter(
+      (ds) => ds.role === "values",
+    );
 
-    if (!config.categoryAxis.dataSource.columnName) {
+    if (!labelsDataSources.length || !labelsDataSources[0]?.columnName) {
       throw new Error(t("errors.categoryAxisNotConfigured"));
     }
 
-    if (!config.series.length) {
+    if (!valuesDataSources.length) {
       throw new Error(t("errors.noSeriesConfigured"));
     }
 
     // Extract categories from the data
-    const categoryColumnName = config.categoryAxis.dataSource.columnName;
+    const categoryColumnName = labelsDataSources[0].columnName;
     const categories = [...new Set(data.map((row) => String(row[categoryColumnName])))];
 
     // Prepare radar chart data
-    const radarData = config.series.map((series, index) => {
-      const seriesColumnName = series.dataSource.columnName;
+    const radarData = valuesDataSources.map((valuesDataSource, index) => {
+      const seriesColumnName = valuesDataSource.columnName;
 
       if (!seriesColumnName) {
         throw new Error(t("errors.seriesColumnNotConfigured", { index: index + 1 }));
@@ -80,24 +86,25 @@ export function RadarChartRenderer({
       const thetaValues = categories.map((_, i) => (i * 360) / categories.length);
       const closedThetaValues = [...thetaValues, 360];
 
+      const colorPalette = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
+      const seriesColor = colorPalette[index % colorPalette.length];
+
       return {
-        r: closedRValues,
-        theta: closedThetaValues,
-        name: series.name ?? series.dataSource.alias ?? series.dataSource.columnName,
-        color: series.color ?? `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
-        mode: series.mode,
-        fill: series.fill,
-        fillcolor: series.fillcolor ?? series.color ?? `hsl(${(index * 137.5) % 360}, 70%, 25%)`,
-        opacity: series.opacity,
+        theta: categories,
+        r: rValues,
+        name: valuesDataSource.alias ?? seriesColumnName,
+        color: seriesColor,
+        type: "scatterpolar" as const,
+        mode: "lines+markers" as const,
+        fillcolor: `${seriesColor}40`, // Add transparency with hex
+        fill: "toself" as const,
         line: {
-          color: series.color ?? `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
-          width: series.line?.width ?? 2,
-          dash: series.line?.dash ?? "solid",
+          color: seriesColor,
+          width: 2,
         },
         marker: {
-          color: series.color ?? `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
-          size: series.marker?.size ?? 6,
-          symbol: series.marker?.symbol ?? "circle",
+          color: seriesColor,
+          size: 6,
         },
       };
     });
@@ -108,16 +115,16 @@ export function RadarChartRenderer({
           data={radarData}
           categories={categories}
           config={{
-            title: config.display?.title ?? visualization.name,
-            showLegend: config.display?.showLegend !== false,
+            title: visualization.name,
+            showLegend: valuesDataSources.length > 1,
             showModeBar: !_isPreview,
           }}
-          rangeMode={config.rangeMode}
-          gridShape={config.gridShape}
-          showTickLabels={config.showTickLabels !== false}
-          tickAngle={config.tickAngle || 0}
-          radialAxisVisible={config.radialAxisVisible !== false}
-          angularAxisVisible={config.angularAxisVisible !== false}
+          rangeMode="tozero"
+          gridShape="circular"
+          showTickLabels={true}
+          tickAngle={0}
+          radialAxisVisible={true}
+          angularAxisVisible={true}
         />
       </div>
     );

@@ -107,7 +107,7 @@ export default function ExperimentVisualizationRenderer({
             <div className="text-center">
               <div className="mb-2 text-lg font-medium">{t("errors.unsupportedChartType")}</div>
               <div className="text-sm">
-                {t("chartTypes." + visualization.config.chartType, visualization.config.chartType)}{" "}
+                {t("chartTypes." + visualization.chartType, visualization.chartType)}{" "}
                 {t("errors.chartTypeNotSupported")}
               </div>
             </div>

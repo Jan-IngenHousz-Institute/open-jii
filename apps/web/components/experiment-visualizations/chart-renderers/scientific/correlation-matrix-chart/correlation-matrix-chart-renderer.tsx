@@ -31,21 +31,22 @@ export function CorrelationMatrixChartRenderer({
 
   try {
     // Ensure this is a correlation matrix chart
-    if (visualization.config.chartType !== "correlation-matrix") {
+    if (!visualization.config || visualization.chartType !== "correlation-matrix") {
       throw new Error("Invalid chart type for correlation matrix chart renderer");
     }
 
-    const config = visualization.config.config;
+    // Get all data sources (correlation matrix uses all variables)
+    const dataSources = visualization.dataConfig.dataSources;
 
     // Validate that we have at least 2 variables
-    if (config.variables.length < 2) {
+    if (dataSources.length < 2) {
       throw new Error("At least 2 variables are required for correlation matrix");
     }
 
     // Extract numeric values for each variable
-    const variables = config.variables.map((variable) => ({
-      name: variable.alias ?? variable.columnName,
-      columnName: variable.columnName,
+    const variables = dataSources.map((dataSource) => ({
+      name: dataSource.alias ?? dataSource.columnName,
+      columnName: dataSource.columnName,
       values: [] as number[],
     }));
 
@@ -90,8 +91,8 @@ export function CorrelationMatrixChartRenderer({
           correlationMatrix={correlationMatrix}
           labels={labels}
           name={visualization.name}
-          showValues={config.showValues}
-          colorscale={config.colorscale}
+          showValues={true}
+          colorscale="RdBu"
           config={correlationConfig}
         />
       </div>

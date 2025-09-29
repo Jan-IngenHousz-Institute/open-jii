@@ -130,7 +130,7 @@ export default function ExperimentVisualizationDetailPage({
                 )}
                 <div className="text-muted-foreground flex items-center gap-2 text-sm">
                   <span className="bg-primary/10 text-primary rounded-full px-2 py-1 font-medium">
-                    {visualization.config.chartType}
+                    {visualization.chartType}
                   </span>
                   <span>•</span>
                   <span>{visualization.chartFamily} family</span>
@@ -233,7 +233,7 @@ export default function ExperimentVisualizationDetailPage({
                 <label className="text-foreground text-sm font-semibold">{t("chartType")}</label>
                 <div className="bg-muted/50 rounded-lg p-3">
                   <div className="text-sm">
-                    <span className="font-mono font-medium">{visualization.config.chartType}</span>
+                    <span className="font-mono font-medium">{visualization.chartType}</span>
                     <span className="text-muted-foreground">
                       {" "}
                       ({visualization.chartFamily} family)
@@ -250,7 +250,7 @@ export default function ExperimentVisualizationDetailPage({
                 </label>
                 <div className="bg-muted/20 rounded-lg border p-4">
                   <pre className="max-h-48 overflow-auto font-mono text-xs leading-relaxed">
-                    {JSON.stringify(visualization.config.config, null, 2)}
+                    {JSON.stringify(visualization.config?.config ?? {}, null, 2)}
                   </pre>
                 </div>
               </div>

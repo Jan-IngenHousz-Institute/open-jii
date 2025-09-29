@@ -5,6 +5,18 @@ import React from "react";
 import type { ExperimentVisualization } from "@repo/api";
 import { ContourPlot } from "@repo/ui/components";
 
+interface ContourConfig {
+  config?: {
+    xAxis?: { title?: string };
+    yAxis?: { title?: string };
+    zAxis?: { title?: string };
+    display?: { title?: string; showLegend?: boolean; legendPosition?: string };
+    ncontours?: number;
+    colorscale?: string;
+    showlabels?: boolean;
+  };
+}
+
 export interface ContourChartRendererProps {
   visualization: ExperimentVisualization;
   experimentId: string;
@@ -30,27 +42,33 @@ export function ContourChartRenderer({
   }
 
   try {
-    // Ensure this is a contour chart
-    if (visualization.config.chartType !== "contour") {
+    // Ensure this is a contour chart and we have data sources
+    if (!visualization.config || visualization.chartType !== "contour") {
       throw new Error("Invalid chart type for contour chart renderer");
     }
 
-    const config = visualization.config.config;
+    // Extract configuration properties
+    const config = visualization.config as ContourConfig;
+
+    // Get role-based data sources
+    const xDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "x");
+    const yDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "y");
+    const zDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "z");
 
     // Validate required columns
-    if (!config.xAxis.dataSource.columnName) {
+    if (!xDataSources.length || !xDataSources[0]?.columnName) {
       throw new Error("X-axis column not configured");
     }
-    if (!config.yAxis.dataSource.columnName) {
+    if (!yDataSources.length || !yDataSources[0]?.columnName) {
       throw new Error("Y-axis column not configured");
     }
-    if (!config.zAxis.dataSource.columnName) {
+    if (!zDataSources.length || !zDataSources[0]?.columnName) {
       throw new Error("Z-axis (values) column not configured");
     }
 
-    const xColumnName = config.xAxis.dataSource.columnName;
-    const yColumnName = config.yAxis.dataSource.columnName;
-    const zColumnName = config.zAxis.dataSource.columnName;
+    const xColumnName = xDataSources[0].columnName;
+    const yColumnName = yDataSources[0].columnName;
+    const zColumnName = zDataSources[0].columnName;
 
     // Get unique x and y values directly from data - no conversions
     const xValues = Array.from(new Set(data.map((row) => row[xColumnName])))
@@ -101,44 +119,37 @@ export function ContourChartRenderer({
         y: yValues,
         z: zMatrix,
         name: visualization.name,
-        colorscale: config.colorscale,
-        showscale: config.showScale !== false,
-        colorbar:
-          config.showScale !== false
-            ? {
-                title:
-                  config.colorbarTitle ?? config.zAxis.title ?? config.zAxis.dataSource.columnName,
-                titleside: "right" as const,
-              }
-            : undefined,
-        ncontours: config.ncontours || 15,
-        autocontour: config.autocontour !== false,
+        colorscale: "Viridis" as const,
+        showscale: true,
+        colorbar: {
+          title: zDataSources[0]?.alias ?? zColumnName,
+          titleside: "right" as const,
+        },
+        ncontours: 15,
+        autocontour: true,
         contours: {
-          coloring: config.contours.coloring,
-          showlines: config.contours.showlines !== false,
-          showlabels: config.contours.showlabels === true,
-          start: config.contours.start,
-          end: config.contours.end,
-          size: config.contours.size,
-          labelfont: config.contours.labelfont ?? {
+          coloring: "heatmap" as const,
+          showlines: true,
+          showlabels: false,
+          labelfont: {
             size: 12,
             color: "black",
           },
         },
-        connectgaps: config.connectgaps !== false,
-        smoothing: config.smoothing || 1,
-        hovertemplate: config.hoverTemplate ?? "%{x}<br>%{y}<br>%{z}<extra></extra>",
+        connectgaps: true,
+        smoothing: 1,
+        hovertemplate: "%{x}<br>%{y}<br>%{z}<extra></extra>",
       },
     ];
 
     // Chart configuration
     const chartConfig = {
-      title: config.display?.title ?? visualization.name,
-      xAxisTitle: config.xAxis.title ?? config.xAxis.dataSource.columnName,
-      yAxisTitle: config.yAxis.title ?? config.yAxis.dataSource.columnName,
+      title: visualization.name,
+      xAxisTitle: xDataSources[0]?.alias ?? xColumnName,
+      yAxisTitle: yDataSources[0]?.alias ?? yColumnName,
       useWebGL: false,
       responsive: true,
-      showlegend: config.display?.showLegend !== false,
+      showlegend: true,
       height,
     };
 

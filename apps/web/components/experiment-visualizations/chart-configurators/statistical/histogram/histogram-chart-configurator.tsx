@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash2, BarChart3, Layers, Eye, Palette, Database } from "lucide-react";
+import { Plus, Trash2, BarChart3, Layers, Eye, Database } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useFieldArray } from "react-hook-form";
 
@@ -23,7 +23,6 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Separator,
   Slider,
   Badge,
   Switch,
@@ -45,27 +44,29 @@ export default function HistogramChartConfigurator({
   const { t } = useTranslation("experimentVisualizations");
   const { t: tCommon } = useTranslation("common");
 
-  // Hook for managing series array
+  // Hook for managing data sources array
   const {
-    fields: seriesFields,
-    append: appendSeries,
-    remove: removeSeries,
+    fields: dataSourceFields,
+    append: appendDataSource,
+    remove: removeDataSource,
   } = useFieldArray({
     control: form.control,
-    name: "config.config.series",
+    name: "dataConfig.dataSources",
   });
+
+  // Get value data sources
+  const valueDataSources = dataSourceFields
+    .map((field, index) => ({ field, index }))
+    .filter(({ field }) => field.role === "value");
 
   // Function to add a new histogram series
   const addHistogramSeries = () => {
-    appendSeries({
-      dataSource: {
-        columnName: "",
-        tableName: form.watch("dataConfig.tableName") || "",
-        alias: "",
-      },
-      color: `hsl(${(seriesFields.length * 137.5) % 360}, 70%, 50%)`,
-      opacity: 0.7,
-      name: `Series ${seriesFields.length + 1}`,
+    const selectedTableName = form.getValues("dataConfig.tableName") || table.name;
+    appendDataSource({
+      columnName: "",
+      tableName: selectedTableName,
+      alias: `Series ${dataSourceFields.length + 1}`,
+      role: "value",
     });
   };
 
@@ -88,11 +89,11 @@ export default function HistogramChartConfigurator({
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Histogram Series Configuration */}
+          {/* Value Data Sources Configuration */}
           <div className="rounded-lg border bg-white p-4">
             <div className="mb-4 flex items-center justify-between">
               <h4 className="text-muted-foreground text-sm font-medium uppercase tracking-wide">
-                {t("yAxisConfiguration")}
+                {t("valueConfiguration")}
               </h4>
               <Button
                 type="button"
@@ -107,21 +108,21 @@ export default function HistogramChartConfigurator({
             </div>
 
             <div className="space-y-4">
-              {seriesFields.map((field, index) => (
+              {valueDataSources.map(({ field, index }) => (
                 <Card key={field.id} className="border-l-primary/20 border-l-4 shadow-sm">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                     <div className="flex items-center gap-2">
                       <Layers className="text-primary h-4 w-4" />
                       <CardTitle className="text-sm font-medium">
-                        {t("series")} {index + 1}
+                        {t("series")} {valueDataSources.findIndex((v) => v.index === index) + 1}
                       </CardTitle>
                     </div>
-                    {seriesFields.length > 1 && (
+                    {valueDataSources.length > 1 && (
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => removeSeries(index)}
+                        onClick={() => removeDataSource(index)}
                         className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -129,19 +130,21 @@ export default function HistogramChartConfigurator({
                     )}
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                       {/* Data Column */}
                       <FormField
                         control={form.control}
-                        name={`config.config.series.${index}.dataSource.columnName` as const}
+                        name={`dataConfig.dataSources.${index}.columnName` as const}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-medium">{t("dataColumn")}</FormLabel>
+                            <FormLabel className="text-sm font-medium">
+                              {t("valueColumn")}
+                            </FormLabel>
                             <Select
                               value={field.value}
                               onValueChange={(value) => {
                                 field.onChange(value);
-                                onColumnSelect("series", value);
+                                onColumnSelect("value", value);
                               }}
                             >
                               <FormControl>
@@ -170,7 +173,7 @@ export default function HistogramChartConfigurator({
                       {/* Series Label */}
                       <FormField
                         control={form.control}
-                        name={`config.config.series.${index}.dataSource.alias` as const}
+                        name={`dataConfig.dataSources.${index}.alias` as const}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">
@@ -181,145 +184,8 @@ export default function HistogramChartConfigurator({
                                 placeholder={t("enterSeriesLabel")}
                                 className="h-10 bg-white"
                                 {...field}
+                                value={String(field.value)}
                               />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Color */}
-                      <FormField
-                        control={form.control}
-                        name={`config.config.series.${index}.color` as const}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2 text-sm font-medium">
-                              <Palette className="h-3.5 w-3.5" />
-                              {t("configuration.color")}
-                            </FormLabel>
-                            <FormControl>
-                              <div className="flex items-center gap-2">
-                                <Input
-                                  type="color"
-                                  className="h-10 w-12 border-2 bg-white p-1"
-                                  {...field}
-                                />
-                                <Input
-                                  type="text"
-                                  className="h-10 flex-1 bg-white font-mono text-sm"
-                                  placeholder="#000000"
-                                  {...field}
-                                />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <Separator className="my-4" />
-
-                    {/* Histogram Options for this series */}
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                      <FormField
-                        control={form.control}
-                        name={`config.config.series.${index}.histfunc` as const}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium">
-                              {t("configuration.histogramFunction")}
-                            </FormLabel>
-                            <Select
-                              value={field.value ?? "none"}
-                              onValueChange={(value) =>
-                                field.onChange(value === "none" ? "" : value)
-                              }
-                            >
-                              <FormControl>
-                                <SelectTrigger className="h-10 bg-white">
-                                  <SelectValue placeholder={tCommon("none")} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="none">{tCommon("none")}</SelectItem>
-                                <SelectItem value="count">
-                                  {t("histogramFunction.count")}
-                                </SelectItem>
-                                <SelectItem value="sum">{t("histogramFunction.sum")}</SelectItem>
-                                <SelectItem value="avg">{t("histogramFunction.avg")}</SelectItem>
-                                <SelectItem value="min">{t("histogramFunction.min")}</SelectItem>
-                                <SelectItem value="max">{t("histogramFunction.max")}</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name={`config.config.series.${index}.histnorm` as const}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium">
-                              {t("configuration.normalization")}
-                            </FormLabel>
-                            <Select
-                              value={field.value ?? "none"}
-                              onValueChange={(value) =>
-                                field.onChange(value === "none" ? "" : value)
-                              }
-                            >
-                              <FormControl>
-                                <SelectTrigger className="h-10 bg-white">
-                                  <SelectValue placeholder={tCommon("none")} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="none">{tCommon("none")}</SelectItem>
-                                <SelectItem value="percent">
-                                  {t("normalization.percent")}
-                                </SelectItem>
-                                <SelectItem value="probability">
-                                  {t("normalization.probability")}
-                                </SelectItem>
-                                <SelectItem value="density">
-                                  {t("normalization.density")}
-                                </SelectItem>
-                                <SelectItem value="probability density">
-                                  {t("normalization.probabilityDensity")}
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name={`config.config.series.${index}.opacity` as const}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium">{t("opacity")}</FormLabel>
-                            <FormControl>
-                              <div className="space-y-3">
-                                <Slider
-                                  min={0}
-                                  max={1}
-                                  step={0.1}
-                                  value={[field.value || 0.7]}
-                                  onValueChange={(values) => field.onChange(values[0])}
-                                  className="w-full"
-                                />
-                                <div className="flex items-center justify-center">
-                                  <Badge variant="outline" className="font-mono text-xs">
-                                    {Math.round((field.value || 0.7) * 100)}%
-                                  </Badge>
-                                </div>
-                              </div>
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -348,7 +214,7 @@ export default function HistogramChartConfigurator({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
-                name="config.config.nbins"
+                name="config.nbins"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium">
@@ -360,14 +226,14 @@ export default function HistogramChartConfigurator({
                           min={5}
                           max={100}
                           step={1}
-                          value={[field.value || 20]}
+                          value={[Number(field.value)]}
                           onValueChange={(values) => field.onChange(values[0])}
                           className="w-full"
                         />
                         <div className="text-muted-foreground flex items-center justify-between text-xs">
                           <span>5</span>
                           <Badge variant="outline" className="font-mono text-xs">
-                            {field.value || 20}
+                            {Number(field.value) || 20}
                           </Badge>
                           <span>100</span>
                         </div>
@@ -380,14 +246,14 @@ export default function HistogramChartConfigurator({
 
               <FormField
                 control={form.control}
-                name="config.config.barmode"
+                name="config.barmode"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium">
                       {t("configuration.barMode")}
                     </FormLabel>
                     <Select
-                      value={field.value}
+                      value={String(field.value)}
                       onValueChange={(value) => field.onChange(value === "none" ? "" : value)}
                     >
                       <FormControl>
@@ -410,14 +276,14 @@ export default function HistogramChartConfigurator({
 
             <FormField
               control={form.control}
-              name="config.config.orientation"
+              name="config.orientation"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium">
                     {t("chartOptions.orientation")}
                   </FormLabel>
                   <Select
-                    value={field.value}
+                    value={String(field.value)}
                     onValueChange={(value) => field.onChange(value === "none" ? "" : value)}
                   >
                     <FormControl>
@@ -438,7 +304,7 @@ export default function HistogramChartConfigurator({
 
             <FormField
               control={form.control}
-              name="config.config.autobinx"
+              name="config.autobinx"
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between rounded-lg border p-3">
                   <div className="space-y-0.5">
@@ -450,7 +316,7 @@ export default function HistogramChartConfigurator({
                     </div>
                   </div>
                   <FormControl className="flex items-center">
-                    <Switch checked={field.value || true} onCheckedChange={field.onChange} />
+                    <Switch checked={Boolean(field.value)} onCheckedChange={field.onChange} />
                   </FormControl>
                 </FormItem>
               )}
@@ -458,13 +324,104 @@ export default function HistogramChartConfigurator({
 
             <FormField
               control={form.control}
-              name="config.config.gridLines"
+              name="config.histfunc"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">
+                    {t("configuration.histogramFunction")}
+                  </FormLabel>
+                  <Select
+                    value={String(field.value)}
+                    onValueChange={(value) => field.onChange(value === "none" ? "" : value)}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="h-10 bg-white">
+                        <SelectValue placeholder={tCommon("none")} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">{tCommon("none")}</SelectItem>
+                      <SelectItem value="count">{t("histogramFunction.count")}</SelectItem>
+                      <SelectItem value="sum">{t("histogramFunction.sum")}</SelectItem>
+                      <SelectItem value="avg">{t("histogramFunction.avg")}</SelectItem>
+                      <SelectItem value="min">{t("histogramFunction.min")}</SelectItem>
+                      <SelectItem value="max">{t("histogramFunction.max")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="config.histnorm"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">
+                    {t("configuration.normalization")}
+                  </FormLabel>
+                  <Select
+                    value={String(field.value)}
+                    onValueChange={(value) => field.onChange(value === "none" ? "" : value)}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="h-10 bg-white">
+                        <SelectValue placeholder={tCommon("none")} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">{tCommon("none")}</SelectItem>
+                      <SelectItem value="percent">{t("normalization.percent")}</SelectItem>
+                      <SelectItem value="probability">{t("normalization.probability")}</SelectItem>
+                      <SelectItem value="density">{t("normalization.density")}</SelectItem>
+                      <SelectItem value="probability density">
+                        {t("normalization.probabilityDensity")}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="config.opacity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">{t("opacity")}</FormLabel>
+                  <FormControl>
+                    <div className="space-y-3">
+                      <Slider
+                        min={0}
+                        max={1}
+                        step={0.1}
+                        value={[Number(field.value)]}
+                        onValueChange={(values) => field.onChange(values[0])}
+                        className="w-full"
+                      />
+                      <div className="flex items-center justify-center">
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {Math.round((Number(field.value) || 0.7) * 100)}%
+                        </Badge>
+                      </div>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="config.gridLines"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium">
                     {t("chartOptions.gridLines")}
                   </FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select value={String(field.value)} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger className="h-10 bg-white">
                         <SelectValue placeholder={t("gridLines.none")} />
@@ -495,7 +452,7 @@ export default function HistogramChartConfigurator({
           <CardContent className="space-y-4">
             <FormField
               control={form.control}
-              name="config.config.display.title"
+              name="config.title"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium">{t("chartTitle")}</FormLabel>
@@ -504,7 +461,7 @@ export default function HistogramChartConfigurator({
                       placeholder={t("enterChartTitle")}
                       className="h-10 bg-white"
                       {...field}
-                      value={field.value ?? ""}
+                      value={String(field.value)}
                     />
                   </FormControl>
                   <FormMessage />
@@ -514,7 +471,7 @@ export default function HistogramChartConfigurator({
 
             <FormField
               control={form.control}
-              name="config.config.display.showLegend"
+              name="config.showLegend"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium">{t("showLegend")}</FormLabel>
@@ -539,14 +496,14 @@ export default function HistogramChartConfigurator({
 
             <FormField
               control={form.control}
-              name="config.config.display.legendPosition"
+              name="config.legendPosition"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium">
                     {t("chartOptions.legendPosition")}
                   </FormLabel>
                   <Select
-                    value={field.value}
+                    value={String(field.value)}
                     onValueChange={(value) => field.onChange(value === "none" ? "" : value)}
                   >
                     <FormControl>
@@ -569,12 +526,12 @@ export default function HistogramChartConfigurator({
 
             <FormField
               control={form.control}
-              name="config.config.display.colorScheme"
+              name="config.colorScheme"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium">{t("colorScheme")}</FormLabel>
                   <Select
-                    value={field.value}
+                    value={String(field.value)}
                     onValueChange={(value) => field.onChange(value === "none" ? "" : value)}
                   >
                     <FormControl>

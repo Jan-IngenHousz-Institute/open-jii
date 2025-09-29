@@ -6,6 +6,16 @@ import type { ExperimentVisualization } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { ScatterChart } from "@repo/ui/components";
 
+interface BubbleChartConfig {
+  chartTitle?: string;
+  yAxisTitle?: string;
+  color?: string;
+  markerSizeMin?: number;
+  markerSizeMax?: number;
+  markerShape?: string;
+  opacity?: number;
+}
+
 export interface BubbleChartRendererProps {
   visualization: ExperimentVisualization;
   experimentId: string;
@@ -34,53 +44,72 @@ export function BubbleChartRenderer({
   }
 
   try {
-    // Type-safe config access
-    if (visualization.config.chartType !== "bubble") {
-      throw new Error("Invalid chart type for bubble renderer");
+    // Ensure this is a bubble chart and we have data sources
+    if (!visualization.config || visualization.chartType !== "bubble") {
+      throw new Error("Invalid chart type for bubble chart renderer");
     }
 
-    const config = visualization.config.config;
+    // Extract configuration properties
+    const config = visualization.config as BubbleChartConfig;
 
-    if (!config.xAxis.dataSource.columnName) {
+    // Get role-based data sources
+    const xDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "x");
+    const yDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "y");
+    const sizeDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "size");
+
+    if (!xDataSources.length || !xDataSources[0]?.columnName) {
       throw new Error(t("errors.xAxisNotConfigured"));
     }
 
-    if (!config.yAxes.length || !config.yAxes[0]?.dataSource.columnName) {
+    if (!yDataSources.length || !yDataSources[0]?.columnName) {
       throw new Error(t("errors.yAxisNotConfigured"));
     }
 
-    if (!config.sizeAxis.dataSource.columnName) {
+    if (!sizeDataSources.length || !sizeDataSources[0]?.columnName) {
       throw new Error(t("errors.sizeAxisNotConfigured"));
     }
 
-    // Prepare bubble chart data
-    const bubbleData = config.yAxes.map((yAxis, index) => {
+    const xColumn = xDataSources[0].columnName;
+    const sizeColumn = sizeDataSources[0].columnName;
+
+    // Prepare bubble chart data using role-based approach
+    const bubbleData = yDataSources.map((yDataSource, index) => {
       const xValues = data.map((row) => {
-        const value = row[config.xAxis.dataSource.columnName];
+        const value = row[xColumn];
         return typeof value === "string" || typeof value === "number" ? value : String(value);
       });
       const yValues = data.map((row) => {
-        const value = row[yAxis.dataSource.columnName];
+        const value = row[yDataSource.columnName];
         return typeof value === "string" || typeof value === "number" ? value : String(value);
       });
       const sizeValues = data.map((row) => {
-        const value = row[config.sizeAxis.dataSource.columnName];
+        const value = row[sizeColumn];
         const num = typeof value === "number" ? value : parseFloat(String(value)) || 0;
-        return Math.max(config.markerSizeScale.min, Math.min(config.markerSizeScale.max, num));
+        // Use configured size range or defaults
+        const minSize = config.markerSizeMin ?? 5;
+        const maxSize = config.markerSizeMax ?? 50;
+        return Math.max(minSize, Math.min(maxSize, num));
       });
 
       return {
         x: xValues,
         y: yValues,
-        name: yAxis.dataSource.alias ?? yAxis.dataSource.columnName,
-        mode: config.mode,
+        name: yDataSource.alias ?? yDataSource.columnName,
+        mode: "markers" as const,
         marker: {
           size: sizeValues,
-          color: yAxis.color ?? `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
-          symbol: config.markerShape,
-          opacity: config.opacity,
+          color: config.color ?? ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"][index % 5],
+          symbol:
+            (config.markerShape as
+              | "circle"
+              | "square"
+              | "diamond"
+              | "triangle-up"
+              | "triangle-down"
+              | undefined) ?? "circle",
+          opacity: config.opacity ?? 0.7,
         },
-        text: config.mode === "markers+text" ? sizeValues.map(String) : undefined,
+        text: undefined, // Default to no text
         textposition: "middle center" as const,
         textfont: {
           family: "Inter, Arial, sans-serif",
@@ -96,13 +125,14 @@ export function BubbleChartRenderer({
         <ScatterChart
           data={bubbleData}
           config={{
-            title: config.display?.title ?? visualization.name,
-            xAxisTitle: config.xAxis.title ?? config.xAxis.dataSource.columnName,
+            title: config.chartTitle ?? visualization.name,
+            xAxisTitle: xDataSources[0]?.alias ?? xColumn,
             yAxisTitle:
-              config.yAxes.length === 1
-                ? (config.yAxes[0].title ?? config.yAxes[0].dataSource.columnName)
-                : "Values",
-            showLegend: config.display?.showLegend ?? true,
+              config.yAxisTitle ??
+              (yDataSources.length === 1
+                ? (yDataSources[0]?.alias ?? yDataSources[0]?.columnName)
+                : "Values"),
+            showLegend: true,
             responsive: true,
           }}
         />

@@ -18,7 +18,7 @@ export function PieChartRenderer({
   experimentId,
   data: providedData,
   height: _height,
-  isPreview,
+  isPreview: _isPreview,
 }: PieChartRendererProps) {
   // Fetch data if not provided
   const {
@@ -67,15 +67,40 @@ export function PieChartRenderer({
   }
 
   try {
-    const config = visualization.config;
-    if (config.chartType !== "pie") {
-      throw new Error("Invalid chart configuration");
+    // Ensure this is a pie chart and we have data sources
+    if (!visualization.config || visualization.chartType !== "pie") {
+      throw new Error("Invalid chart type for pie chart renderer");
     }
 
-    const pieConfig = config.config;
+    // Get role-based data sources
+    const labelDataSources = visualization.dataConfig.dataSources.filter(
+      (ds) => ds.role === "labels",
+    );
+    const valueDataSources = visualization.dataConfig.dataSources.filter(
+      (ds) => ds.role === "values",
+    );
 
-    const labelColumnName = pieConfig.labelSource.columnName;
-    const valueColumnName = pieConfig.valueSource.columnName;
+    if (!labelDataSources.length || !labelDataSources[0]?.columnName) {
+      throw new Error("Label column not configured");
+    }
+
+    if (!valueDataSources.length || !valueDataSources[0]?.columnName) {
+      throw new Error("Value column not configured");
+    }
+
+    const labelColumnName = labelDataSources[0].columnName;
+    const valueColumnName = valueDataSources[0].columnName;
+
+    // Extract config properties from the configurator
+    interface PieConfigType {
+      showLabels?: boolean;
+      showValues?: boolean;
+      textPosition?: string;
+      hole?: number;
+      pull?: number;
+    }
+
+    const config = visualization.config as PieConfigType;
 
     const labels = chartData.map((row) => {
       const value = row[labelColumnName];
@@ -94,35 +119,37 @@ export function PieChartRenderer({
       return 0;
     });
 
+    // Generate textinfo based on configurator settings
+    const textInfoParts: string[] = [];
+    if (config.showLabels) textInfoParts.push("label");
+    if (config.showValues) textInfoParts.push("percent");
+    const textinfo = textInfoParts.length > 0 ? textInfoParts.join("+") : "none";
+
     const pieData = [
       {
         labels,
         values,
         type: "pie" as const,
-        hole: pieConfig.hole,
-        // Enhanced textinfo to support showValues
-        textinfo: (() => {
-          if (pieConfig.showLabels && pieConfig.showValues) {
-            return "label+value+percent" as const;
-          } else if (pieConfig.showLabels) {
-            return "label+percent" as const;
-          } else if (pieConfig.showValues) {
-            return "value+percent" as const;
-          } else {
-            return "percent" as const;
-          }
-        })(),
-        textposition: pieConfig.textPosition,
-        // Add support for pull (slice separation)
-        pull: pieConfig.pull > 0 ? Array(labels.length).fill(pieConfig.pull) : undefined,
+        hole: config.hole ?? 0,
+        textinfo: textinfo as
+          | "label"
+          | "text"
+          | "value"
+          | "percent"
+          | "none"
+          | "label+percent"
+          | "label+text"
+          | "label+value",
+        textposition: (config.textPosition ?? "auto") as "inside" | "outside" | "auto" | "none",
+        pull: config.pull ?? 0,
       },
     ];
 
     const chartConfig = {
-      title: pieConfig.display?.title ?? visualization.name,
-      useWebGL: !isPreview && chartData.length > 1000,
-      showLegend: pieConfig.display?.showLegend ?? true,
-      interactive: pieConfig.display?.interactive ?? true,
+      title: visualization.name,
+      useWebGL: false,
+      showLegend: true,
+      interactive: true,
     };
 
     return <PieChart data={pieData} config={chartConfig} />;

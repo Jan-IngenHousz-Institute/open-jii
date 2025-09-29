@@ -64,44 +64,37 @@ export function ParallelCoordinatesChartRenderer({
 
   try {
     // Ensure this is a parallel coordinates chart
-    if (visualization.config.chartType !== "parallel-coordinates") {
+    if (!visualization.config || visualization.chartType !== "parallel-coordinates") {
       throw new Error("Invalid chart type for parallel coordinates renderer");
     }
 
-    const config = visualization.config.config;
+    // Get all data sources (parallel coordinates uses all as dimensions)
+    const dataSources = visualization.dataConfig.dataSources;
 
     // Validate required dimensions
-    if (config.dimensions.length < 2) {
+    if (dataSources.length < 2) {
       throw new Error("Parallel coordinates chart requires at least 2 dimensions");
     }
 
     // Extract dimension data from the dataset
-    const dimensions = config.dimensions
-      .filter((dim) => dim.visible !== false && dim.dataSource.columnName)
-      .map((dimension) => {
-        const columnName = dimension.dataSource.columnName;
+    const dimensions = dataSources
+      .filter((dataSource) => dataSource.columnName)
+      .map((dataSource) => {
+        const columnName = dataSource.columnName;
         const values = chartData.map((row) => {
           const value = row[columnName];
           return typeof value === "number" ? value : parseFloat(String(value)) || 0;
         });
 
         return {
-          label: dimension.label ?? columnName,
+          label: dataSource.alias ?? columnName,
           values,
-          // Ensure range is a tuple if provided
-          range: dimension.range
-            ? dimension.range.length === 2
-              ? (dimension.range as [number, number])
-              : undefined
-            : undefined,
-          tickvals: dimension.tickvals,
-          ticktext: dimension.ticktext,
-          constraintrange: dimension.constraintrange as
-            | [number, number]
-            | [number, number][]
-            | undefined,
-          multiselect: dimension.multiselect !== false,
-          visible: dimension.visible !== false,
+          range: undefined,
+          tickvals: undefined,
+          ticktext: undefined,
+          constraintrange: undefined,
+          multiselect: true,
+          visible: true,
         };
       });
 
@@ -114,26 +107,17 @@ export function ParallelCoordinatesChartRenderer({
       {
         name: visualization.name,
         dimensions,
-        line: config.line
-          ? {
-              color: config.line.color,
-              colorscale: config.line.colorscale,
-              showscale: config.line.showscale !== false,
-              width: config.line.width,
-              opacity: config.line.opacity,
-              colorbar: config.line.colorbar,
-            }
-          : {
-              color: "blue",
-              width: 1,
-            },
-        labelangle: config.labelangle,
-        labelside: config.labelside,
-        rangefont: config.rangefont ?? {
+        line: {
+          color: "blue",
+          width: 1,
+        },
+        labelangle: 0,
+        labelside: "top" as const,
+        rangefont: {
           size: 12,
           color: "#444",
         },
-        tickfont: config.tickfont ?? {
+        tickfont: {
           size: 10,
           color: "#444",
         },
@@ -141,9 +125,9 @@ export function ParallelCoordinatesChartRenderer({
     ];
 
     const chartConfig = {
-      title: config.display?.title ?? visualization.name,
-      showLegend: config.display?.showLegend !== false,
-      interactive: config.display?.interactive !== false,
+      title: visualization.name,
+      showLegend: false,
+      interactive: true,
       height,
       useWebGL: false, // Generally not needed for parallel coordinates
       responsive: true,

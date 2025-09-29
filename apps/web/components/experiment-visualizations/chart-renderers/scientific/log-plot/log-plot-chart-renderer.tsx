@@ -32,29 +32,31 @@ export function LogPlotChartRenderer({
 
   try {
     // Ensure this is a log plot
-    if (visualization.config.chartType !== "log-plot") {
-      throw new Error(`Expected log-plot, got ${visualization.config.chartType}`);
+    if (!visualization.config || visualization.chartType !== "log-plot") {
+      throw new Error(`Expected log-plot, got ${visualization.chartType}`);
     }
 
-    const config = visualization.config.config;
+    // Get role-based data sources
+    const xDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "x");
+    const yDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "y");
 
     // Validate required columns
-    if (!config.xAxis.dataSource.columnName) {
+    if (!xDataSources.length || !xDataSources[0]?.columnName) {
       throw new Error("X-axis column is required");
     }
 
-    if (!config.yAxes.length || !config.yAxes[0]?.dataSource.columnName) {
+    if (!yDataSources.length || !yDataSources[0]?.columnName) {
       throw new Error("At least one Y-axis series is required");
     }
 
-    const xColumnName = config.xAxis.dataSource.columnName;
+    const xColumnName = xDataSources[0].columnName;
 
     // Extract x-axis data
     const xData = data.map((row) => row[xColumnName]);
 
     // Prepare series data for each Y-axis
-    const seriesData = config.yAxes.map((yAxis, index) => {
-      const yColumnName = yAxis.dataSource.columnName;
+    const seriesData = yDataSources.map((yDataSource, index) => {
+      const yColumnName = yDataSource.columnName;
       const yData = data
         .map((row) => {
           const value = row[yColumnName];
@@ -65,9 +67,9 @@ export function LogPlotChartRenderer({
       return {
         x: xData.slice(0, yData.length), // Match array lengths
         y: yData,
-        name: yAxis.title ?? yAxis.dataSource.alias ?? yColumnName,
-        color: yAxis.color ?? `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
-        mode: "lines+markers" as const,
+        name: yDataSource.alias ?? yColumnName,
+        color: ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"][index % 5],
+        mode: "markers" as const,
         line: {
           width: 2,
         },
@@ -77,20 +79,16 @@ export function LogPlotChartRenderer({
       };
     });
 
-    // Determine axis types - default Y to log scale for log plots
-    const xAxisType = config.xAxis.type;
-    const yAxisType = config.yAxes[0]?.type ?? "log";
-
     return (
       <LogPlot
         data={seriesData}
-        xAxisType={xAxisType}
-        yAxisType={yAxisType}
+        xAxisType="linear"
+        yAxisType="log"
         config={{
-          title: config.display?.title ?? visualization.name,
-          xAxisTitle: config.xAxis.title,
-          yAxisTitle: config.yAxes[0]?.title,
-          showModeBar: config.display?.interactive ?? true,
+          title: visualization.name,
+          xAxisTitle: xDataSources[0].alias ?? xDataSources[0].columnName,
+          yAxisTitle: yDataSources[0]?.alias ?? yDataSources[0]?.columnName,
+          showModeBar: true,
           height,
         }}
       />

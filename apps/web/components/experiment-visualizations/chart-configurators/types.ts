@@ -4,9 +4,19 @@ import type { UseFormReturn } from "react-hook-form";
 
 import type { CreateExperimentVisualizationBody } from "@repo/api";
 
+import type { ChartConfig } from "../types/chart-config-types";
+
+// Export chart configuration types for reuse
+export * from "../types/chart-config-types";
+
 // Form schema type definition for chart configurators
-// This should match the API schema structure
-export type ChartFormValues = CreateExperimentVisualizationBody;
+// This should match the API schema structure but with properly typed config
+export interface ChartFormValues extends Omit<CreateExperimentVisualizationBody, "config"> {
+  config: ChartConfig;
+}
+
+// Backward compatibility for existing code
+export type ChartFormValuesLegacy = CreateExperimentVisualizationBody;
 
 // Reexport API's SampleTable type to use it in our components
 export type SampleTable = ApiSampleTable;

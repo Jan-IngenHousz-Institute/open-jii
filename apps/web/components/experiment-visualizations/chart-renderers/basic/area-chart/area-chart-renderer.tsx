@@ -31,75 +31,92 @@ export function AreaChartRenderer({
   }
 
   try {
-    // Ensure this is an area chart and get configuration with proper typing
-    if (visualization.config.chartType !== "area") {
+    // Ensure this is an area chart and we have data sources
+    if (!visualization.config || visualization.chartType !== "area") {
       throw new Error("Invalid chart type for area chart renderer");
     }
 
-    const config = visualization.config.config;
+    // Get role-based data sources
+    const xDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "x");
+    const yDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "y");
 
-    if (!config.xAxis.dataSource.columnName) {
+    if (!xDataSources.length || !xDataSources[0]?.columnName) {
       throw new Error("X-axis column not configured");
     }
 
-    if (!config.yAxes.length || !config.yAxes[0]?.dataSource.columnName) {
+    if (!yDataSources.length || !yDataSources[0]?.columnName) {
       throw new Error("Y-axis column not configured");
     }
 
-    // Prepare area chart data
-    const areaData = config.yAxes.map((yAxis, index) => {
+    const xColumn = xDataSources[0].columnName;
+
+    // Extract config properties from the configurator
+    interface AreaConfigType {
+      fillMode?: string;
+      fillOpacity?: number;
+      smoothing?: number;
+      lineWidth?: number;
+      color?: string;
+    }
+
+    const config = visualization.config as AreaConfigType;
+
+    // Prepare area chart data using role-based approach
+    const areaData = yDataSources.map((yDataSource, index) => {
       const xValues = data.map((row) => {
-        const value = row[config.xAxis.dataSource.columnName];
+        const value = row[xColumn];
         return typeof value === "string" || typeof value === "number" ? value : String(value);
       });
       const yValues = data.map((row) => {
-        const value = row[yAxis.dataSource.columnName];
+        const value = row[yDataSource.columnName];
         return typeof value === "string" || typeof value === "number" ? value : String(value);
       });
 
-      // Determine fill mode based on configuration
-      let fill: "tozeroy" | "tonexty" | "toself" | undefined;
-      let fillcolor: string | undefined;
+      // Use configurator settings or defaults
+      const fillMode = (config.fillMode ?? "tozeroy") as
+        | "none"
+        | "tozeroy"
+        | "tozerox"
+        | "tonexty"
+        | "tonextx"
+        | "toself"
+        | "tonext";
+      const fillOpacity = config.fillOpacity ?? 0.6;
 
-      if (config.fillMode === "tozeroy") {
-        fill = "tozeroy";
-      } else if (config.fillMode === "tonexty") {
-        fill = "tonexty";
-      } else if (config.fillMode === "toself") {
-        fill = "toself";
-      }
+      // Use a predefined color palette instead of HSL
+      const colorPalette = [
+        "#3b82f6",
+        "#ef4444",
+        "#10b981",
+        "#f59e0b",
+        "#8b5cf6",
+        "#06b6d4",
+        "#f97316",
+        "#84cc16",
+        "#ec4899",
+        "#6366f1",
+      ];
+      const dataSourceColor = config.color ?? colorPalette[index % colorPalette.length];
 
-      if (fill && yAxis.color) {
-        // Convert hex to rgba with opacity
-        const opacity = config.fillOpacity || 0.6;
-        if (yAxis.color.startsWith("#")) {
-          const r = parseInt(yAxis.color.slice(1, 3), 16);
-          const g = parseInt(yAxis.color.slice(3, 5), 16);
-          const b = parseInt(yAxis.color.slice(5, 7), 16);
-          fillcolor = `rgba(${r}, ${g}, ${b}, ${opacity})`;
-        } else if (yAxis.color.startsWith("hsl")) {
-          // For HSL colors, we'll use the color with opacity
-          fillcolor = yAxis.color.replace("hsl", "hsla").replace(")", `, ${opacity})`);
-        } else {
-          fillcolor = yAxis.color;
-        }
-      }
+      // Create fill color with opacity
+      const fillcolor = `${dataSourceColor}${Math.round(fillOpacity * 255)
+        .toString(16)
+        .padStart(2, "0")}`;
 
       const series = {
         x: xValues,
         y: yValues,
-        name: yAxis.dataSource.alias ?? yAxis.dataSource.columnName,
-        color: yAxis.color ?? `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
+        name: yDataSource.alias ?? yDataSource.columnName,
+        color: dataSourceColor,
         mode: "lines" as const,
         type: "scatter" as const,
         line: {
-          shape:
-            config.smoothing && config.smoothing > 0 ? ("spline" as const) : ("linear" as const),
-          smoothing: config.smoothing || 0,
+          shape: "linear" as const,
+          smoothing: config.smoothing ?? 0,
+          width: config.lineWidth ?? 0,
         },
-        ...(fill && { fill }),
-        ...(fillcolor && { fillcolor }),
-        ...(config.stackGroup && { stackgroup: config.stackGroup }),
+        fill: fillMode,
+        fillcolor,
       };
 
       return series;
@@ -110,14 +127,14 @@ export function AreaChartRenderer({
         <AreaChart
           data={areaData}
           config={{
-            title: config.display?.title ?? visualization.name,
-            xAxisTitle: config.xAxis.title ?? config.xAxis.dataSource.columnName,
+            title: visualization.name,
+            xAxisTitle: xDataSources[0]?.alias ?? xColumn,
             yAxisTitle:
-              config.yAxes.length === 1
-                ? (config.yAxes[0].title ?? config.yAxes[0].dataSource.columnName)
+              yDataSources.length === 1
+                ? (yDataSources[0]?.alias ?? yDataSources[0]?.columnName)
                 : "Values",
-            showLegend: config.display?.showLegend ?? true,
-            showGrid: config.gridLines !== "none",
+            showLegend: true,
+            showGrid: true,
             useWebGL: false, // Area charts typically don't need WebGL
             responsive: true,
           }}

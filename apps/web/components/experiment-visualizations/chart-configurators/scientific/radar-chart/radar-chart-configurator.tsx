@@ -44,15 +44,20 @@ export default function RadarChartConfigurator({
 }: RadarChartConfiguratorProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  // Use field array for multiple radar series
+  // Hook for managing data sources array (role-based approach)
   const {
-    fields: seriesFields,
-    append: appendSeries,
-    remove: removeSeries,
+    fields: dataSourceFields,
+    append: appendDataSource,
+    remove: removeDataSource,
   } = useFieldArray({
     control: form.control,
-    name: "config.config.series",
+    name: "dataConfig.dataSources",
   });
+
+  // Get data sources by role
+  const variableDataSources = dataSourceFields
+    .map((field, index) => ({ field, index }))
+    .filter(({ field }) => field.role === "variable");
 
   const columns = table.columns;
   const numericColumns = columns.filter(
@@ -67,25 +72,12 @@ export default function RadarChartConfigurator({
   );
 
   const addSeries = () => {
-    appendSeries({
-      dataSource: {
-        tableName: form.watch("dataConfig.tableName") || "",
-        columnName: "",
-        alias: "",
-      },
-      name: `Series ${seriesFields.length + 1}`,
-      color: `hsl(${(seriesFields.length * 137.5) % 360}, 70%, 50%)`,
-      fill: "toself",
-      mode: "lines+markers",
-      opacity: 0.6,
-      line: {
-        width: 2,
-        dash: "solid",
-      },
-      marker: {
-        size: 6,
-        symbol: "circle",
-      },
+    const selectedTableName = form.getValues("dataConfig.tableName") || table.name;
+    appendDataSource({
+      columnName: "",
+      tableName: selectedTableName,
+      alias: "",
+      role: "variable",
     });
   };
 
@@ -100,7 +92,7 @@ export default function RadarChartConfigurator({
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Category Axis Configuration */}
+          {/* Categories Configuration */}
           <div className="rounded-lg border bg-white p-4">
             <h4 className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
               {t("categoryAxisConfiguration")}
@@ -108,16 +100,21 @@ export default function RadarChartConfigurator({
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <FormField
                 control={form.control}
-                name="config.config.categoryAxis.dataSource.columnName"
+                name="config.dataSources.categories"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium">
                       {t("configuration.categoryColumn")}
                     </FormLabel>
                     <Select
-                      value={field.value}
+                      value={(field.value as { columnName?: string } | null)?.columnName ?? ""}
                       onValueChange={(value) => {
-                        field.onChange(value);
+                        const column = textColumns.find((col) => col.name === value);
+                        field.onChange({
+                          columnName: value,
+                          tableName: table.name,
+                          alias: column?.name ?? value,
+                        });
                         onColumnSelect("category", value);
                       }}
                     >
@@ -147,7 +144,7 @@ export default function RadarChartConfigurator({
 
               <FormField
                 control={form.control}
-                name="config.config.categoryAxis.title"
+                name="config.categoryAxis.title"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium">
@@ -158,6 +155,7 @@ export default function RadarChartConfigurator({
                         {...field}
                         placeholder={t("configuration.axisTitle")}
                         className="h-9"
+                        value={(field.value as string | null) ?? ""}
                       />
                     </FormControl>
                     <FormMessage />
@@ -167,7 +165,7 @@ export default function RadarChartConfigurator({
 
               <FormField
                 control={form.control}
-                name="config.config.categoryAxis.dataSource.alias"
+                name="config.categoryAxis.dataSource.alias"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium">
@@ -178,6 +176,7 @@ export default function RadarChartConfigurator({
                         {...field}
                         placeholder={t("configuration.columnAlias")}
                         className="h-9"
+                        value={(field.value as string | null) ?? ""}
                       />
                     </FormControl>
                     <FormMessage />
@@ -206,17 +205,17 @@ export default function RadarChartConfigurator({
             </div>
 
             <div className="space-y-4">
-              {seriesFields.map((field, index) => (
+              {variableDataSources.map(({ field, index }) => (
                 <Card key={field.id} className="border-l-primary/20 border-l-4 shadow-sm">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                     <div className="flex items-center gap-2">
                       <Radar className="text-primary h-4 w-4" />
                       <h5 className="font-medium">{t("seriesLabel", { number: index + 1 })}</h5>
                     </div>
-                    {seriesFields.length > 1 && (
+                    {variableDataSources.length > 1 && (
                       <Button
                         type="button"
-                        onClick={() => removeSeries(index)}
+                        onClick={() => removeDataSource(index)}
                         size="sm"
                         variant="ghost"
                         className="text-destructive hover:text-destructive"
@@ -230,14 +229,14 @@ export default function RadarChartConfigurator({
                       {/* Data Column */}
                       <FormField
                         control={form.control}
-                        name={`config.config.series.${index}.dataSource.columnName`}
+                        name={`config.series.${index}.dataSource.columnName`}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">
                               {t("configuration.dataColumn")}
                             </FormLabel>
                             <Select
-                              value={field.value}
+                              value={String(field.value)}
                               onValueChange={(value) => {
                                 field.onChange(value);
                                 onColumnSelect("series", value);
@@ -270,7 +269,7 @@ export default function RadarChartConfigurator({
                       {/* Series Name */}
                       <FormField
                         control={form.control}
-                        name={`config.config.series.${index}.name`}
+                        name={`config.series.${index}.name`}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">
@@ -281,6 +280,7 @@ export default function RadarChartConfigurator({
                                 {...field}
                                 placeholder={t("configuration.seriesName")}
                                 className="h-9"
+                                value={(field.value as string | null) ?? ""}
                               />
                             </FormControl>
                             <FormMessage />
@@ -291,7 +291,7 @@ export default function RadarChartConfigurator({
                       {/* Series Color */}
                       <FormField
                         control={form.control}
-                        name={`config.config.series.${index}.color`}
+                        name={`config.series.${index}.color`}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">
@@ -299,8 +299,18 @@ export default function RadarChartConfigurator({
                             </FormLabel>
                             <FormControl>
                               <div className="flex items-center gap-2">
-                                <Input {...field} type="color" className="h-9 w-16 p-1" />
-                                <Input {...field} placeholder="#3b82f6" className="h-9 flex-1" />
+                                <Input
+                                  {...field}
+                                  type="color"
+                                  className="h-9 w-16 p-1"
+                                  value={(field.value as string | null) ?? "#3b82f6"}
+                                />
+                                <Input
+                                  {...field}
+                                  placeholder="#3b82f6"
+                                  className="h-9 flex-1"
+                                  value={(field.value as string | null) ?? ""}
+                                />
                               </div>
                             </FormControl>
                             <FormMessage />
@@ -311,13 +321,13 @@ export default function RadarChartConfigurator({
                       {/* Fill Mode */}
                       <FormField
                         control={form.control}
-                        name={`config.config.series.${index}.fill`}
+                        name={`config.series.${index}.fill`}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">
                               {t("configuration.fillMode")}
                             </FormLabel>
-                            <Select value={field.value} onValueChange={field.onChange}>
+                            <Select value={String(field.value)} onValueChange={field.onChange}>
                               <FormControl>
                                 <SelectTrigger className="h-9">
                                   <SelectValue />
@@ -345,13 +355,13 @@ export default function RadarChartConfigurator({
                       {/* Display Mode */}
                       <FormField
                         control={form.control}
-                        name={`config.config.series.${index}.mode`}
+                        name={`config.series.${index}.mode`}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">
                               {t("configuration.displayMode")}
                             </FormLabel>
-                            <Select value={field.value} onValueChange={field.onChange}>
+                            <Select value={String(field.value)} onValueChange={field.onChange}>
                               <FormControl>
                                 <SelectTrigger className="h-9">
                                   <SelectValue />
@@ -377,16 +387,17 @@ export default function RadarChartConfigurator({
                       {/* Opacity */}
                       <FormField
                         control={form.control}
-                        name={`config.config.series.${index}.opacity`}
+                        name={`config.series.${index}.opacity`}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">
-                              {t("configuration.opacity")} ({Math.round((field.value || 0.6) * 100)}
+                              {t("configuration.opacity")} (
+                              {Math.round(((field.value as number | null) ?? 0.6) * 100)}
                               %)
                             </FormLabel>
                             <FormControl>
                               <Slider
-                                value={[field.value || 0.6]}
+                                value={[Number(field.value)]}
                                 onValueChange={(value) => field.onChange(value[0])}
                                 max={1}
                                 step={0.1}
@@ -401,19 +412,19 @@ export default function RadarChartConfigurator({
                       {/* Line Width */}
                       <FormField
                         control={form.control}
-                        name={`config.config.series.${index}.line.width`}
+                        name={`config.series.${index}.line.width`}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">
-                              {t("configuration.lineWidth")} ({field.value || 2})
+                              {t("configuration.lineWidth")}
                             </FormLabel>
                             <FormControl>
                               <Slider
-                                value={[field.value || 2]}
+                                value={[Number(field.value)]}
                                 onValueChange={(value) => field.onChange(value[0])}
-                                min={1}
                                 max={8}
-                                step={1}
+                                min={0.5}
+                                step={0.5}
                                 className="py-2"
                               />
                             </FormControl>
@@ -421,17 +432,19 @@ export default function RadarChartConfigurator({
                           </FormItem>
                         )}
                       />
+                    </div>
 
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                       {/* Line Dash Style */}
                       <FormField
                         control={form.control}
-                        name={`config.config.series.${index}.line.dash`}
+                        name={`config.series.${index}.line.dash`}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">
-                              {t("configuration.lineStyle")}
+                              {t("configuration.lineDash")}
                             </FormLabel>
-                            <Select value={field.value} onValueChange={field.onChange}>
+                            <Select value={String(field.value)} onValueChange={field.onChange}>
                               <FormControl>
                                 <SelectTrigger className="h-9">
                                   <SelectValue />
@@ -439,12 +452,22 @@ export default function RadarChartConfigurator({
                               </FormControl>
                               <SelectContent>
                                 <SelectItem value="solid">
-                                  {t("configuration.lineSolid")}
+                                  {t("configuration.lineDashSolid")}
                                 </SelectItem>
-                                <SelectItem value="dash">{t("configuration.lineDash")}</SelectItem>
-                                <SelectItem value="dot">{t("configuration.lineDot")}</SelectItem>
-                                <SelectItem value="dashdot">
+                                <SelectItem value="dot">
                                   {t("configuration.lineDashDot")}
+                                </SelectItem>
+                                <SelectItem value="dash">
+                                  {t("configuration.lineDashDash")}
+                                </SelectItem>
+                                <SelectItem value="longdash">
+                                  {t("configuration.lineDashLongDash")}
+                                </SelectItem>
+                                <SelectItem value="dashdot">
+                                  {t("configuration.lineDashDashDot")}
+                                </SelectItem>
+                                <SelectItem value="longdashdot">
+                                  {t("configuration.lineDashLongDashDot")}
                                 </SelectItem>
                               </SelectContent>
                             </Select>
@@ -456,60 +479,22 @@ export default function RadarChartConfigurator({
                       {/* Marker Size */}
                       <FormField
                         control={form.control}
-                        name={`config.config.series.${index}.marker.size`}
+                        name={`config.series.${index}.marker.size`}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">
-                              {t("configuration.markerSize")} ({field.value || 6})
+                              {t("configuration.markerSize")}
                             </FormLabel>
                             <FormControl>
                               <Slider
-                                value={[field.value || 6]}
+                                value={[Number(field.value)]}
                                 onValueChange={(value) => field.onChange(value[0])}
-                                min={3}
-                                max={15}
+                                max={20}
+                                min={2}
                                 step={1}
                                 className="py-2"
                               />
                             </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Marker Symbol */}
-                      <FormField
-                        control={form.control}
-                        name={`config.config.series.${index}.marker.symbol`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium">
-                              {t("configuration.markerSymbol")}
-                            </FormLabel>
-                            <Select value={field.value} onValueChange={field.onChange}>
-                              <FormControl>
-                                <SelectTrigger className="h-9">
-                                  <SelectValue />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="circle">
-                                  {t("configuration.symbolCircle")}
-                                </SelectItem>
-                                <SelectItem value="square">
-                                  {t("configuration.symbolSquare")}
-                                </SelectItem>
-                                <SelectItem value="diamond">
-                                  {t("configuration.symbolDiamond")}
-                                </SelectItem>
-                                <SelectItem value="triangle">
-                                  {t("configuration.symbolTriangle")}
-                                </SelectItem>
-                                <SelectItem value="cross">
-                                  {t("configuration.symbolCross")}
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -519,16 +504,10 @@ export default function RadarChartConfigurator({
                 </Card>
               ))}
 
-              {seriesFields.length === 0 && (
+              {variableDataSources.length === 0 && (
                 <div className="border-muted-foreground/25 rounded-lg border border-dashed p-8 text-center">
-                  <div>
-                    <Layers className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
-                    <p className="text-muted-foreground mb-2 text-sm">{t("noSeriesConfigured")}</p>
-                    <Button type="button" onClick={addSeries} size="sm" variant="outline">
-                      <Plus className="mr-1 h-4 w-4" />
-                      {t("addFirstSeries")}
-                    </Button>
-                  </div>
+                  <p className="text-muted-foreground mb-2 text-sm">{t("noSeriesAdded")}</p>
+                  <p className="text-muted-foreground text-xs">{t("addSeriesDescription")}</p>
                 </div>
               )}
             </div>
@@ -536,9 +515,9 @@ export default function RadarChartConfigurator({
         </CardContent>
       </Card>
 
-      {/* Two-column layout: Appearance (left) and Radar Plot Options (right) */}
+      {/* Configuration Options */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Appearance (formerly Display Options) */}
+        {/* Appearance */}
         <Card className="shadow-sm">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
@@ -547,19 +526,17 @@ export default function RadarChartConfigurator({
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Chart Title */}
             <FormField
               control={form.control}
-              name="config.config.display.title"
+              name="config.display.title"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium">{t("chartTitle")}</FormLabel>
                   <FormControl>
                     <Input
                       placeholder={t("enterChartTitle")}
-                      className="h-10 bg-white"
                       {...field}
-                      value={field.value ?? ""}
+                      value={(field.value as string | null) ?? ""}
                     />
                   </FormControl>
                   <FormMessage />
@@ -567,20 +544,73 @@ export default function RadarChartConfigurator({
               )}
             />
 
-            {/* Show Legend */}
             <FormField
               control={form.control}
-              name="config.config.display.showLegend"
+              name="config.display.showLegend"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                <FormItem className="flex items-center justify-between rounded-lg border p-3">
                   <div className="space-y-0.5">
                     <FormLabel className="text-sm font-medium">{t("showLegend")}</FormLabel>
                     <div className="text-muted-foreground text-xs">
-                      {t("chartOptions.displayChartLegend")}
+                      {t("configuration.showLegendDescription")}
                     </div>
                   </div>
-                  <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  <FormControl className="flex items-center">
+                    <Switch checked={field.value !== false} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="config.display.legendPosition"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">
+                    {t("chartOptions.legendPosition")}
+                  </FormLabel>
+                  <Select value={String(field.value)} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="top">{t("legendPositions.top")}</SelectItem>
+                      <SelectItem value="bottom">{t("legendPositions.bottom")}</SelectItem>
+                      <SelectItem value="left">{t("legendPositions.left")}</SelectItem>
+                      <SelectItem value="right">{t("legendPositions.right")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Radar Options */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-2">
+              <Layers className="text-primary h-5 w-5" />
+              <CardTitle className="text-lg font-semibold">{t("radarOptions")}</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Show Grid */}
+            <FormField
+              control={form.control}
+              name="config.showgrid"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm font-medium">{t("showGrid")}</FormLabel>
+                    <div className="text-muted-foreground text-xs">{t("showGridDescription")}</div>
+                  </div>
+                  <FormControl className="flex items-center">
+                    <Switch checked={field.value !== false} onCheckedChange={field.onChange} />
                   </FormControl>
                 </FormItem>
               )}
@@ -589,137 +619,40 @@ export default function RadarChartConfigurator({
             {/* Show Tick Labels */}
             <FormField
               control={form.control}
-              name="config.config.showTickLabels"
+              name="config.showticklabels"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                <FormItem className="flex items-center justify-between rounded-lg border p-3">
                   <div className="space-y-0.5">
                     <FormLabel className="text-sm font-medium">{t("showTickLabels")}</FormLabel>
                     <div className="text-muted-foreground text-xs">
                       {t("showTickLabelsDescription")}
                     </div>
                   </div>
-                  <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  <FormControl className="flex items-center">
+                    <Switch checked={field.value !== false} onCheckedChange={field.onChange} />
                   </FormControl>
                 </FormItem>
               )}
             />
 
-            {/* Radial Axis Visible */}
+            {/* Angular Unit */}
             <FormField
               control={form.control}
-              name="config.config.radialAxisVisible"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-sm font-medium">{t("radialAxisVisible")}</FormLabel>
-                    <div className="text-muted-foreground text-xs">
-                      {t("radialAxisVisibleDescription")}
-                    </div>
-                  </div>
-                  <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            {/* Angular Axis Visible */}
-            <FormField
-              control={form.control}
-              name="config.config.angularAxisVisible"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-sm font-medium">{t("angularAxisVisible")}</FormLabel>
-                    <div className="text-muted-foreground text-xs">
-                      {t("angularAxisVisibleDescription")}
-                    </div>
-                  </div>
-                  <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Radar Plot Options */}
-        <Card className="bg-white shadow-sm">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-2">
-              <Radar className="text-primary h-5 w-5" />
-              <CardTitle className="text-lg font-semibold">{t("radarPlotOptions")}</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Range Mode */}
-            <FormField
-              control={form.control}
-              name="config.config.rangeMode"
+              name="config.angularaxis.thetaunit"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium">{t("rangeMode")}</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <FormLabel className="text-sm font-medium">{t("angularUnit")}</FormLabel>
+                  <Select value={String(field.value)} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="normal">{t("rangeNormal")}</SelectItem>
-                      <SelectItem value="tozero">{t("rangeToZero")}</SelectItem>
-                      <SelectItem value="nonnegative">{t("rangeNonNegative")}</SelectItem>
+                      <SelectItem value="degrees">{t("degrees")}</SelectItem>
+                      <SelectItem value="radians">{t("radians")}</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Grid Shape */}
-            <FormField
-              control={form.control}
-              name="config.config.gridShape"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">{t("gridShape")}</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="circular">{t("gridCircular")}</SelectItem>
-                      <SelectItem value="linear">{t("gridLinear")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Tick Angle */}
-            <FormField
-              control={form.control}
-              name="config.config.tickAngle"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">
-                    {t("tickAngle")} ({field.value || 0}°)
-                  </FormLabel>
-                  <FormControl>
-                    <Slider
-                      value={[field.value || 0]}
-                      onValueChange={(value) => field.onChange(value[0])}
-                      min={-180}
-                      max={180}
-                      step={15}
-                      className="py-2"
-                    />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

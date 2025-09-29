@@ -5,6 +5,24 @@ import React from "react";
 import type { ExperimentVisualization } from "@repo/api";
 import { Heatmap } from "@repo/ui/components";
 
+interface HeatmapConfig {
+  xColumn?: string;
+  xTitle?: string;
+  yColumn?: string;
+  yTitle?: string;
+  zColumn?: string;
+  zTitle?: string;
+  colorscale?: string;
+  reversescale?: boolean;
+  showscale?: boolean;
+  opacity?: number;
+  title?: string;
+  showValues?: boolean;
+  textColor?: string;
+  textSize?: number;
+  aspectRatio?: number;
+}
+
 export interface HeatmapChartRendererProps {
   visualization: ExperimentVisualization;
   experimentId: string;
@@ -31,26 +49,32 @@ export function HeatmapChartRenderer({
 
   try {
     // Ensure this is a heatmap chart
-    if (visualization.config.chartType !== "heatmap") {
+    if (!visualization.config || visualization.chartType !== "heatmap") {
       throw new Error("Invalid chart type for heatmap chart renderer");
     }
 
-    const config = visualization.config.config;
+    // Extract configuration properties
+    const config = visualization.config as HeatmapConfig;
+
+    // Get role-based data sources
+    const xDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "x");
+    const yDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "y");
+    const zDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "z");
 
     // Validate required columns
-    if (!config.xAxis.dataSource.columnName) {
+    if (!xDataSources.length || !xDataSources[0]?.columnName) {
       throw new Error("X-axis column not configured");
     }
-    if (!config.yAxis.dataSource.columnName) {
+    if (!yDataSources.length || !yDataSources[0]?.columnName) {
       throw new Error("Y-axis column not configured");
     }
-    if (!config.zAxis.dataSource.columnName) {
+    if (!zDataSources.length || !zDataSources[0]?.columnName) {
       throw new Error("Z-axis (values) column not configured");
     }
 
-    const xColumnName = config.xAxis.dataSource.columnName;
-    const yColumnName = config.yAxis.dataSource.columnName;
-    const zColumnName = config.zAxis.dataSource.columnName;
+    const xColumnName = xDataSources[0].columnName;
+    const yColumnName = yDataSources[0].columnName;
+    const zColumnName = zDataSources[0].columnName;
 
     // Get unique x and y values
     const xValues = Array.from(new Set(data.map((row) => row[xColumnName])))
@@ -97,45 +121,43 @@ export function HeatmapChartRenderer({
         x: xValues,
         y: yValues,
         z: zMatrix,
-        type: "heatmap",
-        colorscale: config.colorscale,
-        showscale: config.showScale !== false,
-        text: config.showText ? textMatrix : undefined,
-        texttemplate: config.showText ? config.textTemplate : undefined,
-        textfont: config.textFont
+        text: config.showValues ? textMatrix : undefined,
+        texttemplate: config.showValues ? "%{text}" : undefined,
+        textfont: config.showValues
           ? {
-              size: config.textFont.size,
-              color: config.textFont.color,
+              color: config.textColor ?? "white",
+              size: config.textSize ?? 12,
             }
           : undefined,
-        connectgaps: config.connectGaps,
-        hovertemplate: config.hoverTemplate ?? "%{x}<br>%{y}<br>%{z}<extra></extra>",
-        colorbar:
-          config.showScale !== false
-            ? {
-                title: config.zAxis.title ?? config.zAxis.dataSource.columnName,
-                titleside: "right" as const,
-              }
-            : undefined,
+        type: "heatmap",
+        colorscale: config.colorscale ?? "Viridis",
+        reversescale: config.reversescale ?? false,
+        showscale: config.showscale ?? true,
+        opacity: config.opacity ?? 1.0,
+        hovertemplate: "%{x}<br>%{y}<br>%{z}<extra></extra>",
+        colorbar: {
+          title: config.zTitle ?? zDataSources[0].alias ?? zDataSources[0].columnName,
+          titleside: "right" as const,
+        },
       },
     ];
 
     // Chart configuration
     const chartConfig = {
-      title: config.display?.title ?? visualization.name,
+      title: config.title ?? visualization.name,
       useWebGL: false,
       responsive: true,
       layout: {
         height,
         xaxis: {
-          title: config.xAxis.title ?? config.xAxis.dataSource.columnName,
-          type: config.xAxis.type === "category" ? "category" : "linear",
+          title: config.xTitle ?? xDataSources[0].alias ?? xDataSources[0].columnName,
+          type: "category" as const,
         },
         yaxis: {
-          title: config.yAxis.title ?? config.yAxis.dataSource.columnName,
-          type: config.yAxis.type === "category" ? "category" : "linear",
+          title: config.yTitle ?? yDataSources[0].alias ?? yDataSources[0].columnName,
+          type: "category" as const,
         },
-        showlegend: config.display?.showLegend !== false,
+        showlegend: false,
       },
     };
 

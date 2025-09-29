@@ -5,6 +5,15 @@ import React from "react";
 import type { ExperimentVisualization } from "@repo/api";
 import { ScatterChart } from "@repo/ui/components";
 
+interface DotPlotConfig {
+  chartTitle?: string;
+  yAxisTitle?: string;
+  color?: string;
+  markerSize?: number;
+  markerShape?: string;
+  opacity?: number;
+}
+
 export interface DotPlotRendererProps {
   visualization: ExperimentVisualization;
   experimentId: string;
@@ -32,24 +41,32 @@ export function DotPlotRenderer({
 
   try {
     // Ensure this is a dot-plot chart and get configuration with proper typing
-    if (visualization.config.chartType !== "dot-plot") {
+    // Ensure this is a dot plot and we have data sources
+    if (!visualization.config || visualization.chartType !== "dot-plot") {
       throw new Error("Invalid chart type for dot plot renderer");
     }
 
-    const config = visualization.config.config;
+    // Extract configuration properties
+    const config = visualization.config as DotPlotConfig;
 
-    if (!config.xAxis.dataSource.columnName) {
+    // Get role-based data sources
+    const xDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "x");
+    const yDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "y");
+
+    if (!xDataSources.length || !xDataSources[0]?.columnName) {
       throw new Error("X-axis column not configured");
     }
 
-    if (!config.yAxes.length || !config.yAxes[0]?.dataSource.columnName) {
+    if (!yDataSources.length || !yDataSources[0]?.columnName) {
       throw new Error("Y-axis column not configured");
     }
 
-    // Prepare dot plot data (similar to scatter plot but optimized for dot plots)
-    const dotPlotData = config.yAxes.map((yAxis, index) => {
-      const xColumnName = config.xAxis.dataSource.columnName;
-      const yColumnName = yAxis.dataSource.columnName;
+    const xColumn = xDataSources[0].columnName;
+
+    // Prepare dot plot data using role-based approach
+    const dotPlotData = yDataSources.map((yDataSource, index) => {
+      const xColumnName = xColumn;
+      const yColumnName = yDataSource.columnName;
 
       const xData = data.map((row) => {
         const value = row[xColumnName];
@@ -71,27 +88,42 @@ export function DotPlotRenderer({
         return 0;
       });
 
+      const colorPalette = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
+      const seriesColor = colorPalette[index % colorPalette.length];
+
       return {
         x: xData,
         y: yData,
-        name: yAxis.title ?? yAxis.dataSource.alias ?? yColumnName,
-        color: yAxis.color ?? `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
+        name: yDataSource.alias ?? yColumnName,
+        color: seriesColor,
         // Dot plots use markers only mode
         mode: "markers" as const,
         marker: {
-          size: config.markerSize || 8,
-          symbol: config.markerShape,
-          color: yAxis.color ?? `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
+          size: config.markerSize ?? 8,
+          symbol:
+            (config.markerShape as
+              | "circle"
+              | "square"
+              | "diamond"
+              | "triangle-up"
+              | "triangle-down"
+              | undefined) ?? "circle",
+          color: config.color ?? seriesColor,
+          opacity: config.opacity ?? 1.0,
         },
       };
     });
 
     const chartConfig = {
-      title: config.display?.title ?? visualization.name,
-      xAxisTitle: config.xAxis.title ?? config.xAxis.dataSource.columnName,
-      yAxisTitle: config.yAxes[0]?.title ?? "Values",
+      title: config.chartTitle ?? visualization.name,
+      xAxisTitle: xDataSources[0]?.alias ?? xColumn,
+      yAxisTitle:
+        config.yAxisTitle ??
+        (yDataSources.length === 1
+          ? (yDataSources[0]?.alias ?? yDataSources[0]?.columnName)
+          : "Values"),
       useWebGL: false, // Dot plots typically don't need WebGL
-      showLegend: config.display?.showLegend ?? true,
+      showLegend: true,
       height,
     };
 

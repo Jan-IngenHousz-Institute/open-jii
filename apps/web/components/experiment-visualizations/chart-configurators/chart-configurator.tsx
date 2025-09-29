@@ -39,26 +39,25 @@ import {
   SelectValue,
 } from "@repo/ui/components";
 
+import AreaChartConfigurator from "./basic/area-chart/area-chart-configurator";
+import BarChartConfigurator from "./basic/bar-chart/bar-chart-configurator";
+import BubbleChartConfigurator from "./basic/bubble-chart/bubble-chart-configurator";
+import DotPlotConfigurator from "./basic/dot-plot/dot-plot-configurator";
+// Import role-based configurators
+import LineChartConfigurator from "./basic/line-chart/line-chart-configurator";
+import LollipopChartConfigurator from "./basic/lollipop-chart/lollipop-chart-configurator";
+import PieChartConfigurator from "./basic/pie-chart/pie-chart-configurator";
+import ScatterChartConfigurator from "./basic/scatter-chart/scatter-chart-configurator";
 // Import specific chart configurators and types
-import {
-  LineChartConfigurator,
-  BarChartConfigurator,
-  PieChartConfigurator,
-  AreaChartConfigurator,
-  ScatterChartConfigurator,
-  DotPlotConfigurator,
-  BubbleChartConfigurator,
-  LollipopChartConfigurator,
-  HeatmapChartConfigurator,
-  ContourChartConfigurator,
-  TernaryChartConfigurator,
-  CorrelationMatrixChartConfigurator,
-  LogPlotChartConfigurator,
-  ParallelCoordinatesChartConfigurator,
-  RadarChartConfigurator,
-  BoxPlotConfigurator,
-  HistogramChartConfigurator,
-} from "./index";
+import ContourChartConfigurator from "./scientific/contour-chart/contour-chart-configurator";
+import CorrelationMatrixChartConfigurator from "./scientific/correlation-matrix-chart/correlation-matrix-chart-configurator";
+import HeatmapChartConfigurator from "./scientific/heatmap-chart/heatmap-chart-configurator";
+import LogPlotChartConfigurator from "./scientific/log-plot/log-plot-chart-configurator";
+import ParallelCoordinatesChartConfigurator from "./scientific/parallel-coordinates-chart/parallel-coordinates-chart-configurator";
+import RadarChartConfigurator from "./scientific/radar-chart/radar-chart-configurator";
+import TernaryChartConfigurator from "./scientific/ternary-chart/ternary-chart-configurator";
+import BoxPlotConfigurator from "./statistical/box-plot/box-plot-configurator";
+import HistogramChartConfigurator from "./statistical/histogram/histogram-chart-configurator";
 import type { ChartFormValues, SampleTable } from "./types";
 
 // Define chart types grouped by family for UX purposes - labels will be translated in component
@@ -276,7 +275,7 @@ function ChartTypeConfigurator({
   table: SampleTable;
   onColumnSelect: (columnType: string, columnName: string) => void;
 }) {
-  // Common props for all chart configurators
+  // Common props for old chart configurators (single table)
   const commonProps = {
     form,
     table,
@@ -362,232 +361,60 @@ export default function ChartConfigurator({
    */
   const handleTableChange = (tableName: string) => {
     setSelectedTableName(tableName);
-
-    // Update dataConfig
     form.setValue("dataConfig.tableName", tableName);
 
-    // Only proceed if a chart type is selected
-    if (!selectedChartType) return;
-
-    // Helper functions for common chart configurations
-    const updateXYChartTables = (tableName: string) => {
-      form.setValue("config.config.xAxis.dataSource.tableName", tableName);
-
-      // Update all Y-axes with the new table name
-      const yAxes = form.getValues("config.config.yAxes");
-      if (Array.isArray(yAxes)) {
-        yAxes.forEach((_, index) => {
-          form.setValue(`config.config.yAxes.${index}.dataSource.tableName`, tableName);
-        });
-      } else {
-        // Fallback to just updating the first one
-        form.setValue("config.config.yAxes.0.dataSource.tableName", tableName);
-      }
-    };
-
-    const updateXYCChartTables = (tableName: string) => {
-      form.setValue("config.config.xAxis.dataSource.tableName", tableName);
-
-      // Update all Y-axes with the new table name
-      const yAxes = form.getValues("config.config.yAxes");
-      if (Array.isArray(yAxes)) {
-        yAxes.forEach((_, index) => {
-          form.setValue(`config.config.yAxes.${index}.dataSource.tableName`, tableName);
-        });
-      } else {
-        // Fallback to just updating the first one
-        form.setValue("config.config.yAxes.0.dataSource.tableName", tableName);
-      }
-
-      // Update colorAxis table name only if it exists
-      const colorAxis = form.getValues("config.config.colorAxis");
-      if (colorAxis?.dataSource) {
-        form.setValue("config.config.colorAxis.dataSource.tableName", tableName);
-      }
-    };
-
-    const updateXYZChartTables = (tableName: string) => {
-      form.setValue("config.config.xAxis.dataSource.tableName", tableName);
-      form.setValue("config.config.yAxis.dataSource.tableName", tableName);
-      form.setValue("config.config.zAxis.dataSource.tableName", tableName);
-    };
-
-    // Update table names based on chart type
-    switch (selectedChartType) {
-      // Basic xy charts with similar structure
-      case "line":
-      case "bar":
-      case "area":
-      case "dot-plot":
-      case "lollipop":
-      case "box-plot":
-      case "log-plot":
-        updateXYChartTables(tableName);
-        break;
-
-      case "scatter":
-        updateXYCChartTables(tableName);
-        break;
-
-      // Charts with additional axes
-      case "bubble":
-        updateXYChartTables(tableName);
-        form.setValue("config.config.sizeAxis.dataSource.tableName", tableName);
-        break;
-
-      // Charts with z-axis
-      case "heatmap":
-      case "contour":
-        updateXYZChartTables(tableName);
-        break;
-
-      case "histogram":
-        form.setValue("config.config.series.0.dataSource.tableName", tableName);
-        break;
-
-      // Special chart types
-      case "ternary":
-        form.setValue("config.config.aAxis.dataSource.tableName", tableName);
-        form.setValue("config.config.bAxis.dataSource.tableName", tableName);
-        form.setValue("config.config.cAxis.dataSource.tableName", tableName);
-        break;
-
-      case "correlation-matrix": {
-        // Update variables array
-        const currentVariables = form.getValues("config.config.variables");
-        if (Array.isArray(currentVariables)) {
-          currentVariables.forEach((_: unknown, index: number) => {
-            form.setValue(`config.config.variables.${index}.tableName`, tableName);
-          });
-        }
-        break;
-      }
-
-      case "parallel-coordinates": {
-        // Update dimensions array
-        const currentDimensions = form.getValues("config.config.dimensions");
-        if (Array.isArray(currentDimensions)) {
-          currentDimensions.forEach((_: unknown, index: number) => {
-            form.setValue(`config.config.dimensions.${index}.dataSource.tableName`, tableName);
-          });
-        }
-        break;
-      }
-
-      case "radar": {
-        // Update category axis and series array
-        form.setValue("config.config.categoryAxis.dataSource.tableName", tableName);
-        const currentSeries = form.getValues("config.config.series");
-        if (Array.isArray(currentSeries)) {
-          currentSeries.forEach((_: unknown, index: number) => {
-            form.setValue(`config.config.series.${index}.dataSource.tableName`, tableName);
-          });
-        }
-        break;
-      }
-
-      case "pie":
-        form.setValue("config.config.labelSource.tableName", tableName);
-        form.setValue("config.config.valueSource.tableName", tableName);
-        break;
-
-      // No special handling for disabled chart types or unknown types
-      default:
-        console.debug(`No table update handler for chart type: ${selectedChartType}`);
-        break;
-    }
+    // Update all data sources with the new table name
+    const currentDataSources = form.getValues("dataConfig.dataSources");
+    const updatedDataSources = currentDataSources.map((ds) => ({
+      ...ds,
+      tableName,
+    }));
+    form.setValue("dataConfig.dataSources", updatedDataSources);
   };
 
   /**
-   * Update data sources and form values when a column is selected
+   * Update data sources when a column is selected - role-based approach
    */
   const handleColumnSelect = (columnType: string, columnName: string) => {
-    // Helper function to update form values and data sources
-    const updateFormValues = (configPath: string) => {
-      console.log(`Updating column ${columnType} with value ${columnName} at path ${configPath}`);
-      // Use type assertion for the path - this is safe as we're just setting a string value
-      form.setValue(configPath as keyof ChartFormValues, columnName);
+    const currentDataSources = form.getValues("dataConfig.dataSources");
+    const tableName = form.getValues("dataConfig.tableName");
 
-      // After setting, collect all data sources using our exported function
-      setTimeout(() => {
-        const sources = collectAllChartDataSources(form);
-        console.log("Updated dataSources:", sources);
-        form.setValue("dataConfig.dataSources", sources);
-      }, 0);
-    };
+    // Parse role and series index from columnType (e.g., "y-0" -> role="y", index=0)
+    const [role, indexStr] = columnType.split("-");
+    const seriesIndex = indexStr ? parseInt(indexStr, 10) : undefined;
 
-    // Determine the correct path to update based on column type
-    let configPath: string | undefined;
-
-    // Handle column types with indexed components (e.g., "y-0", "series-2", etc.)
-    if (columnType.includes("-")) {
-      const [baseType, indexStr] = columnType.split("-");
-      const index = parseInt(indexStr, 10);
-
-      switch (baseType) {
-        case "y":
-          configPath = `config.config.yAxes.${index}.dataSource.columnName`;
-          break;
-        case "series":
-          configPath = `config.config.series.${index}.dataSource.columnName`;
-          break;
-        case "dimension":
-          configPath = `config.config.dimensions.${index}.dataSource.columnName`;
-          break;
-        default:
-          console.warn(`Unhandled indexed column type: ${columnType}`);
-          return; // Exit early if no match
+    // Find existing data source or create new one
+    let targetIndex = -1;
+    if (seriesIndex !== undefined) {
+      // For indexed roles, find the Nth occurrence of this role
+      const sameRoleItems = currentDataSources.filter((ds) => ds.role === role);
+      if (sameRoleItems.length > seriesIndex) {
+        targetIndex = currentDataSources.findIndex(
+          (ds, idx) =>
+            ds.role === role &&
+            currentDataSources.slice(0, idx + 1).filter((d) => d.role === role).length ===
+              seriesIndex + 1,
+        );
       }
     } else {
-      // Handle simple column types
-      switch (columnType) {
-        case "x":
-          configPath = "config.config.xAxis.dataSource.columnName";
-          break;
-        case "y": // Default to first Y-axis for backwards compatibility
-          configPath = "config.config.yAxes.0.dataSource.columnName";
-          break;
-        case "color": {
-          // Only set if colorAxis exists
-          const colorAxis = form.getValues("config.config.colorAxis");
-          if (colorAxis) {
-            configPath = "config.config.colorAxis.dataSource.columnName";
-          } else {
-            // No colorAxis configured, return early
-            return;
-          }
-          break;
-        }
-        case "size":
-          configPath = "config.config.sizeAxis.dataSource.columnName";
-          break;
-        case "label":
-          configPath = "config.config.labelSource.columnName";
-          break;
-        case "value":
-          configPath = "config.config.valueSource.columnName";
-          break;
-        case "series":
-          // Handle based on chart type for better specificity
-          if (selectedChartType === "radar") {
-            configPath = "config.config.series.0.dataSource.columnName";
-          } else {
-            configPath = "config.config.series.0.dataSource.columnName";
-          }
-          break;
-        case "category":
-          configPath = "config.config.categoryAxis.dataSource.columnName";
-          break;
-        default:
-          console.warn(`Unhandled column type: ${columnType}`);
-          return; // Exit early if no match
-      }
+      // For non-indexed roles, find first occurrence
+      targetIndex = currentDataSources.findIndex((ds) => ds.role === role);
     }
 
-    // Apply the update if we found a valid path
-    if (configPath) {
-      updateFormValues(configPath);
+    const updatedDataSources = [...currentDataSources];
+    if (targetIndex !== -1) {
+      // Update existing
+      updatedDataSources[targetIndex] = {
+        ...updatedDataSources[targetIndex],
+        columnName,
+        tableName,
+      };
+    } else {
+      // Add new
+      updatedDataSources.push({ tableName, columnName, role, alias: "" });
     }
+
+    form.setValue("dataConfig.dataSources", updatedDataSources);
   };
 
   return (
@@ -739,112 +566,27 @@ export default function ChartConfigurator({
 /**
  * Helper function to collect all data sources for a chart form
  * This is exported for use in both new and edit forms to ensure consistent collection
+ * In the role-based approach, we simply return the dataSources array directly
  */
 export function collectAllChartDataSources(form: UseFormReturn<ChartFormValues>): {
   tableName: string;
   columnName: string;
   alias?: string;
+  role: string;
 }[] {
-  const sources: {
+  // Get the data sources directly from the form
+  const dataSources = form.getValues("dataConfig.dataSources");
+
+  // Filter out empty/invalid data sources and ensure role is defined
+  const validDataSources = dataSources
+    .filter((source) => source.columnName && source.columnName.trim() !== "")
+    .filter((source) => source.role && source.role.trim() !== "") as {
     tableName: string;
     columnName: string;
     alias?: string;
-  }[] = [];
-  // Get the table name or empty string if undefined
-  const tableName = String(form.getValues("dataConfig.tableName") || "");
+    role: string;
+  }[];
 
-  // Helper to push if value exists
-  const pushIf = (col: string | undefined, alias?: string) => {
-    if (col && col.trim() !== "") {
-      sources.push({ tableName, columnName: col, alias });
-    }
-  };
-
-  const chartType = form.getValues("chartType");
-
-  switch (chartType) {
-    case "line":
-    case "bar":
-    case "area":
-    case "dot-plot":
-    case "lollipop":
-    case "box-plot":
-    case "log-plot": {
-      // Add X-Axis
-      pushIf(form.getValues("config.config.xAxis.dataSource.columnName"));
-
-      // Add all Y-Axes with their aliases
-      const yAxes = form.getValues("config.config.yAxes");
-      if (Array.isArray(yAxes)) {
-        yAxes.forEach((axis, i) => {
-          pushIf(
-            form.getValues(`config.config.yAxes.${i}.dataSource.columnName`),
-            form.getValues(`config.config.yAxes.${i}.dataSource.alias`),
-          );
-        });
-      }
-      break;
-    }
-
-    case "scatter": {
-      // Add X-Axis
-      pushIf(form.getValues("config.config.xAxis.dataSource.columnName"));
-
-      // Add all Y-Axes with their aliases
-      const yAxes = form.getValues("config.config.yAxes");
-      if (Array.isArray(yAxes)) {
-        yAxes.forEach((axis, i) => {
-          pushIf(
-            form.getValues(`config.config.yAxes.${i}.dataSource.columnName`),
-            form.getValues(`config.config.yAxes.${i}.dataSource.alias`),
-          );
-        });
-      }
-
-      // Add color axis - safely handle optional colorAxis
-      const colorAxis = form.getValues("config.config.colorAxis");
-      if (colorAxis?.dataSource?.columnName) {
-        pushIf(colorAxis.dataSource.columnName);
-      }
-      break;
-    }
-
-    case "bubble": {
-      // Add X-Axis
-      pushIf(form.getValues("config.config.xAxis.dataSource.columnName"));
-
-      // Add all Y-Axes with their aliases
-      const yAxes = form.getValues("config.config.yAxes");
-      if (Array.isArray(yAxes)) {
-        yAxes.forEach((axis, i) => {
-          pushIf(
-            form.getValues(`config.config.yAxes.${i}.dataSource.columnName`),
-            form.getValues(`config.config.yAxes.${i}.dataSource.alias`),
-          );
-        });
-      }
-
-      // Add size axis
-      pushIf(form.getValues("config.config.sizeAxis.dataSource.columnName"));
-      break;
-    }
-
-    // Add all other chart types...
-    default: {
-      console.log("No specific collection function for chart type:", chartType);
-      // Try to collect from existing dataSources as fallback
-      const existingSources = form.getValues("dataConfig.dataSources");
-      if (Array.isArray(existingSources)) {
-        existingSources.forEach((source) => {
-          if (source.columnName && source.columnName.trim() !== "") {
-            sources.push(source);
-          }
-        });
-      }
-      break;
-    }
-  }
-
-  console.log("Collected data sources:", sources);
-  return sources;
+  console.log("Collected data sources:", validDataSources);
+  return validDataSources;
 }

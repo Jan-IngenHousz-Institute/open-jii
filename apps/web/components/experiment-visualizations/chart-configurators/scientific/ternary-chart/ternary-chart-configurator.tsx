@@ -1,6 +1,6 @@
 "use client";
 
-import { Database, Eye, Settings2, Plus, Trash2, TriangleDashed } from "lucide-react";
+import { Database, Plus, Settings2, Trash2, TriangleDashed, Eye } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useFieldArray } from "react-hook-form";
 
@@ -43,38 +43,35 @@ export default function TernaryChartConfigurator({
 }: TernaryChartConfiguratorProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  // Hook for managing boundaries array
+  // Hook for managing data sources array (role-based approach)
   const {
-    fields: boundariesFields,
-    append: appendBoundary,
-    remove: removeBoundary,
+    fields: dataSourceFields,
+    append: appendDataSource,
+    remove: removeDataSource,
   } = useFieldArray({
     control: form.control,
-    name: "config.config.boundaries",
+    name: "dataConfig.dataSources",
   });
 
-  // Function to add a new boundary
-  const addBoundary = () => {
-    const boundaryDefault = {
-      dataSource: {
-        columnName: "",
-        tableName: "",
-        alias: "",
-      },
-    };
+  // Get data sources by role
+  const aDataSources = dataSourceFields
+    .map((field, index) => ({ field, index }))
+    .filter(({ field }) => field.role === "a");
+  const _bDataSources = dataSourceFields
+    .map((field, index) => ({ field, index }))
+    .filter(({ field }) => field.role === "b");
+  const _cDataSources = dataSourceFields
+    .map((field, index) => ({ field, index }))
+    .filter(({ field }) => field.role === "c");
 
-    appendBoundary({
-      name: `Boundary ${boundariesFields.length + 1}`,
-      a: boundaryDefault,
-      b: boundaryDefault,
-      c: boundaryDefault,
-      line: {
-        color: "#333333",
-        width: 2,
-        dash: "solid" as const,
-      },
-      fillcolor: "",
-      opacity: 0.3,
+  // Function to add a new data source for ternary
+  const addDataSource = (role: "a" | "b" | "c") => {
+    const selectedTableName = form.getValues("dataConfig.tableName") || table.name;
+    appendDataSource({
+      columnName: "",
+      tableName: selectedTableName,
+      alias: "",
+      role,
     });
   };
 
@@ -97,195 +94,225 @@ export default function TernaryChartConfigurator({
             <CardTitle className="text-lg font-semibold">{t("dataConfiguration")}</CardTitle>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* A-Axis Configuration (Component A) */}
-          <div className="rounded-lg border bg-white p-4">
-            <h4 className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
-              {t("ternary.aAxisConfiguration")}
-            </h4>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="config.config.aAxis.dataSource.columnName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("ternary.componentA")}</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        onColumnSelect("a", value);
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-10 bg-white">
-                          <SelectValue placeholder={t("configuration.selectColumn")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {numericColumns.map((column: DataColumn) => (
-                          <SelectItem key={column.name} value={column.name}>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{column.name}</span>
-                              <Badge variant="secondary" className="text-xs">
-                                {column.type_name}
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        <CardContent>
+          {/* Three-Component Configuration */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {/* Component A */}
+            <div className="rounded-lg border bg-white p-4">
+              <h4 className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
+                {t("ternary.componentA")}
+              </h4>
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="config.dataSources.a"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">
+                        {t("configuration.selectColumn")}
+                      </FormLabel>
+                      <Select
+                        value={(field.value as { columnName?: string } | null)?.columnName ?? ""}
+                        onValueChange={(value) => {
+                          const column = numericColumns.find((col) => col.name === value);
+                          field.onChange({
+                            columnName: value,
+                            tableName: table.name,
+                            alias: column?.name ?? value,
+                          });
+                          onColumnSelect("a", value);
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-10 bg-white">
+                            <SelectValue placeholder={t("configuration.selectColumn")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {numericColumns.map((column: DataColumn) => (
+                            <SelectItem key={column.name} value={column.name}>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{column.name}</span>
+                                <Badge variant="secondary" className="text-xs">
+                                  {column.type_name}
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="config.config.aAxisProps.title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("ternary.aAxisTitle")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t("enterAxisTitle")}
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="config.aAxisProps.title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">
+                        {t("ternary.aAxisTitle")}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t("enterAxisTitle")}
+                          {...field}
+                          value={(field.value as string | null) ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
-          </div>
 
-          {/* B-Axis Configuration (Component B) */}
-          <div className="rounded-lg border bg-white p-4">
-            <h4 className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
-              {t("ternary.bAxisConfiguration")}
-            </h4>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="config.config.bAxis.dataSource.columnName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("ternary.componentB")}</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        onColumnSelect("b", value);
-                      }}
-                    >
+            {/* Component B */}
+            <div className="rounded-lg border bg-white p-4">
+              <h4 className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
+                {t("ternary.componentB")}
+              </h4>
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="config.dataSources.b"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">
+                        {t("configuration.selectColumn")}
+                      </FormLabel>
+                      <Select
+                        value={(field.value as { columnName?: string } | null)?.columnName ?? ""}
+                        onValueChange={(value) => {
+                          const column = numericColumns.find((col) => col.name === value);
+                          field.onChange({
+                            columnName: value,
+                            tableName: table.name,
+                            alias: column?.name ?? value,
+                          });
+                          onColumnSelect("b", value);
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-10 bg-white">
+                            <SelectValue placeholder={t("configuration.selectColumn")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {numericColumns.map((column: DataColumn) => (
+                            <SelectItem key={column.name} value={column.name}>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{column.name}</span>
+                                <Badge variant="secondary" className="text-xs">
+                                  {column.type_name}
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="config.bAxisProps.title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">
+                        {t("ternary.bAxisTitle")}
+                      </FormLabel>
                       <FormControl>
-                        <SelectTrigger className="h-10 bg-white">
-                          <SelectValue placeholder={t("configuration.selectColumn")} />
-                        </SelectTrigger>
+                        <Input
+                          placeholder={t("enterAxisTitle")}
+                          {...field}
+                          value={String(field.value)}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        {numericColumns.map((column: DataColumn) => (
-                          <SelectItem key={column.name} value={column.name}>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{column.name}</span>
-                              <Badge variant="secondary" className="text-xs">
-                                {column.type_name}
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="config.config.bAxisProps.title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("ternary.bAxisTitle")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t("enterAxisTitle")}
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
-          </div>
 
-          {/* C-Axis Configuration (Component C) */}
-          <div className="rounded-lg border bg-white p-4">
-            <h4 className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
-              {t("ternary.cAxisConfiguration")}
-            </h4>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="config.config.cAxis.dataSource.columnName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("ternary.componentC")}</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        onColumnSelect("c", value);
-                      }}
-                    >
+            {/* Component C */}
+            <div className="rounded-lg border bg-white p-4">
+              <h4 className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
+                {t("ternary.componentC")}
+              </h4>
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="config.dataSources.c"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">
+                        {t("configuration.selectColumn")}
+                      </FormLabel>
+                      <Select
+                        value={(field.value as { columnName?: string } | null)?.columnName ?? ""}
+                        onValueChange={(value) => {
+                          const column = numericColumns.find((col) => col.name === value);
+                          field.onChange({
+                            columnName: value,
+                            tableName: table.name,
+                            alias: column?.name ?? value,
+                          });
+                          onColumnSelect("c", value);
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-10 bg-white">
+                            <SelectValue placeholder={t("configuration.selectColumn")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {numericColumns.map((column: DataColumn) => (
+                            <SelectItem key={column.name} value={column.name}>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{column.name}</span>
+                                <Badge variant="secondary" className="text-xs">
+                                  {column.type_name}
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="config.cAxisProps.title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">
+                        {t("ternary.cAxisTitle")}
+                      </FormLabel>
                       <FormControl>
-                        <SelectTrigger className="h-10 bg-white">
-                          <SelectValue placeholder={t("configuration.selectColumn")} />
-                        </SelectTrigger>
+                        <Input
+                          placeholder={t("enterAxisTitle")}
+                          {...field}
+                          value={String(field.value)}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        {numericColumns.map((column: DataColumn) => (
-                          <SelectItem key={column.name} value={column.name}>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{column.name}</span>
-                              <Badge variant="secondary" className="text-xs">
-                                {column.type_name}
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="config.config.cAxisProps.title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("ternary.cAxisTitle")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t("enterAxisTitle")}
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
           </div>
 
           {/* Boundaries Configuration */}
-          <div className="space-y-4">
+          <div className="mt-8 space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-muted-foreground text-sm font-medium uppercase tracking-wide">
                 {t("ternary.boundaries")}
@@ -294,7 +321,7 @@ export default function TernaryChartConfigurator({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addBoundary}
+                onClick={() => addDataSource("a")}
                 className="h-8 px-3"
               >
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -304,7 +331,7 @@ export default function TernaryChartConfigurator({
 
             {/* Boundaries List */}
             <div className="space-y-4">
-              {boundariesFields.map((field, index) => (
+              {aDataSources.map(({ field, index }) => (
                 <Card key={field.id} className="border-l-primary/20 border-l-4 shadow-sm">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                     <div className="flex items-center gap-2">
@@ -317,7 +344,7 @@ export default function TernaryChartConfigurator({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => removeBoundary(index)}
+                      onClick={() => removeDataSource(index)}
                       className="text-destructive hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -329,7 +356,7 @@ export default function TernaryChartConfigurator({
                       {/* Boundary Name */}
                       <FormField
                         control={form.control}
-                        name={`config.config.boundaries.${index}.name`}
+                        name={`config.boundaries.${index}.name`}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">
@@ -352,13 +379,13 @@ export default function TernaryChartConfigurator({
                         {/* Component A Coordinates */}
                         <FormField
                           control={form.control}
-                          name={`config.config.boundaries.${index}.a.dataSource.columnName`}
+                          name={`config.boundaries.${index}.a.dataSource.columnName`}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-sm font-medium">
                                 {t("ternary.componentA")} {t("column")}
                               </FormLabel>
-                              <Select value={field.value} onValueChange={field.onChange}>
+                              <Select value={String(field.value)} onValueChange={field.onChange}>
                                 <FormControl>
                                   <SelectTrigger className="h-10 bg-white">
                                     <SelectValue placeholder={t("configuration.selectColumn")} />
@@ -385,13 +412,13 @@ export default function TernaryChartConfigurator({
                         {/* Component B Coordinates */}
                         <FormField
                           control={form.control}
-                          name={`config.config.boundaries.${index}.b.dataSource.columnName`}
+                          name={`config.boundaries.${index}.b.dataSource.columnName`}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-sm font-medium">
                                 {t("ternary.componentB")} {t("column")}
                               </FormLabel>
-                              <Select value={field.value} onValueChange={field.onChange}>
+                              <Select value={String(field.value)} onValueChange={field.onChange}>
                                 <FormControl>
                                   <SelectTrigger className="h-10 bg-white">
                                     <SelectValue placeholder={t("configuration.selectColumn")} />
@@ -418,13 +445,13 @@ export default function TernaryChartConfigurator({
                         {/* Component C Coordinates */}
                         <FormField
                           control={form.control}
-                          name={`config.config.boundaries.${index}.c.dataSource.columnName`}
+                          name={`config.boundaries.${index}.c.dataSource.columnName`}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-sm font-medium">
                                 {t("ternary.componentC")} {t("column")}
                               </FormLabel>
-                              <Select value={field.value} onValueChange={field.onChange}>
+                              <Select value={String(field.value)} onValueChange={field.onChange}>
                                 <FormControl>
                                   <SelectTrigger className="h-10 bg-white">
                                     <SelectValue placeholder={t("configuration.selectColumn")} />
@@ -461,7 +488,7 @@ export default function TernaryChartConfigurator({
                         {/* Line Color */}
                         <FormField
                           control={form.control}
-                          name={`config.config.boundaries.${index}.line.color`}
+                          name={`config.boundaries.${index}.line.color`}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-sm font-medium">
@@ -486,7 +513,7 @@ export default function TernaryChartConfigurator({
                         {/* Line Width */}
                         <FormField
                           control={form.control}
-                          name={`config.config.boundaries.${index}.line.width`}
+                          name={`config.boundaries.${index}.line.width`}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-sm font-medium">
@@ -495,7 +522,7 @@ export default function TernaryChartConfigurator({
                               <FormControl>
                                 <div className="flex items-center space-x-4">
                                   <Slider
-                                    value={[field.value || 2]}
+                                    value={[Number(field.value)]}
                                     onValueChange={(value) => field.onChange(value[0])}
                                     max={5}
                                     min={1}
@@ -505,7 +532,7 @@ export default function TernaryChartConfigurator({
                                   <Input
                                     type="number"
                                     className="h-10 w-16 bg-white"
-                                    value={field.value || 2}
+                                    value={Number(field.value)}
                                     onChange={(e) => field.onChange(Number(e.target.value))}
                                     min={1}
                                     max={5}
@@ -521,13 +548,13 @@ export default function TernaryChartConfigurator({
                         {/* Line Dash */}
                         <FormField
                           control={form.control}
-                          name={`config.config.boundaries.${index}.line.dash`}
+                          name={`config.boundaries.${index}.line.dash`}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-sm font-medium">
                                 {t("ternary.lineDash")}
                               </FormLabel>
-                              <Select value={field.value} onValueChange={field.onChange}>
+                              <Select value={String(field.value)} onValueChange={field.onChange}>
                                 <FormControl>
                                   <SelectTrigger className="h-10 bg-white">
                                     <SelectValue />
@@ -559,7 +586,7 @@ export default function TernaryChartConfigurator({
                         {/* Fill Color */}
                         <FormField
                           control={form.control}
-                          name={`config.config.boundaries.${index}.fillcolor`}
+                          name={`config.boundaries.${index}.fillcolor`}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-sm font-medium">
@@ -571,14 +598,14 @@ export default function TernaryChartConfigurator({
                                     type="color"
                                     className="h-10 w-16"
                                     {...field}
-                                    value={field.value ?? "#cccccc"}
+                                    value={String(field.value)}
                                   />
                                   <Input
                                     type="text"
                                     className="h-10 flex-1 bg-white"
                                     placeholder={t("ternary.optionalFillColor")}
                                     {...field}
-                                    value={field.value ?? ""}
+                                    value={String(field.value)}
                                   />
                                 </div>
                               </FormControl>
@@ -590,7 +617,7 @@ export default function TernaryChartConfigurator({
                         {/* Opacity */}
                         <FormField
                           control={form.control}
-                          name={`config.config.boundaries.${index}.opacity`}
+                          name={`config.boundaries.${index}.opacity`}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-sm font-medium">
@@ -599,7 +626,7 @@ export default function TernaryChartConfigurator({
                               <FormControl>
                                 <div className="flex items-center space-x-4">
                                   <Slider
-                                    value={[field.value || 0.3]}
+                                    value={[Number(field.value)]}
                                     onValueChange={(value) => field.onChange(value[0])}
                                     max={1}
                                     min={0}
@@ -609,7 +636,7 @@ export default function TernaryChartConfigurator({
                                   <Input
                                     type="number"
                                     className="h-10 w-16 bg-white"
-                                    value={field.value || 0.3}
+                                    value={Number(field.value)}
                                     onChange={(e) => field.onChange(Number(e.target.value))}
                                     min={0}
                                     max={1}
@@ -627,7 +654,7 @@ export default function TernaryChartConfigurator({
                 </Card>
               ))}
 
-              {boundariesFields.length === 0 && (
+              {aDataSources.length === 0 && (
                 <div className="border-muted-foreground/25 rounded-lg border border-dashed p-8 text-center">
                   <p className="text-muted-foreground mb-2 text-sm">{t("ternary.noBoundaries")}</p>
                   <p className="text-muted-foreground text-xs">
@@ -640,9 +667,9 @@ export default function TernaryChartConfigurator({
         </CardContent>
       </Card>
 
-      {/* Two-column layout: Appearance (left) and Chart Options & Axis Appearance (right) */}
+      {/* Configuration Options */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Appearance (formerly Display Options) */}
+        {/* Appearance */}
         <Card className="shadow-sm">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
@@ -651,99 +678,95 @@ export default function TernaryChartConfigurator({
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="config.config.display.title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("chartTitle")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t("enterChartTitle")}
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="config.display.title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">{t("chartTitle")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder={t("enterChartTitle")}
+                      {...field}
+                      value={String(field.value)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="config.config.display.showLegend"
-                render={({ field }) => (
-                  <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-sm font-medium">{t("showLegend")}</FormLabel>
-                      <div className="text-muted-foreground text-xs">
-                        {t("configuration.showLegendDescription")}
-                      </div>
+            <FormField
+              control={form.control}
+              name="config.display.showLegend"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm font-medium">{t("showLegend")}</FormLabel>
+                    <div className="text-muted-foreground text-xs">
+                      {t("configuration.showLegendDescription")}
                     </div>
-                    <FormControl className="flex items-center">
-                      <Switch checked={field.value !== false} onCheckedChange={field.onChange} />
+                  </div>
+                  <FormControl className="flex items-center">
+                    <Switch checked={field.value !== false} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="config.display.legendPosition"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">
+                    {t("chartOptions.legendPosition")}
+                  </FormLabel>
+                  <Select value={String(field.value)} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                     </FormControl>
-                  </FormItem>
-                )}
-              />
+                    <SelectContent>
+                      <SelectItem value="top">{t("legendPositions.top")}</SelectItem>
+                      <SelectItem value="bottom">{t("legendPositions.bottom")}</SelectItem>
+                      <SelectItem value="left">{t("legendPositions.left")}</SelectItem>
+                      <SelectItem value="right">{t("legendPositions.right")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="config.config.display.legendPosition"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">
-                      {t("chartOptions.legendPosition")}
-                    </FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="top">{t("legendPositions.top")}</SelectItem>
-                        <SelectItem value="bottom">{t("legendPositions.bottom")}</SelectItem>
-                        <SelectItem value="left">{t("legendPositions.left")}</SelectItem>
-                        <SelectItem value="right">{t("legendPositions.right")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Display Mode */}
-              <FormField
-                control={form.control}
-                name="config.config.mode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">
-                      {t("ternary.displayMode")}
-                    </FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="markers">{t("ternary.markers")}</SelectItem>
-                        <SelectItem value="lines">{t("ternary.lines")}</SelectItem>
-                        <SelectItem value="lines+markers">{t("ternary.linesMarkers")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {/* Display Mode */}
+            <FormField
+              control={form.control}
+              name="config.mode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">{t("ternary.displayMode")}</FormLabel>
+                  <Select value={String(field.value)} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="markers">{t("ternary.markers")}</SelectItem>
+                      <SelectItem value="lines">{t("ternary.lines")}</SelectItem>
+                      <SelectItem value="lines+markers">{t("ternary.linesMarkers")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </CardContent>
         </Card>
 
-        {/* Chart Options & Axis Appearance (combined) */}
+        {/* Ternary Chart Options */}
         <Card className="bg-white shadow-sm">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
@@ -755,174 +778,163 @@ export default function TernaryChartConfigurator({
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Sum Configuration */}
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="config.config.sum"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("ternary.sum")}</FormLabel>
-                    <FormControl>
-                      <div className="flex items-center space-x-4">
-                        <Slider
-                          value={[field.value || 100]}
-                          onValueChange={(value) => field.onChange(value[0])}
-                          max={200}
-                          min={1}
-                          step={1}
-                          className="flex-1"
-                        />
-                        <Input
-                          type="number"
-                          className="w-20"
-                          value={field.value || 100}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
-                          min={1}
-                          max={200}
-                        />
-                      </div>
-                    </FormControl>
-                    <p className="text-muted-foreground text-sm">{t("ternary.sumDescription")}</p>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="config.sum"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">{t("ternary.sum")}</FormLabel>
+                  <FormControl>
+                    <div className="flex items-center space-x-4">
+                      <Slider
+                        value={[Number(field.value)]}
+                        onValueChange={(value) => field.onChange(value[0])}
+                        max={200}
+                        min={1}
+                        step={1}
+                        className="flex-1"
+                      />
+                      <Input
+                        type="number"
+                        className="w-20"
+                        value={Number(field.value)}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        min={1}
+                        max={200}
+                      />
+                    </div>
+                  </FormControl>
+                  <p className="text-muted-foreground text-sm">{t("ternary.sumDescription")}</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            {/* Axis Appearance Section */}
+            {/* Axis Appearance */}
             <div className="space-y-4">
               <h5 className="text-sm font-medium">{t("ternary.axisAppearance")}</h5>
 
-              {/* Grid Options */}
-              <div className="space-y-4">
-                <h6 className="text-muted-foreground text-sm font-medium">
-                  {t("ternary.gridOptions")}
-                </h6>
+              <FormField
+                control={form.control}
+                name="config.aAxisProps.showgrid"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-sm font-medium">
+                        {t("ternary.showGridLines")}
+                      </FormLabel>
+                      <div className="text-muted-foreground text-xs">
+                        {t("ternary.showGridLinesDescription")}
+                      </div>
+                    </div>
+                    <FormControl className="flex items-center">
+                      <Switch checked={field.value !== false} onCheckedChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
+              <FormField
+                control={form.control}
+                name="config.aAxisProps.showline"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-sm font-medium">
+                        {t("ternary.showAxisLines")}
+                      </FormLabel>
+                      <div className="text-muted-foreground text-xs">
+                        {t("ternary.showAxisLinesDescription")}
+                      </div>
+                    </div>
+                    <FormControl className="flex items-center">
+                      <Switch checked={field.value !== false} onCheckedChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="config.aAxisProps.showticklabels"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-sm font-medium">
+                        {t("ternary.showTickLabels")}
+                      </FormLabel>
+                      <div className="text-muted-foreground text-xs">
+                        {t("ternary.showTickLabelsDescription")}
+                      </div>
+                    </div>
+                    <FormControl className="flex items-center">
+                      <Switch checked={field.value !== false} onCheckedChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {/* Color Configuration */}
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <FormField
                   control={form.control}
-                  name="config.config.aAxisProps.showgrid"
+                  name="config.aAxisProps.gridcolor"
                   render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-sm font-medium">
-                          {t("ternary.showGridLines")}
-                        </FormLabel>
-                        <div className="text-muted-foreground text-xs">
-                          {t("ternary.showGridLinesDescription")}
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">
+                        {t("ternary.gridColor")}
+                      </FormLabel>
+                      <FormControl>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            type="color"
+                            className="h-10 w-16"
+                            {...field}
+                            value={field.value}
+                          />
+                          <Input
+                            type="text"
+                            className="flex-1"
+                            placeholder="#E6E6E6"
+                            {...field}
+                            value={field.value}
+                          />
                         </div>
-                      </div>
-                      <FormControl className="flex items-center">
-                        <Switch checked={field.value !== false} onCheckedChange={field.onChange} />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
 
                 <FormField
                   control={form.control}
-                  name="config.config.aAxisProps.showline"
+                  name="config.aAxisProps.linecolor"
                   render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-sm font-medium">
-                          {t("ternary.showAxisLines")}
-                        </FormLabel>
-                        <div className="text-muted-foreground text-xs">
-                          {t("ternary.showAxisLinesDescription")}
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">
+                        {t("ternary.axisLineColor")}
+                      </FormLabel>
+                      <FormControl>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            type="color"
+                            className="h-10 w-16"
+                            {...field}
+                            value={field.value}
+                          />
+                          <Input
+                            type="text"
+                            className="flex-1"
+                            placeholder="#E6E6E6"
+                            {...field}
+                            value={field.value}
+                          />
                         </div>
-                      </div>
-                      <FormControl className="flex items-center">
-                        <Switch checked={field.value !== false} onCheckedChange={field.onChange} />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="config.config.aAxisProps.showticklabels"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-sm font-medium">
-                          {t("ternary.showTickLabels")}
-                        </FormLabel>
-                        <div className="text-muted-foreground text-xs">
-                          {t("ternary.showTickLabelsDescription")}
-                        </div>
-                      </div>
-                      <FormControl className="flex items-center">
-                        <Switch checked={field.value !== false} onCheckedChange={field.onChange} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                {/* Grid Color and Axis Line Color in one row */}
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                  {/* Grid Color */}
-                  <FormField
-                    control={form.control}
-                    name="config.config.aAxisProps.gridcolor"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium">
-                          {t("ternary.gridColor")}
-                        </FormLabel>
-                        <FormControl>
-                          <div className="flex items-center space-x-2">
-                            <Input
-                              type="color"
-                              className="h-10 w-16"
-                              {...field}
-                              value={field.value || "#E6E6E6"}
-                            />
-                            <Input
-                              type="text"
-                              className="flex-1"
-                              placeholder="#E6E6E6"
-                              {...field}
-                              value={field.value || ""}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Axis Line Color */}
-                  <FormField
-                    control={form.control}
-                    name="config.config.aAxisProps.linecolor"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium">
-                          {t("ternary.axisLineColor")}
-                        </FormLabel>
-                        <FormControl>
-                          <div className="flex items-center space-x-2">
-                            <Input
-                              type="color"
-                              className="h-10 w-16"
-                              {...field}
-                              value={field.value || "#E6E6E6"}
-                            />
-                            <Input
-                              type="text"
-                              className="flex-1"
-                              placeholder="#E6E6E6"
-                              {...field}
-                              value={field.value || ""}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
               </div>
             </div>
           </CardContent>

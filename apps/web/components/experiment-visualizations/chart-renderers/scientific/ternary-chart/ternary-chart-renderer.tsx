@@ -32,26 +32,29 @@ export function TernaryChartRenderer({
 
   try {
     // Ensure this is a ternary chart and get configuration with proper typing
-    if (visualization.config.chartType !== "ternary") {
+    if (!visualization.config || visualization.chartType !== "ternary") {
       throw new Error("Invalid chart type for ternary renderer");
     }
 
-    const config = visualization.config.config;
+    // Get role-based data sources (ternary uses x, y, z for the three axes)
+    const xDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "x");
+    const yDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "y");
+    const zDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "z");
 
     // Validate required axes
-    if (!config.aAxis.dataSource.columnName) {
+    if (!xDataSources.length || !xDataSources[0]?.columnName) {
       throw new Error("A-axis column not configured");
     }
-    if (!config.bAxis.dataSource.columnName) {
+    if (!yDataSources.length || !yDataSources[0]?.columnName) {
       throw new Error("B-axis column not configured");
     }
-    if (!config.cAxis.dataSource.columnName) {
+    if (!zDataSources.length || !zDataSources[0]?.columnName) {
       throw new Error("C-axis column not configured");
     }
 
-    const aColumnName = config.aAxis.dataSource.columnName;
-    const bColumnName = config.bAxis.dataSource.columnName;
-    const cColumnName = config.cAxis.dataSource.columnName;
+    const aColumnName = xDataSources[0].columnName;
+    const bColumnName = yDataSources[0].columnName;
+    const cColumnName = zDataSources[0].columnName;
 
     // Extract ternary data from the dataset
     const aValues: number[] = [];
@@ -85,94 +88,53 @@ export function TernaryChartRenderer({
         a: aValues,
         b: bValues,
         c: cValues,
-        name: config.aAxis.dataSource.alias ?? "Data Points",
-        mode: config.mode,
+        name: "Data Points",
+        mode: "markers" as const,
         marker: {
           size: 8,
           color: "#3b82f6",
-          symbol: "circle",
+          symbol: "circle" as const,
         },
       },
     ];
 
-    // Add boundaries if configured
-    const boundaries = config.boundaries?.map((boundary) => {
-      // Extract boundary data from columns like we do for axes
-      const aColumnName = boundary.a.dataSource.columnName;
-      const bColumnName = boundary.b.dataSource.columnName;
-      const cColumnName = boundary.c.dataSource.columnName;
-
-      // Extract boundary values from the dataset
-      const aBoundaryValues: number[] = [];
-      const bBoundaryValues: number[] = [];
-      const cBoundaryValues: number[] = [];
-
-      data.forEach((row) => {
-        const aValue = row[aColumnName];
-        const bValue = row[bColumnName];
-        const cValue = row[cColumnName];
-
-        // Convert to numbers, filtering out invalid values
-        const numA = typeof aValue === "number" ? aValue : Number(aValue);
-        const numB = typeof bValue === "number" ? bValue : Number(bValue);
-        const numC = typeof cValue === "number" ? cValue : Number(cValue);
-
-        if (!isNaN(numA) && !isNaN(numB) && !isNaN(numC)) {
-          aBoundaryValues.push(numA);
-          bBoundaryValues.push(numB);
-          cBoundaryValues.push(numC);
-        }
-      });
-
-      return {
-        name: boundary.name,
-        a: aBoundaryValues,
-        b: bBoundaryValues,
-        c: cBoundaryValues,
-        line: {
-          color: boundary.line?.color ?? "#333",
-          width: boundary.line?.width ?? 2,
-          dash: boundary.line?.dash ?? "solid",
-        },
-        fillcolor: boundary.fillcolor,
-        opacity: boundary.opacity,
-      };
-    });
+    // No boundaries for simplified role-based approach
+    const boundaries = undefined;
 
     return (
       <div style={{ height: `${height}px`, width: "100%" }}>
         <TernaryPlot
           data={ternaryData}
           boundaries={boundaries}
-          sum={config.sum || 100}
+          sum={100}
           aaxis={{
-            title: config.aAxisProps?.title ?? config.aAxis.dataSource.alias ?? aColumnName,
-            showgrid: config.aAxisProps?.showgrid !== false,
-            showline: config.aAxisProps?.showline !== false,
-            showticklabels: config.aAxisProps?.showticklabels !== false,
-            gridcolor: config.aAxisProps?.gridcolor ?? "#E6E6E6",
-            linecolor: config.aAxisProps?.linecolor ?? "#444",
+            title: xDataSources[0].alias ?? aColumnName,
+            showgrid: true,
+            showline: true,
+            showticklabels: true,
+            gridcolor: "#E6E6E6",
+            linecolor: "#444",
           }}
           baxis={{
-            title: config.bAxisProps?.title ?? config.bAxis.dataSource.alias ?? bColumnName,
-            showgrid: config.bAxisProps?.showgrid !== false,
-            showline: config.bAxisProps?.showline !== false,
-            showticklabels: config.bAxisProps?.showticklabels !== false,
-            gridcolor: config.bAxisProps?.gridcolor ?? "#E6E6E6",
-            linecolor: config.bAxisProps?.linecolor ?? "#444",
+            title: yDataSources[0].alias ?? bColumnName,
+            showgrid: true,
+            showline: true,
+            showticklabels: true,
+            gridcolor: "#E6E6E6",
+            linecolor: "#444",
           }}
           caxis={{
-            title: config.cAxisProps?.title ?? config.cAxis.dataSource.alias ?? cColumnName,
-            showgrid: config.cAxisProps?.showgrid !== false,
-            showline: config.cAxisProps?.showline !== false,
-            showticklabels: config.cAxisProps?.showticklabels !== false,
-            gridcolor: config.cAxisProps?.gridcolor ?? "#E6E6E6",
-            linecolor: config.cAxisProps?.linecolor ?? "#444",
+            title: zDataSources[0].alias ?? cColumnName,
+            showgrid: true,
+            showline: true,
+            showticklabels: true,
+            gridcolor: "#E6E6E6",
+            linecolor: "#444",
           }}
-          bgcolor={config.bgcolor}
+          bgcolor="white"
           config={{
-            title: config.display?.title ?? visualization.name,
-            showLegend: config.display?.showLegend ?? true,
+            title: visualization.name,
+            showLegend: true,
             responsive: true,
             backgroundColor: "white",
           }}

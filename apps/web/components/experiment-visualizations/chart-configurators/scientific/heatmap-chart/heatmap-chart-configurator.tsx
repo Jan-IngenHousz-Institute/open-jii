@@ -31,7 +31,7 @@ import type { ChartFormValues, SampleTable } from "../../types";
 interface HeatmapChartConfiguratorProps {
   form: UseFormReturn<ChartFormValues>;
   table: SampleTable;
-  onColumnSelect: (columnType: "x" | "y" | "z", columnName: string) => void;
+  onColumnSelect: (columnType: string, columnName: string) => void;
 }
 
 export default function HeatmapChartConfigurator({
@@ -94,163 +94,36 @@ export default function HeatmapChartConfigurator({
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* X-Axis Configuration */}
-          <div className="rounded-lg border bg-white p-4">
-            <h4 className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
-              {t("xAxisConfiguration")}
-            </h4>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="config.config.xAxis.dataSource.columnName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">
-                      {t("configuration.xAxis")}
-                    </FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        onColumnSelect("x", value);
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-10 bg-white">
-                          <SelectValue placeholder={t("configuration.selectColumn")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {columns.map((column: DataColumn) => (
-                          <SelectItem key={column.name} value={column.name}>
-                            <div className="flex items-center gap-2">
-                              <span>{column.name}</span>
-                              <Badge variant="secondary" className="text-xs">
-                                {column.type_name}
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="config.config.xAxis.title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("xAxisTitle")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t("enterAxisTitle")}
-                        className="h-10 bg-white"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
-
-          {/* Y-Axis Configuration */}
-          <div className="rounded-lg border bg-white p-4">
-            <h4 className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
-              {t("yAxisConfiguration")}
-            </h4>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="config.config.yAxis.dataSource.columnName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">
-                      {t("configuration.yAxis")}
-                    </FormLabel>
-                    <Select
-                      value={field.value || ""}
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        onColumnSelect("y", value);
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-10 bg-white">
-                          <SelectValue placeholder={t("configuration.selectColumn")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {columns.map((column: DataColumn) => (
-                          <SelectItem key={column.name} value={column.name}>
-                            <div className="flex items-center gap-2">
-                              <span>{column.name}</span>
-                              <Badge variant="secondary" className="text-xs">
-                                {column.type_name}
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="config.config.yAxis.title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("yAxisTitle")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t("enterAxisTitle")}
-                        className="h-10 bg-white"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
-
-          {/* Z-Axis (Values) Configuration */}
-          <div className="rounded-lg border bg-white p-4">
-            <h4 className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
-              {t("heatmapValuesConfiguration")}
-            </h4>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="config.config.zAxis.dataSource.columnName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("heatmapValues")}</FormLabel>
-                    <Select
-                      value={field.value || ""}
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        onColumnSelect("z", value);
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-10 bg-white">
-                          <SelectValue placeholder={t("selectNumericColumn")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {numericColumns.length > 0 ? (
-                          numericColumns.map((column: DataColumn) => (
+          {/* Three-column layout for x/y/z roles */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {/* X-Axis Configuration */}
+            <div className="rounded-lg border bg-white p-4">
+              <h4 className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
+                {t("xAxisConfiguration")}
+              </h4>
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="config.xColumn"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">
+                        {t("configuration.xAxis")}
+                      </FormLabel>
+                      <Select
+                        value={field.value as string}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          onColumnSelect("x", value);
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-10 bg-white">
+                            <SelectValue placeholder={t("configuration.selectColumn")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {columns.map((column: DataColumn) => (
                             <SelectItem key={column.name} value={column.name}>
                               <div className="flex items-center gap-2">
                                 <span>{column.name}</span>
@@ -259,190 +132,27 @@ export default function HeatmapChartConfigurator({
                                 </Badge>
                               </div>
                             </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="__no_numeric_columns__" disabled>
-                            <span className="text-muted-foreground text-sm">
-                              {t("noNumericColumns")}
-                            </span>
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="config.config.zAxis.title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("valuesLabel")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t("enterValuesLabel")}
-                        className="h-10 bg-white"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Heatmap Appearance Options */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Appearance */}
-        <Card className="bg-white shadow-sm">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-2">
-              <Eye className="text-primary h-5 w-5" />
-              <CardTitle className="text-lg font-semibold">{t("appearance")}</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Chart Display Options */}
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="config.config.display.title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("chartTitle")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t("enterChartTitle")}
-                        className="h-10 bg-white"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="config.config.display.colorScheme"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("colorScheme")}</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger className="h-10 bg-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="default">{t("colorSchemes.default")}</SelectItem>
-                        <SelectItem value="pastel">{t("colorSchemes.pastel")}</SelectItem>
-                        <SelectItem value="dark">{t("colorSchemes.dark")}</SelectItem>
-                        <SelectItem value="colorblind">{t("colorSchemes.colorblind")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="border-t pt-4">
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="config.config.showText"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-sm font-medium">{t("showTextValues")}</FormLabel>
-                        <div className="text-muted-foreground text-xs">
-                          {t("showTextValuesDescription")}
-                        </div>
-                      </div>
-                      <FormControl className="flex items-center">
-                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                {/* Text styling options in 50/50 grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="config.config.textTemplate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium">{t("textTemplate")}</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="%{z}"
-                            className="h-10 bg-white"
-                            {...field}
-                            value={field.value}
-                          />
-                        </FormControl>
-                        <div className="text-muted-foreground text-xs">
-                          {t("textTemplateDescription")}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="config.config.textFont.color"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium">{t("textColor")}</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger className="h-10 bg-white">
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="white">{t("colors.white")}</SelectItem>
-                            <SelectItem value="black">{t("colors.black")}</SelectItem>
-                            <SelectItem value="auto">{t("colors.auto")}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {/* Font size slider underneath as full width */}
                 <FormField
                   control={form.control}
-                  name="config.config.textFont.size"
+                  name="config.xTitle"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm font-medium">{t("fontSize")}</FormLabel>
+                      <FormLabel className="text-sm font-medium">{t("xAxisTitle")}</FormLabel>
                       <FormControl>
-                        <div className="space-y-3">
-                          <Slider
-                            min={8}
-                            max={24}
-                            step={1}
-                            value={[field.value]}
-                            onValueChange={(values) => field.onChange(values[0])}
-                            className="w-full"
-                          />
-                          <div className="flex items-center justify-center">
-                            <span className="text-muted-foreground text-sm">{field.value}px</span>
-                          </div>
-                        </div>
+                        <Input
+                          placeholder={t("enterAxisTitle")}
+                          className="h-10 bg-white"
+                          {...field}
+                          value={String(field.value)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -450,210 +160,201 @@ export default function HeatmapChartConfigurator({
                 />
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Heatmap Options */}
+            {/* Y-Axis Configuration */}
+            <div className="rounded-lg border bg-white p-4">
+              <h4 className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
+                {t("yAxisConfiguration")}
+              </h4>
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="config.yColumn"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">
+                        {t("configuration.yAxis")}
+                      </FormLabel>
+                      <Select
+                        value={String(field.value)}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          onColumnSelect("y", value);
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-10 bg-white">
+                            <SelectValue placeholder={t("configuration.selectColumn")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {columns.map((column: DataColumn) => (
+                            <SelectItem key={column.name} value={column.name}>
+                              <div className="flex items-center gap-2">
+                                <span>{column.name}</span>
+                                <Badge variant="secondary" className="text-xs">
+                                  {column.type_name}
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="config.yTitle"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">{t("yAxisTitle")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t("enterAxisTitle")}
+                          className="h-10 bg-white"
+                          {...field}
+                          value={String(field.value)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Z-Axis (Values) Configuration */}
+            <div className="rounded-lg border bg-white p-4">
+              <h4 className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
+                {t("heatmapValuesConfiguration")}
+              </h4>
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="config.zColumn"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">{t("heatmapValues")}</FormLabel>
+                      <Select
+                        value={String(field.value)}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          onColumnSelect("z", value);
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-10 bg-white">
+                            <SelectValue placeholder={t("selectNumericColumn")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {numericColumns.length > 0 ? (
+                            numericColumns.map((column: DataColumn) => (
+                              <SelectItem key={column.name} value={column.name}>
+                                <div className="flex items-center gap-2">
+                                  <span>{column.name}</span>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {column.type_name}
+                                  </Badge>
+                                </div>
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="__no_numeric_columns__" disabled>
+                              <span className="text-muted-foreground text-sm">
+                                {t("noNumericColumns")}
+                              </span>
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="config.zTitle"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">{t("valuesLabel")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t("enterValuesLabel")}
+                          className="h-10 bg-white"
+                          {...field}
+                          value={String(field.value)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Two-column layout: Heatmap Options (left) and Display Options (right) */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Heatmap Appearance Options */}
         <Card className="bg-white shadow-sm">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
               <Layers className="text-primary h-5 w-5" />
-              <CardTitle className="text-lg font-semibold">{t("heatmapOptions")}</CardTitle>
+              <CardTitle className="text-lg font-semibold">{t("heatmapOptions.title")}</CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4">
             <FormField
               control={form.control}
-              name="config.config.colorscale"
+              name="config.colorscale"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium">{t("colorScale")}</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select value={String(field.value)} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger className="h-10 bg-white">
-                        <SelectValue />
+                        <SelectValue placeholder={t("selectColorScale")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Viridis">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Viridis"),
-                            }}
-                          />
-                          {t("colorscales.viridis")}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Plasma">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Plasma"),
-                            }}
-                          />
-                          {t("colorscales.plasma")}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Inferno">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Inferno"),
-                            }}
-                          />
-                          {t("colorscales.inferno")}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Magma">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Magma"),
-                            }}
-                          />
-                          {t("colorscales.magma")}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Cividis">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Cividis"),
-                            }}
-                          />
-                          {t("colorscales.cividis")}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Blues">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Blues"),
-                            }}
-                          />
-                          {t("colorscales.blues")}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Greens">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Greens"),
-                            }}
-                          />
-                          {t("colorscales.greens")}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Reds">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Reds"),
-                            }}
-                          />
-                          {t("colorscales.reds")}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Oranges">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Oranges"),
-                            }}
-                          />
-                          {t("colorscales.oranges")}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Purples">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Purples"),
-                            }}
-                          />
-                          {t("colorscales.purples")}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Greys">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Greys"),
-                            }}
-                          />
-                          {t("colorscales.greys")}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Hot">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Hot"),
-                            }}
-                          />
-                          {t("colorscales.hot")}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Cool">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Cool"),
-                            }}
-                          />
-                          {t("colorscales.cool")}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Rainbow">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Rainbow"),
-                            }}
-                          />
-                          {t("colorscales.rainbow")}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Jet">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Jet"),
-                            }}
-                          />
-                          {t("colorscales.jet")}
-                        </div>
-                      </SelectItem>
+                      {[
+                        "Viridis",
+                        "Plasma",
+                        "Inferno",
+                        "Magma",
+                        "Cividis",
+                        "Blues",
+                        "Greens",
+                        "Reds",
+                        "Oranges",
+                        "Purples",
+                        "Greys",
+                        "Hot",
+                        "Cool",
+                        "Rainbow",
+                        "Jet",
+                      ].map((colorscale) => (
+                        <SelectItem key={colorscale} value={colorscale}>
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="h-4 w-8 rounded border"
+                              style={{
+                                background: getColorscaleGradient(colorscale),
+                              }}
+                            />
+                            <span>{colorscale}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-
-                  {/* Colorscale Preview */}
-                  <div className="mt-2">
-                    <div className="text-muted-foreground mb-1 text-xs">{t("preview.title")}</div>
-                    <div
-                      className="h-6 w-full rounded border"
-                      style={{
-                        background: getColorscaleGradient(field.value),
-                      }}
-                    />
-                  </div>
-
                   <FormMessage />
                 </FormItem>
               )}
@@ -661,17 +362,17 @@ export default function HeatmapChartConfigurator({
 
             <FormField
               control={form.control}
-              name="config.config.showScale"
+              name="config.reversescale"
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between rounded-lg border p-3">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-sm font-medium">{t("showColorScale")}</FormLabel>
+                    <FormLabel className="text-sm font-medium">{t("reverseColorScale")}</FormLabel>
                     <div className="text-muted-foreground text-xs">
-                      {t("showColorScaleDescription")}
+                      {t("reverseColorScaleDescription")}
                     </div>
                   </div>
                   <FormControl className="flex items-center">
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    <Switch checked={Boolean(field.value)} onCheckedChange={field.onChange} />
                   </FormControl>
                 </FormItem>
               )}
@@ -679,18 +380,170 @@ export default function HeatmapChartConfigurator({
 
             <FormField
               control={form.control}
-              name="config.config.colorbarTitle"
+              name="config.showscale"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm font-medium">{t("showColorBar")}</FormLabel>
+                    <div className="text-muted-foreground text-xs">
+                      {t("showColorBarDescription")}
+                    </div>
+                  </div>
+                  <FormControl className="flex items-center">
+                    <Switch checked={field.value !== false} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="config.opacity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium">{t("colorbarTitle")}</FormLabel>
+                  <FormLabel className="text-sm font-medium">{t("opacity")}</FormLabel>
+                  <FormControl>
+                    <div className="space-y-3">
+                      <Slider
+                        min={0}
+                        max={1}
+                        step={0.1}
+                        value={[Number(field.value)]}
+                        onValueChange={(values) => field.onChange(values[0])}
+                        className="w-full"
+                      />
+                      <div className="flex items-center justify-center">
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {Math.round((Number(field.value) || 1.0) * 100)}%
+                        </Badge>
+                      </div>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Display Options */}
+        <Card className="bg-white shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-2">
+              <Eye className="text-primary h-5 w-5" />
+              <CardTitle className="text-lg font-semibold">{t("displayOptions")}</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FormField
+              control={form.control}
+              name="config.title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">{t("chartTitle")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder={t("enterColorbarTitle")}
+                      placeholder={t("enterChartTitle")}
                       className="h-10 bg-white"
                       {...field}
-                      value={field.value ?? ""}
+                      value={String(field.value)}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="config.showValues"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm font-medium">{t("showValues")}</FormLabel>
+                    <div className="text-muted-foreground text-xs">
+                      {t("showValuesDescription")}
+                    </div>
+                  </div>
+                  <FormControl className="flex items-center">
+                    <Switch checked={Boolean(field.value)} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="config.textColor"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">{t("textColor")}</FormLabel>
+                  <Select value={field.value as string} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger className="h-10 bg-white">
+                        <SelectValue placeholder={t("selectTextColor")} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="auto">{t("textColors.auto")}</SelectItem>
+                      <SelectItem value="white">{t("textColors.white")}</SelectItem>
+                      <SelectItem value="black">{t("textColors.black")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="config.textSize"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">{t("textSize")}</FormLabel>
+                  <FormControl>
+                    <div className="space-y-3">
+                      <Slider
+                        min={8}
+                        max={24}
+                        step={1}
+                        value={[Number(field.value)]}
+                        onValueChange={(values) => field.onChange(values[0])}
+                        className="w-full"
+                      />
+                      <div className="text-muted-foreground flex items-center justify-between text-xs">
+                        <span>8px</span>
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {Number(field.value) || 12}px
+                        </Badge>
+                        <span>24px</span>
+                      </div>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="config.aspectRatio"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">{t("aspectRatio")}</FormLabel>
+                  <Select value={field.value as string} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger className="h-10 bg-white">
+                        <SelectValue placeholder={t("selectAspectRatio")} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="auto">{t("aspectRatios.auto")}</SelectItem>
+                      <SelectItem value="1:1">{t("aspectRatios.square")}</SelectItem>
+                      <SelectItem value="4:3">{t("aspectRatios.fourThree")}</SelectItem>
+                      <SelectItem value="16:9">{t("aspectRatios.sixteenNine")}</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

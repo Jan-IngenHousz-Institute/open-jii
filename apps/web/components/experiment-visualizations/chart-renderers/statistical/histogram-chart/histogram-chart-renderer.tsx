@@ -6,6 +6,21 @@ import { Histogram } from "@repo/ui/components";
 
 import { useExperimentVisualizationData } from "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 
+interface HistogramConfig {
+  nbins?: number;
+  barmode?: string;
+  orientation?: string;
+  autobinx?: boolean;
+  histfunc?: string;
+  histnorm?: string;
+  opacity?: number;
+  gridLines?: boolean;
+  title?: string;
+  showLegend?: boolean;
+  legendPosition?: string;
+  colorScheme?: string;
+}
+
 interface HistogramChartRendererProps {
   visualization: ExperimentVisualization;
   experimentId: string;
@@ -68,15 +83,25 @@ export function HistogramChartRenderer({
   }
 
   try {
-    const config = visualization.config;
-    if (config.chartType !== "histogram") {
-      throw new Error("Invalid chart configuration");
+    // Ensure this is a histogram chart and we have data sources
+    if (!visualization.config || visualization.chartType !== "histogram") {
+      throw new Error("Invalid chart type for histogram chart renderer");
     }
 
-    const histogramConfig = config.config;
+    // Extract configuration properties
+    const config = visualization.config as HistogramConfig;
 
-    const histogramSeries = histogramConfig.series.map((series) => {
-      const columnName = series.dataSource.columnName;
+    // Get role-based data sources (histogram typically uses 'values' role)
+    const valueDataSources = visualization.dataConfig.dataSources.filter(
+      (ds) => ds.role === "values",
+    );
+
+    if (!valueDataSources.length || !valueDataSources[0]?.columnName) {
+      throw new Error("Values column not configured");
+    }
+
+    const histogramSeries = valueDataSources.map((dataSource) => {
+      const columnName = dataSource.columnName;
 
       // Extract the data for this series
       const seriesData = chartData.map((row) => {
@@ -93,46 +118,48 @@ export function HistogramChartRenderer({
 
       return {
         x: seriesData,
-        name: series.name ?? series.dataSource.alias ?? columnName,
-        color: series.color,
-        opacity: series.opacity,
+        name: dataSource.alias ?? columnName,
+        color: config.colorScheme ?? "#3b82f6",
+        opacity: config.opacity ?? 0.7,
 
         // Histogram configuration
-        nbinsx: histogramConfig.nbins,
-        autobinx: histogramConfig.autobinx,
-        histfunc: series.histfunc ?? "count",
+        nbinsx: config.nbins ?? 20,
+        autobinx: config.autobinx ?? true,
+        histfunc:
+          (config.histfunc as "count" | "sum" | "avg" | "min" | "max" | undefined) ?? "count",
         histnorm:
-          series.histnorm ??
-          ("" as "" | "percent" | "probability" | "density" | "probability density"),
-        orientation: histogramConfig.orientation,
-
-        // Binning configuration
-        xbins: histogramConfig.xbins,
+          (config.histnorm as
+            | ""
+            | "percent"
+            | "probability"
+            | "density"
+            | "probability density"
+            | undefined) ?? "",
+        orientation: (config.orientation as "v" | "h" | undefined) ?? "v",
 
         // Marker styling
         marker: {
-          color: series.color,
-          opacity: series.opacity,
+          color: config.colorScheme ?? "#3b82f6",
+          opacity: config.opacity ?? 0.7,
         },
       };
     });
 
     const chartConfig: PlotlyChartConfig = {
-      title: histogramConfig.display?.title ?? visualization.name,
+      title: config.title ?? visualization.name,
       xAxisTitle: "Values",
-      yAxisTitle: histogramConfig.orientation === "h" ? "Values" : "Frequency",
+      yAxisTitle: "Frequency",
       useWebGL: !isPreview && chartData.length > 1000,
-      showLegend: histogramConfig.display?.showLegend ?? histogramSeries.length > 1,
-      // Grid lines configuration
-      showGrid: histogramConfig.gridLines !== "none",
+      showLegend: config.showLegend ?? histogramSeries.length > 1,
+      showGrid: config.gridLines ?? true,
     };
 
     return (
       <Histogram
         data={histogramSeries}
         config={chartConfig}
-        barmode={histogramConfig.barmode}
-        orientation={histogramConfig.orientation}
+        barmode={(config.barmode as "group" | "overlay" | "stack" | undefined) ?? "overlay"}
+        orientation={(config.orientation as "v" | "h" | undefined) ?? "v"}
       />
     );
   } catch (error) {

@@ -5,6 +5,15 @@ import React from "react";
 import type { ExperimentVisualization } from "@repo/api";
 import { LollipopChart } from "@repo/ui/components";
 
+interface LollipopChartConfig {
+  chartTitle?: string;
+  color?: string;
+  orientation?: string;
+  stemWidth?: number;
+  dotSize?: number;
+  opacity?: number;
+}
+
 export interface LollipopChartRendererProps {
   visualization: ExperimentVisualization;
   experimentId: string;
@@ -31,23 +40,28 @@ export function LollipopChartRenderer({
   }
 
   try {
-    // Ensure this is a lollipop chart and get configuration with proper typing
-    if (visualization.config.chartType !== "lollipop") {
-      throw new Error("Invalid chart type for lollipop renderer");
+    // Ensure this is a lollipop chart and we have data sources
+    if (!visualization.config || visualization.chartType !== "lollipop") {
+      throw new Error("Invalid chart type for lollipop chart renderer");
     }
 
-    const config = visualization.config.config;
+    // Extract configuration properties
+    const config = visualization.config as LollipopChartConfig;
 
-    if (!config.xAxis.dataSource.columnName) {
+    // Get role-based data sources
+    const xDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "x");
+    const yDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "y");
+
+    if (!xDataSources.length || !xDataSources[0]?.columnName) {
       throw new Error("X-axis column not configured");
     }
 
-    if (!config.yAxes.length || !config.yAxes[0]?.dataSource.columnName) {
+    if (!yDataSources.length || !yDataSources[0]?.columnName) {
       throw new Error("Y-axis column not configured");
     }
 
-    const xColumnName = config.xAxis.dataSource.columnName;
-    const yColumnName = config.yAxes[0].dataSource.columnName;
+    const xColumnName = xDataSources[0].columnName;
+    const yColumnName = yDataSources[0].columnName;
 
     // Extract categories and values from the data
     const categories = data.map((row) => {
@@ -66,13 +80,13 @@ export function LollipopChartRenderer({
       <LollipopChart
         categories={categories}
         values={values}
-        name={config.yAxes[0]?.title ?? config.yAxes[0]?.dataSource.alias ?? yColumnName}
-        color={config.yAxes[0]?.color ?? "#3b82f6"}
-        orientation={config.orientation}
-        stemWidth={config.stemWidth || 2}
-        dotSize={config.dotSize || 8}
+        name={yDataSources[0]?.alias ?? yColumnName}
+        color={config.color ?? "#3b82f6"}
+        orientation={(config.orientation as "v" | "h" | undefined) ?? "v"}
+        stemWidth={config.stemWidth ?? 2}
+        dotSize={config.dotSize ?? 8}
         config={{
-          title: config.display?.title ?? visualization.name,
+          title: config.chartTitle ?? visualization.name,
           height,
         }}
       />

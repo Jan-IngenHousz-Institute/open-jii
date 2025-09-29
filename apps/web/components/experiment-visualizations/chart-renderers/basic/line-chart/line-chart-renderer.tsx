@@ -4,6 +4,7 @@ import type { ExperimentVisualization } from "@repo/api";
 import { LineChart } from "@repo/ui/components";
 
 import { useExperimentVisualizationData } from "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
+import type { LineChartConfig } from "../../../types/chart-config-types";
 
 interface LineChartRendererProps {
   visualization: ExperimentVisualization;
@@ -68,18 +69,39 @@ export function LineChartRenderer({
   }
 
   try {
-    // Get chart configuration
-    const config = visualization.config;
-    if (config.chartType !== "line") {
-      throw new Error("Invalid chart configuration");
+    // Ensure this is a line chart and we have data sources
+    if (!visualization.config || visualization.chartType !== "line") {
+      throw new Error("Invalid chart type for line chart renderer");
     }
 
-    const lineConfig = config.config;
+    // Get role-based data sources
+    const xDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "x");
+    const yDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "y");
 
-    // Prepare chart data arrays
-    const chartSeries = lineConfig.yAxes.map((yAxis, index) => {
-      const xColumnName = lineConfig.xAxis.dataSource.columnName;
-      const yColumnName = yAxis.dataSource.columnName;
+    if (!xDataSources.length || !xDataSources[0]?.columnName) {
+      throw new Error("X-axis column not configured");
+    }
+
+    if (!yDataSources.length || !yDataSources[0]?.columnName) {
+      throw new Error("Y-axis column not configured");
+    }
+
+    const xColumn = xDataSources[0].columnName;
+
+    // Extract config properties from the configurator
+    interface LineConfigType {
+      mode?: string;
+      connectGaps?: boolean;
+      smoothing?: number;
+      lineWidth?: number;
+    }
+
+    const config = visualization.config as LineConfigType;
+
+    // Prepare chart data arrays using role-based approach
+    const chartSeries = yDataSources.map((yDataSource, index) => {
+      const xColumnName = xColumn;
+      const yColumnName = yDataSource.columnName;
 
       // Extract data for this series with type conversion
       const xData = chartData.map((row) => {
@@ -104,44 +126,44 @@ export function LineChartRenderer({
         return 0; // fallback
       });
 
+      const colorPalette = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
+      const seriesColor = colorPalette[index % colorPalette.length];
+
       return {
         x: xData,
         y: yData,
-        name: yAxis.title ?? yAxis.dataSource.alias ?? yColumnName,
-        color: yAxis.color ?? `hsl(${index * 60}, 70%, 50%)`,
-        mode: lineConfig.mode,
+        name: yDataSource.alias ?? yColumnName,
+        color: seriesColor,
+        mode: (config.mode ?? "lines") as "lines" | "markers" | "lines+markers",
         line: {
-          color: yAxis.color ?? `hsl(${index * 60}, 70%, 50%)`,
-          width: 2,
-          // Add support for smoothing
-          shape:
-            lineConfig.smoothing && lineConfig.smoothing > 0
-              ? ("spline" as const)
-              : ("linear" as const),
+          color: seriesColor,
+          width: config.lineWidth ?? 2,
+          shape: "linear" as const,
+          smoothing: config.smoothing ?? 0,
         },
-        marker: lineConfig.mode.includes("markers") ? { size: 6 } : undefined,
-        // Add support for connectGaps
-        connectgaps: lineConfig.connectGaps,
+        marker: config.mode?.includes("markers")
+          ? {
+              color: seriesColor,
+              size: 6,
+            }
+          : undefined,
+        connectgaps: config.connectGaps ?? true,
       };
     });
 
+    // Use the line chart config from the visualization
+    const lineConfig = visualization.config as LineChartConfig;
+
     const chartConfig = {
-      title: lineConfig.display?.title ?? visualization.name,
-      xAxisTitle: lineConfig.xAxis.title ?? lineConfig.xAxis.dataSource.columnName,
-      yAxisTitle: lineConfig.yAxes[0]?.title ?? "Values",
+      title: lineConfig.chartTitle ?? visualization.name,
+      xAxisTitle: (lineConfig.xAxisTitle ?? xDataSources[0]?.alias ?? xColumn) as string,
+      yAxisTitle: (lineConfig.yAxisTitle ??
+        (yDataSources.length === 1
+          ? (yDataSources[0]?.alias ?? yDataSources[0]?.columnName)
+          : "Values")) as string,
       useWebGL: !isPreview && chartData.length > 1000,
-      showLegend: lineConfig.display?.showLegend ?? true,
-      // Note: gridLines support would need UI component enhancement
-      // layout: {
-      //   xaxis: {
-      //     showgrid: lineConfig.gridLines === "both" || lineConfig.gridLines === "x",
-      //     zeroline: false,
-      //   },
-      //   yaxis: {
-      //     showgrid: lineConfig.gridLines === "both" || lineConfig.gridLines === "y",
-      //     zeroline: false,
-      //   },
-      // },
+      showLegend: true,
+      showGrid: lineConfig.showGrid,
     };
 
     return <LineChart data={chartSeries} config={chartConfig} />;

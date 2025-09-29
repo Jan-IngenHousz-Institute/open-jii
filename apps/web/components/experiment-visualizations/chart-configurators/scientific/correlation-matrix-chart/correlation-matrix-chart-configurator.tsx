@@ -42,15 +42,20 @@ export default function CorrelationMatrixChartConfigurator({
 }: CorrelationMatrixChartConfiguratorProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  // Use field array for multiple variables
+  // Hook for managing data sources array
   const {
-    fields: variablesFields,
-    append: appendVariable,
-    remove: removeVariable,
+    fields: dataSourceFields,
+    append: appendDataSource,
+    remove: removeDataSource,
   } = useFieldArray({
     control: form.control,
-    name: "config.config.variables",
+    name: "dataConfig.dataSources",
   });
+
+  // Get variables data sources
+  const variableDataSources = dataSourceFields
+    .map((field, index) => ({ field, index }))
+    .filter(({ field }) => field.role === "variables");
 
   const columns = table.columns;
   const numericColumns = columns.filter(
@@ -62,10 +67,12 @@ export default function CorrelationMatrixChartConfigurator({
   );
 
   const addVariable = () => {
-    appendVariable({
-      tableName: form.watch("dataConfig.tableName") || "",
+    const selectedTableName = form.getValues("dataConfig.tableName") || table.name;
+    appendDataSource({
       columnName: "",
-      alias: "",
+      tableName: selectedTableName,
+      alias: `Variable ${variableDataSources.length + 1}`,
+      role: "variables",
     });
   };
 
@@ -132,7 +139,7 @@ export default function CorrelationMatrixChartConfigurator({
             </div>
 
             <div className="space-y-4">
-              {variablesFields.length === 0 && (
+              {variableDataSources.length === 0 && (
                 <div className="text-muted-foreground py-8 text-center">
                   <TrendingUp className="mx-auto mb-2 h-12 w-12 opacity-50" />
                   <p className="text-sm">{t("correlationMatrix.noVariablesSelected")}</p>
@@ -140,21 +147,22 @@ export default function CorrelationMatrixChartConfigurator({
                 </div>
               )}
 
-              {variablesFields.map((field, index) => (
+              {variableDataSources.map(({ field, index }) => (
                 <Card key={field.id} className="border-l-primary/20 border-l-4 shadow-sm">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                     <div className="flex items-center gap-2">
                       <Layers className="text-primary h-4 w-4" />
                       <CardTitle className="text-sm font-medium">
-                        {t("correlationMatrix.variable")} {index + 1}
+                        {t("correlationMatrix.variable")}{" "}
+                        {variableDataSources.findIndex((v) => v.index === index) + 1}
                       </CardTitle>
                     </div>
-                    {variablesFields.length > 2 && (
+                    {variableDataSources.length > 2 && (
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => removeVariable(index)}
+                        onClick={() => removeDataSource(index)}
                         className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -165,7 +173,7 @@ export default function CorrelationMatrixChartConfigurator({
                     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                       <FormField
                         control={form.control}
-                        name={`config.config.variables.${index}.columnName`}
+                        name={`dataConfig.dataSources.${index}.columnName` as const}
                         render={({ field: columnField }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">{t("dataColumn")}</FormLabel>
@@ -173,7 +181,7 @@ export default function CorrelationMatrixChartConfigurator({
                               value={columnField.value}
                               onValueChange={(value) => {
                                 columnField.onChange(value);
-                                onColumnSelect("variable", value);
+                                onColumnSelect("variables", value);
                               }}
                             >
                               <FormControl>
@@ -202,17 +210,17 @@ export default function CorrelationMatrixChartConfigurator({
 
                       <FormField
                         control={form.control}
-                        name={`config.config.variables.${index}.alias`}
+                        name={`dataConfig.dataSources.${index}.alias` as const}
                         render={({ field: aliasField }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium">
-                              {t("displayName")}
+                              {t("variableLabel")}
                             </FormLabel>
                             <FormControl>
                               <Input
-                                placeholder={t("enterDisplayName")}
+                                placeholder={t("enterVariableLabel")}
                                 {...aliasField}
-                                className="h-9"
+                                value={aliasField.value}
                               />
                             </FormControl>
                             <FormMessage />
@@ -228,209 +236,45 @@ export default function CorrelationMatrixChartConfigurator({
         </CardContent>
       </Card>
 
-      {/* Appearance */}
-      <Card className="shadow-sm">
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-2">
-            <Eye className="text-primary h-5 w-5" />
-            <CardTitle className="text-lg font-semibold">{t("appearance")}</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Color Scale and Colorbar Title in 50/50 grid */}
-          <div className="grid grid-cols-2 gap-6">
+      {/* Two-column layout: Correlation Options (left) and Display Options (right) */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Correlation Matrix Options */}
+        <Card className="bg-white shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="text-primary h-5 w-5" />
+              <CardTitle className="text-lg font-semibold">
+                {t("correlationMatrix.matrixOptions")}
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <FormField
               control={form.control}
-              name="config.config.colorscale"
+              name="config.method"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium">{t("colorScale")}</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <FormLabel className="text-sm font-medium">
+                    {t("correlationMatrix.method")}
+                  </FormLabel>
+                  <Select value={field.value as string} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger className="h-10 bg-white">
-                        <SelectValue />
+                        <SelectValue placeholder={t("correlationMatrix.selectMethod")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Viridis">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Viridis"),
-                            }}
-                          />
-                          Viridis
-                        </div>
+                      <SelectItem value="pearson">
+                        {t("correlationMatrix.methods.pearson")}
                       </SelectItem>
-                      <SelectItem value="Plasma">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Plasma"),
-                            }}
-                          />
-                          Plasma
-                        </div>
+                      <SelectItem value="spearman">
+                        {t("correlationMatrix.methods.spearman")}
                       </SelectItem>
-                      <SelectItem value="Inferno">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Inferno"),
-                            }}
-                          />
-                          Inferno
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Magma">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Magma"),
-                            }}
-                          />
-                          Magma
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Cividis">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Cividis"),
-                            }}
-                          />
-                          Cividis
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Blues">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Blues"),
-                            }}
-                          />
-                          Blues
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Greens">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Greens"),
-                            }}
-                          />
-                          Greens
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Reds">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Reds"),
-                            }}
-                          />
-                          Reds
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Oranges">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Oranges"),
-                            }}
-                          />
-                          Oranges
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Purples">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Purples"),
-                            }}
-                          />
-                          Purples
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Greys">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Greys"),
-                            }}
-                          />
-                          Greys
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Hot">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Hot"),
-                            }}
-                          />
-                          Hot
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Cool">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Cool"),
-                            }}
-                          />
-                          Cool
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Rainbow">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Rainbow"),
-                            }}
-                          />
-                          Rainbow
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="Jet">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-4 w-8 rounded border"
-                            style={{
-                              background: getColorscaleGradient("Jet"),
-                            }}
-                          />
-                          Jet
-                        </div>
+                      <SelectItem value="kendall">
+                        {t("correlationMatrix.methods.kendall")}
                       </SelectItem>
                     </SelectContent>
                   </Select>
-
-                  {/* Colorscale Preview */}
-                  <div className="mt-2">
-                    <div className="text-muted-foreground mb-1 text-xs">{t("preview.title")}</div>
-                    <div
-                      className="h-6 w-full rounded border"
-                      style={{
-                        background: getColorscaleGradient(field.value),
-                      }}
-                    />
-                  </div>
-
                   <FormMessage />
                 </FormItem>
               )}
@@ -438,86 +282,242 @@ export default function CorrelationMatrixChartConfigurator({
 
             <FormField
               control={form.control}
-              name="config.config.colorbarTitle"
+              name="config.colorscale"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium">
-                    {t("correlationMatrix.colorbarTitle")}
-                  </FormLabel>
+                  <FormLabel className="text-sm font-medium">{t("colorScale")}</FormLabel>
+                  <Select value={field.value as string} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger className="h-10 bg-white">
+                        <SelectValue placeholder={t("selectColorScale")} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {[
+                        "Viridis",
+                        "Plasma",
+                        "Inferno",
+                        "Magma",
+                        "Cividis",
+                        "Blues",
+                        "Greens",
+                        "Reds",
+                        "Oranges",
+                        "Purples",
+                        "Greys",
+                        "Hot",
+                        "Cool",
+                        "Rainbow",
+                        "Jet",
+                      ].map((colorscale) => (
+                        <SelectItem key={colorscale} value={colorscale}>
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="h-4 w-8 rounded border"
+                              style={{
+                                background: getColorscaleGradient(colorscale),
+                              }}
+                            />
+                            <span>{colorscale}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="config.reversescale"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm font-medium">{t("reverseColorScale")}</FormLabel>
+                    <div className="text-muted-foreground text-xs">
+                      {t("reverseColorScaleDescription")}
+                    </div>
+                  </div>
+                  <FormControl className="flex items-center">
+                    <Switch checked={Boolean(field.value)} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="config.showUpperTriangle"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm font-medium">
+                      {t("correlationMatrix.showUpperTriangle")}
+                    </FormLabel>
+                    <div className="text-muted-foreground text-xs">
+                      {t("correlationMatrix.showUpperTriangleDescription")}
+                    </div>
+                  </div>
+                  <FormControl className="flex items-center">
+                    <Switch
+                      checked={Boolean(field.value) !== false}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="config.showLowerTriangle"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm font-medium">
+                      {t("correlationMatrix.showLowerTriangle")}
+                    </FormLabel>
+                    <div className="text-muted-foreground text-xs">
+                      {t("correlationMatrix.showLowerTriangleDescription")}
+                    </div>
+                  </div>
+                  <FormControl className="flex items-center">
+                    <Switch
+                      checked={Boolean(field.value) !== false}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Display Options */}
+        <Card className="bg-white shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-2">
+              <Eye className="text-primary h-5 w-5" />
+              <CardTitle className="text-lg font-semibold">{t("displayOptions")}</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FormField
+              control={form.control}
+              name="config.title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">{t("chartTitle")}</FormLabel>
                   <FormControl>
-                    <Input placeholder={t("correlationMatrix.enterColorbarTitle")} {...field} />
+                    <Input
+                      placeholder={t("enterChartTitle")}
+                      className="h-10 bg-white"
+                      {...field}
+                      value={String(field.value)}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          </div>
 
-          {/* Display Options */}
-          <div className="rounded-lg border bg-white p-4">
-            <h4 className="text-muted-foreground mb-4 text-sm font-medium uppercase tracking-wide">
-              {t("displayOptions")}
-            </h4>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="config.config.showValues"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-sm font-medium">{t("showValues")}</FormLabel>
-                      <div className="text-muted-foreground text-xs">
-                        {t("correlationMatrix.showCorrelationValues")}
-                      </div>
+            <FormField
+              control={form.control}
+              name="config.showCorrelationValues"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm font-medium">
+                      {t("correlationMatrix.showValues")}
+                    </FormLabel>
+                    <div className="text-muted-foreground text-xs">
+                      {t("correlationMatrix.showValuesDescription")}
                     </div>
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+                  </div>
+                  <FormControl className="flex items-center">
+                    <Switch
+                      checked={Boolean(field.value) !== false}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="config.config.showScale"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-sm font-medium">
-                        {t("correlationMatrix.showColorScale")}
-                      </FormLabel>
-                      <div className="text-muted-foreground text-xs">
-                        {t("correlationMatrix.showColorScaleLegend")}
-                      </div>
-                    </div>
+            <FormField
+              control={form.control}
+              name="config.textColor"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">{t("textColor")}</FormLabel>
+                  <Select value={field.value as string} onValueChange={field.onChange}>
                     <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      <SelectTrigger className="h-10 bg-white">
+                        <SelectValue placeholder={t("selectTextColor")} />
+                      </SelectTrigger>
                     </FormControl>
-                  </FormItem>
-                )}
-              />
+                    <SelectContent>
+                      <SelectItem value="auto">{t("textColors.auto")}</SelectItem>
+                      <SelectItem value="white">{t("textColors.white")}</SelectItem>
+                      <SelectItem value="black">{t("textColors.black")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="config.config.display.showLegend"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-sm font-medium">{t("showLegend")}</FormLabel>
-                      <div className="text-muted-foreground text-xs">
-                        {t("showLegendDescription")}
-                      </div>
-                    </div>
+            <FormField
+              control={form.control}
+              name="config.aspectRatio"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">{t("aspectRatio")}</FormLabel>
+                  <Select value={field.value as string} onValueChange={field.onChange}>
                     <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      <SelectTrigger className="h-10 bg-white">
+                        <SelectValue placeholder={t("selectAspectRatio")} />
+                      </SelectTrigger>
                     </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                    <SelectContent>
+                      <SelectItem value="auto">{t("aspectRatios.auto")}</SelectItem>
+                      <SelectItem value="1:1">{t("aspectRatios.square")}</SelectItem>
+                      <SelectItem value="4:3">{t("aspectRatios.fourThree")}</SelectItem>
+                      <SelectItem value="16:9">{t("aspectRatios.sixteenNine")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="config.showDiagonal"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm font-medium">
+                      {t("correlationMatrix.showDiagonal")}
+                    </FormLabel>
+                    <div className="text-muted-foreground text-xs">
+                      {t("correlationMatrix.showDiagonalDescription")}
+                    </div>
+                  </div>
+                  <FormControl className="flex items-center">
+                    <Switch
+                      checked={Boolean(field.value) !== false}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
