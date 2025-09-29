@@ -149,6 +149,21 @@ def clean_data():
         F.unix_timestamp("ingestion_timestamp") - F.unix_timestamp("timestamp")
     )
     
+    # Extract macros from sample data for downstream processing
+    df = df.withColumn(
+        "macros",
+        F.when(F.col("sample").isNotNull(),
+            F.expr("""
+                flatten(
+                    transform(
+                        from_json(sample, 'array<string>'),
+                        x -> from_json(get_json_object(x, '$.macros'), 'array<string>')
+                    )
+                )
+            """)
+        ).otherwise(F.array())
+    )
+    
     # Select final columns for silver layer
     return df.select(
         "device_id",
@@ -158,6 +173,7 @@ def clean_data():
         "device_firmware",
         "sample",
         "output",
+        "macros",
         "experiment_id",
         "timestamp",
         "date",

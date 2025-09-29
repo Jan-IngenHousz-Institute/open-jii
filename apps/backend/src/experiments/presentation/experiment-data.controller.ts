@@ -10,6 +10,7 @@ import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
 import { AsyncQueue } from "../../common/utils/async-queue";
 import { handleFailure } from "../../common/utils/fp-utils";
+import { DownloadExperimentDataUseCase } from "../application/use-cases/experiment-data/download-experiment-data";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data";
 import { UploadAmbyteDataUseCase } from "../application/use-cases/experiment-data/upload-ambyte-data";
 import { GetExperimentAccessUseCase } from "../application/use-cases/get-experiment-access/get-experiment-access";
@@ -23,6 +24,7 @@ export class ExperimentDataController {
     private readonly getExperimentDataUseCase: GetExperimentDataUseCase,
     private readonly getExperimentAccessUseCase: GetExperimentAccessUseCase,
     private readonly uploadAmbyteDataUseCase: UploadAmbyteDataUseCase,
+    private readonly downloadExperimentDataUseCase: DownloadExperimentDataUseCase,
   ) {}
 
   @TsRestHandler(contract.experiments.getExperimentData)
@@ -248,6 +250,38 @@ export class ExperimentDataController {
         return {
           status: StatusCodes.CREATED,
           body: result.value,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.experiments.downloadExperimentData)
+  downloadExperimentData(@CurrentUser() user: { id: string }) {
+    return tsRestHandler(contract.experiments.downloadExperimentData, async ({ params, query }) => {
+      const { id: experimentId } = params;
+      const { tableName } = query;
+
+      this.logger.log(
+        `Processing download request for experiment ${experimentId}, table ${tableName} by user ${user.id}`,
+      );
+
+      const result = await this.downloadExperimentDataUseCase.execute(experimentId, user.id, {
+        tableName,
+      });
+
+      if (result.isSuccess()) {
+        const data = result.value;
+
+        this.logger.log(
+          `Successfully prepared download links for experiment ${experimentId}, table ${tableName}. ` +
+            `Total chunks: ${data.externalLinks.length}`,
+        );
+
+        return {
+          status: StatusCodes.OK,
+          body: data,
         };
       }
 

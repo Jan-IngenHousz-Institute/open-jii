@@ -63,13 +63,48 @@
   "experimentData": {
     "title": "Experiment Data",
     "description": "View and manage data associated with this experiment.",
-    "uploadData": "Upload Data"
+    "uploadData": "Upload Data",
+    "provisioning": {
+      "title": "Experiment is Being Prepared",
+      "description": "The experiment infrastructure is currently being set up. Data access will be available once provisioning is complete.",
+      "tooltip": "During provisioning, the system is creating database schemas, setting up data pipelines, and configuring access permissions. This process usually takes a few minutes."
+    },
+    "provisioningFailed": {
+      "title": "Experiment Setup Failed",
+      "description": "There was an issue setting up the experiment infrastructure. Please contact support or try recreating the experiment."
+    }
   },
   "experiment": "Experiment",
   "experimentId": "Experiment ID",
   "created": "Created",
   "updated": "Updated",
   "descriptionTitle": "Description",
+  "details": {
+    "locations": {
+      "locationsTitle": "Experiment Locations",
+      "locationsCount": "{{count}} location",
+      "locationsCount_plural": "{{count}} locations",
+      "noLocations": "No locations",
+      "noLocationsDescription": "This experiment doesn't have any locations configured."
+    }
+  },
+  "settings": {
+    "locations": {
+      "title": "Location Management",
+      "description": "Configure and manage experiment locations",
+      "editLocations": "Edit Locations",
+      "count": "{{count}} location",
+      "count_plural": "{{count}} locations",
+      "noLocations": "No locations configured",
+      "noLocationsDescription": "Add locations to specify where this experiment takes place",
+      "viewMap": "View on Map",
+      "mapPreview": "Location Map Preview",
+      "editMode": "Edit Locations",
+      "editModeDescription": "Click on the map to add locations, click existing markers to edit or remove them",
+      "editingCount_one": "{{count}} location selected",
+      "editingCount_other": "{{count}} locations selected"
+    }
+  },
   "manageExperimentDescription": "View and manage experiment details, data, flow, and settings.",
   "loading": "Loading...",
   "failedToLoad": "Failed to load experiment",

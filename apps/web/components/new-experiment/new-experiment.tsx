@@ -14,6 +14,7 @@ import { Button, Form } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 import { NewExperimentDetailsCard } from "./new-experiment-details-card";
+import { NewExperimentLocationsCard } from "./new-experiment-locations-card";
 import { NewExperimentMembersCard } from "./new-experiment-members-card";
 import { NewExperimentProtocolsCard } from "./new-experiment-protocols-card";
 import { NewExperimentVisibilityCard } from "./new-experiment-visibility-card";
@@ -37,6 +38,7 @@ export function NewExperimentForm() {
       description: "",
       visibility: zExperimentVisibility.enum.public,
       members: [],
+      locations: [],
     },
   });
 
@@ -62,9 +64,10 @@ export function NewExperimentForm() {
           <NewExperimentVisibilityCard form={form} />
         </div>
 
-        {/* Card 3: Add Protocols (new row) */}
+        {/* Card 3: Add Protocols & Locations (new row) */}
         <div className="flex flex-col gap-6">
           <NewExperimentProtocolsCard form={form} />
+          <NewExperimentLocationsCard form={form} />
         </div>
 
         <div className="flex gap-2">

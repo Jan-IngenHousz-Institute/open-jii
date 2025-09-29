@@ -166,14 +166,25 @@
     "addProtocolsTitle": "Protokolle hinzufügen",
     "addProtocolsDescription": "Verwalten und ordnen Sie die Experimentprotokolle",
     "addProtocolsPlaceholder": "Protokoll hinzufügen",
-    "embargoUntilHelperString": "Dieses Experiment wird am {{date}} öffentlich."
+    "embargoUntilHelperString": "Dieses Experiment wird am {{date}} öffentlich.",
+    "locationsTitle": "Experimentstandorte",
+    "locationsDescription": "Wählen Sie geografische Standorte aus, an denen dieses Experiment stattfinden wird",
+    "selectLocations": "Standorte auswählen",
+    "addLocationsTitle": "Standorte hinzufügen",
+    "addLocationsDescription": "Klicken Sie auf die Karte, um Experimentstandorte hinzuzufügen",
+    "locationsListTitle": "Ausgewählte Standorte"
   },
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Willkommen bei OpenJII",
     "recentExperiments": "Kürzliche Experimente",
+    "recentArticles": "Neueste Blogbeiträge",
+    "yourExperiments": "Ihre neuesten Experimente",
+    "seeAll": "Alle ansehen",
     "statistics": "Statistiken",
-    "quickActions": "Schnellaktionen"
+    "quickActions": "Schnellaktionen",
+    "noBlogPosts": "Keine Blogbeiträge vorhanden",
+    "errorLoadingBlogPosts": "Fehler beim Laden der Blogbeiträge"
   },
   "auth": {
     "login": "Anmelden",
@@ -197,6 +208,7 @@
     "loginWith": "Anmelden mit {{provider}}",
     "loginWith-github": "Mit GitHub anmelden",
     "loginWith-nodemailer": "Mit E-Mail anmelden",
+    "loginWith-orcid": "Mit ORCID anmelden",
     "verifyRequest": "Wir haben Ihnen per E-Mail einen Anmeldelink gesendet",
     "verifyRequestDetails": "Wir haben Ihnen eine E-Mail an Ihre E-Mail-Adresse gesendet. Tippen Sie auf die Schaltfläche in der E-Mail, um fortzufahren.",
     "verifyRequestDetailsJunk": "Wenn Sie die E-Mail nicht sehen, überprüfen Sie Ihren Spam- oder Junk-Ordner.",
@@ -258,7 +270,17 @@
     "unauthorized": "Unbefugter Zugriff",
     "forbidden": "Zugriff verboten",
     "failedToLoadProtocol": "Protokoll konnte nicht geladen werden",
-    "loginRequired": "Bitte melden Sie sich an, um auf diese Seite zuzugreifen"
+    "loginRequired": "Bitte melden Sie sich an, um auf diese Seite zuzugreifen",
+    "notFoundTitle": "404",
+    "notFoundHeading": "Seite nicht gefunden",
+    "notFoundMessage": "Die gesuchte Seite existiert nicht. Sie wurde möglicherweise verschoben, gelöscht oder Sie haben eine falsche URL eingegeben.",
+    "whereToGo": "Wohin möchten Sie gehen?",
+    "goToHomepage": "Zur Startseite",
+    "accessPlatform": "Plattform aufrufen",
+    "learnAboutUs": "Über uns erfahren",
+    "needHelp": "Brauchen Sie Hilfe? Versuchen Sie, zur vorherigen Seite zurückzugehen oder kontaktieren Sie den Support.",
+    "goBack": "Zurück",
+    "brandTagline": "Jan IngenHousz Institut - Photosynthese für eine nachhaltige Zukunft verbessern"
   },
   "footer": {
     "aboutUs": "Über uns",
@@ -307,6 +329,7 @@
     "next": "Weiter",
     "table": "Tabelle",
     "details": "Tabellendetails anzeigen",
+    "download": "Tabelle herunterladen",
     "row": "Zeile",
     "rows": "Zeilen"
   },

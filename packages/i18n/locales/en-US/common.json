@@ -120,7 +120,13 @@
     "pickADate": "Pick a date",
     "embargoUntil": "Embargo until",
     "visibilityCannotBeChanged": "Once public, visibility cannot be changed back to private.",
-    "embargoUntilHelperString": "This experiment will become public on {{date}}."
+    "embargoUntilHelperString": "This experiment will become public on {{date}}.",
+    "locationsTitle": "Experiment Locations",
+    "locationsDescription": "Select geographic locations where this experiment will take place",
+    "selectLocations": "Select Locations",
+    "addLocationsTitle": "Add Locations",
+    "addLocationsDescription": "Click on the map to add experiment locations",
+    "locationsListTitle": "Selected Locations"
   },
 
   "experimentSettings": {
@@ -178,8 +184,13 @@
     "title": "Dashboard",
     "welcome": "Welcome to OpenJII",
     "recentExperiments": "Recent Experiments",
+    "recentArticles": "Recent blog posts",
+    "yourExperiments": "Your recent experiments",
+    "seeAll": "See all",
     "statistics": "Statistics",
-    "quickActions": "Quick Actions"
+    "quickActions": "Quick Actions",
+    "noBlogPosts": "No blog posts available",
+    "errorLoadingBlogPosts": "Error loading blog posts"
   },
   "auth": {
     "login": "Sign in",
@@ -203,6 +214,7 @@
     "loginWith": "Sign in with {{provider}}",
     "loginWith-github": "Sign in with GitHub",
     "loginWith-nodemailer": "Sign in with Email",
+    "loginWith-orcid": "Sign in with ORCID",
     "verifyRequest": "We emailed you a sign in link",
     "verifyRequestDetails": "We sent you an email to your email address. Tap the button in the email to continue.",
     "verifyRequestDetailsJunk": "If you don’t see the email, check your spam or junk folder.",
@@ -266,7 +278,17 @@
     "accessDenied": "Access Denied",
     "notFound": "Not Found",
     "failedToLoadProtocol": "Failed to load protocol",
-    "loginRequired": "Please log in to access this page"
+    "loginRequired": "Please log in to access this page",
+    "notFoundTitle": "404",
+    "notFoundHeading": "Page Not Found",
+    "notFoundMessage": "The page you're looking for doesn't exist. It might have been moved, deleted, or you entered the wrong URL.",
+    "whereToGo": "Where would you like to go?",
+    "goToHomepage": "Go to Homepage",
+    "accessPlatform": "Access Platform",
+    "learnAboutUs": "Learn About Us",
+    "needHelp": "Need help? Try going back to the previous page or contact support.",
+    "goBack": "Go Back",
+    "brandTagline": "Jan IngenHousz Institute - Improving photosynthesis for a sustainable future"
   },
   "footer": {
     "aboutUs": "About Us",
@@ -385,7 +407,9 @@
       "addFlag": "Add flag",
       "removeAllComments": "Remove all comments",
       "removeAllFlags": "Remove all flags"
-    }
+    },
+    "details": "Show table details",
+    "download": "Download table"
   },
   "landingPage": {
     "latestArticles": "Latest articles"

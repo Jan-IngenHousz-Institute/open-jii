@@ -235,9 +235,81 @@ module "centrum_pipeline" {
   development_mode = true
   serverless       = true
 
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_RUN"
+    }
+  ]
+
   providers = {
     databricks.workspace = databricks.workspace
   }
+}
+
+module "pipeline_scheduler" {
+  source = "../../modules/databricks/job"
+
+  name        = "Pipeline-Scheduler-DEV"
+  description = "Orchestrates central pipeline execution followed by all experiment pipelines every 15 minutes between 9am and 9pm"
+
+  # Schedule: Every 15 minutes after the hour (0, 15, 30, 45) between 9am and 9pm (UTC)
+  # Format: "seconds minutes hours day-of-month month day-of-week"
+  schedule = "0 0,15,30,45 9-21 * * ?"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key           = "trigger_centrum_pipeline"
+      task_type     = "pipeline"
+      compute_type  = "serverless"
+      pipeline_id   = module.centrum_pipeline.pipeline_id
+    },
+    {
+      key           = "trigger_experiment_pipelines"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipelines_orchestrator_task"
+      
+      parameters = {
+        "catalog_name" = module.databricks_catalog.catalog_name
+      }
+      
+      depends_on = "trigger_centrum_pipeline"
+    },
+  ]
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.centrum_pipeline]
 }
 
 module "experiment_provisioning_job" {
@@ -335,6 +407,8 @@ module "auth_secrets" {
     AUTH_SECRET        = var.auth_secret
     AUTH_GITHUB_ID     = var.github_oauth_client_id
     AUTH_GITHUB_SECRET = var.github_oauth_client_secret
+    AUTH_ORCID_ID      = var.orcid_oauth_client_id
+    AUTH_ORCID_SECRET  = var.orcid_oauth_client_secret
   })
 
   tags = {
@@ -398,6 +472,56 @@ module "contentful_secrets" {
   }
 }
 
+# SES Email Service for transactional emails
+module "ses" {
+  source = "../../modules/ses"
+
+  region          = var.aws_region
+  domain_name     = var.domain_name
+  subdomain       = "mail"
+  environment     = var.environment
+  route53_zone_id = module.route53.route53_zone_id
+
+  allowed_from_addresses = [
+    "auth@mail.${var.environment}.${var.domain_name}",
+  ]
+
+  create_smtp_user            = true
+  enable_event_publishing     = true
+  enable_dmarc_reports        = true
+  dmarc_report_retention_days = 90
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "email"
+  }
+
+}
+
+# SES SMTP secrets for application use
+module "ses_secrets" {
+  source = "../../modules/secrets-manager"
+
+  name        = "openjii-ses-secrets-dev"
+  description = "SES SMTP credentials for transactional email sending"
+
+  # Store SES SMTP credentials as JSON
+  secret_string = jsonencode({
+    AUTH_EMAIL_SERVER = module.ses.auth_email_server
+    AUTH_EMAIL_FROM   = "auth@mail.${var.environment}.${var.domain_name}"
+  })
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "email"
+    SecretType  = "ses"
+  }
+}
+
 # WAF for OpenNext Web Application
 module "opennext_waf" {
   source = "../../modules/waf"
@@ -406,6 +530,15 @@ module "opennext_waf" {
   environment        = "dev"
   rate_limit         = 500
   log_retention_days = 30
+
+  # Apply restrictive rate limiting to sensitive routes with flexible configuration
+  restrictive_rate_limit_routes = [
+    {
+      search_string         = "login"
+      positional_constraint = "CONTAINS_WORD"
+      method                = "POST"
+    },
+  ]
 
   tags = {
     Environment = "dev"
@@ -446,6 +579,7 @@ module "opennext" {
   db_credentials_secret_arn = module.aurora_db.master_user_secret_arn
   oauth_secret_arn          = module.auth_secrets.secret_arn
   contentful_secret_arn     = module.contentful_secrets.secret_arn
+  ses_secret_arn            = module.ses_secrets.secret_arn
 
   server_environment_variables = {
     COOKIE_DOMAIN = ".${var.environment}.${var.domain_name}"
@@ -769,7 +903,20 @@ module "backend_ecs" {
     {
       name  = "COOKIE_DOMAIN"
       value = ".${var.environment}.${var.domain_name}"
+    },
+    {
+      name  = "AWS_LOCATION_PLACE_INDEX_NAME"
+      value = module.location_service.place_index_name
+    },
+    {
+      name  = "AWS_REGION"
+      value = var.aws_region
     }
+  ]
+
+  # Additional IAM policies for the task role
+  additional_task_role_policy_arns = [
+    module.location_service.iam_policy_arn
   ]
 
   tags = {
@@ -787,6 +934,19 @@ module "backend_waf" {
   environment        = "dev"
   rate_limit         = 500
   log_retention_days = 30
+
+  large_body_bypass_routes = [
+    {
+      search_string         = "/upload"
+      positional_constraint = "ENDS_WITH"
+      method                = "POST"
+    },
+    {
+      search_string         = "/api/v1/macros"
+      positional_constraint = "STARTS_WITH"
+      method                = "POST"
+    }
+  ]
 
   tags = {
     Environment = "dev"
@@ -892,5 +1052,23 @@ module "route53" {
   tags = {
     Environment = "dev"
     ManagedBy   = "Terraform"
+  }
+}
+
+# AWS Location Service for search and geocoding
+module "location_service" {
+  source = "../../modules/location-service"
+
+  place_index_name = "open-jii-${var.environment}-places-index"
+  data_source      = "Esri"
+  description      = "Place Index for OpenJII search and geocoding operations"
+  intended_use     = "SingleUse"
+  iam_policy_name  = "OpenJII-${var.environment}-LocationServicePolicy"
+
+  tags = {
+    Environment = "dev"
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "location-service"
   }
 }

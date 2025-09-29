@@ -20,6 +20,22 @@
       "noResults": "Keine Analyseergebnisse verfügbar.",
       "description": "Analyseergebnisse und Berichte werden hier angezeigt, sobald die Datenerfassung beginnt."
     },
-    "uploadData": "Daten hochladen"
+    "uploadData": "Daten hochladen",
+    "downloadModal": {
+      "title": "Datensatz herunterladen",
+      "description": "Download für den Datensatz '{{tableName}}' vorbereiten. Bei sehr großen Datensätzen wird der Download automatisch in mehrere Teile aufgeteilt, um ein reibungsloses und effizientes Erlebnis zu gewährleisten.",
+      "format": "Format",
+      "generateLinks": "Download vorbereiten",
+      "generating": "Download wird vorbereitet...",
+      "downloadAll": "Alle Dateien herunterladen",
+      "downloadFiles": "Dateien herunterladen",
+      "rows": "Zeilen",
+      "error": "Download fehlgeschlagen",
+      "success": {
+        "title": "Download-Vorbereitung abgeschlossen!",
+        "description": "{{count}} Datei(en) zum Download bereit. Gesamtgröße: {{totalSize}}, Gesamtzeilen: {{totalRows}}"
+      },
+      "fileChunk": "{{tableName}} - Teil {{chunkNumber}} von {{totalChunks}}"
+    }
   }
 }

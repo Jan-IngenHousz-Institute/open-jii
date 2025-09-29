@@ -25,6 +25,10 @@
     "./types": {
       "types": "./src/types.d.ts",
       "default": "./dist/types.js"
+    },
+    "./providers/orcid": {
+      "types": "./src/providers/orcid.d.ts",
+      "default": "./dist/providers/orcid.js"
     }
   },
   "private": true,
@@ -42,6 +46,7 @@
     "@auth/express": "^0.11.0",
     "@react-email/components": "catalog:react-email",
     "@repo/database": "workspace:*",
+    "@repo/transactional": "workspace:*",
     "next": "^15.3.3",
     "next-auth": "5.0.0-beta.29",
     "nodemailer": "catalog:",
@@ -56,7 +61,6 @@
     "@types/node": "catalog:",
     "@types/nodemailer": "catalog:",
     "eslint": "catalog:",
-    "transactional": "workspace:*",
     "typescript": "catalog:"
   }
 }

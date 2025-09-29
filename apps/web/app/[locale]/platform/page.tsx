@@ -1,18 +1,20 @@
+import { DashboardSection } from "@/components/dashboard/dashboard-section";
+import { UserExperimentsSection } from "@/components/dashboard/user-experiments-section";
 import type { Metadata } from "next";
+import { BlogPostsSection } from "~/components/dashboard/blog-posts-section";
 
 import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
-import { Button } from "@repo/ui/components";
 
 export const metadata: Metadata = {
-  title: "openJII",
+  title: "Dashboard - openJII",
 };
 
 interface PlatformPageProps {
   params: Promise<{ locale: Locale }>;
 }
 
-export default async function OpenJIIHome({ params }: PlatformPageProps) {
+export default async function PlatformDashboard({ params }: PlatformPageProps) {
   const { locale } = await params;
   const { t } = await initTranslations({
     locale,
@@ -20,16 +22,29 @@ export default async function OpenJIIHome({ params }: PlatformPageProps) {
   });
 
   return (
-    <>
-      <h1 className="text-jii-dark-green mb-6 text-4xl font-bold">{t("jii.institute")}</h1>
-      <div className="flex items-center gap-2 py-12">
-        <Button>{t("common.noVariant")}</Button>
-      </div>
-      <p className="mb-4 text-lg">{t("jii.aboutDescription")}</p>
-      <div className="bg-jii-light-blue/30 mt-8 h-64 rounded-lg p-6">
-        <h2 className="text-jii-dark-green mb-4 text-2xl font-semibold">{t("jii.mission")}</h2>
-        <p>{t("jii.missionDescription")}</p>
-      </div>
-    </>
+    <div className="space-y-8">
+      {/* Dashboard Header */}
+      <h1 className="text-3xl font-bold text-gray-900">{t("dashboard.title")}</h1>
+
+      {/* First Row - User's Experiments */}
+      <DashboardSection
+        title={t("dashboard.yourExperiments")}
+        seeAllLabel={t("dashboard.seeAll")}
+        seeAllHref="/platform/experiments"
+        locale={locale}
+      >
+        <UserExperimentsSection />
+      </DashboardSection>
+
+      {/* Second Row - Recent Blog Posts */}
+      <DashboardSection
+        title={t("dashboard.recentArticles")}
+        seeAllLabel={t("dashboard.seeAll")}
+        seeAllHref="/blog"
+        locale={locale}
+      >
+        <BlogPostsSection locale={locale} />
+      </DashboardSection>
+    </div>
   );
 }

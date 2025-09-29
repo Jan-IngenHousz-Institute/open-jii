@@ -285,6 +285,7 @@ def print_execution_summary(result: PipelineCreationResult) -> None:
     print(f"Update ID: {result.update_id}")
     print(f"Target Schema: {result.config.experiment_schema}")
     print(f"Pipeline Name: {result.config.pipeline_name}")
+    print(f"Scheduling: Managed by unified scheduler (runs every 15min, 9am-9pm UTC)")
     print(f"{'='*50}\n")
 
 # COMMAND ----------

@@ -14,7 +14,14 @@ import type { ExperimentData } from "@repo/api";
 
 export type DataValue = string | null;
 export type DataRow = Record<string, DataValue>;
-export type DataRenderFunction = (value: unknown, type: string) => string | React.JSX.Element;
+export type DataRenderFunction = (
+  value: unknown,
+  type: string,
+  columnName?: string,
+  onChartHover?: (data: number[], columnName: string) => void,
+  onChartLeave?: () => void,
+  onChartClick?: (data: number[], columnName: string) => void,
+) => string | React.JSX.Element;
 
 // Time in ms before data is removed from the cache
 const STALE_TIME = 2 * 60 * 1000;
@@ -25,6 +32,9 @@ interface CreateTableColumnsParams {
   data: ExperimentData | undefined;
   formatFunction: DataRenderFunction;
   commentsColumnName?: string;
+  onChartHover?: (data: number[], columnName: string) => void;
+  onChartLeave?: () => void;
+  onChartClick?: (data: number[], columnName: string) => void;
 }
 
 function createTableColumns({
@@ -33,15 +43,52 @@ function createTableColumns({
   data,
   formatFunction,
   commentsColumnName,
+  onChartHover,
+  onChartLeave,
+  onChartClick,
 }: CreateTableColumnsParams) {
   const columnHelper = createColumnHelper<DataRow>();
 
   const columns: AccessorKeyColumnDef<DataRow, DataValue>[] = [];
   if (!data) return columns;
 
+  // Define type precedence for sorting
+  const getTypePrecedence = (typeName: string): number => {
+    switch (typeName) {
+      case "TIMESTAMP":
+        return 1;
+      case "STRING":
+        return 3;
+      case "DOUBLE":
+      case "INT":
+      case "LONG":
+      case "BIGINT":
+        return 4;
+      default:
+        if (typeName === "MAP" || typeName.startsWith("MAP<")) return 2;
+        if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 5;
+        return 6; // Other types at the end
+    }
+  };
+
+  // Sort columns by type precedence
+  const sortedColumns = [...data.columns].sort((a, b) => {
+    const precedenceA = getTypePrecedence(a.type_name);
+    const precedenceB = getTypePrecedence(b.type_name);
+    return precedenceA - precedenceB;
+  });
+
   let idColumnName: string | undefined;
 
-  data.columns.forEach((dataColumn) => {
+  sortedColumns.forEach((dataColumn) => {
+    // Set smaller width for array columns that contain charts
+    const isArrayColumn =
+      dataColumn.type_name === "ARRAY" || dataColumn.type_name.startsWith("ARRAY<");
+
+    // Set medium width for map columns that contain collapsible content
+    const isMapColumn =
+      dataColumn.type_name === "MAP" || dataColumn.type_name.startsWith("MAP<STRING,");
+
     switch (dataColumn.type_name) {
       case "ID":
         if (tableName === undefined) return;
@@ -88,12 +135,20 @@ function createTableColumns({
         columns.push(
           columnHelper.accessor(dataColumn.name, {
             header: dataColumn.name,
+            size: isArrayColumn ? 120 : isMapColumn ? 200 : undefined,
             meta: {
               type: dataColumn.type_name,
             },
             cell: ({ row }) => {
               const value = row.getValue(dataColumn.name);
-              return formatFunction(value, dataColumn.type_name);
+              return formatFunction(
+                value,
+                dataColumn.type_name,
+                undefined,
+                onChartHover,
+                onChartLeave,
+                onChartClick,
+              );
             },
           }),
         );
@@ -115,6 +170,9 @@ export interface UseExperimentDataProps {
   pageSize: number; // Page to fetch; pages start with 1
   formatFunction: DataRenderFunction; // Function used to render the column value
   commentsColumnName?: string; // Name for the comments column
+  onChartHover?: (data: number[], columnName: string) => void;
+  onChartLeave?: () => void;
+  onChartClick?: (data: number[], columnName: string) => void;
 }
 
 /**
@@ -127,6 +185,9 @@ export const useExperimentData = ({
   tableName,
   formatFunction,
   commentsColumnName,
+  onChartHover,
+  onChartLeave,
+  onChartClick,
 }: UseExperimentDataProps) => {
   const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
     queryData: {
@@ -147,12 +208,24 @@ export const useExperimentData = ({
             data: tableData.data,
             formatFunction,
             commentsColumnName,
+            onChartHover,
+            onChartLeave,
+            onChartClick,
           }),
           totalPages: tableData.totalPages,
           totalRows: tableData.totalRows,
         }
       : undefined;
-  }, [tableData, experimentId, tableName, formatFunction, commentsColumnName]);
+  }, [
+    tableData,
+    experimentId,
+    tableName,
+    formatFunction,
+    commentsColumnName,
+    onChartHover,
+    onChartLeave,
+    onChartClick,
+  ]);
   const tableRows: DataRow[] | undefined = tableData?.data?.rows;
 
   return { tableMetadata, tableRows, isLoading, error };

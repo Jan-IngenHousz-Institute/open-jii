@@ -23,6 +23,8 @@ declare module "@auth/core/types" {
   interface User extends DefaultUser {
     id: string;
     registered: boolean;
+    /** ORCID iD URI if user authenticated with ORCID */
+    orcid?: string;
     // Example on how to extend the User type
     // role?: "admin" | "user";
   }

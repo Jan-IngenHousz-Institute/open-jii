@@ -71,6 +71,18 @@ variable "github_oauth_client_secret" {
   sensitive   = true
 }
 
+variable "orcid_oauth_client_id" {
+  description = "ORCID OAuth client ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "orcid_oauth_client_secret" {
+  description = "ORCID OAuth client secret"
+  type        = string
+  sensitive   = true
+}
+
 # Backend x Databricks webhook secrets
 variable "backend_webhook_api_key_id" {
   description = "Databricks webhook API key ID"
