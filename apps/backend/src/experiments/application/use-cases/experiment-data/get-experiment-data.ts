@@ -90,7 +90,8 @@ export class GetExperimentDataUseCase {
         const pageSize = query.pageSize || 5; // Default to 5 rows per table
 
         // Form the schema name based on experiment ID and name
-        const schemaName = `exp_${experiment.name}_${experimentId}`;
+        const cleanName = experiment.name.toLowerCase().trim().replace(/ /g, "_");
+        const schemaName = `exp_${cleanName}_${experimentId}`;
 
         try {
           // If table name is specified, fetch data for that single table
