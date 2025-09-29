@@ -604,31 +604,6 @@ describe("ExperimentDataTable", () => {
     });
   });
 
-  it("should render download button and open modal", async () => {
-    const user = userEvent.setup();
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: mockResponse,
-      isLoading: false,
-      error: null,
-    });
-    mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-    render(
-      <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
-      { wrapper: createWrapper() },
-    );
-
-    // Find and click download button
-    const downloadButton = screen.getByText("Download");
-    expect(downloadButton).toBeInTheDocument();
-
-    await user.click(downloadButton);
-
-    // Check that modal appears
-    expect(screen.getByTestId("data-download-modal")).toBeInTheDocument();
-    expect(screen.getByText("Download Modal for test_table - experiment-123")).toBeInTheDocument();
-  });
-
   describe("Chart functionality", () => {
     const mockTableDataWithCharts = {
       columns: [

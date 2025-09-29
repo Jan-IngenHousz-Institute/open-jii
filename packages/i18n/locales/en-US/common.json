@@ -337,6 +337,7 @@
     "next": "Next",
     "table": "Table",
     "details": "Show table details",
+    "download": "Download table",
     "row": "row",
     "rows": "rows"
   },
@@ -408,8 +409,7 @@
       "removeAllComments": "Remove all comments",
       "removeAllFlags": "Remove all flags"
     },
-    "details": "Show table details",
-    "download": "Download table"
+    "details": "Show table details"
   },
   "landingPage": {
     "latestArticles": "Latest articles"

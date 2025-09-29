@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { AddCommentDialogProps } from "~/components/experiment-data/comments/add-comment-dialog";
@@ -16,6 +17,7 @@ vi.mock("@repo/i18n", () => ({
         "experimentDataComments.bulkActions.addFlag": "Add flag",
         "experimentDataComments.bulkActions.removeAllComments": "Remove all comments",
         "experimentDataComments.bulkActions.removeAllFlags": "Remove all flags",
+        "experimentDataTable.download": "Download",
       };
       return translations[key] || key;
     },
@@ -25,17 +27,20 @@ vi.mock("@repo/i18n", () => ({
 // Mock UI components
 vi.mock("@repo/ui/components", () => ({
   Button: ({
-    className,
-    type,
     children,
+    onClick,
+    className,
+    ...props
   }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    variant?: string;
+    size?: string;
     className?: string;
-    type?: string;
-    children?: React.ReactNode;
   }) => (
-    <div data-testid={`button${type ? "-" + type : ""}`} className={className}>
-      {children ?? "Button"}
-    </div>
+    <button onClick={onClick} className={className} {...props}>
+      {children}
+    </button>
   ),
   DropdownMenu: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="dropdown-menu">{children ?? "DropdownMenu"}</div>
@@ -101,6 +106,7 @@ describe("BulkActionsBar", () => {
         totalComments={0}
         totalFlags={0}
         clearSelection={vi.fn()}
+        downloadTable={vi.fn()}
       />,
       { wrapper: createWrapper() },
     );
@@ -131,6 +137,7 @@ describe("BulkActionsBar", () => {
         totalComments={5}
         totalFlags={0}
         clearSelection={vi.fn()}
+        downloadTable={vi.fn()}
       />,
       { wrapper: createWrapper() },
     );
@@ -161,6 +168,7 @@ describe("BulkActionsBar", () => {
         totalComments={0}
         totalFlags={2}
         clearSelection={vi.fn()}
+        downloadTable={vi.fn()}
       />,
       { wrapper: createWrapper() },
     );
@@ -191,6 +199,7 @@ describe("BulkActionsBar", () => {
         totalComments={5}
         totalFlags={2}
         clearSelection={vi.fn()}
+        downloadTable={vi.fn()}
       />,
       { wrapper: createWrapper() },
     );
@@ -210,5 +219,31 @@ describe("BulkActionsBar", () => {
     expect(screen.getByTestId("add-comment-dialog-flag")).toBeInTheDocument();
     expect(screen.getByTestId("delete-comment-dialog-comment")).toBeInTheDocument();
     expect(screen.getByTestId("delete-comment-dialog-flag")).toBeInTheDocument();
+  });
+
+  it("should render download button and open modal", async () => {
+    const user = userEvent.setup();
+    const downloadTableFunction = vi.fn();
+    render(
+      <BulkActionsBar
+        experimentId="exp1"
+        tableName="table1"
+        rowIds={["row1", "row2", "row3"]}
+        totalComments={5}
+        totalFlags={2}
+        clearSelection={vi.fn()}
+        downloadTable={downloadTableFunction}
+      />,
+      { wrapper: createWrapper() },
+    );
+
+    // Find and click download button
+    const downloadButton = screen.getByText("Download");
+    expect(downloadButton).toBeInTheDocument();
+
+    await user.click(downloadButton);
+
+    // Check that function was called
+    expect(downloadTableFunction).toHaveBeenCalledTimes(1);
   });
 });

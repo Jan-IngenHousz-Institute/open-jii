@@ -7,7 +7,6 @@ import type {
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import type { PaginationState, RowSelectionState, Updater } from "@tanstack/react-table";
 import { getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
-import { Download } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { BulkActionsBar } from "~/components/experiment-data/comments/bulk-actions-bar";
 import {
@@ -21,7 +20,6 @@ import { renderIntoElement } from "~/util/reactUtil";
 import type { ExperimentDataComment } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
-  Button,
   Checkbox,
   Label,
   Pagination,
@@ -248,16 +246,8 @@ export function ExperimentDataTable({
         totalComments={totalSelectedComments}
         totalFlags={totalSelectedFlags}
         clearSelection={clearSelection}
+        downloadTable={() => setDownloadModalOpen(true)}
       />
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setDownloadModalOpen(true)}
-        className="flex items-center gap-2"
-      >
-        <Download className="h-4 w-4" />
-        {t("experimentDataTable.download")}
-      </Button>
       <div className="text-muted-foreground rounded-md border">
         <Table>
           <ExperimentTableHeader headerGroups={table.getHeaderGroups()} />

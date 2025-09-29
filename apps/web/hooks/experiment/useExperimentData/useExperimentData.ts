@@ -55,19 +55,23 @@ function createTableColumns({
   // Define type precedence for sorting
   const getTypePrecedence = (typeName: string): number => {
     switch (typeName) {
-      case "TIMESTAMP":
+      case "ID":
         return 1;
-      case "STRING":
+      case "JSON_COMMENTS":
+        return 2;
+      case "TIMESTAMP":
         return 3;
+      case "STRING":
+        return 5;
       case "DOUBLE":
       case "INT":
       case "LONG":
       case "BIGINT":
-        return 4;
+        return 6;
       default:
-        if (typeName === "MAP" || typeName.startsWith("MAP<")) return 2;
-        if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 5;
-        return 6; // Other types at the end
+        if (typeName === "MAP" || typeName.startsWith("MAP<")) return 4;
+        if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 7;
+        return 8; // Other types at the end
     }
   };
 

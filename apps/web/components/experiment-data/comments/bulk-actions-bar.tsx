@@ -1,4 +1,4 @@
-import { MessageSquare, Flag, ChevronDown, Trash2 } from "lucide-react";
+import { MessageSquare, Flag, ChevronDown, Trash2, Download } from "lucide-react";
 import React from "react";
 import { AddCommentDialog } from "~/components/experiment-data/comments/add-comment-dialog";
 import { DeleteCommentsDialog } from "~/components/experiment-data/comments/delete-comment-dialog";
@@ -20,6 +20,7 @@ interface BulkActionsBarProps {
   totalComments: number;
   totalFlags: number;
   clearSelection: () => void;
+  downloadTable: () => void;
 }
 
 export function BulkActionsBar({
@@ -29,6 +30,7 @@ export function BulkActionsBar({
   totalComments,
   totalFlags,
   clearSelection,
+  downloadTable,
 }: BulkActionsBarProps) {
   const { t } = useTranslation();
   const selectedCount = rowIds.length;
@@ -63,6 +65,15 @@ export function BulkActionsBar({
         )}
       </div>
       <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={downloadTable}
+          className="flex items-center gap-2"
+        >
+          <Download className="h-4 w-4" />
+          {t("experimentDataTable.download")}
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
