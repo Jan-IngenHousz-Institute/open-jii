@@ -4,7 +4,7 @@ import type React from "react";
 import { useMemo } from "react";
 import { tsr } from "~/lib/tsr";
 
-import type { ExperimentData } from "@repo/api";
+import type { ExperimentData, DataColumn } from "@repo/api";
 
 export type DataValue = string | null;
 export type DataRow = Record<string, DataValue>;
@@ -153,6 +153,8 @@ export interface SampleTable {
   name: string;
   tableMetadata: TableMetadata;
   tableRows: DataRow[];
+  columns: DataColumn[]; // Add raw columns for easy access
+  totalRows: number; // Add totalRows for display
 }
 
 /**
@@ -191,6 +193,8 @@ export const useExperimentSampleData = (
           totalRows: tableData.totalRows,
         } as TableMetadata,
         tableRows: tableData.data?.rows ?? [],
+        columns: tableData.data?.columns ?? [], // Add raw columns
+        totalRows: tableData.totalRows, // Add totalRows for display
       });
     });
     return tables;
