@@ -315,5 +315,18 @@ describe("DeleteExperimentVisualizationUseCase", () => {
       assertSuccess(result);
       expect(result.value).toBeUndefined();
     });
+
+    it("should fail when visualization findById returns success with null", async () => {
+      // Arrange - Mock findById to return success with null (instead of failure)
+      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(success(null));
+
+      // Act
+      const result = await useCase.execute(visualizationId, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toBe(`Visualization with ID ${visualizationId} not found`);
+    });
   });
 });

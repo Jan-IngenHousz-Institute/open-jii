@@ -536,5 +536,26 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       assertFailure(result);
       expect(result.error.message).toBe("Failed to update visualization");
     });
+
+    it("should fail when visualization findById returns success with null", async () => {
+      // Arrange - Mock findById to return success with null (instead of failure)
+      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(success(null));
+
+      const updateData: UpdateExperimentVisualizationDto = {
+        name: "Updated Name",
+        chartFamily: "basic",
+        chartType: "bar",
+        dataConfig: { tableName: "test_table", dataSources: [] },
+      };
+
+      // Act
+      const result = await useCase.execute(visualizationId, updateData, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      // This should hit the visualization null check (lines 37-39)
+      expect(result.error.message).toBe(`Visualization with ID ${visualizationId} not found`);
+    });
   });
 });

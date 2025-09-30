@@ -215,5 +215,38 @@ describe("GetExperimentVisualizationUseCase", () => {
         `Visualization with ID ${visualizationId} not found in this experiment`,
       );
     });
+
+    it("should fail when visualization findById returns success with null", async () => {
+      // Arrange - Experiment access should pass
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: {
+            id: experimentId,
+            name: "Test Experiment",
+            description: "Test Description",
+            status: "active" as const,
+            visibility: "public" as const, // Public so access check passes
+            embargoUntil: new Date(),
+            createdBy: testUserId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          hasAccess: true,
+          isAdmin: false,
+        }),
+      );
+
+      // Mock findById to return success with null (instead of failure)
+      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(success(null));
+
+      // Act
+      const result = await useCase.execute(experimentId, visualizationId, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      // This should hit the visualization null check (lines 68-70)
+      expect(result.error.message).toBe(`Visualization with ID ${visualizationId} not found`);
+    });
   });
 });
