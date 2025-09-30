@@ -15,7 +15,7 @@ import type {
   VolumeResponse,
 } from "../../../common/modules/databricks/services/volumes/volumes.types";
 import type { Result } from "../../../common/utils/fp-utils";
-import type { ExperimentVisualizationDto } from "../models/experiment-visualization.model";
+import type { ExperimentVisualizationDto } from "../models/experiment-visualizations.model";
 
 /**
  * Injection token for the Databricks port

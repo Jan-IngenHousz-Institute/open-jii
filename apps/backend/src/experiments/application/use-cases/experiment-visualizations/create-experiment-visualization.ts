@@ -1,316 +1,108 @@
-import { faker } from "@faker-js/faker";
+import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
-import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
-import { TestHarness } from "../../../../test/test-harness";
-import type { CreateExperimentVisualizationDto } from "../../../core/models/experiment-visualizations.model";
+import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
+import {
+  CreateExperimentVisualizationDto,
+  ExperimentVisualizationDto,
+} from "../../../core/models/experiment-visualization.model";
+import { ExperimentDto } from "../../../core/models/experiment.model";
+import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
+import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { ExperimentVisualizationRepository } from "../../../core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { CreateExperimentVisualizationUseCase } from "./create-experiment-visualization.spec";
 
-describe("CreateExperimentVisualizationUseCase", () => {
-  const testApp = TestHarness.App;
-  let testUserId: string;
-  let useCase: CreateExperimentVisualizationUseCase;
-  let experimentRepository: ExperimentRepository;
-  let experimentVisualizationRepository: ExperimentVisualizationRepository;
-  let databricksAdapter: DatabricksAdapter;
+@Injectable()
+export class CreateExperimentVisualizationUseCase {
+  private readonly logger = new Logger(CreateExperimentVisualizationUseCase.name);
 
-  beforeAll(async () => {
-    await testApp.setup();
-  });
+  constructor(
+    private readonly experimentRepository: ExperimentRepository,
+    private readonly experimentVisualizationRepository: ExperimentVisualizationRepository,
+    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+  ) {}
 
-  beforeEach(async () => {
-    await testApp.beforeEach();
-    testUserId = await testApp.createTestUser({});
-    useCase = testApp.module.get(CreateExperimentVisualizationUseCase);
-    experimentRepository = testApp.module.get(ExperimentRepository);
-    experimentVisualizationRepository = testApp.module.get(ExperimentVisualizationRepository);
-    databricksAdapter = testApp.module.get(DatabricksAdapter);
+  async execute(
+    experimentId: string,
+    data: CreateExperimentVisualizationDto,
+    userId: string,
+  ): Promise<Result<ExperimentVisualizationDto>> {
+    this.logger.log(
+      `Creating visualization "${data.name}" for experiment ${experimentId} by user ${userId}`,
+    );
 
-    vi.restoreAllMocks();
-  });
+    // Validate that the user ID is provided
+    if (!userId) {
+      this.logger.warn("Attempt to create visualization without user ID");
+      return failure(AppError.badRequest("User ID is required to create a visualization"));
+    }
 
-  afterEach(() => {
-    testApp.afterEach();
-  });
+    // Validate that name is provided
+    if (!data.name || data.name.trim() === "") {
+      this.logger.warn(`Invalid visualization name provided by user ${userId}`);
+      return failure(AppError.badRequest("Visualization name is required"));
+    }
 
-  afterAll(async () => {
-    await testApp.teardown();
-  });
+    // Check if experiment exists and if user has access
+    const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
 
-  describe("execute", () => {
-    const mockRequest: CreateExperimentVisualizationDto = {
-      name: "Test Visualization",
-      chartFamily: "basic" as const,
-      chartType: "bar" as const,
-      dataConfig: {
-        tableName: "test_table",
-        dataSources: [
-          {
-            tableName: "test_table",
-            columnName: "col1",
-            alias: "X Column",
-          },
-          {
-            tableName: "test_table",
-            columnName: "col2",
-            alias: "Y Column",
-          },
-        ],
-      },
-      config: {
-        chartType: "bar" as const,
-        config: {
-          xAxis: {
-            dataSource: {
-              tableName: "test_table",
-              columnName: "col1",
-            },
-            type: "category" as const,
-            title: "X Axis",
-          },
-          yAxes: [
-            {
-              dataSource: {
-                tableName: "test_table",
-                columnName: "col2",
-              },
-              type: "linear" as const,
-              title: "Y Axis",
-            },
-          ],
-          orientation: "vertical" as const,
-          barMode: "overlay" as const,
-          barWidth: 0.7,
-          gridLines: "both" as const,
-          showValues: false,
-          display: {
-            title: "Test Visualization",
-            showLegend: true,
-            legendPosition: "right" as const,
-            colorScheme: "default" as const,
-            interactive: true,
-          },
-        },
-      },
-    };
+    return accessResult.chain(
+      async ({
+        experiment,
+        hasAccess,
+      }: {
+        experiment: ExperimentDto | null;
+        hasAccess: boolean;
+        isAdmin: boolean;
+      }) => {
+        if (!experiment) {
+          this.logger.warn(
+            `Attempt to create visualization in non-existent experiment with ID ${experimentId}`,
+          );
+          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+        }
 
-    const experimentId = faker.string.uuid();
-    const visualizationId = faker.string.uuid();
+        if (!hasAccess) {
+          this.logger.warn(
+            `User ${userId} does not have access to create visualization in experiment ${experimentId}`,
+          );
+          return failure(AppError.forbidden("You do not have access to this experiment"));
+        }
 
-    it("should successfully create a visualization", async () => {
-      // Arrange
-      const checkAccessSpy = vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: {
-            id: experimentId,
-            name: "Test Experiment",
-            description: "Test Description",
-            status: "active",
-            visibility: "private",
-            embargoUntil: new Date(),
-            createdBy: testUserId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          hasAccess: true,
-          isAdmin: true,
-        }),
-      );
-
-      const validateDataSourcesSpy = vi
-        .spyOn(databricksAdapter, "validateDataSources")
-        .mockResolvedValue(success(true));
-
-      const createVisualizationSpy = vi
-        .spyOn(experimentVisualizationRepository, "create")
-        .mockResolvedValue(
-          success([
-            {
-              id: visualizationId,
-              experimentId,
-              name: mockRequest.name,
-              description: null,
-              chartFamily: mockRequest.chartFamily,
-              chartType: mockRequest.chartType,
-              config: mockRequest.config,
-              dataConfig: mockRequest.dataConfig,
-              createdBy: testUserId,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            },
-          ]),
+        // Validate data sources exist
+        const dataSourceValidation = await this.databricksPort.validateDataSources(
+          data.dataConfig,
+          experiment.name,
+          experimentId,
         );
 
-      // Act
-      const result = await useCase.execute(experimentId, mockRequest, testUserId);
+        if (dataSourceValidation.isFailure()) {
+          this.logger.warn(`Data source validation failed: ${dataSourceValidation.error.message}`);
+          return failure(dataSourceValidation.error);
+        }
 
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toMatchObject({
-        id: visualizationId,
-        experimentId,
-        name: mockRequest.name,
-        chartFamily: mockRequest.chartFamily,
-        chartType: mockRequest.chartType,
-        config: mockRequest.config,
-        dataConfig: mockRequest.dataConfig,
-        createdBy: testUserId,
-      });
+        this.logger.debug(`Creating visualization in repository: "${data.name}"`);
+        // Create the visualization
+        const visualizationResult = await this.experimentVisualizationRepository.create(
+          experimentId,
+          data,
+          userId,
+        );
 
-      expect(checkAccessSpy).toHaveBeenCalledWith(experimentId, testUserId);
-      expect(validateDataSourcesSpy).toHaveBeenCalledWith(
-        mockRequest.dataConfig,
-        "Test Experiment",
-        experimentId,
-      );
-      expect(createVisualizationSpy).toHaveBeenCalledWith(experimentId, mockRequest, testUserId);
-    });
+        return visualizationResult.chain((visualizations: ExperimentVisualizationDto[]) => {
+          if (visualizations.length === 0) {
+            this.logger.error(
+              `Failed to create visualization "${data.name}" for experiment ${experimentId} by user ${userId}`,
+            );
+            return failure(AppError.internal("Failed to create visualization"));
+          }
 
-    it("should fail when user ID is not provided", async () => {
-      // Act
-      const result = await useCase.execute(experimentId, mockRequest, "");
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe("User ID is required to create a visualization");
-    });
-
-    it("should fail when visualization name is not provided", async () => {
-      // Arrange
-      const invalidRequest = { ...mockRequest, name: "" };
-
-      // Act
-      const result = await useCase.execute(experimentId, invalidRequest, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe("Visualization name is required");
-    });
-
-    it("should fail when experiment does not exist", async () => {
-      // Arrange
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: null,
-          hasAccess: false,
-          isAdmin: false,
-        }),
-      );
-
-      // Act
-      const result = await useCase.execute(experimentId, mockRequest, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe(`Experiment with ID ${experimentId} not found`);
-    });
-
-    it("should fail when user does not have access to the experiment", async () => {
-      // Arrange
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: {
-            id: experimentId,
-            name: "Test Experiment",
-            description: "Test Description",
-            status: "active",
-            visibility: "private",
-            embargoUntil: new Date(),
-            createdBy: faker.string.uuid(), // Different user
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          hasAccess: false,
-          isAdmin: false,
-        }),
-      );
-
-      // Act
-      const result = await useCase.execute(experimentId, mockRequest, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe("You do not have access to this experiment");
-    });
-
-    it("should fail when data source validation fails", async () => {
-      // Arrange
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: {
-            id: experimentId,
-            name: "Test Experiment",
-            description: "Test Description",
-            status: "active",
-            visibility: "private",
-            embargoUntil: new Date(),
-            createdBy: testUserId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          hasAccess: true,
-          isAdmin: true,
-        }),
-      );
-
-      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(
-        failure({
-          message: "Table test_table does not exist",
-          code: "INVALID_DATA_SOURCE",
-          statusCode: 400,
-          name: "",
-        }),
-      );
-
-      // Act
-      const result = await useCase.execute(experimentId, mockRequest, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe("Table test_table does not exist");
-    });
-
-    it("should fail when repository create operation fails", async () => {
-      // Arrange
-      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-        success({
-          experiment: {
-            id: experimentId,
-            name: "Test Experiment",
-            description: "Test Description",
-            status: "active",
-            visibility: "private",
-            embargoUntil: new Date(),
-            createdBy: testUserId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          hasAccess: true,
-          isAdmin: true,
-        }),
-      );
-
-      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
-
-      vi.spyOn(experimentVisualizationRepository, "create").mockResolvedValue(
-        success([]), // Empty array indicates creation failure
-      );
-
-      // Act
-      const result = await useCase.execute(experimentId, mockRequest, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe("Failed to create visualization");
-    });
-  });
-});
+          const visualization = visualizations[0];
+          this.logger.log(
+            `Successfully created visualization ${visualization.id} for experiment ${experimentId}`,
+          );
+          return success(visualization);
+        });
+      },
+    );
+  }
+}

@@ -6,7 +6,7 @@ import type {
   CreateExperimentVisualizationDto,
   UpdateExperimentVisualizationDto,
   ExperimentVisualizationDto,
-} from "../models/experiment-visualization.model";
+} from "../models/experiment-visualizations.model";
 import { ExperimentVisualizationRepository } from "./experiment-visualization.repository";
 
 describe("ExperimentVisualizationRepository", () => {

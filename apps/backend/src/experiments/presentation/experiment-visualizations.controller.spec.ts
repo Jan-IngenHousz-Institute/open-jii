@@ -10,7 +10,7 @@ import { DeleteExperimentVisualizationUseCase } from "../application/use-cases/e
 import { GetExperimentVisualizationUseCase } from "../application/use-cases/experiment-visualizations/get-experiment-visualization";
 import { ListExperimentVisualizationsUseCase } from "../application/use-cases/experiment-visualizations/list-experiment-visualizations";
 import { UpdateExperimentVisualizationUseCase } from "../application/use-cases/experiment-visualizations/update-experiment-visualization";
-import type { ExperimentVisualizationDto } from "../core/models/experiment-visualization.model";
+import type { ExperimentVisualizationDto } from "../core/models/experiment-visualizations.model";
 
 // Helper function to create test visualization data
 const createTestVisualizationData = (overrides: Partial<any> = {}) => ({

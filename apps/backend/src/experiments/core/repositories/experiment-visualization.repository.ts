@@ -8,7 +8,7 @@ import type {
   ExperimentVisualizationDto,
   CreateExperimentVisualizationDto,
   UpdateExperimentVisualizationDto,
-} from "../models/experiment-visualization.model";
+} from "../models/experiment-visualizations.model";
 
 @Injectable()
 export class ExperimentVisualizationRepository {

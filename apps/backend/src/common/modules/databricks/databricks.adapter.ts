@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { ExperimentVisualizationDto } from "../../../experiments/core/models/experiment-visualization.model";
+import { ExperimentVisualizationDto } from "../../../experiments/core/models/experiment-visualizations.model";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { MacroDto } from "../../../macros/core/models/macro.model";
 import { DatabricksPort as MacrosDatabricksPort } from "../../../macros/core/ports/databricks.port";
