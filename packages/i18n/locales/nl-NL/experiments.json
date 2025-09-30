@@ -73,6 +73,11 @@
   "updated": "Bijgewerkt",
   "descriptionTitle": "Beschrijving",
   "details": {
+    "location": {
+      "locationsTitle": "Experiment Locaties",
+      "noLocations": "Geen locaties",
+      "noLocationsDescription": "Dit experiment heeft geen geconfigureerde locaties."
+    },
     "locations": {
       "locationsTitle": "Experiment Locaties",
       "locationsCount": "{{count}} locatie",

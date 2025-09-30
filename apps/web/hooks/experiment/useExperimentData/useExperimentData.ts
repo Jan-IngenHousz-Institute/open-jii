@@ -12,7 +12,13 @@ import type { BulkSelectionFormType } from "~/components/experiment-data/experim
 //import { addDemoAnnotationData } from "~/hooks/experiment/useExperimentData/addDemoAnnotationData";
 import { tsr } from "~/lib/tsr";
 
-import type { Annotation, AnnotationFlagType, AnnotationType, ExperimentData } from "@repo/api";
+import type {
+  Annotation,
+  AnnotationFlagType,
+  AnnotationType,
+  DataColumn,
+  ExperimentData,
+} from "@repo/api";
 
 export type DataRow = Record<string, unknown>;
 export type DataRenderFunction = (
@@ -265,6 +271,8 @@ export interface SampleTable {
   name: string;
   tableMetadata: TableMetadata;
   tableRows: DataRow[];
+  columns: DataColumn[]; // Add raw columns for easy access
+  totalRows: number; // Add totalRows for display
 }
 
 /**
@@ -303,6 +311,8 @@ export const useExperimentSampleData = (
           totalRows: tableData.totalRows,
         } as TableMetadata,
         tableRows: tableData.data?.rows ?? [],
+        columns: tableData.data?.columns ?? [], // Add raw columns
+        totalRows: tableData.totalRows, // Add totalRows for display
       });
     });
     return tables;

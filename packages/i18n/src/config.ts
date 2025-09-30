@@ -26,6 +26,7 @@ export const namespaces = [
   "account",
   "macro",
   "experimentData",
+  "experimentVisualizations",
 ] as const;
 
 export type Namespace = (typeof namespaces)[number];

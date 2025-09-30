@@ -80,6 +80,11 @@
   "updated": "Aktualisiert",
   "descriptionTitle": "Beschreibung",
   "details": {
+    "location": {
+      "locationsTitle": "Experiment-Standorte",
+      "noLocations": "Keine Standorte",
+      "noLocationsDescription": "Dieses Experiment hat keine konfigurierten Standorte."
+    },
     "locations": {
       "locationsTitle": "Experiment-Standorte",
       "locationsCount": "{{count}} Standort",

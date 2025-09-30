@@ -658,7 +658,7 @@ describe("BoxPlot", () => {
         {
           y: [1, 2, 3, 4, 5],
           name: "No Points",
-          boxpoints: false,
+          boxpoints: "false",
         },
       ];
 

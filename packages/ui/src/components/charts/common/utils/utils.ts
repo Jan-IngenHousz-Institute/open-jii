@@ -25,7 +25,7 @@ export function detectWebGLSupport(): boolean {
 /**
  * Determines the appropriate renderer based on configuration and browser support
  */
-export function getRenderer(useWebGL?: boolean): WebGLRenderer {
+export function getRenderer(useWebGL: boolean = false): WebGLRenderer {
   if (useWebGL === false) return "svg";
   if (useWebGL === true) {
     return detectWebGLSupport() ? "webgl" : "svg";
