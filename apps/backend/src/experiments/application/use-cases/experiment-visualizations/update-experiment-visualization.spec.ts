@@ -1,120 +1,540 @@
-import { Injectable, Logger, Inject } from "@nestjs/common";
+import { faker } from "@faker-js/faker";
 
-import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
-import {
-  UpdateExperimentVisualizationDto,
-  ExperimentVisualizationDto,
-} from "../../../core/models/experiment-visualizations.model";
-import { ExperimentDto } from "../../../core/models/experiment.model";
-import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
+import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
+import { TestHarness } from "../../../../test/test-harness";
+import type { UpdateExperimentVisualizationDto } from "../../../core/models/experiment-visualization.model";
 import { ExperimentVisualizationRepository } from "../../../core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import { UpdateExperimentVisualizationUseCase } from "./update-experiment-visualization";
 
-@Injectable()
-export class UpdateExperimentVisualizationUseCase {
-  private readonly logger = new Logger(UpdateExperimentVisualizationUseCase.name);
+describe("UpdateExperimentVisualizationUseCase", () => {
+  const testApp = TestHarness.App;
+  let testUserId: string;
+  let useCase: UpdateExperimentVisualizationUseCase;
+  let experimentVisualizationRepository: ExperimentVisualizationRepository;
+  let experimentRepository: ExperimentRepository;
+  let databricksAdapter: DatabricksAdapter;
 
-  constructor(
-    private readonly experimentRepository: ExperimentRepository,
-    private readonly experimentVisualizationRepository: ExperimentVisualizationRepository,
-    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
-  ) {}
+  beforeAll(async () => {
+    await testApp.setup();
+  });
 
-  async execute(
-    visualizationId: string,
-    data: UpdateExperimentVisualizationDto,
-    userId: string,
-  ): Promise<Result<ExperimentVisualizationDto>> {
-    this.logger.log(`Updating visualization ${visualizationId} by user ${userId}`);
+  beforeEach(async () => {
+    await testApp.beforeEach();
+    testUserId = await testApp.createTestUser({});
+    useCase = testApp.module.get(UpdateExperimentVisualizationUseCase);
+    experimentVisualizationRepository = testApp.module.get(ExperimentVisualizationRepository);
+    experimentRepository = testApp.module.get(ExperimentRepository);
+    databricksAdapter = testApp.module.get(DatabricksAdapter);
 
-    // Find the visualization first
-    const visualizationResult =
-      await this.experimentVisualizationRepository.findById(visualizationId);
+    vi.restoreAllMocks();
+  });
 
-    return visualizationResult.chain(async (visualization: ExperimentVisualizationDto | null) => {
-      if (!visualization) {
-        this.logger.warn(`Attempt to update non-existent visualization with ID ${visualizationId}`);
-        return failure(AppError.notFound(`Visualization with ID ${visualizationId} not found`));
-      }
+  afterEach(() => {
+    testApp.afterEach();
+  });
 
-      // Check if experiment exists and if user has access
-      const accessResult = await this.experimentRepository.checkAccess(
-        visualization.experimentId,
-        userId,
+  afterAll(async () => {
+    await testApp.teardown();
+  });
+
+  describe("execute", () => {
+    const experimentId = faker.string.uuid();
+    const visualizationId = faker.string.uuid();
+
+    const mockVisualization = {
+      id: visualizationId,
+      experimentId,
+      name: "Original Visualization",
+      chartFamily: "plotly",
+      chartType: "bar",
+      dataConfig: { table: "test_table", columns: ["col1", "col2"] },
+      config: { title: "Original Visualization" },
+      createdBy: testUserId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const mockUpdateRequest: UpdateExperimentVisualizationDto = {
+      name: "Updated Visualization",
+      chartFamily: "plotly",
+      chartType: "line",
+      dataConfig: { table: "test_table", columns: ["col1", "col3"] },
+      config: { title: "Updated Visualization" },
+    };
+
+    it("should successfully update a visualization", async () => {
+      // Arrange
+      const mockVisualization = {
+        id: visualizationId,
+        experimentId,
+        name: "Original Visualization",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+        createdBy: testUserId, // Now this matches the test user
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
+        success(mockVisualization),
       );
 
-      return accessResult.chain(
-        async ({
-          experiment,
-          hasAccess,
-          isAdmin,
-        }: {
-          experiment: ExperimentDto | null;
-          hasAccess: boolean;
-          isAdmin: boolean;
-        }) => {
-          if (!experiment) {
-            this.logger.warn(
-              `Visualization ${visualizationId} belongs to non-existent experiment ${visualization.experimentId}`,
-            );
-            return failure(
-              AppError.notFound(`Experiment with ID ${visualization.experimentId} not found`),
-            );
-          }
-
-          if (!hasAccess) {
-            this.logger.warn(
-              `User ${userId} does not have access to experiment ${visualization.experimentId}`,
-            );
-            return failure(AppError.forbidden("You do not have access to this experiment"));
-          }
-
-          // Check if user can modify this visualization
-          if (visualization.createdBy !== userId && !isAdmin) {
-            this.logger.warn(
-              `User ${userId} does not have permission to modify visualization ${visualizationId}`,
-            );
-            return failure(
-              AppError.forbidden("You do not have permission to modify this visualization"),
-            );
-          }
-
-          // Validate data sources if provided
-          const dataSourceValidation = await this.databricksPort.validateDataSources(
-            data.dataConfig,
-            experiment.name,
-            visualization.experimentId,
-          );
-
-          if (dataSourceValidation.isFailure()) {
-            this.logger.warn(
-              `Data source validation failed: ${dataSourceValidation.error.message}`,
-            );
-            return failure(dataSourceValidation.error);
-          }
-
-          this.logger.debug(`Updating visualization in repository: ${visualizationId}`);
-          // Update the visualization
-          const updateResult = await this.experimentVisualizationRepository.update(
-            visualizationId,
-            data,
-          );
-
-          return updateResult.chain((updatedVisualizations: ExperimentVisualizationDto[]) => {
-            if (updatedVisualizations.length === 0) {
-              this.logger.error(
-                `Failed to update visualization ${visualizationId} by user ${userId}`,
-              );
-              return failure(AppError.internal("Failed to update visualization"));
-            }
-
-            const updatedVisualization = updatedVisualizations[0];
-            this.logger.log(`Successfully updated visualization ${visualizationId}`);
-            return success(updatedVisualization);
-          });
-        },
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: { id: experimentId, name: "Test Experiment" },
+          hasAccess: true,
+          isAdmin: false,
+        }),
       );
+
+      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
+
+      const updatedVisualization = {
+        ...mockVisualization,
+        name: mockUpdateRequest.name,
+        chartFamily: mockUpdateRequest.chartFamily,
+        chartType: mockUpdateRequest.chartType,
+        dataConfig: mockUpdateRequest.dataConfig,
+        config: mockUpdateRequest.config,
+        updatedAt: new Date(),
+      };
+
+      vi.spyOn(experimentVisualizationRepository, "update").mockResolvedValue(
+        success([updatedVisualization]),
+      );
+
+      // Act
+      const result = await useCase.execute(visualizationId, mockUpdateRequest, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toMatchObject({
+        id: visualizationId,
+        experimentId,
+        name: mockUpdateRequest.name,
+        chartFamily: mockUpdateRequest.chartFamily,
+        chartType: mockUpdateRequest.chartType,
+      });
     });
-  }
-}
+
+    it("should fail when visualization does not exist", async () => {
+      // Arrange
+      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
+        failure({
+          message: "Visualization not found",
+          code: "NOT_FOUND",
+          statusCode: 404,
+          name: "",
+        }),
+      );
+
+      // Act
+      const result = await useCase.execute(visualizationId, mockUpdateRequest, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toBe("Visualization not found");
+    });
+
+    it("should fail when user is not the creator of the visualization", async () => {
+      // Arrange
+      const differentUserVisualization = {
+        ...mockVisualization,
+        createdBy: faker.string.uuid(), // Different user
+      };
+
+      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
+        success(differentUserVisualization),
+      );
+
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: { id: experimentId, name: "Test Experiment" },
+          hasAccess: true,
+          isAdmin: false,
+        }),
+      );
+
+      // Act
+      const result = await useCase.execute(visualizationId, mockUpdateRequest, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toBe("You do not have permission to modify this visualization");
+    });
+
+    it("should fail when data source validation fails", async () => {
+      // Arrange
+      const mockVisualization = {
+        id: visualizationId,
+        experimentId,
+        name: "Original Visualization",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+        createdBy: testUserId, // User is the owner
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
+        success(mockVisualization),
+      );
+
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: { id: experimentId, name: "Test Experiment" },
+          hasAccess: true,
+          isAdmin: false,
+        }),
+      );
+
+      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(
+        failure({
+          message: "Table not found",
+          code: "INVALID_DATA_SOURCE",
+          statusCode: 400,
+          name: "",
+        }),
+      );
+
+      // Act
+      const result = await useCase.execute(visualizationId, mockUpdateRequest, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toBe("Table not found");
+    });
+
+    it("should fail when repository update operation fails", async () => {
+      // Arrange
+      const mockVisualization = {
+        id: visualizationId,
+        experimentId,
+        name: "Original Visualization",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+        createdBy: testUserId, // User is the owner
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
+        success(mockVisualization),
+      );
+
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: { id: experimentId, name: "Test Experiment" },
+          hasAccess: true,
+          isAdmin: false,
+        }),
+      );
+
+      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
+
+      vi.spyOn(experimentVisualizationRepository, "update").mockResolvedValue(
+        failure({
+          message: "Database error",
+          code: "DATABASE_ERROR",
+          statusCode: 500,
+          name: "",
+        }),
+      );
+
+      // Act
+      const result = await useCase.execute(visualizationId, mockUpdateRequest, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toBe("Database error");
+    });
+
+    it("should handle empty update successfully", async () => {
+      // Arrange
+      const emptyUpdate = {};
+      const mockVisualization = {
+        id: visualizationId,
+        experimentId,
+        name: "Original Visualization",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+        createdBy: testUserId, // User is the owner
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
+        success(mockVisualization),
+      );
+
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: { id: experimentId, name: "Test Experiment" },
+          hasAccess: true,
+          isAdmin: false,
+        }),
+      );
+
+      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
+
+      vi.spyOn(experimentVisualizationRepository, "update").mockResolvedValue(
+        success([mockVisualization]),
+      );
+
+      // Act
+      const result = await useCase.execute(
+        visualizationId,
+        emptyUpdate as UpdateExperimentVisualizationDto,
+        testUserId,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toMatchObject({
+        id: visualizationId,
+        experimentId,
+      });
+    });
+
+    it("should fail when visualization belongs to non-existent experiment", async () => {
+      // Arrange
+      const mockVisualization = {
+        id: visualizationId,
+        experimentId,
+        name: "Test Visualization",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+        createdBy: testUserId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const updateData: UpdateExperimentVisualizationDto = {
+        name: "Updated Visualization",
+        chartFamily: "basic",
+        chartType: "line",
+        config: { chartType: "line", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+      };
+
+      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
+        success(mockVisualization),
+      );
+
+      // Mock experiment access to return null experiment (experiment doesn't exist)
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: null,
+          hasAccess: false,
+          isAdmin: false,
+        }),
+      );
+
+      // Act
+      const result = await useCase.execute(visualizationId, updateData, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toBe(`Experiment with ID ${experimentId} not found`);
+    });
+
+    it("should fail when user does not have access to experiment", async () => {
+      // Arrange
+      const mockVisualization = {
+        id: visualizationId,
+        experimentId,
+        name: "Test Visualization",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+        createdBy: testUserId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const mockExperiment = {
+        id: experimentId,
+        name: "Test Experiment",
+        description: "Test Description",
+        status: "active",
+        visibility: "private",
+        embargoUntil: new Date(),
+        createdBy: "other-user-id",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const updateData: UpdateExperimentVisualizationDto = {
+        name: "Updated Visualization",
+        chartFamily: "basic",
+        chartType: "line",
+        config: { chartType: "line", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+      };
+
+      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
+        success(mockVisualization),
+      );
+
+      // Mock experiment access to return experiment but no access
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: mockExperiment,
+          hasAccess: false,
+          isAdmin: false,
+        }),
+      );
+
+      // Act
+      const result = await useCase.execute(visualizationId, updateData, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toBe("You do not have access to this experiment");
+    });
+
+    it("should allow admin to update visualization even if not creator", async () => {
+      // Arrange
+      const otherUserId = faker.string.uuid();
+      const mockVisualization = {
+        id: visualizationId,
+        experimentId,
+        name: "Test Visualization",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+        createdBy: otherUserId, // Different user created it
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const mockExperiment = {
+        id: experimentId,
+        name: "Test Experiment",
+        description: "Test Description",
+        status: "active",
+        visibility: "private",
+        embargoUntil: new Date(),
+        createdBy: testUserId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const updateData: UpdateExperimentVisualizationDto = {
+        name: "Updated Visualization",
+        chartFamily: "basic",
+        chartType: "line",
+        config: { chartType: "line", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+      };
+
+      const updatedVisualization = {
+        ...mockVisualization,
+        ...updateData,
+        updatedAt: new Date(),
+      };
+
+      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
+        success(mockVisualization),
+      );
+
+      // Mock experiment access with admin privileges
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: mockExperiment,
+          hasAccess: true,
+          isAdmin: true, // User is admin
+        }),
+      );
+
+      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
+
+      vi.spyOn(experimentVisualizationRepository, "update").mockResolvedValue(
+        success([updatedVisualization]),
+      );
+
+      // Act
+      const result = await useCase.execute(visualizationId, updateData, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toMatchObject({
+        id: visualizationId,
+        name: "Updated Visualization",
+        chartType: "line",
+      });
+    });
+
+    it("should fail when repository update returns empty array", async () => {
+      // Arrange
+      const mockVisualization = {
+        id: visualizationId,
+        experimentId,
+        name: "Test Visualization",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+        createdBy: testUserId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const updateData: UpdateExperimentVisualizationDto = {
+        name: "Updated Visualization",
+        chartFamily: "basic",
+        chartType: "line",
+        config: { chartType: "line", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+      };
+
+      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
+        success(mockVisualization),
+      );
+
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: { id: experimentId, name: "Test Experiment" },
+          hasAccess: true,
+          isAdmin: false,
+        }),
+      );
+
+      vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
+
+      // Mock repository to return empty array (no visualization was updated)
+      vi.spyOn(experimentVisualizationRepository, "update").mockResolvedValue(success([]));
+
+      // Act
+      const result = await useCase.execute(visualizationId, updateData, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toBe("Failed to update visualization");
+    });
+  });
+});
