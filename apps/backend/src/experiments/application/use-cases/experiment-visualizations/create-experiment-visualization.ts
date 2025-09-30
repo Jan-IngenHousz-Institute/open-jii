@@ -4,7 +4,7 @@ import { Result, success, failure, AppError } from "../../../../common/utils/fp-
 import {
   CreateExperimentVisualizationDto,
   ExperimentVisualizationDto,
-} from "../../../core/models/experiment-visualization.model";
+} from "../../../core/models/experiment-visualizations.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
