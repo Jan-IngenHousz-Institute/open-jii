@@ -6,7 +6,7 @@ import { TestHarness } from "../../../../test/test-harness";
 import type { CreateExperimentVisualizationDto } from "../../../core/models/experiment-visualizations.model";
 import { ExperimentVisualizationRepository } from "../../../core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { CreateExperimentVisualizationUseCase } from "./create-experiment-visualization.spec";
+import { CreateExperimentVisualizationUseCase } from "./create-experiment-visualization";
 
 describe("CreateExperimentVisualizationUseCase", () => {
   const testApp = TestHarness.App;
@@ -51,11 +51,13 @@ describe("CreateExperimentVisualizationUseCase", () => {
             tableName: "test_table",
             columnName: "col1",
             alias: "X Column",
+            role: "x",
           },
           {
             tableName: "test_table",
             columnName: "col2",
             alias: "Y Column",
+            role: "y",
           },
         ],
       },
@@ -167,16 +169,6 @@ describe("CreateExperimentVisualizationUseCase", () => {
         experimentId,
       );
       expect(createVisualizationSpy).toHaveBeenCalledWith(experimentId, mockRequest, testUserId);
-    });
-
-    it("should fail when user ID is not provided", async () => {
-      // Act
-      const result = await useCase.execute(experimentId, mockRequest, "");
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toBe("User ID is required to create a visualization");
     });
 
     it("should fail when visualization name is not provided", async () => {

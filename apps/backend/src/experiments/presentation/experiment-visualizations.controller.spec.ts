@@ -22,16 +22,16 @@ const createTestVisualizationData = (overrides: Partial<any> = {}) => ({
     chartType: "bar" as const,
     config: {
       xAxis: {
-        dataSource: { tableName: "test_table", columnName: "column1" },
+        dataSource: { tableName: "test_table", columnName: "column1", role: "x" },
       },
-      yAxes: [{ dataSource: { tableName: "test_table", columnName: "column2" } }],
+      yAxes: [{ dataSource: { tableName: "test_table", columnName: "column2", role: "y" } }],
     },
   },
   dataConfig: {
     tableName: "test_table",
     dataSources: [
-      { tableName: "test_table", columnName: "column1" },
-      { tableName: "test_table", columnName: "column2" },
+      { tableName: "test_table", columnName: "column1", role: "x" },
+      { tableName: "test_table", columnName: "column2", role: "y" },
     ],
   },
   ...overrides,
@@ -46,22 +46,23 @@ const createMockVisualizationDto = (
   id: faker.string.uuid(),
   experimentId,
   name: "Test Visualization",
+  description: "Test Description",
   chartFamily: "basic",
   chartType: "bar",
   config: {
     chartType: "bar",
     config: {
       xAxis: {
-        dataSource: { tableName: "test_table", columnName: "column1" },
+        dataSource: { tableName: "test_table", columnName: "column1", role: "x" },
       },
-      yAxes: [{ dataSource: { tableName: "test_table", columnName: "column2" } }],
+      yAxes: [{ dataSource: { tableName: "test_table", columnName: "column2", role: "y" } }],
     },
   },
   dataConfig: {
     tableName: "test_table",
     dataSources: [
-      { tableName: "test_table", columnName: "column1" },
-      { tableName: "test_table", columnName: "column2" },
+      { tableName: "test_table", columnName: "column1", role: "x" },
+      { tableName: "test_table", columnName: "column2", role: "y" },
     ],
   },
   createdBy: userId,
@@ -222,6 +223,29 @@ describe("ExperimentVisualizationsController", () => {
         .withAuth(testUserId)
         .send(invalidData)
         .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should handle use case errors when creating visualization", async () => {
+      // Arrange
+      const experimentId = faker.string.uuid();
+      const visualizationData = createTestVisualizationData({
+        name: "Test Visualization",
+      });
+      const errorMessage = "Failed to create visualization";
+
+      vi.spyOn(createExperimentVisualizationUseCase, "execute").mockResolvedValue(
+        failure(AppError.internal(errorMessage)),
+      );
+
+      // Act & Assert
+      await testApp
+        .post(contract.experiments.createExperimentVisualization.path.replace(":id", experimentId))
+        .withAuth(testUserId)
+        .send(visualizationData)
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR)
+        .expect((response) => {
+          expect(response.body).toHaveProperty("message", errorMessage);
+        });
     });
   });
 

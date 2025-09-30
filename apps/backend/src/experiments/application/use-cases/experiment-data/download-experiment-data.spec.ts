@@ -52,7 +52,7 @@ describe("DownloadExperimentDataUseCase", () => {
       description: "Test Download Description",
       status: "active",
       visibility: "private",
-      embargoIntervalDays: 90,
+      embargoUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       userId: testUserId,
     });
 

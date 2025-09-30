@@ -30,12 +30,6 @@ export class CreateExperimentVisualizationUseCase {
       `Creating visualization "${data.name}" for experiment ${experimentId} by user ${userId}`,
     );
 
-    // Validate that the user ID is provided
-    if (!userId) {
-      this.logger.warn("Attempt to create visualization without user ID");
-      return failure(AppError.badRequest("User ID is required to create a visualization"));
-    }
-
     // Validate that name is provided
     if (!data.name || data.name.trim() === "") {
       this.logger.warn(`Invalid visualization name provided by user ${userId}`);
