@@ -3,7 +3,7 @@ import { faker } from "@faker-js/faker";
 import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import type { CreateExperimentVisualizationDto } from "../../../core/models/experiment-visualization.model";
+import type { CreateExperimentVisualizationDto } from "../../../core/models/experiment-visualizations.model";
 import { ExperimentVisualizationRepository } from "../../../core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { CreateExperimentVisualizationUseCase } from "./create-experiment-visualization.spec";
