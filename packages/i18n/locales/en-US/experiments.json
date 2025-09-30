@@ -80,6 +80,11 @@
   "updated": "Updated",
   "descriptionTitle": "Description",
   "details": {
+    "location": {
+      "locationsTitle": "Experiment Locations",
+      "noLocations": "No locations",
+      "noLocationsDescription": "This experiment doesn't have any locations configured."
+    },
     "locations": {
       "locationsTitle": "Experiment Locations",
       "locationsCount": "{{count}} location",
