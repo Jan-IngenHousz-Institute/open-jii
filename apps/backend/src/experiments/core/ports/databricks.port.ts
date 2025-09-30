@@ -15,6 +15,7 @@ import type {
   VolumeResponse,
 } from "../../../common/modules/databricks/services/volumes/volumes.types";
 import type { Result } from "../../../common/utils/fp-utils";
+import type { ExperimentVisualizationDto } from "../models/experiment-visualization.model";
 
 /**
  * Injection token for the Databricks port
@@ -53,6 +54,20 @@ export interface DatabricksPort {
    * List tables in the schema for a specific experiment
    */
   listTables(experimentName: string, experimentId: string): Promise<Result<ListTablesResponse>>;
+
+  /**
+   * Validate that data sources (table and columns) exist in the experiment
+   *
+   * @param dataConfig - Configuration containing table name and column names to validate
+   * @param experimentName - Name of the experiment
+   * @param experimentId - ID of the experiment
+   * @returns Result indicating whether the data sources are valid
+   */
+  validateDataSources(
+    dataConfig: ExperimentVisualizationDto["dataConfig"],
+    experimentName: string,
+    experimentId: string,
+  ): Promise<Result<boolean>>;
 
   /**
    * Upload data to Databricks for a specific experiment.
