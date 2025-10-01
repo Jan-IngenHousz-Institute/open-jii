@@ -1,4 +1,4 @@
-import type { AccessorKeyColumnDef } from "@tanstack/react-table";
+import type { AccessorKeyColumnDef, Row } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import type React from "react";
 import { useMemo } from "react";
@@ -83,80 +83,72 @@ function createTableColumns({
     return precedenceA - precedenceB;
   });
 
+  function getColumnWidth(typeName: string): number | undefined {
+    if (typeName === "ID") return 30;
+    if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 120;
+    if (typeName === "MAP" || typeName.startsWith("MAP<STRING,")) return 200;
+    return undefined;
+  }
+
+  function getHeader(typeName: string, columnName: string) {
+    if (typeName === "ID") return () => getToggleAllRowsCheckbox();
+    if (typeName === "JSON_COMMENTS") return commentsColumnName ?? "Comments & Flags";
+    return columnName;
+  }
+
+  function getRow(typeName: string, columnName: string, row: Row<DataRow>) {
+    // ID column shows a checkbox
+    if (typeName === "ID") return getRowCheckbox(row);
+
+    const value = row.getValue(columnName);
+
+    // Comments column shows the comments component
+    if (typeName === "JSON_COMMENTS") {
+      const rowId = idColumnName ? row.getValue(idColumnName) : undefined;
+      if (rowId && tableName) {
+        const commentRowId: CommentsRowIdentifier = {
+          experimentId,
+          tableName,
+          rowId: rowId as string,
+        };
+        return getCommentsColumn(commentRowId, value as string);
+      }
+      return value as string;
+    }
+
+    // Regular data column is formatted using the provided function
+    return formatFunction({
+      value,
+      type: typeName,
+      onChartHover,
+      onChartLeave,
+      onChartClick,
+    });
+  }
+
   let idColumnName: string | undefined;
 
   sortedColumns.forEach((dataColumn) => {
-    // Set smaller width for array columns that contain charts
-    const isArrayColumn =
-      dataColumn.type_name === "ARRAY" || dataColumn.type_name.startsWith("ARRAY<");
-
-    // Set medium width for map columns that contain collapsible content
-    const isMapColumn =
-      dataColumn.type_name === "MAP" || dataColumn.type_name.startsWith("MAP<STRING,");
-
-    switch (dataColumn.type_name) {
-      case "ID":
-        if (tableName === undefined) return;
-        columns.push(
-          columnHelper.accessor(dataColumn.name, {
-            id: dataColumn.name,
-            header: () => getToggleAllRowsCheckbox(),
-            meta: {
-              type: dataColumn.type_name,
-            },
-            cell: ({ row }) => {
-              return getRowCheckbox(row);
-            },
-            size: 30,
-          }),
-        );
-        idColumnName = dataColumn.name;
-        break;
-      case "JSON_COMMENTS":
-        if (tableName === undefined) return;
-        columns.push(
-          columnHelper.accessor(dataColumn.name, {
-            header: commentsColumnName ?? "Comments & Flags--",
-            meta: {
-              type: dataColumn.type_name,
-            },
-            cell: ({ row }) => {
-              const value = row.getValue(dataColumn.name);
-              const rowId = idColumnName ? row.getValue(idColumnName) : undefined;
-              if (rowId) {
-                const commentRowId: CommentsRowIdentifier = {
-                  experimentId,
-                  tableName,
-                  rowId: rowId as string,
-                };
-                return getCommentsColumn(commentRowId, value as string);
-              }
-              return value as string;
-            },
-          }),
-        );
-        break;
-      default:
-        columns.push(
-          columnHelper.accessor(dataColumn.name, {
-            header: dataColumn.name,
-            size: isArrayColumn ? 120 : isMapColumn ? 200 : undefined,
-            meta: {
-              type: dataColumn.type_name,
-            },
-            cell: ({ row }) => {
-              const value = row.getValue(dataColumn.name);
-              return formatFunction({
-                value,
-                type: dataColumn.type_name,
-                onChartHover,
-                onChartLeave,
-                onChartClick,
-              });
-            },
-          }),
-        );
-    }
+    const typeName = dataColumn.type_name;
+    const columnName = dataColumn.name;
+    const isIdColumn = typeName === "ID";
+    const isCommentsColumn = typeName === "JSON_COMMENTS";
+    const isMetaColumn = isIdColumn || isCommentsColumn;
+    if (isMetaColumn && tableName === undefined) return;
+    if (isIdColumn) idColumnName = columnName;
+    columns.push(
+      columnHelper.accessor(columnName, {
+        id: isIdColumn ? columnName : undefined,
+        header: getHeader(typeName, columnName),
+        meta: {
+          type: typeName,
+        },
+        cell: ({ row }) => {
+          return getRow(typeName, columnName, row);
+        },
+        size: getColumnWidth(typeName),
+      }),
+    );
   });
   return columns;
 }
