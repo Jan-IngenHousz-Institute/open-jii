@@ -346,8 +346,8 @@ describe("Comprehensive Protocol JSON Validator", () => {
       if (result.data?.[0]) {
         expect(isMultiProtocolSet(result.data[0])).toBe(true);
 
-        if (isMultiProtocolSet(result.data[0])) {
-          const protocolSet = result.data[0]._protocol_set_ as unknown as ProtocolSet[];
+        if (isMultiProtocolSet(result.data[0]) && result.data[0]._protocol_set_) {
+          const protocolSet: ProtocolSet[] = result.data[0]._protocol_set_;
           expect(protocolSet).toHaveLength(4);
           expect(protocolSet[0].label).toBe("no_leaf_baseline");
           expect(protocolSet[1].label).toBe("DIRK_ECS");
