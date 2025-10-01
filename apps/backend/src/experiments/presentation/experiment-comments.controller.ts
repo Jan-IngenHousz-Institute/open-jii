@@ -55,7 +55,9 @@ export class ExperimentCommentsController {
     return tsRestHandler(
       contract.experiments.deleteExperimentDataComments,
       async ({ params, body }) => {
-        this.logger.debug(`deleteExperimentDataComments called with params: ${JSON.stringify(params)}, body: ${JSON.stringify(body)}, user: ${JSON.stringify(user)}`);
+        this.logger.debug(
+          `deleteExperimentDataComments called with params: ${JSON.stringify(params)}, body: ${JSON.stringify(body)}, user: ${JSON.stringify(user)}`,
+        );
 
         const result = await this.deleteExperimentDataCommentsUseCase.execute(
           params.id,
