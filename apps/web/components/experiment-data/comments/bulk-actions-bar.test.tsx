@@ -60,7 +60,7 @@ vi.mock("@repo/ui/components", () => ({
     </div>
   ),
   DropdownMenuSeparator: ({ children }: { children?: React.ReactNode }) => (
-    <div data-testid="ddropdown-menu-separator">{children ?? "DropdownMenuSeparator"}</div>
+    <div data-testid="dropdown-menu-separator">{children ?? "DropdownMenuSeparator"}</div>
   ),
   DropdownMenuTrigger: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="dropdown-menu-trigger">{children ?? "DropdownMenuTrigger"}</div>
