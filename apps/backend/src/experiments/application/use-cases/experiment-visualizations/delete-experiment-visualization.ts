@@ -38,7 +38,7 @@ export class DeleteExperimentVisualizationUseCase {
         async ({
           experiment,
           hasAccess,
-          isAdmin,
+          isAdmin: _isAdmin, // Rename to _isAdmin to indicate it's not used
         }: {
           experiment: ExperimentDto | null;
           hasAccess: boolean;
@@ -60,15 +60,8 @@ export class DeleteExperimentVisualizationUseCase {
             return failure(AppError.forbidden("You do not have access to this experiment"));
           }
 
-          // Check if user can modify this visualization
-          if (visualization.createdBy !== userId && !isAdmin) {
-            this.logger.warn(
-              `User ${userId} does not have permission to delete visualization ${visualizationId}`,
-            );
-            return failure(
-              AppError.forbidden("You do not have permission to delete this visualization"),
-            );
-          }
+          // Any experiment member can delete visualizations
+          // No need to check if user is creator or admin, as long as they have access to the experiment
 
           this.logger.debug(`Deleting visualization from repository: ${visualizationId}`);
           // Delete the visualization
