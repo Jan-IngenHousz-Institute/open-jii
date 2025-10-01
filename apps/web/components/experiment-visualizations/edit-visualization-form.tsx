@@ -8,7 +8,7 @@ import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useForm } from "react-hook-form";
 
-import type { ChartType, ExperimentVisualization } from "@repo/api";
+import type { ExperimentVisualization } from "@repo/api";
 import { zUpdateExperimentVisualizationBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -54,8 +54,8 @@ export default function EditVisualizationForm({
 }: EditVisualizationFormProps) {
   const { t } = useTranslation("experimentVisualizations");
   const { t: tCommon } = useTranslation("common");
-  const [selectedChartType, setSelectedChartType] = useState<ChartType | null>(
-    visualization.chartType,
+  const [selectedChartType, setSelectedChartType] = useState<"line" | "scatter" | null>(
+    visualization.chartType as "line" | "scatter",
   );
 
   // Form setup with existing visualization data
@@ -119,7 +119,7 @@ export default function EditVisualizationForm({
   );
 
   // Handle chart type selection - for edit form, preserve existing config
-  const handleChartTypeSelect = (chartType: ChartType) => {
+  const handleChartTypeSelect = (chartType: "line" | "scatter") => {
     setSelectedChartType(chartType);
     form.setValue("chartType", chartType);
     // Don't reset config when editing - let the user's existing configuration persist
