@@ -107,9 +107,17 @@ export function ExperimentInfoCard({ experimentId, experiment }: ExperimentInfoC
       toast({ description: t("experimentSettings.experimentUnarchivedSuccess") });
       // Navigate to experiments list
       router.push(`/${locale}/platform/experiments`);
-    } catch {
+    } catch (error) {
       toast({
-        description: t("experimentSettings.experimentUnarchivedError"),
+        description:
+          error &&
+          typeof error === "object" &&
+          "body" in error &&
+          error.body &&
+          typeof error.body === "object" &&
+          "message" in error.body
+            ? String(error.body.message)
+            : t("experimentSettings.experimentUnarchivedError"),
         variant: "destructive",
       });
     }

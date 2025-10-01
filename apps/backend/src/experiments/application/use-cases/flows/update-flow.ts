@@ -42,7 +42,7 @@ export class UpdateFlowUseCase {
               `User ${userId} is not an admin and cannot update flow for archived experiment ${experimentId}`,
             );
             return failure(
-              AppError.forbidden("Only administrators can update flows for archived experiments"),
+              AppError.forbidden("Only admins can update flows for archived experiments"),
             );
           }
         } else {

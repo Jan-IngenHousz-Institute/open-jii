@@ -51,9 +51,7 @@ export class UpdateExperimentLocationsUseCase {
               `User ${userId} is not an admin and cannot update locations of archived experiment ${experimentId}`,
             );
             return failure(
-              AppError.forbidden(
-                "Only administrators can modify locations of archived experiments",
-              ),
+              AppError.forbidden("Only admins can modify locations of archived experiments"),
             );
           }
         } else {

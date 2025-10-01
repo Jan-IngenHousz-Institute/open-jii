@@ -42,7 +42,7 @@ export class CreateFlowUseCase {
               `User ${userId} is not an admin and cannot create flow for archived experiment ${experimentId}`,
             );
             return failure(
-              AppError.forbidden("Only administrators can create flows for archived experiments"),
+              AppError.forbidden("Only admins can create flows for archived experiments"),
             );
           }
         } else {

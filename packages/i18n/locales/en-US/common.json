@@ -98,7 +98,7 @@
     "errorLoadingExperiment": "There was an error loading the experiment.",
     "experimentNotFound": "The experiment you are looking for could not be found.",
     "needMemberAccess": "You need to be a member to access experiment settings",
-    "needAdminAccessArchived": "Only administrators can access settings for archived experiments",
+    "needAdminAccessArchived": "Only admins can access settings for archived experiments",
     "measurementPanelTitle": "Measurement Protocol"
   },
   "newExperiment": {

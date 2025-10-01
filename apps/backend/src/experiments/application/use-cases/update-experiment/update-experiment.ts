@@ -38,7 +38,7 @@ export class UpdateExperimentUseCase {
         // Check if user is trying to change status to archived - only admins can do this
         if (data.status === "archived" && experiment.status !== "archived" && !isAdmin) {
           this.logger.warn(`User ${userId} is not an admin and cannot archive experiment ${id}`);
-          return failure(AppError.forbidden("Only administrators can archive experiments"));
+          return failure(AppError.forbidden("Only admins can archive experiments"));
         }
 
         // Check access permissions based on experiment status
@@ -48,9 +48,7 @@ export class UpdateExperimentUseCase {
             this.logger.warn(
               `User ${userId} is not an admin and cannot update archived experiment ${id}`,
             );
-            return failure(
-              AppError.forbidden("Only administrators can update archived experiments"),
-            );
+            return failure(AppError.forbidden("Only admins can update archived experiments"));
           }
         } else {
           // For active experiments, any member can update

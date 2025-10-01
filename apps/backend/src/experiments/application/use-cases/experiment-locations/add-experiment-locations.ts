@@ -53,7 +53,7 @@ export class AddExperimentLocationsUseCase {
               `User ${userId} is not an admin and cannot add locations to archived experiment ${experimentId}`,
             );
             return failure(
-              AppError.forbidden("Only administrators can add locations to archived experiments"),
+              AppError.forbidden("Only admins can add locations to archived experiments"),
             );
           }
         } else {
