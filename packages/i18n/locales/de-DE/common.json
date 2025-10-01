@@ -371,7 +371,7 @@
       "flagLabel": "Markierungstyp",
       "flagPlaceholder": "Markierungstyp auswählen",
       "textLabel": "Grund",
-      "textPlaceholder": "Erklären Sie, warum diese Messungen markiert wirden...",
+      "textPlaceholder": "Erklären Sie, warum diese Messungen markiert werden...",
       "add": "{{count}} Zeile(n) markieren"
     },
     "commentDeleteDialog": {
