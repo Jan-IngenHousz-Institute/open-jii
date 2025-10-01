@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  Archive,
-  BookOpen,
-  Code,
-  FileSliders,
-  Home,
-  Microscope,
-  RadioReceiver,
-  Webcam,
-} from "lucide-react";
+import { BookOpen, Code, FileSliders, Home, Microscope, RadioReceiver, Webcam } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -51,7 +42,6 @@ interface NavigationItem {
 interface NavigationData {
   navDashboard: NavigationItem[];
   navExperiments: NavigationItem[];
-  navExperimentsArchive?: NavigationItem[];
   navHardware: NavigationItem[];
   navMacros: NavigationItem[];
 }
@@ -62,7 +52,6 @@ interface Translations {
   signIn: string;
 
   experimentsTitle: string;
-  experimentsArchiveTitle: string;
   hardwareTitle: string;
   macrosTitle: string;
 }
@@ -72,7 +61,6 @@ const iconMap = {
   Home,
   BookOpen,
   Microscope,
-  Archive,
   Webcam,
   FileSliders,
   RadioReceiver,
@@ -102,12 +90,6 @@ export function AppSidebar({
     icon: iconMap[item.icon as keyof typeof iconMap],
   }));
 
-  const processedNavExperimentsArchive =
-    navigationData.navExperimentsArchive?.map((item) => ({
-      ...item,
-      icon: iconMap[item.icon as keyof typeof iconMap],
-    })) ?? [];
-
   const processedNavHardware = navigationData.navHardware.map((item) => ({
     ...item,
     icon: iconMap[item.icon as keyof typeof iconMap],
@@ -135,9 +117,6 @@ export function AppSidebar({
       <SidebarContent>
         <NavItems items={processedNavDashboard} />
         <NavItems items={processedNavExperiments} />
-        {processedNavExperimentsArchive.length > 0 && (
-          <NavItems items={processedNavExperimentsArchive} />
-        )}
         <NavItems items={processedNavHardware} />
         <NavItems items={processedNavMacros} />
       </SidebarContent>

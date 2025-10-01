@@ -19,9 +19,7 @@ export const useExperiments = ({
   archived?: boolean;
 }) => {
   const [filter, setFilter] = useState<ExperimentFilter>(initialFilter);
-  const [status, setStatus] = useState<ExperimentStatus | undefined>(
-    archived ? "archived" : initialStatus,
-  );
+  const [status, setStatus] = useState<ExperimentStatus | undefined>(initialStatus);
   const [search, setSearch] = useState<string>(initialSearch);
   const [debouncedSearch] = useDebounce(search, 300);
 

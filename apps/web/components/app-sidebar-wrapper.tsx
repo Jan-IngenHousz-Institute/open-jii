@@ -49,23 +49,14 @@ export async function AppSidebarWrapper({
             title: tNavigation("sidebar.overview"),
             url: `/${locale}/platform/experiments`,
           },
-        ],
-      },
-    ],
-    navExperimentsArchive: [
-      {
-        title: tNavigation("sidebar.experimentsArchive"),
-        url: `/${locale}/platform/experiments-archive`,
-        icon: "Archive",
-        isActive: true,
-        items: [
           {
-            title: tNavigation("sidebar.overview"),
+            title: tNavigation("sidebar.archive"),
             url: `/${locale}/platform/experiments-archive`,
           },
         ],
       },
     ],
+    // experiments archive has been moved into navExperiments as a subitem
     navHardware: [
       {
         title: tNavigation("sidebar.protocols"),
