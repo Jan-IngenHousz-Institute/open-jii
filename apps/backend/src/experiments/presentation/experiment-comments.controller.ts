@@ -26,8 +26,6 @@ export class ExperimentCommentsController {
     return tsRestHandler(
       contract.experiments.createExperimentDataComments,
       async ({ params, body }) => {
-        //this.logger.log("createExperimentDataComment", body);
-
         const result = await this.createExperimentDataCommentsUseCase.execute(
           params.id,
           params.tableName,
