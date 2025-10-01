@@ -199,20 +199,18 @@ export function ExperimentDataTable({
   }, [persistedMetaData, table, rowSelection]);
 
   function getSelectedNumberOfCommentsAndFlags() {
-    let totalSelectedComments = 0;
-    let totalSelectedFlags = 0;
-    if (tableRows) {
-      tableRows.forEach((row) => {
-        if (row.id && row.comments && Object.keys(rowSelection).includes(row.id)) {
-          const parsedCommentsAndFlags = JSON.parse(row.comments) as ExperimentDataComment[];
-          parsedCommentsAndFlags.forEach((comment) => {
-            if (comment.flag === undefined) totalSelectedComments++;
-            else totalSelectedFlags++;
-          });
-        }
-      });
-    }
-    return { totalSelectedComments, totalSelectedFlags };
+    if (!tableRows) return { totalSelectedComments: 0, totalSelectedFlags: 0 };
+
+    return tableRows
+      .filter((row) => row.id && row.comments && Object.keys(rowSelection).includes(row.id))
+      .flatMap((row) => JSON.parse(row.comments ?? "[]") as ExperimentDataComment[])
+      .reduce(
+        (acc, comment) => ({
+          totalSelectedComments: acc.totalSelectedComments + (comment.flag === undefined ? 1 : 0),
+          totalSelectedFlags: acc.totalSelectedFlags + (comment.flag !== undefined ? 1 : 0),
+        }),
+        { totalSelectedComments: 0, totalSelectedFlags: 0 },
+      );
   }
 
   if (isLoading && !persistedMetaData) {
