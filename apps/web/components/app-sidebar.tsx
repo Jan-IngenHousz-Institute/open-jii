@@ -10,6 +10,7 @@ import {
   RadioReceiver,
   Webcam,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
@@ -39,7 +40,7 @@ interface UserData {
 interface NavigationItem {
   title: string;
   url: string;
-  icon: string;
+  icon: string | LucideIcon;
   isActive?: boolean;
   items: {
     title: string;
@@ -50,6 +51,7 @@ interface NavigationItem {
 interface NavigationData {
   navDashboard: NavigationItem[];
   navExperiments: NavigationItem[];
+  navExperimentsArchive?: NavigationItem[];
   navHardware: NavigationItem[];
   navMacros: NavigationItem[];
 }
@@ -60,6 +62,7 @@ interface Translations {
   signIn: string;
 
   experimentsTitle: string;
+  experimentsArchiveTitle: string;
   hardwareTitle: string;
   macrosTitle: string;
 }
@@ -99,6 +102,12 @@ export function AppSidebar({
     icon: iconMap[item.icon as keyof typeof iconMap],
   }));
 
+  const processedNavExperimentsArchive =
+    navigationData.navExperimentsArchive?.map((item) => ({
+      ...item,
+      icon: iconMap[item.icon as keyof typeof iconMap],
+    })) ?? [];
+
   const processedNavHardware = navigationData.navHardware.map((item) => ({
     ...item,
     icon: iconMap[item.icon as keyof typeof iconMap],
@@ -126,6 +135,9 @@ export function AppSidebar({
       <SidebarContent>
         <NavItems items={processedNavDashboard} />
         <NavItems items={processedNavExperiments} />
+        {processedNavExperimentsArchive.length > 0 && (
+          <NavItems items={processedNavExperimentsArchive} />
+        )}
         <NavItems items={processedNavHardware} />
         <NavItems items={processedNavMacros} />
       </SidebarContent>

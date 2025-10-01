@@ -58,6 +58,7 @@
     "filterStatusAll": "All Statuses",
     "clearSearch": "Clear search",
     "title": "Experiments",
+    "archiveTitle": "Experiments Archive",
     "newExperiment": "New Experiment",
     "overview": "Overview",
     "data": "Data",
@@ -74,6 +75,7 @@
     "experimentUpdated": "Experiment updated successfully",
     "experimentDeleted": "Experiment deleted successfully",
     "listDescription": "This page will show a list of existing experiments.",
+    "archiveDescription": "This page will show a list of archived experiments.",
     "experiment": "Experiment",
     "settings": "Experiment Settings",
     "settingsDescription": "Manage settings and members for this experiment.",
@@ -96,6 +98,7 @@
     "errorLoadingExperiment": "There was an error loading the experiment.",
     "experimentNotFound": "The experiment you are looking for could not be found.",
     "needMemberAccess": "You need to be a member to access experiment settings",
+    "needAdminAccessArchived": "Only administrators can access settings for archived experiments",
     "measurementPanelTitle": "Measurement Protocol"
   },
   "newExperiment": {
@@ -177,7 +180,21 @@
     "errorLoadingProtocols": "Error loading protocols. Please try again.",
     "pickADate": "Pick a date",
     "embargoUntil": "Embargo until",
-    "visibilityCannotBeChanged": "Once public, visibility cannot be changed back to private."
+    "visibilityCannotBeChanged": "Once public, visibility cannot be changed back to private.",
+    "archiveExperiment": "Archive Experiment",
+    "archivingExperiment": "Archiving an experiment",
+    "archiveDescription": "If you want to stop or 'delete' the experiment, you can archive it.",
+    "confirmArchive": "Are you sure you want to archive experiment",
+    "archiveDeactivate": "Archive (deactivate)",
+    "experimentArchivedSuccess": "Experiment successfully archived",
+    "experimentArchivedError": "Failed to archive experiment. Please try again.",
+    "unarchiveExperiment": "Unarchive Experiment",
+    "unarchivingExperiment": "Unarchiving an experiment",
+    "unarchiveDescription": "This will restore the experiment from the archive and make it active again.",
+    "confirmUnarchive": "Are you sure you want to unarchive experiment",
+    "unarchiveActivate": "Unarchive (activate)",
+    "experimentUnarchivedSuccess": "Experiment successfully unarchived",
+    "experimentUnarchivedError": "Failed to unarchive experiment. Please try again."
   },
 
   "dashboard": {

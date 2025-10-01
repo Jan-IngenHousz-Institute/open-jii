@@ -53,8 +53,8 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
     return <div>{t("notFound")}</div>;
   }
 
-  // Check if experiment is archived - if so, redirect to not found (should use archive route)
-  if (experiment.status === "archived") {
+  // Check if experiment is archived - if not, redirect to not found
+  if (experiment.status !== "archived") {
     notFound();
   }
 

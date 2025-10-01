@@ -360,7 +360,7 @@ export const Map = ({
   );
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn("relative z-0", className)}>
       {/* Location Search Overlay */}
       {showLocationSearch && (
         <div className="absolute left-1/2 top-4 z-[1000] w-full max-w-md -translate-x-1/2 transform px-4">
@@ -432,7 +432,7 @@ export const Map = ({
       {/* Map Container */}
       <div
         className={cn(
-          "relative overflow-hidden rounded-lg border",
+          "relative z-0 overflow-hidden rounded-lg border",
           disabled && "cursor-not-allowed opacity-50",
         )}
         style={{ height, width: "100%" }}

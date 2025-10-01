@@ -52,6 +52,20 @@ export async function AppSidebarWrapper({
         ],
       },
     ],
+    navExperimentsArchive: [
+      {
+        title: tNavigation("sidebar.experimentsArchive"),
+        url: `/${locale}/platform/experiments-archive`,
+        icon: "Archive",
+        isActive: true,
+        items: [
+          {
+            title: tNavigation("sidebar.overview"),
+            url: `/${locale}/platform/experiments-archive`,
+          },
+        ],
+      },
+    ],
     navHardware: [
       {
         title: tNavigation("sidebar.protocols"),
@@ -95,6 +109,7 @@ export async function AppSidebarWrapper({
     logoAlt: tCommon("common.logo"),
     signIn: tCommon("signIn"),
     experimentsTitle: tNavigation("sidebar.experiments"),
+    experimentsArchiveTitle: tNavigation("sidebar.experimentsArchive"),
     hardwareTitle: tNavigation("sidebar.hardware"),
     macrosTitle: tNavigation("sidebar.macros"),
   };
