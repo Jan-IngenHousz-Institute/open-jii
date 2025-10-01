@@ -1,7 +1,7 @@
 "use client";
 
 import { useExperimentVisualizationDelete } from "@/hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete";
-import { AreaChart, Calendar, Edit, Trash2, ArrowRight } from "lucide-react";
+import { AreaChart, Calendar, Edit, Trash2, ArrowRight, TrendingUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -83,15 +83,9 @@ export default function ExperimentVisualizationsList({
     switch (chartType.toLowerCase()) {
       case "line":
       case "lineplot":
-        return <AreaChart className={iconClass} />;
-      case "bar":
-      case "column":
-        return <AreaChart className={iconClass} />;
+        return <TrendingUp className={iconClass} />;
       case "scatter":
       case "scatterplot":
-        return <AreaChart className={iconClass} />;
-      case "area":
-      case "areaplot":
         return <AreaChart className={iconClass} />;
       default:
         return <AreaChart className={iconClass} />;

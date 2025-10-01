@@ -8,7 +8,6 @@ import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useForm } from "react-hook-form";
 
-import type { ChartType } from "@repo/api";
 import { zCreateExperimentVisualizationBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -53,7 +52,7 @@ export default function NewVisualizationForm({
 }: NewVisualizationFormProps) {
   const { t } = useTranslation("experimentVisualizations");
   const { t: tCommon } = useTranslation("common");
-  const [selectedChartType, setSelectedChartType] = useState<ChartType | null>(null);
+  const [selectedChartType, setSelectedChartType] = useState<"line" | "scatter" | null>(null);
 
   // Form setup with properly typed default values for role-based approach
   const form = useForm({
@@ -129,7 +128,7 @@ export default function NewVisualizationForm({
   // We no longer need the handleFamilyChange function since we're selecting chart types directly
 
   // Handle chart type selection
-  const handleChartTypeSelect = (chartType: ChartType) => {
+  const handleChartTypeSelect = (chartType: "line" | "scatter") => {
     setSelectedChartType(chartType);
     form.setValue("chartType", chartType);
 
@@ -139,11 +138,11 @@ export default function NewVisualizationForm({
       (sampleTables.length > 0 ? sampleTables[0].name : "");
 
     // Role-based chart initialization - each chart type gets appropriate roles
-    const getRolesForChartType = (type: ChartType): { role: string; required: boolean }[] => {
+    const getRolesForChartType = (
+      type: "line" | "scatter",
+    ): { role: string; required: boolean }[] => {
       switch (type) {
         case "line":
-        case "area":
-        case "dot-plot":
           return [
             { role: "x", required: true },
             { role: "y", required: true },
@@ -154,43 +153,6 @@ export default function NewVisualizationForm({
             { role: "y", required: true },
             { role: "color", required: false },
           ];
-        case "bar":
-        case "lollipop":
-          return [
-            { role: "category", required: true },
-            { role: "value", required: true },
-          ];
-        case "pie":
-          return [
-            { role: "labels", required: true },
-            { role: "values", required: true },
-          ];
-        case "bubble":
-          return [
-            { role: "x", required: true },
-            { role: "y", required: true },
-            { role: "size", required: true },
-          ];
-        case "heatmap":
-        case "contour":
-          return [
-            { role: "x", required: true },
-            { role: "y", required: true },
-            { role: "z", required: true },
-          ];
-        case "ternary":
-          return [
-            { role: "a", required: true },
-            { role: "b", required: true },
-            { role: "c", required: true },
-          ];
-        case "box-plot":
-          return [
-            { role: "category", required: true },
-            { role: "value", required: true },
-          ];
-        case "histogram":
-          return [{ role: "value", required: true }];
         default:
           return [
             { role: "x", required: true },
