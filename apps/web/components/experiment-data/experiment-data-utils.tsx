@@ -1,7 +1,10 @@
 import { flexRender } from "@tanstack/react-table";
 import type { Row, HeaderGroup, RowData } from "@tanstack/react-table";
 import React from "react";
-import type { DataRow } from "~/hooks/experiment/useExperimentData/useExperimentData";
+import type {
+  DataRenderFunctionParams,
+  DataRow,
+} from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import { useTranslation } from "@repo/i18n";
 import { Skeleton, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components";
@@ -9,14 +12,14 @@ import { Skeleton, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/
 import { ExperimentDataTableChartCell } from "./experiment-data-table-chart-cell";
 import { ExperimentDataTableMapCell } from "./experiment-data-table-map-cell";
 
-export function formatValue(
-  value: unknown,
-  type: string,
-  columnName?: string,
-  onChartHover?: (data: number[], columnName: string) => void,
-  onChartLeave?: () => void,
-  onChartClick?: (data: number[], columnName: string) => void,
-) {
+export function formatValue({
+  value,
+  type,
+  columnName,
+  onChartHover,
+  onChartLeave,
+  onChartClick,
+}: DataRenderFunctionParams) {
   switch (type) {
     case "DOUBLE":
     case "INT":

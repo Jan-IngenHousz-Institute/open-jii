@@ -14,14 +14,15 @@ import type { ExperimentData } from "@repo/api";
 
 export type DataValue = string | null;
 export type DataRow = Record<string, DataValue>;
-export type DataRenderFunction = (
-  value: unknown,
-  type: string,
-  columnName?: string,
-  onChartHover?: (data: number[], columnName: string) => void,
-  onChartLeave?: () => void,
-  onChartClick?: (data: number[], columnName: string) => void,
-) => string | React.JSX.Element;
+export interface DataRenderFunctionParams {
+  value: unknown;
+  type: string;
+  columnName?: string;
+  onChartHover?: (data: number[], columnName: string) => void;
+  onChartLeave?: () => void;
+  onChartClick?: (data: number[], columnName: string) => void;
+}
+export type DataRenderFunction = (params: DataRenderFunctionParams) => string | React.JSX.Element;
 
 // Time in ms before data is removed from the cache
 const STALE_TIME = 2 * 60 * 1000;
@@ -145,14 +146,13 @@ function createTableColumns({
             },
             cell: ({ row }) => {
               const value = row.getValue(dataColumn.name);
-              return formatFunction(
+              return formatFunction({
                 value,
-                dataColumn.type_name,
-                undefined,
+                type: dataColumn.type_name,
                 onChartHover,
                 onChartLeave,
                 onChartClick,
-              );
+              });
             },
           }),
         );
