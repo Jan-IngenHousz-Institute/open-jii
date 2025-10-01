@@ -38,7 +38,6 @@ import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-
 import { AWS_PORT } from "./core/ports/aws.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 // Repositories
-import { ExperimentDataCommentsRepository } from "./core/repositories/experiment-data-comments.repository";
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
 import { ExperimentProtocolRepository } from "./core/repositories/experiment-protocol.repository";
@@ -81,7 +80,6 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ExperimentRepository,
     ExperimentMemberRepository,
     ExperimentProtocolRepository,
-    ExperimentDataCommentsRepository,
     FlowRepository,
     LocationRepository,
 
