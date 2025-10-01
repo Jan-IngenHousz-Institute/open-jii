@@ -106,19 +106,21 @@ export function RenderCommentsAndFlags({
 }: RenderCommentsAndFlagsProps) {
   const { t } = useTranslation();
   const parsedCommentsAndFlags = JSON.parse(commentsJSON) as ExperimentDataComment[];
-  const comments: ExperimentDataComment[] = parsedCommentsAndFlags.filter(
-    (comment) => comment.flag === undefined,
-  );
-  const flagComments: ExperimentDataComment[] = parsedCommentsAndFlags.filter(
-    (comment) => comment.flag !== undefined,
-  );
-  const uniqueFlags: ExperimentDataCommentFlag[] = Array.from(
-    new Set(
-      flagComments
-        .map((comment) => comment.flag)
-        .filter((flag) => flag !== undefined)
-        .flat(),
-    ),
+  const { comments, flagComments, uniqueFlags } = parsedCommentsAndFlags.reduce(
+    (acc, comment) => {
+      if (comment.flag === undefined) {
+        acc.comments.push(comment);
+      } else {
+        acc.flagComments.push(comment);
+        acc.uniqueFlags.add(comment.flag);
+      }
+      return acc;
+    },
+    {
+      comments: [] as ExperimentDataComment[],
+      flagComments: [] as ExperimentDataComment[],
+      uniqueFlags: new Set<ExperimentDataCommentFlag>(),
+    },
   );
 
   return (
@@ -126,7 +128,7 @@ export function RenderCommentsAndFlags({
       <HoverCardTrigger asChild>
         <div className="flex w-full flex-wrap gap-2">
           <CommentsBadge count={comments.length} />
-          <Flags flags={uniqueFlags} />
+          <Flags flags={Array.from(uniqueFlags)} />
           {parsedCommentsAndFlags.length == 0 && <Link href="#">{t("common.add")}...</Link>}
         </div>
       </HoverCardTrigger>
