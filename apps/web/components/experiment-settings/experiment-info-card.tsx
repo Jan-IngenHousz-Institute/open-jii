@@ -81,7 +81,6 @@ export function ExperimentInfoCard({ experimentId, experiment }: ExperimentInfoC
       // Navigate to experiments archive list
       router.push(`/${locale}/platform/experiments-archive`);
     } catch (error) {
-      console.log(error);
       toast({
         description:
           error &&
