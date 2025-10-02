@@ -54,16 +54,15 @@ function EmailLoginForm({ callbackUrl }: { callbackUrl: string | undefined }) {
   });
 
   async function onSubmit(data: EmailFormData) {
-    if (isPending || !data.email) return;
+    if (isPending) return;
     setIsPending(true);
 
     try {
       await signInAction("nodemailer", callbackUrl, data.email);
-    } catch (error) {
+    } finally {
       setIsPending(false);
-      console.error("Sign in error:", error);
     }
-  }
+  
 
   return (
     <Form {...form}>
@@ -90,7 +89,7 @@ function EmailLoginForm({ callbackUrl }: { callbackUrl: string | undefined }) {
           variant="outline"
           className="w-full"
           type="submit"
-          disabled={isPending || !form.formState.isValid}
+          disabled={isPending || (!form.formState.isValid && form.formState.isDirty)}
         >
           {isPending ? (
             <>
