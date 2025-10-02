@@ -1,14 +1,13 @@
 "use client";
 
-import { ScatterChart, Layers, Eye, Plus, Trash2, Palette, Database } from "lucide-react";
+import { ScatterChart, Eye, Database } from "lucide-react";
 import { useFieldArray } from "react-hook-form";
 import type { UseFormReturn } from "react-hook-form";
+import type { SampleTable } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
-import type { DataColumn } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
   Badge,
-  Button,
   Card,
   CardContent,
   CardHeader,
@@ -24,11 +23,12 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Separator,
   Slider,
 } from "@repo/ui/components";
 
-import type { ChartFormValues, SampleTable } from "../../types";
+import type { ChartFormValues } from "../../chart-configurator-util";
+import XAxisConfiguration from "../../shared/x-axis-configuration";
+import YAxisConfiguration from "../../shared/y-axis-configuration";
 
 interface ScatterChartConfiguratorProps {
   form: UseFormReturn<ChartFormValues>;
@@ -107,6 +107,32 @@ export default function ScatterChartConfigurator({
     });
   };
 
+  const handleColorColumnChange = (value: string) => {
+    if (value === "none") {
+      // Remove the color data source when "None" is selected
+      if (colorAxisDataSources[0]) {
+        removeDataSource(colorAxisDataSources[0].index);
+      }
+    } else {
+      if (colorAxisDataSources[0]) {
+        // Update existing color data source
+        form.setValue(
+          `dataConfig.dataSources.${colorAxisDataSources[0].index}.columnName` as const,
+          value,
+        );
+      } else {
+        // Add new color data source
+        appendDataSource({
+          tableName: form.watch("dataConfig.tableName"),
+          columnName: value,
+          role: "color",
+          alias: "",
+        });
+      }
+      onColumnSelect("color", value);
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Data Configuration */}
@@ -119,319 +145,22 @@ export default function ScatterChartConfigurator({
         </CardHeader>
         <CardContent className="space-y-6">
           {/* X-Axis Configuration */}
-          <div className="rounded-lg border bg-white p-4">
-            <h4 className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
-              {t("xAxisConfiguration")}
-            </h4>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <FormField
-                control={form.control}
-                name={
-                  xAxisDataSources[0]
-                    ? (`dataConfig.dataSources.${xAxisDataSources[0].index}.columnName` as const)
-                    : ("dataConfig.dataSources.0.columnName" as const)
-                }
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">
-                      {t("configuration.xAxis")}
-                    </FormLabel>
-                    <Select
-                      value={String(field.value)}
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        onColumnSelect("x", value);
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-10 bg-white">
-                          <SelectValue placeholder={t("configuration.selectColumn")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {table.columns.map((column: DataColumn) => (
-                          <SelectItem key={column.name} value={column.name}>
-                            <div className="flex items-center gap-2">
-                              <span>{column.name}</span>
-                              <Badge variant="secondary" className="text-xs">
-                                {column.type_name}
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="config.xTitle"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">{t("xAxisTitle")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={t("enterAxisTitle")}
-                        className="h-10 bg-white"
-                        value={typeof field.value === "string" ? field.value : ""}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="config.xAxisType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">
-                      {t("configuration.axisType")}
-                    </FormLabel>
-                    <Select value={String(field.value)} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger className="h-10 bg-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="linear">{t("axisTypes.linear")}</SelectItem>
-                        <SelectItem value="log">{t("axisTypes.log")}</SelectItem>
-                        <SelectItem value="date">{t("axisTypes.date")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
+          <XAxisConfiguration
+            form={form}
+            table={table}
+            onColumnSelect={onColumnSelect}
+            xAxisDataSources={xAxisDataSources}
+          />
 
           {/* Y-Axes Series Configuration */}
-          <div className="rounded-lg border bg-white p-4">
-            <div className="mb-4 flex items-center justify-between">
-              <h4 className="text-muted-foreground text-sm font-medium uppercase tracking-wide">
-                {t("yAxesSeries")}
-              </h4>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addYAxisSeries}
-                className="h-8 px-3"
-              >
-                <Plus className="mr-1.5 h-3.5 w-3.5" />
-                {t("configuration.addSeries")}
-              </Button>
-            </div>
-
-            <div className="space-y-4">
-              {yAxisDataSources.map(({ field, index: dataSourceIndex }, seriesIndex) => (
-                <Card key={field.id} className="border-l-primary/20 border-l-4 shadow-sm">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <div className="flex items-center gap-2">
-                      <Layers className="text-primary h-4 w-4" />
-                      <CardTitle className="text-sm font-medium">
-                        {t("series")} {seriesIndex + 1}
-                      </CardTitle>
-                    </div>
-                    {yAxisDataSources.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeDataSource(dataSourceIndex)}
-                        className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                      {/* Data Column */}
-                      <FormField
-                        control={form.control}
-                        name={`dataConfig.dataSources.${dataSourceIndex}.columnName` as const}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium">{t("dataColumn")}</FormLabel>
-                            <Select
-                              value={String(field.value)}
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                onColumnSelect(`y-${seriesIndex}`, value);
-                              }}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="h-10 bg-white">
-                                  <SelectValue placeholder={t("configuration.selectColumn")} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {table.columns.map((column: DataColumn) => (
-                                  <SelectItem key={column.name} value={column.name}>
-                                    <div className="flex items-center gap-2">
-                                      <span>{column.name}</span>
-                                      <Badge variant="secondary" className="text-xs">
-                                        {column.type_name}
-                                      </Badge>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Series Name */}
-                      <FormField
-                        control={form.control}
-                        name={`dataConfig.dataSources.${dataSourceIndex}.alias` as const}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium">{t("seriesName")}</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder={t("enterSeriesName")}
-                                className="h-10 bg-white"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <Separator className="my-4" />
-
-                    {/* Series Styling */}
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      <FormField
-                        control={form.control}
-                        name="config.color"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2 text-sm font-medium">
-                              <Palette className="h-3.5 w-3.5" />
-                              {t("chartOptions.pointColor")}
-                            </FormLabel>
-                            <FormControl>
-                              <div className="flex items-center gap-2">
-                                <Input
-                                  type="color"
-                                  className="h-10 w-12 border-2 bg-white p-1"
-                                  value={typeof field.value === "string" ? field.value : "#3b82f6"}
-                                  onChange={field.onChange}
-                                  onBlur={field.onBlur}
-                                  name={field.name}
-                                  ref={field.ref}
-                                />
-                                <Input
-                                  type="text"
-                                  className="h-10 flex-1 bg-white font-mono text-sm"
-                                  placeholder="#000000"
-                                  value={typeof field.value === "string" ? field.value : "#3b82f6"}
-                                  onChange={field.onChange}
-                                  onBlur={field.onBlur}
-                                  name={field.name}
-                                  ref={field.ref}
-                                />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="config.yAxisType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium">
-                              {t("configuration.axisType")}
-                            </FormLabel>
-                            <Select value={String(field.value)} onValueChange={field.onChange}>
-                              <FormControl>
-                                <SelectTrigger className="h-10 bg-white">
-                                  <SelectValue />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="linear">{t("axisTypes.linear")}</SelectItem>
-                                <SelectItem value="log">{t("axisTypes.log")}</SelectItem>
-                                <SelectItem value="date">{t("axisTypes.date")}</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name={`config.ySeries[${seriesIndex}].side` as const}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium">{t("yAxisSide")}</FormLabel>
-                            <Select value={String(field.value)} onValueChange={field.onChange}>
-                              <FormControl>
-                                <SelectTrigger className="h-10 bg-white">
-                                  <SelectValue />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="left">{t("left")}</SelectItem>
-                                <SelectItem value="right">{t("right")}</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* Y-axis Title - only show for first axis */}
-                    {seriesIndex === 0 && (
-                      <FormField
-                        control={form.control}
-                        name="config.yTitle"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium">{t("yAxisTitle")}</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder={t("enterAxisTitle")}
-                                className="h-10 bg-white"
-                                value={typeof field.value === "string" ? field.value : ""}
-                                onChange={field.onChange}
-                                onBlur={field.onBlur}
-                                name={field.name}
-                                ref={field.ref}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
+          <YAxisConfiguration
+            form={form}
+            table={table}
+            onColumnSelect={onColumnSelect}
+            yAxisDataSources={yAxisDataSources}
+            addYAxisSeries={addYAxisSeries}
+            removeDataSource={removeDataSource}
+          />
 
           {/* Color Dimension Configuration */}
           <div className="rounded-lg border bg-white p-4">
@@ -444,32 +173,8 @@ export default function ScatterChartConfigurator({
                   {t("configuration.colorColumn")}
                 </FormLabel>
                 <Select
-                  value={colorAxisDataSources[0]?.field.columnName || "none"}
-                  onValueChange={(value) => {
-                    if (value === "none") {
-                      // Remove the color data source when "None" is selected
-                      if (colorAxisDataSources[0]) {
-                        removeDataSource(colorAxisDataSources[0].index);
-                      }
-                    } else {
-                      if (colorAxisDataSources[0]) {
-                        // Update existing color data source
-                        form.setValue(
-                          `dataConfig.dataSources.${colorAxisDataSources[0].index}.columnName` as const,
-                          value,
-                        );
-                      } else {
-                        // Add new color data source
-                        appendDataSource({
-                          tableName: form.watch("dataConfig.tableName") || "",
-                          columnName: value,
-                          role: "color",
-                          alias: "",
-                        });
-                      }
-                      onColumnSelect("color", value);
-                    }
-                  }}
+                  value={colorAxisDataSources[0]?.field.columnName}
+                  onValueChange={handleColorColumnChange}
                 >
                   <SelectTrigger className="h-10 bg-white">
                     <SelectValue placeholder={t("configuration.selectColorColumn")} />
@@ -498,13 +203,13 @@ export default function ScatterChartConfigurator({
               {colorAxisDataSources.length > 0 && colorAxisDataSources[0]?.field.columnName && (
                 <FormField
                   control={form.control}
-                  name="config.colorScale"
+                  name="config.marker.colorscale"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm font-medium">
                         {t("configuration.colorScale")}
                       </FormLabel>
-                      <Select value={String(field.value)} onValueChange={field.onChange}>
+                      <Select value={field.value as string} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger className="h-10 bg-white">
                             <SelectValue />
@@ -687,7 +392,11 @@ export default function ScatterChartConfigurator({
                         <div
                           className="h-6 w-full rounded border"
                           style={{
-                            background: getColorscaleGradient(field.value ?? "Viridis"),
+                            background: getColorscaleGradient(
+                              Array.isArray(field.value)
+                                ? field.value[0]?.[1] || "Viridis"
+                                : (field.value ?? "Viridis"),
+                            ),
                           }}
                         />
                       </div>
@@ -701,10 +410,10 @@ export default function ScatterChartConfigurator({
 
             {/* Color Axis Title - only show when colorAxis is configured */}
             {colorAxisDataSources.length > 0 && colorAxisDataSources[0]?.field.columnName && (
-              <div className="mt-4">
+              <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <FormField
                   control={form.control}
-                  name="config.zTitle"
+                  name="config.marker.colorbar.title.text"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm font-medium">
@@ -721,6 +430,31 @@ export default function ScatterChartConfigurator({
                           ref={field.ref}
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="config.marker.colorbar.title.side"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">
+                        {t("configuration.colorAxisTitlePosition")}
+                      </FormLabel>
+                      <Select value={String(field.value)} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className="h-10 bg-white">
+                            <SelectValue placeholder={t("configuration.selectPosition")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="top">{t("positions.top")}</SelectItem>
+                          <SelectItem value="right">{t("positions.right")}</SelectItem>
+                          <SelectItem value="bottom">{t("positions.bottom")}</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -773,7 +507,7 @@ export default function ScatterChartConfigurator({
 
               <FormField
                 control={form.control}
-                name="config.markerSize"
+                name="config.marker.size"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium">
@@ -803,7 +537,7 @@ export default function ScatterChartConfigurator({
 
               <FormField
                 control={form.control}
-                name="config.markerShape"
+                name="config.marker.symbol"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium">
@@ -830,23 +564,24 @@ export default function ScatterChartConfigurator({
 
               <FormField
                 control={form.control}
-                name="config.gridLines"
+                name="config.showGrid"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium">
-                      {t("chartOptions.gridLines")}
+                      {t("chartOptions.showGrid")}
                     </FormLabel>
-                    <Select value={String(field.value)} onValueChange={field.onChange}>
+                    <Select
+                      value={field.value?.toString()}
+                      onValueChange={(value) => field.onChange(value === "true")}
+                    >
                       <FormControl>
                         <SelectTrigger className="h-10 bg-white">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="both">{t("gridLines.both")}</SelectItem>
-                        <SelectItem value="x">{t("gridLines.x")}</SelectItem>
-                        <SelectItem value="y">{t("gridLines.y")}</SelectItem>
-                        <SelectItem value="none">{t("gridLines.none")}</SelectItem>
+                        <SelectItem value="true">{tCommon("common.yes")}</SelectItem>
+                        <SelectItem value="false">{tCommon("common.no")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -858,7 +593,7 @@ export default function ScatterChartConfigurator({
               {colorAxisDataSources.length > 0 && colorAxisDataSources[0]?.field.columnName && (
                 <FormField
                   control={form.control}
-                  name="config.showColorBar"
+                  name="config.marker.showscale"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm font-medium">
@@ -937,32 +672,6 @@ export default function ScatterChartConfigurator({
                       <SelectContent>
                         <SelectItem value="true">{tCommon("common.yes")}</SelectItem>
                         <SelectItem value="false">{tCommon("common.no")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="config.legendPosition"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">
-                      {t("chartOptions.legendPosition")}
-                    </FormLabel>
-                    <Select value={String(field.value)} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger className="h-10 bg-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="top">{t("positions.top")}</SelectItem>
-                        <SelectItem value="bottom">{t("positions.bottom")}</SelectItem>
-                        <SelectItem value="left">{t("positions.left")}</SelectItem>
-                        <SelectItem value="right">{t("positions.right")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
