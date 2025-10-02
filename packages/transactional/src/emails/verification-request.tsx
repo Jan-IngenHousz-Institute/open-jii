@@ -12,22 +12,20 @@ import {
   Text,
   Hr,
 } from "@react-email/components";
-import QRCode from "qrcode";
 
 interface VerificationRequestProps {
   url: string;
   host: string;
   senderName: string;
+  qrCodeDataUrl: string;
 }
 
-export const VerificationRequest = async ({ url, host, senderName }: VerificationRequestProps) => {
-  // Generate QR code as data URL
-  const qrCodeDataUrl = await QRCode.toDataURL(url, {
-    width: 200,
-    margin: 1,
-    errorCorrectionLevel: "M",
-  });
-
+export const VerificationRequest = ({
+  url,
+  host,
+  senderName,
+  qrCodeDataUrl,
+}: VerificationRequestProps) => {
   return (
     <Html>
       <Tailwind>
