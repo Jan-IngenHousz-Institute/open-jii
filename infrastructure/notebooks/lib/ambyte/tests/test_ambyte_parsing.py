@@ -26,11 +26,11 @@ sys.modules['pyspark.dbutils'] = MagicMock()
 sys.modules['pyspark.dbutils.DBUtils'] = MagicMock()
 
 # Mock the spark and dbutils globals
-import ambyte_parsing
+import infrastructure.notebooks.lib.ambyte.ambyte_parsing as ambyte_parsing
 ambyte_parsing.spark = spark_session_mock
 ambyte_parsing.dbutils = dbutils_mock
 
-from ambyte_parsing import protocol_array_calc, parse_trace, find_byte_folders, load_files_per_byte, process_trace_files
+from infrastructure.notebooks.lib.ambyte.ambyte_parsing import protocol_array_calc, parse_trace, find_byte_folders, load_files_per_byte, process_trace_files
 
 
 class TestProtocolArrayCalc(unittest.TestCase):
