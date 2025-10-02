@@ -1,27 +1,19 @@
 "use client";
 
+import { config } from "process";
 import React from "react";
 
 import type { ExperimentVisualization } from "@repo/api";
 import type { PlotlyChartConfig, ScatterSeriesData } from "@repo/ui/components";
 import { ScatterChart } from "@repo/ui/components";
 
-import type { ScatterChartConfig } from "../../../types/chart-config-types";
-
 export interface ScatterChartRendererProps {
   visualization: ExperimentVisualization;
   experimentId: string;
   data?: Record<string, unknown>[];
-  height?: number;
-  isPreview?: boolean;
 }
 
-export function ScatterChartRenderer({
-  visualization,
-  data,
-  height = 400,
-  isPreview: _isPreview = false,
-}: ScatterChartRendererProps) {
+export function ScatterChartRenderer({ visualization, data }: ScatterChartRendererProps) {
   if (!data || data.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -56,11 +48,11 @@ export function ScatterChartRenderer({
 
     const xColumn = xDataSources[0].columnName;
 
-    // Prepare scatter plot data using role-based approach
-    // Use the flat config structure that matches the form defaults
-    const scatterConfig = visualization.config as ScatterChartConfig;
+    // Get the chart config directly - it's already in the right format
+    const chartConfig = visualization.config as PlotlyChartConfig &
+      Omit<ScatterSeriesData, "x" | "y">;
 
-    const scatterData = yDataSources.map((yDataSource, index) => {
+    const scatterData: ScatterSeriesData[] = yDataSources.map((yDataSource, index) => {
       const xValues = data.map((row) => {
         const value = row[xColumn];
         return typeof value === "string" || typeof value === "number" ? value : String(value);
@@ -80,48 +72,53 @@ export function ScatterChartRenderer({
       }
 
       const colorPalette = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
-      const baseColor = colorPalette[index % colorPalette.length];
+      const defaultColor = colorPalette[index % colorPalette.length];
+
+      console.log(chartConfig);
 
       return {
         x: xValues,
         y: yValues,
         name: yDataSource.alias ?? yDataSource.columnName,
-        mode: (scatterConfig.mode ?? "markers") as "markers" | "lines" | "lines+markers",
+        mode: chartConfig.mode,
         marker: {
-          size: scatterConfig.markerSize ?? 6,
-          symbol: scatterConfig.markerShape ?? "circle",
-          color: colorValues ?? baseColor,
-          colorscale: colorValues ? scatterConfig.colorScale : undefined,
-          showscale: colorValues ? scatterConfig.showColorBar : undefined,
+          size: chartConfig.marker?.size,
+          symbol: chartConfig.marker?.symbol,
+          color: colorValues ?? chartConfig.color ?? defaultColor,
+          colorscale: colorValues ? chartConfig.marker?.colorscale : undefined,
+          showscale: colorValues ? chartConfig.marker?.showscale : undefined,
+          ...(colorValues &&
+            chartConfig.marker?.showscale && {
+              colorbar: {
+                title: {
+                  text: chartConfig.marker.colorbar?.title?.text,
+                  font: {
+                    color: chartConfig.marker.colorbar?.title?.font?.color,
+                    size: chartConfig.marker.colorbar?.title?.font?.size,
+                    family: chartConfig.marker.colorbar?.title?.font?.family,
+                  },
+                  side: chartConfig.marker.colorbar?.title?.side,
+                },
+                thickness: 15,
+                len: 0.9,
+              },
+            }),
         },
-        type: "scatter" as const,
+        line: chartConfig.line,
+        text: chartConfig.text,
+        textposition: chartConfig.textposition,
+        textfont: chartConfig.textfont,
+        error_x: chartConfig.error_x,
+        error_y: chartConfig.error_y,
+        fill: chartConfig.fill,
+        fillcolor: chartConfig.fillcolor,
+        type: "scatter",
       };
     });
 
-    // Create the Plotly config with axis titles and colorbar title
-    const plotlyConfig: PlotlyChartConfig = {
-      ...(visualization.config as PlotlyChartConfig),
-      xAxisTitle: scatterConfig.xTitle,
-      yAxisTitle: scatterConfig.yTitle,
-      title: scatterConfig.title,
-    };
-
-    // Add colorbar title if color mapping is enabled
-    if (colorDataSources.length > 0) {
-      scatterData.forEach((series: ScatterSeriesData) => {
-        if (series.marker?.showscale) {
-          series.marker.colorbar = {
-            title: scatterConfig.zTitle ?? colorDataSources[0]?.columnName,
-            thickness: 15,
-            len: 0.9,
-          };
-        }
-      });
-    }
-
     return (
-      <div style={{ height: `${height}px`, width: "100%" }}>
-        <ScatterChart data={scatterData} config={plotlyConfig} />
+      <div style={{ height: `400px`, width: "100%" }}>
+        <ScatterChart data={scatterData} config={chartConfig} />
       </div>
     );
   } catch (error) {

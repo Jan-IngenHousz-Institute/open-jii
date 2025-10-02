@@ -66,6 +66,8 @@ export function ScatterChart({ data, config = {}, className, loading, error }: S
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatter", renderer);
 
+  console.log(data[0]?.marker);
+
   const plotData: PlotData[] = data.map(
     (series) =>
       ({
