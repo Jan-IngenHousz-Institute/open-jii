@@ -10,7 +10,7 @@ import { WizardForm, WizardStepButtons } from "./wizard-form";
 import type { WizardStepProps } from "./wizard-form";
 
 // Mock form components to avoid dependencies
-vi.mock("./form", () => ({
+vi.mock("../form", () => ({
   Form: ({ children, ...props }: any) => (
     <div data-testid="form" {...props}>
       {children}

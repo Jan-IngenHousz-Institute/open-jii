@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
-import type { UseFormReturn, FieldValues, UseFormProps } from "react-hook-form";
+import type { UseFormReturn, FieldValues, UseFormProps, Resolver } from "react-hook-form";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
@@ -120,7 +120,7 @@ export interface WizardStep<T extends FieldValues = FieldValues> {
   /**
    * Validation schema for this step
    */
-  validationSchema: z.ZodType<any>;
+  validationSchema: z.ZodObject<any>;
   /**
    * Component to render for this step
    */
@@ -183,7 +183,7 @@ export function WizardForm<T extends FieldValues>({
   const combinedSchema = React.useMemo(() => {
     return z.object(
       steps.reduce<Record<string, z.ZodTypeAny>>((acc, step) => {
-        const schemaShape = (step.validationSchema as z.ZodObject<any>).shape;
+        const schemaShape = step.validationSchema.shape;
         return { ...acc, ...schemaShape };
       }, {}),
     );
@@ -192,8 +192,9 @@ export function WizardForm<T extends FieldValues>({
   // Initialize the form with the combined schema
   const form = useForm<T>({
     defaultValues,
-    resolver: zodResolver(combinedSchema) as any,
+    resolver: zodResolver(combinedSchema) as unknown as Resolver<T, any, T>,
     mode: "onChange",
+    ...formProps,
   });
 
   // Calculate which steps should be skipped
@@ -209,7 +210,7 @@ export function WizardForm<T extends FieldValues>({
     if (!currentStep) return;
 
     // Get fields relevant to the current step
-    const currentSchemaShape = (currentStep.validationSchema as z.ZodObject<any>).shape;
+    const currentSchemaShape = currentStep.validationSchema.shape;
     const fieldsToValidate = Object.keys(currentSchemaShape);
 
     // Validate only the fields for the current step
