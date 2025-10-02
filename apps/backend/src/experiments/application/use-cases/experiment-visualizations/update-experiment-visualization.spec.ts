@@ -554,7 +554,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       // Assert
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      // This should hit the visualization null check (lines 37-39)
       expect(result.error.message).toBe(`Visualization with ID ${visualizationId} not found`);
     });
   });

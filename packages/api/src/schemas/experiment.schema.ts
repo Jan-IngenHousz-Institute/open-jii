@@ -802,7 +802,6 @@ export type ChartFamily = z.infer<typeof zChartFamily>;
 export type ChartType = z.infer<typeof zChartType>;
 export type DataSourceConfig = z.infer<typeof zDataSourceConfig>;
 export type AxisConfig = z.infer<typeof zAxisConfig>;
-// Chart-specific config types are no longer needed - use generic ChartConfig instead
 export type ChartConfig = z.infer<typeof zChartConfig>;
 export type ExperimentVisualization = z.infer<typeof zExperimentVisualization>;
 export type ExperimentVisualizationList = z.infer<typeof zExperimentVisualizationList>;

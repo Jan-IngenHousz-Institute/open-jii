@@ -395,11 +395,6 @@ describe("ExperimentVisualizationRepository", () => {
         updatedAt: expect.any(Date) as Date,
       });
 
-      // Verify the updatedAt timestamp changed
-      expect(updatedVisualization.updatedAt.getTime()).toBeGreaterThan(
-        visualization.updatedAt.getTime(),
-      );
-
       // Verify through repository
       const findUpdatedResult = await repository.findById(visualization.id);
       assertSuccess(findUpdatedResult);

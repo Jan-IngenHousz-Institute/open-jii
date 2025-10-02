@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
 import { ExperimentDataQuery } from "@repo/api";
@@ -86,56 +85,48 @@ export class GetExperimentDataUseCase {
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        // Determine the data fetching mode based on the query parameters
+        // Determine the data fetching approach based on the query parameters
         const { page = 1, pageSize = 5, tableName, columns } = query;
-
-        let fetchMode: "paginated" | "sampling" | "full-columns";
-        if (tableName && columns) {
-          fetchMode = "full-columns"; // Specific columns from a table, full data
-        } else if (tableName) {
-          fetchMode = "paginated"; // Single table with pagination
-        } else {
-          fetchMode = "sampling"; // Multiple tables with sample data
-        }
 
         // Form the schema name based on experiment ID and name
         const cleanName = experiment.name.toLowerCase().trim().replace(/ /g, "_");
         const schemaName = `exp_${cleanName}_${experimentId}`;
 
-        this.logger.debug(
-          `Fetching data for experiment ${experimentId} in ${fetchMode} mode${
-            tableName ? ` (table: ${tableName})` : ""
-          }${columns && columns.length > 0 ? ` (columns: ${columns})` : ""}`,
-        );
-
-        switch (fetchMode) {
-          case "full-columns":
-            return await this.fetchSpecificColumns(
-              tableName!,
-              columns!,
-              schemaName,
-              experiment,
-              experimentId,
-            );
-          case "paginated":
-            return await this.fetchSingleTablePaginated(
-              tableName!,
-              schemaName,
-              experiment,
-              page,
-              pageSize,
-              experimentId,
-            );
-          case "sampling":
-            return await this.fetchMultipleTablesSample(
-              schemaName,
-              experiment,
-              pageSize,
-              experimentId,
-            );
-          default:
-            // This should never happen due to the type system, but adding for safety
-            return failure(AppError.internal("Invalid fetch mode"));
+        // Direct conditional logic for data fetching
+        if (tableName && columns) {
+          // Specific columns from a table, full data
+          this.logger.debug(
+            `Fetching data for experiment ${experimentId} in full-columns mode (table: ${tableName}) (columns: ${columns})`,
+          );
+          return await this.fetchSpecificColumns(
+            tableName,
+            columns,
+            schemaName,
+            experiment,
+            experimentId,
+          );
+        } else if (tableName) {
+          // Single table with pagination
+          this.logger.debug(
+            `Fetching data for experiment ${experimentId} in paginated mode (table: ${tableName})`,
+          );
+          return await this.fetchSingleTablePaginated(
+            tableName,
+            schemaName,
+            experiment,
+            page,
+            pageSize,
+            experimentId,
+          );
+        } else {
+          // Multiple tables with sample data
+          this.logger.debug(`Fetching data for experiment ${experimentId} in sampling mode`);
+          return await this.fetchMultipleTablesSample(
+            schemaName,
+            experiment,
+            pageSize,
+            experimentId,
+          );
         }
       },
     );

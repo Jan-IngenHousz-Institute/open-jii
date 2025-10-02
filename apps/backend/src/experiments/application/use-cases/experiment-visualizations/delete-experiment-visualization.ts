@@ -38,11 +38,9 @@ export class DeleteExperimentVisualizationUseCase {
         async ({
           experiment,
           hasAccess,
-          isAdmin: _isAdmin, // Rename to _isAdmin to indicate it's not used
         }: {
           experiment: ExperimentDto | null;
           hasAccess: boolean;
-          isAdmin: boolean;
         }) => {
           if (!experiment) {
             this.logger.warn(
