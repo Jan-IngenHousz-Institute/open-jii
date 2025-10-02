@@ -180,31 +180,29 @@ export function WizardForm<T extends FieldValues>({
   const [currentStepIndex, setCurrentStepIndex] = React.useState(0);
 
   // Create combined validation schema for the entire form
-  const combinedSchema = z.object(
-    steps.reduce<Record<string, z.ZodTypeAny>>((acc, step) => {
-      const schemaShape = (step.validationSchema as z.ZodObject<any>).shape;
-      return { ...acc, ...schemaShape };
-    }, {}),
-  );
+  const combinedSchema = React.useMemo(() => {
+    return z.object(
+      steps.reduce<Record<string, z.ZodTypeAny>>((acc, step) => {
+        const schemaShape = (step.validationSchema as z.ZodObject<any>).shape;
+        return { ...acc, ...schemaShape };
+      }, {}),
+    );
+  }, [steps]);
 
-  // Initialize the form
+  // Initialize the form with the combined schema
   const form = useForm<T>({
-    ...formProps,
     defaultValues,
-    resolver: zodResolver(combinedSchema),
+    resolver: zodResolver(combinedSchema) as any,
     mode: "onChange",
   });
 
   // Calculate which steps should be skipped
-  const activeSteps = React.useMemo(() => {
-    return steps.filter((step) => {
-      const shouldSkip = step.shouldSkip?.(form.getValues());
-      return !shouldSkip;
-    });
-  }, [steps, form, currentStepIndex]);
+  const activeSteps = steps.filter((step) => {
+    const shouldSkip = step.shouldSkip?.(form.getValues());
+    return !shouldSkip;
+  });
 
   const currentStep = activeSteps[currentStepIndex];
-  const StepComponent = currentStep?.component;
 
   // Go to the next step
   const handleNext = async () => {
@@ -247,7 +245,7 @@ export function WizardForm<T extends FieldValues>({
       {showStepIndicator && (
         <div className="mb-6">
           <div className="flex items-center justify-between">
-            {activeSteps.map((step, index) => (
+            {activeSteps.map((_step, index) => (
               <React.Fragment key={index}>
                 {/* Step circle */}
                 <div
