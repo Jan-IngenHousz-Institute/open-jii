@@ -66,6 +66,8 @@ export function ScatterChart({ data, config = {}, className, loading, error }: S
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatter", renderer);
 
+  console.log(data[0]?.marker);
+
   const plotData: PlotData[] = data.map(
     (series) =>
       ({
@@ -122,6 +124,18 @@ export function ScatterChart({ data, config = {}, className, loading, error }: S
 
   const layout = createBaseLayout(config);
   const plotConfig = createPlotlyConfig(config);
+
+  // Check if we have categorical x data (non-numeric strings)
+  const hasCategoricalX = data.some(
+    (series) => series.x && series.x.some((val) => typeof val === "string" && isNaN(Number(val))),
+  );
+  if (hasCategoricalX) {
+    layout.xaxis = {
+      ...layout.xaxis,
+      type: "category",
+      categoryorder: "category ascending",
+    };
+  }
 
   return (
     <div className={className}>

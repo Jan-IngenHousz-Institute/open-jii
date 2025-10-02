@@ -99,8 +99,11 @@ export interface MarkerConfig {
   colorscale?: string | Array<[number, string]>;
   showscale?: boolean;
   colorbar?: {
-    title?: string;
-    titleside?: "right" | "top" | "bottom";
+    title?: {
+      text?: string;
+      font?: SafeFont;
+      side?: "right" | "top" | "bottom";
+    };
     thickness?: number;
     len?: number;
   };
