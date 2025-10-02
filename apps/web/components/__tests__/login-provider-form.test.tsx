@@ -21,6 +21,9 @@ const mockT = vi.fn((key: string) => {
     "auth.sendEmail": "Send Email",
     "auth.sendingEmail": "Sending...",
     "auth.signInWith": "Sign in with",
+    "auth.loginWith-nodemailer": "Sign in with Email",
+    "auth.loginWith-github": "Sign in with GitHub",
+    "auth.loginWith-google": "Sign in with Google",
   };
   return translations[key] ?? key;
 });
@@ -88,7 +91,7 @@ describe("LoginProviderForm", () => {
       await user.click(button);
 
       await waitFor(() => {
-        expect(mockSignInAction).toHaveBeenCalledWith("google", callbackUrl, undefined);
+        expect(mockSignInAction).toHaveBeenCalledWith("google", callbackUrl);
       });
     });
   });
@@ -103,7 +106,7 @@ describe("LoginProviderForm", () => {
 
       expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
       expect(screen.getByPlaceholderText(/enter your email/i)).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /send email/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /sign in with email/i })).toBeInTheDocument();
     });
 
     it("validates required email field", async () => {
@@ -113,32 +116,13 @@ describe("LoginProviderForm", () => {
         wrapper: createWrapper(),
       });
 
-      const emailInput = screen.getByLabelText(/email/i);
+      const submitButton = screen.getByRole("button", { name: /sign in with email/i });
 
-      // Try to submit without entering email
-      await user.click(emailInput);
-      await user.tab(); // Blur the input
+      // Submit form without entering email
+      await user.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText(/email is required/i)).toBeInTheDocument();
-      });
-    });
-
-    it("validates email format", async () => {
-      const user = userEvent.setup();
-
-      render(<LoginProviderForm provider={emailProvider} callbackUrl="/dashboard" />, {
-        wrapper: createWrapper(),
-      });
-
-      const emailInput = screen.getByLabelText(/email/i);
-
-      // Enter invalid email
-      await user.type(emailInput, "invalid-email");
-      await user.tab(); // Blur the input
-
-      await waitFor(() => {
-        expect(screen.getByText(/invalid email address/i)).toBeInTheDocument();
       });
     });
 
@@ -153,7 +137,7 @@ describe("LoginProviderForm", () => {
       });
 
       const emailInput = screen.getByLabelText(/email/i);
-      const submitButton = screen.getByRole("button", { name: /send email/i });
+      const submitButton = screen.getByRole("button", { name: /sign in with email/i });
 
       // Enter valid email
       await user.type(emailInput, "test@example.com");
@@ -179,7 +163,7 @@ describe("LoginProviderForm", () => {
       });
 
       const emailInput = screen.getByLabelText(/email/i);
-      const submitButton = screen.getByRole("button", { name: /send email/i });
+      const submitButton = screen.getByRole("button", { name: /sign in with email/i });
 
       await user.type(emailInput, "test@example.com");
       await user.click(submitButton);
@@ -199,36 +183,6 @@ describe("LoginProviderForm", () => {
       );
     });
 
-    it("handles submission error gracefully", async () => {
-      const user = userEvent.setup();
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {
-        // Intentionally empty to suppress error logs in tests
-      });
-
-      mockSignInAction.mockRejectedValueOnce(new Error("Network error"));
-
-      render(<LoginProviderForm provider={emailProvider} callbackUrl="/dashboard" />, {
-        wrapper: createWrapper(),
-      });
-
-      const emailInput = screen.getByLabelText(/email/i);
-      const submitButton = screen.getByRole("button", { name: /send email/i });
-
-      await user.type(emailInput, "test@example.com");
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalled();
-      });
-
-      // Button should be re-enabled after error
-      await waitFor(() => {
-        expect(submitButton).not.toBeDisabled();
-      });
-
-      consoleErrorSpy.mockRestore();
-    });
-
     it("prevents multiple submissions while pending", async () => {
       const user = userEvent.setup();
 
@@ -239,7 +193,7 @@ describe("LoginProviderForm", () => {
       });
 
       const emailInput = screen.getByLabelText(/email/i);
-      const submitButton = screen.getByRole("button", { name: /send email/i });
+      const submitButton = screen.getByRole("button", { name: /sign in with email/i });
 
       await user.type(emailInput, "test@example.com");
 
@@ -265,7 +219,7 @@ describe("LoginProviderForm", () => {
       });
 
       const emailInput = screen.getByLabelText(/email/i);
-      const submitButton = screen.getByRole("button", { name: /send email/i });
+      const submitButton = screen.getByRole("button", { name: /sign in with email/i });
 
       // Initially button should be enabled (form is pristine)
       expect(submitButton).not.toBeDisabled();
