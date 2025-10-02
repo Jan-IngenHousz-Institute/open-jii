@@ -62,7 +62,7 @@ function EmailLoginForm({ callbackUrl }: { callbackUrl: string | undefined }) {
     } finally {
       setIsPending(false);
     }
-  
+  }
 
   return (
     <Form {...form}>
