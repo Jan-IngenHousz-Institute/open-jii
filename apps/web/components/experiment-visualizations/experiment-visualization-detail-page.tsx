@@ -1,7 +1,6 @@
 "use client";
 
 import { ArrowLeft, Edit, Trash2 } from "lucide-react";
-import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useLocale } from "~/hooks/useLocale";
 
@@ -12,19 +11,7 @@ import { toast } from "@repo/ui/hooks";
 import { useExperimentVisualization } from "../../hooks/experiment/useExperimentVisualization/useExperimentVisualization";
 import { useExperimentVisualizationData } from "../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { useExperimentVisualizationDelete } from "../../hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete";
-
-// Dynamic import of the renderer to avoid SSR issues
-const ExperimentVisualizationRenderer = dynamic(
-  () => import("./experiment-visualization-renderer"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-[500px] items-center justify-center">
-        <div className="text-muted-foreground">Loading visualization...</div>
-      </div>
-    ),
-  },
-);
+import ExperimentVisualizationRenderer from "./experiment-visualization-renderer";
 
 interface ExperimentVisualizationDetailPageProps {
   visualizationId: string;
