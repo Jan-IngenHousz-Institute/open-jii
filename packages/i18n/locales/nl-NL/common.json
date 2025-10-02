@@ -163,6 +163,10 @@
     "loginWith-github": "Inloggen met GitHub",
     "loginWith-nodemailer": "Inloggen met e-mail",
     "loginWith-orcid": "Inloggen met ORCID",
+    "emailPlaceholder": "m@voorbeeld.com",
+    "emailRequired": "E-mail is verplicht",
+    "emailInvalid": "Voer een geldig e-mailadres in",
+    "sendingEmail": "We sturen je een e-mail...",
     "account": "Account",
     "userMenu": "Gebruikersmenu",
     "signingOut": "Uitloggen..."
