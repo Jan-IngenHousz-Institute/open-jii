@@ -101,6 +101,36 @@ describe("ExperimentRepository", () => {
       );
     });
 
+    it("should exclude archived experiments by default when no status is provided", async () => {
+      // Arrange
+      const userId = await testApp.createTestUser({ email: "exclude-archived@example.com" });
+      const { experiment: active } = await testApp.createExperiment({
+        name: "Active Experiment Default",
+        userId,
+        status: "active",
+      });
+
+      // Create an archived experiment for the same user
+      await testApp.createExperiment({
+        name: "Archived Experiment Default",
+        userId,
+        status: "archived",
+      });
+
+      // Act: call findAll without passing a status
+      const result = await repository.findAll(userId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+
+      // Archived experiment should be excluded by default
+      expect(experiments.some((e) => e.status === "archived")).toBe(false);
+      // Active experiment should be present
+      expect(experiments.some((e) => e.id === active.id)).toBe(true);
+    });
+
     it("should return experiments in the correct order", async () => {
       // Arrange
       const { experiment: experiment1 } = await testApp.createExperiment({
