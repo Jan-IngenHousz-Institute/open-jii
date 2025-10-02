@@ -239,7 +239,7 @@
     "sendingEmail": "Sending you an email...",
     "verifyRequest": "We emailed you a sign in link",
     "verifyRequestDetails": "We sent you an email to your email address. Tap the button in the email to continue.",
-    "verifyRequestDetailsJunk": "If you don’t see the email, check your spam or junk folder.",
+    "verifyRequestDetailsJunk": "If you don't see the email, check your spam or junk folder.",
     "loginEmail": "Confirm your email address to sign in",
     "loginEmailConfirm": "Confirm and sign in",
     "loginEmailNotClickable": "If the button above is not clickable, copy-paste the following url into your web browser:",
