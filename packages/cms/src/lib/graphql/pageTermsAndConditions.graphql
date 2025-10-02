@@ -1,0 +1,21 @@
+fragment PageTermsAndConditionsFields on PageTermsAndConditions {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+  internalName
+  title
+  content {
+    json
+  }
+}
+
+query pageTermsAndConditions($locale: String, $preview: Boolean) {
+  pageTermsAndConditionsCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...PageTermsAndConditionsFields
+    }
+  }
+}

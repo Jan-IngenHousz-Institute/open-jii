@@ -1,14 +1,9 @@
 directive @contentSourceMaps on QUERY
 
-directive @delegatedResourceLink(contentTypeId: String, field: JSON) on FIELD_DEFINITION | OBJECT
-
-directive @enumMapper(value: JSON) on ENUM_VALUE
-
-directive @featureFlag(featureName: String) on FIELD
-
-directive @fieldResolver(data: JSON, kind: String) on FIELD_DEFINITION
-
-directive @typeIdentifier(contentTypeId: String) on OBJECT
+"""
+Indicates exactly one field must be supplied and this field must not be `null`.
+"""
+directive @oneOf on INPUT_OBJECT
 
 """Represents a binary file in a space. An asset can be any file type."""
 type Asset {
@@ -138,7 +133,7 @@ enum AssetOrder {
 }
 
 """
-[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAuthor)
+To have author-related properties [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentAuthor)
 """
 type ComponentAuthor implements Entry & _Node {
   _id: ID!
@@ -219,7 +214,7 @@ enum ComponentAuthorOrder {
 }
 
 """
-[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentButton)
+CTA button for Hero section [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentButton)
 """
 type ComponentButton implements Entry & _Node {
   _id: ID!
@@ -623,7 +618,7 @@ enum ComponentPartnerOrder {
 }
 
 """
-[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentRichImage)
+To describe an image used in rich text fields [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentRichImage)
 """
 type ComponentRichImage implements Entry & _Node {
   _id: ID!
@@ -690,7 +685,7 @@ enum ComponentRichImageOrder {
 }
 
 """
-[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentSeo)
+To have SEO-related properties to the pages we render [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/componentSeo)
 """
 type ComponentSeo implements Entry & _Node {
   _id: ID!
@@ -1303,7 +1298,7 @@ enum PageAboutOrder {
 }
 
 """
-[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageBlogPost)
+To create individual blog posts [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageBlogPost)
 """
 type PageBlogPost implements Entry & _Node {
   _id: ID!
@@ -2058,7 +2053,7 @@ enum PageHomePartnersPartnersCollectionOrder {
 }
 
 """
-[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageLanding)
+To have an entry point for the app (e.g. Homepage) [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageLanding)
 """
 type PageLanding implements Entry & _Node {
   _id: ID!
@@ -2216,6 +2211,109 @@ enum PagePoliciesOrder {
 }
 
 """
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageTermsAndConditions)
+"""
+type PageTermsAndConditions implements Entry & _Node {
+  _id: ID!
+  content(locale: String): PageTermsAndConditionsContent
+  contentfulMetadata: ContentfulMetadata!
+  internalName(locale: String): String
+  linkedFrom(allowedLocales: [String]): PageTermsAndConditionsLinkingCollections
+  sys: Sys!
+  title(locale: String): String
+}
+
+type PageTermsAndConditionsCollection {
+  items: [PageTermsAndConditions]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+type PageTermsAndConditionsContent {
+  json: JSON!
+  links: PageTermsAndConditionsContentLinks!
+}
+
+type PageTermsAndConditionsContentAssets {
+  block: [Asset]!
+  hyperlink: [Asset]!
+}
+
+type PageTermsAndConditionsContentEntries {
+  block: [Entry]!
+  hyperlink: [Entry]!
+  inline: [Entry]!
+}
+
+type PageTermsAndConditionsContentLinks {
+  assets: PageTermsAndConditionsContentAssets!
+  entries: PageTermsAndConditionsContentEntries!
+  resources: PageTermsAndConditionsContentResources!
+}
+
+type PageTermsAndConditionsContentResources {
+  block: [PageTermsAndConditionsContentResourcesBlock!]!
+  hyperlink: [PageTermsAndConditionsContentResourcesHyperlink!]!
+  inline: [PageTermsAndConditionsContentResourcesInline!]!
+}
+
+type PageTermsAndConditionsContentResourcesBlock implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type PageTermsAndConditionsContentResourcesHyperlink implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type PageTermsAndConditionsContentResourcesInline implements ResourceLink {
+  sys: ResourceSys!
+}
+
+input PageTermsAndConditionsFilter {
+  AND: [PageTermsAndConditionsFilter]
+  OR: [PageTermsAndConditionsFilter]
+  content_contains: String
+  content_exists: Boolean
+  content_not_contains: String
+  contentfulMetadata: ContentfulMetadataFilter
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
+}
+
+type PageTermsAndConditionsLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+}
+
+enum PageTermsAndConditionsOrder {
+  internalName_ASC
+  internalName_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+"""
 The 'Quality' type represents quality as whole numeric values between `1` and `100`.
 """
 scalar Quality
@@ -2260,6 +2358,8 @@ type Query {
   pageLandingCollection(limit: Int = 100, locale: String, order: [PageLandingOrder], preview: Boolean, skip: Int = 0, where: PageLandingFilter): PageLandingCollection
   pagePolicies(id: String!, locale: String, preview: Boolean): PagePolicies
   pagePoliciesCollection(limit: Int = 100, locale: String, order: [PagePoliciesOrder], preview: Boolean, skip: Int = 0, where: PagePoliciesFilter): PagePoliciesCollection
+  pageTermsAndConditions(id: String!, locale: String, preview: Boolean): PageTermsAndConditions
+  pageTermsAndConditionsCollection(limit: Int = 100, locale: String, order: [PageTermsAndConditionsOrder], preview: Boolean, skip: Int = 0, where: PageTermsAndConditionsFilter): PageTermsAndConditionsCollection
 }
 
 interface ResourceLink {
