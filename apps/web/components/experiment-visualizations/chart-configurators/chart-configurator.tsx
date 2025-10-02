@@ -4,6 +4,7 @@ import { LineChart, ScatterChart } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import type { UseFormReturn } from "react-hook-form";
+import { SampleTable } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
 import { useTranslation } from "@repo/i18n";
 import {
@@ -29,7 +30,7 @@ import {
 // Import role-based configurators
 import LineChartConfigurator from "./basic/line-chart/line-chart-configurator";
 import ScatterChartConfigurator from "./basic/scatter-chart/scatter-chart-configurator";
-import type { ChartFormValues, SampleTable } from "./types";
+import { ChartFormValues } from "./chart-configurator-util";
 
 // Define chart types grouped by family for UX purposes - labels will be translated in component
 const CHART_TYPES_CONFIG: {

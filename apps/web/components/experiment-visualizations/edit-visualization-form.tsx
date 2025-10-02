@@ -33,7 +33,7 @@ import { toast } from "@repo/ui/hooks";
 import ChartConfigurator, {
   collectAllChartDataSources,
 } from "./chart-configurators/chart-configurator";
-import type { ChartFormValues } from "./chart-configurators/types";
+import type { ChartFormValues } from "./chart-configurators/chart-configurator-util";
 
 interface EditVisualizationFormProps {
   experimentId: string;
@@ -91,11 +91,21 @@ export default function EditVisualizationForm({
       // Explicitly collect all data sources before submission
       const allDataSources = collectAllDataSources();
 
+      // Ensure all data sources have required fields
+      const validDataSources = allDataSources
+        .filter((source) => source.columnName && source.columnName.trim() !== "")
+        .map((source) => ({
+          tableName: source.tableName,
+          columnName: source.columnName,
+          role: source.role, // Role is required so no default needed
+          alias: source.alias ?? "",
+        }));
+
       const updatedData = {
         ...data,
         dataConfig: {
           ...data.dataConfig,
-          dataSources: allDataSources,
+          dataSources: validDataSources,
         },
       };
 

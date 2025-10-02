@@ -32,8 +32,8 @@ import { toast } from "@repo/ui/hooks";
 import ChartConfigurator, {
   collectAllChartDataSources,
 } from "./chart-configurators/chart-configurator";
-import type { ChartFormValues } from "./chart-configurators/types";
-import { getDefaultChartConfig } from "./types/chart-config-types";
+import type { ChartFormValues } from "./chart-configurators/chart-configurator-util";
+import { getDefaultChartConfig } from "./chart-configurators/chart-configurator-util";
 
 interface NewVisualizationFormProps {
   experimentId: string;
@@ -61,9 +61,9 @@ export default function NewVisualizationForm({
     defaultValues: {
       name: "",
       description: "",
-      chartFamily: "basic" as const,
-      chartType: "line" as const,
-      config: getDefaultChartConfig("line"), // Start with line chart defaults
+      chartFamily: "basic",
+      chartType: "line",
+      config: getDefaultChartConfig("line"),
       dataConfig: {
         tableName: "",
         dataSources: [],
@@ -164,12 +164,15 @@ export default function NewVisualizationForm({
     // Use centralized default config function
 
     const roles = getRolesForChartType(chartType);
-    const dataSources = roles.map(({ role }) => ({
-      tableName: selectedTableName,
-      columnName: "",
-      alias: "",
-      role: role, // Explicitly set role as required string
-    }));
+    // Only create data sources for required roles initially
+    const dataSources = roles
+      .filter(({ required }) => required)
+      .map(({ role }) => ({
+        tableName: selectedTableName,
+        columnName: "",
+        alias: "",
+        role: role, // Explicitly set role as required string
+      }));
 
     // Set chart-specific default config
     form.setValue("config", getDefaultChartConfig(chartType));

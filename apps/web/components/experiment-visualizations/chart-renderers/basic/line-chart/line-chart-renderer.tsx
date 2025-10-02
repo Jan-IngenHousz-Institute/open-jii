@@ -1,25 +1,21 @@
 import React from "react";
 
 import type { ExperimentVisualization } from "@repo/api";
+import type { LineSeriesData, PlotlyChartConfig } from "@repo/ui/components";
 import { LineChart } from "@repo/ui/components";
 
 import { useExperimentVisualizationData } from "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
-import type { LineChartConfig } from "../../../types/chart-config-types";
 
 interface LineChartRendererProps {
   visualization: ExperimentVisualization;
   experimentId: string;
   data?: Record<string, unknown>[];
-  height: number;
-  isPreview: boolean;
 }
 
 export function LineChartRenderer({
   visualization,
   experimentId,
   data: providedData,
-  height: _height,
-  isPreview,
 }: LineChartRendererProps) {
   // Fetch data if not provided
   const {
@@ -88,18 +84,10 @@ export function LineChartRenderer({
 
     const xColumn = xDataSources[0].columnName;
 
-    // Extract config properties from the configurator
-    interface LineConfigType {
-      mode?: string;
-      connectGaps?: boolean;
-      smoothing?: number;
-      lineWidth?: number;
-    }
-
-    const config = visualization.config as LineConfigType;
+    const chartConfig = visualization.config as PlotlyChartConfig & Omit<LineSeriesData, "x" | "y">;
 
     // Prepare chart data arrays using role-based approach
-    const chartSeries = yDataSources.map((yDataSource, index) => {
+    const chartSeries: LineSeriesData[] = yDataSources.map((yDataSource, index) => {
       const xColumnName = xColumn;
       const yColumnName = yDataSource.columnName;
 
@@ -127,46 +115,34 @@ export function LineChartRenderer({
       });
 
       const colorPalette = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
-      const seriesColor = colorPalette[index % colorPalette.length];
+      const defaultColor = colorPalette[index % colorPalette.length];
 
       return {
         x: xData,
         y: yData,
         name: yDataSource.alias ?? yColumnName,
-        color: seriesColor,
-        mode: (config.mode ?? "lines") as "lines" | "markers" | "lines+markers",
-        line: {
-          color: seriesColor,
-          width: config.lineWidth ?? 2,
-          shape: "linear" as const,
-          smoothing: config.smoothing ?? 0,
-        },
-        marker: config.mode?.includes("markers")
-          ? {
-              color: seriesColor,
-              size: 6,
-            }
-          : undefined,
-        connectgaps: config.connectGaps ?? true,
+        color: Array.isArray(chartConfig.color)
+          ? chartConfig.color[index]
+          : (chartConfig.color ?? defaultColor),
+        mode: chartConfig.mode,
+        line: chartConfig.line,
+        marker: chartConfig.marker,
+        connectgaps: chartConfig.connectgaps,
+        fill: chartConfig.fill,
+        fillcolor: chartConfig.fillcolor,
+        text: chartConfig.text,
+        textposition: chartConfig.textposition,
+        textfont: chartConfig.textfont,
+        error_x: chartConfig.error_x,
+        error_y: chartConfig.error_y,
       };
     });
 
-    // Use the line chart config from the visualization
-    const lineConfig = visualization.config as LineChartConfig;
-
-    const chartConfig = {
-      title: lineConfig.chartTitle ?? visualization.name,
-      xAxisTitle: (lineConfig.xAxisTitle ?? xDataSources[0]?.alias ?? xColumn) as string,
-      yAxisTitle: (lineConfig.yAxisTitle ??
-        (yDataSources.length === 1
-          ? (yDataSources[0]?.alias ?? yDataSources[0]?.columnName)
-          : "Values")) as string,
-      useWebGL: !isPreview && chartData.length > 1000,
-      showLegend: true,
-      showGrid: lineConfig.showGrid,
-    };
-
-    return <LineChart data={chartSeries} config={chartConfig} />;
+    return (
+      <div style={{ height: `400px`, width: "100%" }}>
+        <LineChart data={chartSeries} config={chartConfig} />{" "}
+      </div>
+    );
   } catch (error) {
     return (
       <div className="bg-destructive/10 text-destructive flex h-full items-center justify-center rounded-lg border">
