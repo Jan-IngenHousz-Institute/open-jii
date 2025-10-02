@@ -214,7 +214,6 @@
     "loginWith-github": "Mit GitHub anmelden",
     "loginWith-nodemailer": "Mit E-Mail anmelden",
     "loginWith-orcid": "Mit ORCID anmelden",
-    "email": "E-Mail",
     "emailPlaceholder": "m@beispiel.de",
     "emailRequired": "E-Mail ist erforderlich",
     "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein",

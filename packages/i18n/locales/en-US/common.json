@@ -233,7 +233,6 @@
     "loginWith-github": "Sign in with GitHub",
     "loginWith-nodemailer": "Sign in with Email",
     "loginWith-orcid": "Sign in with ORCID",
-    "email": "Email",
     "emailPlaceholder": "m@example.com",
     "emailRequired": "Email is required",
     "emailInvalid": "Please enter a valid email address",
