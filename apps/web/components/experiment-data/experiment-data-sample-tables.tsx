@@ -25,11 +25,11 @@ export function ExperimentDataSampleTables({
   sampleSize: number;
   locale: Locale;
 }) {
-  const { sampleTables, isLoading } = useExperimentSampleData(
+  const { sampleTables, isLoading } = useExperimentSampleData({
     experimentId,
     sampleSize,
-    formatValue,
-  );
+    formatFunction: formatValue,
+  });
 
   const { t } = useTranslation();
   if (isLoading) return <div>{t("experimentDataTable.loading")}</div>;

@@ -153,6 +153,9 @@ export class GetExperimentDataUseCase {
               );
             }
 
+            // Uncomment this to test the frontend code for the comments and flags
+            //addFakeCommentsColumns(dataResult.value);
+
             // Create a single-element array with the table data
             const response: ExperimentDataDto = [
               {
