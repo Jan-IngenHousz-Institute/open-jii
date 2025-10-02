@@ -12,7 +12,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,md,mdx,css,yaml,yml,json}\"",
     "lint": "turbo run lint --continue -- --no-cache",
     "lint:fix": "turbo run lint --continue -- --fix --no-cache",
-    "lint:ws": "pnpm dlx sherif@latest",
+    "lint:ws": "pnpm dlx sherif@latest --fix",
     "test": "turbo test",
     "test:watch": "turbo test --watch",
     "test:coverage": "turbo test --coverage",

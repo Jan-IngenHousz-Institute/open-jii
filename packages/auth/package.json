@@ -50,6 +50,7 @@
     "next": "^15.3.3",
     "next-auth": "5.0.0-beta.29",
     "nodemailer": "catalog:",
+    "qrcode": "^1.5.4",
     "react": "catalog:react19",
     "react-dom": "catalog:react19",
     "react-email": "catalog:react-email"
@@ -60,6 +61,7 @@
     "@types/express": "^5.0.1",
     "@types/node": "catalog:",
     "@types/nodemailer": "catalog:",
+    "@types/qrcode": "^1.5.5",
     "eslint": "catalog:",
     "typescript": "catalog:"
   }
