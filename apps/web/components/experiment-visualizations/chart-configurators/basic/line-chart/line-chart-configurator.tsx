@@ -44,25 +44,28 @@ export default function LineChartConfigurator({
   const { t } = useTranslation("experimentVisualizations");
   const { t: tCommon } = useTranslation("common");
 
-  // Hook for managing Y-axes array
+  // Use field array for multiple Y-axis series (data sources with role 'y')
   const {
-    fields: yAxesFields,
-    append: appendYAxis,
-    remove: removeYAxis,
+    fields: dataSourceFields,
+    append: appendDataSource,
+    remove: removeDataSource,
   } = useFieldArray({
     control: form.control,
-    name: "config.config.yAxes",
+    name: "dataConfig.dataSources",
   });
+
+  // Get Y-axis data sources
+  const yAxesFields = dataSourceFields
+    .map((field, index) => ({ field, index }))
+    .filter(({ field }) => field.role === "y");
 
   // Function to add a new Y-axis series
   const addYAxisSeries = () => {
-    const selectedTableName = form.getValues("dataConfig.tableName") || table.name;
-    appendYAxis({
-      dataSource: { columnName: "", tableName: selectedTableName, alias: "" },
-      type: "linear",
-      title: "",
-      side: "left",
-      color: `hsl(${(yAxesFields.length * 137.5) % 360}, 70%, 50%)`,
+    appendDataSource({
+      tableName: form.watch("dataConfig.tableName") || table.name,
+      columnName: "",
+      role: "y",
+      alias: "",
     });
   };
 
@@ -160,8 +163,8 @@ export default function LineChartConfigurator({
             </div>
 
             <div className="space-y-4">
-              {yAxesFields.map((field, index) => (
-                <Card key={field.id} className="border-l-primary/20 border-l-4 shadow-sm">
+              {yAxesFields.map(({ field, index }) => (
+                <Card key={field.id || index} className="border-l-primary/20 border-l-4 shadow-sm">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                     <div className="flex items-center gap-2">
                       <Layers className="text-primary h-4 w-4" />
@@ -174,7 +177,7 @@ export default function LineChartConfigurator({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => removeYAxis(index)}
+                        onClick={() => removeDataSource(yAxesFields[index].index)}
                         className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -386,7 +389,7 @@ export default function LineChartConfigurator({
                   <FormItem>
                     <FormLabel className="text-sm font-medium">{t("showLegend")}</FormLabel>
                     <Select
-                      value={field.value ? "true" : "false"}
+                      value={field.value}
                       onValueChange={(value) => field.onChange(value === "true")}
                     >
                       <FormControl>
@@ -527,7 +530,7 @@ export default function LineChartConfigurator({
                       {t("chartOptions.connectGaps")}
                     </FormLabel>
                     <Select
-                      value={field.value ? "true" : "false"}
+                      value={field.value}
                       onValueChange={(value) => field.onChange(value === "true")}
                     >
                       <FormControl>
@@ -559,13 +562,13 @@ export default function LineChartConfigurator({
                           min={0}
                           max={1}
                           step={0.05}
-                          value={[field.value || 0]}
+                          value={[field.value]}
                           onValueChange={(values) => field.onChange(values[0])}
                           className="w-full"
                         />
                         <div className="flex items-center justify-center">
                           <Badge variant="outline" className="font-mono text-xs">
-                            {Math.round((field.value || 0) * 100)}%
+                            {Math.round(field.value * 100)}%
                           </Badge>
                         </div>
                       </div>
