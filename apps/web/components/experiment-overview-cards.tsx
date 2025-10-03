@@ -9,8 +9,10 @@ import { Button, Card, CardContent, CardHeader } from "@repo/ui/components";
 
 export function ExperimentOverviewCards({
   experiments,
+  archived = false,
 }: {
   experiments: Experiment[] | undefined;
+  archived?: boolean;
 }) {
   const { t } = useTranslation("experiments");
 
@@ -30,8 +32,11 @@ export function ExperimentOverviewCards({
           const isPrivate = experiment.visibility === zExperimentVisibility.enum.private;
           const IconComponent = isPrivate ? Lock : Globe;
           const iconDescription = isPrivate ? t("visibility.private") : t("visibility.public");
+          const experimentPath = archived
+            ? `/platform/experiments-archive/${experiment.id}`
+            : `/platform/experiments/${experiment.id}`;
           return (
-            <Link key={experiment.id} href={`/platform/experiments/${experiment.id}`}>
+            <Link key={experiment.id} href={experimentPath}>
               <Card className="bg-white transition-shadow hover:shadow-md">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">

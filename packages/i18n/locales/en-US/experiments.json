@@ -113,6 +113,7 @@
   "errorLoadingExperiment": "An error occurred while loading the experiment",
   "experimentNotFound": "The experiment you're looking for could not be found",
   "needMemberAccess": "You need member access to perform this action",
+  "needAdminAccess": "You need admin access to perform this action",
   "previewMode": "Preview Mode",
   "editingMode": "Editing Mode",
   "validation": {

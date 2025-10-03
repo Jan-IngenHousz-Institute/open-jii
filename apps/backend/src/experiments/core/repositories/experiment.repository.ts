@@ -85,6 +85,11 @@ export class ExperimentRepository {
         conditions.push(ilike(experiments.name, `%${search}%`));
       }
 
+      // By default, exclude archived experiments unless explicitly requested via status filter
+      if (!status) {
+        conditions.push(sql`${experiments.status} != 'archived'`);
+      }
+
       const where = and(...conditions);
       return where ? query.where(where) : query;
     });

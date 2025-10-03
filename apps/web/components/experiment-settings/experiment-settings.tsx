@@ -1,5 +1,7 @@
 "use client";
 
+import { notFound } from "next/navigation";
+
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription } from "@repo/ui/components";
 
@@ -14,9 +16,10 @@ import { ExperimentVisibilityCard } from "./experiment-visibility-card";
 
 interface ExperimentSettingsProps {
   experimentId: string;
+  archived?: boolean;
 }
 
-export function ExperimentSettings({ experimentId }: ExperimentSettingsProps) {
+export function ExperimentSettings({ experimentId, archived = false }: ExperimentSettingsProps) {
   const { data: accessData, error, isLoading } = useExperimentAccess(experimentId);
   const { t } = useTranslation();
 
@@ -32,13 +35,29 @@ export function ExperimentSettings({ experimentId }: ExperimentSettingsProps) {
     return <div>{t("experimentSettings.notFound")}</div>;
   }
 
-  const { experiment, hasAccess } = accessData.body;
+  const { experiment, hasAccess, isAdmin } = accessData.body;
 
-  // Only members can access settings
-  if (!hasAccess) {
+  // Check if we're on the archive route but experiment is not archived
+  if (archived && experiment.status !== "archived") {
+    notFound();
+  }
+
+  // Check if we're on the regular route but experiment is archived
+  if (!archived && experiment.status === "archived") {
+    notFound();
+  }
+
+  // For archived experiments, only admins can access settings
+  // For regular experiments, any member can access settings
+  if (!hasAccess || (archived && !isAdmin)) {
+    const message =
+      archived && !isAdmin
+        ? t("experiments.needAdminAccessArchived")
+        : t("experiments.needMemberAccess");
+
     return (
       <Alert>
-        <AlertDescription>{t("experiments.needMemberAccess")}</AlertDescription>
+        <AlertDescription>{message}</AlertDescription>
       </Alert>
     );
   }

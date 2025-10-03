@@ -16,8 +16,14 @@ import {
   Input,
 } from "@repo/ui/components";
 
-export function ListExperiments() {
-  const { data, filter, setFilter, status, setStatus, search, setSearch } = useExperiments({});
+interface ListExperimentsProps {
+  archived?: boolean;
+}
+
+export function ListExperiments({ archived = false }: ListExperimentsProps) {
+  const { data, filter, setFilter, status, setStatus, search, setSearch } = useExperiments({
+    archived,
+  });
   const { t } = useTranslation();
 
   return (
@@ -59,26 +65,30 @@ export function ListExperiments() {
             </SelectContent>
           </Select>
 
-          <Select
-            value={status ?? "all"}
-            onValueChange={(v) => setStatus(v === "all" ? undefined : (v as ExperimentStatus))}
-          >
-            <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Filter status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("experiments.filterStatusAll")}</SelectItem>
-              {Object.values(zExperimentStatus.enum).map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {!archived && (
+            <Select
+              value={status ?? "all"}
+              onValueChange={(v) => setStatus(v === "all" ? undefined : (v as ExperimentStatus))}
+            >
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Filter status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("experiments.filterStatusAll")}</SelectItem>
+                {Object.values(zExperimentStatus.enum)
+                  .filter((s) => s !== "archived")
+                  .map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
-      <ExperimentOverviewCards experiments={data?.body} />
+      <ExperimentOverviewCards experiments={data?.body} archived={archived} />
     </div>
   );
 }

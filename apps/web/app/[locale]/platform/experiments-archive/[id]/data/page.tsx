@@ -39,8 +39,8 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
 
   const experiment = data.body;
 
-  // Check if experiment is archived - if so, redirect to not found (should use archive route)
-  if (experiment.status === "archived") {
+  // Check if experiment is archived - if not, redirect to not found
+  if (experiment.status !== "archived") {
     notFound();
   }
 
@@ -51,13 +51,18 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
           <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
         </div>
-        <Button onClick={() => setUploadModalOpen(true)}>
+        <Button onClick={() => setUploadModalOpen(true)} disabled>
           <Upload className="mr-2 h-4 w-4" />
           {t("experimentData.uploadData")}
         </Button>
       </div>
 
-      <ExperimentDataSampleTables experimentId={id} sampleSize={5} locale={locale} />
+      <ExperimentDataSampleTables
+        experimentId={id}
+        sampleSize={5}
+        locale={locale}
+        archived={true}
+      />
 
       <DataUploadModal experimentId={id} open={uploadModalOpen} onOpenChange={setUploadModalOpen} />
     </div>

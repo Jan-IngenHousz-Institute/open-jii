@@ -774,6 +774,33 @@ describe("ExperimentDataController", () => {
         .expect(StatusCodes.FORBIDDEN);
     });
 
+    it("should return 403 when uploading to an archived experiment", async () => {
+      // Create an archived experiment owned by the test user
+      const { experiment } = await testApp.createExperiment({
+        name: "Archived Upload Experiment",
+        userId: testUserId,
+        status: "archived",
+      });
+
+      // Prepare a mock file buffer
+      const fileBuffer = Buffer.from("mock ambyte data content");
+
+      const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .set("Content-Type", "multipart/form-data")
+        .field("sourceType", "ambyte")
+        .attach("files", fileBuffer, "Ambyte_1/data.txt")
+        .expect(StatusCodes.FORBIDDEN)
+        .expect(({ body }: { body: { message: string } }) => {
+          expect(body.message).toBe("Cannot upload data to archived experiments");
+        });
+    });
+
     it("should reject invalid file formats", async () => {
       const fileName = "invalid.pdf"; // Not a .txt file
       const description = "Invalid file format";
@@ -934,7 +961,6 @@ describe("ExperimentDataController", () => {
         description: "Test Download Description",
         status: "active",
         visibility: "private",
-        embargoIntervalDays: 90,
         userId: testUserId,
       });
 

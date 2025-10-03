@@ -20,10 +20,12 @@ export function ExperimentDataSampleTables({
   experimentId,
   sampleSize = 10,
   locale,
+  archived = false,
 }: {
   experimentId: string;
   sampleSize: number;
   locale: Locale;
+  archived?: boolean;
 }) {
   const { sampleTables, isLoading } = useExperimentSampleData(
     experimentId,
@@ -40,7 +42,9 @@ export function ExperimentDataSampleTables({
         <div key={sampleTable.name}>
           <ExperimentDataSampleTable sampleTable={sampleTable} />
           <div className="text-muted-foreground mt-4">
-            <Link href={`/${locale}/platform/experiments/${experimentId}/data/${sampleTable.name}`}>
+            <Link
+              href={`/${locale}/platform/experiments${archived ? "-archive" : ""}/${experimentId}/data/${sampleTable.name}`}
+            >
               <Button variant="outline" size="sm">
                 <TableIcon /> {t("experimentDataTable.details")}
               </Button>

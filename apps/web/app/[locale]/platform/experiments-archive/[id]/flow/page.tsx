@@ -36,7 +36,7 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
   const { data: existingFlow, refetch } = useExperimentFlow(id);
 
   // Determine if user has access to edit
-  const hasAccess = accessData?.body.hasAccess ?? false;
+  const isAdmin = accessData?.body.isAdmin ?? false;
 
   // Flow state / editor ref
   const flowEditorRef = useRef<FlowEditorHandle | null>(null);
@@ -50,7 +50,15 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
     },
     onError: (error) => {
       console.error("Create flow error:", error);
-      toast({ description: "Failed to create flow", variant: "destructive" });
+      // Extract error message from API response if available
+      let errorMessage = "Failed to create flow";
+      if (error && typeof error === "object" && "body" in error) {
+        const body = (error as { body?: { message?: string } }).body;
+        if (body?.message && typeof body.message === "string") {
+          errorMessage = body.message;
+        }
+      }
+      toast({ description: errorMessage, variant: "destructive" });
     },
   });
 
@@ -62,7 +70,15 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
     },
     onError: (error) => {
       console.error("Update flow error:", error);
-      toast({ description: "Failed to update flow", variant: "destructive" });
+      // Extract error message from API response if available
+      let errorMessage = "Failed to update flow";
+      if (error && typeof error === "object" && "body" in error) {
+        const body = (error as { body?: { message?: string } }).body;
+        if (body?.message && typeof body.message === "string") {
+          errorMessage = body.message;
+        }
+      }
+      toast({ description: errorMessage, variant: "destructive" });
     },
   });
 
@@ -94,8 +110,8 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
     return <div>{t("notFound")}</div>;
   }
 
-  // Check if experiment is archived - if so, redirect to not found (should use archive route)
-  if (experimentData.status === "archived") {
+  // Check if experiment is archived - if not, redirect to not found
+  if (experimentData.status !== "archived") {
     notFound();
   }
 
@@ -107,17 +123,15 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
         <div>
           <h2 className="text-2xl font-bold">{t("flow.title")}</h2>
           <p className="text-muted-foreground text-sm">
-            {hasAccess ? t("flow.editDescription") : t("flow.staticDescription")}
+            {isAdmin ? t("flow.editDescription") : t("flow.staticDescription")}
           </p>
         </div>
         <div
-          className={`flex items-center gap-2 rounded-md px-3 py-1.5 ${hasAccess ? "bg-green-50" : "bg-blue-50"}`}
+          className={`flex items-center gap-2 rounded-md px-3 py-1.5 ${isAdmin ? "bg-green-50" : "bg-blue-50"}`}
         >
-          <div
-            className={`h-2 w-2 rounded-full ${hasAccess ? "bg-green-500" : "bg-blue-500"}`}
-          ></div>
-          <span className={`text-sm font-medium ${hasAccess ? "text-green-700" : "text-blue-700"}`}>
-            {hasAccess ? t("editingMode") : t("previewMode")}
+          <div className={`h-2 w-2 rounded-full ${isAdmin ? "bg-green-500" : "bg-blue-500"}`}></div>
+          <span className={`text-sm font-medium ${isAdmin ? "text-green-700" : "text-blue-700"}`}>
+            {isAdmin ? t("editingMode") : t("previewMode")}
           </span>
         </div>
       </div>
@@ -125,11 +139,11 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
       <FlowEditor
         ref={flowEditorRef}
         initialFlow={existingFlow?.body}
-        isDisabled={!hasAccess}
-        onDirtyChange={hasAccess ? () => setHasUnsavedChanges(true) : undefined}
+        isDisabled={!isAdmin}
+        onDirtyChange={isAdmin ? () => setHasUnsavedChanges(true) : undefined}
       />
 
-      {hasAccess && (
+      {isAdmin && (
         <div className="flex items-center justify-end gap-4">
           <Button
             onClick={handleSave}
