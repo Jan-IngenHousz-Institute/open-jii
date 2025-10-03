@@ -230,7 +230,7 @@ describe("UpdateExperimentLocationsUseCase", () => {
     expect(result.isFailure()).toBe(true);
     assertFailure(result);
     // Implementation changed to return a more specific forbidden message
-    expect(result.error.message).toContain("Only experiment members can update locations");
+    expect(result.error.message).toContain("You do not have access to this experiment");
   });
 
   it("should allow admins to update locations of archived experiments", async () => {
