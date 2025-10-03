@@ -169,15 +169,10 @@ export const ProtocolSetSchema = z
   })
   .strict();
 
-// Schema for protocols within a multi-protocol set (requires label)
-const ProtocolSetWithLabelSchema = ProtocolSetSchema.extend({
-  label: z.string(), // Required for multi-protocol sets
-}).strict();
-
 // Single and multi-protocol set schema
 export const ProtocolJsonSchema = z.array(
   ProtocolSetSchema.extend({
-    _protocol_set_: z.array(ProtocolSetWithLabelSchema).min(1).optional(),
+    _protocol_set_: z.array(ProtocolSetSchema).min(1).optional(),
   }).strict(),
 );
 

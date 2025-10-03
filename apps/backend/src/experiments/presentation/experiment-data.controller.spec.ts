@@ -90,7 +90,7 @@ describe("ExperimentDataController", () => {
           {
             name: "test_table",
             catalog_name: experiment.name,
-            schema_name: `exp_${experiment.name}_${experiment.id}`,
+            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
           },
@@ -128,7 +128,7 @@ describe("ExperimentDataController", () => {
       expect(response.body[0]).toMatchObject({
         name: "test_table",
         catalog_name: experiment.name,
-        schema_name: `exp_${experiment.name}_${experiment.id}`,
+        schema_name: `exp_test_experiment_for_data_${experiment.id}`,
         data: resultTableData,
         page: 1,
         pageSize: 5,
@@ -144,13 +144,13 @@ describe("ExperimentDataController", () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         1,
-        `exp_${experiment.name}_${experiment.id}`,
+        `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
         "SELECT COUNT(*) as count FROM test_table",
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         2,
-        `exp_${experiment.name}_${experiment.id}`,
+        `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
         "SELECT * FROM test_table LIMIT 5 OFFSET 0",
       );
     });
@@ -168,14 +168,14 @@ describe("ExperimentDataController", () => {
           {
             name: "bronze_data",
             catalog_name: "test_catalog",
-            schema_name: `exp_${experiment.name}_${experiment.id}`,
+            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
           },
           {
             name: "silver_data",
             catalog_name: "test_catalog",
-            schema_name: `exp_${experiment.name}_${experiment.id}`,
+            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
           },
@@ -265,13 +265,13 @@ describe("ExperimentDataController", () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         1,
-        `exp_${experiment.name}_${experiment.id}`,
+        `exp_test_experiment_for_tables_${experiment.id}`,
         "SELECT * FROM bronze_data LIMIT 5",
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         2,
-        `exp_${experiment.name}_${experiment.id}`,
+        `exp_test_experiment_for_tables_${experiment.id}`,
         "SELECT * FROM silver_data LIMIT 5",
       );
     });
@@ -376,7 +376,7 @@ describe("ExperimentDataController", () => {
           {
             name: "nonexistent_table",
             catalog_name: experiment.name,
-            schema_name: `exp_${experiment.name}_${experiment.id}`,
+            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
           },
@@ -442,7 +442,7 @@ describe("ExperimentDataController", () => {
           {
             name: "test_table",
             catalog_name: experiment.name,
-            schema_name: `exp_${experiment.name}_${experiment.id}`,
+            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
           },
@@ -485,7 +485,7 @@ describe("ExperimentDataController", () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         2,
-        `exp_${experiment.name}_${experiment.id}`,
+        `exp_test_experiment_for_pagination_${experiment.id}`,
         "SELECT * FROM test_table LIMIT 10 OFFSET 10", // page 2 with pageSize 10
       );
     });
@@ -503,7 +503,7 @@ describe("ExperimentDataController", () => {
           {
             name: "existing_table",
             catalog_name: experiment.name,
-            schema_name: `exp_${experiment.name}_${experiment.id}`,
+            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
           },
@@ -994,7 +994,7 @@ describe("ExperimentDataController", () => {
           {
             name: "bronze_data",
             catalog_name: "test_catalog",
-            schema_name: `exp_${experiment.name}_${experiment.id}`,
+            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
           },
@@ -1042,7 +1042,7 @@ describe("ExperimentDataController", () => {
       expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.name, experiment.id);
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.downloadExperimentData).toHaveBeenCalledWith(
-        `exp_${experiment.name}_${experiment.id}`,
+        `exp_test_download_experiment_${experiment.id}`,
         "SELECT * FROM bronze_data",
       );
     });

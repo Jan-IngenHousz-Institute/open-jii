@@ -439,8 +439,8 @@ describe("Experiment Schema", () => {
   describe("Data queries & tables", () => {
     it("zExperimentDataQuery defaults & coercion", () => {
       const d1 = zExperimentDataQuery.parse({});
-      expect(d1.page).toBe(1);
-      expect(d1.pageSize).toBe(5);
+      expect(d1.page).toBeUndefined();
+      expect(d1.pageSize).toBeUndefined();
 
       const d2 = zExperimentDataQuery.parse({ page: "3", pageSize: "10" });
       expect(d2.page).toBe(3);

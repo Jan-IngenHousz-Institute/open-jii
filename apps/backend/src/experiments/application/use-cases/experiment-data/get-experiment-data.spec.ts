@@ -45,6 +45,133 @@ describe("GetExperimentDataUseCase", () => {
     await testApp.teardown();
   });
 
+  // Test for transforming schema data is covered indirectly in other tests
+  // through the integration tests that verify the end-to-end behavior
+
+  it("should return specific column data when columns are specified", async () => {
+    // Create an experiment in the database
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      description: "Test Description",
+      status: "active",
+      visibility: "private",
+      userId: testUserId,
+    });
+
+    // Mock the Databricks methods for column-specific query
+    const mockColumnData = {
+      columns: [
+        { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+        { name: "temperature", type_name: "DOUBLE", type_text: "DOUBLE" },
+      ],
+      rows: [
+        ["2023-01-01T12:00:00Z", "25.5"],
+        ["2023-01-01T12:01:00Z", "26.0"],
+        ["2023-01-01T12:02:00Z", "25.8"],
+      ],
+      totalRows: 3,
+      truncated: false,
+    };
+
+    // Create expected data format after transformation by the service
+    const expectedColumnData = {
+      columns: mockColumnData.columns,
+      rows: [
+        { timestamp: "2023-01-01T12:00:00Z", temperature: "25.5" },
+        { timestamp: "2023-01-01T12:01:00Z", temperature: "26.0" },
+        { timestamp: "2023-01-01T12:02:00Z", temperature: "25.8" },
+      ],
+      totalRows: mockColumnData.totalRows,
+      truncated: mockColumnData.truncated,
+    };
+
+    // Generate clean schema name to match the implementation
+    const cleanName = experiment.name.toLowerCase().trim().replace(/ /g, "_");
+
+    // Mock token request
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+      access_token: "mock-token",
+      expires_in: 3600,
+      token_type: "Bearer",
+    });
+
+    // Mock listTables API call to validate table exists
+    nock(DATABRICKS_HOST)
+      .get(DatabricksTablesService.TABLES_ENDPOINT)
+      .query(true)
+      .reply(200, {
+        tables: [
+          {
+            name: "sensor_data",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: `exp_${cleanName}_${experiment.id}`,
+          },
+        ],
+      });
+
+    // Mock SQL query for specific columns (no pagination - full data)
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "SELECT `timestamp`, `temperature` FROM sensor_data",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_${cleanName}_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-column-data-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockColumnData.columns.length,
+            columns: mockColumnData.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockColumnData.totalRows,
+          truncated: mockColumnData.truncated,
+        },
+        result: {
+          data_array: mockColumnData.rows,
+          chunk_index: 0,
+          row_count: mockColumnData.rows.length,
+          row_offset: 0,
+        },
+      });
+
+    // Act
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "sensor_data",
+      columns: "timestamp,temperature",
+      page: 1,
+      pageSize: 5,
+    });
+
+    // Assert result is success
+    if (result.isFailure()) {
+      console.log("Test failed with error:", result.error);
+    }
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+
+    // Verify response structure - should be array with one element (full-columns mode)
+    expect(Array.isArray(result.value)).toBe(true);
+    expect(result.value).toHaveLength(1);
+    expect(result.value[0]).toMatchObject({
+      name: "sensor_data",
+      catalog_name: experiment.name,
+      schema_name: `exp_${cleanName}_${experiment.id}`,
+      data: expectedColumnData,
+      page: 1,
+      pageSize: 3, // Should equal totalRows for full data
+      totalRows: 3,
+      totalPages: 1, // No pagination for column-specific queries
+    });
+  });
+
   it("should return table data when table name is specified", async () => {
     // Create an experiment in the database
     const { experiment } = await testApp.createExperiment({
@@ -103,7 +230,7 @@ describe("GetExperimentDataUseCase", () => {
           {
             name: "test_table",
             catalog_name: MOCK_CATALOG_NAME,
-            schema_name: `exp_${experiment.name}_${experiment.id}`,
+            schema_name: `exp_test_experiment_${experiment.id}`,
           },
         ],
       });
@@ -113,7 +240,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT COUNT(*) as count FROM test_table",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_${experiment.name}_${experiment.id}`,
+        schema: `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -147,7 +274,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT * FROM test_table LIMIT 20 OFFSET 0",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_${experiment.name}_${experiment.id}`,
+        schema: `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -192,7 +319,7 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.value[0]).toMatchObject({
       name: "test_table",
       catalog_name: experiment.name,
-      schema_name: `exp_${experiment.name}_${experiment.id}`,
+      schema_name: `exp_test_experiment_${experiment.id}`,
       data: expectedTableData,
       page: 1,
       pageSize: 20,
@@ -217,12 +344,12 @@ describe("GetExperimentDataUseCase", () => {
         {
           name: "table1",
           catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
-          schema_name: `exp_${experiment.name}_${experiment.id}`,
+          schema_name: `exp_test_experiment_${experiment.id}`,
         },
         {
           name: "table2",
           catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
-          schema_name: `exp_${experiment.name}_${experiment.id}`,
+          schema_name: `exp_test_experiment_${experiment.id}`,
         },
       ],
     };
@@ -272,7 +399,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: `SELECT * FROM table1 LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_${experiment.name}_${experiment.id}`,
+        schema: `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -305,7 +432,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: `SELECT * FROM table2 LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_${experiment.name}_${experiment.id}`,
+        schema: `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -435,7 +562,7 @@ describe("GetExperimentDataUseCase", () => {
         {
           name: "public_table",
           catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
-          schema_name: `exp_${experiment.name}_${experiment.id}`,
+          schema_name: `exp_test_experiment_${experiment.id}`,
         },
       ],
     };
@@ -472,7 +599,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: `SELECT * FROM public_table LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_${experiment.name}_${experiment.id}`,
+        schema: `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -551,7 +678,7 @@ describe("GetExperimentDataUseCase", () => {
           {
             name: "test_table",
             catalog_name: MOCK_CATALOG_NAME,
-            schema_name: `exp_${experiment.name}_${experiment.id}`,
+            schema_name: `exp_test_experiment_${experiment.id}`,
           },
         ],
       });
@@ -561,7 +688,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT COUNT(*) as count FROM test_table",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_${experiment.name}_${experiment.id}`,
+        schema: `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -595,7 +722,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT * FROM test_table LIMIT 20 OFFSET 0",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_${experiment.name}_${experiment.id}`,
+        schema: `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -640,7 +767,7 @@ describe("GetExperimentDataUseCase", () => {
           {
             name: "test_table",
             catalog_name: MOCK_CATALOG_NAME,
-            schema_name: `exp_${experiment.name}_${experiment.id}`,
+            schema_name: `exp_test_experiment_${experiment.id}`,
           },
         ],
       });
@@ -650,7 +777,7 @@ describe("GetExperimentDataUseCase", () => {
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: "SELECT COUNT(*) as count FROM test_table",
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_${experiment.name}_${experiment.id}`,
+        schema: `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -721,7 +848,7 @@ describe("GetExperimentDataUseCase", () => {
         {
           name: "existing_table",
           catalog_name: MOCK_CATALOG_NAME,
-          schema_name: `exp_${experiment.name}_${experiment.id}`,
+          schema_name: `exp_test_experiment_${experiment.id}`,
         },
       ],
     };
@@ -753,5 +880,103 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.error.message).toContain(
       "Table 'non_existent_table' not found in this experiment",
     );
+  });
+
+  it("should handle SQL query failure in fetchSpecificColumns", async () => {
+    // Create an experiment in the database
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      description: "Test Description",
+      status: "active",
+      visibility: "private",
+      userId: testUserId,
+    });
+
+    // Generate clean schema name to match the implementation
+    const cleanName = experiment.name.toLowerCase().trim().replace(/ /g, "_");
+
+    // Mock token request
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+      access_token: "mock-token",
+      expires_in: 3600,
+      token_type: "Bearer",
+    });
+
+    // Mock listTables API call to validate table exists
+    nock(DATABRICKS_HOST)
+      .get(DatabricksTablesService.TABLES_ENDPOINT)
+      .query(true)
+      .reply(200, {
+        tables: [
+          {
+            name: "sensor_data",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: `exp_${cleanName}_${experiment.id}`,
+          },
+        ],
+      });
+
+    // Mock SQL query for specific columns - failure
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "SELECT `timestamp`, `temperature` FROM sensor_data",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_${cleanName}_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(500, { error: "SQL execution failed" });
+
+    // Act
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "sensor_data",
+      columns: "timestamp, temperature",
+      page: 1,
+      pageSize: 5,
+    });
+
+    // Assert result is failure
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.message).toContain("Failed to get table data");
+  });
+
+  it("should handle listTables failure in validateTableExists", async () => {
+    // Create an experiment in the database
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      description: "Test Description",
+      status: "active",
+      visibility: "private",
+      userId: testUserId,
+    });
+
+    // Mock token request
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+      access_token: "mock-token",
+      expires_in: 3600,
+      token_type: "Bearer",
+    });
+
+    // Mock listTables API call - failure
+    nock(DATABRICKS_HOST)
+      .get(DatabricksTablesService.TABLES_ENDPOINT)
+      .query(true)
+      .reply(500, { error: "Failed to list tables" });
+
+    // Act
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "sensor_data",
+      columns: "timestamp, temperature",
+      page: 1,
+      pageSize: 5,
+    });
+
+    // Assert result is failure
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.message).toContain("Failed to list tables");
   });
 });

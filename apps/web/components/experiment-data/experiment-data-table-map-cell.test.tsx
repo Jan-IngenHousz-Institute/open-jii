@@ -549,7 +549,6 @@ describe("ExperimentDataTableMapCell", () => {
 
   describe("DOM manipulation coverage tests", () => {
     it("should test formatValue function coverage with special types", () => {
-      // Test the formatValue function coverage for number and boolean types (lines 49-50)
       render(
         <ExperimentDataTableMapCell
           data='{"numberVal": 42, "booleanVal": true, "stringVal": "test"}'
@@ -568,7 +567,6 @@ describe("ExperimentDataTableMapCell", () => {
     });
 
     it("should test formatValue exotic type fallback", () => {
-      // Create a scenario that would test the "[object]" fallback (lines 60-61)
       // This is hard to achieve through JSON, but we can test with complex nested structures
       const complexData = {
         regularString: "normal",
