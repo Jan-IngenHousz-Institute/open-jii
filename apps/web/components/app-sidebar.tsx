@@ -1,7 +1,15 @@
 "use client";
 
-import { BookOpen, Code, FileSliders, Home, Microscope, RadioReceiver, Webcam } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import {
+  Archive,
+  BookOpen,
+  Code,
+  FileSliders,
+  Home,
+  Microscope,
+  RadioReceiver,
+  Webcam,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
@@ -31,7 +39,7 @@ interface UserData {
 interface NavigationItem {
   title: string;
   url: string;
-  icon: string | LucideIcon;
+  icon: string;
   isActive?: boolean;
   items: {
     title: string;
@@ -61,6 +69,7 @@ const iconMap = {
   Home,
   BookOpen,
   Microscope,
+  Archive,
   Webcam,
   FileSliders,
   RadioReceiver,

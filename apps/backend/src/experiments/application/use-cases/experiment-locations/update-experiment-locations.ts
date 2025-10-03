@@ -58,9 +58,9 @@ export class UpdateExperimentLocationsUseCase {
           // For active experiments, any member can update locations
           if (!hasAccess) {
             this.logger.warn(
-              `User ${userId} is not a member of experiment ${experimentId} and cannot update locations`,
+              `User ${userId} attempted to update locations of experiment ${experimentId} without proper permissions`,
             );
-            return failure(AppError.forbidden("Only experiment members can update locations"));
+            return failure(AppError.forbidden("You do not have access to this experiment"));
           }
         }
 

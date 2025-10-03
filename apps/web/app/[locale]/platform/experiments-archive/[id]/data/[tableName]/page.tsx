@@ -2,6 +2,7 @@
 
 import { ErrorDisplay } from "@/components/error-display";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
+import { notFound } from "next/navigation";
 import { use } from "react";
 import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
 
@@ -26,6 +27,13 @@ export default function ExperimentDataDetailsPage({ params }: ExperimentDataDeta
 
   if (!data) {
     return <div>{t("notFound")}</div>;
+  }
+
+  const experiment = data.body;
+
+  // Check if experiment is archived - if not, redirect to not found
+  if (experiment.status !== "archived") {
+    notFound();
   }
 
   return (
