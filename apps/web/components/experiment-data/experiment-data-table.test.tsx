@@ -169,6 +169,21 @@ vi.mock("@repo/ui/components", () => ({
   Skeleton: ({ className }: { className?: string }) => (
     <div data-testid="skeleton" className={className} />
   ),
+  DropdownMenu: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="dropdown-menu">{children ?? "DropdownMenu"}</div>
+  ),
+  DropdownMenuTrigger: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="dropdown-menu-trigger">{children ?? "DropdownMenuTrigger"}</div>
+  ),
+  DropdownMenuContent: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="dropdown-menu-content">{children ?? "DropdownMenuContent"}</div>
+  ),
+  DropdownMenuItem: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="dropdown-menu-item">{children ?? "DropdownMenuItem"}</div>
+  ),
+  DropdownMenuSeparator: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="dropdown-menu-separator">{children ?? "DropdownMenuSeparator"}</div>
+  ),
   Form: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
     <div {...props}>{children}</div>
   ),
@@ -318,6 +333,11 @@ vi.mock("./experiment-data-table-chart", () => ({
         )}
       </div>
     ) : null,
+}));
+
+// Mock BulkActionsBar
+vi.mock("~/components/experiment-data/comments/bulk-actions-bar", () => ({
+  BulkActionsBar: () => <div data-testid="bulk-actions-bar">BulkActionsBar</div>,
 }));
 
 const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
@@ -582,31 +602,6 @@ describe("ExperimentDataTable", () => {
       queryKey: ["experiment", "experiment-123", 1, 20, "test_table"],
       staleTime: 120000,
     });
-  });
-
-  it("should render download button and open modal", async () => {
-    const user = userEvent.setup();
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: mockResponse,
-      isLoading: false,
-      error: null,
-    });
-    mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
-
-    render(
-      <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
-      { wrapper: createWrapper() },
-    );
-
-    // Find and click download button
-    const downloadButton = screen.getByText("Download");
-    expect(downloadButton).toBeInTheDocument();
-
-    await user.click(downloadButton);
-
-    // Check that modal appears
-    expect(screen.getByTestId("data-download-modal")).toBeInTheDocument();
-    expect(screen.getByText("Download Modal for test_table - experiment-123")).toBeInTheDocument();
   });
 
   describe("Chart functionality", () => {

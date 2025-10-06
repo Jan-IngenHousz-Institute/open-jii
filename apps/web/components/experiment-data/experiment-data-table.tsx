@@ -5,20 +5,22 @@ import type {
   TableMetadata,
 } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
-import type { PaginationState, Updater } from "@tanstack/react-table";
+import type { PaginationState, RowSelectionState, Updater } from "@tanstack/react-table";
 import { getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
-import { Download } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
+import { BulkActionsBar } from "~/components/experiment-data/comments/bulk-actions-bar";
 import {
   ExperimentDataRows,
   ExperimentTableHeader,
   formatValue,
   LoadingRows,
 } from "~/components/experiment-data/experiment-data-utils";
+import { renderIntoElement } from "~/util/reactUtil";
 
+import type { ExperimentDataComment } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
-  Button,
+  Checkbox,
   Label,
   Pagination,
   PaginationContent,
@@ -49,6 +51,7 @@ export function ExperimentDataTable({
 }) {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
   const [persistedMetaData, setPersistedMetaData] = useState<TableMetadata>();
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
 
   // Chart state - much simpler
@@ -94,24 +97,31 @@ export function ExperimentDataTable({
   }, []);
 
   // Use traditional pagination with improved column persistence
-  const { tableMetadata, tableRows, isLoading, error } = useExperimentData(
+  const { tableMetadata, tableRows, isLoading, error } = useExperimentData({
     experimentId,
-    pagination.pageIndex + 1,
-    pagination.pageSize,
+    page: pagination.pageIndex + 1,
+    pageSize: pagination.pageSize,
     tableName,
-    formatValue,
-    showChartOnHover,
-    hideChartOnLeave,
-    toggleChartPin,
-  );
+    formatFunction: formatValue,
+    commentsColumnName: t("experimentDataComments.columnHeader"),
+    onChartHover: showChartOnHover,
+    onChartLeave: hideChartOnLeave,
+    onChartClick: toggleChartPin,
+  });
+
+  function clearSelection() {
+    setRowSelection({});
+  }
 
   const onPaginationChange = useCallback(
     (updaterOrValue: Updater<PaginationState>) => {
       if (typeof updaterOrValue === "function") {
         const newPagination = updaterOrValue(pagination);
         setPagination(newPagination);
+        clearSelection();
       } else {
         setPagination(updaterOrValue);
+        clearSelection();
       }
     },
     [pagination],
@@ -140,8 +150,15 @@ export function ExperimentDataTable({
     getPaginationRowModel: getPaginationRowModel(),
     manualPagination: true,
     onPaginationChange,
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection: true,
+    getRowId: (originalRow: DataRow, index: number) => {
+      if (originalRow.id) return originalRow.id;
+      return index.toString();
+    },
     state: {
       pagination,
+      rowSelection,
     },
     rowCount: totalRows,
     defaultColumn: {
@@ -164,6 +181,38 @@ export function ExperimentDataTable({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [table]);
 
+  useEffect(() => {
+    function getPageRowsSelectedCheckedState() {
+      return table.getIsSomePageRowsSelected() ? "indeterminate" : table.getIsAllPageRowsSelected();
+    }
+
+    const toggleAll = document.getElementById("rowToggleAll");
+    if (toggleAll) {
+      renderIntoElement(
+        toggleAll,
+        <Checkbox
+          checked={getPageRowsSelectedCheckedState()}
+          onCheckedChange={() => table.toggleAllPageRowsSelected()}
+        />,
+      );
+    }
+  }, [persistedMetaData, table, rowSelection]);
+
+  function getSelectedNumberOfCommentsAndFlags() {
+    if (!tableRows) return { totalSelectedComments: 0, totalSelectedFlags: 0 };
+
+    return tableRows
+      .filter((row) => row.id && row.comments && Object.keys(rowSelection).includes(row.id))
+      .flatMap((row) => JSON.parse(row.comments ?? "[]") as ExperimentDataComment[])
+      .reduce(
+        (acc, comment) => ({
+          totalSelectedComments: acc.totalSelectedComments + (comment.flag === undefined ? 1 : 0),
+          totalSelectedFlags: acc.totalSelectedFlags + (comment.flag !== undefined ? 1 : 0),
+        }),
+        { totalSelectedComments: 0, totalSelectedFlags: 0 },
+      );
+  }
+
   if (isLoading && !persistedMetaData) {
     return <div>{t("experimentDataTable.loading")}</div>;
   }
@@ -180,23 +229,24 @@ export function ExperimentDataTable({
   const loadingRowCount =
     pagination.pageIndex + 1 == totalPages ? totalRows % pagination.pageSize : pagination.pageSize;
 
+  const { totalSelectedComments, totalSelectedFlags } = getSelectedNumberOfCommentsAndFlags();
+  const rowIds = Object.keys(rowSelection);
+
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h5 className="text-base font-medium">
-          {t("experimentDataTable.table")} {tableName}
-        </h5>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setDownloadModalOpen(true)}
-          className="flex items-center gap-2"
-        >
-          <Download className="h-4 w-4" />
-          {t("experimentDataTable.download")}
-        </Button>
-      </div>
-      <div className="text-muted-foreground relative overflow-visible rounded-md border">
+      <h5 className="mb-4 text-base font-medium">
+        {t("experimentDataTable.table")} {tableName}
+      </h5>
+      <BulkActionsBar
+        experimentId={experimentId}
+        tableName={tableName}
+        rowIds={rowIds}
+        totalComments={totalSelectedComments}
+        totalFlags={totalSelectedFlags}
+        clearSelection={clearSelection}
+        downloadTable={() => setDownloadModalOpen(true)}
+      />
+      <div className="text-muted-foreground rounded-md border">
         <Table>
           <ExperimentTableHeader headerGroups={table.getHeaderGroups()} />
           <TableBody>

@@ -1,32 +1,53 @@
-import type { AccessorKeyColumnDef } from "@tanstack/react-table";
+import type { AccessorKeyColumnDef, Row } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import type React from "react";
 import { useMemo } from "react";
+import type { CommentsRowIdentifier } from "~/components/experiment-data/comments/utils";
+import {
+  getCommentsColumn,
+  getRowCheckbox,
+  getToggleAllRowsCheckbox,
+} from "~/components/experiment-data/comments/utils";
 import { tsr } from "~/lib/tsr";
 
 import type { ExperimentData } from "@repo/api";
 
 export type DataValue = string | null;
 export type DataRow = Record<string, DataValue>;
-export type DataRenderFunction = (
-  value: unknown,
-  type: string,
-  columnName?: string,
-  onChartHover?: (data: number[], columnName: string) => void,
-  onChartLeave?: () => void,
-  onChartClick?: (data: number[], columnName: string) => void,
-) => string | React.JSX.Element;
+export interface DataRenderFunctionParams {
+  value: unknown;
+  type: string;
+  columnName?: string;
+  onChartHover?: (data: number[], columnName: string) => void;
+  onChartLeave?: () => void;
+  onChartClick?: (data: number[], columnName: string) => void;
+}
+export type DataRenderFunction = (params: DataRenderFunctionParams) => string | React.JSX.Element;
 
 // Time in ms before data is removed from the cache
 const STALE_TIME = 2 * 60 * 1000;
 
-function createTableColumns(
-  data: ExperimentData | undefined,
-  formatFunction?: DataRenderFunction,
-  onChartHover?: (data: number[], columnName: string) => void,
-  onChartLeave?: () => void,
-  onChartClick?: (data: number[], columnName: string) => void,
-) {
+interface CreateTableColumnsParams {
+  experimentId: string;
+  tableName?: string;
+  data: ExperimentData | undefined;
+  formatFunction: DataRenderFunction;
+  commentsColumnName?: string;
+  onChartHover?: (data: number[], columnName: string) => void;
+  onChartLeave?: () => void;
+  onChartClick?: (data: number[], columnName: string) => void;
+}
+
+function createTableColumns({
+  experimentId,
+  tableName,
+  data,
+  formatFunction,
+  commentsColumnName,
+  onChartHover,
+  onChartLeave,
+  onChartClick,
+}: CreateTableColumnsParams) {
   const columnHelper = createColumnHelper<DataRow>();
 
   const columns: AccessorKeyColumnDef<DataRow, DataValue>[] = [];
@@ -35,19 +56,23 @@ function createTableColumns(
   // Define type precedence for sorting
   const getTypePrecedence = (typeName: string): number => {
     switch (typeName) {
-      case "TIMESTAMP":
+      case "ID":
         return 1;
-      case "STRING":
+      case "JSON_COMMENTS":
+        return 2;
+      case "TIMESTAMP":
         return 3;
+      case "STRING":
+        return 5;
       case "DOUBLE":
       case "INT":
       case "LONG":
       case "BIGINT":
-        return 4;
+        return 6;
       default:
-        if (typeName === "MAP" || typeName.startsWith("MAP<")) return 2;
-        if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 5;
-        return 6; // Other types at the end
+        if (typeName === "MAP" || typeName.startsWith("MAP<")) return 4;
+        if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 7;
+        return 8; // Other types at the end
     }
   };
 
@@ -58,36 +83,70 @@ function createTableColumns(
     return precedenceA - precedenceB;
   });
 
+  function getColumnWidth(typeName: string): number | undefined {
+    if (typeName === "ID") return 30;
+    if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 120;
+    if (typeName === "MAP" || typeName.startsWith("MAP<STRING,")) return 200;
+    return undefined;
+  }
+
+  function getHeader(typeName: string, columnName: string) {
+    if (typeName === "ID") return () => getToggleAllRowsCheckbox();
+    if (typeName === "JSON_COMMENTS") return commentsColumnName ?? "Comments & Flags";
+    return columnName;
+  }
+
+  function getRow(typeName: string, columnName: string, row: Row<DataRow>) {
+    // ID column shows a checkbox
+    if (typeName === "ID") return getRowCheckbox(row);
+
+    const value = row.getValue(columnName);
+
+    // Comments column shows the comments component
+    if (typeName === "JSON_COMMENTS") {
+      const rowId = idColumnName ? row.getValue(idColumnName) : undefined;
+      if (rowId && tableName) {
+        const commentRowId: CommentsRowIdentifier = {
+          experimentId,
+          tableName,
+          rowId: rowId as string,
+        };
+        return getCommentsColumn(commentRowId, value as string);
+      }
+      return value as string;
+    }
+
+    // Regular data column is formatted using the provided function
+    return formatFunction({
+      value,
+      type: typeName,
+      onChartHover,
+      onChartLeave,
+      onChartClick,
+    });
+  }
+
+  let idColumnName: string | undefined;
+
   sortedColumns.forEach((dataColumn) => {
-    // Set smaller width for array columns that contain charts
-    const isArrayColumn =
-      dataColumn.type_name === "ARRAY" || dataColumn.type_name.startsWith("ARRAY<");
-
-    // Set medium width for map columns that contain collapsible content
-    const isMapColumn =
-      dataColumn.type_name === "MAP" || dataColumn.type_name.startsWith("MAP<STRING,");
-
+    const typeName = dataColumn.type_name;
+    const columnName = dataColumn.name;
+    const isIdColumn = typeName === "ID";
+    const isCommentsColumn = typeName === "JSON_COMMENTS";
+    const isMetaColumn = isIdColumn || isCommentsColumn;
+    if (isMetaColumn && tableName === undefined) return;
+    if (isIdColumn) idColumnName = columnName;
     columns.push(
-      columnHelper.accessor(dataColumn.name, {
-        header: dataColumn.name,
-        size: isArrayColumn ? 120 : isMapColumn ? 200 : undefined,
+      columnHelper.accessor(columnName, {
+        id: isIdColumn ? columnName : undefined,
+        header: getHeader(typeName, columnName),
         meta: {
-          type: dataColumn.type_name,
+          type: typeName,
         },
         cell: ({ row }) => {
-          const value = row.getValue(dataColumn.name);
-          if (formatFunction) {
-            return formatFunction(
-              value,
-              dataColumn.type_name,
-              dataColumn.name,
-              onChartHover,
-              onChartLeave,
-              onChartClick,
-            );
-          }
-          return value as string;
+          return getRow(typeName, columnName, row);
         },
+        size: getColumnWidth(typeName),
       }),
     );
   });
@@ -100,25 +159,32 @@ export interface TableMetadata {
   totalPages: number;
 }
 
+export interface UseExperimentDataProps {
+  experimentId: string; // The ID of the experiment to fetch
+  tableName: string; // Name of the table to fetch
+  page: number; // Page to fetch; pages start with 1
+  pageSize: number; // Page to fetch; pages start with 1
+  formatFunction: DataRenderFunction; // Function used to render the column value
+  commentsColumnName?: string; // Name for the comments column
+  onChartHover?: (data: number[], columnName: string) => void;
+  onChartLeave?: () => void;
+  onChartClick?: (data: number[], columnName: string) => void;
+}
+
 /**
  * Hook to fetch experiment data by ID using regular pagination
- * @param experimentId The ID of the experiment to fetch
- * @param tableName Name of the table to fetch
- * @param page Page to fetch; pages start with 1
- * @param pageSize Page size to fetch
- * @param formatFunction Function used to render the column value
- * @returns Query result containing the experiment data
  */
-export const useExperimentData = (
-  experimentId: string,
-  page: number,
-  pageSize: number,
-  tableName: string,
-  formatFunction?: DataRenderFunction,
-  onChartHover?: (data: number[], columnName: string) => void,
-  onChartLeave?: () => void,
-  onChartClick?: (data: number[], columnName: string) => void,
-) => {
+export const useExperimentData = ({
+  experimentId,
+  page,
+  pageSize,
+  tableName,
+  formatFunction,
+  commentsColumnName,
+  onChartHover,
+  onChartLeave,
+  onChartClick,
+}: UseExperimentDataProps) => {
   const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
     queryData: {
       params: { id: experimentId },
@@ -132,18 +198,30 @@ export const useExperimentData = (
   const tableMetadata: TableMetadata | undefined = useMemo(() => {
     return tableData
       ? {
-          columns: createTableColumns(
-            tableData.data,
+          columns: createTableColumns({
+            experimentId,
+            tableName,
+            data: tableData.data,
             formatFunction,
+            commentsColumnName,
             onChartHover,
             onChartLeave,
             onChartClick,
-          ),
+          }),
           totalPages: tableData.totalPages,
           totalRows: tableData.totalRows,
         }
       : undefined;
-  }, [tableData, formatFunction, onChartHover, onChartLeave, onChartClick]);
+  }, [
+    tableData,
+    experimentId,
+    tableName,
+    formatFunction,
+    commentsColumnName,
+    onChartHover,
+    onChartLeave,
+    onChartClick,
+  ]);
   const tableRows: DataRow[] | undefined = tableData?.data?.rows;
 
   return { tableMetadata, tableRows, isLoading, error };
@@ -155,18 +233,20 @@ export interface SampleTable {
   tableRows: DataRow[];
 }
 
+export interface UseExperimentSampleDataProps {
+  experimentId: string; // The ID of the experiment to fetch
+  sampleSize?: number; // Number of sample rows to fetch
+  formatFunction: DataRenderFunction; // Function used to render the column value
+}
+
 /**
  * Hook to fetch experiment sample data by ID
- * @param experimentId The ID of the experiment to fetch
- * @param sampleSize Number of sample rows to fetch
- * @param formatFunction Function used to render the column value
- * @returns Query result containing the experiment sample data
  */
-export const useExperimentSampleData = (
-  experimentId: string,
+export const useExperimentSampleData = ({
+  experimentId,
   sampleSize = 5,
-  formatFunction?: DataRenderFunction,
-) => {
+  formatFunction,
+}: UseExperimentSampleDataProps) => {
   const page = 1;
   const pageSize = sampleSize;
   const tableName = undefined;
@@ -186,7 +266,7 @@ export const useExperimentSampleData = (
       tables.push({
         name: tableData.name,
         tableMetadata: {
-          columns: createTableColumns(tableData.data, formatFunction, undefined, undefined),
+          columns: createTableColumns({ experimentId, data: tableData.data, formatFunction }),
           totalPages: tableData.totalPages,
           totalRows: tableData.totalRows,
         } as TableMetadata,
@@ -194,7 +274,7 @@ export const useExperimentSampleData = (
       });
     });
     return tables;
-  }, [data, formatFunction]);
+  }, [data, experimentId, formatFunction]);
 
   return { sampleTables, isLoading, error };
 };

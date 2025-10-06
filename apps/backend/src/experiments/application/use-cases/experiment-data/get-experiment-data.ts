@@ -224,6 +224,9 @@ export class GetExperimentDataUseCase {
       return failure(AppError.internal(`Failed to get table data: ${dataResult.error.message}`));
     }
 
+    // Uncomment this to test the frontend code for the comments and flags
+    //addFakeCommentsColumns(dataResult.value);
+
     // Create response
     const response: ExperimentDataDto = [
       {
