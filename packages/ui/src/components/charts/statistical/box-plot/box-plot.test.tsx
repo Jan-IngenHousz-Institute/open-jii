@@ -172,7 +172,6 @@ describe("BoxPlot", () => {
         {
           y: [1, 2, 3, 4, 5],
           name: "Test",
-          // No marker property to test undefined branch at lines 335-338
         },
       ];
 
@@ -186,7 +185,6 @@ describe("BoxPlot", () => {
         {
           y: [1, 2, 3, 4, 5],
           name: "Test",
-          // No line property to test undefined branch at lines 350-351
         },
       ];
 
@@ -196,7 +194,7 @@ describe("BoxPlot", () => {
     });
 
     // Additional specific coverage tests for exact uncovered lines
-    it("covers marker.line width fallback (line 101)", () => {
+    it("covers marker.line width fallback", () => {
       const data: BoxSeriesData[] = [
         {
           y: [1, 2, 3, 4, 5],
@@ -216,7 +214,7 @@ describe("BoxPlot", () => {
       expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
     });
 
-    it("covers marker.line outlierwidth fallback (line 103)", () => {
+    it("covers marker.line outlierwidth fallback", () => {
       const data: BoxSeriesData[] = [
         {
           y: [1, 2, 3, 4, 5],
@@ -236,7 +234,7 @@ describe("BoxPlot", () => {
       expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
     });
 
-    it("covers violin box width fallback (line 312)", () => {
+    it("covers violin box width fallback", () => {
       const data: ViolinSeriesData[] = [
         {
           y: [1, 2, 3, 4, 5],
@@ -253,7 +251,7 @@ describe("BoxPlot", () => {
       expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
     });
 
-    it("covers violin marker size fallback (line 335)", () => {
+    it("covers violin marker size fallback", () => {
       const data: ViolinSeriesData[] = [
         {
           y: [1, 2, 3, 4, 5],
@@ -271,7 +269,7 @@ describe("BoxPlot", () => {
       expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
     });
 
-    it("covers violin marker color fallback (line 336)", () => {
+    it("covers violin marker color fallback", () => {
       const data: ViolinSeriesData[] = [
         {
           y: [1, 2, 3, 4, 5],
@@ -290,7 +288,7 @@ describe("BoxPlot", () => {
       expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
     });
 
-    it("covers violin marker opacity fallback (line 337)", () => {
+    it("covers violin marker opacity fallback", () => {
       const data: ViolinSeriesData[] = [
         {
           y: [1, 2, 3, 4, 5],
@@ -308,7 +306,7 @@ describe("BoxPlot", () => {
       expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
     });
 
-    it("covers violin marker symbol fallback (line 338)", () => {
+    it("covers violin marker symbol fallback", () => {
       const data: ViolinSeriesData[] = [
         {
           y: [1, 2, 3, 4, 5],
@@ -326,7 +324,7 @@ describe("BoxPlot", () => {
       expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
     });
 
-    it("covers violin line color fallback (line 350)", () => {
+    it("covers violin line color fallback", () => {
       const data: ViolinSeriesData[] = [
         {
           y: [1, 2, 3, 4, 5],
@@ -343,13 +341,12 @@ describe("BoxPlot", () => {
       expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
     });
 
-    it("covers category fallback for groupBy (line 202)", () => {
+    it("covers category fallback for groupBy", () => {
       const groups = [
         { name: "Group1", values: [1, 2, 3, 4, 5, 6] }, // More values to ensure we iterate through categories
         { name: "Group2", values: [7, 8, 9, 10, 11, 12] },
       ];
 
-      // Provide fewer categories than needed to force the fallback at line 202
       const incompleteGroupBy = ["Category A"]; // Only one category, but we have enough values for multiple
 
       render(<GroupedBoxPlot groups={groups} groupBy={incompleteGroupBy} />);
@@ -357,7 +354,7 @@ describe("BoxPlot", () => {
       expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
     });
 
-    it("covers category fallback with falsy values (line 202)", () => {
+    it("covers category fallback with falsy values", () => {
       // This test will require mocking or manipulating the internal behavior
       // Since TypeScript prevents us from passing falsy values in groupBy array,
       // we need to test the edge case where groupByArr[i] could be falsy
@@ -372,7 +369,7 @@ describe("BoxPlot", () => {
       expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
     });
 
-    it("covers violin line width fallback (line 351)", () => {
+    it("covers violin line width fallback", () => {
       const data: ViolinSeriesData[] = [
         {
           y: [1, 2, 3, 4, 5],

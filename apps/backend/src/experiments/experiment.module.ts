@@ -26,6 +26,11 @@ import { RemoveExperimentMemberUseCase } from "./application/use-cases/experimen
 import { AddExperimentProtocolsUseCase } from "./application/use-cases/experiment-protocols/add-experiment-protocols";
 import { ListExperimentProtocolsUseCase } from "./application/use-cases/experiment-protocols/list-experiment-protocols";
 import { RemoveExperimentProtocolUseCase } from "./application/use-cases/experiment-protocols/remove-experiment-protocol";
+import { CreateExperimentVisualizationUseCase } from "./application/use-cases/experiment-visualizations/create-experiment-visualization";
+import { DeleteExperimentVisualizationUseCase } from "./application/use-cases/experiment-visualizations/delete-experiment-visualization";
+import { GetExperimentVisualizationUseCase } from "./application/use-cases/experiment-visualizations/get-experiment-visualization";
+import { ListExperimentVisualizationsUseCase } from "./application/use-cases/experiment-visualizations/list-experiment-visualizations";
+import { UpdateExperimentVisualizationUseCase } from "./application/use-cases/experiment-visualizations/update-experiment-visualization";
 import { CreateFlowUseCase } from "./application/use-cases/flows/create-flow";
 import { GetFlowUseCase } from "./application/use-cases/flows/get-flow";
 import { UpdateFlowUseCase } from "./application/use-cases/flows/update-flow";
@@ -41,6 +46,7 @@ import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
 import { ExperimentProtocolRepository } from "./core/repositories/experiment-protocol.repository";
+import { ExperimentVisualizationRepository } from "./core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
 import { FlowRepository } from "./core/repositories/flow.repository";
 // Controllers
@@ -50,6 +56,7 @@ import { ExperimentFlowsController } from "./presentation/experiment-flows.contr
 import { ExperimentLocationsController } from "./presentation/experiment-locations.controller";
 import { ExperimentMembersController } from "./presentation/experiment-members.controller";
 import { ExperimentProtocolsController } from "./presentation/experiment-protocols.controller";
+import { ExperimentVisualizationsController } from "./presentation/experiment-visualizations.controller";
 import { ExperimentWebhookController } from "./presentation/experiment-webhook.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
 
@@ -61,6 +68,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ExperimentFlowsController,
     ExperimentMembersController,
     ExperimentProtocolsController,
+    ExperimentVisualizationsController,
     ExperimentWebhookController,
     ExperimentCommentsController,
     ExperimentLocationsController,
@@ -80,6 +88,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ExperimentRepository,
     ExperimentMemberRepository,
     ExperimentProtocolRepository,
+    ExperimentVisualizationRepository,
     FlowRepository,
     LocationRepository,
 
@@ -120,6 +129,13 @@ import { ExperimentController } from "./presentation/experiment.controller";
     AddExperimentProtocolsUseCase,
     ListExperimentProtocolsUseCase,
     RemoveExperimentProtocolUseCase,
+
+    // Experiment visualization use cases
+    ListExperimentVisualizationsUseCase,
+    CreateExperimentVisualizationUseCase,
+    GetExperimentVisualizationUseCase,
+    UpdateExperimentVisualizationUseCase,
+    DeleteExperimentVisualizationUseCase,
 
     // Flow use cases
     GetFlowUseCase,
