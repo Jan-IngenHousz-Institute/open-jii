@@ -14,14 +14,14 @@ async function getBrowserPackage(): Promise<string | undefined> {
     }
 
     Toast.show({
-      text1: "Chrome is browser is recommended for safer login flow",
+      text1: "Chrome browser is recommended for safer login flow",
       type: "error",
     });
     await delay(3000);
     return preferredBrowserPackage;
   } catch {
     Toast.show({
-      text1: "Chrome is browser is recommended for safer login flow",
+      text1: "Chrome browser is recommended for safer login flow",
       type: "error",
     });
     await delay(3000);
