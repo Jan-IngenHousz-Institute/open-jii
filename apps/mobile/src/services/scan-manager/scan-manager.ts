@@ -1,5 +1,6 @@
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import RNBluetoothClassic from "react-native-bluetooth-classic";
+import { useToast } from "~/context/toast-context";
 import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
 import { useMacros } from "~/hooks/use-macros";
 import { useProtocols } from "~/hooks/use-protocols";
@@ -78,6 +79,7 @@ export function useScanner() {
   const { session } = useSessionStore();
   const { protocols } = useProtocols();
   const { setBatteryLevel } = useDeviceConnectionStore();
+  const { showToast } = useToast();
 
   const userId = session?.data.user.id;
 
@@ -101,7 +103,9 @@ export function useScanner() {
       throw new Error("Invalid result");
     }
     console.log("got result, processing...");
-    return processScan(result, userId, macro?.filename, macro?.code);
+    return processScan(result, userId, macro?.filename, macro?.code, (errorMessage) =>
+      showToast(errorMessage, "error"),
+    );
   });
 
   return {

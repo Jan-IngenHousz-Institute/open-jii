@@ -383,6 +383,9 @@ importers:
       expo-asset:
         specifier: ~11.1.7
         version: 11.1.7(expo@53.0.23(@babel/core@7.27.1)(@expo/metro-runtime@5.0.5(react-native@0.79.5(@babel/core@7.27.1)(@types/react@19.0.10)(react@19.0.0)))(graphql@16.8.1)(react-native@0.79.5(@babel/core@7.27.1)(@types/react@19.0.10)(react@19.0.0))(react@19.0.0))(react-native@0.79.5(@babel/core@7.27.1)(@types/react@19.0.10)(react@19.0.0))(react@19.0.0)
+      expo-file-system:
+        specifier: ~18.1.11
+        version: 18.1.11(expo@53.0.23(@babel/core@7.27.1)(@expo/metro-runtime@5.0.5(react-native@0.79.5(@babel/core@7.27.1)(@types/react@19.0.10)(react@19.0.0)))(graphql@16.8.1)(react-native@0.79.5(@babel/core@7.27.1)(@types/react@19.0.10)(react@19.0.0))(react@19.0.0))(react-native@0.79.5(@babel/core@7.27.1)(@types/react@19.0.10)(react@19.0.0))
       expo-font:
         specifier: ~13.3.2
         version: 13.3.2(expo@53.0.23(@babel/core@7.27.1)(@expo/metro-runtime@5.0.5(react-native@0.79.5(@babel/core@7.27.1)(@types/react@19.0.10)(react@19.0.0)))(graphql@16.8.1)(react-native@0.79.5(@babel/core@7.27.1)(@types/react@19.0.10)(react@19.0.0))(react@19.0.0))(react@19.0.0)

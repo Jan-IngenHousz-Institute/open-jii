@@ -1,4 +1,5 @@
 import { Asset } from "expo-asset";
+import * as FileSystem from "expo-file-system";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
@@ -6,9 +7,9 @@ import mathLibResource from "./math.lib.js.txt";
 
 async function loadMathLib() {
   const asset = Asset.fromModule(mathLibResource);
-  await asset.downloadAsync(); // ensures it’s available
-  const response = await fetch(asset.uri);
-  return await response.text();
+  await asset.downloadAsync();
+  const path = asset.localUri ?? asset.uri;
+  return await FileSystem.readAsStringAsync(path);
 }
 
 let mathLibSource = "";
@@ -22,6 +23,7 @@ export function processScan(
   userId?: string,
   macroFilename?: string,
   macroCodeBase64?: string,
+  onError?: (message: string) => void,
 ) {
   if (!("sample" in result)) {
     return result;
@@ -43,8 +45,9 @@ export function processScan(
       console.log("executing macro", macroFilename);
       output = samples.map((sample) => executeMacro(code, sample));
     }
-  } catch (e) {
+  } catch (e: any) {
     console.log("error executing local macro", e);
+    onError?.(e.message);
   }
 
   for (const sample of samples) {
