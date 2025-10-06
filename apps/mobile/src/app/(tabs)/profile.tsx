@@ -185,7 +185,7 @@ export default function ProfileScreen() {
           },
         ]}
       >
-        MultispeQ App v{packageJson.version}
+        OpenJII v{packageJson.version}
       </Text>
 
       <Toast

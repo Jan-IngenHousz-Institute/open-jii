@@ -5,7 +5,9 @@ import { getLoginArgs } from "~/api/get-login-args";
 export async function login() {
   const { expectedRedirectUrl, loginUrl } = getLoginArgs();
 
-  const result = await openAuthSessionAsync(loginUrl, expectedRedirectUrl);
+  const result = await openAuthSessionAsync(loginUrl, expectedRedirectUrl, {
+    browserPackage: "com.android.chrome",
+  });
 
   if (result.type !== "success") {
     return undefined;
