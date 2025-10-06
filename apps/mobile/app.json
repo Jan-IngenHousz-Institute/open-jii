@@ -3,7 +3,7 @@
     "scheme": "photosynq",
     "name": "OpenJII",
     "slug": "photosynq",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -19,6 +19,7 @@
       "appleTeamId": "7Q2WX38PT2"
     },
     "android": {
+      "versionCode": 5,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#D3D3D3"
