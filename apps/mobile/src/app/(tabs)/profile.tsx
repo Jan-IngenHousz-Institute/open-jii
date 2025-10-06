@@ -1,3 +1,5 @@
+import "expo-application";
+import * as Application from "expo-application";
 import { useRouter } from "expo-router";
 import { User, ExternalLink, LogOut } from "lucide-react-native";
 import React, { useState } from "react";
@@ -10,8 +12,6 @@ import { useSessionStore } from "~/hooks/use-session-store";
 import { useTheme } from "~/hooks/use-theme";
 import { assertEnvVariables } from "~/utils/assert";
 import { formatIsoDateString } from "~/utils/format-iso-date-string";
-
-import packageJson from "../../../package.json";
 
 const { NEXT_AUTH_URI } = assertEnvVariables({ NEXT_AUTH_URI: process.env.NEXT_AUTH_URI });
 
@@ -185,7 +185,7 @@ export default function ProfileScreen() {
           },
         ]}
       >
-        OpenJII v{packageJson.version}
+        OpenJII v{Application.nativeApplicationVersion}
       </Text>
 
       <Toast
