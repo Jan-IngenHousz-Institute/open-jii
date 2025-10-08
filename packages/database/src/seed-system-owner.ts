@@ -12,10 +12,7 @@ export async function seedSystemOwner(): Promise<void> {
 
     await db.insert(users).values({
       id: SYSTEM_OWNER_ID,
-      name: "System",
-      email: "system@openjii.internal",
-      registered: true,
-      emailVerified: new Date(),
+      name: "System Owner",
     });
 
     await db.insert(profiles).values({
