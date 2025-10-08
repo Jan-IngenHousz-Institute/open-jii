@@ -46,7 +46,7 @@ export function ExperimentDataTableChartCell({
   const parsedData = useMemo(() => {
     const result = Array.isArray(data) ? data : parseArrayData(String(data));
     return result;
-  }, []);
+  }, [data]);
 
   // Create SVG path for the line chart
   const svgPath = useMemo(() => {
