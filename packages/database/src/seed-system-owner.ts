@@ -23,7 +23,7 @@ export async function seedSystemOwner(): Promise<void> {
       firstName: "System",
       lastName: "Owner",
       bio: "System account for managing orphaned content",
-      activated: false,
+      activated: false, // Keep inactive by default so the account appears as "Unknown User" on the platform
     });
 
     console.log("System owner account created successfully");
