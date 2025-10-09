@@ -128,6 +128,57 @@ describe("ExperimentMemberRepository", () => {
       expect(members).toEqual([]);
     });
   });
+
+  describe("anonymization", () => {
+    it("should return real name and email for activated users", async () => {
+      const activeUserId = await testApp.createTestUser({
+        name: "Active User",
+        email: "active@example.com",
+        activated: true,
+      });
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Anonymization Test Active",
+        userId: testUserId,
+      });
+
+      await repository.addMembers(experiment.id, [{ userId: activeUserId, role: "member" }]);
+
+      const result = await repository.getMembers(experiment.id);
+      assertSuccess(result);
+
+      const member = result.value.find((m) => m.user.id === activeUserId);
+      expect(member).toBeDefined();
+      expect(member?.user.firstName).toBe("Active");
+      expect(member?.user.lastName).toBe("User");
+      expect(member?.user.email).toBe("active@example.com");
+    });
+
+    it("should anonymize name and email for deactivated users", async () => {
+      const inactiveUserId = await testApp.createTestUser({
+        name: "Hidden User",
+        email: "hidden@example.com",
+        activated: false,
+      });
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Anonymization Test Inactive",
+        userId: testUserId,
+      });
+
+      await repository.addMembers(experiment.id, [{ userId: inactiveUserId, role: "member" }]);
+
+      const result = await repository.getMembers(experiment.id);
+      assertSuccess(result);
+
+      const member = result.value.find((m) => m.user.id === inactiveUserId);
+      expect(member).toBeDefined();
+      expect(member?.user.firstName).toBe("Unknown");
+      expect(member?.user.lastName).toBe("User");
+      expect(member?.user.email).toBeNull();
+    });
+  });
+
   describe("addMembers", () => {
     it("should add multiple members to an experiment", async () => {
       // Create experiment
