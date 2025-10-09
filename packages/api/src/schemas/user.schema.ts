@@ -40,6 +40,7 @@ export const zCreateUserProfileBody = z.object({
   lastName: z.string().min(2).describe("Last name"),
   bio: z.string().optional().describe("Bio"),
   organization: z.string().trim().optional().describe("Organization"),
+  activated: z.boolean().optional().describe("Whether the profile is active or deactivated"),
 });
 
 export const zCreateUserProfileResponse = z.object({});
@@ -50,6 +51,7 @@ export const zUserProfile = z.object({
   lastName: z.string(),
   bio: z.string().nullable(),
   organization: z.string().optional(),
+  activated: z.boolean().nullable(),
   email: z.string().email().nullable(),
 });
 

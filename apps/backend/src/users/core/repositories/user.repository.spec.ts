@@ -1,6 +1,15 @@
 import { faker } from "@faker-js/faker";
 
-import { users, organizations, profiles, eq } from "@repo/database";
+import {
+  users,
+  organizations,
+  profiles,
+  accounts,
+  sessions,
+  authenticators,
+  experimentMembers,
+  eq,
+} from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -309,7 +318,7 @@ describe("UserRepository", () => {
   });
 
   describe("delete", () => {
-    it("should delete a user", async () => {
+    it("should soft-delete a user and scrub PII", async () => {
       // Arrange
       const userToDeleteId = await testApp.createTestUser({
         name: "User to Delete",
@@ -319,16 +328,54 @@ describe("UserRepository", () => {
       // Act
       const result = await repository.delete(userToDeleteId);
 
-      // Assert
+      // Assert result
       expect(result.isSuccess()).toBe(true);
 
-      // Verify user is deleted
-      const dbResult = await testApp.database
+      // Verify user row still exists but PII is scrubbed and deletedAt is set
+      const userRows = await testApp.database
         .select()
         .from(users)
         .where(eq(users.id, userToDeleteId));
+      expect(userRows.length).toBe(1);
+      const userRow = userRows[0];
+      expect(userRow.email).toBeNull();
+      expect(userRow.image).toBeNull();
+      expect(userRow.emailVerified).toBeNull();
+      expect(userRow.name).toMatch(/^deleted-user-/);
+      expect(userRow.deletedAt).not.toBeNull();
 
-      expect(dbResult.length).toBe(0);
+      // Verify related PII rows are removed
+      const accountRows = await testApp.database
+        .select()
+        .from(accounts)
+        .where(eq(accounts.userId, userToDeleteId));
+      expect(accountRows.length).toBe(0);
+
+      const sessionRows = await testApp.database
+        .select()
+        .from(sessions)
+        .where(eq(sessions.userId, userToDeleteId));
+      expect(sessionRows.length).toBe(0);
+
+      const authRows = await testApp.database
+        .select()
+        .from(authenticators)
+        .where(eq(authenticators.userId, userToDeleteId));
+      expect(authRows.length).toBe(0);
+
+      // Profile should be deleted
+      const profs = await testApp.database
+        .select()
+        .from(profiles)
+        .where(eq(profiles.userId, userToDeleteId));
+      expect(profs.length).toBe(0);
+
+      // Experiment memberships for this user should be deleted
+      const memberships = await testApp.database
+        .select()
+        .from(experimentMembers)
+        .where(eq(experimentMembers.userId, userToDeleteId));
+      expect(memberships.length).toBe(0);
     });
   });
 

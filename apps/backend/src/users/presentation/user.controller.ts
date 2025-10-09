@@ -10,6 +10,7 @@ import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { handleFailure } from "../../common/utils/fp-utils";
 import { CreateUserProfileUseCase } from "../application/use-cases/create-user-profile/create-user-profile";
+import { DeleteUserUseCase } from "../application/use-cases/delete-user/delete-user";
 import { GetUserProfileUseCase } from "../application/use-cases/get-user-profile/get-user-profile";
 import { GetUserUseCase } from "../application/use-cases/get-user/get-user";
 import { SearchUsersUseCase } from "../application/use-cases/search-users/search-users";
@@ -24,7 +25,25 @@ export class UserController {
     private readonly searchUsersUseCase: SearchUsersUseCase,
     private readonly getUserUseCase: GetUserUseCase,
     private readonly getUserProfileUseCase: GetUserProfileUseCase,
+    private readonly deleteUserUseCase: DeleteUserUseCase,
   ) {}
+
+  @TsRestHandler(contract.users.deleteUser)
+  deleteUser() {
+    return tsRestHandler(contract.users.deleteUser, async ({ params }) => {
+      const result = await this.deleteUserUseCase.execute(params.id);
+
+      if (result.isSuccess()) {
+        this.logger.log(`Deleted user ${params.id}`);
+        return {
+          status: StatusCodes.NO_CONTENT,
+          body: null,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
 
   @TsRestHandler(contract.users.searchUsers)
   searchUsers(@CurrentUser() user: User) {

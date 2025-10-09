@@ -153,6 +153,7 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
                 lastName: member.user.lastName,
                 email: member.user.email,
                 bio: null,
+                activated: null,
                 organization: undefined,
               },
             }))}
