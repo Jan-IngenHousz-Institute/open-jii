@@ -1,6 +1,5 @@
 "use client";
 
-import { config } from "process";
 import React from "react";
 
 import type { ExperimentVisualization } from "@repo/api";
