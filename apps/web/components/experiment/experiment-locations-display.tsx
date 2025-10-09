@@ -44,17 +44,17 @@ export function ExperimentLocationsDisplay({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MapPinIcon className="h-5 w-5" />
-            {t("experiments.details.location.locationsTitle")}
+            {t("details.locations.locationsTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="py-8 text-center">
             <MapPinIcon className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">
-              {t("experiments.details.location.noLocations")}
+              {t("details.locations.noLocations")}
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              {t("experiments.details.location.noLocationsDescription")}
+              {t("details.locations.noLocationsDescription")}
             </p>
           </div>
         </CardContent>
