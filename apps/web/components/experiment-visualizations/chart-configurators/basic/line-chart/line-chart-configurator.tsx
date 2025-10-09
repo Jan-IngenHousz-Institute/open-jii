@@ -5,7 +5,6 @@ import type { UseFormReturn } from "react-hook-form";
 import { useFieldArray } from "react-hook-form";
 import type { SampleTable } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
-import type { DataColumn } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
   Badge,
@@ -70,24 +69,6 @@ export default function LineChartConfigurator({
     });
   };
 
-  const handleXAxisColumnChange = (value: string) => {
-    onColumnSelect("x", value);
-    // Auto-fill X-axis title if it's empty
-    const currentXAxisTitle = form.getValues("config.xAxisTitle");
-    if (!currentXAxisTitle || currentXAxisTitle.trim() === "") {
-      form.setValue("config.xAxisTitle", value);
-    }
-  };
-
-  const handleYAxisColumnChange = (value: string, seriesIndex: number) => {
-    onColumnSelect(`y-${seriesIndex}`, value);
-    // Auto-fill Y-axis title if it's empty
-    const currentYAxisTitle = form.getValues("config.yAxisTitle");
-    if (!currentYAxisTitle || currentYAxisTitle.trim() === "") {
-      form.setValue("config.yAxisTitle", value);
-    }
-  };
-
   return (
     <div className="space-y-8">
       {/* Data Configuration */}
@@ -103,174 +84,14 @@ export default function LineChartConfigurator({
           <XAxisConfiguration form={form} table={table} onColumnSelect={onColumnSelect} />
 
           {/* Y-Axes Series Configuration */}
-          <div className="rounded-lg border bg-white p-4">
-            <div className="mb-4 flex items-center justify-between">
-              <h4 className="text-muted-foreground text-sm font-medium uppercase tracking-wide">
-                {t("yAxesSeries")}
-              </h4>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addYAxisSeries}
-                className="h-8 px-3"
-              >
-                <Plus className="mr-1.5 h-3.5 w-3.5" />
-                {t("configuration.addSeries")}
-              </Button>
-            </div>
-
-            <YAxisConfiguration
-              form={form}
-              table={table}
-              onColumnSelect={onColumnSelect}
-              yAxisDataSources={yAxesFields}
-              addYAxisSeries={addYAxisSeries}
-              removeDataSource={removeDataSource}
-            />
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                      {/* Data Column */}
-                      <FormField
-                        control={form.control}
-                        name={`dataConfig.dataSources.${dataSourceIndex}.columnName`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium">{t("dataColumn")}</FormLabel>
-                            <Select
-                              value={field.value}
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                handleYAxisColumnChange(value, seriesIndex);
-                              }}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="h-10 bg-white">
-                                  <SelectValue placeholder={t("configuration.selectColumn")} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {table.columns.map((column: DataColumn) => (
-                                  <SelectItem key={column.name} value={column.name}>
-                                    <div className="flex items-center gap-2">
-                                      <span>{column.name}</span>
-                                      <Badge variant="secondary" className="text-xs">
-                                        {column.type_name}
-                                      </Badge>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Series Name */}
-                      <FormField
-                        control={form.control}
-                        name={`dataConfig.dataSources.${dataSourceIndex}.alias` as const}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium">{t("seriesName")}</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder={t("enterSeriesName")}
-                                className="h-10 bg-white"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <Separator className="my-4" />
-
-                    {/* Series Styling */}
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      <FormField
-                        control={form.control}
-                        name="config.color"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2 text-sm font-medium">
-                              <Palette className="h-3.5 w-3.5" />
-                              {t("chartOptions.lineColor")}
-                            </FormLabel>
-                            <FormControl>
-                              <div className="flex items-center gap-2">
-                                <Input
-                                  type="color"
-                                  className="h-10 w-12 border-2 bg-white p-1"
-                                  {...field}
-                                />
-                                <Input
-                                  type="text"
-                                  className="h-10 flex-1 bg-white font-mono text-sm"
-                                  placeholder="#000000"
-                                  {...field}
-                                />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="config.yAxisType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium">
-                              {t("configuration.axisType")}
-                            </FormLabel>
-                            <Select value={field.value} onValueChange={field.onChange}>
-                              <FormControl>
-                                <SelectTrigger className="h-10 bg-white">
-                                  <SelectValue />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="linear">{t("axisTypes.linear")}</SelectItem>
-                                <SelectItem value="log">{t("axisTypes.log")}</SelectItem>
-                                <SelectItem value="date">{t("axisTypes.date")}</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* Y-axis Title - only show for first axis */}
-                    {seriesIndex === 0 && (
-                      <FormField
-                        control={form.control}
-                        name="config.yAxisTitle"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium">{t("yAxisTitle")}</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder={t("enterAxisTitle")}
-                                className="h-10 bg-white"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
+          <YAxisConfiguration
+            form={form}
+            table={table}
+            onColumnSelect={onColumnSelect}
+            yAxisDataSources={yAxesFields}
+            addYAxisSeries={addYAxisSeries}
+            removeDataSource={removeDataSource}
+          />
         </CardContent>
       </Card>
 
