@@ -142,8 +142,9 @@ export class UserRepository {
     await tx.delete(authenticators).where(eq(authenticators.userId, userId));
 
     // 2. Handle experiment memberships:
-    // - Delete member-only memberships
-    // - For admin memberships, transfer admin role to system owner first
+    // - If user is the only admin of an experiment -> transfer admin to system owner
+    // - Otherwise skip (other admins remain)
+    // - Finally delete all memberships belonging to this user
 
     // Find all admin memberships for this user
     const adminMemberships = await tx
@@ -151,16 +152,31 @@ export class UserRepository {
       .from(experimentMembers)
       .where(and(eq(experimentMembers.userId, userId), eq(experimentMembers.role, "admin")));
 
-    // For each admin membership, add system owner as admin
     for (const membership of adminMemberships) {
-      await tx.insert(experimentMembers).values({
-        experimentId: membership.experimentId,
-        userId: SYSTEM_OWNER_ID,
-        role: "admin",
-      });
+      // Count how many admins exist for this experiment
+      const adminCountResult = await tx
+        .select({ count: sql<number>`count(*)` })
+        .from(experimentMembers)
+        .where(
+          and(
+            eq(experimentMembers.experimentId, membership.experimentId),
+            eq(experimentMembers.role, "admin"),
+          ),
+        );
+
+      const count = Number(adminCountResult[0]?.count ?? 0);
+
+      // If the user is the only admin, add the system owner as a new admin
+      if (count === 1) {
+        await tx.insert(experimentMembers).values({
+          experimentId: membership.experimentId,
+          userId: SYSTEM_OWNER_ID,
+          role: "admin",
+        });
+      }
     }
 
-    // Now delete all memberships for the user (both member and admin roles)
+    // Now delete all memberships for the user (member + admin roles)
     await tx.delete(experimentMembers).where(eq(experimentMembers.userId, userId));
 
     // 3. Delete profile row

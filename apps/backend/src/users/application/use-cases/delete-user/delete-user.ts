@@ -3,6 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { seedSystemOwner } from "@repo/database";
 
 import { success, Result, failure, AppError } from "../../../../common/utils/fp-utils";
+import { UserDto } from "../../../core/models/user.model";
 import { UserRepository } from "../../../core/repositories/user.repository";
 
 @Injectable()
@@ -17,7 +18,7 @@ export class DeleteUserUseCase {
     // Check if user exists
     const userResult = await this.userRepository.findOne(id);
 
-    return userResult.chain(async (user) => {
+    return userResult.chain(async (user: UserDto | null) => {
       if (!user) {
         this.logger.warn(`Attempt to delete non-existent user with ID ${id}`);
         return failure(AppError.notFound(`User with ID ${id} not found`));
