@@ -1128,4 +1128,17 @@ describe("Code to determine error line numbers", () => {
       });
     }
   });
+
+  it("should validate protocol with inc_ri", () => {
+    const envProtocol = [
+      {
+        inc_ri: 1,
+        environmental: [["light_intensity", 0]],
+      },
+    ];
+
+    const result = validateProtocolJson(envProtocol);
+
+    expect(result.success).toBe(true);
+  });
 });
