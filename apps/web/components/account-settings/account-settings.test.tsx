@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { CreateUserProfileBody } from "@repo/api";
 import type { Session } from "@repo/auth/types";
 
-import { AccountSettings } from "../account-settings";
+import { AccountSettings } from "./account-settings";
 
 globalThis.React = React;
 
@@ -52,7 +52,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ back: routerBackSpy }),
 }));
 
-vi.mock("../danger-zone-card", () => ({
+vi.mock("./danger-zone-card", () => ({
   DangerZoneCard: () => <div data-testid="danger-zone-card" />,
 }));
 
@@ -104,15 +104,15 @@ vi.mock("@repo/ui/components", () => {
 });
 
 // Mock ErrorDisplay to avoid depending on inner layout
-vi.mock("../../error-display", () => ({
+vi.mock("../error-display", () => ({
   ErrorDisplay: ({ title }: { title: string }) => <div data-testid="error-display">{title}</div>,
 }));
 
-vi.mock("../profile-picture-card", () => ({
+vi.mock("./profile-picture-card", () => ({
   ProfilePictureCard: () => <div data-testid="profile-picture-card" />,
 }));
 
-vi.mock("../profile-card", () => ({
+vi.mock("./profile-card", () => ({
   ProfileCard: ({ form }: { form: MinimalForm }) => {
     const values = form.getValues();
     return (
