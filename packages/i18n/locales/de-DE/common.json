@@ -329,7 +329,78 @@
     "next": "Weiter",
     "table": "Tabelle",
     "details": "Tabellendetails anzeigen",
-    "download": "Tabelle herunterladen"
+    "download": "Tabelle herunterladen",
+    "row": "Zeile",
+    "rows": "Zeilen"
+  },
+  "experimentDataAnnotations": {
+    "title": "Kommentare & Markierungen",
+    "columnHeader": "Kommentare & Markierungen",
+    "titleComments": "Kommentare",
+    "titleFlags": "Markierungen",
+    "flagType": {
+      "needs_review": "Überprüfung erforderlich",
+      "outlier": "Ausreißer"
+    },
+    "commentDialog": {
+      "title": "Kommentar hinzufügen",
+      "description": "Fügen Sie einen Kommentar zur Messung hinzu",
+      "textLabel": "Kommentar",
+      "textPlaceholder": "Geben Sie hier Ihren Kommentar ein...",
+      "add": "Kommentar hinzufügen"
+    },
+    "commentDialogBulk": {
+      "title": "Kommentar für mehrere hinzufügen",
+      "description": "Fügen Sie denselben Kommentar zu {{count}} ausgewählten Messungen hinzu",
+      "textLabel": "Kommentar",
+      "textPlaceholder": "Geben Sie hier Ihren Kommentar ein...",
+      "add": "Zu {{count}} Zeile(n) hinzufügen"
+    },
+    "flagDialog": {
+      "title": "Markierung hinzufügen",
+      "description": "Markieren Sie die Messung",
+      "flagLabel": "Markierungstyp",
+      "flagPlaceholder": "Markierungstyp auswählen",
+      "textLabel": "Grund",
+      "textPlaceholder": "Erklären Sie, warum diese Messung markiert wird...",
+      "add": "Markierung hinzufügen"
+    },
+    "flagDialogBulk": {
+      "title": "Markierung für mehrere hinzufügen",
+      "description": "{{count}} ausgewählte Messungen markieren",
+      "flagLabel": "Markierungstyp",
+      "flagPlaceholder": "Markierungstyp auswählen",
+      "textLabel": "Grund",
+      "textPlaceholder": "Erklären Sie, warum diese Messungen markiert werden...",
+      "add": "{{count}} Zeile(n) markieren"
+    },
+    "commentDeleteDialog": {
+      "title": "Sind Sie absolut sicher?",
+      "description": "Diese Aktion kann nicht rückgängig gemacht werden. Dadurch werden alle Kommentare aus den ausgewählten {{count}} Zeile(n) dauerhaft gelöscht.",
+      "delete": "Löschen"
+    },
+    "flagDeleteDialog": {
+      "title": "Sind Sie absolut sicher?",
+      "description": "Diese Aktion kann nicht rückgängig gemacht werden. Dadurch werden alle Markierungen aus den ausgewählten {{count}} Zeile(n) dauerhaft gelöscht.",
+      "delete": "Löschen"
+    },
+    "noAnnotations": "Noch keine Kommentare oder Markierungen.",
+    "noAnnotationsDescription": "Verwenden Sie die obigen Schaltflächen, um einen hinzuzufügen.",
+    "updated": "Kommentare und Markierungen aktualisiert",
+    "deleted": {
+      "comment": "Kommentar gelöscht",
+      "comments": "Kommentare gelöscht",
+      "flag": "Markierung gelöscht",
+      "flags": "Markierungen gelöscht"
+    },
+    "bulkActions": {
+      "actions": "Aktionen",
+      "selected": "ausgewählt",
+      "addComment": "Kommentar hinzufügen",
+      "addFlag": "Markierung hinzufügen",
+      "removeAllComments": "Alle Kommentare entfernen",
+      "removeAllFlags": "Alle Markierungen entfernen"
+    }
   },
   "landingPage": {
     "latestArticles": "Neueste artikel"
