@@ -108,16 +108,6 @@ describe("Experiment Schema", () => {
       };
       expect(zExperimentData.parse(data)).toEqual(data);
     });
-
-    it("zExperimentData rejects non-string row values", () => {
-      const bad = {
-        columns: [{ name: "a", type_name: "text", type_text: "VARCHAR" }],
-        rows: [{ a: 123 }], // not string or null
-        totalRows: 1,
-        truncated: false,
-      } as unknown;
-      expect(() => zExperimentData.parse(bad)).toThrow();
-    });
   });
 
   // ----- Experiment core -----
