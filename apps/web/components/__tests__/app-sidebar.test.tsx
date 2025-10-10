@@ -85,13 +85,13 @@ vi.mock("../nav-items", () => ({
       url: string;
       icon: React.ComponentType;
       isActive?: boolean;
-      items: { title: string; url: string }[];
     }[];
   }) => (
     <div data-testid="nav-items">
       {items.map((item, i) => (
         <div key={i} data-item-title={item.title}>
-          <item.icon data-testid="item-icon" />
+          <item.icon data-testid={`item-icon-${item.title.toLowerCase()}`} />
+          <span>{item.title}</span>
         </div>
       ))}
     </div>
@@ -127,6 +127,7 @@ vi.mock("lucide-react", () => ({
   FileSliders: () => <div data-testid="icon-file-sliders" />,
   RadioReceiver: () => <div data-testid="icon-radio-receiver" />,
   Code: () => <div data-testid="icon-code" />,
+  LogIn: () => <div data-testid="icon-login" />,
 }));
 
 describe("<AppSidebar />", () => {
@@ -153,7 +154,7 @@ describe("<AppSidebar />", () => {
         url: "/platform/experiments",
         icon: "Microscope",
         isActive: true,
-        items: [{ title: "Experiment 1", url: "/platform/experiments/1" }],
+        items: [],
       },
     ],
     navHardware: [
@@ -161,7 +162,7 @@ describe("<AppSidebar />", () => {
         title: "Hardware",
         url: "/platform/hardware",
         icon: "RadioReceiver",
-        items: [{ title: "Device 1", url: "/platform/hardware/1" }],
+        items: [],
       },
     ],
     navMacros: [
@@ -169,7 +170,7 @@ describe("<AppSidebar />", () => {
         title: "Macros",
         url: "/platform/macros",
         icon: "Code",
-        items: [{ title: "Macro 1", url: "/platform/macros/1" }],
+        items: [],
       },
     ],
   };
@@ -212,9 +213,8 @@ describe("<AppSidebar />", () => {
     );
 
     const image = screen.getByTestId("next-image");
-    expect(image).toHaveAttribute("data-src", "/logo.png");
+    expect(image).toHaveAttribute("data-src", "/logo-platform.png");
     expect(image).toHaveAttribute("data-alt", "Open JII Logo");
-    expect(screen.getByText("Open JII")).toBeInTheDocument();
   });
 
   it("renders NavUser component when user is provided", () => {
@@ -235,7 +235,7 @@ describe("<AppSidebar />", () => {
     expect(navUser).toHaveAttribute("data-user-avatar", "/test-avatar.jpg");
   });
 
-  it("renders sign-in link when user is not provided", () => {
+  it("renders sign-in link and icon when user is not provided", () => {
     render(
       <AppSidebar
         user={null}
@@ -246,10 +246,11 @@ describe("<AppSidebar />", () => {
     );
 
     expect(screen.getByText("Sign In")).toBeInTheDocument();
+    expect(screen.getByTestId("icon-login")).toBeInTheDocument();
     expect(screen.queryByTestId("nav-user")).not.toBeInTheDocument();
   });
 
-  it("processes icons correctly", () => {
+  it("renders mapped icons for navigation items", () => {
     render(
       <AppSidebar
         user={mockUser}
@@ -259,9 +260,22 @@ describe("<AppSidebar />", () => {
       />,
     );
 
-    // Check that icon mapping worked
+    expect(screen.getByTestId("icon-home")).toBeInTheDocument();
     expect(screen.getByTestId("icon-microscope")).toBeInTheDocument();
     expect(screen.getByTestId("icon-radio-receiver")).toBeInTheDocument();
     expect(screen.getByTestId("icon-code")).toBeInTheDocument();
+  });
+
+  it("renders translated sign-in text", () => {
+    render(
+      <AppSidebar
+        user={null}
+        locale="en-US"
+        navigationData={mockNavigationData}
+        translations={{ ...mockTranslations, signIn: "Log In" }}
+      />,
+    );
+
+    expect(screen.getByText("Log In")).toBeInTheDocument();
   });
 });
