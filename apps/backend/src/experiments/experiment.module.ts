@@ -7,6 +7,8 @@ import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
 import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
+import { DeltaAdapter } from "../common/modules/delta/delta.adapter";
+import { DeltaModule } from "../common/modules/delta/delta.module";
 import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { EmailModule } from "../common/modules/email/services/email.module";
 import { UserModule } from "../users/user.module";
@@ -54,6 +56,7 @@ import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 // Ports
 import { AWS_PORT } from "./core/ports/aws.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
+import { DELTA_PORT } from "./core/ports/delta.port";
 import { EMAIL_PORT } from "./core/ports/email.port";
 // Repositories
 import { ExperimentDataAnnotationsRepository } from "./core/repositories/experiment-data-annotations.repository";
@@ -80,7 +83,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
 import { ProjectTransferRequestsController } from "./presentation/project-transfer-requests.controller";
 
 @Module({
-  imports: [DatabricksModule, AwsModule, EmailModule, UserModule, AnalyticsModule],
+  imports: [DatabricksModule, AwsModule, EmailModule, UserModule, AnalyticsModule, DeltaModule],
   controllers: [
     ExperimentController,
     ExperimentDataController,
@@ -110,6 +113,10 @@ import { ProjectTransferRequestsController } from "./presentation/project-transf
     {
       provide: ANALYTICS_PORT,
       useExisting: AnalyticsAdapter,
+    },
+    {
+      provide: DELTA_PORT,
+      useExisting: DeltaAdapter,
     },
 
     // Repositories
