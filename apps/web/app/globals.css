@@ -119,12 +119,12 @@
     --ring: 180 100% 18.4%; /* Same as primary */
     --radius: 0.5rem;
 
-    /* Sidebar colors */
-    --sidebar-background: 180 100% 18.4%; /* Primary dark teal */
+  /* Sidebar colors */
+    --sidebar-background: 180, 100%, 9%; /* #002F2F */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 136 74% 58%; /* Secondary bright green */
     --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 180 50% 35%; /* Lighter teal for better hover visibility */
+    --sidebar-accent: 180 45% 18%; /* Primary dark green */
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 180 30% 25%;
     --sidebar-ring: 136 74% 58%;
@@ -163,12 +163,12 @@
     --input: 240 3.7% 15.9%;
     --ring: 180 80% 15%;
 
-    /* Dark mode sidebar */
-    --sidebar-background: 180 100% 10%;
+  /* Dark mode sidebar */
+    --sidebar-background: 180, 100%, 9%; /* #002F2F */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 136 60% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 180 30% 25%; /* Lighter teal for dark mode hover */
+    --sidebar-accent: 180 45% 18%; /* Primary dark green */
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 180 30% 20%;
     --sidebar-ring: 136 60% 45%;
