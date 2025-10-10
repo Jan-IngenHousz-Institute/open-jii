@@ -6,8 +6,8 @@ import type { SchemaData } from "../../../../common/modules/databricks/services/
 import type { Table } from "../../../../common/modules/databricks/services/tables/tables.types";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
-import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import { DELTA_PORT } from "../../../core/ports/delta.port";
+import type { DeltaPort } from "../../../core/ports/delta.port";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 /**
@@ -49,7 +49,7 @@ export class GetExperimentDataUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+    @Inject(DELTA_PORT) private readonly deltaPort: DeltaPort,
   ) {}
 
   async execute(
@@ -60,7 +60,7 @@ export class GetExperimentDataUseCase {
     this.logger.log(
       `Getting experiment data for experiment ${experimentId}, user ${userId}, query: ${JSON.stringify(
         query,
-      )}`,
+      )}, using Delta Sharing`,
     );
 
     // Check if experiment exists and user has access
@@ -148,17 +148,15 @@ export class GetExperimentDataUseCase {
       return tableExists;
     }
 
-    // Build SQL query with specific columns
-    const columnList = columns
-      .split(",")
-      .map((col) => `\`${col.trim()}\``)
-      .join(", ");
-    const sqlQuery = `SELECT ${columnList} FROM ${tableName}`;
-
-    this.logger.debug(`Executing SQL query: ${sqlQuery}`);
-
-    // Execute the query
-    const dataResult = await this.databricksPort.executeSqlQuery(schemaName, sqlQuery);
+    // Use Delta Sharing getTableColumns method
+    const columnList = columns.split(",").map((col) => col.trim());
+    this.logger.debug(`Fetching columns [${columnList.join(", ")}] using Delta Sharing`);
+    const dataResult = await this.deltaPort.getTableColumns(
+      experiment.name,
+      experimentId,
+      tableName,
+      columnList,
+    );
 
     if (dataResult.isFailure()) {
       return failure(AppError.internal(`Failed to get table data: ${dataResult.error.message}`));
@@ -200,25 +198,32 @@ export class GetExperimentDataUseCase {
       return tableExists;
     }
 
-    // Get total row count for pagination
-    const countResult = await this.databricksPort.executeSqlQuery(
-      schemaName,
-      `SELECT COUNT(*) as count FROM ${tableName}`,
+    // Use Delta Sharing methods
+    this.logger.debug(`Fetching table data using Delta Sharing with pagination`);
+
+    // Get row count using Delta port
+    const countResult = await this.deltaPort.getTableRowCount(
+      experiment.name,
+      experimentId,
+      tableName,
     );
 
     if (countResult.isFailure()) {
       return failure(AppError.internal(`Failed to get row count: ${countResult.error.message}`));
     }
 
-    const totalRows = parseInt(countResult.value.rows[0]?.[0] ?? "0", 10);
+    const totalRows = countResult.value;
+
+    // Get table data with pagination
+    const dataResult = await this.deltaPort.getTableData(
+      experiment.name,
+      experimentId,
+      tableName,
+      page,
+      pageSize,
+    );
+
     const totalPages = Math.ceil(totalRows / pageSize);
-
-    // Build paginated query
-    const offset = (page - 1) * pageSize;
-    const sqlQuery = `SELECT * FROM ${tableName} LIMIT ${pageSize} OFFSET ${offset}`;
-
-    // Execute the query
-    const dataResult = await this.databricksPort.executeSqlQuery(schemaName, sqlQuery);
 
     if (dataResult.isFailure()) {
       return failure(AppError.internal(`Failed to get table data: ${dataResult.error.message}`));
@@ -250,7 +255,7 @@ export class GetExperimentDataUseCase {
     pageSize: number,
     experimentId: string,
   ): Promise<Result<ExperimentDataDto>> {
-    const tablesResult = await this.databricksPort.listTables(experiment.name, experimentId);
+    const tablesResult = await this.deltaPort.listTables(experiment.name, experimentId);
 
     if (tablesResult.isFailure()) {
       return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
@@ -258,10 +263,15 @@ export class GetExperimentDataUseCase {
 
     const response: ExperimentDataDto = [];
 
-    // Fetch sample data for each table
+    // Fetch sample data for each table using Delta Sharing
     for (const table of tablesResult.value.tables) {
-      const sqlQuery = `SELECT * FROM ${table.name} LIMIT ${pageSize}`;
-      const dataResult = await this.databricksPort.executeSqlQuery(schemaName, sqlQuery);
+      const dataResult = await this.deltaPort.getTableData(
+        experiment.name,
+        experimentId,
+        table.name,
+        1,
+        pageSize,
+      );
 
       const tableInfo: TableDataDto = {
         name: table.name,
@@ -295,7 +305,7 @@ export class GetExperimentDataUseCase {
     experimentName: string,
     experimentId: string,
   ): Promise<Result<boolean>> {
-    const tablesResult = await this.databricksPort.listTables(experimentName, experimentId);
+    const tablesResult = await this.deltaPort.listTables(experimentName, experimentId);
 
     if (tablesResult.isFailure()) {
       return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
