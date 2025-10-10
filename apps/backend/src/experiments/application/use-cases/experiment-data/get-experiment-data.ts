@@ -6,8 +6,8 @@ import type { SchemaData } from "../../../../common/modules/databricks/services/
 import type { Table } from "../../../../common/modules/databricks/services/tables/tables.types";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
-import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import { DELTA_PORT } from "../../../core/ports/delta.port";
+import type { DeltaPort } from "../../../core/ports/delta.port";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import type { SchemaDataDto } from "../../services/data-transformation/data-transformation.service";
 import { UserTransformationService } from "../../services/data-transformation/user-metadata/user-transformation.service";
@@ -50,7 +50,7 @@ export class GetExperimentDataUseCase {
     this.logger.log(
       `Getting experiment data for experiment ${experimentId}, user ${userId}, query: ${JSON.stringify(
         query,
-      )}`,
+      )}, using Delta Sharing`,
     );
 
     // Check if experiment exists and user has access
@@ -237,17 +237,31 @@ export class GetExperimentDataUseCase {
     }
     const table = tableResult.value;
 
-    // Get total row count for pagination
-    const countResult = await this.databricksPort.executeSqlQuery(
-      schemaName,
-      `SELECT COUNT(*) as count FROM ${tableName}`,
+    // Use Delta Sharing methods
+    this.logger.debug(`Fetching table data using Delta Sharing with pagination`);
+
+    // Get row count using Delta port
+    const countResult = await this.deltaPort.getTableRowCount(
+      experiment.name,
+      experimentId,
+      tableName,
     );
 
     if (countResult.isFailure()) {
       return failure(AppError.internal(`Failed to get row count: ${countResult.error.message}`));
     }
 
-    const totalRows = parseInt(countResult.value.rows[0]?.[0] ?? "0", 10);
+    const totalRows = countResult.value;
+
+    // Get table data with pagination
+    const dataResult = await this.deltaPort.getTableData(
+      experiment.name,
+      experimentId,
+      tableName,
+      page,
+      pageSize,
+    );
+
     const totalPages = Math.ceil(totalRows / pageSize);
 
     // Build paginated query
