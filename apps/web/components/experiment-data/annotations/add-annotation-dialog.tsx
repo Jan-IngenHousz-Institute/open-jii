@@ -63,7 +63,7 @@ export function AddAnnotationDialog({
         ? zAddAnnotationFormSchema.extend({ flag: zAnnotationFlagType })
         : zAddAnnotationFormSchema,
     ),
-    defaultValues: {},
+    defaultValues: type === "flag" ? { text: "", flag: undefined } : { text: "" },
   });
 
   function onSubmit(formData: AddAnnotationDialogFormType) {
@@ -76,7 +76,15 @@ export function AddAnnotationDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm">
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={
+            type === "comment"
+              ? t("experimentDataAnnotations.commentDialog.title")
+              : t("experimentDataAnnotations.flagDialog.title")
+          }
+        >
           {type === "comment" && <MessageSquare className="h-4 w-4" />}
           {type === "flag" && <Flag className="h-4 w-4" />}
         </Button>

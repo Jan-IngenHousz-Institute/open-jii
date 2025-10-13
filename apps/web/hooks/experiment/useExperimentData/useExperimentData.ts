@@ -146,7 +146,10 @@ function createTableColumns({
           tableName,
           rowId: rowId as string,
         };
-        return getAnnotationsColumn(commentRowId, getAnnotationData(value as Annotation[]));
+        return getAnnotationsColumn(
+          commentRowId,
+          getAnnotationData(Array.isArray(value) ? (value as Annotation[]) : []),
+        );
       }
       return value as string;
     }
@@ -228,6 +231,7 @@ export const useExperimentData = (
       ? {
           columns: createTableColumns({
             experimentId,
+            tableName,
             data: tableData.data,
             formatFunction,
             onChartHover,
@@ -238,7 +242,15 @@ export const useExperimentData = (
           totalRows: tableData.totalRows,
         }
       : undefined;
-  }, [experimentId, tableData, formatFunction, onChartHover, onChartLeave, onChartClick]);
+  }, [
+    experimentId,
+    tableName,
+    tableData,
+    formatFunction,
+    onChartHover,
+    onChartLeave,
+    onChartClick,
+  ]);
   const tableRows: DataRow[] | undefined = tableData?.data?.rows;
 
   return { tableMetadata, tableRows, isLoading, error };

@@ -28,7 +28,7 @@ function Flags({ flags }: { flags: AnnotationFlagType[] }) {
 }
 
 function CommentsBadge({ count }: { count: number }) {
-  if (count == 0) return null;
+  if (count === 0) return null;
   return (
     <Badge variant="outline" className="px-1">
       <MessageSquare size={12} className="mr-2" /> {count}
@@ -77,7 +77,8 @@ function Annotation({
     <div className="mt-4">
       {annotation.type === "flag" && (
         <Badge variant="outline" className="px-1">
-          <Flag size={12} className="mr-2" /> {getFlagType()}
+          <Flag size={12} className="mr-2" />{" "}
+          {t(`experimentDataAnnotations.flagType.${getFlagType()}`)}
         </Badge>
       )}
       <div className="grid w-full grid-cols-[3fr_1fr_1fr] grid-rows-2 items-center">
@@ -109,7 +110,7 @@ export function Annotations({ experimentId, tableName, rowIds, data }: Annotatio
         <div className="flex w-full flex-wrap gap-2">
           <CommentsBadge count={data.commentCount} />
           <Flags flags={Array.from(data.uniqueFlags)} />
-          {data.count == 0 && <Link href="#">{t("common.add")}...</Link>}
+          {data.count === 0 && <Link href="#">{t("common.add")}...</Link>}
         </div>
       </HoverCardTrigger>
       <HoverCardContent className="w-80">
@@ -166,7 +167,7 @@ export function Annotations({ experimentId, tableName, rowIds, data }: Annotatio
             })}
           </div>
         )}
-        {data.count == 0 && (
+        {data.count === 0 && (
           <div className="mt-4">
             <div className="text-muted-foreground mb-4 mt-4 flex w-full items-center justify-center">
               <MessageSquare size={24} />
