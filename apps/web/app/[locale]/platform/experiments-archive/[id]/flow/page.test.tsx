@@ -92,6 +92,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockGetFlowData.mockReturnValue({ nodes: [{ id: "n1" }] });
 
+  vi.spyOn(console, "error").mockImplementation(() => {
+    /* no-op */
+  });
+
   // Default safe returns for mutations
   vi.mocked(useExperimentFlowCreate).mockReturnValue({
     mutate: vi.fn(),
@@ -262,5 +266,109 @@ describe("<ExperimentFlowPage />", () => {
       expect(updateMutate).toHaveBeenCalled();
       expect(mockGetFlowData).toHaveBeenCalled();
     });
+  });
+
+  it("handles update flow error with custom message from API", () => {
+    // Arrange: experiment present, archived status
+    vi.mocked(useExperiment).mockReturnValue({
+      data: { body: { status: "archived" } },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperiment>);
+
+    // User has admin access
+    vi.mocked(useExperimentAccess).mockReturnValue({
+      data: { body: { isAdmin: true, experiment: {} } },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperimentAccess>);
+
+    // existing flow exists
+    const refetch = vi.fn();
+    vi.mocked(useExperimentFlow).mockReturnValue({
+      data: { body: { nodes: [] } },
+      refetch,
+    } as unknown as ReturnType<typeof useExperimentFlow>);
+
+    // Mock the update mutation to capture the onError callback
+    let capturedOnError: ((error: unknown) => void) | undefined;
+    vi.mocked(useExperimentFlowUpdate).mockImplementation((options) => {
+      capturedOnError = options?.onError;
+      return {
+        mutate: vi.fn(),
+        isPending: false,
+      } as unknown as ReturnType<typeof useExperimentFlowUpdate>;
+    });
+
+    render(
+      <ExperimentFlowPage
+        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+      />,
+    );
+
+    // Simulate the error from the API with custom message
+    const apiError = {
+      body: {
+        message: "Custom API error message",
+      },
+    };
+
+    // Trigger the onError callback
+    if (capturedOnError) {
+      capturedOnError(apiError);
+    }
+
+    // Verify console.error was called with the error
+    expect(console.error).toHaveBeenCalledWith("Update flow error:", apiError);
+  });
+
+  it("handles update flow error with default message when no body", () => {
+    // Arrange: experiment present, archived status
+    vi.mocked(useExperiment).mockReturnValue({
+      data: { body: { status: "archived" } },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperiment>);
+
+    // User has admin access
+    vi.mocked(useExperimentAccess).mockReturnValue({
+      data: { body: { isAdmin: true, experiment: {} } },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useExperimentAccess>);
+
+    // existing flow exists
+    const refetch = vi.fn();
+    vi.mocked(useExperimentFlow).mockReturnValue({
+      data: { body: { nodes: [] } },
+      refetch,
+    } as unknown as ReturnType<typeof useExperimentFlow>);
+
+    // Mock the update mutation to capture the onError callback
+    let capturedOnError: ((error: unknown) => void) | undefined;
+    vi.mocked(useExperimentFlowUpdate).mockImplementation((options) => {
+      capturedOnError = options?.onError;
+      return {
+        mutate: vi.fn(),
+        isPending: false,
+      } as unknown as ReturnType<typeof useExperimentFlowUpdate>;
+    });
+
+    render(
+      <ExperimentFlowPage
+        params={Promise.resolve({ id: "test-experiment-id", locale: "en-US" })}
+      />,
+    );
+
+    // Simulate a generic error without body
+    const genericError = new Error("Network error");
+
+    // Trigger the onError callback
+    if (capturedOnError) {
+      capturedOnError(genericError);
+    }
+
+    // Verify console.error was called with the error
+    expect(console.error).toHaveBeenCalledWith("Update flow error:", genericError);
   });
 });
