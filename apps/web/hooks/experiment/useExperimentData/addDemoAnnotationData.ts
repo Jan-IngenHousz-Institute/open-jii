@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
+import { getAnnotationData } from "~/components/experiment-data/annotations/utils";
 
 import type { Annotation, ExperimentData } from "@repo/api";
 
@@ -57,22 +58,24 @@ export function addDemoAnnotationData(data: ExperimentData) {
     data.rows.forEach((row) => {
       row.id = uuidv4();
       const randomComment = Math.floor(Math.random() * (5 - 1 + 1)) + 1;
+      let annotations: Annotation[] = [];
       switch (randomComment) {
         case 1:
-          row.annotations = [testAnnotation1];
+          annotations = [testAnnotation1];
           break;
         case 2:
-          row.annotations = [testAnnotation1, testAnnotation2];
+          annotations = [testAnnotation1, testAnnotation2];
           break;
         case 3:
-          row.annotations = [testAnnotation3, testAnnotation2];
+          annotations = [testAnnotation3, testAnnotation2];
           break;
         case 4:
-          row.annotations = [testAnnotation3, testAnnotation4];
+          annotations = [testAnnotation3, testAnnotation4];
           break;
         default:
-          row.annotations = [];
+          annotations = [];
       }
+      row.annotations = getAnnotationData(annotations);
     });
   }
 }

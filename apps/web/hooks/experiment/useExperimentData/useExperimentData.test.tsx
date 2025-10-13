@@ -3,17 +3,11 @@ import { tsr } from "@/lib/tsr";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
 import React from "react";
-import { v4 as uuidv4 } from "uuid";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-import type { Annotation, ExperimentData } from "@repo/api";
+import type { ExperimentData } from "@repo/api";
 
-import {
-  getAnnotationData,
-  getColumnWidth,
-  useExperimentData,
-  useExperimentSampleData,
-} from "./useExperimentData";
+import { getColumnWidth, useExperimentData, useExperimentSampleData } from "./useExperimentData";
 
 vi.mock("@/lib/tsr", () => ({
   tsr: {
@@ -69,60 +63,6 @@ describe("getColumnWidth", () => {
   it("should return undefined for MAP without STRING key", () => {
     expect(getColumnWidth("MAP<INT,")).toBeUndefined();
     expect(getColumnWidth("MAP<DOUBLE,STRING>")).toBeUndefined();
-  });
-});
-
-describe("getAnnotationData", () => {
-  const comment1: Annotation = {
-    id: uuidv4(),
-    userId: uuidv4(),
-    userName: "User One",
-    type: "comment",
-    content: { text: "Test comment 1" },
-    createdAt: "2025-09-01T00:00:00Z",
-    updatedAt: "2025-09-01T00:00:00Z",
-  };
-
-  const flag1: Annotation = {
-    id: uuidv4(),
-    userId: uuidv4(),
-    userName: "User Three",
-    type: "flag",
-    content: { flagType: "outlier", reason: "Flagged as outlier" },
-    createdAt: "2025-09-03T00:00:00Z",
-    updatedAt: "2025-09-03T00:00:00Z",
-  };
-
-  const flag2: Annotation = {
-    id: uuidv4(),
-    userId: uuidv4(),
-    userName: "User Four",
-    type: "flag",
-    content: { flagType: "needs_review", reason: "Needs review" },
-    createdAt: "2025-09-04T00:00:00Z",
-    updatedAt: "2025-09-04T00:00:00Z",
-  };
-
-  it("should aggregate annotation data correctly", () => {
-    const annotations: Annotation[] = [comment1, flag1, flag2];
-
-    const result = getAnnotationData(annotations);
-
-    expect(result.count).toBe(3);
-    expect(result.commentCount).toBe(1);
-    expect(result.flagCount).toBe(2);
-    expect(Array.from(result.uniqueFlags)).toEqual(["outlier", "needs_review"]);
-    expect(result.annotationsPerType.comment).toHaveLength(1);
-    expect(result.annotationsPerType.flag).toHaveLength(2);
-  });
-
-  it("should handle empty annotations array", () => {
-    const result = getAnnotationData([]);
-    expect(result.count).toBe(0);
-    expect(result.commentCount).toBe(0);
-    expect(result.flagCount).toBe(0);
-    expect(Array.from(result.uniqueFlags)).toEqual([]);
-    expect(result.annotationsPerType).toEqual({});
   });
 });
 

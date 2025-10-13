@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { isAnnotationData } from "~/components/experiment-data/annotations/utils";
 
 import type { ExperimentData } from "@repo/api";
 
@@ -33,7 +34,7 @@ describe("addDemoAnnotationData", () => {
       expect(row.id).toBeDefined();
       expect(typeof row.id).toBe("string");
       expect(row.annotations).toBeDefined();
-      expect(Array.isArray(row.annotations)).toBe(true);
+      expect(isAnnotationData(row.annotations)).toBe(true);
     });
   });
 

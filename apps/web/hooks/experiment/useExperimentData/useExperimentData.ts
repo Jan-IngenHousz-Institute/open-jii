@@ -28,31 +28,6 @@ export interface AnnotationData {
   flagCount: number;
 }
 
-export function getAnnotationData(annotations: Annotation[]): AnnotationData {
-  const { annotationsPerType, uniqueFlags } = annotations.reduce(
-    (acc, annotation) => {
-      if (!(annotation.type in acc.annotationsPerType)) {
-        acc.annotationsPerType[annotation.type] = [];
-      }
-      acc.annotationsPerType[annotation.type].push(annotation);
-      if (annotation.type === "flag" && "flagType" in annotation.content) {
-        acc.uniqueFlags.add(annotation.content.flagType);
-      }
-      return acc;
-    },
-    {
-      annotationsPerType: {} as Record<AnnotationType, Annotation[]>,
-      uniqueFlags: new Set<AnnotationFlagType>(),
-    },
-  );
-
-  const count = annotations.length;
-  const commentCount = "comment" in annotationsPerType ? annotationsPerType.comment.length : 0;
-  const flagCount = "flag" in annotationsPerType ? annotationsPerType.flag.length : 0;
-
-  return { annotations, annotationsPerType, uniqueFlags, count, commentCount, flagCount };
-}
-
 // Time in ms before data is removed from the cache
 const STALE_TIME = 2 * 60 * 1000;
 
@@ -146,10 +121,7 @@ function createTableColumns({
           tableName,
           rowId: rowId as string,
         };
-        return getAnnotationsColumn(
-          commentRowId,
-          getAnnotationData(Array.isArray(value) ? (value as Annotation[]) : []),
-        );
+        return getAnnotationsColumn(commentRowId, value);
       }
       return value as string;
     }

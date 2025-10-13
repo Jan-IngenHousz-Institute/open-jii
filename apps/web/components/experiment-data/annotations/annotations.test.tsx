@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { AddAnnotationDialogProps } from "~/components/experiment-data/annotations/add-annotation-dialog";
 import { Annotations } from "~/components/experiment-data/annotations/annotations";
-import { getAnnotationData } from "~/hooks/experiment/useExperimentData/useExperimentData";
+import { getAnnotationData } from "~/components/experiment-data/annotations/utils";
 
 import type { Annotation } from "@repo/api";
 
