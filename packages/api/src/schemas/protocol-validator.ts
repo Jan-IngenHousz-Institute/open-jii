@@ -166,6 +166,7 @@ export const ProtocolSetSchema = z
     message: z.array(z.array(z.string())).optional(), // User messages/prompts
     e_time: z.number().int().optional(),
     hello: z.array(z.number().int()).optional(),
+    inc_ri: z.number().int().optional(),
   })
   .strict();
 
