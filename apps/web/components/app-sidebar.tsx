@@ -111,10 +111,14 @@ export function AppSidebar({
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <span className="text-highlight text-xl font-semibold group-data-[state=collapsed]:hidden">
-          open
-        </span>
-        <Image src="/logo-platform-yellow.svg" alt={translations.logoAlt} width={50} height={50} />
+        <Image
+          src="/logo-open-yellow.svg"
+          alt={translations.openJII}
+          width={48}
+          height={12}
+          className="mt-2 align-middle group-data-[state=collapsed]:hidden"
+        />
+        <Image src="/logo-jii-yellow.svg" alt={translations.logoAlt} width={50} height={50} />
       </SidebarHeader>
       <SidebarContent>
         <NavItems items={processedNavDashboard} />

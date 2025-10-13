@@ -212,9 +212,15 @@ describe("<AppSidebar />", () => {
       />,
     );
 
-    const image = screen.getByTestId("next-image");
-    expect(image).toHaveAttribute("data-src", "/logo-platform-yellow.svg");
-    expect(image).toHaveAttribute("data-alt", "Open JII Logo");
+    const images = screen.getAllByTestId("next-image");
+    // Expect both the small 'open' logo and the main JII logo to be rendered
+    const srcs = images.map((el) => el.getAttribute("data-src"));
+    const alts = images.map((el) => el.getAttribute("data-alt"));
+
+    expect(srcs).toContain("/logo-open-yellow.svg");
+    expect(srcs).toContain("/logo-jii-yellow.svg");
+    expect(alts).toContain("Open JII");
+    expect(alts).toContain("Open JII Logo");
   });
 
   it("renders NavUser component when user is provided", () => {
