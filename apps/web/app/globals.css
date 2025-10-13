@@ -120,7 +120,7 @@
     --radius: 0.5rem;
 
   /* Sidebar colors */
-    --sidebar-background: 180, 100%, 9%; /* #002F2F */
+    --sidebar-background: 180 100% 9%; /* #002F2F */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 136 74% 58%; /* Secondary bright green */
     --sidebar-primary-foreground: 0 0% 0%;
@@ -164,7 +164,7 @@
     --ring: 180 80% 15%;
 
   /* Dark mode sidebar */
-    --sidebar-background: 180, 100%, 9%; /* #002F2F */
+    --sidebar-background: 180 100% 9%; /* #002F2F */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 136 60% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
