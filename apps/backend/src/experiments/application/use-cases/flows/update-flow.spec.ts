@@ -104,6 +104,7 @@ describe("UpdateFlowUseCase", () => {
       success({
         experiment: { ...experiment, status: "archived" },
         hasAccess: true,
+        hasArchiveAccess: false,
         isAdmin: false,
       }),
     );
@@ -118,9 +119,7 @@ describe("UpdateFlowUseCase", () => {
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
       expect(result.error.statusCode).toBe(403);
-      expect(result.error.message).toContain(
-        "Only admins can update flows for archived experiments",
-      );
+      expect(result.error.message).toContain("You do not have access to this experiment");
     } finally {
       vi.restoreAllMocks();
     }
@@ -142,6 +141,7 @@ describe("UpdateFlowUseCase", () => {
       success({
         experiment: { ...experiment, status: "archived" },
         hasAccess: true,
+        hasArchiveAccess: true,
         isAdmin: true,
       }),
     );

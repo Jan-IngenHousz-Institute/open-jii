@@ -178,7 +178,7 @@ describe("AddExperimentLocationsUseCase", () => {
 
     expect(result.isFailure()).toBe(true);
     assertFailure(result);
-    expect(result.error.message).toContain("Only admins can add locations to archived experiments");
+    expect(result.error.message).toContain("You do not have access to this experiment");
   });
 
   it("should allow admin users to add locations to archived experiments", async () => {

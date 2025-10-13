@@ -23,11 +23,11 @@ export class UpdateExperimentUseCase {
     return accessCheckResult.chain(
       async ({
         experiment,
-        hasAccess,
+        hasArchiveAccess,
         isAdmin,
       }: {
         experiment: ExperimentDto | null;
-        hasAccess: boolean;
+        hasArchiveAccess: boolean;
         isAdmin: boolean;
       }) => {
         if (!experiment) {
@@ -41,21 +41,9 @@ export class UpdateExperimentUseCase {
           return failure(AppError.forbidden("Only admins can archive experiments"));
         }
 
-        // Check access permissions based on experiment status
-        if (experiment.status === "archived") {
-          // For archived experiments, only admins can update
-          if (!isAdmin) {
-            this.logger.warn(
-              `User ${userId} is not an admin and cannot update archived experiment ${id}`,
-            );
-            return failure(AppError.forbidden("Only admins can update archived experiments"));
-          }
-        } else {
-          // For active experiments, any member can update
-          if (!hasAccess) {
-            this.logger.warn(`User ${userId} is not a member of experiment ${id}`);
-            return failure(AppError.forbidden("Only experiment members can update experiments"));
-          }
+        if (!hasArchiveAccess) {
+          this.logger.warn(`User ${userId} does not have access to experiment ${id}`);
+          return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
         this.logger.debug(`Updating experiment "${experiment.name}" (ID: ${id})`);

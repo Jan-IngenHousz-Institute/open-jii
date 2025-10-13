@@ -246,6 +246,7 @@ describe("UpdateExperimentLocationsUseCase", () => {
       success({
         experiment: { ...experiment, status: "archived" },
         hasAccess: true,
+        hasArchiveAccess: true,
         isAdmin: true,
       }),
     );
@@ -282,6 +283,7 @@ describe("UpdateExperimentLocationsUseCase", () => {
       success({
         experiment: { ...experiment, status: "archived" },
         hasAccess: false,
+        hasArchiveAccess: false,
         isAdmin: false,
       }),
     );
@@ -301,9 +303,7 @@ describe("UpdateExperimentLocationsUseCase", () => {
       const result = await useCase.execute(experiment.id, locationsToUpdate, anotherUserId);
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
-      expect(result.error.message).toContain(
-        "Only admins can modify locations of archived experiments",
-      );
+      expect(result.error.message).toContain("You do not have access to this experiment");
     } finally {
       vi.restoreAllMocks();
     }

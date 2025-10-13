@@ -33,37 +33,22 @@ export class AddExperimentLocationsUseCase {
     return accessResult.chain(
       async ({
         experiment,
-        hasAccess,
-        isAdmin,
+        hasArchiveAccess,
       }: {
         experiment: ExperimentDto | null;
-        hasAccess: boolean;
-        isAdmin: boolean;
+        hasArchiveAccess: boolean;
       }) => {
         if (!experiment) {
           this.logger.warn(`Experiment ${experimentId} not found`);
           return failure(AppError.notFound("Experiment not found"));
         }
 
-        // Check access permissions based on experiment status
-        if (experiment.status === "archived") {
-          // For archived experiments, only admins can add locations
-          if (!isAdmin) {
-            this.logger.warn(
-              `User ${userId} is not an admin and cannot add locations to archived experiment ${experimentId}`,
-            );
-            return failure(
-              AppError.forbidden("Only admins can add locations to archived experiments"),
-            );
-          }
-        } else {
-          // For active experiments, any member can add locations
-          if (!hasAccess && experiment.visibility !== "public") {
-            this.logger.warn(
-              `User ${userId} attempted to add locations to experiment ${experimentId} without proper permissions`,
-            );
-            return failure(AppError.forbidden("You do not have access to this experiment"));
-          }
+        // For public experiments, allow anyone to add locations
+        if (!hasArchiveAccess && experiment.visibility !== "public") {
+          this.logger.warn(
+            `User ${userId} attempted to add locations to experiment ${experimentId} without proper permissions`,
+          );
+          return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
         if (locationsData.length === 0) {

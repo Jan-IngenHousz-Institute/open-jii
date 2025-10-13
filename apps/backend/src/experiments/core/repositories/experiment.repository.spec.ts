@@ -763,6 +763,49 @@ describe("ExperimentRepository", () => {
       expect(membership.length).toBe(0);
     });
 
+    it("should set hasArchiveAccess=false for non-admin members and true for admins on archived experiments", async () => {
+      // Arrange: create an experiment and archive it
+      const { experiment } = await testApp.createExperiment({
+        name: "Archive Access Test",
+        userId: testUserId,
+        status: "archived",
+      });
+
+      // Create a member user and add as regular member
+      const memberId = await testApp.createTestUser({ email: "archive-member@example.com" });
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      // Act: check access for non-admin member
+      const memberResult = await repository.checkAccess(experiment.id, memberId);
+      expect(memberResult.isSuccess()).toBe(true);
+      assertSuccess(memberResult);
+      expect(memberResult.value.experiment).toBeTruthy();
+      // Non-admin members should NOT have archive access
+      expect(memberResult.value.hasAccess).toBe(true);
+      expect(memberResult.value.isAdmin).toBe(false);
+      expect(memberResult.value.hasArchiveAccess).toBe(false);
+
+      // Now promote to admin by updating the role directly to avoid duplicate insert
+      await testApp.database
+        .update(experimentMembers)
+        .set({ role: "admin" })
+        .where(
+          and(
+            eq(experimentMembers.experimentId, experiment.id),
+            eq(experimentMembers.userId, memberId),
+          ),
+        );
+
+      const adminResult = await repository.checkAccess(experiment.id, memberId);
+      expect(adminResult.isSuccess()).toBe(true);
+      assertSuccess(adminResult);
+      expect(adminResult.value.experiment).toBeTruthy();
+      // Admins should have archive access
+      expect(adminResult.value.hasAccess).toBe(true);
+      expect(adminResult.value.isAdmin).toBe(true);
+      expect(adminResult.value.hasArchiveAccess).toBe(true);
+    });
+
     it("should return null experiment and no access when experiment does not exist", async () => {
       // Act
       const result = await repository.checkAccess(

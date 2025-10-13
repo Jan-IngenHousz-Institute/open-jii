@@ -113,7 +113,7 @@ describe("UpdateExperimentUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toBe("Only experiment members can update experiments");
+    expect(result.error.message).toBe("You do not have access to this experiment");
   });
 
   it("should return NOT_FOUND error if experiment does not exist", async () => {
@@ -177,7 +177,7 @@ describe("UpdateExperimentUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toContain("Only admins can update archived experiments");
+    expect(result.error.message).toContain("You do not have access to this");
   });
 
   it("should allow admin to update an archived experiment", async () => {

@@ -31,37 +31,21 @@ export class UpdateExperimentLocationsUseCase {
     return accessResult.chain(
       async ({
         experiment,
-        hasAccess,
-        isAdmin,
+        hasArchiveAccess,
       }: {
         experiment: ExperimentDto | null;
-        hasAccess: boolean;
-        isAdmin: boolean;
+        hasArchiveAccess: boolean;
       }) => {
         if (!experiment) {
           this.logger.warn(`Experiment ${experimentId} not found`);
           return failure(AppError.notFound("Experiment not found"));
         }
 
-        // Check access permissions based on experiment status
-        if (experiment.status === "archived") {
-          // For archived experiments, only admins can update locations
-          if (!isAdmin) {
-            this.logger.warn(
-              `User ${userId} is not an admin and cannot update locations of archived experiment ${experimentId}`,
-            );
-            return failure(
-              AppError.forbidden("Only admins can modify locations of archived experiments"),
-            );
-          }
-        } else {
-          // For active experiments, any member can update locations
-          if (!hasAccess) {
-            this.logger.warn(
-              `User ${userId} attempted to update locations of experiment ${experimentId} without proper permissions`,
-            );
-            return failure(AppError.forbidden("You do not have access to this experiment"));
-          }
+        if (!hasArchiveAccess) {
+          this.logger.warn(
+            `User ${userId} attempted to update locations of experiment ${experimentId} without proper permissions`,
+          );
+          return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
         // Add experimentId to each location DTO

@@ -25,31 +25,15 @@ export class UpdateFlowUseCase {
     return access.chain(
       async ({
         experiment,
-        hasAccess,
-        isAdmin,
+        hasArchiveAccess,
       }: {
         experiment: ExperimentDto | null;
-        hasAccess: boolean;
-        isAdmin: boolean;
+        hasArchiveAccess: boolean;
       }) => {
         if (!experiment) return failure(AppError.notFound("Experiment not found"));
 
-        // Check access permissions based on experiment status
-        if (experiment.status === "archived") {
-          // For archived experiments, only admins can update flows
-          if (!isAdmin) {
-            this.logger.warn(
-              `User ${userId} is not an admin and cannot update flow for archived experiment ${experimentId}`,
-            );
-            return failure(
-              AppError.forbidden("Only admins can update flows for archived experiments"),
-            );
-          }
-        } else {
-          // For active experiments, any member can update flows
-          if (!hasAccess) {
-            return failure(AppError.forbidden("Only members can modify the flow"));
-          }
+        if (!hasArchiveAccess) {
+          return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
         const existing = await this.flowRepository.getByExperimentId(experimentId);
