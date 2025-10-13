@@ -136,10 +136,10 @@ export function Annotations({ experimentId, tableName, rowIds, data }: Annotatio
             <h4 className="mb-3 text-sm font-medium uppercase text-gray-600">
               {t(`experimentDataAnnotations.titleFlags`)}
             </h4>
-            {data.annotationsPerType.flag.map((annotation, index) => {
+            {data.annotationsPerType.flag.map((annotation) => {
               return (
                 <Annotation
-                  key={index}
+                  key={annotation.id}
                   experimentId={experimentId}
                   tableName={tableName}
                   rowIds={rowIds}
@@ -154,10 +154,10 @@ export function Annotations({ experimentId, tableName, rowIds, data }: Annotatio
             <h4 className="mb-3 text-sm font-medium uppercase text-gray-600">
               {t(`experimentDataAnnotations.titleComments`)}
             </h4>
-            {data.annotationsPerType.comment.map((annotation, index) => {
+            {data.annotationsPerType.comment.map((annotation) => {
               return (
                 <Annotation
-                  key={index}
+                  key={annotation.id}
                   experimentId={experimentId}
                   tableName={tableName}
                   rowIds={rowIds}
