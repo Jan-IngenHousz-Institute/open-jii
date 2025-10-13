@@ -213,7 +213,7 @@ describe("<AppSidebar />", () => {
     );
 
     const image = screen.getByTestId("next-image");
-    expect(image).toHaveAttribute("data-src", "/logo-platform.png");
+    expect(image).toHaveAttribute("data-src", "/logo-platform-yellow.svg");
     expect(image).toHaveAttribute("data-alt", "Open JII Logo");
   });
 
