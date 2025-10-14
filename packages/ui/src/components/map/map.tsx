@@ -200,6 +200,7 @@ const FitBoundsController = ({
       map.fitBounds(bounds, { padding, maxZoom: maxZoomOverride ?? 10, animate: true });
       hasFittedRef.current = true;
     } catch (err) {
+      console.error("Error fitting map bounds:", err);
       // Fallback: center on average
       const centerLat = locations.reduce((s, l) => s + l.latitude, 0) / locations.length;
       const centerLng = locations.reduce((s, l) => s + l.longitude, 0) / locations.length;
