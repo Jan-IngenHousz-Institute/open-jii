@@ -63,6 +63,7 @@
     "overview": "Overview",
     "data": "Data",
     "create": "Create Experiment",
+    "viewArchived": "View Archived Experiments",
     "edit": "Edit Experiment",
     "delete": "Delete Experiment",
     "status": "Status",

@@ -49,14 +49,9 @@ export async function AppSidebarWrapper({
             title: tNavigation("sidebar.overview"),
             url: `/${locale}/platform/experiments`,
           },
-          {
-            title: tNavigation("sidebar.archive"),
-            url: `/${locale}/platform/experiments-archive`,
-          },
         ],
       },
     ],
-    // experiments archive has been moved into navExperiments as a subitem
     navHardware: [
       {
         title: tNavigation("sidebar.protocols"),
@@ -100,7 +95,6 @@ export async function AppSidebarWrapper({
     logoAlt: tCommon("common.logo"),
     signIn: tCommon("signIn"),
     experimentsTitle: tNavigation("sidebar.experiments"),
-    experimentsArchiveTitle: tNavigation("sidebar.experimentsArchive"),
     hardwareTitle: tNavigation("sidebar.hardware"),
     macrosTitle: tNavigation("sidebar.macros"),
   };
