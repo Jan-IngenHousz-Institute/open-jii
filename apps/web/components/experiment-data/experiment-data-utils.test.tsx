@@ -120,42 +120,46 @@ vi.mock("@repo/ui/components", () => ({
 describe("experiment-data-utils", () => {
   describe("formatValue", () => {
     it("should format numeric values with right alignment", () => {
-      const result = formatValue(123.45, "DOUBLE");
+      const result = formatValue({ value: 123.45, type: "DOUBLE" });
       expect(result).toEqual(<div className="text-right tabular-nums">{123.45}</div>);
     });
 
     it("should format INT values with right alignment", () => {
-      const result = formatValue(42, "INT");
+      const result = formatValue({ value: 42, type: "INT" });
       expect(result).toEqual(<div className="text-right tabular-nums">{42}</div>);
     });
 
     it("should format LONG values with right alignment", () => {
-      const result = formatValue(1234567890, "LONG");
+      const result = formatValue({ value: 1234567890, type: "LONG" });
       expect(result).toEqual(<div className="text-right tabular-nums">{1234567890}</div>);
     });
 
     it("should format BIGINT values with right alignment", () => {
-      const result = formatValue(9876543210, "BIGINT");
+      const result = formatValue({ value: 9876543210, type: "BIGINT" });
       expect(result).toEqual(<div className="text-right tabular-nums">{9876543210}</div>);
     });
 
     it("should format TIMESTAMP values by truncating and replacing T", () => {
-      const result = formatValue("2023-01-01T10:30:45.123Z", "TIMESTAMP");
+      const result = formatValue({ value: "2023-01-01T10:30:45.123Z", type: "TIMESTAMP" });
       expect(result).toBe("2023-01-01 10:30:45");
     });
 
     it("should return string values as-is for other types", () => {
-      const result = formatValue("test string", "STRING");
+      const result = formatValue({ value: "test string", type: "STRING" });
       expect(result).toBe("test string");
     });
 
     it("should handle null values", () => {
-      const result = formatValue(null, "STRING");
+      const result = formatValue({ value: null, type: "STRING" });
       expect(result).toBeNull();
     });
 
     it("should render ExperimentDataTableMapCell for MAP type", () => {
-      const result = formatValue('{"key": "value"}', "MAP", "test-column");
+      const result = formatValue({
+        value: '{"key": "value"}',
+        type: "MAP",
+        columnName: "test-column",
+      });
 
       // The result should be a React element (ExperimentDataTableMapCell)
       expect(React.isValidElement(result)).toBe(true);
@@ -167,11 +171,11 @@ describe("experiment-data-utils", () => {
     });
 
     it("should render ExperimentDataTableMapCell for MAP<STRING,STRING> type", () => {
-      const result = formatValue(
-        '{"name": "John", "role": "Admin"}',
-        "MAP<STRING,STRING>",
-        "test-column",
-      );
+      const result = formatValue({
+        value: '{"name": "John", "role": "Admin"}',
+        type: "MAP<STRING,STRING>",
+        columnName: "test-column",
+      });
 
       // The result should be a React element (ExperimentDataTableMapCell)
       expect(React.isValidElement(result)).toBe(true);
@@ -182,7 +186,11 @@ describe("experiment-data-utils", () => {
     });
 
     it("should render ExperimentDataTableMapCell for MAP<STRING,INT> type", () => {
-      const result = formatValue('{"count": 5, "total": 10}', "MAP<STRING,INT>", "test-column");
+      const result = formatValue({
+        value: '{"count": 5, "total": 10}',
+        type: "MAP<STRING,INT>",
+        columnName: "test-column",
+      });
 
       // The result should be a React element (ExperimentDataTableMapCell)
       expect(React.isValidElement(result)).toBe(true);

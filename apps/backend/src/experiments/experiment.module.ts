@@ -10,6 +10,8 @@ import { EmbargoProcessorService } from "./application/services/embargo-processo
 // Use Cases
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "./application/use-cases/delete-experiment/delete-experiment";
+import { CreateExperimentDataCommentsUseCase } from "./application/use-cases/experiment-data-comments/create-experiment-data-comments";
+import { DeleteExperimentDataCommentsUseCase } from "./application/use-cases/experiment-data-comments/delete-experiment-data-comments";
 import { DownloadExperimentDataUseCase } from "./application/use-cases/experiment-data/download-experiment-data";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data";
 import { UploadAmbyteDataUseCase } from "./application/use-cases/experiment-data/upload-ambyte-data";
@@ -40,14 +42,15 @@ import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-
 // Ports
 import { AWS_PORT } from "./core/ports/aws.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
-import { LocationRepository } from "./core/repositories/experiment-location.repository";
 // Repositories
+import { LocationRepository } from "./core/repositories/experiment-location.repository";
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
 import { ExperimentProtocolRepository } from "./core/repositories/experiment-protocol.repository";
 import { ExperimentVisualizationRepository } from "./core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
 import { FlowRepository } from "./core/repositories/flow.repository";
 // Controllers
+import { ExperimentCommentsController } from "./presentation/experiment-comments.controller";
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
 import { ExperimentFlowsController } from "./presentation/experiment-flows.controller";
 import { ExperimentLocationsController } from "./presentation/experiment-locations.controller";
@@ -67,6 +70,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ExperimentProtocolsController,
     ExperimentVisualizationsController,
     ExperimentWebhookController,
+    ExperimentCommentsController,
     ExperimentLocationsController,
   ],
   providers: [
@@ -104,6 +108,10 @@ import { ExperimentController } from "./presentation/experiment.controller";
     GetExperimentDataUseCase,
     UploadAmbyteDataUseCase,
     DownloadExperimentDataUseCase,
+
+    // Experiment data comment use cases
+    CreateExperimentDataCommentsUseCase,
+    DeleteExperimentDataCommentsUseCase,
 
     // Experiment member use cases
     ListExperimentMembersUseCase,
