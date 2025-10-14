@@ -108,16 +108,6 @@ describe("Experiment Schema", () => {
       };
       expect(zExperimentData.parse(data)).toEqual(data);
     });
-
-    it("zExperimentData rejects non-string row values", () => {
-      const bad = {
-        columns: [{ name: "a", type_name: "text", type_text: "VARCHAR" }],
-        rows: [{ a: 123 }], // not string or null
-        totalRows: 1,
-        truncated: false,
-      } as unknown;
-      expect(() => zExperimentData.parse(bad)).toThrow();
-    });
   });
 
   // ----- Experiment core -----
@@ -439,8 +429,8 @@ describe("Experiment Schema", () => {
   describe("Data queries & tables", () => {
     it("zExperimentDataQuery defaults & coercion", () => {
       const d1 = zExperimentDataQuery.parse({});
-      expect(d1.page).toBe(1);
-      expect(d1.pageSize).toBe(5);
+      expect(d1.page).toBeUndefined();
+      expect(d1.pageSize).toBeUndefined();
 
       const d2 = zExperimentDataQuery.parse({ page: "3", pageSize: "10" });
       expect(d2.page).toBe(3);

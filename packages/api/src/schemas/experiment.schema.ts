@@ -137,10 +137,35 @@ export const zDataColumn = z.object({
   type_text: z.string(),
 });
 
+// Experiment data annotations
+export const zAnnotationType = z.enum(["comment", "flag"]);
+
+export const zAnnotationCommentContent = z.object({
+  text: z.string().min(1).max(255),
+});
+
+export const zAnnotationFlagType = z.enum(["outlier", "needs_review"]);
+export const zAnnotationFlagContent = z.object({
+  flagType: zAnnotationFlagType,
+  reason: z.string().min(1).max(255),
+});
+
+export const zAnnotationContent = z.union([zAnnotationCommentContent, zAnnotationFlagContent]);
+
+export const zAnnotation = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  userName: z.string().optional(),
+  type: zAnnotationType,
+  content: zAnnotationContent,
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
 // Experiment data schema
 export const zExperimentData = z.object({
   columns: z.array(zDataColumn),
-  rows: z.array(z.record(z.string(), z.string().nullable())),
+  rows: z.array(z.record(z.string(), z.unknown().nullable())),
   totalRows: z.number().int(),
   truncated: z.boolean(),
 });
@@ -311,6 +336,172 @@ export const zFlow = z.object({
 
 export const zUpsertFlowBody = zFlowGraph;
 
+// --- Visualization Schemas ---
+
+// Chart family enum
+export const zChartFamily = z.enum(["basic", "scientific", "3d", "statistical"]);
+
+// Chart type enum (matches database enum)
+export const zChartType = z.enum([
+  "line",
+  "scatter",
+  "bar",
+  "pie",
+  "area",
+  "dot-plot",
+  "bubble",
+  "lollipop",
+  // Statistical charts
+  "box-plot",
+  "histogram",
+  "violin-plot",
+  "error-bar",
+  "density-plot",
+  "ridge-plot",
+  "histogram-2d",
+  "scatter2density",
+  "spc-control-chart",
+  // Scientific charts (for future expansion)
+  "heatmap",
+  "contour",
+  "carpet",
+  "ternary",
+  "parallel-coordinates",
+  "log-plot",
+  "wind-rose",
+  "radar",
+  "polar",
+  "correlation-matrix",
+  "alluvial",
+]);
+
+// Data source configuration schema
+export const zDataSourceConfig = z.object({
+  tableName: z.string().min(1, "Table name is required"),
+  columnName: z.string().min(1, "Column name is required"),
+  // Role defines how this data source is used (e.g., "x", "y", "y1", "y2", "color", "size", "a", "b", "c", "labels", "values", etc.)
+  role: z.string().min(1, "Role is required"),
+  // Optional series name for multiple series with same role
+  seriesName: z.string().optional(),
+  // Optional alias for display
+  alias: z.string().optional(),
+});
+
+// Axis configuration schema
+export const zAxisConfig = z.object({
+  // Data source for this axis
+  dataSource: zDataSourceConfig,
+  // Axis type/scale
+  type: z.enum(["linear", "log", "date", "category"]).default("linear"),
+  // Axis title (optional, defaults to column name or alias)
+  title: z.string().optional(),
+  // For multi-axis charts (left/right y-axis)
+  side: z.enum(["left", "right"]).optional(),
+  // Color for this data series
+  color: z.string().optional(),
+});
+
+// Shared chart display options
+export const zChartDisplayOptions = z
+  .object({
+    title: z.string().optional(),
+    showLegend: z.boolean().default(true),
+    legendPosition: z.enum(["top", "bottom", "left", "right"]).default("right"),
+    colorScheme: z.enum(["default", "pastel", "dark", "colorblind"]).default("default"),
+    interactive: z.boolean().default(true), // Whether chart allows zoom/pan
+  })
+  .optional();
+
+// Generic chart config - allows any props to be passed to chart components
+export const zChartConfig = z.record(z.string(), z.unknown()).optional();
+
+// Data configuration schema for visualization data sources
+export const zChartDataConfig = z.object({
+  // Primary data table for the visualization
+  tableName: z.string().min(1),
+  // Additional data source configurations specific to chart type
+  dataSources: z.array(zDataSourceConfig).min(1),
+  // Optional filtering/aggregation settings
+  filters: z
+    .array(
+      z.object({
+        column: z.string(),
+        operator: z.enum(["equals", "not_equals", "greater_than", "less_than", "contains", "in"]),
+        value: z.union([z.string(), z.number(), z.boolean(), z.array(z.string())]),
+      }),
+    )
+    .optional(),
+  // Optional aggregation settings
+  aggregation: z
+    .object({
+      groupBy: z.array(z.string()).optional(),
+      functions: z
+        .array(
+          z.object({
+            column: z.string(),
+            function: z.enum(["sum", "avg", "count", "min", "max", "std", "var"]),
+            alias: z.string().optional(),
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
+});
+
+// Base visualization schema
+export const zExperimentVisualization = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(255),
+  description: z.string().nullable(),
+  experimentId: z.string().uuid(),
+  chartFamily: zChartFamily,
+  chartType: zChartType,
+  config: zChartConfig,
+  dataConfig: zChartDataConfig,
+  createdBy: z.string().uuid(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const zExperimentVisualizationList = z.array(zExperimentVisualization);
+
+// Create visualization request
+export const zCreateExperimentVisualizationBody = z.object({
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+  chartFamily: zChartFamily,
+  chartType: zChartType,
+  config: zChartConfig,
+  dataConfig: zChartDataConfig,
+});
+
+// Update visualization request
+export const zUpdateExperimentVisualizationBody = z.object({
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+  chartFamily: zChartFamily,
+  chartType: zChartType,
+  config: zChartConfig,
+  dataConfig: zChartDataConfig,
+});
+
+// List visualizations query parameters
+export const zListExperimentVisualizationsQuery = z.object({
+  chartFamily: zChartFamily.optional(),
+  limit: z.coerce.number().int().positive().max(100).default(50),
+  offset: z.coerce.number().int().nonnegative().default(0),
+});
+
+// Path parameters for visualizations
+export const zExperimentVisualizationPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+  visualizationId: z.string().uuid().describe("ID of the visualization"),
+});
+
+// Visualization responses
+export const zCreateExperimentVisualizationResponse = zExperimentVisualization;
+export const zUpdateExperimentVisualizationResponse = zExperimentVisualization;
+
 // Infer types from Zod schemas
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
 export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
@@ -478,19 +669,18 @@ export const zExperimentFilterQuery = z.object({
 });
 
 export const zExperimentDataQuery = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1).describe("Page number for pagination"),
-  pageSize: z.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(100)
-    .optional()
-    .default(5)
-    .describe("Number of rows per page"),
+  page: z.coerce.number().int().min(1).optional().describe("Page number for pagination"),
+  pageSize: z.coerce.number().int().min(1).max(100).optional().describe("Number of rows per page"),
   tableName: z
     .string()
     .optional()
     .describe("Optional table name to filter results to a specific table"),
+  columns: z
+    .string()
+    .optional()
+    .describe(
+      "Specific columns to fetch. If provided with tableName, fetches full data for these columns only",
+    ),
 });
 
 export const zExperimentDataTableInfo = z.object({
@@ -631,3 +821,22 @@ export type ExperimentProvisioningStatusWebhookPayload = z.infer<
 export type ExperimentProvisioningStatus = ExperimentProvisioningStatusWebhookPayload["status"];
 export type ExperimentWebhookSuccessResponse = z.infer<typeof zExperimentWebhookSuccessResponse>;
 export type ExperimentWebhookErrorResponse = z.infer<typeof zExperimentWebhookErrorResponse>;
+
+// Visualization types
+export type ChartFamily = z.infer<typeof zChartFamily>;
+export type ChartType = z.infer<typeof zChartType>;
+export type DataSourceConfig = z.infer<typeof zDataSourceConfig>;
+export type AxisConfig = z.infer<typeof zAxisConfig>;
+export type ChartConfig = z.infer<typeof zChartConfig>;
+export type ExperimentVisualization = z.infer<typeof zExperimentVisualization>;
+export type ExperimentVisualizationList = z.infer<typeof zExperimentVisualizationList>;
+export type CreateExperimentVisualizationBody = z.infer<typeof zCreateExperimentVisualizationBody>;
+export type UpdateExperimentVisualizationBody = z.infer<typeof zUpdateExperimentVisualizationBody>;
+export type ListExperimentVisualizationsQuery = z.infer<typeof zListExperimentVisualizationsQuery>;
+
+// Annotation types
+export type AnnotationType = z.infer<typeof zAnnotationType>;
+export type AnnotationFlagType = z.infer<typeof zAnnotationFlagType>;
+export type AnnotationCommentContent = z.infer<typeof zAnnotationCommentContent>;
+export type AnnotationFlagContent = z.infer<typeof zAnnotationFlagContent>;
+export type Annotation = z.infer<typeof zAnnotation>;
