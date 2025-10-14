@@ -99,6 +99,10 @@ export interface MapProps {
    */
   height?: string;
   /**
+   * If true, automatically fit the map bounds to include all provided locations when the map first loads
+   */
+  fitBoundsOnMapLoad?: boolean;
+  /**
    * CSS class name for the container
    */
   className?: string;
@@ -161,6 +165,54 @@ const MapViewController = ({
   return null;
 };
 
+// Controller to fit map bounds to provided locations
+const FitBoundsController = ({
+  locations,
+  padding = [50, 50],
+  maxZoomOverride,
+}: {
+  locations: LocationPoint[];
+  padding?: [number, number];
+  maxZoomOverride?: number;
+}) => {
+  const map = useMap();
+  const hasFittedRef = React.useRef(false);
+
+  useEffect(() => {
+    // Only fit once on initial load (first time we have locations)
+    if (!map || !locations || locations.length === 0) return;
+    if (hasFittedRef.current) return;
+
+    if (locations.length === 1) {
+      // For single location, set a reasonable zoom but don't over-zoom
+      const loc = locations[0];
+      if (loc) {
+        const targetZoom = Math.min(maxZoomOverride ?? map.getMaxZoom(), 12);
+        map.setView([loc.latitude, loc.longitude], targetZoom, { animate: true });
+      }
+      return;
+    }
+
+    try {
+      const latLngs = locations.map((l) => [l.latitude, l.longitude] as [number, number]);
+      const bounds = L.latLngBounds(latLngs);
+      // Use fitBounds with padding and a maxZoom to avoid over-zooming for distant points
+      map.fitBounds(bounds, { padding, maxZoom: maxZoomOverride ?? 10, animate: true });
+      hasFittedRef.current = true;
+    } catch (err) {
+      // Fallback: center on average
+      const centerLat = locations.reduce((s, l) => s + l.latitude, 0) / locations.length;
+      const centerLng = locations.reduce((s, l) => s + l.longitude, 0) / locations.length;
+      map.setView([centerLat, centerLng], Math.min(maxZoomOverride ?? map.getZoom(), 4), {
+        animate: true,
+      });
+      hasFittedRef.current = true;
+    }
+  }, [map, locations, padding, maxZoomOverride]);
+
+  return null;
+};
+
 // Calculate distance between two points in kilometers
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 6371; // Earth's radius in kilometers
@@ -201,6 +253,7 @@ export const Map = ({
   sidebarCollapsed = false,
   showDistances = false,
   referencePoint,
+  fitBoundsOnMapLoad = true,
 }: MapProps) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(sidebarCollapsed);
   const [selectedLocation, setSelectedLocation] = useState<LocationPoint | undefined>();
@@ -451,6 +504,10 @@ export const Map = ({
           />
 
           <MapViewController center={mapCenter} zoom={mapZoom} shouldPan={shouldPanToLocation} />
+
+          {fitBoundsOnMapLoad && locations.length > 0 && (
+            <FitBoundsController locations={locations} maxZoomOverride={maxZoom} />
+          )}
 
           {showZoomControl && <ZoomControl position="topright" />}
           {showScale && <ScaleControl position="bottomright" />}

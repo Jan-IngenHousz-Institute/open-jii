@@ -17,6 +17,14 @@ vi.mock("leaflet", () => mockLeaflet);
 vi.mock("leaflet/dist/leaflet.css", () => ({}));
 
 // Mock react-leaflet components
+// Provide a shared mockMap object so tests can assert calls to fitBounds/setView
+const mockMap = {
+  setView: vi.fn(),
+  getZoom: vi.fn(() => 10),
+  fitBounds: vi.fn(),
+  getMaxZoom: vi.fn(() => 18),
+};
+
 vi.mock("react-leaflet", () => ({
   MapContainer: ({ children, zoomControl, ...props }: any) => (
     <div data-testid="map-container" data-zoom-control={zoomControl} {...props}>
@@ -43,10 +51,7 @@ vi.mock("react-leaflet", () => ({
     (globalThis as any).__mapClickHandler = eventHandlers.click;
     return null;
   }),
-  useMap: vi.fn(() => ({
-    setView: vi.fn(),
-    getZoom: vi.fn(() => 10),
-  })),
+  useMap: vi.fn(() => mockMap),
 }));
 
 // Mock react-leaflet-cluster
@@ -675,6 +680,54 @@ describe("Map Component", () => {
       render(<Map locations={locationWithAddress} />);
 
       expect(screen.getByText("123 Main Street, New York, NY 10001")).toBeInTheDocument();
+    });
+  });
+
+  describe("FitBounds behavior", () => {
+    beforeEach(() => {
+      // Clear mockMap calls
+      mockMap.setView.mockClear();
+      mockMap.fitBounds.mockClear();
+      mockMap.getZoom.mockClear();
+      mockMap.getMaxZoom.mockClear();
+    });
+
+    it("should call fitBounds once on initial render when multiple locations present", () => {
+      const { rerender } = render(<Map {...defaultProps} />);
+
+      // fitBounds should have been called once during initial mount
+      expect(mockMap.fitBounds).toHaveBeenCalledTimes(1);
+
+      // Rerender with an additional location - should not call fitBounds again
+      const newLoc: LocationPoint = {
+        id: "loc-3",
+        name: "New Loc",
+        latitude: 41.0,
+        longitude: -74.0,
+      };
+      rerender(<Map {...defaultProps} locations={[...mockLocations, newLoc]} />);
+
+      expect(mockMap.fitBounds).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not call fitBounds when fitBoundsOnMapLoad is false", () => {
+      render(<Map {...defaultProps} fitBoundsOnMapLoad={false} />);
+
+      expect(mockMap.fitBounds).not.toHaveBeenCalled();
+    });
+
+    it("should set view for a single location with capped zoom", () => {
+      const single: LocationPoint[] = [{ id: "only", name: "Only", latitude: 10, longitude: 20 }];
+
+      render(<Map {...defaultProps} locations={single} />);
+
+      // For single location we expect setView to be used
+      expect(mockMap.setView).toHaveBeenCalled();
+      const [[coords, zoom]] = mockMap.setView.mock.calls as any;
+      expect(coords).toEqual([10, 20]);
+      // Zoom should be a number and capped (<=12 per implementation)
+      expect(typeof zoom).toBe("number");
+      expect(zoom).toBeLessThanOrEqual(12);
     });
   });
 
