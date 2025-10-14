@@ -17,14 +17,12 @@ import sys
 from typing import Dict, Any, List, Callable
 from pyspark.sql.types import (
     StringType, TimestampType, DoubleType, IntegerType, 
-    StructType, StructField, ArrayType
+    StructType, StructField, ArrayType, BooleanType, MapType
 )
 
-sys.path.append("/Workspace/Shared/notebooks/lib/multispeq/macro/executors")
-
-# Import the new executor modules
-from js_executor import execute_javascript_macro
-from py_executor import execute_python_macro
+# Import the executor modules using relative imports
+from .executors.js_executor import execute_javascript_macro
+from .executors.py_executor import execute_python_macro
 
 
 def execute_macro_script(
@@ -142,10 +140,8 @@ def process_macro_output_for_spark(output: Dict[str, Any]) -> Dict[str, Any]:
         original_type = type(value).__name__
         
         if isinstance(value, dict):
-            # Convert dictionaries to JSON strings
-            # processed_output[key] = json.dumps(value)
-            # conversions_made += 1
-            print(f"[MACRO] Converted dict '{key}' to JSON string")
+            # Keep dictionaries as-is for proper schema inference
+            print(f"[MACRO] Kept dict '{key}' as dictionary for schema inference")
         elif isinstance(value, str):
             try:
                 parsed = json.loads(value)
@@ -199,3 +195,83 @@ def process_macro_output_for_spark(output: Dict[str, Any]) -> Dict[str, Any]:
     
     print(f"[MACRO] Macro output processing completed, {conversions_made} conversions made")
     return processed_output
+
+
+def infer_macro_schema(macro_name: str, sample_data: dict, macros_path: str = "/Shared/Workspace/macros") -> StructType:
+    """
+    Infer the schema of a macro's output by running it on sample data.
+    Returns a StructType for use with from_json.
+    
+    Args:
+        macro_name: Name of the macro script
+        sample_data: Sample data to use for schema inference
+        macros_path: Path to the macros directory
+        
+    Returns:
+        StructType schema for the macro output or None if inference fails
+    """
+    try:
+        # Execute the macro with sample data
+        raw_output = execute_macro_script(macro_name, sample_data, macros_path)
+        
+        if raw_output is None:
+            return None
+        
+        # Process the output the same way it will be processed in the actual pipeline
+        output = process_macro_output_for_spark(raw_output)
+            
+        # Analyze the macro output structure and build StructType
+        def infer_spark_field(key, value):
+            if value is None:
+                return StructField(key, StringType(), True)  # Default to string for null values
+            elif isinstance(value, bool):
+                return StructField(key, BooleanType(), True)
+            elif isinstance(value, int):
+                # After processing, integers are converted to floats for consistency
+                return StructField(key, DoubleType(), True)
+            elif isinstance(value, float):
+                return StructField(key, DoubleType(), True)
+            elif isinstance(value, str):
+                return StructField(key, StringType(), True)
+            elif isinstance(value, list):
+                if len(value) == 0:
+                    return StructField(key, ArrayType(StringType()), True)  # Default array type
+                # Infer array element type from first non-null element
+                # Note: process_macro_output_for_spark converts all numeric arrays to float
+                for item in value:
+                    if item is not None:
+                        if isinstance(item, bool):
+                            return StructField(key, ArrayType(BooleanType()), True)
+                        elif isinstance(item, int):
+                            # This shouldn't happen after processing, but handle it
+                            return StructField(key, ArrayType(DoubleType()), True)
+                        elif isinstance(item, float):
+                            return StructField(key, ArrayType(DoubleType()), True)
+                        elif isinstance(item, str):
+                            return StructField(key, ArrayType(StringType()), True)
+                        elif isinstance(item, list):
+                            # Array of arrays - keep as array of strings for simplicity
+                            return StructField(key, ArrayType(StringType()), True)
+                        elif isinstance(item, dict):
+                            # Array of objects - treat as Array<Map<String, String>> for simplicity
+                            return StructField(key, ArrayType(MapType(StringType(), StringType())), True)
+                        else:
+                            return StructField(key, ArrayType(StringType()), True)
+                return StructField(key, ArrayType(StringType()), True)
+            elif isinstance(value, dict):
+                # After processing, dicts should have string keys and string values
+                return StructField(key, MapType(StringType(), StringType()), True)
+            else:
+                return StructField(key, StringType(), True)  # Default fallback
+        
+        # Build struct fields from macro output
+        struct_fields = []
+        for key, value in output.items():
+            field = infer_spark_field(key, value)
+            struct_fields.append(field)
+        
+        return StructType(struct_fields)
+        
+    except Exception as e:
+        print(f"Error inferring schema for macro {macro_name}: {str(e)}")
+        return None
