@@ -1,131 +1,31 @@
 """
 Unit tests for volume_io.py module.
-
-Tests cover all functions including find_upload_directories, parse_upload_time,
-and discover_and_validate_upload_directories.
 """
 
 import os
+import sys
 import unittest
 from datetime import datetime
 from unittest.mock import Mock, patch, MagicMock
-from volume_io import find_upload_directories, parse_upload_time, discover_and_validate_upload_directories
 
+# Add the parent directory to Python path so we can import volume_io
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-class TestFindUploadDirectories(unittest.TestCase):
-    """Test find_upload_directories function."""
-    
-    @patch('os.path.exists')
-    @patch('os.listdir')
-    @patch('os.path.isdir')
-    def test_find_upload_directories_success(self, mock_isdir, mock_listdir, mock_exists):
-        """Test successful discovery of upload directories."""
-        mock_exists.return_value = True
-        mock_listdir.return_value = [
-            'upload_20250901_01',
-            'upload_20250902_02', 
-            'other_folder',
-            'upload_20250903_03',
-            'regular_file.txt'
-        ]
-        
-        def mock_isdir_side_effect(path):
-            # Only upload directories and other_folder are directories
-            return any(folder in path for folder in ['upload_20250901_01', 'upload_20250902_02', 'upload_20250903_03', 'other_folder'])
-        
-        mock_isdir.side_effect = mock_isdir_side_effect
-        
-        result = find_upload_directories('/test/base/path')
-        
-        expected = [
-            '/test/base/path/upload_20250901_01',
-            '/test/base/path/upload_20250902_02',
-            '/test/base/path/upload_20250903_03'
-        ]
-        
-        self.assertEqual(result, expected)
-        mock_exists.assert_called_once_with('/test/base/path')
-        mock_listdir.assert_called_once_with('/test/base/path')
-    
-    @patch('os.path.exists')
-    def test_find_upload_directories_path_not_exists(self, mock_exists):
-        """Test when base path doesn't exist."""
-        mock_exists.return_value = False
-        
-        result = find_upload_directories('/nonexistent/path')
-        
-        self.assertEqual(result, [])
-        mock_exists.assert_called_once_with('/nonexistent/path')
-    
-    @patch('os.path.exists')
-    @patch('os.listdir')
-    def test_find_upload_directories_empty_directory(self, mock_listdir, mock_exists):
-        """Test with empty directory."""
-        mock_exists.return_value = True
-        mock_listdir.return_value = []
-        
-        result = find_upload_directories('/test/empty/path')
-        
-        self.assertEqual(result, [])
-    
-    @patch('os.path.exists')
-    @patch('os.listdir')
-    @patch('os.path.isdir')
-    def test_find_upload_directories_no_upload_dirs(self, mock_isdir, mock_listdir, mock_exists):
-        """Test when no upload directories are found."""
-        mock_exists.return_value = True
-        mock_listdir.return_value = ['other_folder', 'regular_file.txt', 'another_dir']
-        mock_isdir.return_value = True
-        
-        result = find_upload_directories('/test/path')
-        
-        self.assertEqual(result, [])
-    
-    @patch('os.path.exists')
-    @patch('os.listdir')
-    @patch('os.path.isdir')
-    def test_find_upload_directories_mixed_items(self, mock_isdir, mock_listdir, mock_exists):
-        """Test with mix of files and directories, some upload dirs."""
-        mock_exists.return_value = True
-        mock_listdir.return_value = [
-            'upload_20250801_01',  # directory
-            'upload_20250802_02',  # file (should be ignored)
-            'not_upload_dir',      # directory
-            'upload_invalid',      # directory but wrong format (should be ignored)
-            'upload_20250803_03'   # directory
-        ]
-        
-        def mock_isdir_side_effect(path):
-            files = ['upload_20250802_02']  # This one is a file
-            return not any(f in path for f in files)
-        
-        mock_isdir.side_effect = mock_isdir_side_effect
-        
-        result = find_upload_directories('/test/path')
-        
-        # The function filters by startswith("upload_"), so 'upload_invalid' will be included
-        # but it still has the correct upload_ prefix, just not a valid date format
-        expected = [
-            '/test/path/upload_20250801_01',
-            '/test/path/upload_invalid',
-            '/test/path/upload_20250803_03'
-        ]
-        
-        self.assertEqual(result, expected)
-    
-    @patch('os.path.exists')
-    @patch('os.listdir')
-    def test_find_upload_directories_os_error(self, mock_listdir, mock_exists):
-        """Test handling of OS errors during directory listing."""
-        mock_exists.return_value = True
-        mock_listdir.side_effect = OSError("Permission denied")
-        
-        with patch('builtins.print') as mock_print:
-            result = find_upload_directories('/restricted/path')
-        
-        self.assertEqual(result, [])
-        mock_print.assert_called_once()
-        self.assertIn("Error accessing volume", mock_print.call_args[0][0])
+# Mock PySpark and dbutils before importing volume_io
+spark_session_mock = MagicMock()
+dbutils_mock = MagicMock()
+sys.modules['pyspark'] = MagicMock()
+sys.modules['pyspark.sql'] = MagicMock()
+sys.modules['pyspark.sql.SparkSession'] = MagicMock()
+sys.modules['pyspark.dbutils'] = MagicMock()
+sys.modules['pyspark.dbutils.DBUtils'] = MagicMock()
+
+# Mock the spark and dbutils globals
+import volume_io
+volume_io.spark = spark_session_mock
+volume_io.dbutils = dbutils_mock
+
+from volume_io import parse_upload_time, prepare_ambyte_files
 
 
 class TestParseUploadTime(unittest.TestCase):
@@ -207,160 +107,100 @@ class TestParseUploadTime(unittest.TestCase):
         self.assertEqual(result, expected)
 
 
-class TestDiscoverAndValidateUploadDirectories(unittest.TestCase):
-    """Test discover_and_validate_upload_directories function."""
+class TestPrepareAmbyteFiles(unittest.TestCase):
+    """Test prepare_ambyte_files function."""
     
-    @patch('volume_io.find_upload_directories')
-    def test_discover_and_validate_success(self, mock_find_upload_directories):
-        """Test successful discovery and validation."""
-        mock_find_upload_directories.return_value = [
-            '/test/path/upload_20250901_01',
-            '/test/path/upload_20250902_02'
+    def test_prepare_ambyte_files_basic_structure(self):
+        """Test basic file organization functionality."""
+        # Mock file data structure as it would come from Auto Loader
+        files_data = [
+            {
+                'content': 'I1\t4039\t1748882921\nA\t27306\t44136\nT0\t26870\nT1\t192,208\nT2\t6580,7369\nmore\nlines\nhere\nEOF',
+                'file_path': '/path/upload_20250901_01/Ambyte_1/1/file1.txt',
+                'ambit_index': '1'
+            },
+            {
+                'content': 'I1\t4039\t1748882921\nA\t27306\t44136\nT0\t26870\nT1\t192,208\nT2\t6580,7369\nmore\nlines\nhere\nEOF',
+                'file_path': '/path/upload_20250901_01/Ambyte_1/2/file2.txt',
+                'ambit_index': '2'
+            }
         ]
         
-        with patch('builtins.print') as mock_print:
-            directories, success = discover_and_validate_upload_directories('/test/path')
+        result = prepare_ambyte_files(files_data, 'upload_20250901_01', 'Ambyte_1')
         
-        expected_directories = [
-            '/test/path/upload_20250901_01',
-            '/test/path/upload_20250902_02'
+        self.assertIsNotNone(result)
+        files_per_byte, upload_time, folder_name = result
+        
+        # Should organize files into non-empty slots (filters out empty ones)
+        self.assertEqual(len(files_per_byte), 2)  # Only 2 non-empty slots
+        self.assertGreater(len(files_per_byte[0]), 0)  # First ambit slot should have data
+        self.assertGreater(len(files_per_byte[1]), 0)  # Second ambit slot should have data
+        
+        # Should parse upload time
+        self.assertIsInstance(upload_time, datetime)
+        self.assertEqual(upload_time, datetime(2025, 9, 1))
+        
+        # Should return folder name
+        self.assertEqual(folder_name, 'Ambyte_1')
+    
+    def test_prepare_ambyte_files_unknown_ambit(self):
+        """Test handling of unknown ambit files."""
+        files_data = [
+            {
+                'content': 'I1\t4039\t1748882921\nA\t27306\t44136\nT0\t26870\nT1\t192,208\nT2\t6580,7369\nmore\nlines\nhere\nEOF',
+                'file_path': '/path/upload_20250901_01/Ambyte_1/unknown_ambit/file.txt',
+                'ambit_index': ''
+            }
         ]
         
-        self.assertEqual(directories, expected_directories)
-        self.assertTrue(success)
+        result = prepare_ambyte_files(files_data, 'upload_20250901_01', 'Ambyte_1')
         
-        # Check that appropriate messages were printed
-        print_calls = [call[0][0] for call in mock_print.call_args_list]
-        self.assertTrue(any("Found 2 upload directories" in call for call in print_calls))
-        self.assertTrue(any("Upload directories: ['upload_20250901_01', 'upload_20250902_02']" in call for call in print_calls))
+        self.assertIsNotNone(result)
+        files_per_byte, upload_time, folder_name = result
+        
+        # Unknown ambit files should go to first slot, and only have 1 non-empty slot
+        self.assertEqual(len(files_per_byte), 1)  # Only 1 non-empty slot
+        self.assertGreater(len(files_per_byte[0]), 0)  # First slot should have data
     
-    @patch('volume_io.find_upload_directories')
-    def test_discover_and_validate_empty_result(self, mock_find_upload_directories):
-        """Test when no upload directories are found."""
-        mock_find_upload_directories.return_value = []
-        
-        with patch('builtins.print') as mock_print:
-            directories, success = discover_and_validate_upload_directories('/test/path')
-        
-        self.assertEqual(directories, [])
-        self.assertFalse(success)
-        
-        mock_print.assert_called_once_with("No upload directories found")
-    
-    @patch('volume_io.find_upload_directories')
-    def test_discover_and_validate_single_directory(self, mock_find_upload_directories):
-        """Test with single upload directory."""
-        mock_find_upload_directories.return_value = ['/test/path/upload_20250901_01']
-        
-        with patch('builtins.print') as mock_print:
-            directories, success = discover_and_validate_upload_directories('/test/path')
-        
-        self.assertEqual(directories, ['/test/path/upload_20250901_01'])
-        self.assertTrue(success)
-        
-        print_calls = [call[0][0] for call in mock_print.call_args_list]
-        self.assertTrue(any("Found 1 upload directories" in call for call in print_calls))
-        self.assertTrue(any("Upload directories: ['upload_20250901_01']" in call for call in print_calls))
-    
-    @patch('volume_io.find_upload_directories')
-    def test_discover_and_validate_many_directories(self, mock_find_upload_directories):
-        """Test with many upload directories."""
-        upload_dirs = [f'/test/path/upload_202509{i:02d}_01' for i in range(1, 11)]
-        mock_find_upload_directories.return_value = upload_dirs
-        
-        with patch('builtins.print') as mock_print:
-            directories, success = discover_and_validate_upload_directories('/test/path')
-        
-        self.assertEqual(directories, upload_dirs)
-        self.assertTrue(success)
-        
-        print_calls = [call[0][0] for call in mock_print.call_args_list]
-        self.assertTrue(any("Found 10 upload directories" in call for call in print_calls))
-
-
-class TestIntegrationScenarios(unittest.TestCase):
-    """Integration tests combining multiple functions."""
-    
-    @patch('os.path.exists')
-    @patch('os.listdir')
-    @patch('os.path.isdir')
-    def test_complete_workflow_success(self, mock_isdir, mock_listdir, mock_exists):
-        """Test complete workflow from directory discovery to time parsing."""
-        # Setup mocks for find_upload_directories
-        mock_exists.return_value = True
-        mock_listdir.return_value = [
-            'upload_20250901_01',
-            'upload_20250902_02',
-            'other_folder',
-            'upload_20250903_03'
+    def test_prepare_ambyte_files_insufficient_content(self):
+        """Test handling of files with insufficient content."""
+        files_data = [
+            {
+                'content': 'short\ncontent\nEOF',  # Only 3 lines, should be filtered out
+                'file_path': '/path/upload_20250901_01/Ambyte_1/1/file.txt',
+                'ambit_index': '1'
+            }
         ]
-        mock_isdir.return_value = True
         
-        # Test the complete workflow
-        with patch('builtins.print'):
-            directories, success = discover_and_validate_upload_directories('/test/path')
+        result = prepare_ambyte_files(files_data, 'upload_20250901_01', 'Ambyte_1')
         
-        self.assertTrue(success)
-        self.assertEqual(len(directories), 3)
-        
-        # Test parsing upload times for discovered directories
-        for directory in directories:
-            dir_name = os.path.basename(directory)
-            upload_time = parse_upload_time(dir_name)
-            self.assertIsNotNone(upload_time)
-            self.assertIsInstance(upload_time, datetime)
+        # Should return None because no valid files
+        self.assertIsNone(result)
     
-    @patch('os.path.exists')
-    @patch('os.listdir')
-    def test_complete_workflow_with_os_error(self, mock_listdir, mock_exists):
-        """Test complete workflow when OS errors occur."""
-        mock_exists.return_value = True
-        mock_listdir.side_effect = PermissionError("Access denied")
+    def test_prepare_ambyte_files_invalid_upload_dir(self):
+        """Test handling of invalid upload directory name."""
+        files_data = [
+            {
+                'content': 'I1\t4039\t1748882921\nA\t27306\t44136\nT0\t26870\nT1\t192,208\nT2\t6580,7369\nmore\nlines\nhere\nEOF',
+                'file_path': '/path/invalid_dir/Ambyte_1/1/file.txt',
+                'ambit_index': '1'
+            }
+        ]
         
         with patch('builtins.print'):
-            directories, success = discover_and_validate_upload_directories('/restricted/path')
+            result = prepare_ambyte_files(files_data, 'invalid_dir', 'Ambyte_1')
         
-        self.assertFalse(success)
-        self.assertEqual(directories, [])
-    
-    def test_date_parsing_edge_cases_integration(self):
-        """Test date parsing with various edge cases in integration context."""
-        test_cases = [
-            ('upload_20250101_01', True),   # New Year's Day
-            ('upload_20251231_99', True),   # New Year's Eve
-            ('upload_20240229_01', True),   # Leap year
-            ('upload_20250229_01', False),  # Invalid leap year
-            ('upload_invalid_01', False),   # Invalid format
-        ]
+        # Should still organize files even if upload time parsing fails
+        self.assertIsNotNone(result)
+        files_per_byte, upload_time, folder_name = result
         
-        for dir_name, should_succeed in test_cases:
-            with self.subTest(dir_name=dir_name):
-                with patch('builtins.print'):
-                    result = parse_upload_time(dir_name)
-                
-                if should_succeed:
-                    self.assertIsNotNone(result)
-                    self.assertIsInstance(result, datetime)
-                else:
-                    self.assertIsNone(result)
+        self.assertGreater(len(files_per_byte[0]), 0)
+        self.assertIsNone(upload_time)  # Upload time should be None due to invalid format
+        self.assertEqual(folder_name, 'Ambyte_1')
 
 
 class TestErrorHandling(unittest.TestCase):
     """Test error handling and edge cases."""
-    
-    def test_find_upload_directories_with_unicode_names(self):
-        """Test handling of unicode characters in directory names."""
-        with patch('os.path.exists', return_value=True), \
-             patch('os.listdir', return_value=['upload_20250901_01', 'üñíçødé_folder', 'upload_20250902_02']), \
-             patch('os.path.isdir', return_value=True):
-            
-            result = find_upload_directories('/test/path')
-            
-            expected = [
-                '/test/path/upload_20250901_01',
-                '/test/path/upload_20250902_02'
-            ]
-            self.assertEqual(result, expected)
     
     def test_parse_upload_time_with_unicode_input(self):
         """Test parse_upload_time with unicode characters."""
@@ -369,20 +209,23 @@ class TestErrorHandling(unittest.TestCase):
         
         self.assertIsNone(result)
     
-    @patch('volume_io.find_upload_directories')
-    def test_discover_and_validate_with_none_result(self, mock_find_upload_directories):
-        """Test when find_upload_directories returns unexpected None (defensive)."""
-        mock_find_upload_directories.return_value = None
+    def test_prepare_ambyte_files_exception_handling(self):
+        """Test that exceptions in prepare_ambyte_files are handled gracefully."""
+        files_data = [
+            {
+                'content': 'valid\ncontent\nwith\nmultiple\nlines\nhere\nmore\nlines\nEOF',
+                'file_path': '/path/upload_20250901_01/Ambyte_1/1/file.txt',
+                'ambit_index': '1'
+            }
+        ]
         
-        with patch('builtins.print') as mock_print:
-            directories, success = discover_and_validate_upload_directories('/test/path')
-            
-            # The function treats None as falsy, so it returns empty list and False
-            self.assertEqual(directories, [])
-            self.assertFalse(success)
-            
-            # Should print "No upload directories found" message
-            mock_print.assert_called_once_with("No upload directories found")
+        # Mock parse_upload_time to raise an exception
+        with patch('volume_io.parse_upload_time', side_effect=Exception("Test error")):
+            with patch('builtins.print'):
+                result = prepare_ambyte_files(files_data, 'upload_20250901_01', 'Ambyte_1')
+        
+        # Should return None when exception occurs
+        self.assertIsNone(result)
 
 
 if __name__ == '__main__':
