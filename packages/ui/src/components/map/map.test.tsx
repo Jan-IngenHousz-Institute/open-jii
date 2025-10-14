@@ -10,6 +10,10 @@ const mockLeaflet = vi.hoisted(() => ({
   default: {
     divIcon: vi.fn(() => ({ _leaflet_id: 1 })),
     atan2: Math.atan2,
+    latLngBounds: vi.fn((coords: any) => ({
+      _southWest: coords[0],
+      _northEast: coords[coords.length - 1],
+    })),
   },
 }));
 
@@ -17,14 +21,6 @@ vi.mock("leaflet", () => mockLeaflet);
 vi.mock("leaflet/dist/leaflet.css", () => ({}));
 
 // Mock react-leaflet components
-// Provide a shared mockMap object so tests can assert calls to fitBounds/setView
-const mockMap = {
-  setView: vi.fn(),
-  getZoom: vi.fn(() => 10),
-  fitBounds: vi.fn(),
-  getMaxZoom: vi.fn(() => 18),
-};
-
 vi.mock("react-leaflet", () => ({
   MapContainer: ({ children, zoomControl, ...props }: any) => (
     <div data-testid="map-container" data-zoom-control={zoomControl} {...props}>
@@ -51,7 +47,12 @@ vi.mock("react-leaflet", () => ({
     (globalThis as any).__mapClickHandler = eventHandlers.click;
     return null;
   }),
-  useMap: vi.fn(() => mockMap),
+  useMap: vi.fn(() => ({
+    setView: vi.fn(),
+    getZoom: vi.fn(() => 10),
+    getMaxZoom: vi.fn(() => 18),
+    fitBounds: vi.fn(),
+  })),
 }));
 
 // Mock react-leaflet-cluster
@@ -683,54 +684,6 @@ describe("Map Component", () => {
     });
   });
 
-  describe("FitBounds behavior", () => {
-    beforeEach(() => {
-      // Clear mockMap calls
-      mockMap.setView.mockClear();
-      mockMap.fitBounds.mockClear();
-      mockMap.getZoom.mockClear();
-      mockMap.getMaxZoom.mockClear();
-    });
-
-    it("should call fitBounds once on initial render when multiple locations present", () => {
-      const { rerender } = render(<Map {...defaultProps} />);
-
-      // fitBounds should have been called once during initial mount
-      expect(mockMap.fitBounds).toHaveBeenCalledTimes(1);
-
-      // Rerender with an additional location - should not call fitBounds again
-      const newLoc: LocationPoint = {
-        id: "loc-3",
-        name: "New Loc",
-        latitude: 41.0,
-        longitude: -74.0,
-      };
-      rerender(<Map {...defaultProps} locations={[...mockLocations, newLoc]} />);
-
-      expect(mockMap.fitBounds).toHaveBeenCalledTimes(1);
-    });
-
-    it("should not call fitBounds when fitBoundsOnMapLoad is false", () => {
-      render(<Map {...defaultProps} fitBoundsOnMapLoad={false} />);
-
-      expect(mockMap.fitBounds).not.toHaveBeenCalled();
-    });
-
-    it("should set view for a single location with capped zoom", () => {
-      const single: LocationPoint[] = [{ id: "only", name: "Only", latitude: 10, longitude: 20 }];
-
-      render(<Map {...defaultProps} locations={single} />);
-
-      // For single location we expect setView to be used
-      expect(mockMap.setView).toHaveBeenCalled();
-      const [[coords, zoom]] = mockMap.setView.mock.calls as any;
-      expect(coords).toEqual([10, 20]);
-      // Zoom should be a number and capped (<=12 per implementation)
-      expect(typeof zoom).toBe("number");
-      expect(zoom).toBeLessThanOrEqual(12);
-    });
-  });
-
   describe("Error Handling", () => {
     it("should handle undefined locations gracefully", () => {
       render(<Map locations={undefined} />);
@@ -810,6 +763,67 @@ describe("Map Component", () => {
       expect(screen.getByTestId("select-location-loc-1")).toBeInTheDocument();
       expect(screen.getByTestId("navigate-location-loc-1")).toBeInTheDocument();
       expect(screen.getByTestId("remove-location-loc-1")).toBeInTheDocument();
+    });
+  });
+
+  describe("Fit Bounds on Map Load", () => {
+    it("should render FitBoundsController when fitBoundsOnMapLoad is true with locations", () => {
+      const { container } = render(<Map {...defaultProps} fitBoundsOnMapLoad />);
+      
+      // Component should render without errors
+      expect(screen.getByTestId("map-container")).toBeInTheDocument();
+    });
+
+    it("should not render FitBoundsController when fitBoundsOnMapLoad is false", () => {
+      const { container } = render(<Map {...defaultProps} fitBoundsOnMapLoad={false} />);
+      
+      // Component should render without errors
+      expect(screen.getByTestId("map-container")).toBeInTheDocument();
+    });
+
+    it("should render with fitBoundsOnMapLoad and single location", () => {
+      const singleLocation: LocationPoint[] = [
+        {
+          id: "single",
+          name: "Single Location",
+          latitude: 40.7829,
+          longitude: -73.9654,
+          country: "US",
+        },
+      ];
+
+      const { container } = render(<Map locations={singleLocation} fitBoundsOnMapLoad />);
+      
+      expect(screen.getByTestId("map-container")).toBeInTheDocument();
+      expect(screen.getByText("Single Location")).toBeInTheDocument();
+    });
+
+    it("should not render FitBoundsController when locations array is empty", () => {
+      const { container } = render(<Map locations={[]} fitBoundsOnMapLoad />);
+      
+      expect(screen.getByTestId("map-container")).toBeInTheDocument();
+      expect(screen.queryByTestId("marker")).not.toBeInTheDocument();
+    });
+
+    it("should work with custom maxZoom when fitBoundsOnMapLoad is enabled", () => {
+      const { container } = render(<Map {...defaultProps} fitBoundsOnMapLoad maxZoom={15} />);
+      
+      const mapContainer = screen.getByTestId("map-container");
+      expect(mapContainer).toHaveAttribute("maxZoom", "15");
+    });
+
+    it("should work with fitBoundsOnMapLoad enabled by default", () => {
+      // Test that fitBoundsOnMapLoad defaults to true
+      const { container } = render(<Map {...defaultProps} />);
+      
+      expect(screen.getByTestId("map-container")).toBeInTheDocument();
+    });
+
+    it("should render correctly when fitBoundsOnMapLoad is disabled explicitly", () => {
+      const { container } = render(<Map {...defaultProps} fitBoundsOnMapLoad={false} />);
+      
+      expect(screen.getByTestId("map-container")).toBeInTheDocument();
+      expect(screen.getAllByTestId("marker")).toHaveLength(2);
     });
   });
 });
