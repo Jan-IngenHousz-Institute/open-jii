@@ -3,7 +3,7 @@
 # Implementation of experiment-specific medallion architecture pipeline
 # Processes data from central silver layer into experiment-specific bronze/silver/gold tables
 
-%pip install /Workspace/Shared/wheels/macro-0.1.0-py3-none-any.whl
+%pip install /Workspace/Shared/wheels/multispeq-0.1.0-py3-none-any.whl
 %pip install /Workspace/Shared/wheels/mini_racer-0.12.4-py3-none-manylinux_2_31_x86_64.whl
 
 # COMMAND ----------
@@ -27,7 +27,7 @@ from ambyte_parsing import find_byte_folders, load_files_per_byte, process_trace
 from volume_io import discover_and_validate_upload_directories, parse_upload_time
 
 # Import our macro processing library
-from macro import execute_macro_script, get_available_macros, process_macro_output_for_spark, infer_macro_schema
+from multispeq import execute_macro_script, get_available_macros, process_macro_output_for_spark, infer_macro_schema
 
 # COMMAND ----------
 
