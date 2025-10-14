@@ -113,7 +113,7 @@ describe("UpdateExperimentUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.code).toBe("FORBIDDEN");
-    expect(result.error.message).toBe("Only experiment members can update experiments");
+    expect(result.error.message).toBe("You do not have access to this experiment");
   });
 
   it("should return NOT_FOUND error if experiment does not exist", async () => {
@@ -126,5 +126,73 @@ describe("UpdateExperimentUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
     expect(result.error.message).toContain(`Experiment with ID ${nonExistentId} not found`);
+  });
+
+  it("should return FORBIDDEN error if non-admin attempts to archive an experiment", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Archive Forbidden",
+      userId: testUserId,
+    });
+    const memberId = await testApp.createTestUser({});
+    await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+    const updateData = { status: "archived" as const };
+    const result = await useCase.execute(experiment.id, updateData, memberId);
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+    expect(result.error.message).toContain("Only admins can archive experiments");
+  });
+
+  it("should allow admin to archive an experiment", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Archive Allowed",
+      userId: testUserId,
+    });
+
+    const updateData = { status: "archived" as const };
+    const result = await useCase.execute(experiment.id, updateData, testUserId);
+
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value.status).toBe("archived");
+  });
+
+  it("should return FORBIDDEN error if non-admin attempts to update an archived experiment", async () => {
+    // Create experiment and archive by admin
+    const { experiment } = await testApp.createExperiment({
+      name: "Archived Update Test",
+      userId: testUserId,
+    });
+    await useCase.execute(experiment.id, { status: "archived" as const }, testUserId);
+
+    // Add member and attempt update
+    const memberId = await testApp.createTestUser({});
+    await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+    const updateData = { name: "Should Not Update" };
+    const result = await useCase.execute(experiment.id, updateData, memberId);
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+    expect(result.error.message).toContain("You do not have access to this");
+  });
+
+  it("should allow admin to update an archived experiment", async () => {
+    // Create experiment and archive by admin
+    const { experiment } = await testApp.createExperiment({
+      name: "Archived Admin Update",
+      userId: testUserId,
+    });
+    await useCase.execute(experiment.id, { status: "archived" as const }, testUserId);
+
+    const updateData = { name: "Admin Updated Name" };
+    const result = await useCase.execute(experiment.id, updateData, testUserId);
+
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value.name).toBe("Admin Updated Name");
   });
 });
