@@ -100,6 +100,7 @@ def raw_data():
             "kinesis_arrival_time",
             "partitionKey"
         )
+        .withWatermark("ingestion_timestamp", "15 minutes")
     )
 
 # COMMAND ----------
@@ -142,9 +143,10 @@ def clean_data():
         .withColumn("hour", F.hour("timestamp"))
     )
 
+    # TODO: Breaks things and maybe not needed
     # Apply watermarking and deduplication
-    df = df.withWatermark("timestamp", "1 hour") \
-        .dropDuplicates(["device_id", "timestamp", "kinesis_sequence_number"])
+    #df = df.withWatermark("timestamp", "1 hour") \
+    #    .dropDuplicates(["device_id", "timestamp", "kinesis_sequence_number"])
         
     # Calculate data latency (time between reading and ingestion)
     df = df.withColumn(
