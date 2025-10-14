@@ -5,7 +5,7 @@ import { getClient, db } from "./database";
 
 async function runMigrations() {
   let exit = 0;
-  
+
   try {
     // Run the migrations
     await migrate(db, { migrationsFolder: "drizzle" });
