@@ -4,6 +4,7 @@ import {
   Container,
   Head,
   Html,
+  Img,
   Link,
   Preview,
   Section,
@@ -16,9 +17,15 @@ interface VerificationRequestProps {
   url: string;
   host: string;
   senderName: string;
+  qrCodeDataUrl: string;
 }
 
-export const VerificationRequest = ({ url, host, senderName }: VerificationRequestProps) => {
+export const VerificationRequest = ({
+  url,
+  host,
+  senderName,
+  qrCodeDataUrl,
+}: VerificationRequestProps) => {
   return (
     <Html>
       <Tailwind>
@@ -37,12 +44,10 @@ export const VerificationRequest = ({ url, host, senderName }: VerificationReque
               <Text className="mb-4 mt-0 text-center text-[24px] font-semibold text-gray-800">
                 Confirm your email address
               </Text>
-
               <Text className="mb-8 text-center text-[16px] leading-relaxed text-gray-600">
                 Click the button below to verify your email address and sign in to your OpenJII
                 account.
               </Text>
-
               <Section className="mb-8 text-center">
                 <Button
                   className="rounded-lg bg-[#005e5e] px-8 py-4 font-semibold text-white no-underline shadow-md transition-colors hover:bg-[#004747]"
@@ -51,20 +56,29 @@ export const VerificationRequest = ({ url, host, senderName }: VerificationReque
                   Verify Email & Sign In
                 </Button>
               </Section>
-
               <Hr className="my-6 border-gray-200" />
-
+              <Text className="mb-4 text-center text-[16px] font-semibold text-gray-800">
+                Or scan with your phone
+              </Text>
+              <Section className="mb-6 text-center">
+                <Img
+                  src={qrCodeDataUrl}
+                  alt="QR Code"
+                  width="200"
+                  height="200"
+                  style={{ display: "inline-block" }}
+                />
+              </Section>
+              <Hr className="my-6 border-gray-200" />
               <Text className="mb-3 text-[14px] leading-relaxed text-gray-500">
                 <strong>Having trouble?</strong> If the button above doesn't work, copy and paste
                 this link into your browser:
               </Text>
-
               <Text className="break-all rounded border bg-gray-50 p-3 font-mono text-[14px]">
                 <Link href={url} className="text-[#005e5e] no-underline hover:underline">
                   {url}
                 </Link>
               </Text>
-
               <Text className="mb-0 mt-6 text-[14px] leading-relaxed text-gray-500">
                 If you didn't request this verification, you can safely ignore this email. Your
                 account remains secure.
