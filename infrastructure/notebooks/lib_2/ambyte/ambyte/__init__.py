@@ -6,15 +6,13 @@ It includes parsing and volume I/O utilities for Databricks Delta Live Tables pi
 """
 
 # Import the main functions from modules to make them directly accessible
-from .ambyte_parsing import parse_trace, process_trace_files
-from .volume_io import parse_upload_time, prepare_ambyte_files
-
+from .ambyte_parsing import process_trace_files
+from .volume_io import prepare_ambyte_files
+    
 # Define what gets imported with "from ambyte import *"
 __all__ = [
-    'parse_trace', 
     'process_trace_files',
-    'parse_upload_time',
-    'prepare_ambyte_files'
+    'prepare_ambyte_files',
 ]
 
 # Package metadata

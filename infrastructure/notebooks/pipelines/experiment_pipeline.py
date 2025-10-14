@@ -22,10 +22,7 @@ import sys
 from typing import Dict, Any, List
 
 # Import the ambyte processing utilities
-from ambyte_parsing import find_byte_folders, load_files_per_byte, process_trace_files
-# Import volume I/O utilities
-from volume_io import discover_and_validate_upload_directories, parse_upload_time
-
+from ambyte import prepare_ambye_files, process_trace_files
 # Import our macro processing library
 from multispeq import execute_macro_script, get_available_macros, process_macro_output_for_spark, infer_macro_schema
 
@@ -206,87 +203,99 @@ raw_ambyte_schema = StructType([
 )
 def raw_ambyte_data():
     """
-    Main DLT table-generating function that processes Ambyte trace files from a Databricks volume
-    and creates a Delta table with the processed data.
+    Streaming DLT table-generating function that processes Ambyte trace files from a Databricks volume
+    and creates a Delta table with the processed data using Auto Loader.
     """
+    
     # Configuration - specify the base path in the Databricks volume
-    # This should be configured based on your actual volume mount point
     ambyte_base_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/ambyte"
     
-    # Find all upload directories with the format upload_YYYYMMDD_SS
-    upload_directories, success = discover_and_validate_upload_directories(ambyte_base_path)
+    # For streaming tables, we cannot use discovery functions in the main function
+    # Instead, use Auto Loader to stream files and process using pandas UDF
+    df = (
+        spark.readStream.format("cloudFiles")
+        .option("cloudFiles.format", "text")
+        .option("recursiveFileLookup", "true")
+        .option("cloudFiles.schemaLocation", f"/tmp/checkpoints/{EXPERIMENT_SCHEMA}/ambyte_schema")
+        .option("pathGlobFilter", f"{YEAR_PREFIX}*_*.txt")
+        .load(ambyte_base_path)
+    )
     
-    if not success or not upload_directories:
-        # Return an empty dataframe with the correct schema if no upload directories are found
-        return spark.createDataFrame([], schema=raw_ambyte_schema)
+    # Add file path information
+    df = df.withColumn("file_path", F.col("_metadata.file_path"))
     
-    # Process each upload directory
-    all_data = []
+    # Filter to only process data files (same logic as existing load_files_per_byte)
+    df = df.filter(
+        F.col("file_path").rlike(f".*/{YEAR_PREFIX}.*_.txt$")
+    )
     
-    for upload_dir in upload_directories:
-        upload_dir_name = os.path.basename(upload_dir)
-        print(f"Processing upload directory: {upload_dir_name}")
+    # Extract upload directory and ambyte folder information from file path
+    df = df.withColumn("upload_dir", F.regexp_extract(F.col("file_path"), r"(upload_\d{8}_\d+)", 1))
+    df = df.withColumn("ambyte_folder", F.regexp_extract(F.col("file_path"), r"(Ambyte_\d+|unknown_ambyte)", 1))
+    df = df.withColumn("ambit_index", F.regexp_extract(F.col("file_path"), r"/(\d+|unknown_ambit)/", 1))
+    
+    # Group by ambyte folder path to collect all files for that folder
+    df = df.withColumn("ambyte_folder_path", 
+        F.regexp_extract(F.col("file_path"), r"(.*/(?:Ambyte_\d+|unknown_ambyte))", 1)
+    )
+    
+    # Group by ambyte folder to process together (like your original logic)
+    df = df.groupBy("ambyte_folder_path", "upload_dir", "ambyte_folder").agg(
+        F.collect_list(
+            F.struct(
+                F.col("value").alias("content"),
+                F.col("file_path"),
+                F.col("ambit_index")
+            )
+        ).alias("file_data")
+    )
+    
+    # Define pandas UDF with embedded utility functions - SIMPLE SOLUTION
+    @pandas_udf(returnType=ArrayType(raw_ambyte_schema))
+    def process_ambyte_folder(folder_data: pd.Series, upload_dirs: pd.Series, ambyte_folders: pd.Series) -> pd.Series:
+        """
+        Process ambyte folders with embedded utility functions - no module imports needed!
+        """
         
-        # Parse upload time from directory name
-        upload_time = parse_upload_time(upload_dir_name)
+        all_results = []
         
-        # Find all Ambyte_N and unknown_ambyte folders within this upload directory
-        # Each of these folders should contain either 1-4 subfolders or unknown_ambit subfolder
-        try:
-            # Use the existing find_byte_folders function to discover valid byte parent folders
-            byte_parent_folders = find_byte_folders(upload_dir)
+        for files_data, upload_dir, ambyte_folder in zip(folder_data, upload_dirs, ambyte_folders):
+            # Organize files using embedded function (exact copy of volume_io.prepare_ambyte_files)
+            organized_data = prepare_ambye_files(files_data, upload_dir, ambyte_folder)
             
-            if byte_parent_folders:
-                print(f"Found {len(byte_parent_folders)} valid byte parent folders in {upload_dir_name}")
-                print(f"Byte parent folders: {[os.path.basename(x.rstrip('/')) for x in byte_parent_folders]}")
-            else:
-                print(f"No valid byte parent folders found in {upload_dir_name}")
+            if organized_data is None:
                 continue
                 
-        except Exception as e:
-            print(f"Error finding byte folders in {upload_dir_name}: {e}")
-            continue
+            files_per_byte, upload_time, folder_name = organized_data
+            
+            try:                
+                df_result = process_trace_files(folder_name or 'unknown', files_per_byte)
+                
+                if df_result is not None:
+                    df_result = df_result.reset_index()
+                    df_result['upload_directory'] = upload_dir
+                    df_result['upload_time'] = upload_time
+                    
+                    records = df_result.to_dict('records')
+                    all_results.extend(records)
+                    
+            except Exception as e:
+                print(f"Error processing ambyte folder {folder_name}: {e}")
+                continue
         
-        # Process each byte folder within this upload directory
-        for ambyte_folder in byte_parent_folders:
-            ambyte_folder_name = os.path.basename(ambyte_folder.rstrip('/'))
-            
-            # Load files from byte subfolders or unknown_ambit
-            files_per_byte, _ = load_files_per_byte(ambyte_folder, year_prefix=YEAR_PREFIX)
-            files_per_byte = [lst for lst in files_per_byte if lst]
-            
-            print(f"Loaded files for {ambyte_folder_name} in {upload_dir_name}: {len(files_per_byte)}")
-            
-            # Process trace files
-            df = process_trace_files(ambyte_folder_name, files_per_byte)
-            
-            if df is not None:
-                # Convert pandas DataFrame to Spark DataFrame
-                try:
-                    # Reset index to make Time a regular column
-                    df = df.reset_index()
-                    
-                    # Add upload directory info to the dataframe
-                    df['upload_directory'] = upload_dir_name
-                    
-                    # Add upload time to the dataframe (convert to pandas timestamp first)
-                    if upload_time is not None:
-                        df['upload_time'] = upload_time
-                    else:
-                        df['upload_time'] = None
-                    
-                    # Convert pandas DataFrame to Spark DataFrame
-                    spark_df = spark.createDataFrame(df)
-                    
-                    all_data.append(spark_df)
-                except Exception as e:
-                    print(f"Error converting DataFrame to Spark DataFrame for {ambyte_folder_name} in {upload_dir_name}: {e}")
+        return pd.Series([all_results])
     
-    # Combine all spark dataframes if any were created
-    if all_data:
-        return all_data[0] if len(all_data) == 1 else all_data[0].unionAll(*all_data[1:])
-    else:
-        return spark.createDataFrame([], schema=raw_ambyte_schema)
+    # Apply pandas UDF to process ambyte folders using existing logic
+    df = df.select(
+        F.explode(
+            process_ambyte_folder(F.col("file_data"), F.col("upload_dir"), F.col("ambyte_folder"))
+        ).alias("parsed_data")
+    )
+    
+    # Expand the parsed data into individual columns matching the schema
+    df = df.select("parsed_data.*")
+    
+    return df
 
 # COMMAND ----------
 
