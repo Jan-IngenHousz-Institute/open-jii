@@ -21,24 +21,13 @@ vi.mock("@/lib/tsr", () => ({
 // Mock i18n
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        "experimentDataTable.loading": "Loading...",
-        "experimentDataTable.error": "Error loading data",
-        "experimentDataTable.noData": "No data available",
-        "experimentDataTable.table": "Table",
-        "experimentDataTable.totalRows": "Total rows",
-        "experimentDataTable.rowsPerPage": "Rows per page",
-        "experimentDataTable.page": "Page",
-        "experimentDataTable.pageOf": "of",
-        "experimentDataTable.previous": "Previous",
-        "experimentDataTable.next": "Next",
-        "experimentDataTable.noResults": "No results found",
-        "experimentDataTable.download": "Download",
-      };
-      return translations[key] || key;
-    },
+    t: (k: string) => k,
   }),
+}));
+
+// Mock BulkActionsBar
+vi.mock("~/components/experiment-data/annotations/bulk-actions-bar", () => ({
+  BulkActionsBar: () => <div data-testid="bulk-actions-bar">BulkActionsBar</div>,
 }));
 
 // Mock UI components
@@ -186,7 +175,9 @@ vi.mock("@repo/ui/components", () => ({
   FormLabel: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <label className={className}>{children}</label>
   ),
-  FormControl: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  FormControl: ({ children }: { children: React.ReactNode }) => {
+    <>{children}</>;
+  },
   FormMessage: () => <div />,
 }));
 
@@ -387,7 +378,7 @@ describe("ExperimentDataTable", () => {
       { wrapper: createWrapper() },
     );
 
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataTable.loading")).toBeInTheDocument();
   });
 
   it("should render error state", () => {
@@ -403,7 +394,7 @@ describe("ExperimentDataTable", () => {
       { wrapper: createWrapper() },
     );
 
-    expect(screen.getByText("Error loading data")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataTable.error")).toBeInTheDocument();
   });
 
   it("should render no data state", () => {
@@ -419,7 +410,7 @@ describe("ExperimentDataTable", () => {
       { wrapper: createWrapper() },
     );
 
-    expect(screen.getByText("No data available")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataTable.noData")).toBeInTheDocument();
   });
 
   it("should render table with data", () => {
@@ -435,8 +426,8 @@ describe("ExperimentDataTable", () => {
       { wrapper: createWrapper() },
     );
 
-    expect(screen.getByText("Table test_table")).toBeInTheDocument();
-    expect(screen.getByText("Total rows: 100")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataTable.table test_table")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataTable.totalRows: 100")).toBeInTheDocument();
     expect(screen.getByTestId("experiment-table-header")).toBeInTheDocument();
     expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();
   });
@@ -584,8 +575,7 @@ describe("ExperimentDataTable", () => {
     });
   });
 
-  it("should render download button and open modal", async () => {
-    const user = userEvent.setup();
+  it("should render bulk actions bar", () => {
     const mockUseQuery = vi.fn().mockReturnValue({
       data: mockResponse,
       isLoading: false,
@@ -599,14 +589,8 @@ describe("ExperimentDataTable", () => {
     );
 
     // Find and click download button
-    const downloadButton = screen.getByText("Download");
-    expect(downloadButton).toBeInTheDocument();
-
-    await user.click(downloadButton);
-
-    // Check that modal appears
-    expect(screen.getByTestId("data-download-modal")).toBeInTheDocument();
-    expect(screen.getByText("Download Modal for test_table - experiment-123")).toBeInTheDocument();
+    const bulkActionsBar = screen.getByTestId("bulk-actions-bar");
+    expect(bulkActionsBar).toBeInTheDocument();
   });
 
   describe("Chart functionality", () => {
