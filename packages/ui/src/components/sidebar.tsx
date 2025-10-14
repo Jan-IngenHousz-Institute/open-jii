@@ -361,13 +361,7 @@ const SidebarFooter = React.forwardRef<HTMLDivElement, React.ComponentProps<"div
       <div
         ref={ref}
         data-sidebar="footer"
-        className={cn(
-          // keep left padding to match menu buttons; also ensure collapsed/icon
-          // mode preserves the same left offset so the avatar aligns with icons
-          "flex flex-col gap-2 py-2",
-          "group-data-[collapsible=icon]:!pl-2",
-          className,
-        )}
+        className={cn("flex flex-col gap-2 py-2", className)}
         {...props}
       />
     );
