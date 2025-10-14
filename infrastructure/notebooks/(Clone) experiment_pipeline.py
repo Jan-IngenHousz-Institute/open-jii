@@ -11,7 +11,7 @@
 import dlt
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
-from pyspark.sql.types import StringType, TimestampType, DoubleType, StructType, StructField, IntegerType, FloatType, BooleanType, ArrayType
+from pyspark.sql.types import StringType, TimestampType, DoubleType, StructType, StructField, IntegerType, FloatType, BooleanType, ArrayType, MapType
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import pandas_udf
 from delta.tables import DeltaTable

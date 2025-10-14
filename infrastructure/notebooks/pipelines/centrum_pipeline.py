@@ -24,12 +24,15 @@ sensor_schema = StructType([
     StructField("device_firmware", StringType(), True),
     StructField("sample", StringType(), True),
     StructField("timestamp", TimestampType(), False),
-    StructField("output", StringType(), True)
+    StructField("output", StringType(), True),
+    StructField("user_answers", MapType(StringType(), StringType()), True)
 ])
 
 # COMMAND ----------
 
 # DBTITLE 1,Configuration
+CATALOG_NAME = spark.conf.get("CATALOG_NAME", "open_jii_dev")
+CENTRAL_SCHEMA = spark.conf.get("CENTRAL_SCHEMA", "centrum")
 BRONZE_TABLE = spark.conf.get("BRONZE_TABLE", "raw_data")
 SILVER_TABLE = spark.conf.get("SILVER_TABLE", "clean_data")
 
@@ -111,8 +114,8 @@ def raw_data():
         "delta.enableChangeDataFeed": "true"
     }
 )
-@dlt.expect_or_fail("valid_timestamp", "timestamp IS NOT NULL")
-@dlt.expect_or_fail("valid_device_id", "device_id IS NOT NULL")
+@dlt.expect_or_drop("valid_timestamp", "timestamp IS NOT NULL")
+@dlt.expect_or_drop("valid_device_id", "device_id IS NOT NULL")
 def clean_data():
     """
     Transforms Bronze data into a cleaned Silver table with standardized values,
@@ -121,7 +124,7 @@ def clean_data():
     This Silver layer serves as the handoff point for experiment-specific schemas.
     """
     # Read from bronze and extract/transform the data
-    bronze_df = dlt.read(BRONZE_TABLE)
+    bronze_df = spark.readStream.table(f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{BRONZE_TABLE}")
     
     # Extract and transform the data
     df = (
@@ -164,6 +167,30 @@ def clean_data():
         ).otherwise(F.array())
     )
     
+    # Extract user_answers from the parsed_data (same level as device_id, device_name, etc.)
+    df = df.withColumn(
+        "user_answers_json",
+        F.col("parsed_data.user_answers")
+    )
+    
+    # Extract specific user answer fields as separate columns
+    df = df.withColumn(
+        "plot_number",
+        F.when(F.col("user_answers_json").isNotNull(),
+            F.get_json_object(F.to_json(F.col("user_answers_json")), "$.59988").cast("int")
+        ).otherwise(F.lit(None).cast("int"))
+    ).withColumn(
+        "plant",
+        F.when(F.col("user_answers_json").isNotNull(),
+            F.get_json_object(F.to_json(F.col("user_answers_json")), "$.59989")
+        ).otherwise(F.lit(None).cast("string"))
+    ).withColumn(
+        "stem_count",
+        F.when(F.col("user_answers_json").isNotNull(),
+            F.get_json_object(F.to_json(F.col("user_answers_json")), "$.59994").cast("int")
+        ).otherwise(F.lit(None).cast("int"))
+    )
+    
     # Select final columns for silver layer
     return df.select(
         "device_id",
@@ -174,6 +201,9 @@ def clean_data():
         "sample",
         "output",
         "macros",
+        "plot_number",
+        "plant", 
+        "stem_count",
         "experiment_id",
         "timestamp",
         "date",

@@ -1,8 +1,5 @@
 """
 Unit tests for ambyte_parsing.py module.
-
-Tests cover all major functions including protocol_array_calc, parse_trace, 
-find_byte_folders, load_files_per_byte, and process_trace_files.
 """
 
 import unittest
@@ -30,7 +27,7 @@ import ambyte_parsing
 ambyte_parsing.spark = spark_session_mock
 ambyte_parsing.dbutils = dbutils_mock
 
-from ambyte_parsing import protocol_array_calc, parse_trace, find_byte_folders, load_files_per_byte, process_trace_files
+from ambyte_parsing import protocol_array_calc, parse_trace, process_trace_files
 
 
 class TestProtocolArrayCalc(unittest.TestCase):
@@ -186,172 +183,6 @@ class TestParseTrace(unittest.TestCase):
         self.assertFalse(np.all(result['arr'][:, 5] == 0))
         self.assertFalse(np.all(result['arr'][:, 6] == 0))
 
-
-class TestFindByteFolders(unittest.TestCase):
-    """Test find_byte_folders function."""
-    
-    def setUp(self):
-        """Set up mocks for each test."""
-        # Create a fresh mock for dbutils
-        self.dbutils_patcher = patch.object(ambyte_parsing, 'dbutils', create=True)
-        self.mock_dbutils = self.dbutils_patcher.start()
-        
-    def tearDown(self):
-        """Clean up mocks."""
-        self.dbutils_patcher.stop()
-    
-    def test_find_standard_byte_folders(self):
-        """Test finding folders with standard byte structure (1,2,3,4)."""
-        # Mock the file system structure
-        mock_entry_1 = Mock()
-        mock_entry_1.path = "/test/path/1/"
-        mock_entry_1.isDir.return_value = True
-        
-        mock_entry_2 = Mock()
-        mock_entry_2.path = "/test/path/2/"
-        mock_entry_2.isDir.return_value = True
-        
-        mock_entry_3 = Mock()
-        mock_entry_3.path = "/test/path/3/"
-        mock_entry_3.isDir.return_value = True
-        
-        mock_entry_4 = Mock()
-        mock_entry_4.path = "/test/path/4/"
-        mock_entry_4.isDir.return_value = True
-        
-        self.mock_dbutils.fs.ls.return_value = [mock_entry_1, mock_entry_2, mock_entry_3, mock_entry_4]
-        
-        result = find_byte_folders("/test/path", recursive=False)
-        
-        self.assertEqual(result, ["/test/path"])
-        self.mock_dbutils.fs.ls.assert_called_with("/test/path")
-    
-    def test_find_unknown_ambit_folders(self):
-        """Test finding folders with unknown_ambit structure."""
-        mock_entry = Mock()
-        mock_entry.path = "/test/path/unknown_ambit/"
-        mock_entry.isDir.return_value = True
-        
-        self.mock_dbutils.fs.ls.return_value = [mock_entry]
-        
-        result = find_byte_folders("/test/path", recursive=False)
-        
-        self.assertEqual(result, ["/test/path"])
-    
-    def test_find_no_matching_folders(self):
-        """Test when no matching folder structure is found."""
-        mock_entry = Mock()
-        mock_entry.path = "/test/path/other/"
-        mock_entry.isDir.return_value = True
-        
-        self.mock_dbutils.fs.ls.return_value = [mock_entry]
-        
-        result = find_byte_folders("/test/path", recursive=False)
-        
-        self.assertEqual(result, [])
-    
-    def test_recursive_search(self):
-        """Test recursive folder search."""
-        def mock_ls_side_effect(path):
-            if path == "/test/path":
-                mock_subdir = Mock()
-                mock_subdir.path = "/test/path/subdir/"
-                mock_subdir.isDir.return_value = True
-                return [mock_subdir]
-            elif path == "/test/path/subdir":
-                # Return standard byte folders in subdirectory
-                entries = []
-                for i in range(1, 5):
-                    mock_entry = Mock()
-                    mock_entry.path = f"/test/path/subdir/{i}/"
-                    mock_entry.isDir.return_value = True
-                    entries.append(mock_entry)
-                return entries
-            return []
-        
-        self.mock_dbutils.fs.ls.side_effect = mock_ls_side_effect
-        
-        result = find_byte_folders("/test/path", recursive=True, max_depth=2)
-        
-        self.assertEqual(result, ["/test/path/subdir"])
-
-
-class TestLoadFilesPerByte(unittest.TestCase):
-    """Test load_files_per_byte function."""
-    
-    def setUp(self):
-        """Set up mocks for each test."""
-        # Create a fresh mock for dbutils
-        self.dbutils_patcher = patch.object(ambyte_parsing, 'dbutils', create=True)
-        self.mock_dbutils = self.dbutils_patcher.start()
-        
-    def tearDown(self):
-        """Clean up mocks."""
-        self.dbutils_patcher.stop()
-    
-    def test_load_standard_byte_structure(self):
-        """Test loading files from standard byte folder structure."""
-        # Mock file content
-        file_content = "I1\t4039\t1748882921\tU6\tS13\t1\tNew_Ambit%202\nA\t27306\t44136\tMPF2\t2,0,0,10\nT0\t26870\nT1\t192,208\nT2\t6580,7369\nmore\nlines\nhere\nEOF"
-        
-        def mock_ls_side_effect(path):
-            if path == "/test":
-                # Return directory structure with 1,2,3,4 folders
-                entries = []
-                for i in range(1, 5):
-                    mock_entry = Mock()
-                    mock_entry.path = f"/test/{i}/"
-                    mock_entry.isDir.return_value = True
-                    entries.append(mock_entry)
-                return entries
-            elif "/1" in path:
-                # Return files in byte folder 1 with correct naming pattern
-                mock_file = Mock()
-                mock_file.path = "/test/1/2025_test_data_.txt"  # Matches year_prefix + ends with _.txt
-                mock_file.isDir.return_value = False
-                return [mock_file]
-            return []
-        
-        # Mock the file reading using dbutils.fs.head instead of fs.open
-        self.mock_dbutils.fs.head.return_value = file_content
-        
-        self.mock_dbutils.fs.ls.side_effect = mock_ls_side_effect
-        
-        files_per_byte, folder_path = load_files_per_byte("/test", "2025")
-        
-        self.assertEqual(folder_path, "/test")
-        self.assertEqual(len(files_per_byte), 4)
-        self.assertGreater(len(files_per_byte[0]), 0)  # Should have files in first byte folder
-    
-    def test_load_unknown_ambit_structure(self):
-        """Test loading files from unknown_ambit folder structure."""
-        file_content = "I1\t4039\t1748882921\nA\t27306\t44136\nT0\t26870\nT1\t192,208\nT2\t6580,7369\nmore\nlines\nhere\nEOF"
-        
-        def mock_ls_side_effect(path):
-            if path == "/test":
-                mock_entry = Mock()
-                mock_entry.path = "/test/unknown_ambit/"
-                mock_entry.isDir.return_value = True
-                return [mock_entry]
-            elif "unknown_ambit" in path:
-                mock_file = Mock()
-                mock_file.path = "/test/unknown_ambit/2025_data_.txt"  # Matches year_prefix + ends with _.txt
-                mock_file.isDir.return_value = False
-                return [mock_file]
-            return []
-        
-        # Mock the file reading using dbutils.fs.head instead of fs.open
-        self.mock_dbutils.fs.head.return_value = file_content
-        
-        self.mock_dbutils.fs.ls.side_effect = mock_ls_side_effect
-        
-        files_per_byte, folder_path = load_files_per_byte("/test", "2025")
-        
-        self.assertEqual(folder_path, "/test")
-        self.assertGreater(len(files_per_byte[0]), 0)  # Files should be in first slot
-        self.assertEqual(len(files_per_byte[1]), 0)     # Other slots should be empty
-        self.assertEqual(len(files_per_byte[2]), 0)
-        self.assertEqual(len(files_per_byte[3]), 0)
 
 
 class TestProcessTraceFiles(unittest.TestCase):

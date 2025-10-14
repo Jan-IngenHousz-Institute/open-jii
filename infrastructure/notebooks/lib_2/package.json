@@ -1,0 +1,15 @@
+{
+  "name": "openjii-python-packages",
+  "version": "0.1.0",
+  "description": "Python package build scripts for OpenJII",
+  "scripts": {
+    "build": "npm run build:multispeq && npm run build:ambyte",
+    "build:multispeq": "cd multispeq && python3 -m build",
+    "build:ambyte": "cd ambyte && python3 -m build",
+    "clean": "npm run clean:multispeq && npm run clean:ambyte",
+    "clean:multispeq": "cd multispeq && rm -rf dist/ build/ *.egg-info/",
+    "clean:ambyte": "cd ambyte && rm -rf dist/ build/ *.egg-info/"
+  },
+  "devDependencies": {},
+  "private": true
+}
