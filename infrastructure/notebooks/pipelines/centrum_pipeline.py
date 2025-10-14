@@ -41,6 +41,7 @@ KINESIS_STREAM_NAME = spark.conf.get("KINESIS_STREAM_NAME")
 CHECKPOINT_PATH = spark.conf.get("CHECKPOINT_PATH")
 SERVICE_CREDENTIAL_NAME = spark.conf.get("SERVICE_CREDENTIAL_NAME")
 
+
 # COMMAND ----------
 
 # DBTITLE 1,Bronze Layer - Raw Data Processing
@@ -142,11 +143,6 @@ def clean_data():
         .withColumn("date", F.to_date("timestamp"))
         .withColumn("hour", F.hour("timestamp"))
     )
-
-    # TODO: Breaks things and maybe not needed
-    # Apply watermarking and deduplication
-    #df = df.withWatermark("timestamp", "1 hour") \
-    #    .dropDuplicates(["device_id", "timestamp", "kinesis_sequence_number"])
         
     # Calculate data latency (time between reading and ingestion)
     df = df.withColumn(
