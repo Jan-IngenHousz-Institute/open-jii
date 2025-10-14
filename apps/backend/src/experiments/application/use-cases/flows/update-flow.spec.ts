@@ -1,7 +1,8 @@
 import { flows } from "@repo/database";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { UpdateFlowUseCase } from "./update-flow";
 
 describe("UpdateFlowUseCase", () => {
@@ -82,5 +83,81 @@ describe("UpdateFlowUseCase", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     expect(result.value.graph).toEqual(updatedGraph);
+  });
+
+  it("returns 403 when members attempt to update flow for archived experiments", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
+
+    // Add the member
+    await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+    // Create existing flow directly
+    const graph = testApp.sampleFlowGraph({ questionKind: "multi_choice" });
+    await testApp.database.insert(flows).values({
+      experimentId: experiment.id,
+      graph,
+    });
+
+    // Mock checkAccess to indicate experiment is archived but member has access (not admin)
+    const experimentRepository = testApp.module.get(ExperimentRepository);
+    vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+      success({
+        experiment: { ...experiment, status: "archived" },
+        hasAccess: true,
+        hasArchiveAccess: false,
+        isAdmin: false,
+      }),
+    );
+
+    try {
+      const updatedGraph: ReturnType<typeof testApp.sampleFlowGraph> = {
+        ...graph,
+        edges: [{ id: "e1", source: "n1", target: "n1" }],
+      };
+
+      const result = await useCase.execute(experiment.id, memberId, updatedGraph);
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(403);
+      expect(result.error.message).toContain("You do not have access to this experiment");
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("allows admins to update flow for archived experiments", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Exp Admin", userId: ownerId });
+
+    // Create existing flow directly
+    const graph = testApp.sampleFlowGraph({ questionKind: "multi_choice" });
+    await testApp.database.insert(flows).values({
+      experimentId: experiment.id,
+      graph,
+    });
+
+    // Mock checkAccess to indicate experiment is archived and user is admin
+    const experimentRepository = testApp.module.get(ExperimentRepository);
+    vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+      success({
+        experiment: { ...experiment, status: "archived" },
+        hasAccess: true,
+        hasArchiveAccess: true,
+        isAdmin: true,
+      }),
+    );
+
+    try {
+      const updatedGraph: ReturnType<typeof testApp.sampleFlowGraph> = {
+        ...graph,
+        edges: [{ id: "e1", source: "n1", target: "n1" }],
+      };
+
+      const result = await useCase.execute(experiment.id, ownerId, updatedGraph);
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value.graph).toEqual(updatedGraph);
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 });

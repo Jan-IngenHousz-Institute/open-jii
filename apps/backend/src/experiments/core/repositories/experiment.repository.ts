@@ -1,7 +1,7 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import { ExperimentFilter, ExperimentStatus } from "@repo/api";
-import { desc, eq, or, and, ilike, experiments, experimentMembers, sql } from "@repo/database";
+import { desc, eq, or, and, ilike, ne, experiments, experimentMembers, sql } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -85,6 +85,11 @@ export class ExperimentRepository {
         conditions.push(ilike(experiments.name, `%${search}%`));
       }
 
+      // By default, exclude archived experiments unless explicitly requested via status filter
+      if (!status) {
+        conditions.push(ne(experiments.status, "archived"));
+      }
+
       const where = and(...conditions);
       return where ? query.where(where) : query;
     });
@@ -152,6 +157,7 @@ export class ExperimentRepository {
     Result<{
       experiment: ExperimentDto | null;
       hasAccess: boolean;
+      hasArchiveAccess: boolean;
       isAdmin: boolean;
     }>
   > {
@@ -185,14 +191,18 @@ export class ExperimentRepository {
         .limit(1);
 
       if (result.length === 0) {
-        return { experiment: null, hasAccess: false, isAdmin: false };
+        return { experiment: null, hasAccess: false, isAdmin: false, hasArchiveAccess: false };
       }
 
       const { experiment, memberRole } = result[0];
       const isMember = memberRole !== null;
       const isAdmin = memberRole === "admin";
 
-      return { experiment, hasAccess: isMember, isAdmin };
+      // If experiment is archived, only admins have access
+      // Otherwise, any member has access
+      const hasArchiveAccess = experiment.status === "archived" ? isAdmin : isMember;
+
+      return { experiment, hasAccess: isMember, isAdmin, hasArchiveAccess };
     });
   }
 

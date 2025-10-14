@@ -53,8 +53,8 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
     return <div>{t("notFound")}</div>;
   }
 
-  // Check if experiment is archived - if so, redirect to not found (should use archive route)
-  if (experiment.status === "archived") {
+  // Check if experiment is archived - if not, redirect to not found
+  if (experiment.status !== "archived") {
     notFound();
   }
 
@@ -101,15 +101,6 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
               <h4 className="text-muted-foreground text-sm font-medium">{t("updated")}</h4>
               <p>{formatDate(experiment.updatedAt)}</p>
             </div>
-            {/* TODO: Temporary removed as the implementation is pending on the backend */}
-            {/*<div>*/}
-            {/*  <h4 className="text-muted-foreground text-sm font-medium">*/}
-            {/*    {t("experimentSettings.embargoIntervalDays")}*/}
-            {/*  </h4>*/}
-            {/*  <p>*/}
-            {/*    {experiment.embargoIntervalDays} {t("common.days")}*/}
-            {/*  </p>*/}
-            {/*</div>*/}
             <div>
               <h4 className="text-muted-foreground text-sm font-medium">{t("experimentId")}</h4>
               <p className="truncate font-mono text-xs">{experiment.id}</p>

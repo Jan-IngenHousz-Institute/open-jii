@@ -84,6 +84,17 @@ export class ExperimentDataController {
 
       const { experiment } = experimentAccessResult.value;
 
+      // Check if experiment is archived - no one can upload data to archived experiments
+      if (experiment.status === "archived") {
+        this.logger.warn(
+          `User ${user.id} attempted to upload data to archived experiment ${experimentId}`,
+        );
+        return {
+          status: StatusCodes.FORBIDDEN,
+          body: { message: "Cannot upload data to archived experiments" },
+        };
+      }
+
       // Prepare the upload environment by ensuring the required volume exists
       this.logger.log(
         `Preparing upload environment for experiment ${experiment.name} (${experimentId})`,

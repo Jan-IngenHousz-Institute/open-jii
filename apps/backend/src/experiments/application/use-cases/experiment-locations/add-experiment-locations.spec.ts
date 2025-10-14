@@ -153,6 +153,63 @@ describe("AddExperimentLocationsUseCase", () => {
     expect(result.error.message).toContain("You do not have access to this experiment");
   });
 
+  it("should forbid non-admin users from adding locations to archived experiments", async () => {
+    // Create a test user who will NOT have admin access
+    const anotherUserId = await testApp.createTestUser({});
+
+    // Create an archived experiment with testUserId as the owner/admin
+    const { experiment } = await testApp.createExperiment({
+      name: "Archived Experiment",
+      status: "archived",
+      userId: testUserId,
+    });
+
+    const locationsToAdd: CreateLocationDto[] = [
+      {
+        experimentId: experiment.id,
+        name: "Unauthorized Archived Location",
+        latitude: 52.52,
+        longitude: 13.405,
+      },
+    ];
+
+    // Try to add locations as anotherUserId (non-admin)
+    const result = await useCase.execute(experiment.id, locationsToAdd, anotherUserId);
+
+    expect(result.isFailure()).toBe(true);
+    assertFailure(result);
+    expect(result.error.message).toContain("You do not have access to this experiment");
+  });
+
+  it("should allow admin users to add locations to archived experiments", async () => {
+    // Create an archived experiment where testUserId is the owner/admin
+    const { experiment } = await testApp.createExperiment({
+      name: "Archived Experiment Admin Add",
+      status: "archived",
+      userId: testUserId,
+    });
+
+    const locationsToAdd: CreateLocationDto[] = [
+      {
+        experimentId: experiment.id,
+        name: "Admin Location",
+        latitude: 48.8566,
+        longitude: 2.3522,
+      },
+    ];
+
+    const result = await useCase.execute(experiment.id, locationsToAdd, testUserId);
+
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+
+    const locations = result.value;
+    expect(Array.isArray(locations)).toBe(true);
+    expect(locations.length).toBe(1);
+    expect(locations[0].name).toBe("Admin Location");
+    expect(locations[0].experimentId).toBe(experiment.id);
+  });
+
   it("should handle repository errors when creating locations fails", async () => {
     // Arrange
     const { experiment } = await testApp.createExperiment({

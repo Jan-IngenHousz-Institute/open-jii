@@ -31,7 +31,8 @@ export default function ExperimentDataDetailsPage({ params }: ExperimentDataDeta
 
   const experiment = data.body;
 
-  if (experiment.status === "archived") {
+  // Check if experiment is archived - if not, redirect to not found
+  if (experiment.status !== "archived") {
     notFound();
   }
 
