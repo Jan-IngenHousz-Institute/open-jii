@@ -112,32 +112,25 @@ def sample():
         .filter(F.col("experiment_id") == EXPERIMENT_ID)  # Filter for specific experiment
     )
     
-    # Get user_answers columns from the central table (they're already extracted there)
-    user_answers_df = (
-        base_df
-        .select(
-            F.col("device_id"),
-            F.col("plot_number"),
-            F.col("plant"),
-            F.col("stem_count"),
-            F.col("timestamp")
-        )
-        .dropDuplicates(["device_id", "timestamp"])
-    )
-    
-    # Process sample data as before
-    sample_df = (
+    # Process sample data and include user_answers columns directly
+    return (
         base_df
         .select(
             F.col("device_id"),
             F.col("device_name"),
             F.col("timestamp"),
+            F.col("plot_number"),
+            F.col("plant"),
+            F.col("stem_count"),
             F.explode(F.from_json(F.col("sample"), "array<string>")).alias("sample_data_str")
         )
         .select(
             F.col("device_id"),
             F.col("device_name"),
             F.col("timestamp"),
+            F.col("plot_number"),
+            F.col("plant"),
+            F.col("stem_count"),
             F.get_json_object(F.col("sample_data_str"), "$.v_arrays").alias("v_arrays"),
             F.get_json_object(F.col("sample_data_str"), "$.set_repeats").cast("int").alias("set_repeats"),
             F.get_json_object(F.col("sample_data_str"), "$.protocol_id").alias("protocol_id"),
@@ -171,31 +164,6 @@ def sample():
                           F.expr("transform(measurement_sets, x -> get_json_object(x, '$.label'))"))
                    .otherwise(F.lit(None)))
             .otherwise(F.array())
-        )
-    )
-    
-    # Join with user_answers to add the user response columns
-    return (
-        sample_df
-        .join(
-            user_answers_df,
-            on=["device_id", "timestamp"],
-            how="left"
-        )
-        .select(
-            F.col("device_id"),
-            F.col("device_name"),
-            F.col("v_arrays"),
-            F.col("set_repeats"),
-            F.col("protocol_id"),
-            F.col("macros"),
-            F.col("measurement_sets"),
-            F.col("measurement_set_types"),
-            F.col("sample_id"),
-            F.col("plot_number"),
-            F.col("plant"),
-            F.col("stem_count"),
-            F.col("processed_timestamp")
         )
     )
 
