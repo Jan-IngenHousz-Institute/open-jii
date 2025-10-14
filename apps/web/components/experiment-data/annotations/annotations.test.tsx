@@ -11,20 +11,7 @@ import type { Annotation } from "@repo/api";
 // Mock i18n
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        "common.add": "Add",
-        "experimentDataAnnotations.title": "Annotations & Flags",
-        "experimentDataAnnotations.titleFlags": "Flags",
-        "experimentDataAnnotations.titleAnnotations": "Annotations",
-        "experimentDataAnnotations.titleComments": "Comments",
-        "experimentDataAnnotations.noAnnotations": "No comments or flags yet.",
-        "experimentDataAnnotations.noAnnotationsDescription": "Use the buttons above to add one.",
-        "experimentDataAnnotations.deleted.flag": "Flag deleted",
-        "experimentDataAnnotations.deleted.comment": "Annotation deleted",
-      };
-      return translations[key] || key;
-    },
+    t: (k: string) => k,
   }),
 }));
 
@@ -123,10 +110,12 @@ describe("Annotations", () => {
 
     expect(screen.queryByTestId("badge")).not.toBeInTheDocument();
     expect(screen.getByTestId("hover-card-trigger")).toBeInTheDocument();
-    expect(screen.getByText("Add...")).toBeInTheDocument();
-    expect(screen.getByText("Annotations & Flags")).toBeInTheDocument();
-    expect(screen.getByText("No comments or flags yet.")).toBeInTheDocument();
-    expect(screen.getByText("Use the buttons above to add one.")).toBeInTheDocument();
+    expect(screen.getByText("common.add...")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataAnnotations.title")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataAnnotations.noAnnotations")).toBeInTheDocument();
+    expect(
+      screen.getByText("experimentDataAnnotations.noAnnotationsDescription"),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("add-annotation-dialog-comment")).toBeInTheDocument();
     expect(screen.getByTestId("add-annotation-dialog-flag")).toBeInTheDocument();
   });
@@ -143,12 +132,14 @@ describe("Annotations", () => {
     );
 
     expect(screen.getByTestId("hover-card-trigger")).toBeInTheDocument();
-    expect(screen.getByText("Annotations & Flags")).toBeInTheDocument();
-    expect(screen.queryByText("No comments or flags yet.")).not.toBeInTheDocument();
-    expect(screen.queryByText("Use the buttons above to add one.")).not.toBeInTheDocument();
+    expect(screen.getByText("experimentDataAnnotations.title")).toBeInTheDocument();
+    expect(screen.queryByText("experimentDataAnnotations.noAnnotations")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("experimentDataAnnotations.noAnnotationsDescription"),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("add-annotation-dialog-comment")).toBeInTheDocument();
     expect(screen.getByTestId("add-annotation-dialog-flag")).toBeInTheDocument();
-    expect(screen.getByText("Comments")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataAnnotations.titleComments")).toBeInTheDocument();
     expect(screen.getByText("Test comment 1")).toBeInTheDocument();
   });
 
@@ -162,7 +153,7 @@ describe("Annotations", () => {
       />,
       { wrapper: createWrapper() },
     );
-    expect(screen.getByText("Comments")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataAnnotations.title")).toBeInTheDocument();
     expect(screen.getByText("Test comment 1")).toBeInTheDocument();
     expect(screen.getByText("Test comment 2")).toBeInTheDocument();
     expect(screen.getByTestId("badge")).toBeInTheDocument();
@@ -181,7 +172,7 @@ describe("Annotations", () => {
     expect(screen.getByText("Flagged as outlier")).toBeInTheDocument();
     expect(screen.getByText("Needs review")).toBeInTheDocument();
     expect(screen.getAllByTestId("badge").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText("Flags")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataAnnotations.titleFlags")).toBeInTheDocument();
   });
 
   it("should render mixed comments and flags", () => {
@@ -198,8 +189,8 @@ describe("Annotations", () => {
     expect(screen.getByText("Test comment 2")).toBeInTheDocument();
     expect(screen.getByText("Flagged as outlier")).toBeInTheDocument();
     expect(screen.getByText("Needs review")).toBeInTheDocument();
-    expect(screen.getByText("Comments")).toBeInTheDocument();
-    expect(screen.getByText("Flags")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataAnnotations.titleComments")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataAnnotations.titleFlags")).toBeInTheDocument();
   });
 
   it("should not render badge if there are no comments or flags", () => {

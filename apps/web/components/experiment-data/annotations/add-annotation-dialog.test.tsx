@@ -14,46 +14,7 @@ const { mockToast } = vi.hoisted(() => {
 // Mock i18n
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        "common.cancel": "Cancel",
-        "experimentDataAnnotations.updated": "Comments and flags updated",
-        "experimentDataAnnotations.commentDialog.title": "Add Comment",
-        "experimentDataAnnotations.commentDialog.description": "Add a comment to the measurement",
-        "experimentDataAnnotations.commentDialog.textLabel": "Comment",
-        "experimentDataAnnotations.commentDialog.textPlaceholder": "Enter your comment here...",
-        "experimentDataAnnotations.commentDialog.add": "Add Comment",
-        "experimentDataAnnotations.commentDialog.cancel": "Cancel",
-        "experimentDataAnnotations.commentDialogBulk.title": "Bulk Add Comment",
-        "experimentDataAnnotations.commentDialogBulk.description":
-          "Add the same comment to 3 selected measurements",
-        "experimentDataAnnotations.commentDialogBulk.textLabel": "Comment",
-        "experimentDataAnnotations.commentDialogBulk.textPlaceholder": "Enter your comment here...",
-        "experimentDataAnnotations.commentDialogBulk.add": "Add to 3 Row(s)",
-        "experimentDataAnnotations.commentDialogBulk.cancel": "Cancel",
-        "experimentDataAnnotations.flagDialog.title": "Add Flag",
-        "experimentDataAnnotations.flagDialog.description": "Flag the measurement",
-        "experimentDataAnnotations.flagDialog.flagLabel": "Flag Type",
-        "experimentDataAnnotations.flagDialog.flagPlaceholder": "Select flag type",
-        "experimentDataAnnotations.flagDialog.textLabel": "Reason",
-        "experimentDataAnnotations.flagDialog.textPlaceholder":
-          "Explain why this measurement is being flagged...",
-        "experimentDataAnnotations.flagDialog.add": "Add Flag",
-        "experimentDataAnnotations.flagDialog.cancel": "Cancel",
-        "experimentDataAnnotations.flagDialogBulk.title": "Bulk Add Flag",
-        "experimentDataAnnotations.flagDialogBulk.description": "Flag 3 selected measurements",
-        "experimentDataAnnotations.flagDialogBulk.flagLabel": "Flag Type",
-        "experimentDataAnnotations.flagDialogBulk.flagPlaceholder": "Select flag type",
-        "experimentDataAnnotations.flagDialogBulk.textLabel": "Reason",
-        "experimentDataAnnotations.flagDialogBulk.textPlaceholder":
-          "Explain why these measurements are being flagged..",
-        "experimentDataAnnotations.flagDialogBulk.add": "Flag 3 Row(s)",
-        "experimentDataAnnotations.flagDialogBulk.cancel": "Cancel",
-        "experimentDataAnnotations.flagType.needs_review": "Needs Review",
-        "experimentDataAnnotations.flagType.outlier": "Outlier",
-      };
-      return translations[key] || key;
-    },
+    t: (k: string) => k,
   }),
 }));
 
@@ -203,13 +164,17 @@ describe("AddCommentDialog", () => {
       { wrapper: createWrapper() },
     );
 
-    expect(screen.queryByTestId("dialog-title")).toHaveTextContent("Add Comment");
+    expect(screen.queryByTestId("dialog-title")).toHaveTextContent(
+      "experimentDataAnnotations.commentDialog.titl",
+    );
     expect(screen.queryByTestId("dialog-description")).toHaveTextContent(
-      "Add a comment to the measurement",
+      "experimentDataAnnotations.commentDialog.description",
     );
     expect(screen.queryAllByTestId("form-field")).toHaveLength(1);
-    expect(screen.queryByTestId("dialog-close")).toHaveTextContent("Cancel");
-    expect(screen.queryByTestId("button-submit")).toHaveTextContent("Add Comment");
+    expect(screen.queryByTestId("dialog-close")).toHaveTextContent("common.cancel");
+    expect(screen.queryByTestId("button-submit")).toHaveTextContent(
+      "experimentDataAnnotations.commentDialog.add",
+    );
   });
 
   it("should render dialog for adding a flag", () => {
@@ -218,11 +183,17 @@ describe("AddCommentDialog", () => {
       { wrapper: createWrapper() },
     );
 
-    expect(screen.queryByTestId("dialog-title")).toHaveTextContent("Add Flag");
-    expect(screen.queryByTestId("dialog-description")).toHaveTextContent("Flag the measurement");
+    expect(screen.queryByTestId("dialog-title")).toHaveTextContent(
+      "experimentDataAnnotations.flagDialog.title",
+    );
+    expect(screen.queryByTestId("dialog-description")).toHaveTextContent(
+      "experimentDataAnnotations.flagDialog.description",
+    );
     expect(screen.queryAllByTestId("form-field")).toHaveLength(2);
-    expect(screen.queryByTestId("dialog-close")).toHaveTextContent("Cancel");
-    expect(screen.queryByTestId("button-submit")).toHaveTextContent("Add Flag");
+    expect(screen.queryByTestId("dialog-close")).toHaveTextContent("common.cancel");
+    expect(screen.queryByTestId("button-submit")).toHaveTextContent(
+      "experimentDataAnnotations.flagDialog.add",
+    );
   });
 
   it("should handle form submission for comment", () => {
@@ -240,7 +211,7 @@ describe("AddCommentDialog", () => {
     if (form) fireEvent.submit(form);
 
     expect(mockToast).toHaveBeenCalledWith({
-      description: "Comments and flags updated",
+      description: "experimentDataAnnotations.updated",
     });
   });
 
@@ -259,7 +230,7 @@ describe("AddCommentDialog", () => {
     if (form) fireEvent.submit(form);
 
     expect(mockToast).toHaveBeenCalledWith({
-      description: "Comments and flags updated",
+      description: "experimentDataAnnotations.updated",
     });
   });
 
