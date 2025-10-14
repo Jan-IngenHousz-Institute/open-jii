@@ -124,7 +124,7 @@ def clean_data():
     This Silver layer serves as the handoff point for experiment-specific schemas.
     """
     # Read from bronze and extract/transform the data
-    bronze_df = spark.readStream.table(f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{BRONZE_TABLE}")
+    bronze_df = dlt.read_stream(BRONZE_TABLE)
     
     # Extract and transform the data
     df = (

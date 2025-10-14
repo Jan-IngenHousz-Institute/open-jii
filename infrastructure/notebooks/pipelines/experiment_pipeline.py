@@ -323,7 +323,6 @@ def raw_ambyte_data():
 # COMMAND ----------
 
 # DBTITLE 1,Macro Processing Pipeline
-
 def create_macro_tables():
     """
     Create DLT tables for each macro found in the experiment data.
