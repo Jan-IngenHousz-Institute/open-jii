@@ -137,10 +137,35 @@ export const zDataColumn = z.object({
   type_text: z.string(),
 });
 
+// Experiment data annotations
+export const zAnnotationType = z.enum(["comment", "flag"]);
+
+export const zAnnotationCommentContent = z.object({
+  text: z.string().min(1).max(255),
+});
+
+export const zAnnotationFlagType = z.enum(["outlier", "needs_review"]);
+export const zAnnotationFlagContent = z.object({
+  flagType: zAnnotationFlagType,
+  reason: z.string().min(1).max(255),
+});
+
+export const zAnnotationContent = z.union([zAnnotationCommentContent, zAnnotationFlagContent]);
+
+export const zAnnotation = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  userName: z.string().optional(),
+  type: zAnnotationType,
+  content: zAnnotationContent,
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
 // Experiment data schema
 export const zExperimentData = z.object({
   columns: z.array(zDataColumn),
-  rows: z.array(z.record(z.string(), z.string().nullable())),
+  rows: z.array(z.record(z.string(), z.unknown().nullable())),
   totalRows: z.number().int(),
   truncated: z.boolean(),
 });
@@ -808,3 +833,10 @@ export type ExperimentVisualizationList = z.infer<typeof zExperimentVisualizatio
 export type CreateExperimentVisualizationBody = z.infer<typeof zCreateExperimentVisualizationBody>;
 export type UpdateExperimentVisualizationBody = z.infer<typeof zUpdateExperimentVisualizationBody>;
 export type ListExperimentVisualizationsQuery = z.infer<typeof zListExperimentVisualizationsQuery>;
+
+// Annotation types
+export type AnnotationType = z.infer<typeof zAnnotationType>;
+export type AnnotationFlagType = z.infer<typeof zAnnotationFlagType>;
+export type AnnotationCommentContent = z.infer<typeof zAnnotationCommentContent>;
+export type AnnotationFlagContent = z.infer<typeof zAnnotationFlagContent>;
+export type Annotation = z.infer<typeof zAnnotation>;

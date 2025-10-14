@@ -7,7 +7,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 import type { ExperimentData } from "@repo/api";
 
-import { useExperimentData, useExperimentSampleData } from "./useExperimentData";
+import { getColumnWidth, useExperimentData, useExperimentSampleData } from "./useExperimentData";
 
 vi.mock("@/lib/tsr", () => ({
   tsr: {
@@ -20,6 +20,51 @@ vi.mock("@/lib/tsr", () => ({
 }));
 
 const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
+
+describe("getColumnWidth", () => {
+  it("should return 30 for ID column type", () => {
+    expect(getColumnWidth("ID")).toBe(30);
+  });
+
+  it("should return 120 for ARRAY column type", () => {
+    expect(getColumnWidth("ARRAY")).toBe(120);
+  });
+
+  it("should return 120 for ARRAY with generic type", () => {
+    expect(getColumnWidth("ARRAY<STRING>")).toBe(120);
+    expect(getColumnWidth("ARRAY<NUMBER>")).toBe(120);
+    expect(getColumnWidth("ARRAY<INT>")).toBe(120);
+  });
+
+  it("should return 200 for MAP column type", () => {
+    expect(getColumnWidth("MAP")).toBe(200);
+  });
+
+  it("should return 200 for MAP with STRING key type", () => {
+    expect(getColumnWidth("MAP<STRING,")).toBe(200);
+    expect(getColumnWidth("MAP<STRING,INT>")).toBe(200);
+    expect(getColumnWidth("MAP<STRING,DOUBLE>")).toBe(200);
+  });
+
+  it("should return undefined for other column types", () => {
+    expect(getColumnWidth("STRING")).toBeUndefined();
+    expect(getColumnWidth("NUMBER")).toBeUndefined();
+    expect(getColumnWidth("DOUBLE")).toBeUndefined();
+    expect(getColumnWidth("INT")).toBeUndefined();
+    expect(getColumnWidth("TIMESTAMP")).toBeUndefined();
+    expect(getColumnWidth("BOOLEAN")).toBeUndefined();
+    expect(getColumnWidth("ANNOTATIONS")).toBeUndefined();
+  });
+
+  it("should return undefined for empty string", () => {
+    expect(getColumnWidth("")).toBeUndefined();
+  });
+
+  it("should return undefined for MAP without STRING key", () => {
+    expect(getColumnWidth("MAP<INT,")).toBeUndefined();
+    expect(getColumnWidth("MAP<DOUBLE,STRING>")).toBeUndefined();
+  });
+});
 
 describe("useExperimentData", () => {
   let queryClient: QueryClient;
