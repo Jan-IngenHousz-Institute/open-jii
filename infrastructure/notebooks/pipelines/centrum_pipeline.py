@@ -99,7 +99,6 @@ def raw_data():
             "kinesis_arrival_time",
             "partitionKey"
         )
-        .withWatermark("ingestion_timestamp", "15 minutes")
     )
 
 # COMMAND ----------
