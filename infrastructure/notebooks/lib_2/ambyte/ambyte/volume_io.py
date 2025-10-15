@@ -7,12 +7,7 @@ import os
 import re
 from datetime import datetime
 from typing import List, Optional, Tuple
-from pyspark.sql import SparkSession
-from pyspark.dbutils import DBUtils
 
-# Initialize Spark and DBUtils for DBFS operations
-spark = SparkSession.builder.getOrCreate()
-dbutils = DBUtils(spark)
 
 def parse_upload_time(upload_dir_name: str) -> Optional[datetime]:
     """
