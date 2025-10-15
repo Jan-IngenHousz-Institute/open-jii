@@ -99,10 +99,6 @@ export interface MapProps {
    */
   height?: string;
   /**
-   * If true, automatically fit the map bounds to include all provided locations when the map first loads
-   */
-  fitBoundsOnMapLoad?: boolean;
-  /**
    * CSS class name for the container
    */
   className?: string;
@@ -142,74 +138,47 @@ export interface MapProps {
    * Reference point for distance calculations
    */
   referencePoint?: [number, number];
+  /**
+   * Whether to automatically fit map bounds to show all locations on initial load
+   */
+  fitBoundsOnMapLoad?: boolean;
 }
 
-// Component to handle map view changes
+// Component to handle map view changes and bounds fitting
 const MapViewController = ({
   center,
   zoom,
   shouldPan,
+  locations,
+  fitBoundsOnMapLoad,
 }: {
   center: [number, number];
   zoom?: number;
   shouldPan: boolean;
+  locations?: LocationPoint[];
+  fitBoundsOnMapLoad?: boolean;
 }) => {
   const map = useMap();
+  const [hasInitiallyFit, setHasInitiallyFit] = useState(false);
+
+  // Fit bounds on initial load if enabled and locations are available
+  useEffect(() => {
+    if (fitBoundsOnMapLoad && !hasInitiallyFit && locations && locations.length > 0) {
+      const bounds = L.latLngBounds(locations.map((loc) => [loc.latitude, loc.longitude]));
+      map.fitBounds(bounds, {
+        padding: [50, 50],
+        maxZoom: 15,
+        animate: true,
+      });
+      setHasInitiallyFit(true);
+    }
+  }, [map, locations, fitBoundsOnMapLoad, hasInitiallyFit]);
 
   useEffect(() => {
     if (shouldPan) {
       map.setView(center, zoom || map.getZoom(), { animate: true });
     }
   }, [map, center, zoom, shouldPan]);
-
-  return null;
-};
-
-// Controller to fit map bounds to provided locations
-const FitBoundsController = ({
-  locations,
-  padding = [50, 50],
-  maxZoomOverride,
-}: {
-  locations: LocationPoint[];
-  padding?: [number, number];
-  maxZoomOverride?: number;
-}) => {
-  const map = useMap();
-  const hasFittedRef = React.useRef(false);
-
-  useEffect(() => {
-    // Only fit once on initial load (first time we have locations)
-    if (!map || !locations || locations.length === 0) return;
-    if (hasFittedRef.current) return;
-
-    if (locations.length === 1) {
-      // For single location, set a reasonable zoom but don't over-zoom
-      const loc = locations[0];
-      if (loc) {
-        const targetZoom = Math.min(maxZoomOverride ?? map.getMaxZoom(), 12);
-        map.setView([loc.latitude, loc.longitude], targetZoom, { animate: true });
-      }
-      return;
-    }
-
-    try {
-      const latLngs = locations.map((l) => [l.latitude, l.longitude] as [number, number]);
-      const bounds = L.latLngBounds(latLngs);
-      // Use fitBounds with padding and a maxZoom to avoid over-zooming for distant points
-      map.fitBounds(bounds, { padding, maxZoom: maxZoomOverride ?? 10, animate: true });
-      hasFittedRef.current = true;
-    } catch (err) {
-      console.error("Error fitting map bounds:", err);
-      // Fallback: center on average
-      const centerLat = locations.reduce((s, l) => s + l.latitude, 0) / locations.length;
-      const centerLng = locations.reduce((s, l) => s + l.longitude, 0) / locations.length;
-      map.setView([centerLat, centerLng], Math.min(maxZoomOverride ?? map.getZoom(), 4), {
-        animate: true,
-      });
-      hasFittedRef.current = true;
-    }
-  }, [map, locations, padding, maxZoomOverride]);
 
   return null;
 };
@@ -504,11 +473,13 @@ export const Map = ({
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
 
-          <MapViewController center={mapCenter} zoom={mapZoom} shouldPan={shouldPanToLocation} />
-
-          {fitBoundsOnMapLoad && locations.length > 0 && (
-            <FitBoundsController locations={locations} maxZoomOverride={maxZoom} />
-          )}
+          <MapViewController
+            center={mapCenter}
+            zoom={mapZoom}
+            shouldPan={shouldPanToLocation}
+            locations={locations}
+            fitBoundsOnMapLoad={fitBoundsOnMapLoad}
+          />
 
           {showZoomControl && <ZoomControl position="topright" />}
           {showScale && <ScaleControl position="bottomright" />}
