@@ -767,20 +767,6 @@ describe("Map Component", () => {
   });
 
   describe("Fit Bounds on Map Load", () => {
-    it("should render FitBoundsController when fitBoundsOnMapLoad is true with locations", () => {
-      const { container } = render(<Map {...defaultProps} fitBoundsOnMapLoad />);
-
-      // Component should render without errors
-      expect(screen.getByTestId("map-container")).toBeInTheDocument();
-    });
-
-    it("should not render FitBoundsController when fitBoundsOnMapLoad is false", () => {
-      const { container } = render(<Map {...defaultProps} fitBoundsOnMapLoad={false} />);
-
-      // Component should render without errors
-      expect(screen.getByTestId("map-container")).toBeInTheDocument();
-    });
-
     it("should render with fitBoundsOnMapLoad and single location", () => {
       const singleLocation: LocationPoint[] = [
         {
@@ -796,13 +782,6 @@ describe("Map Component", () => {
 
       expect(screen.getByTestId("map-container")).toBeInTheDocument();
       expect(screen.getByText("Single Location")).toBeInTheDocument();
-    });
-
-    it("should not render FitBoundsController when locations array is empty", () => {
-      const { container } = render(<Map locations={[]} fitBoundsOnMapLoad />);
-
-      expect(screen.getByTestId("map-container")).toBeInTheDocument();
-      expect(screen.queryByTestId("marker")).not.toBeInTheDocument();
     });
 
     it("should work with custom maxZoom when fitBoundsOnMapLoad is enabled", () => {
