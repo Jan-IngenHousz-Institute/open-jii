@@ -8,11 +8,7 @@ import pandas as pd
 import numpy as np
 import datetime
 from typing import List, Optional
-from pyspark.sql import SparkSession
-from pyspark.dbutils import DBUtils
 
-spark = SparkSession.builder.getOrCreate()
-dbutils = DBUtils(spark)
 
 def protocol_array_calc(arr: np.ndarray, actual_size=-1):
     if arr.size == 3:
