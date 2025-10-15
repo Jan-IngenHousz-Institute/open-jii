@@ -23,13 +23,27 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-lg font-medium">{t("experiments.title")}</h1>
-        <p>{t("experiments.listDescription")}</p>
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        {/* Left: title, description and archive link */}
+        <div>
+          <h1 className="text-lg font-medium">{t("experiments.title")}</h1>
+          <p>{t("experiments.listDescription")}</p>
+
+          <Link href={`/${locale}/platform/experiments-archive`}>
+            <Button variant="link" className="!p-0">
+              {t("experiments.viewArchived")}
+            </Button>
+          </Link>
+        </div>
+
+        {/* Right: actions (create) */}
+        <div>
+          <Link href={`/platform/experiments/new`} locale={locale}>
+            <Button>{t("experiments.create")}</Button>
+          </Link>
+        </div>
       </div>
-      <Link href={`/platform/experiments/new`} locale={locale}>
-        <Button variant="outline">{t("experiments.create")}</Button>
-      </Link>
+
       <ListExperiments />
     </div>
   );

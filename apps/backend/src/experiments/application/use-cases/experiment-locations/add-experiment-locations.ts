@@ -33,18 +33,18 @@ export class AddExperimentLocationsUseCase {
     return accessResult.chain(
       async ({
         experiment,
-        hasAccess,
+        hasArchiveAccess,
       }: {
         experiment: ExperimentDto | null;
-        hasAccess: boolean;
-        isAdmin: boolean;
+        hasArchiveAccess: boolean;
       }) => {
         if (!experiment) {
           this.logger.warn(`Experiment ${experimentId} not found`);
           return failure(AppError.notFound("Experiment not found"));
         }
 
-        if (!hasAccess && experiment.visibility !== "public") {
+        // For public experiments, allow anyone to add locations
+        if (!hasArchiveAccess && experiment.visibility !== "public") {
           this.logger.warn(
             `User ${userId} attempted to add locations to experiment ${experimentId} without proper permissions`,
           );

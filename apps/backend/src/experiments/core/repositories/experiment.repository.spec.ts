@@ -101,6 +101,36 @@ describe("ExperimentRepository", () => {
       );
     });
 
+    it("should exclude archived experiments by default when no status is provided", async () => {
+      // Arrange
+      const userId = await testApp.createTestUser({ email: "exclude-archived@example.com" });
+      const { experiment: active } = await testApp.createExperiment({
+        name: "Active Experiment Default",
+        userId,
+        status: "active",
+      });
+
+      // Create an archived experiment for the same user
+      await testApp.createExperiment({
+        name: "Archived Experiment Default",
+        userId,
+        status: "archived",
+      });
+
+      // Act: call findAll without passing a status
+      const result = await repository.findAll(userId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+
+      // Archived experiment should be excluded by default
+      expect(experiments.some((e) => e.status === "archived")).toBe(false);
+      // Active experiment should be present
+      expect(experiments.some((e) => e.id === active.id)).toBe(true);
+    });
+
     it("should return experiments in the correct order", async () => {
       // Arrange
       const { experiment: experiment1 } = await testApp.createExperiment({
@@ -731,6 +761,49 @@ describe("ExperimentRepository", () => {
           ),
         );
       expect(membership.length).toBe(0);
+    });
+
+    it("should set hasArchiveAccess=false for non-admin members and true for admins on archived experiments", async () => {
+      // Arrange: create an experiment and archive it
+      const { experiment } = await testApp.createExperiment({
+        name: "Archive Access Test",
+        userId: testUserId,
+        status: "archived",
+      });
+
+      // Create a member user and add as regular member
+      const memberId = await testApp.createTestUser({ email: "archive-member@example.com" });
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      // Act: check access for non-admin member
+      const memberResult = await repository.checkAccess(experiment.id, memberId);
+      expect(memberResult.isSuccess()).toBe(true);
+      assertSuccess(memberResult);
+      expect(memberResult.value.experiment).toBeTruthy();
+      // Non-admin members should NOT have archive access
+      expect(memberResult.value.hasAccess).toBe(true);
+      expect(memberResult.value.isAdmin).toBe(false);
+      expect(memberResult.value.hasArchiveAccess).toBe(false);
+
+      // Now promote to admin by updating the role directly to avoid duplicate insert
+      await testApp.database
+        .update(experimentMembers)
+        .set({ role: "admin" })
+        .where(
+          and(
+            eq(experimentMembers.experimentId, experiment.id),
+            eq(experimentMembers.userId, memberId),
+          ),
+        );
+
+      const adminResult = await repository.checkAccess(experiment.id, memberId);
+      expect(adminResult.isSuccess()).toBe(true);
+      assertSuccess(adminResult);
+      expect(adminResult.value.experiment).toBeTruthy();
+      // Admins should have archive access
+      expect(adminResult.value.hasAccess).toBe(true);
+      expect(adminResult.value.isAdmin).toBe(true);
+      expect(adminResult.value.hasArchiveAccess).toBe(true);
     });
 
     it("should return null experiment and no access when experiment does not exist", async () => {

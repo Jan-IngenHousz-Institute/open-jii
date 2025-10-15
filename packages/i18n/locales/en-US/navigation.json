@@ -27,6 +27,7 @@
     "protocol": "Protocol",
     "configuration": "Configuration",
     "experiments": "Experiments",
+    "experimentsArchive": "Experiments Archive",
     "hardware": "Hardware",
     "macros": "Macros",
     "archive": "Archive",

@@ -52,6 +52,7 @@ export * from "./toaster";
 export * from "./toggle-group";
 export * from "./toggle";
 export * from "./tooltip";
+export * from "./wizard-form";
 
 // Export Plotly chart components
 export * from "./charts/basic";
