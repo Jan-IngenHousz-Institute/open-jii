@@ -176,7 +176,7 @@ vi.mock("@repo/ui/components", () => ({
     <label className={className}>{children}</label>
   ),
   FormControl: ({ children }: { children: React.ReactNode }) => {
-    <>{children}</>;
+    return <>{children}</>;
   },
   FormMessage: () => <div />,
 }));
