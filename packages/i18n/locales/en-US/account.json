@@ -42,5 +42,56 @@
     "save": "Save changes",
     "saving": "Saving...",
     "saved": "Account settings saved"
+  },
+  "dangerZone": {
+    "title": "Danger Zone",
+    "deactivate": {
+      "title": "Deactivate Account",
+      "description": "Temporarily disable your account.",
+      "button": "Deactivate",
+      "buttonDeactivated": "Deactivated",
+      "dialogTitle": "Deactivate Account",
+      "dialogDescription": "This will temporarily disable your account and hide your profile from other users.",
+      "warningTitle": "What happens when you deactivate:",
+      "warningList": {
+        "profileHidden": "Your profile will be hidden from other researchers",
+        "noRequests": "You won't receive collaboration requests",
+        "contentAccessible": "Your experiments, macros, and protocols will remain accessible to collaborators",
+        "loggedOut": "You will be logged out of your account",
+        "canReactivate": "You can reactivate your account by logging in again"
+      },
+      "confirmPrompt": "Type",
+      "confirmWord": "deactivate",
+      "confirmSuffix": "to confirm:",
+      "confirmPlaceholder": "Type 'deactivate' here",
+      "buttonSaving": "Saving...",
+      "buttonConfirm": "Deactivate Account",
+      "successMessage": "Account deactivated"
+    },
+    "delete": {
+      "title": "Delete Account",
+      "description": "Permanently delete your account and all associated data. This cannot be undone.",
+      "button": "Delete Account",
+      "dialogTitle": "Delete Account",
+      "dialogDescription": "This action cannot be undone. Your personal data will be permanently erased, but your published contributions will remain.",
+      "warningEraseTitle": "This will erase:",
+      "warningEraseList": {
+        "profile": "Your profile and personal information",
+        "email": "Your email and contact details",
+        "teams": "Your team memberships"
+      },
+      "warningPreserveTitle": "Your content will be preserved:",
+      "warningPreserveList": {
+        "content": "Experiments, macros, and protocols will remain intact and have ownership transferred to a system account"
+      },
+      "confirmPrompt": "Type",
+      "confirmWord": "delete",
+      "confirmSuffix": "to confirm:",
+      "confirmPlaceholder": "Type 'delete' here",
+      "buttonDeleting": "Deleting...",
+      "buttonConfirm": "Delete Account",
+      "successMessage": "Account deleted. Your personal data has been erased, but your published contributions remain attributed to a system account."
+    },
+    "cancel": "Cancel"
   }
 }

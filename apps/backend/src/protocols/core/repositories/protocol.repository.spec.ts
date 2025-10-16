@@ -256,6 +256,84 @@ describe("ProtocolRepository", () => {
     });
   });
 
+  describe("anonymization", () => {
+    it("should show real name for activated users", async () => {
+      // Arrange
+      const activeUserId = await testApp.createTestUser({
+        name: "Active User",
+        activated: true,
+      });
+
+      const createProtocolDto = {
+        name: "Active Protocol",
+        description: "Created by active user",
+        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
+      };
+
+      await repository.create(createProtocolDto, activeUserId);
+
+      // Act
+      const result = await repository.findAll();
+      assertSuccess(result);
+
+      const protocol = result.value.find((p) => p.name === "Active Protocol");
+      expect(protocol).toBeDefined();
+      expect(protocol?.createdByName).toBe("Active User");
+    });
+
+    it("should anonymize names for deactivated users", async () => {
+      // Arrange
+      const inactiveUserId = await testApp.createTestUser({
+        name: "Hidden User",
+        activated: false,
+      });
+
+      const createProtocolDto = {
+        name: "Hidden Protocol",
+        description: "Created by inactive user",
+        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
+      };
+
+      await repository.create(createProtocolDto, inactiveUserId);
+
+      // Act
+      const result = await repository.findAll();
+      assertSuccess(result);
+
+      const protocol = result.value.find((p) => p.name === "Hidden Protocol");
+      expect(protocol).toBeDefined();
+      expect(protocol?.createdByName).toBe("Unknown User");
+    });
+
+    it("should anonymize name in findOne for deactivated user", async () => {
+      // Arrange
+      const inactiveUserId = await testApp.createTestUser({
+        name: "Ghost User",
+        activated: false,
+      });
+
+      const createProtocolDto = {
+        name: "Ghost Protocol",
+        description: "Should be anonymized",
+        code: [{ steps: [{ name: "Step 1", action: "test" }] }],
+        family: "multispeq" as const,
+      };
+
+      const createResult = await repository.create(createProtocolDto, inactiveUserId);
+      assertSuccess(createResult);
+      const createdProtocol = createResult.value[0];
+
+      // Act
+      const result = await repository.findOne(createdProtocol.id);
+      assertSuccess(result);
+
+      // Assert
+      expect(result.value?.createdByName).toBe("Unknown User");
+    });
+  });
+
   describe("findByName", () => {
     it("should find a protocol by name", async () => {
       // Arrange

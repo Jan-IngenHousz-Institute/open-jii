@@ -15,6 +15,7 @@ import { Form, Button } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 import { ErrorDisplay } from "../error-display";
+import { DangerZoneCard } from "./danger-zone-card";
 import { ProfileCard } from "./profile-card";
 import { ProfilePictureCard } from "./profile-picture-card";
 
@@ -38,26 +39,33 @@ export function AccountSettings({ session }: { session: Session | null }) {
   if (error) {
     return <ErrorDisplay error={error} title={t("settings.errorTitle")} />;
   }
-
   const initialValues: CreateUserProfileBody = userProfile?.body
     ? {
         firstName: userProfile.body.firstName,
         lastName: userProfile.body.lastName,
         bio: userProfile.body.bio ?? "",
         organization: userProfile.body.organization ?? "",
+        activated: userProfile.body.activated ?? true,
       }
     : {
         firstName: "",
         lastName: "",
         bio: "",
         organization: "",
+        activated: true,
       };
 
-  return <AccountSettingsForm initialValues={initialValues} />;
+  return <AccountSettingsForm initialValues={initialValues} userId={user?.id ?? ""} />;
 }
 
 // A pure form component that mounts once with the right defaults.
-function AccountSettingsForm({ initialValues }: { initialValues: CreateUserProfileBody }) {
+function AccountSettingsForm({
+  initialValues,
+  userId,
+}: {
+  initialValues: CreateUserProfileBody;
+  userId: string;
+}) {
   const router = useRouter();
   const { t } = useTranslation("account");
   const { mutate: createUserProfile, isPending } = useCreateUserProfile({
@@ -82,7 +90,22 @@ function AccountSettingsForm({ initialValues }: { initialValues: CreateUserProfi
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-medium">{t("settings.accountsettings")}</h3>
+            <p className="text-muted-foreground text-sm">{t("settings.description")}</p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button type="button" onClick={onCancel} variant="outline">
+              {t("settings.cancel")}
+            </Button>
+            <Button type="submit" disabled={isPending} aria-busy={isPending}>
+              {isPending ? t("settings.saving") : t("settings.save")}
+            </Button>
+          </div>
+        </div>
         {/* Two-column layout: picture card on the left, profile card on the right */}
         <div className="grid items-stretch gap-6 md:grid-cols-2">
           <div className="h-full">
@@ -93,14 +116,9 @@ function AccountSettingsForm({ initialValues }: { initialValues: CreateUserProfi
           </div>
         </div>
 
-        {/* Footer buttons */}
-        <div className="flex gap-2">
-          <Button type="button" onClick={onCancel} variant="outline">
-            {t("settings.cancel")}
-          </Button>
-          <Button type="submit" disabled={isPending} aria-busy={isPending}>
-            {isPending ? t("settings.saving") : t("settings.save")}
-          </Button>
+        {/* Danger zone: deactivate account */}
+        <div>
+          <DangerZoneCard profile={initialValues} userId={userId} />
         </div>
       </form>
     </Form>
