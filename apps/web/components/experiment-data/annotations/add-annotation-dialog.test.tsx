@@ -165,7 +165,7 @@ describe("AddCommentDialog", () => {
     );
 
     expect(screen.queryByTestId("dialog-title")).toHaveTextContent(
-      "experimentDataAnnotations.commentDialog.titl",
+      "experimentDataAnnotations.commentDialog.title",
     );
     expect(screen.queryByTestId("dialog-description")).toHaveTextContent(
       "experimentDataAnnotations.commentDialog.description",
@@ -193,6 +193,56 @@ describe("AddCommentDialog", () => {
     expect(screen.queryByTestId("dialog-close")).toHaveTextContent("common.cancel");
     expect(screen.queryByTestId("button-submit")).toHaveTextContent(
       "experimentDataAnnotations.flagDialog.add",
+    );
+  });
+
+  it("should render dialog for adding bulk comments", () => {
+    render(
+      <AddAnnotationDialog
+        experimentId="exp1"
+        tableName="table1"
+        rowIds={["row1", "row2", "row3"]}
+        type="comment"
+        bulk={true}
+      />,
+      { wrapper: createWrapper() },
+    );
+
+    expect(screen.queryByTestId("dialog-title")).toHaveTextContent(
+      "experimentDataAnnotations.commentDialogBulk.title",
+    );
+    expect(screen.queryByTestId("dialog-description")).toHaveTextContent(
+      "experimentDataAnnotations.commentDialogBulk.description",
+    );
+    expect(screen.queryAllByTestId("form-field")).toHaveLength(1);
+    expect(screen.queryByTestId("dialog-close")).toHaveTextContent("common.cancel");
+    expect(screen.queryByTestId("button-submit")).toHaveTextContent(
+      "experimentDataAnnotations.commentDialogBulk.add",
+    );
+  });
+
+  it("should render dialog for adding bulk flags", () => {
+    render(
+      <AddAnnotationDialog
+        experimentId="exp1"
+        tableName="table1"
+        rowIds={["row1", "row2", "row3"]}
+        type="flag"
+        bulk={true}
+      />,
+      { wrapper: createWrapper() },
+    );
+
+    expect(screen.queryByTestId("dialog-title")).toHaveTextContent(
+      "experimentDataAnnotations.flagDialogBulk.title",
+    );
+    expect(screen.queryByTestId("dialog-description")).toHaveTextContent(
+      "experimentDataAnnotations.flagDialogBulk.description",
+    );
+    expect(screen.queryAllByTestId("form-field")).toHaveLength(2);
+    expect(screen.queryByTestId("dialog-close")).toHaveTextContent("common.cancel");
+    expect(screen.queryByTestId("button-submit")).toHaveTextContent(
+      "experimentDataAnnotations.flagDialogBulk.add",
     );
   });
 

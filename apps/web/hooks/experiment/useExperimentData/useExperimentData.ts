@@ -1,9 +1,14 @@
 import type { AccessorKeyColumnDef, Row } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import type React from "react";
+import { useEffect } from "react";
 import { useMemo } from "react";
+import type { UseFormReturn } from "react-hook-form";
 import type { AnnotationsRowIdentifier } from "~/components/experiment-data/annotations/utils";
+import { getAllRowsSelectionCheckbox } from "~/components/experiment-data/annotations/utils";
+import { getRowSelectionCheckbox } from "~/components/experiment-data/annotations/utils";
 import { getAnnotationsColumn } from "~/components/experiment-data/annotations/utils";
+import type { BulkSelectionFormType } from "~/components/experiment-data/experiment-data-table";
 //import { addDemoAnnotationData } from "~/hooks/experiment/useExperimentData/addDemoAnnotationData";
 import { tsr } from "~/lib/tsr";
 
@@ -52,6 +57,7 @@ interface CreateTableColumnsParams {
   onChartHover?: (data: number[], columnName: string) => void;
   onChartLeave?: () => void;
   onChartClick?: (data: number[], columnName: string) => void;
+  selectionForm?: UseFormReturn<BulkSelectionFormType>;
 }
 
 function createTableColumns({
@@ -62,6 +68,7 @@ function createTableColumns({
   onChartHover,
   onChartLeave,
   onChartClick,
+  selectionForm,
 }: CreateTableColumnsParams) {
   const columnHelper = createColumnHelper<DataRow>();
 
@@ -99,15 +106,14 @@ function createTableColumns({
   });
 
   function getHeader(typeName: string, columnName: string) {
-    if (typeName === "ID") return () => "X";
+    if (typeName === "ID" && selectionForm) return () => getAllRowsSelectionCheckbox(selectionForm);
     return columnName;
   }
 
   function getRow(typeName: string, columnName: string, row: Row<DataRow>) {
     // ID column shows a checkbox
-    if (typeName === "ID") {
-      // TODO: Change into checkbox for bulk actions
-      return "X";
+    if (typeName === "ID" && selectionForm) {
+      return getRowSelectionCheckbox(selectionForm, row.original[ID_COLUMN_NAME] as string);
     }
 
     const value = row.getValue(columnName);
@@ -166,6 +172,7 @@ export interface TableMetadata {
  * @param onChartHover Event handler for when a chart is hovered
  * @param onChartLeave Event handler for when a chart is no longer hovered
  * @param onChartClick Event handler for when a chart is clicked
+ * @param selectionForm Backing form to manage bulk selection state
  * @returns Query result containing the experiment data
  */
 export const useExperimentData = (
@@ -177,6 +184,7 @@ export const useExperimentData = (
   onChartHover?: (data: number[], columnName: string) => void,
   onChartLeave?: () => void,
   onChartClick?: (data: number[], columnName: string) => void,
+  selectionForm?: UseFormReturn<BulkSelectionFormType>,
 ) => {
   const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
     queryData: {
@@ -198,6 +206,22 @@ export const useExperimentData = (
   // }, [originalTableData]);
   const tableData = data?.body[0];
 
+  // Add all row id's to form
+  const allRowIds = useMemo(() => {
+    if (tableData?.data) {
+      if (tableData.data.columns.find((col) => col.name === ID_COLUMN_NAME)) {
+        // Extract all row IDs from the data
+        return tableData.data.rows.map((row) => row[ID_COLUMN_NAME] as string);
+      }
+      return [];
+    }
+  }, [tableData]);
+  useEffect(() => {
+    if (selectionForm) {
+      selectionForm.setValue("allRows", allRowIds ?? []);
+    }
+  }, [selectionForm, allRowIds]);
+
   const tableMetadata: TableMetadata | undefined = useMemo(() => {
     return tableData
       ? {
@@ -209,6 +233,7 @@ export const useExperimentData = (
             onChartHover,
             onChartLeave,
             onChartClick,
+            selectionForm,
           }),
           totalPages: tableData.totalPages,
           totalRows: tableData.totalRows,
@@ -222,6 +247,7 @@ export const useExperimentData = (
     onChartHover,
     onChartLeave,
     onChartClick,
+    selectionForm,
   ]);
   const tableRows: DataRow[] | undefined = tableData?.data?.rows;
 
