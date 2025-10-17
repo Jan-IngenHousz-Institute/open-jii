@@ -7,12 +7,31 @@ import os
 import re
 from datetime import datetime
 from typing import List, Optional, Tuple
-from pyspark.sql import SparkSession
-from pyspark.dbutils import DBUtils
 
-# Initialize Spark and DBUtils for DBFS operations
-spark = SparkSession.builder.getOrCreate()
-dbutils = DBUtils(spark)
+
+def find_upload_directories(base_path: str) -> List[str]:
+    """
+    Find all upload directories with the format upload_YYYYMMDD_SS in the given base path.
+    
+    Args:
+        base_path: The base path to search for upload directories
+        
+    Returns:
+        List of full paths to upload directories
+    """
+    upload_directories = []
+    
+    try:
+        if os.path.exists(base_path):
+            for item in os.listdir(base_path):
+                item_path = os.path.join(base_path, item)
+                if os.path.isdir(item_path) and item.startswith("upload_"):
+                    upload_directories.append(item_path)
+    except Exception as e:
+        print(f"Error accessing volume or finding upload directories: {e}")
+        
+    return upload_directories
+
 
 def parse_upload_time(upload_dir_name: str) -> Optional[datetime]:
     """
@@ -40,58 +59,23 @@ def parse_upload_time(upload_dir_name: str) -> Optional[datetime]:
         print(f"Error parsing upload time from {upload_dir_name}: {e}")
         return None
 
-def prepare_ambyte_files(files_data, upload_dir, ambyte_folder):
+
+def discover_and_validate_upload_directories(base_path: str) -> Tuple[List[str], bool]:
     """
-    Prepare ambyte files from streaming data into files_per_byte structure for processing.
-    
-    This function handles ONLY the file organization workflow:
-    1. Parse upload time for the folder
-    2. Organize files into files_per_byte structure
-    3. Return organized data for processing
+    Discover upload directories and validate their existence.
     
     Args:
-        files_data: File data structure for this ambyte folder
-        upload_dir: Upload directory name
-        ambyte_folder: Ambyte folder name
+        base_path: The base path to search for upload directories
         
     Returns:
-        Tuple of (files_per_byte, upload_time, ambyte_folder) or None if no valid files
+        Tuple of (list of upload directories, success flag)
     """
-    try:
-        # Parse upload time using existing utility
-        upload_time = parse_upload_time(upload_dir)
-        
-        # Organize files into files_per_byte structure like existing logic
-        files_per_byte = [[] for _ in range(4)]
-        
-        for file_info in files_data:
-            content = file_info['content']
-            ambit_index_str = file_info['ambit_index']
-            
-            # Convert content to lines format expected by existing parsing logic
-            lines = content.split('\n')
-            lines.append("EOF")
-            
-            if len(lines) <= 7:
-                continue
-            
-            # Place in correct ambit slot
-            if ambit_index_str and ambit_index_str.isdigit():
-                ambit_index = int(ambit_index_str)
-                if 1 <= ambit_index <= 4:
-                    files_per_byte[ambit_index - 1].append(lines)
-            else:
-                # Unknown ambit case (put in first slot like existing logic)
-                files_per_byte[0].append(lines)
-        
-        # Filter out empty slots
-        files_per_byte = [lst for lst in files_per_byte if lst]
-        
-        if not files_per_byte:
-            return None
-            
-        return files_per_byte, upload_time, ambyte_folder
-        
-    except Exception as e:
-        print(f"Error organizing files for ambyte folder {ambyte_folder} in {upload_dir}: {e}")
-        return None
+    upload_directories = find_upload_directories(base_path)
+    
+    if upload_directories:
+        print(f"Found {len(upload_directories)} upload directories")
+        print(f"Upload directories: {[os.path.basename(x) for x in upload_directories]}")
+        return upload_directories, True
+    else:
+        print("No upload directories found")
+        return [], False
