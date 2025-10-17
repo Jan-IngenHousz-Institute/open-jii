@@ -529,7 +529,7 @@ export type GeocodeResponse = z.infer<typeof zGeocodeResponse>;
 
 // Define request and response types
 // Shared embargo date validation function
-const validateEmbargoDate = (
+export const validateEmbargoDate = (
   embargoUntil: string | undefined,
   ctx: z.RefinementCtx,
   path: string[],
@@ -567,52 +567,54 @@ const validateEmbargoDate = (
   }
 };
 
-export const zCreateExperimentBody = z
-  .object({
-    name: z
-      .string()
-      .trim()
-      .min(1, "The name of the experiment is required")
-      .max(255, "The name must be at most 255 characters")
-      .describe("The name of the experiment"),
-    description: z.string().optional().describe("Optional description of the experiment"),
-    status: zExperimentStatus.optional().describe("Initial status of the experiment"),
-    visibility: zExperimentVisibility.optional().describe("Experiment visibility setting"),
-    embargoUntil: z
-      .string()
-      .datetime()
-      .optional()
-      .describe(
-        "Embargo end date and time (ISO datetime string, will be stored as UTC in database)",
-      ),
-    members: z
-      .array(
-        z.object({
-          userId: z.string().uuid(),
-          role: zExperimentMemberRole.optional(),
-        }),
-      )
-      .optional()
-      .describe("Optional array of member objects with userId and role"),
-    protocols: z
-      .array(
-        z.object({
-          protocolId: z.string().uuid(),
-          order: z.number().int().optional(),
-        }),
-      )
-      .optional()
-      .describe(
-        "Optional array of protocol objects with protocolId and order to associate with the experiment",
-      ),
-    locations: z
-      .array(zLocationInput)
-      .optional()
-      .describe("Optional array of locations associated with the experiment"),
-  })
-  .superRefine((val, ctx) => {
-    validateEmbargoDate(val.embargoUntil, ctx, ["embargoUntil"]);
-  });
+export const zCreateExperimentBodyBase = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "The name of the experiment is required")
+    .max(255, "The name must be at most 255 characters")
+    .describe("The name of the experiment"),
+  description: z.string().optional().describe("Optional description of the experiment"),
+  status: zExperimentStatus.optional().describe("Initial status of the experiment"),
+  visibility: zExperimentVisibility.optional().describe("Experiment visibility setting"),
+  embargoUntil: z
+    .string()
+    .datetime()
+    .optional()
+    .describe("Embargo end date and time (ISO datetime string, will be stored as UTC in database)"),
+  members: z
+    .array(
+      z.object({
+        userId: z.string().uuid(),
+        role: zExperimentMemberRole.optional(),
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+        email: z.string().email().nullable().optional(),
+      }),
+    )
+    .optional()
+    .describe("Optional array of member objects with userId and role"),
+  protocols: z
+    .array(
+      z.object({
+        protocolId: z.string().uuid(),
+        order: z.number().int().optional(),
+        name: z.string().optional(),
+      }),
+    )
+    .optional()
+    .describe(
+      "Optional array of protocol objects with protocolId and order to associate with the experiment",
+    ),
+  locations: z
+    .array(zLocationInput)
+    .optional()
+    .describe("Optional array of locations associated with the experiment"),
+});
+
+export const zCreateExperimentBody = zCreateExperimentBodyBase.superRefine((val, ctx) => {
+  validateEmbargoDate(val.embargoUntil, ctx, ["embargoUntil"]);
+});
 
 export const zUpdateExperimentBody = z.object({
   name: z
