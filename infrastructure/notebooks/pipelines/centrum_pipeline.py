@@ -206,3 +206,69 @@ def clean_data():
         "ingest_latency_ms",
         "processed_timestamp"
     )
+
+# COMMAND ----------
+
+# DBTITLE 1,Gold Layer - Experiment Status
+@dlt.table(
+    name="experiment_status",
+    comment="Gold layer: Materialized view tracking experiment freshness status",
+    table_properties={
+        "quality": "gold",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.enableChangeDataFeed": "true"
+    }
+)
+def experiment_status():
+    """
+    Gold layer materialized view that tracks experiment freshness status.
+    
+    This function:
+    - Queries the clean data (silver) table
+    - Gets the latest timestamp for each experiment ID
+    - Determines the status (fresh/stale) based on configurable freshness criteria
+    - Structured for efficient incremental refreshes
+    """
+    
+    # Configuration for freshness threshold (in minutes)
+    # Data older than this threshold will be marked as "stale"
+    FRESHNESS_THRESHOLD_MINUTES = 60  # Can be parameterized via spark.conf
+    
+    # Read from silver table
+    silver_df = dlt.read(SILVER_TABLE)
+    
+    # Get the current timestamp for comparison
+    current_timestamp = F.current_timestamp()
+    
+    # Calculate the latest timestamp for each experiment_id
+    experiment_status_df = (
+        silver_df
+        .groupBy("experiment_id")
+        .agg(
+            F.max("timestamp").alias("latest_timestamp"),
+            F.max("processed_timestamp").alias("latest_processed_timestamp")
+        )
+        .filter("experiment_id IS NOT NULL")  # Filter out records with null experiment_id
+    )
+    
+    # Calculate freshness status
+    status_df = (
+        experiment_status_df
+        .withColumn(
+            "status",
+            F.when(
+                (current_timestamp.cast("long") - F.col("latest_timestamp").cast("long")) / 60 <= FRESHNESS_THRESHOLD_MINUTES,
+                F.lit("fresh")
+            ).otherwise(F.lit("stale"))
+        )
+        .withColumn("status_updated_at", current_timestamp)
+    )
+    
+    # Select final columns for the gold layer
+    return status_df.select(
+        "experiment_id",
+        "latest_timestamp",
+        "latest_processed_timestamp",
+        "status",
+        "status_updated_at"
+    )

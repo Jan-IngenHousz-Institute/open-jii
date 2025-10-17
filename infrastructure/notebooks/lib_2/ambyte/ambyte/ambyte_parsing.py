@@ -7,8 +7,13 @@ This module contains all the core processing logic for parsing Ambyte trace file
 import pandas as pd
 import numpy as np
 import datetime
-from typing import List, Optional
+import os
+from typing import List, Tuple, Optional
+from pyspark.sql import SparkSession
+from pyspark.dbutils import DBUtils
 
+spark = SparkSession.builder.getOrCreate()
+dbutils = DBUtils(spark)
 
 def protocol_array_calc(arr: np.ndarray, actual_size=-1):
     if arr.size == 3:
@@ -143,6 +148,101 @@ def parse_trace(trace: list):
         "Full": full_length,
         "Duration": end_ms_0 - start_ms_0 if 'end_ms_0' in locals() else None
     }
+
+
+def find_byte_folders(dbfs_path: str, recursive: bool = True, max_depth: int = 6) -> List[str]:
+    """Locate folders that contain subfolders named '1','2','3','4' or 'unknown_ambit' (DBFS recursive).
+
+    Args:
+        dbfs_path: Base DBFS path to search.
+        recursive: Enable depth-first recursion.
+        max_depth: Maximum recursion depth.
+    """
+    required = {'1', '2', '3', '4'}
+    results: List[str] = []
+
+    def _dfs(path: str, depth: int):
+        if depth > max_depth:
+            return
+        try:
+            entries = dbutils.fs.ls(path)  # type: ignore
+        except Exception as e:  # pragma: no cover
+            print(f"Cannot list {path}: {e}")
+            return
+        dir_names = {os.path.basename(e.path.rstrip('/')) for e in entries if e.isDir()}
+        # Check for standard byte folders (1-4) or unknown_ambit folder
+        if required.issubset(dir_names) or 'unknown_ambit' in dir_names:
+            results.append(path.rstrip('/'))
+        if recursive:
+            for e in entries:
+                if e.isDir():
+                    _dfs(e.path.rstrip('/'), depth + 1)
+
+    _dfs(dbfs_path.rstrip('/'), 0)
+    return sorted(set(results))
+
+
+def load_files_per_byte(byte_folder_path: str, year_prefix: str = "2025") -> Tuple[List[List[list]], str]:
+    """Load trace files from each byte subfolder (1-4) or from unknown_ambit using full DBFS reads.
+
+    Args:
+        byte_folder_path: Base folder containing subfolders 1..4 or unknown_ambit
+        year_prefix: File name prefix filter
+    """
+    files_per_byte: List[List[list]] = [[] for _ in range(4)]
+
+    # Check if this is an unknown_ambit folder structure
+    try:
+        entries = dbutils.fs.ls(byte_folder_path)  # type: ignore
+        dir_names = {os.path.basename(e.path.rstrip('/')) for e in entries if e.isDir()}
+        has_unknown_ambit = 'unknown_ambit' in dir_names
+    except Exception as e:  # pragma: no cover
+        print(f"Error accessing folder {byte_folder_path}: {e}")
+        has_unknown_ambit = False
+
+    if has_unknown_ambit:
+        # Load files from unknown_ambit folder and put them all in the first slot
+        unknown_ambit_dir = f"{byte_folder_path.rstrip('/')}/unknown_ambit"
+        try:
+            listing = dbutils.fs.ls(unknown_ambit_dir)  # type: ignore
+            for fi in listing:
+                name = os.path.basename(fi.path)
+                if not (name.endswith('_.txt') and name.startswith(year_prefix)):
+                    continue
+                try:
+                    content = dbutils.fs.head(fi.path, max_bytes=10485760)  # 10MB limit  # type: ignore
+                    lines = content.split('\n')
+                    lines.append("EOF")
+                    if len(lines) > 7:
+                        files_per_byte[0].append(lines)  # Put all unknown_ambit files in first slot
+                except Exception as e:  # pragma: no cover
+                    print(f"Error reading file {fi.path}: {e}")
+        except Exception as e:  # pragma: no cover
+            print(f"Error accessing unknown_ambit directory {unknown_ambit_dir}: {e}")
+    else:
+        # Standard byte folder processing (1-4)
+        for byte_index in range(1, 5):
+            byte_dir = f"{byte_folder_path.rstrip('/')}/{byte_index}"
+            try:
+                listing = dbutils.fs.ls(byte_dir)  # type: ignore
+            except Exception as e:  # pragma: no cover
+                print(f"Error accessing byte directory {byte_dir}: {e}")
+                continue
+
+            for fi in listing:
+                name = os.path.basename(fi.path)
+                if not (name.endswith('_.txt') and name.startswith(year_prefix)):
+                    continue
+                try:
+                    content = dbutils.fs.head(fi.path, max_bytes=10485760)  # 10MB limit  # type: ignore
+                    lines = content.split('\n')
+                    lines.append("EOF")
+                    if len(lines) > 7:
+                        files_per_byte[byte_index - 1].append(lines)
+                except Exception as e:  # pragma: no cover
+                    print(f"Error reading file {fi.path}: {e}")
+
+    return files_per_byte, byte_folder_path
 
 
 def process_trace_files(ambyte_folder: str, files_per_byte: List[List[list]]) -> Optional[pd.DataFrame]:
