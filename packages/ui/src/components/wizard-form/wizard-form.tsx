@@ -30,6 +30,10 @@ export interface WizardStepProps<T extends FieldValues = FieldValues> {
    */
   onPrevious: () => void;
   /**
+   * Jump to a specific step index
+   */
+  goToStep?: (index: number) => void;
+  /**
    * Index of the current step
    */
   stepIndex: number;
@@ -120,7 +124,7 @@ export interface WizardStep<T extends FieldValues = FieldValues> {
   /**
    * Validation schema for this step
    */
-  validationSchema: z.ZodObject<any>;
+  validationSchema: z.AnyZodObject;
   /**
    * Component to render for this step
    */
@@ -231,6 +235,13 @@ export function WizardForm<T extends FieldValues>({
     }
   };
 
+  // Jump to a specific step (index within activeSteps)
+  const goToStep = (index: number) => {
+    if (index >= 0 && index < activeSteps.length) {
+      setCurrentStepIndex(index);
+    }
+  };
+
   // Handle form submission (only on the last step)
   const handleSubmit = form.handleSubmit(async (data) => {
     if (currentStepIndex === activeSteps.length - 1) {
@@ -245,61 +256,63 @@ export function WizardForm<T extends FieldValues>({
       {/* Step indicators */}
       {showStepIndicator && (
         <div className="mb-6">
-          <div className="flex items-center justify-between">
-            {activeSteps.map((_step, index) => (
-              <React.Fragment key={index}>
-                {/* Step circle */}
-                <div
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium",
-                    index === currentStepIndex
-                      ? "bg-primary text-primary-foreground"
-                      : index < currentStepIndex
-                        ? "bg-primary/80 text-primary-foreground"
-                        : "border-input bg-background text-muted-foreground border",
-                  )}
-                >
-                  {index + 1}
-                </div>
+          <div className="flex items-start gap-1">
+            {activeSteps.map((_step, index) => {
+              const isActive = index === currentStepIndex;
+              const isCompleted = index < currentStepIndex;
 
-                {/* Connector line */}
-                {index < activeSteps.length - 1 && (
-                  <div
-                    className={cn(
-                      "mx-2 h-[2px] flex-1",
-                      index < currentStepIndex ? "bg-primary/80" : "bg-border",
+              return (
+                <React.Fragment key={index}>
+                  {/* Step circle + label */}
+                  <div className="flex w-[50px] flex-col items-center transition-all duration-300 md:w-[80px]">
+                    <div
+                      className={cn(
+                        "flex h-8 w-8 items-center justify-center rounded-full border text-sm font-medium transition-all duration-300 ease-in-out",
+                        isActive
+                          ? "bg-primary text-primary-foreground scale-110 shadow-md"
+                          : isCompleted
+                            ? "bg-primary/80 text-primary-foreground"
+                            : "bg-background text-muted-foreground border-input",
+                      )}
+                    >
+                      {index + 1}
+                    </div>
+
+                    {showStepTitles && (
+                      <div
+                        className={cn(
+                          "mt-2 text-center text-xs font-medium transition-all duration-300 ease-in-out",
+                          isActive
+                            ? "text-primary translate-y-0 opacity-100"
+                            : isCompleted
+                              ? "text-primary/80 opacity-80"
+                              : "text-muted-foreground opacity-70",
+                        )}
+                      >
+                        {activeSteps[index]?.title}
+                      </div>
                     )}
-                  />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
+                  </div>
 
-          {/* Step titles */}
-          {showStepTitles && (
-            <div className="mt-2 flex items-center justify-between">
-              {activeSteps.map((step, index) => (
-                <div
-                  key={`title-${index}`}
-                  className={cn(
-                    "text-center text-xs font-medium",
-                    index === currentStepIndex
-                      ? "text-primary"
-                      : index < currentStepIndex
-                        ? "text-primary/80"
-                        : "text-muted-foreground",
+                  {/* Connector line */}
+                  {index < activeSteps.length - 1 && (
+                    <div className="flex flex-1 items-start pt-4">
+                      <div className="bg-border relative h-[2px] w-full overflow-hidden rounded-full">
+                        <div
+                          className={cn(
+                            "bg-primary/80 absolute left-0 top-0 h-full transition-all duration-500 ease-in-out",
+                            isCompleted ? "w-full" : "w-0",
+                          )}
+                        />
+                      </div>
+                    </div>
                   )}
-                  style={{ width: `${100 / activeSteps.length}%` }}
-                >
-                  {step.title}
-                </div>
-              ))}
-            </div>
-          )}
+                </React.Fragment>
+              );
+            })}
+          </div>
         </div>
       )}
-
-      {/* Current step */}
       {currentStep && (
         <Form {...form}>
           <form onSubmit={handleSubmit} className="space-y-6" data-testid="form">
@@ -319,6 +332,7 @@ export function WizardForm<T extends FieldValues>({
               step: currentStep,
               onNext: handleNext,
               onPrevious: handlePrevious,
+              goToStep,
               stepIndex: currentStepIndex,
               totalSteps: activeSteps.length,
               isSubmitting,
