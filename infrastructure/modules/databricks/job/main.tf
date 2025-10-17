@@ -47,11 +47,11 @@ resource "databricks_job" "this" {
     }
   }
 
-  lifecycle {
-    ignore_changes = [
-      task,
-    ]
-  }
+  # lifecycle {
+  #   ignore_changes = [
+  #     task,
+  #   ]
+  # }
 
   dynamic "task" {
     for_each = var.tasks

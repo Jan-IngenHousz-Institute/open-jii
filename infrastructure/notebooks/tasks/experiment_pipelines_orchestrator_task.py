@@ -7,12 +7,13 @@ It's designed to run after the central pipeline completes to ensure fresh data i
 
 import logging
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+import re
 
 from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.pipelines import PipelineStateInfo
+from pyspark.sql import SparkSession
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -26,7 +27,9 @@ def extract_parameters() -> Dict[str, str]:
     """Extract parameters from Databricks widgets."""
     try:
         params = {
-            "catalog_name": dbutils.widgets.get("catalog_name")
+            "catalog_name": dbutils.widgets.get("catalog_name"),
+            "schema_name": dbutils.widgets.get("central_schema"),
+            "experiment_status_table": dbutils.widgets.get("experiment_status_table")
         }
         
         logger.info(f"Configuration extracted: {params}")
@@ -45,10 +48,47 @@ class ExperimentPipelineOrchestrator:
     
     def __init__(self, workspace_client: Optional[WorkspaceClient] = None):
         self.client = workspace_client or WorkspaceClient()
+        self.spark = SparkSession.builder.getOrCreate()
+    
+    def get_fresh_experiment_ids(self, catalog_name: str, schema_name: str, status_table_name: str) -> Set[str]:
+        """
+        Query the experiment_status table to get experiment IDs with 'fresh' status.
+        
+        Args:
+            catalog_name: Catalog containing the experiment_status table
+            schema_name: Schema containing the experiment_status table
+            status_table_name: Name of the experiment status table
+            
+        Returns:
+            Set of experiment IDs with 'fresh' status
+        """
+        try:
+            logger.info(f"Querying fresh experiments from {catalog_name}.{schema_name}.{status_table_name}")
+            
+            # Full table path with catalog and schema
+            full_table_path = f"{catalog_name}.{schema_name}.{status_table_name}"
+            
+            # Query experiment status table for fresh experiments
+            fresh_experiments_df = self.spark.sql(f"""
+                SELECT experiment_id 
+                FROM {full_table_path}
+                WHERE status = 'fresh'
+            """)
+            
+            # Convert to list of experiment IDs
+            fresh_experiment_ids = set(row.experiment_id for row in fresh_experiments_df.collect())
+            
+            logger.info(f"Found {len(fresh_experiment_ids)} fresh experiments")
+            return fresh_experiment_ids
+            
+        except Exception as e:
+            logger.error(f"Error querying experiment status table: {e}")
+            raise
     
     def find_experiment_pipelines(self) -> List[Dict[str, str]]:
         """
         Find all experiment pipelines (pipelines with names starting with 'exp-').
+        Extracts experiment_id from pipeline configuration parameters.
         
         Returns:
             List of dictionaries containing pipeline info
@@ -62,21 +102,96 @@ class ExperimentPipelineOrchestrator:
             for pipeline in pipelines:
                 # Filter for experiment pipelines
                 if pipeline.name and pipeline.name.startswith('exp-') and pipeline.name.endswith('-DLT-Pipeline-DEV'):
-                    experiment_pipelines.append({
-                        'pipeline_id': pipeline.pipeline_id,
-                        'name': pipeline.name,
-                        'state': pipeline.state.value if pipeline.state else 'UNKNOWN'
-                    })
+                    # Get pipeline configuration to extract experiment_id
+                    pipeline_id = pipeline.pipeline_id
+                    try:
+                        # Get full pipeline details including configuration
+                        pipeline_details = self.client.pipelines.get(pipeline_id)
+                        experiment_id = self._extract_experiment_id_from_config(pipeline_details)
+                        
+                        experiment_pipelines.append({
+                            'pipeline_id': pipeline_id,
+                            'name': pipeline.name,
+                            'experiment_id': experiment_id,
+                            'state': pipeline.state.value if pipeline.state else 'UNKNOWN'
+                        })
+                    except Exception as config_error:
+                        logger.warning(f"Could not extract experiment_id from config for pipeline {pipeline.name}: {config_error}")
+                        # Fall back to extracting from name if config extraction fails
+                        experiment_pipelines.append({
+                            'pipeline_id': pipeline_id,
+                            'name': pipeline.name,
+                            'experiment_id': self._extract_experiment_id_from_name(pipeline.name),
+                            'state': pipeline.state.value if pipeline.state else 'UNKNOWN'
+                        })
             
             logger.info(f"Found {len(experiment_pipelines)} experiment pipelines")
             for pipeline in experiment_pipelines:
-                logger.info(f"  - {pipeline['name']} (ID: {pipeline['pipeline_id']}, State: {pipeline['state']})")
+                logger.info(f"  - {pipeline['name']} (ID: {pipeline['pipeline_id']}, Experiment ID: {pipeline['experiment_id']}, State: {pipeline['state']})")
                 
             return experiment_pipelines
             
         except Exception as e:
             logger.error(f"Error finding experiment pipelines: {e}")
             raise
+    
+    def _extract_experiment_id_from_config(self, pipeline_details) -> Optional[str]:
+        """
+        Extract experiment_id from pipeline configuration.
+        
+        Args:
+            pipeline_details: Pipeline details object from Databricks SDK
+            
+        Returns:
+            Extracted experiment_id or None if not found
+        """
+        try:
+            # Look for EXPERIMENT_ID in pipeline configuration parameters
+            # Pipeline configuration structure depends on the Databricks SDK version
+            if hasattr(pipeline_details, 'configuration') and pipeline_details.configuration:
+                if hasattr(pipeline_details.configuration, 'configuration'):
+                    # For newer SDK versions
+                    config = pipeline_details.configuration.configuration
+                else:
+                    # For older SDK versions
+                    config = pipeline_details.configuration
+                
+                # Try to find experiment ID in configuration
+                if hasattr(config, 'spark_conf'):
+                    # Try to extract from Spark configuration
+                    spark_conf = config.spark_conf or {}
+                    if 'spark.databricks.delta.dlt.parameters.EXPERIMENT_ID' in spark_conf:
+                        return spark_conf['spark.databricks.delta.dlt.parameters.EXPERIMENT_ID']
+                
+                # Try other common parameter locations
+                if hasattr(config, 'parameters'):
+                    params = config.parameters or {}
+                    if 'EXPERIMENT_ID' in params:
+                        return params['EXPERIMENT_ID']
+            
+            logger.debug(f"Could not find EXPERIMENT_ID in pipeline configuration")
+            return None
+                
+        except Exception as e:
+            logger.warning(f"Error extracting experiment_id from pipeline configuration: {e}")
+            return None
+    
+    def _extract_experiment_id_from_name(self, pipeline_name: str) -> Optional[str]:
+        """
+        Extract experiment_id from the pipeline name as fallback method.
+        Pipeline names follow the format 'exp-{experiment_id}-DLT-Pipeline-DEV'.
+        
+        Args:
+            pipeline_name: Name of the pipeline
+            
+        Returns:
+            Extracted experiment_id or None if not found
+        """
+        # Regular expression to extract experiment_id from pipeline name using the original pattern
+        match = re.search(r'exp-([^-]+)-DLT', pipeline_name)
+        if match:
+            return match.group(1)
+        return None
     
     def trigger_pipeline(self, pipeline_info: Dict[str, str]) -> Dict[str, Any]:
         """
@@ -207,18 +322,65 @@ def main() -> None:
         # Initialize orchestrator
         orchestrator = ExperimentPipelineOrchestrator()
         
-        # Find all experiment pipelines
-        experiment_pipelines = orchestrator.find_experiment_pipelines()
+        # Get fresh experiment IDs from the experiment_status table
+        fresh_experiment_ids = orchestrator.get_fresh_experiment_ids(
+            catalog_name=params["catalog_name"],
+            schema_name=params["schema_name"],
+            status_table_name=params["experiment_status_table"]
+        )
         
-        if not experiment_pipelines:
+        if not fresh_experiment_ids:
+            logger.info("No fresh experiments found. Nothing to execute.")
+            print("\n📝 No fresh experiments found in the experiment_status table.")
+            return
+        
+        # Log the fresh experiment IDs for debugging
+        logger.info(f"Fresh experiment IDs: {', '.join(sorted(fresh_experiment_ids))}")
+        
+        # Find all experiment pipelines
+        all_experiment_pipelines = orchestrator.find_experiment_pipelines()
+        
+        if not all_experiment_pipelines:
             logger.info("No experiment pipelines found. Nothing to execute.")
             print("\n📝 No experiment pipelines found.")
             return
         
-        # Trigger all experiment pipelines
+        # Debug: Print all extracted experiment IDs and their sources
+        pipeline_experiment_ids = {p.get('experiment_id', 'NONE'): p['name'] for p in all_experiment_pipelines}
+        logger.info(f"Found {len(pipeline_experiment_ids)} pipeline experiment IDs:")
+        for exp_id, name in pipeline_experiment_ids.items():
+            logger.info(f"  - Pipeline: {name} → Experiment ID: {exp_id or 'None'}")
+        
+        # Filter pipelines to only include those with fresh experiment data
+        fresh_pipelines = [
+            pipeline for pipeline in all_experiment_pipelines 
+            if pipeline.get('experiment_id') in fresh_experiment_ids
+        ]
+        
+        # Debug: Log intersection between fresh experiment IDs and pipeline experiment IDs
+        matches = fresh_experiment_ids.intersection(
+            {p.get('experiment_id') for p in all_experiment_pipelines if p.get('experiment_id')}
+        )
+        logger.info(f"Matches between fresh experiments and pipelines: {len(matches)}")
+        for match in sorted(matches):
+            matching_pipelines = [p['name'] for p in all_experiment_pipelines 
+                                if p.get('experiment_id') == match]
+            logger.info(f"  - Experiment ID: {match} → Pipelines: {', '.join(matching_pipelines)}")
+        
+        if not fresh_pipelines:
+            logger.info("No pipelines with fresh experiment data found. Nothing to execute.")
+            print("\n📝 No pipelines with fresh experiment data found.")
+            return
+        
+        logger.info(f"Found {len(fresh_pipelines)} pipelines with fresh experiment data out of {len(all_experiment_pipelines)} total pipelines")
+        print(f"\n📝 Found {len(fresh_pipelines)} pipelines with fresh experiment data:")
+        for pipeline in fresh_pipelines:
+            print(f"  - {pipeline['name']} (Experiment ID: {pipeline['experiment_id']})")
+        
+        # Trigger only pipelines with fresh experiment data
         # Use parallel execution for better performance, but limit concurrency
         results = orchestrator.trigger_all_experiments_parallel(
-            experiment_pipelines, 
+            fresh_pipelines, 
             max_workers=3  # Conservative to avoid overwhelming Databricks
         )
         
@@ -227,7 +389,7 @@ def main() -> None:
         
         # Log final status
         successful_count = len([r for r in results if r['status'] == 'TRIGGERED'])
-        logger.info(f"Experiment pipeline orchestration completed: {successful_count}/{len(results)} successful")
+        logger.info(f"Experiment pipeline orchestration completed: {successful_count}/{len(fresh_pipelines)} successful")
         
     except Exception as e:
         logger.error(f"Experiment pipeline orchestration failed: {e}")
