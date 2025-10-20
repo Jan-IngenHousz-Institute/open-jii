@@ -55,18 +55,8 @@ export function useUnsavedChangesWarning({
         return;
       }
 
-      // Find if the click target is a link or inside a link
-      let target = e.target as HTMLElement | null;
-      let anchor: HTMLAnchorElement | null = null;
-
-      // Traverse up to find an anchor tag
-      while (target && target !== document.body) {
-        if (target.tagName === "A") {
-          anchor = target as HTMLAnchorElement;
-          break;
-        }
-        target = target.parentElement;
-      }
+      // closest() to find the nearest anchor element
+      const anchor = (e.target as HTMLElement).closest("a");
 
       if (!anchor?.href) {
         return;
