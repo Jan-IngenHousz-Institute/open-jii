@@ -82,7 +82,7 @@ function Annotation({
         </Badge>
       )}
       <div className="grid w-full grid-cols-[3fr_1fr_1fr] grid-rows-2 items-center">
-        <div className="text-sm font-medium">{annotation.userName}</div>
+        <div className="text-sm font-medium">{annotation.createdByName}</div>
         <div className="text-xs text-gray-500">{formatDate(annotation.createdAt)}</div>
         <div>
           <Button variant="ghost" size="sm" onClick={onDelete}>
