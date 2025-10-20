@@ -32,7 +32,7 @@ export const VerificationRequest = ({
         <Head />
         <Body className="mx-auto my-auto bg-gray-50 font-sans" style={{ color: "#374151" }}>
           <Container className="mx-auto my-[40px] w-[580px] rounded-lg border border-solid border-gray-200 bg-white shadow-sm">
-            <Preview>Sign in to your OpenJII account</Preview>
+            <Preview>Sign in to your openJII account</Preview>
 
             {/* Header */}
             <Section className="rounded-t-lg bg-[#005e5e] px-8 py-6">
@@ -45,7 +45,7 @@ export const VerificationRequest = ({
                 Confirm your email address
               </Text>
               <Text className="mb-8 text-center text-[16px] leading-relaxed text-gray-600">
-                Click the button below to verify your email address and sign in to your OpenJII
+                Click the button below to verify your email address and sign in to your openJII
                 account.
               </Text>
               <Section className="mb-8 text-center">
