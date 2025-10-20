@@ -256,11 +256,11 @@ describe("<MacroSearchPopover />", () => {
     expect(screen.getByText("Al Turing")).toBeInTheDocument();
 
     // Check that language labels are shown
-    const languageLabels = screen.getAllByText("Language:");
+    const languageLabels = screen.getAllByText("language");
     expect(languageLabels).toHaveLength(3);
 
     // Check that created by labels are shown for macros that have creator
-    const createdByLabels = screen.getAllByText("Created by:");
+    const createdByLabels = screen.getAllByText("createdBy");
     expect(createdByLabels).toHaveLength(2); // Only m1 and m2 have createdByName
   });
 
