@@ -2,6 +2,7 @@
 
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { User, Home, BookOpen, LogOut, Menu, LogIn, Sprout } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
@@ -180,12 +181,13 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
       <nav className="container mx-auto grid h-16 grid-cols-3 items-center px-4">
         {/* Logo/Brand */}
         <div className="col-start-1 col-end-2 flex items-center">
-          <Link
-            href={`/${locale}`}
-            className="flex items-center space-x-2 text-xl font-bold transition-opacity hover:opacity-80"
-          >
-            <span className="text-primary">openJII</span>
-          </Link>
+          <Image
+            src="/openJII-logo-vertical-yellow.svg"
+            alt="openJII logo"
+            width={210}
+            height={52}
+            className="h-11 w-auto"
+          />
         </div>
 
         {/* Navigation Links - Desktop */}
