@@ -167,19 +167,42 @@ def sample():
 # COMMAND ----------
 
 # DBTITLE 1,Raw Ambyte Data Table Schema
+# Define the schema for the raw ambyte data table
+raw_ambyte_schema = StructType([
+    StructField("Time", TimestampType(), False),
+    StructField("SigF", IntegerType(), True),
+    StructField("RefF", IntegerType(), True),
+    StructField("Sun", IntegerType(), True),
+    StructField("Leaf", IntegerType(), True),
+    StructField("Sig7", IntegerType(), True),
+    StructField("Ref7", IntegerType(), True),
+    StructField("Actinic", IntegerType(), True),
+    StructField("Temp", FloatType(), True),
+    StructField("Res", IntegerType(), True),
+    StructField("Full", BooleanType(), True),
+    StructField("Type", StringType(), True),
+    StructField("Count", IntegerType(), True),
+    StructField("PTS", IntegerType(), True),
+    StructField("PAR", FloatType(), True),
+    StructField("raw", FloatType(), True),
+    StructField("spec", ArrayType(IntegerType()), True),
+    StructField("BoardT", FloatType(), True),
+    StructField("ambyte_folder", StringType(), True),
+    StructField("ambit_index", IntegerType(), True),
+    StructField("meta_Actinic", FloatType(), True),
+    StructField("meta_Dark", IntegerType(), True),
+    StructField("upload_directory", StringType(), True),
+    StructField("upload_time", TimestampType(), True)
+])
 # COMMAND ----------
 
-# DBTITLE 1,Raw Ambyte Data Table (Streaming)
-# This is a streaming implementation of the raw_ambyte_table
-# It uses Auto Loader to stream data from the Databricks volume
-# and processes it using a UDF that calls the same core parsing functions
-
+# DBTITLE 1,Raw Ambyte Data Table
 def create_ambyte_table_code():
     """Generate code for ambyte streaming table."""
     return '''
 @dlt.table(
     name=RAW_AMBYTE_TABLE,
-    comment="ambyte trace data processed from raw files stored in Databricks volume using streaming"
+    comment="ambyte trace data processed from raw files stored in Databricks volume"
 )
 def raw_ambyte_data():
     """
@@ -190,270 +213,69 @@ def raw_ambyte_data():
     # Configuration - specify the base path in the Databricks volume
     ambyte_base_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/ambyte"
     
-    # For streaming tables, we use Auto Loader to stream files from the volume
-    # With the structure upload_YYYYMMDD_HHMMSS/Ambyte_X/N/YYYYMMDD-HHMMSS_.txt
-    raw_df = (
-        spark.readStream
-        .format("cloudFiles")
+    # For streaming tables, we cannot use discovery functions in the main function
+    # Instead, use Auto Loader to stream files and process using pandas UDF
+    df = (
+        spark.readStream.format("cloudFiles")
         .option("cloudFiles.format", "text")
         .option("recursiveFileLookup", "true")
         .option("cloudFiles.schemaLocation", f"/tmp/checkpoints/{EXPERIMENT_SCHEMA}/ambyte_schema")
-        .option("pathGlobFilter", "*.txt")  # Match all txt files, we'll filter by path components
+        .option("pathGlobFilter", "**/*.txt")  # Catch ANY .txt files first
         .option("cloudFiles.allowOverwrites", "true")
         .load(ambyte_base_path)
     )
     
-    # Add a simple logging action to see if files are being found
-    print(f"Looking for trace files in {ambyte_base_path}")
-    
-    # Extract file path components for processing with the correct directory structure
-    # Structure: /ambyte/upload_YYYYMMDD_HHMMSS/Ambyte_N/[1-4]/YYYYMMDD-HHMMSS_.txt
-    enriched_df = raw_df.withColumn(
-        # Use _metadata.file_path as recommended for Unity Catalog compatibility
-        "file_path", F.col("_metadata.file_path")
-    ).withColumn(
-        # Extract filename to filter only trace files
-        "file_name",
-        F.element_at(F.split(F.col("file_path"), "/"), -1)
-    ).withColumn(
-        # Extract upload directory (e.g. "upload_20250901_091409")
-        "upload_directory", 
-        F.regexp_extract("file_path", "ambyte/([^/]+)/", 1)
-    ).withColumn(
-        # Extract ambyte folder (e.g. "Ambyte_2")
-        "ambyte_folder", 
-        F.regexp_extract("file_path", "ambyte/[^/]+/([^/]+)/", 1)
-    ).withColumn(
-        # Extract byte folder (e.g. "1", "2", "3", "4" or "unknown_ambit")
-        "byte_folder", 
-        F.regexp_extract("file_path", "ambyte/[^/]+/[^/]+/([^/]+)/", 1)
-    ).filter(
-        # Use a more permissive filter to ensure we're finding files
-        F.col("file_name").endsWith(".txt")
+    # First, let's add a simple transform to ensure we're detecting files at all
+    df_with_count = df.select(
+        F.lit("FILE_DETECTED").alias("detection_status"),
+        F.col("_metadata.file_path").alias("detected_path"),
+        F.length(F.col("value")).alias("file_size")
     )
     
-    # Extract upload time from directory name
-    df_with_time = enriched_df.withColumn(
-        "upload_time_str",
-        F.regexp_extract("upload_directory", "upload_(\\d{8})_\\d{2}", 1)
-    ).withColumn(
-        "upload_time",
-        F.expr("CASE WHEN upload_time_str != '' THEN to_date(upload_time_str, 'yyyyMMdd') ELSE null END")
+    # Create a simple debug row for every file detected
+    debug_df = df_with_count.select(
+        F.current_timestamp().alias("Time"),
+        F.lit(None).cast("int").alias("SigF"),
+        F.lit(None).cast("int").alias("RefF"),
+        F.lit(None).cast("int").alias("Sun"),
+        F.lit(None).cast("int").alias("Leaf"),
+        F.lit(None).cast("int").alias("Sig7"),
+        F.lit(None).cast("int").alias("Ref7"),
+        F.lit(None).cast("int").alias("Actinic"),
+        F.lit(None).cast("float").alias("Temp"),
+        F.lit(None).cast("int").alias("Res"),
+        F.lit(None).cast("boolean").alias("Full"),
+        F.col("detection_status").alias("Type"),
+        F.col("file_size").alias("Count"),  
+        F.lit(None).cast("int").alias("PTS"),
+        F.lit(None).cast("float").alias("PAR"),
+        F.lit(None).cast("float").alias("raw"),
+        F.lit(None).cast("array<int>").alias("spec"),
+        F.lit(None).cast("float").alias("BoardT"),
+        F.regexp_extract(F.col("detected_path"), r".*/([^/]+)/[^/]*\\.txt$", 1).alias("ambyte_folder"),
+        F.when(F.regexp_extract(F.col("detected_path"), r".*/([0-9]+|unknown_ambit)/[^/]*\\.txt$", 1) == "unknown_ambit", 0)
+         .otherwise(F.regexp_extract(F.col("detected_path"), r".*/([0-9]+)/[^/]*\\.txt$", 1).cast("int"))
+         .alias("ambit_index"),
+        F.lit(None).cast("float").alias("meta_Actinic"),
+        F.lit(None).cast("int").alias("meta_Dark"),
+        F.regexp_extract(F.col("detected_path"), r".*/([^/]*upload_[^/]*)/.*", 1).alias("upload_directory"),
+        F.lit(None).cast("timestamp").alias("upload_time")
     )
     
-    # Define schema for UDF return type - array of records
-    trace_record_schema = StructType([
-        StructField("Time", TimestampType(), True),
-        StructField("SigF", IntegerType(), True),
-        StructField("RefF", IntegerType(), True),
-        StructField("Sun", IntegerType(), True),
-        StructField("Leaf", IntegerType(), True),
-        StructField("Sig7", IntegerType(), True),
-        StructField("Ref7", IntegerType(), True),
-        StructField("Actinic", IntegerType(), True),
-        StructField("Temp", FloatType(), True),
-        StructField("Res", IntegerType(), True),
-        StructField("Full", BooleanType(), True),
-        StructField("Type", StringType(), True),
-        StructField("Count", IntegerType(), True),
-        StructField("PTS", IntegerType(), True),
-        StructField("PAR", FloatType(), True),
-        StructField("raw", FloatType(), True),
-        StructField("spec", ArrayType(IntegerType()), True),
-        StructField("BoardT", FloatType(), True),
-        StructField("ambyte_folder", StringType(), True),
-        StructField("ambit_index", IntegerType(), True),
-        StructField("meta_Actinic", FloatType(), True),
-        StructField("meta_Dark", IntegerType(), True),
-        StructField("upload_directory", StringType(), True),
-        StructField("upload_time", TimestampType(), True)
-    ])
-    
-    # Define the return schema for the UDF (a struct with a single array field)
-    return_schema = StructType([
-        StructField("result", ArrayType(trace_record_schema), True),
-    ])
-    
-    # Print some diagnostic info about the schema
-    print(f"Processing with return schema type: {type(return_schema)}")
-    print(f"Schema structure: {return_schema}")
-    
-    # Define pandas UDF to process the files - simplified for debugging
-    @F.pandas_udf(return_schema)
-    def process_ambyte_files(
-        content_series: pd.Series, 
-        ambyte_folder_series: pd.Series,
-        byte_folder_series: pd.Series,
-        upload_directory_series: pd.Series,
-        upload_time_series: pd.Series
-    ) -> pd.DataFrame:
-        """
-        Process ambyte files using existing ambyte package logic.
-        This UDF mimics the logic from process_trace_files but works on file content directly.
-        Returns a pandas DataFrame with a single column 'result' as required by the StructType schema.
-        """
-        result_list = []
-        
-        for i in range(len(content_series)):
-            content = content_series[i]
-            ambyte_folder = ambyte_folder_series[i]
-            byte_folder = byte_folder_series[i]
-            upload_dir = upload_directory_series[i]
-            upload_time = upload_time_series[i]
-            
-            # Start with empty result for this file
-            file_result = []
-            
-            try:
-                # Prepare the file content by splitting into lines
-                lines = content.split('\n')
-                lines.append("EOF")  # Add EOF marker as done in original code
-                
-                # Skip files with insufficient content
-                if len(lines) <= 7:
-                    result_list.append(file_result)  # Empty result
-                    continue
-                
-                # Determine ambit_index based on byte_folder
-                if byte_folder in ["1", "2", "3", "4"]:
-                    ambit_index = int(byte_folder) - 1
-                elif byte_folder == "unknown_ambit":
-                    ambit_index = 0  # Put unknown_ambit in slot 0
-                else:
-                    # Skip files with unrecognized byte folder structure
-                    result_list.append(file_result)  # Empty result
-                    continue
-                
-                # Prepare files_per_byte structure as expected by process_trace_files
-                files_per_byte = [[] for _ in range(4)]
-                files_per_byte[ambit_index].append(lines)
-                
-                # Process trace files using the ambyte module function
-                df = process_trace_files(ambyte_folder, files_per_byte)
-                
-                if df is None or df.empty:
-                    result_list.append(file_result)  # Empty result
-                    continue
-                
-                # Reset index to make Time a regular column
-                df = df.reset_index()
-                
-                # Add upload directory info
-                df['upload_directory'] = upload_dir
-                
-                # Add upload time (which might be None)
-                df['upload_time'] = upload_time
-                
-                # Convert to list of dictionaries for return
-                records = df.to_dict('records')
-                
-                # Add these records to this file's result
-                file_result = records
-                
-            except Exception:
-                # Silent exception - just return empty result
-                pass
-                
-            # Add this file's results (might be empty)
-            result_list.append(file_result)
-        
-        # If we have no results at all, add a test record to verify pipeline functionality
-        if all(len(r) == 0 for r in result_list):
-            # Add a dummy test record to ensure we have some output
-            import datetime
-            test_record = [{
-                "Time": datetime.datetime.now(),
-                "SigF": 1000,
-                "RefF": 2000,
-                "Sun": 50,
-                "Leaf": 60,
-                "Sig7": 70,
-                "Ref7": 80,
-                "Actinic": 90,
-                "Temp": 25.5,
-                "Res": 100,
-                "Full": True,
-                "Type": "TEST",
-                "Count": 1,
-                "PTS": 123,
-                "PAR": 1500.0,
-                "raw": 0.0,
-                "spec": [1, 2, 3],
-                "BoardT": 30.0,
-                "ambyte_folder": "Ambyte_TEST",
-                "ambit_index": 0,
-                "meta_Actinic": 100.0,
-                "meta_Dark": 0,
-                "upload_directory": "TEST_DIRECTORY",
-                "upload_time": datetime.datetime.now()
-            }]
-            result_list.append(test_record)
-        
-        # Return as a DataFrame with a single column 'result'
-        return pd.DataFrame({'result': result_list})
-    
-    # Debug - log the filter pattern
-    print(f"Using filter pattern: {YEAR_PREFIX}\\d+-\\d+_\\.txt$")
-    
-    # Apply the UDF to process files
-    processed_df = df_with_time.withColumn(
-        "processed_data",
-        process_ambyte_files(
-            "value", 
-            "ambyte_folder", 
-            "byte_folder", 
-            "upload_directory", 
-            "upload_time"
-        )
-    )
-    
-    # Explode the array of results to get individual rows
-    exploded_df = processed_df.select(
-        F.explode("processed_data.result").alias("record")
-    ).select("record.*")
-    
-    # Log that we're returning the processed data
-    print("Returning processed data - table should be created now")
-    
-    return exploded_df
+    # Return the debug dataframe first to see if files are being detected
+    return debug_df
 '''
 
 # Check if volume exists and only create table if it does
 try:
     # Try to read from the volume path to check if it exists
     volume_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads"
-    ambyte_path = f"{volume_path}/ambyte"
-    
-    # Check main volume path
-    test_df = spark.read.format("text").load(volume_path, limit=1)
+    test_df = spark.read.format("text").load(volume_path)
+    # If we can create the DataFrame, the volume exists
     print(f"Volume data-uploads exists at {volume_path}")
-    
-    try:
-        # Check if ambyte folder exists by attempting to load files from it
-        ambyte_test_df = spark.read.format("text").load(ambyte_path, limit=1)
-        print(f"Ambyte folder exists at {ambyte_path}")
-        
-        # Try to count the total number of txt files - but don't worry if none found
-        try:
-            txt_count = spark.read.format("text").load(f"{ambyte_path}/**/*.txt").count()
-            print(f"Found approximately {txt_count} .txt files in the ambyte folder")
-        except Exception as txt_e:
-            print(f"No .txt files found yet in ambyte folder (this is ok for initial setup): {txt_e}")
-            print(f"Will create table anyway to process files when they arrive")
-            
-        # Create the table
-        print("Creating streaming raw_ambyte_data table")
-        try:
-            table_code = create_ambyte_table_code()
-            exec(table_code, globals())
-            print("Raw ambyte table created successfully")
-        except Exception as exec_e:
-            print(f"Error executing generated table code: {exec_e}")
-            print("First 200 characters of generated code for debugging:")
-            print(table_code[:200] + "...")
-    except Exception as ambyte_e:
-        print(f"Error checking ambyte folder: {ambyte_e}")
-        print("Skipping raw_ambyte_data table creation")
+    print("Creating streaming raw_ambyte_data table")
+    exec(create_ambyte_table_code(), globals())
+    print("Raw ambyte streaming table created successfully")
         
 except Exception as e:
     print(f"Volume data-uploads does not exist or is not accessible: {e}")
