@@ -117,11 +117,10 @@ class ExperimentPipelineOrchestrator:
                         })
                     except Exception as config_error:
                         logger.warning(f"Could not extract experiment_id from config for pipeline {pipeline.name}: {config_error}")
-                        # Fall back to extracting from name if config extraction fails
                         experiment_pipelines.append({
                             'pipeline_id': pipeline_id,
                             'name': pipeline.name,
-                            'experiment_id': self._extract_experiment_id_from_name(pipeline.name),
+                            'experiment_id': None,
                             'state': pipeline.state.value if pipeline.state else 'UNKNOWN'
                         })
             
@@ -138,60 +137,18 @@ class ExperimentPipelineOrchestrator:
     def _extract_experiment_id_from_config(self, pipeline_details) -> Optional[str]:
         """
         Extract experiment_id from pipeline configuration.
-        
-        Args:
-            pipeline_details: Pipeline details object from Databricks SDK
-            
-        Returns:
-            Extracted experiment_id or None if not found
         """
         try:
-            # Look for EXPERIMENT_ID in pipeline configuration parameters
-            # Pipeline configuration structure depends on the Databricks SDK version
-            if hasattr(pipeline_details, 'configuration') and pipeline_details.configuration:
-                if hasattr(pipeline_details.configuration, 'configuration'):
-                    # For newer SDK versions
-                    config = pipeline_details.configuration.configuration
-                else:
-                    # For older SDK versions
-                    config = pipeline_details.configuration
-                
-                # Try to find experiment ID in configuration
-                if hasattr(config, 'spark_conf'):
-                    # Try to extract from Spark configuration
-                    spark_conf = config.spark_conf or {}
-                    if 'spark.databricks.delta.dlt.parameters.EXPERIMENT_ID' in spark_conf:
-                        return spark_conf['spark.databricks.delta.dlt.parameters.EXPERIMENT_ID']
-                
-                # Try other common parameter locations
-                if hasattr(config, 'parameters'):
-                    params = config.parameters or {}
-                    if 'EXPERIMENT_ID' in params:
-                        return params['EXPERIMENT_ID']
-            
-            logger.debug(f"Could not find EXPERIMENT_ID in pipeline configuration")
+            config = getattr(pipeline_details, "configuration", None)
+            if config and isinstance(config, dict):
+                return config.get("EXPERIMENT_ID")
+            logger.debug("Could not find EXPERIMENT_ID in pipeline configuration")
             return None
-                
         except Exception as e:
             logger.warning(f"Error extracting experiment_id from pipeline configuration: {e}")
             return None
     
-    def _extract_experiment_id_from_name(self, pipeline_name: str) -> Optional[str]:
-        """
-        Extract experiment_id from the pipeline name as fallback method.
-        Pipeline names follow the format 'exp-{experiment_id}-DLT-Pipeline-DEV'.
-        
-        Args:
-            pipeline_name: Name of the pipeline
-            
-        Returns:
-            Extracted experiment_id or None if not found
-        """
-        # Regular expression to extract experiment_id from pipeline name using the original pattern
-        match = re.search(r'exp-([^-]+)-DLT', pipeline_name)
-        if match:
-            return match.group(1)
-        return None
+
     
     def trigger_pipeline(self, pipeline_info: Dict[str, str]) -> Dict[str, Any]:
         """
