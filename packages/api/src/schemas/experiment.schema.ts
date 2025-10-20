@@ -154,12 +154,54 @@ export const zAnnotationContent = z.union([zAnnotationCommentContent, zAnnotatio
 
 export const zAnnotation = z.object({
   id: z.string().uuid(),
-  userId: z.string().uuid(),
-  userName: z.string().optional(),
+  rowId: z.string().uuid().optional(),
   type: zAnnotationType,
   content: zAnnotationContent,
+  createdBy: z.string().uuid(),
+  createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+});
+
+export const zAnnotationList = z.array(zAnnotation);
+
+export const zAnnotationPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+  annotationId: z.string().uuid().describe("ID of the annotation"),
+});
+
+export const zAddAnnotationBody = z.object({
+  tableName: z.string(),
+  rowId: z.string().uuid(),
+  annotation: z.object({
+    type: zAnnotationType,
+    content: zAnnotationContent,
+  }),
+});
+
+export const zAddAnnotationsBulkBody = z.object({
+  tableName: z.string(),
+  rowIds: z.array(z.string().uuid().min(1)).min(1),
+  annotation: z.object({
+    type: zAnnotationType,
+    content: zAnnotationContent,
+  }),
+});
+
+export const zListAnnotationsQuery = z.object({
+  page: z.coerce.number().int().min(1).optional().describe("Page number for pagination"),
+  pageSize: z.coerce.number().int().min(1).max(100).optional().describe("Number of rows per page"),
+  tableName: z.string().describe("Name of the data table"),
+});
+
+export const zUpdateAnnotationBody = z.object({
+  content: zAnnotationContent.optional().describe("Updated content"),
+});
+
+export const zAnnotationDeleteBulkPathParam = z.object({
+  id: z.string().uuid().describe("ID of the experiment"),
+  tableName: z.string().describe("Name of the data table"),
+  type: zAnnotationType.describe("Type of annotations to delete"),
 });
 
 // Experiment data schema
@@ -852,6 +894,9 @@ export type ListExperimentVisualizationsQuery = z.infer<typeof zListExperimentVi
 // Annotation types
 export type AnnotationType = z.infer<typeof zAnnotationType>;
 export type AnnotationFlagType = z.infer<typeof zAnnotationFlagType>;
+export type AnnotationContent = z.infer<typeof zAnnotationContent>;
 export type AnnotationCommentContent = z.infer<typeof zAnnotationCommentContent>;
 export type AnnotationFlagContent = z.infer<typeof zAnnotationFlagContent>;
 export type Annotation = z.infer<typeof zAnnotation>;
+export type AddAnnotationBody = z.infer<typeof zAddAnnotationBody>;
+export type AddAnnotationsBulkBody = z.infer<typeof zAddAnnotationsBulkBody>;

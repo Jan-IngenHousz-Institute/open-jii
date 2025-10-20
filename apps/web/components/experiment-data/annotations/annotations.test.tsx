@@ -48,8 +48,8 @@ describe("Annotations", () => {
 
   const comment1: Annotation = {
     id: uuidv4(),
-    userId: uuidv4(),
-    userName: "User One",
+    createdBy: uuidv4(),
+    createdByName: "User One",
     type: "comment",
     content: { text: "Test comment 1" },
     createdAt: "2025-09-01T00:00:00Z",
@@ -58,8 +58,8 @@ describe("Annotations", () => {
 
   const comment2: Annotation = {
     id: uuidv4(),
-    userId: uuidv4(),
-    userName: "User Two",
+    createdBy: uuidv4(),
+    createdByName: "User Two",
     type: "comment",
     content: { text: "Test comment 2" },
     createdAt: "2025-09-02T00:00:00Z",
@@ -68,8 +68,8 @@ describe("Annotations", () => {
 
   const flag1: Annotation = {
     id: uuidv4(),
-    userId: uuidv4(),
-    userName: "User Three",
+    createdBy: uuidv4(),
+    createdByName: "User Three",
     type: "flag",
     content: { flagType: "outlier", reason: "Flagged as outlier" },
     createdAt: "2025-09-03T00:00:00Z",
@@ -78,8 +78,8 @@ describe("Annotations", () => {
 
   const flag2: Annotation = {
     id: uuidv4(),
-    userId: uuidv4(),
-    userName: "User Four",
+    createdBy: uuidv4(),
+    createdByName: "User Four",
     type: "flag",
     content: { flagType: "needs_review", reason: "Needs review" },
     createdAt: "2025-09-04T00:00:00Z",

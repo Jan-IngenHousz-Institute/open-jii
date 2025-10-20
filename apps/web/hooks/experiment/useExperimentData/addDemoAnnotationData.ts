@@ -5,8 +5,8 @@ import type { Annotation, ExperimentData } from "@repo/api";
 
 const testAnnotation1: Annotation = {
   id: uuidv4(),
-  userId: uuidv4(),
-  userName: "Test User 1",
+  createdBy: uuidv4(),
+  createdByName: "Test User 1",
   type: "comment",
   content: { text: "Test comment 1" },
   createdAt: new Date().toISOString(),
@@ -15,8 +15,8 @@ const testAnnotation1: Annotation = {
 
 const testAnnotation2: Annotation = {
   id: uuidv4(),
-  userId: uuidv4(),
-  userName: "Test User 2",
+  createdBy: uuidv4(),
+  createdByName: "Test User 2",
   type: "comment",
   content: { text: "Test comment 2" },
   createdAt: new Date().toISOString(),
@@ -25,8 +25,8 @@ const testAnnotation2: Annotation = {
 
 const testAnnotation3: Annotation = {
   id: uuidv4(),
-  userId: testAnnotation1.userId,
-  userName: "Test User 1",
+  createdBy: testAnnotation1.createdBy,
+  createdByName: "Test User 1",
   type: "flag",
   content: { flagType: "outlier", reason: "Test reason 1" },
   createdAt: new Date().toISOString(),
@@ -35,8 +35,8 @@ const testAnnotation3: Annotation = {
 
 const testAnnotation4: Annotation = {
   id: uuidv4(),
-  userId: testAnnotation2.userId,
-  userName: "Test User 2",
+  createdBy: testAnnotation2.createdBy,
+  createdByName: "Test User 2",
   type: "flag",
   content: { flagType: "needs_review", reason: "Test reason 2" },
   createdAt: new Date().toISOString(),
