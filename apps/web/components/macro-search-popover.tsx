@@ -55,14 +55,14 @@ function MacroList({ macros, onAddMacro, isAddingMacro, setOpen, onSearchChange 
 
             {/* Language */}
             <div className="text-muted-foreground truncate text-xs">
-              <span className="opacity-75">Language:</span>{" "}
+              <span className="opacity-75">{t("language")}</span>{" "}
               <span className="font-medium">{macro.language}</span>
             </div>
 
             {/* Created by */}
             {macro.createdByName && (
               <div className="text-muted-foreground truncate text-xs">
-                <span className="opacity-75">Created by:</span>{" "}
+                <span className="opacity-75">{t("createdBy")}</span>{" "}
                 <span className="font-medium">{macro.createdByName}</span>
               </div>
             )}
