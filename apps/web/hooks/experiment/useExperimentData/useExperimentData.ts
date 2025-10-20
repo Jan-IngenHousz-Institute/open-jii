@@ -9,7 +9,7 @@ import { getAllRowsSelectionCheckbox } from "~/components/experiment-data/annota
 import { getRowSelectionCheckbox } from "~/components/experiment-data/annotations/utils";
 import { getAnnotationsColumn } from "~/components/experiment-data/annotations/utils";
 import type { BulkSelectionFormType } from "~/components/experiment-data/experiment-data-table";
-//import { addDemoAnnotationData } from "~/hooks/experiment/useExperimentData/addDemoAnnotationData";
+import { addDemoAnnotationData } from "~/hooks/experiment/useExperimentData/addDemoAnnotationData";
 import { tsr } from "~/lib/tsr";
 
 import type {
@@ -217,15 +217,14 @@ export const useExperimentData = (
   });
 
   // Add fake data for demo purposes
-  // const originalTableData = data?.body[0];
-  // const tableData = useMemo(() => {
-  //   if (originalTableData?.data) {
-  //     // Add fake id columns to each row if not present
-  //     addDemoAnnotationData(originalTableData.data);
-  //   }
-  //   return originalTableData;
-  // }, [originalTableData]);
-  const tableData = data?.body[0];
+  const originalTableData = data?.body[0];
+  const tableData = useMemo(() => {
+    if (originalTableData?.data) {
+      // Add fake id columns to each row if not present
+      addDemoAnnotationData(originalTableData.data);
+    }
+    return originalTableData;
+  }, [originalTableData]);
 
   // Add all row id's to form
   // const allRowIds = useMemo(() => {
