@@ -38,6 +38,10 @@ export interface AddAnnotationDialogProps {
   tableName: string;
   rowIds: string[];
   type: AnnotationType;
+  bulk?: boolean;
+  bulkOpen?: boolean;
+  setBulkOpen?: (value: React.SetStateAction<boolean>) => void;
+  clearSelection?: () => void;
 }
 
 const zAddAnnotationFormSchema = z.object({
@@ -51,10 +55,15 @@ export function AddAnnotationDialog({
   tableName,
   rowIds,
   type,
+  bulk,
+  bulkOpen,
+  setBulkOpen,
+  clearSelection,
 }: AddAnnotationDialogProps) {
   const { t } = useTranslation();
   const [open, setOpen] = React.useState(false);
 
+  const bulkSuffix = bulk ? "Bulk" : "";
   const count = rowIds.length;
 
   const form = useForm<AddAnnotationDialogFormType>({
@@ -70,32 +79,39 @@ export function AddAnnotationDialog({
     // TODO: Implement API call to add annotation and remove logging statement
     console.log("onSubmit", { formData, experimentId, tableName, rowIds, type });
     toast({ description: t("experimentDataAnnotations.updated") });
-    setOpen(false);
+    if (setBulkOpen !== undefined) {
+      setBulkOpen(false);
+    } else {
+      setOpen(false);
+    }
+    if (clearSelection) {
+      clearSelection();
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          aria-label={
-            type === "comment"
-              ? t("experimentDataAnnotations.commentDialog.title")
-              : t("experimentDataAnnotations.flagDialog.title")
-          }
-        >
-          {type === "comment" && <MessageSquare className="h-4 w-4" />}
-          {type === "flag" && <Flag className="h-4 w-4" />}
-        </Button>
-      </DialogTrigger>
+    <Dialog open={bulkOpen ?? open} onOpenChange={setBulkOpen ?? setOpen}>
+      {!bulk && (
+        <DialogTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.title`)}
+          >
+            {type === "comment" && <MessageSquare className="h-4 w-4" />}
+            {type === "flag" && <Flag className="h-4 w-4" />}
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <DialogHeader>
-              <DialogTitle>{t(`experimentDataAnnotations.${type}Dialog.title`)}</DialogTitle>
+              <DialogTitle>
+                {t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.title`)}
+              </DialogTitle>
               <DialogDescription>
-                {t(`experimentDataAnnotations.${type}Dialog.description`, { count })}
+                {t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.description`, { count })}
               </DialogDescription>
             </DialogHeader>
             <div className="mb-4 grid gap-4">
@@ -107,14 +123,14 @@ export function AddAnnotationDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          {t(`experimentDataAnnotations.${type}Dialog.flagLabel`)}
+                          {t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.flagLabel`)}
                         </FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger className="w-[180px]">
                               <SelectValue
                                 placeholder={t(
-                                  `experimentDataAnnotations.${type}Dialog.flagPlaceholder`,
+                                  `experimentDataAnnotations.${type}Dialog${bulkSuffix}.flagPlaceholder`,
                                 )}
                               />
                             </SelectTrigger>
@@ -142,14 +158,16 @@ export function AddAnnotationDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t(`experimentDataAnnotations.${type}Dialog.textLabel`)}
+                        {t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.textLabel`)}
                       </FormLabel>
                       <FormControl>
                         <Textarea
                           value={field.value}
                           onChange={field.onChange}
                           rows={4}
-                          placeholder={t(`experimentDataAnnotations.${type}Dialog.textPlaceholder`)}
+                          placeholder={t(
+                            `experimentDataAnnotations.${type}Dialog${bulkSuffix}.textPlaceholder`,
+                          )}
                         />
                       </FormControl>
                       <FormMessage />
@@ -163,7 +181,7 @@ export function AddAnnotationDialog({
                 <Button variant="outline">{t("common.cancel")}</Button>
               </DialogClose>
               <Button type="submit">
-                {t(`experimentDataAnnotations.${type}Dialog.add`, { count })}
+                {t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.add`, { count })}
               </Button>
             </DialogFooter>
           </form>
