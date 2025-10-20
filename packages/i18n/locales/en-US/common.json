@@ -100,7 +100,16 @@
     "experimentNotFound": "The experiment you are looking for could not be found.",
     "needMemberAccess": "You need to be a member to access experiment settings",
     "needAdminAccessArchived": "Only admins can access settings for archived experiments",
-    "measurementPanelTitle": "Measurement Protocol"
+    "measurementPanelTitle": "Measurement Protocol",
+    "analysisPanelTitle": "Analysis Options",
+    "searchMacros": "Search analysis options...",
+    "addMacro": "Add macro",
+    "seeMacroDetails": "See macro details",
+    "searchingMacros": "Searching macros...",
+    "noMacrosFound": "No macros found",
+    "tryDifferentSearchMacros": "Try a different search term than \"{{searchValue}}\"",
+    "noMacrosAvailable": "No macros available",
+    "createFirstMacro": "Create your first macro to get started"
   },
   "newExperiment": {
     "description": "Set up a new experiment (project).",
