@@ -34,7 +34,7 @@ export function BulkActionsBar({
 }: BulkActionsBarProps) {
   const { t } = useTranslation();
   const selectedCount = rowIds.length;
-  const [showAddBulkAddCommentDialog, setShowAddBulkCommentDialog] = React.useState(false);
+  const [showAddBulkCommentDialog, setShowAddBulkCommentDialog] = React.useState(false);
   const [showAddBulkFlagDialog, setShowAddBulkFlagDialog] = React.useState(false);
   const [showDeleteBulkCommentsDialog, setShowDeleteBulkCommentsDialog] = React.useState(false);
   const [showDeleteBulkFlagsDialog, setShowDeleteBulkFlagsDialog] = React.useState(false);
@@ -120,7 +120,7 @@ export function BulkActionsBar({
         rowIds={rowIds}
         type="comment"
         bulk={true}
-        bulkOpen={showAddBulkAddCommentDialog}
+        bulkOpen={showAddBulkCommentDialog}
         setBulkOpen={setShowAddBulkCommentDialog}
         clearSelection={clearSelection}
       />
