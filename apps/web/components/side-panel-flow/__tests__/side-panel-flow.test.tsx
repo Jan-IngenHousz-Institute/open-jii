@@ -103,18 +103,18 @@ vi.mock("../measurement-panel", () => ({
 
 vi.mock("../analysis-panel", () => ({
   AnalysisPanel: ({
-    selectedMeasurementOption,
+    selectedMacroId,
     onChange,
     disabled,
   }: {
-    selectedMeasurementOption: string;
-    onChange: (opt: string) => void;
+    selectedMacroId: string;
+    onChange: (macroId: string) => void;
     disabled?: boolean;
   }) => (
     <div>
       <span>AnalysisPanel</span>
-      <div data-testid="ap-option">{selectedMeasurementOption}</div>
-      <button type="button" onClick={() => onChange("agg-mean")} disabled={disabled}>
+      <div data-testid="ap-macro">{selectedMacroId}</div>
+      <button type="button" onClick={() => onChange("macro-updated")} disabled={disabled}>
         Apply Analysis Change
       </button>
     </div>
@@ -365,8 +365,8 @@ describe("<ExperimentSidePanel />", () => {
     });
   });
 
-  it("AnalysisPanel: propagates measurement option change via onNodeDataChange", async () => {
-    const node = makeNode("na", { measurementOption: "agg-sum" });
+  it("AnalysisPanel: propagates macroId change via onNodeDataChange", async () => {
+    const node = makeNode("na", { macroId: "macro-original" });
 
     const { props } = renderPanel({
       selectedNode: node,
@@ -374,12 +374,12 @@ describe("<ExperimentSidePanel />", () => {
     });
 
     expect(screen.queryByText("AnalysisPanel")).toBeTruthy();
-    expect(screen.getByTestId("ap-option").textContent).toBe("agg-sum");
+    expect(screen.getByTestId("ap-macro").textContent).toBe("macro-original");
 
     await userEvent.click(screen.getByRole("button", { name: /Apply Analysis Change/i }));
     expect(props.onNodeDataChange).toHaveBeenCalledWith("na", {
       ...node.data,
-      measurementOption: "agg-mean",
+      macroId: "macro-updated",
     });
   });
 

@@ -3,7 +3,13 @@ import { MarkerType } from "@xyflow/react";
 import type { z } from "zod";
 
 import type { Flow, UpsertFlowBody } from "@repo/api";
-import { zFlowGraph, zQuestionContent, zInstructionContent, zMeasurementContent } from "@repo/api";
+import {
+  zFlowGraph,
+  zQuestionContent,
+  zInstructionContent,
+  zMeasurementContent,
+  zAnalysisContent,
+} from "@repo/api";
 import type { zQuestionKind } from "@repo/api";
 
 import type { NodeType } from "../react-flow/node-config";
@@ -13,6 +19,7 @@ import { nodeTypeColorMap } from "../react-flow/node-config";
 type QuestionContent = z.infer<typeof zQuestionContent>;
 type InstructionContent = z.infer<typeof zInstructionContent>;
 type MeasurementContent = z.infer<typeof zMeasurementContent>;
+type AnalysisContent = z.infer<typeof zAnalysisContent>;
 type QuestionKind = z.infer<typeof zQuestionKind>;
 
 // UI-focused question spec interface (matches the one in question-card.tsx)
@@ -23,7 +30,11 @@ interface QuestionUI {
   required: boolean;
 }
 
-type StepSpecification = QuestionContent | InstructionContent | MeasurementContent;
+type StepSpecification =
+  | QuestionContent
+  | InstructionContent
+  | MeasurementContent
+  | AnalysisContent;
 
 export interface FlowNodeDataBase extends Record<string, unknown> {
   title: string;
@@ -34,6 +45,7 @@ export interface FlowNodeDataBase extends Record<string, unknown> {
 export interface FlowNodeDataWithSpec extends FlowNodeDataBase {
   stepSpecification?: StepSpecification | QuestionUI; // UI format for questions, API format for others
   protocolId?: string; // measurement convenience field (when not yet set in stepSpecification)
+  macroId?: string; // analysis convenience field (when not yet set in stepSpecification)
 }
 
 export interface FlowEdgeData extends Record<string, unknown> {
@@ -49,6 +61,7 @@ const REACT_FLOW_TO_API_NODE_TYPE = {
   QUESTION: "question",
   INSTRUCTION: "instruction",
   MEASUREMENT: "measurement",
+  ANALYSIS: "analysis",
 } as const;
 
 const QUESTION_KIND_TO_ANSWER_TYPE: Record<QuestionKind, QuestionUI["answerType"]> = {
@@ -91,14 +104,19 @@ export class FlowMapper {
   /** Convert API Flow object to React Flow nodes/edges */
   static toReactFlow(apiFlow: Flow): { nodes: Node[]; edges: Edge[] } {
     const nodes: Node[] = apiFlow.graph.nodes.map((apiNode) => {
-      const reactFlowType =
-        apiNode.type === "question"
-          ? "QUESTION"
-          : apiNode.type === "instruction"
-            ? "INSTRUCTION"
-            : "MEASUREMENT";
+      const reactFlowTypeMapping: Record<
+        "question" | "instruction" | "measurement" | "analysis",
+        NodeType
+      > = {
+        question: "QUESTION",
+        instruction: "INSTRUCTION",
+        measurement: "MEASUREMENT",
+        analysis: "ANALYSIS",
+      };
 
-      const config = nodeTypeColorMap[reactFlowType as NodeType];
+      const nodeType = reactFlowTypeMapping[apiNode.type];
+
+      const config = nodeTypeColorMap[nodeType];
 
       const nodeData: FlowNodeDataWithSpec = {
         title: apiNode.name,
@@ -118,9 +136,17 @@ export class FlowMapper {
         }
       }
 
+      // For analysis nodes, also set macroId directly on the node data
+      if (apiNode.type === "analysis" && isObject(apiNode.content)) {
+        const analysisContent = apiNode.content as AnalysisContent;
+        if (analysisContent.macroId) {
+          nodeData.macroId = analysisContent.macroId;
+        }
+      }
+
       return {
         id: apiNode.id,
-        type: reactFlowType,
+        type: nodeType,
         // Use persisted position when available, fallback to deterministic placement (0,0)
         position: apiNode.position ?? { x: 0, y: 0 },
         sourcePosition: config.defaultSourcePosition,
@@ -218,6 +244,26 @@ export class FlowMapper {
           throw new Error(parsed.error.errors[0].message);
         }
         content = parsed.data;
+      } else if (nodeType === "analysis") {
+        const macroId =
+          data.macroId ??
+          (isObject(data.stepSpecification)
+            ? (data.stepSpecification as { macroId?: string }).macroId
+            : undefined);
+        const rawParams = isObject(data.stepSpecification)
+          ? (data.stepSpecification as { params?: Record<string, unknown> }).params
+          : undefined;
+        const candidate: AnalysisContent = {
+          macroId: macroId ?? "", // Let Zod validate empty/invalid macro
+          params: rawParams ?? {},
+        } as const;
+
+        // Let Zod handle all validation including missing macro
+        const parsed = zAnalysisContent.safeParse(candidate);
+        if (!parsed.success) {
+          throw new Error(parsed.error.errors[0].message);
+        }
+        content = parsed.data;
       } else {
         // instruction - prioritize current description over existing stepSpecification
         const candidate: InstructionContent = { text: text || "Instruction" } as const;
@@ -271,6 +317,14 @@ export class FlowMapper {
       };
 
       return questionUI;
+    }
+
+    if (nodeType === "analysis" && isObject(apiContent)) {
+      const content = apiContent as AnalysisContent;
+      return {
+        macroId: content.macroId,
+        params: content.params,
+      };
     }
 
     // For non-question nodes or invalid content, return as-is
