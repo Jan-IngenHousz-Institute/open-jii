@@ -15,11 +15,7 @@ globalThis.React = React;
 // --------------------
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
-    t: (k: string) =>
-      ({
-        "common.by": "by",
-        "experiments.searchMacros": "Search macros…",
-      })[k] ?? k,
+    t: (k: string) => k,
   }),
 }));
 
@@ -148,7 +144,7 @@ function renderWidget(over: Partial<React.ComponentProps<typeof MacroSearchWithD
   const props: React.ComponentProps<typeof MacroSearchWithDropdown> = {
     availableMacros: macros,
     value: over.value ?? "",
-    placeholder: "Pick a macro",
+    placeholder: "experiments.pickMacro",
     loading: false,
     searchValue: "",
     onSearchChange: vi.fn(),
@@ -176,14 +172,14 @@ describe("<MacroSearchWithDropdown />", () => {
     renderWidget({ value: "" });
     const trigger = screen.getByRole("combobox");
     expect(trigger).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByText("Pick a macro")).toBeInTheDocument();
+    expect(screen.getByText("experiments.pickMacro")).toBeInTheDocument();
   });
 
   it("renders default placeholder when no custom placeholder and no macro is selected", () => {
     renderWidget({ value: "", placeholder: undefined });
     const trigger = screen.getByRole("combobox");
     expect(trigger).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByText("Search macros…")).toBeInTheDocument();
+    expect(screen.getByText("experiments.searchMacros")).toBeInTheDocument();
   });
 
   it("filters dropdown list to exclude currently selected macro", () => {

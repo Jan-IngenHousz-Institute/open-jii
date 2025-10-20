@@ -19,17 +19,7 @@ vi.mock("@/hooks/useLocale", () => ({
 
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
-    t: (k: string) =>
-      ({
-        "experiments.searchMacros": "Search macros…",
-        "experiments.addMacro": "Add macro",
-        "experiments.seeMacroDetails": "See macro details",
-        "experiments.searchingMacros": "Searching macros…",
-        "experiments.noMacrosFound": "No macros found",
-        "experiments.tryDifferentSearchMacros": "Try a different search term",
-        "experiments.noMacrosAvailable": "No macros available",
-        "experiments.createFirstMacro": "Create your first macro",
-      })[k] ?? k,
+    t: (k: string) => k,
   }),
 }));
 
@@ -238,7 +228,7 @@ describe("<MacroSearchPopover />", () => {
     renderPopover();
 
     const input = screen.getByTestId("command-input");
-    expect(input).toHaveAttribute("placeholder", "Search macros…");
+    expect(input).toHaveAttribute("placeholder", "experiments.searchMacros");
   });
 
   it("renders all available macros as command items", () => {
@@ -277,11 +267,11 @@ describe("<MacroSearchPopover />", () => {
   it("renders add buttons for all macros", () => {
     renderPopover();
 
-    const addButtons = screen.getAllByLabelText("Add macro");
+    const addButtons = screen.getAllByLabelText("experiments.addMacro");
     expect(addButtons).toHaveLength(3);
 
     addButtons.forEach((button) => {
-      expect(button).toHaveAttribute("title", "Add macro");
+      expect(button).toHaveAttribute("title", "experiments.addMacro");
     });
 
     // Check that plus icons are present (there should be 3)
@@ -301,8 +291,8 @@ describe("<MacroSearchPopover />", () => {
     links.forEach((link) => {
       expect(link).toHaveAttribute("target", "_blank");
       expect(link).toHaveAttribute("rel", "noopener noreferrer");
-      expect(link).toHaveAttribute("title", "See macro details");
-      expect(link).toHaveAttribute("aria-label", "See macro details");
+      expect(link).toHaveAttribute("title", "experiments.seeMacroDetails");
+      expect(link).toHaveAttribute("aria-label", "experiments.seeMacroDetails");
     });
   });
 
@@ -312,7 +302,7 @@ describe("<MacroSearchPopover />", () => {
     const onSearchChange = vi.fn();
     renderPopover({ onAddMacro, setOpen, onSearchChange });
 
-    const addButtons = screen.getAllByLabelText("Add macro");
+    const addButtons = screen.getAllByLabelText("experiments.addMacro");
     await userEvent.click(addButtons[0]);
 
     expect(onAddMacro).toHaveBeenCalledWith("m1");
@@ -326,7 +316,7 @@ describe("<MacroSearchPopover />", () => {
     const onSearchChange = vi.fn();
     renderPopover({ onAddMacro, setOpen, onSearchChange });
 
-    const addButtons = screen.getAllByLabelText("Add macro");
+    const addButtons = screen.getAllByLabelText("experiments.addMacro");
     await userEvent.click(addButtons[1]);
 
     await waitFor(() => {
@@ -339,7 +329,7 @@ describe("<MacroSearchPopover />", () => {
   it("disables add buttons when isAddingMacro is true", () => {
     renderPopover({ isAddingMacro: true });
 
-    const addButtons = screen.getAllByLabelText("Add macro");
+    const addButtons = screen.getAllByLabelText("experiments.addMacro");
     addButtons.forEach((button) => {
       expect(button).toBeDisabled();
     });
@@ -348,7 +338,7 @@ describe("<MacroSearchPopover />", () => {
   it("shows loading state", () => {
     renderPopover({ loading: true, availableMacros: [] });
 
-    expect(screen.getByText("Searching macros…")).toBeInTheDocument();
+    expect(screen.getByText("experiments.searchingMacros")).toBeInTheDocument();
   });
 
   it("shows no macros found message when search has no results", () => {
@@ -358,8 +348,8 @@ describe("<MacroSearchPopover />", () => {
       loading: false,
     });
 
-    expect(screen.getByText("No macros found")).toBeInTheDocument();
-    expect(screen.getByText("Try a different search term")).toBeInTheDocument();
+    expect(screen.getByText("experiments.noMacrosFound")).toBeInTheDocument();
+    expect(screen.getByText("experiments.tryDifferentSearchMacros")).toBeInTheDocument();
     expect(screen.getByTestId("search-x-icon")).toBeInTheDocument();
   });
 
@@ -370,8 +360,8 @@ describe("<MacroSearchPopover />", () => {
       loading: false,
     });
 
-    expect(screen.getByText("No macros available")).toBeInTheDocument();
-    expect(screen.getByText("Create your first macro")).toBeInTheDocument();
+    expect(screen.getByText("experiments.noMacrosAvailable")).toBeInTheDocument();
+    expect(screen.getByText("experiments.createFirstMacro")).toBeInTheDocument();
   });
 
   it("forwards search value and onSearchChange to input", () => {
@@ -415,7 +405,7 @@ describe("<MacroSearchPopover />", () => {
     const onAddMacro = vi.fn();
     renderPopover({ onAddMacro });
 
-    const addButtons = screen.getAllByLabelText("Add macro");
+    const addButtons = screen.getAllByLabelText("experiments.addMacro");
     await userEvent.click(addButtons[0]);
 
     expect(onAddMacro).toHaveBeenCalledWith("m1");

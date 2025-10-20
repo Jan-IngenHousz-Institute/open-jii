@@ -33,7 +33,7 @@ vi.mock("@/hooks/useLocale", () => ({
 
 // Mock useDebounce hook
 vi.mock("@/hooks/useDebounce", () => ({
-  useDebounce: (value: string, delay: number) => [value, true], // Return [debouncedValue, isDebounced]
+  useDebounce: (value: string, _delay: number) => [value, true], // Return [debouncedValue, isDebounced]
 }));
 
 // Mock data
