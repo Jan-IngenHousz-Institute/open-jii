@@ -1,4 +1,5 @@
 import React from "react";
+import { useExperimentDeleteAnnotationsBulk } from "~/hooks/experiment/useExperimentDeleteAnnotationsBulk/useExperimentDeleteAnnotationsBulk";
 
 import type { AnnotationType } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
@@ -33,12 +34,14 @@ export function DeleteAnnotationsDialog({
   setBulkOpen,
   clearSelection,
 }: DeleteAnnotationsDialogProps) {
+  const { mutateAsync: deleteAnnotationsBulk } = useExperimentDeleteAnnotationsBulk();
   const { t } = useTranslation();
   const count = rowIds.length;
 
-  function onDelete() {
-    // TODO: Implement API call to delete annotations and remove logging statement
-    console.log("onSubmit", { experimentId, tableName, rowIds, type });
+  async function onDelete() {
+    await deleteAnnotationsBulk({
+      params: { id: experimentId, tableName, type },
+    });
     toast({ description: t(`experimentDataAnnotations.deleted.${type}s`) });
     clearSelection();
     setBulkOpen(false);

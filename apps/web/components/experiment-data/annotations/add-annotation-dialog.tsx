@@ -4,8 +4,14 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
 import { useExperimentAddAnnotation } from "~/hooks/experiment/useExperimentAddAnnotation/useExperimentAddAnnotation";
+import { useExperimentAddAnnotationsBulk } from "~/hooks/experiment/useExperimentAddAnnotationsBulk/useExperimentAddAnnotationsBulk";
 
-import type { AddAnnotationBody, AnnotationContent, AnnotationType } from "@repo/api";
+import type {
+  AddAnnotationBody,
+  AddAnnotationsBulkBody,
+  AnnotationContent,
+  AnnotationType,
+} from "@repo/api";
 import { zAnnotationFlagType } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -62,6 +68,7 @@ export function AddAnnotationDialog({
   clearSelection,
 }: AddAnnotationDialogProps) {
   const { mutateAsync: addAnnotation } = useExperimentAddAnnotation();
+  const { mutateAsync: addAnnotationsBulk } = useExperimentAddAnnotationsBulk();
   const { t } = useTranslation();
   const [open, setOpen] = React.useState(false);
 
@@ -87,19 +94,35 @@ export function AddAnnotationDialog({
         : {
             text: formData.text,
           };
-    const data: AddAnnotationBody = {
-      tableName,
-      rowId: rowIds[0],
-      annotation: {
-        type,
-        content,
-      },
-    };
-    await addAnnotation({
-      params: { id: experimentId },
-      body: data,
-    });
-    toast({ description: t("experimentDataAnnotations.updated") });
+    if (bulk) {
+      const data: AddAnnotationsBulkBody = {
+        tableName,
+        rowIds,
+        annotation: {
+          type,
+          content,
+        },
+      };
+      await addAnnotationsBulk({
+        params: { id: experimentId },
+        body: data,
+      });
+      toast({ description: t("experimentDataAnnotations.updated") });
+    } else {
+      const data: AddAnnotationBody = {
+        tableName,
+        rowId: rowIds[0],
+        annotation: {
+          type,
+          content,
+        },
+      };
+      await addAnnotation({
+        params: { id: experimentId },
+        body: data,
+      });
+      toast({ description: t("experimentDataAnnotations.updated") });
+    }
     if (setBulkOpen !== undefined) {
       setBulkOpen(false);
     } else {

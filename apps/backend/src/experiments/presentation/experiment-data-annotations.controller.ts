@@ -5,7 +5,7 @@ import { contract } from "@repo/api";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
-import { handleFailure } from "../../common/utils/fp-utils";
+import { handleFailure, tryCatch } from "../../common/utils/fp-utils";
 import { AddAnnotationUseCase } from "../application/use-cases/experiment-data-annotations/add-annotation/add-annotation";
 
 // import { DeleteAnnotationUseCase } from "../application/use-cases/experiment-data-annotations/delete-annotation/delete-annotation";
@@ -63,22 +63,65 @@ export class ExperimentDataAnnotationsController {
       return handleFailure(result, this.logger);
     });
   }
+
+  @TsRestHandler(contract.experiments.deleteAnnotation)
+  deleteAnnotation(@CurrentUser() user: { id: string }) {
+    return tsRestHandler(contract.experiments.deleteAnnotation, async ({ params }) => {
+      const { id: experimentId, annotationId } = params;
+
+      this.logger.log(
+        `Deleting annotation ${annotationId} from experiment ${experimentId} (user ${user.id})`,
+      );
+
+      // Dummy code
+      await tryCatch(() => {
+        return;
+      });
+
+      return {
+        status: 204,
+        body: null,
+      };
+    });
+  }
+
+  @TsRestHandler(contract.experiments.deleteAnnotationsBulk)
+  deleteAnnotationBulk(@CurrentUser() user: { id: string }) {
+    return tsRestHandler(contract.experiments.deleteAnnotationsBulk, async ({ params }) => {
+      const { id: experimentId, tableName, type } = params;
+
+      this.logger.log(
+        `Deleting all annotations of type ${type} from experiment ${experimentId} and table ${tableName} (user ${user.id})`,
+      );
+
+      // Dummy code
+      await tryCatch(() => {
+        return;
+      });
+
+      return {
+        status: 204,
+        body: null,
+      };
+    });
+  }
+  //
+  //   @TsRestHandler(contract.experiments.listAnnotations)
+  //   listAnnotations(@CurrentUser() user: { id: string }) {
+  //     return tsRestHandler(contract.experiments.listAnnotations, async ({ params, query }) => {
+  //       const { id: experimentId } = params;
+  //
+  //       const result = await this.listAnnotationsUseCase.execute(experimentId, user.id, query);
+  //
+  //       if (result.isSuccess()) {
+  //         return {
+  //           status: 200,
+  //           body: { annotations: result.value },
+  //         };
+  //       }
+  //
+  //       return handleFailure(result);
+  //     });
+  //   }
+  // }
 }
-//   @TsRestHandler(contract.experiments.listAnnotations)
-//   listAnnotations(@CurrentUser() user: { id: string }) {
-//     return tsRestHandler(contract.experiments.listAnnotations, async ({ params, query }) => {
-//       const { id: experimentId } = params;
-//
-//       const result = await this.listAnnotationsUseCase.execute(experimentId, user.id, query);
-//
-//       if (result.isSuccess()) {
-//         return {
-//           status: 200,
-//           body: { annotations: result.value },
-//         };
-//       }
-//
-//       return handleFailure(result);
-//     });
-//   }
-// }
