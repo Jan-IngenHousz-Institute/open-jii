@@ -88,10 +88,10 @@ export class ExperimentDataAnnotationsController {
   @TsRestHandler(contract.experiments.deleteAnnotationsBulk)
   deleteAnnotationBulk(@CurrentUser() user: { id: string }) {
     return tsRestHandler(contract.experiments.deleteAnnotationsBulk, async ({ params }) => {
-      const { id: experimentId, tableName, type } = params;
+      const { id: experimentId, tableName, rowIds, type } = params;
 
       this.logger.log(
-        `Deleting all annotations of type ${type} from experiment ${experimentId} and table ${tableName} (user ${user.id})`,
+        `Deleting all annotations for ${rowIds.length} row(s) of type ${type} from experiment ${experimentId} and table ${tableName} (user ${user.id})`,
       );
 
       // Dummy code

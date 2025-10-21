@@ -163,7 +163,12 @@ describe("DeleteCommentsDialog", () => {
 
     await vi.waitFor(() => {
       expect(mockMutateDeleteAnnotationsBulk).toHaveBeenCalledWith({
-        params: { id: "exp1", tableName: "table1", type: "comment" },
+        params: {
+          id: "exp1",
+          tableName: "table1",
+          rowIds: ["row1", "row2", "row3"],
+          type: "comment",
+        },
       });
 
       expect(mockToast).toHaveBeenCalledWith({

@@ -201,6 +201,7 @@ export const zUpdateAnnotationBody = z.object({
 export const zAnnotationDeleteBulkPathParam = z.object({
   id: z.string().uuid().describe("ID of the experiment"),
   tableName: z.string().describe("Name of the data table"),
+  rowIds: z.array(z.string().uuid().min(1)).min(1).describe("Row id's to delete annotations for"),
   type: zAnnotationType.describe("Type of annotations to delete"),
 });
 
