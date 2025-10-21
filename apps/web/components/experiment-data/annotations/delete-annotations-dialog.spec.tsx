@@ -165,6 +165,8 @@ describe("DeleteCommentsDialog", () => {
       expect(mockMutateDeleteAnnotationsBulk).toHaveBeenCalledWith({
         params: {
           id: "exp1",
+        },
+        body: {
           tableName: "table1",
           rowIds: ["row1", "row2", "row3"],
           type: "comment",
