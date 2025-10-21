@@ -2,6 +2,7 @@ import { Flag, MessageSquare, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { AddAnnotationDialog } from "~/components/experiment-data/annotations/add-annotation-dialog";
 import type { AnnotationData } from "~/hooks/experiment/useExperimentData/useExperimentData";
+import { useExperimentDeleteAnnotation } from "~/hooks/experiment/useExperimentDeleteAnnotation/useExperimentDeleteAnnotation";
 import { formatDate } from "~/util/date";
 
 import type {
@@ -38,20 +39,18 @@ function CommentsBadge({ count }: { count: number }) {
 
 function Annotation({
   experimentId,
-  tableName,
-  rowIds,
   annotation,
 }: {
   experimentId: string;
-  tableName: string;
-  rowIds: string[];
   annotation: Annotation;
 }) {
+  const { mutateAsync: deleteAnnotation } = useExperimentDeleteAnnotation();
   const { t } = useTranslation();
 
-  function onDelete() {
-    // TODO: Implement API call to delete annotation and remove logging statement
-    console.log("onDelete", { experimentId, tableName, rowIds, annotation });
+  async function onDelete() {
+    await deleteAnnotation({
+      params: { id: experimentId, annotationId: annotation.id },
+    });
     toast({ description: t(`experimentDataAnnotations.deleted.${annotation.type}`) });
   }
 
@@ -141,8 +140,6 @@ export function Annotations({ experimentId, tableName, rowIds, data }: Annotatio
                 <Annotation
                   key={annotation.id}
                   experimentId={experimentId}
-                  tableName={tableName}
-                  rowIds={rowIds}
                   annotation={annotation}
                 />
               );
@@ -159,8 +156,6 @@ export function Annotations({ experimentId, tableName, rowIds, data }: Annotatio
                 <Annotation
                   key={annotation.id}
                   experimentId={experimentId}
-                  tableName={tableName}
-                  rowIds={rowIds}
                   annotation={annotation}
                 />
               );
