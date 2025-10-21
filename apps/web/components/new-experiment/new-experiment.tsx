@@ -3,7 +3,7 @@
 import { useExperimentCreate } from "@/hooks/experiment/useExperimentCreate/useExperimentCreate";
 import { useLocale } from "@/hooks/useLocale";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 import type { CreateExperimentBody } from "@repo/api";
 import { zExperimentVisibility } from "@repo/api";
@@ -52,39 +52,42 @@ export function NewExperimentForm() {
     return Component;
   };
 
-  // Wizard steps use translation strings so define them inside the component
-  const steps: WizardStep<CreateExperimentBody>[] = [
-    {
-      title: t("experiments.detailsTitle"),
-      description: t("experiments.detailsDescription"),
-      validationSchema: detailsSchema,
-      component: createFormStep([NewExperimentDetailsCard]),
-    },
-    {
-      title: t("experiments.membersVisibilityTitle"),
-      description: t("experiments.membersVisibilityDescription"),
-      validationSchema: membersVisibilitySchema,
-      component: createFormStep([NewExperimentMembersCard, NewExperimentVisibilityCard]),
-    },
-    {
-      title: t("experiments.protocolsTitle"),
-      description: t("experiments.protocolsDescription"),
-      validationSchema: protocolsSchema,
-      component: createFormStep([NewExperimentProtocolsCard]),
-    },
-    {
-      title: t("experiments.locationsTitle"),
-      description: t("experiments.locationsDescription"),
-      validationSchema: locationsSchema,
-      component: createFormStep([NewExperimentLocationsCard]),
-    },
-    {
-      title: t("experiments.reviewTitle"),
-      description: t("experiments.reviewDescription"),
-      validationSchema: reviewSchema,
-      component: ReviewStep,
-    },
-  ];
+  // Wizard steps
+  const steps: WizardStep<CreateExperimentBody>[] = useMemo(
+    () => [
+      {
+        title: t("experiments.detailsTitle"),
+        description: t("experiments.detailsDescription"),
+        validationSchema: detailsSchema,
+        component: createFormStep([NewExperimentDetailsCard]),
+      },
+      {
+        title: t("experiments.membersVisibilityTitle"),
+        description: t("experiments.membersVisibilityDescription"),
+        validationSchema: membersVisibilitySchema,
+        component: createFormStep([NewExperimentMembersCard, NewExperimentVisibilityCard]),
+      },
+      {
+        title: t("experiments.protocolsTitle"),
+        description: t("experiments.protocolsDescription"),
+        validationSchema: protocolsSchema,
+        component: createFormStep([NewExperimentProtocolsCard]),
+      },
+      {
+        title: t("experiments.locationsTitle"),
+        description: t("experiments.locationsDescription"),
+        validationSchema: locationsSchema,
+        component: createFormStep([NewExperimentLocationsCard]),
+      },
+      {
+        title: t("experiments.reviewTitle"),
+        description: t("experiments.reviewDescription"),
+        validationSchema: reviewSchema,
+        component: ReviewStep,
+      },
+    ],
+    [t],
+  );
 
   const { mutate: createExperiment, isPending } = useExperimentCreate({
     onSuccess: (experimentId: string) => {
