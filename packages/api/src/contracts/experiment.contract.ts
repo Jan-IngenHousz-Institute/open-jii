@@ -555,7 +555,7 @@ export const experimentContract = c.router({
 
   deleteAnnotationsBulk: {
     method: "DELETE",
-    path: "/api/v1/experiments/:id/data/annotations/bulk/:tableName/:type",
+    path: "/api/v1/experiments/:id/data/annotations/bulk/:tableName/:rowIds/:type",
     pathParams: zAnnotationDeleteBulkPathParam,
     responses: {
       204: null,
