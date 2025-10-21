@@ -255,11 +255,11 @@ module "pipeline_scheduler" {
   source = "../../modules/databricks/job"
 
   name        = "Pipeline-Scheduler-DEV"
-  description = "Orchestrates central pipeline execution followed by all experiment pipelines every 15 minutes between 9am and 9pm"
+  description = "Orchestrates central pipeline execution followed by all experiment pipelines every 15 minutes between 6am and 6pm"
 
-  # Schedule: Every 15 minutes after the hour (0, 15, 30, 45) between 9am and 9pm (UTC)
+  # Schedule: Every 15 minutes after the hour (0, 15, 30, 45) between 6am and 6pm (UTC)
   # Format: "seconds minutes hours day-of-month month day-of-week"
-  schedule = "0 0,15,30,45 9-21 * * ?"
+  schedule = "0 0,15,30,45 6-18 * * ?"
 
   max_concurrent_runs           = 1
   use_serverless                = true
