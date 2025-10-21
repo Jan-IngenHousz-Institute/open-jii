@@ -130,7 +130,16 @@
     "noProtocolsAdded": "No protocols added",
     "unnamedProtocol": "Unnamed Protocol",
     "researchLocations": "Research Locations",
-    "noLocationsAdded": "No locations added"
+    "noLocationsAdded": "No locations added",
+    "analysisPanelTitle": "Analysis Options",
+    "searchMacros": "Search analysis options...",
+    "addMacro": "Add macro",
+    "seeMacroDetails": "See macro details",
+    "searchingMacros": "Searching macros...",
+    "noMacrosFound": "No macros found",
+    "tryDifferentSearchMacros": "Try a different search term than \"{{searchValue}}\"",
+    "noMacrosAvailable": "No macros available",
+    "createFirstMacro": "Create your first macro to get started"
   },
   "newExperiment": {
     "description": "Set up a new experiment (project).",

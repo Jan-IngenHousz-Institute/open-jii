@@ -210,7 +210,7 @@ export const zErrorResponse = z.object({
 });
 
 // --- Flow Schemas ---
-export const zFlowNodeType = z.enum(["question", "instruction", "measurement"]);
+export const zFlowNodeType = z.enum(["question", "instruction", "measurement", "analysis"]);
 
 export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice", "number"]);
 
@@ -283,6 +283,11 @@ export const zMeasurementContent = z.object({
   params: z.record(z.string(), z.unknown()).optional(),
 });
 
+export const zAnalysisContent = z.object({
+  macroId: z.string().uuid("A valid macro must be selected for analysis nodes"),
+  params: z.record(z.string(), z.unknown()).optional(),
+});
+
 export const zFlowNode = z.object({
   id: z.string().min(1),
   type: zFlowNodeType,
@@ -290,7 +295,7 @@ export const zFlowNode = z.object({
     .string()
     .min(1, "Node label is required")
     .max(64, "Node label must be 64 characters or less"),
-  content: z.union([zQuestionContent, zInstructionContent, zMeasurementContent]),
+  content: z.union([zQuestionContent, zInstructionContent, zMeasurementContent, zAnalysisContent]),
   // A node can be marked as a start node. Exactly one node must be the start node for any flow.
   isStart: z.boolean().optional().default(false),
   // Optional persisted layout position (added later for backwards compatibility)
