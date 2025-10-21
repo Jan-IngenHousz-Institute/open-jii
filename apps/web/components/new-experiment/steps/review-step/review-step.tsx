@@ -48,31 +48,34 @@ export function ReviewStep({
         <p className="text-muted-foreground text-sm">{t("experiments.reviewAllDetails")}</p>
       </div>
 
-      <div className="grid gap-6">
-        {/* Details */}
-        <DetailsSection
-          formData={formData}
-          onEdit={() => (goToStep as (index: number) => void)(0)}
-        />
-
-        {/* Members & Visibility */}
-        <MembersVisibilitySection
-          formData={formData}
-          onEdit={() => (goToStep as (index: number) => void)(1)}
-        />
-
-        {/* Protocols & Locations Grid */}
-        <div className="grid gap-6 md:grid-cols-2">
-          <ProtocolsSection
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Details - full width */}
+        <div className="md:col-span-2">
+          <DetailsSection
             formData={formData}
-            onEdit={() => (goToStep as (index: number) => void)(2)}
-          />
-
-          <LocationsSection
-            formData={formData}
-            onEdit={() => (goToStep as (index: number) => void)(3)}
+            onEdit={() => (goToStep as (index: number) => void)(0)}
           />
         </div>
+
+        {/* Members - full width */}
+        <div className="md:col-span-2">
+          <MembersVisibilitySection
+            formData={formData}
+            onEdit={() => (goToStep as (index: number) => void)(1)}
+          />
+        </div>
+
+        {/* Protocols (left) */}
+        <ProtocolsSection
+          formData={formData}
+          onEdit={() => (goToStep as (index: number) => void)(2)}
+        />
+
+        {/* Locations (right) */}
+        <LocationsSection
+          formData={formData}
+          onEdit={() => (goToStep as (index: number) => void)(3)}
+        />
       </div>
 
       <WizardStepButtons

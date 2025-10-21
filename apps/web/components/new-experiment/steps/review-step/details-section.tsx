@@ -27,24 +27,22 @@ export function DetailsSection({ formData, onEdit }: DetailsSectionProps) {
           {t("common.edit")}
         </Button>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-3">
-          <div className="text-muted-foreground mb-1 text-xs font-medium uppercase tracking-wider">
-            {t("experiments.experimentName")}
-          </div>
-          <div className="text-base font-medium">{formData.name || "—"}</div>
-
-          {formData.description && (
-            <>
-              <div className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wider">
-                {t("experiments.descriptionTitle")}
-              </div>
-              <div className="rounded-md border p-3 text-sm">
-                <RichTextRenderer content={formData.description} />
-              </div>
-            </>
-          )}
+      <CardContent className="space-y-2">
+        <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+          {t("experiments.experimentName")}
         </div>
+        <div className="text-base font-medium">{formData.name || "—"}</div>
+
+        {formData.description && (
+          <>
+            <div className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wider">
+              {t("experiments.descriptionTitle")}
+            </div>
+            <div className="rounded-md border p-3 text-sm">
+              <RichTextRenderer content={formData.description} />
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
