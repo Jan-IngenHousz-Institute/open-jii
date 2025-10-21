@@ -5,11 +5,28 @@ import type { AddAnnotationDialogFormType } from "~/components/experiment-data/a
 import { AddAnnotationDialog } from "~/components/experiment-data/annotations/add-annotation-dialog";
 
 // Hoisted mocks
+const mockMutateAddAnnotation = vi.hoisted(() => vi.fn());
+const mockMutateAddAnnotationsBulk = vi.hoisted(() => vi.fn());
 const { mockToast } = vi.hoisted(() => {
   const mockToast = vi.fn();
 
   return { mockToast };
 });
+
+// Mock hooks
+vi.mock("~/hooks/experiment/useExperimentAddAnnotation/useExperimentAddAnnotation", () => ({
+  useExperimentAddAnnotation: () => ({
+    mutateAsync: mockMutateAddAnnotation,
+  }),
+}));
+vi.mock(
+  "~/hooks/experiment/useExperimentAddAnnotationsBulk/useExperimentAddAnnotationsBulk",
+  () => ({
+    useExperimentAddAnnotationsBulk: () => ({
+      mutateAsync: mockMutateAddAnnotationsBulk,
+    }),
+  }),
+);
 
 // Mock i18n
 vi.mock("@repo/i18n", () => ({
@@ -246,7 +263,7 @@ describe("AddCommentDialog", () => {
     );
   });
 
-  it("should handle form submission for comment", () => {
+  it("should handle form submission for add a single comment", async () => {
     render(
       <AddAnnotationDialog
         experimentId="exp1"
@@ -260,18 +277,35 @@ describe("AddCommentDialog", () => {
     const form = screen.getByTestId("form").querySelector("form");
     if (form) fireEvent.submit(form);
 
-    expect(mockToast).toHaveBeenCalledWith({
-      description: "experimentDataAnnotations.updated",
+    await vi.waitFor(() => {
+      expect(mockMutateAddAnnotation).toHaveBeenCalledWith({
+        params: { id: "exp1" },
+        body: {
+          tableName: "table1",
+          rowId: "row1",
+          annotation: {
+            type: "comment",
+            content: {
+              text: "Test Comment",
+            },
+          },
+        },
+      });
+
+      expect(mockToast).toHaveBeenCalledWith({
+        description: "experimentDataAnnotations.updated",
+      });
     });
   });
 
-  it("should handle form submission for flag", () => {
+  it("should handle form submission for add bulk comments", async () => {
     render(
       <AddAnnotationDialog
         experimentId="exp1"
         tableName="table1"
         rowIds={["row1", "row2"]}
-        type="flag"
+        type="comment"
+        bulk={true}
       />,
       { wrapper: createWrapper() },
     );
@@ -279,8 +313,24 @@ describe("AddCommentDialog", () => {
     const form = screen.getByTestId("form").querySelector("form");
     if (form) fireEvent.submit(form);
 
-    expect(mockToast).toHaveBeenCalledWith({
-      description: "experimentDataAnnotations.updated",
+    await vi.waitFor(() => {
+      expect(mockMutateAddAnnotationsBulk).toHaveBeenCalledWith({
+        params: { id: "exp1" },
+        body: {
+          tableName: "table1",
+          rowIds: ["row1", "row2"],
+          annotation: {
+            type: "comment",
+            content: {
+              text: "Test Comment",
+            },
+          },
+        },
+      });
+
+      expect(mockToast).toHaveBeenCalledWith({
+        description: "experimentDataAnnotations.updated",
+      });
     });
   });
 

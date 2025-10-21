@@ -8,6 +8,12 @@ import { getAnnotationData } from "~/components/experiment-data/annotations/util
 
 import type { Annotation } from "@repo/api";
 
+// Mock hooks
+const useExperimentDeleteAnnotationMock = vi.hoisted(() => vi.fn());
+vi.mock("~/hooks/experiment/useExperimentDeleteAnnotation/useExperimentDeleteAnnotation", () => ({
+  useExperimentDeleteAnnotation: () => useExperimentDeleteAnnotationMock,
+}));
+
 // Mock i18n
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
