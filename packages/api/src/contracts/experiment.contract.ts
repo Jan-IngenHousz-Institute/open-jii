@@ -40,6 +40,7 @@ import {
   zListAnnotationsQuery,
   zUpdateAnnotationBody,
   zAnnotationDeleteBulkPathParam,
+  zAnnotationDeleteBulkBody,
 } from "../schemas/experiment.schema";
 import {
   // Flow schemas
@@ -554,9 +555,10 @@ export const experimentContract = c.router({
   },
 
   deleteAnnotationsBulk: {
-    method: "DELETE",
-    path: "/api/v1/experiments/:id/data/annotations/bulk/:tableName/:rowIds/:type",
+    method: "POST",
+    path: "/api/v1/experiments/:id/data/annotations/bulk-delete",
     pathParams: zAnnotationDeleteBulkPathParam,
+    body: zAnnotationDeleteBulkBody,
     responses: {
       204: null,
       404: zErrorResponse,
