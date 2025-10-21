@@ -84,7 +84,7 @@ function Annotation({
         <div className="text-sm font-medium">{annotation.createdByName}</div>
         <div className="text-xs text-gray-500">{formatDate(annotation.createdAt)}</div>
         <div>
-          <Button variant="ghost" size="sm" onClick={onDelete}>
+          <Button variant="ghost" size="sm" type="button" onClick={onDelete}>
             <Trash2 className="h-3 w-3" />
           </Button>
         </div>
