@@ -18,13 +18,21 @@ import {
   DialogTitle,
   WizardForm,
 } from "@repo/ui/components";
-import type { WizardStep } from "@repo/ui/components";
+import type { WizardStep, WizardStepProps } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-import { DetailsStep, detailsSchema } from "./steps/details-step";
-import { LocationsStep, locationsSchema } from "./steps/locations-step";
-import { MembersVisibilityStep, membersVisibilitySchema } from "./steps/members-visibility-step";
-import { ProtocolsStep, protocolsSchema } from "./steps/protocols-step";
+import { NewExperimentDetailsCard } from "./new-experiment-details-card";
+import { NewExperimentLocationsCard } from "./new-experiment-locations-card";
+import { NewExperimentMembersCard } from "./new-experiment-members-card";
+import { NewExperimentProtocolsCard } from "./new-experiment-protocols-card";
+import { NewExperimentVisibilityCard } from "./new-experiment-visibility-card";
+import {
+  detailsSchema,
+  FormStep,
+  locationsSchema,
+  membersVisibilitySchema,
+  protocolsSchema,
+} from "./steps/form-step";
 import { ReviewStep, reviewSchema } from "./steps/review-step/review-step";
 
 export function NewExperimentForm() {
@@ -36,31 +44,39 @@ export function NewExperimentForm() {
   const [showDialog, setShowDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
+  // Helper to create FormStep with specific cards
+  const createFormStep = (cards: Parameters<typeof FormStep>[0]["cards"]) => {
+    const Component = (props: WizardStepProps<CreateExperimentBody>) => (
+      <FormStep {...props} cards={cards} />
+    );
+    return Component;
+  };
+
   // Wizard steps use translation strings so define them inside the component
   const steps: WizardStep<CreateExperimentBody>[] = [
     {
       title: t("experiments.detailsTitle"),
       description: t("experiments.detailsDescription"),
       validationSchema: detailsSchema,
-      component: DetailsStep,
+      component: createFormStep([NewExperimentDetailsCard]),
     },
     {
       title: t("experiments.membersVisibilityTitle"),
       description: t("experiments.membersVisibilityDescription"),
       validationSchema: membersVisibilitySchema,
-      component: MembersVisibilityStep,
+      component: createFormStep([NewExperimentMembersCard, NewExperimentVisibilityCard]),
     },
     {
       title: t("experiments.protocolsTitle"),
       description: t("experiments.protocolsDescription"),
       validationSchema: protocolsSchema,
-      component: ProtocolsStep,
+      component: createFormStep([NewExperimentProtocolsCard]),
     },
     {
       title: t("experiments.locationsTitle"),
       description: t("experiments.locationsDescription"),
       validationSchema: locationsSchema,
-      component: LocationsStep,
+      component: createFormStep([NewExperimentLocationsCard]),
     },
     {
       title: t("experiments.reviewTitle"),

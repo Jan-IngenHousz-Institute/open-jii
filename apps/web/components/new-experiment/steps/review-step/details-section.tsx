@@ -2,7 +2,14 @@
 
 import type { CreateExperimentBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardContent, RichTextRenderer } from "@repo/ui/components";
+import {
+  Button,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  RichTextRenderer,
+} from "@repo/ui/components";
 
 interface DetailsSectionProps {
   formData: CreateExperimentBody;
@@ -14,36 +21,28 @@ export function DetailsSection({ formData, onEdit }: DetailsSectionProps) {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold">{t("experiments.detailsTitle")}</CardTitle>
-          <button
-            type="button"
-            onClick={onEdit}
-            className="text-muted-foreground text-xs transition-colors"
-          >
-            {t("common.edit")}
-          </button>
-        </div>
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <CardTitle className="text-base font-semibold">{t("experiments.detailsTitle")}</CardTitle>
+        <Button type="button" onClick={onEdit} variant="link" size="sm">
+          {t("common.edit")}
+        </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3">
-          <div>
-            <div className="text-muted-foreground mb-1 text-xs font-medium uppercase tracking-wider">
-              {t("experiments.experimentName")}
-            </div>
-            <div className="text-base font-medium">{formData.name || "—"}</div>
+          <div className="text-muted-foreground mb-1 text-xs font-medium uppercase tracking-wider">
+            {t("experiments.experimentName")}
           </div>
+          <div className="text-base font-medium">{formData.name || "—"}</div>
 
           {formData.description && (
-            <div>
+            <>
               <div className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wider">
                 {t("experiments.descriptionTitle")}
               </div>
               <div className="rounded-md border p-3 text-sm">
                 <RichTextRenderer content={formData.description} />
               </div>
-            </div>
+            </>
           )}
         </div>
       </CardContent>

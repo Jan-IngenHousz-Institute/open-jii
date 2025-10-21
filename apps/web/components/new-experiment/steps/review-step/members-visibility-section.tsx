@@ -2,7 +2,7 @@
 
 import type { CreateExperimentBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardContent, Badge } from "@repo/ui/components";
+import { Button, Card, CardHeader, CardTitle, CardContent, Badge } from "@repo/ui/components";
 
 import { embargoUntilHelperString } from "../../embargo-utils";
 
@@ -17,19 +17,13 @@ export function MembersVisibilitySection({ formData, onEdit }: MembersVisibility
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold">
-            {t("experiments.membersAndVisibility")}
-          </CardTitle>
-          <button
-            type="button"
-            onClick={onEdit}
-            className="text-muted-foreground text-xs transition-colors"
-          >
-            {t("common.edit")}
-          </button>
-        </div>
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <CardTitle className="text-base font-semibold">
+          {t("experiments.membersAndVisibility")}
+        </CardTitle>
+        <Button type="button" onClick={onEdit} variant="link" size="sm">
+          {t("common.edit")}
+        </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col gap-3">

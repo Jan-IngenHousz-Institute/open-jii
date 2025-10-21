@@ -7,10 +7,12 @@ import { useTranslation } from "@repo/i18n";
 import { WizardStepButtons } from "@repo/ui/components";
 import type { WizardStepProps } from "@repo/ui/components";
 
-import { detailsSchema } from "../details-step";
-import { locationsSchema } from "../locations-step";
-import { membersVisibilitySchema } from "../members-visibility-step";
-import { protocolsSchema } from "../protocols-step";
+import {
+  detailsSchema,
+  locationsSchema,
+  membersVisibilitySchema,
+  protocolsSchema,
+} from "../form-step";
 import { DetailsSection } from "./details-section";
 import { LocationsSection } from "./locations-section";
 import { MembersVisibilitySection } from "./members-visibility-section";
