@@ -107,7 +107,6 @@ export function AddAnnotationDialog({
         params: { id: experimentId },
         body: data,
       });
-      toast({ description: t("experimentDataAnnotations.updated") });
     } else {
       const data: AddAnnotationBody = {
         tableName,
@@ -121,8 +120,8 @@ export function AddAnnotationDialog({
         params: { id: experimentId },
         body: data,
       });
-      toast({ description: t("experimentDataAnnotations.updated") });
     }
+    toast({ description: t("experimentDataAnnotations.updated") });
     if (setBulkOpen !== undefined) {
       setBulkOpen(false);
     } else {

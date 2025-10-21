@@ -44,6 +44,7 @@ const testAnnotation4: Annotation = {
 };
 
 export function addDemoAnnotationData(data: ExperimentData) {
+  if (data.columns.length === 0) return;
   if (!data.columns.find((column) => column.name === "id")) {
     data.columns.unshift({
       name: "id",
