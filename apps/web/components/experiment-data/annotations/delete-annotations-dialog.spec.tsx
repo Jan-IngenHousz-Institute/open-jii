@@ -4,11 +4,22 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { DeleteAnnotationsDialog } from "~/components/experiment-data/annotations/delete-annotations-dialog";
 
 // Hoisted mocks
+const mockMutateDeleteAnnotationsBulk = vi.hoisted(() => vi.fn());
 const { mockToast } = vi.hoisted(() => {
   const mockToast = vi.fn();
 
   return { mockToast };
 });
+
+// Mock hooks
+vi.mock(
+  "~/hooks/experiment/useExperimentDeleteAnnotationsBulk/useExperimentDeleteAnnotationsBulk",
+  () => ({
+    useExperimentDeleteAnnotationsBulk: () => ({
+      mutateAsync: mockMutateDeleteAnnotationsBulk,
+    }),
+  }),
+);
 
 // Mock i18n
 vi.mock("@repo/i18n", () => ({
@@ -133,7 +144,7 @@ describe("DeleteCommentsDialog", () => {
     );
   });
 
-  it("should handle form submission for deleting comments", () => {
+  it("should handle form submission for deleting comments", async () => {
     render(
       <DeleteAnnotationsDialog
         experimentId="exp1"
@@ -150,8 +161,14 @@ describe("DeleteCommentsDialog", () => {
     const submitButton = screen.queryByTestId("button-submit");
     if (submitButton) fireEvent.click(submitButton);
 
-    expect(mockToast).toHaveBeenCalledWith({
-      description: "experimentDataAnnotations.deleted.comments",
+    await vi.waitFor(() => {
+      expect(mockMutateDeleteAnnotationsBulk).toHaveBeenCalledWith({
+        params: { id: "exp1", tableName: "table1", type: "comment" },
+      });
+
+      expect(mockToast).toHaveBeenCalledWith({
+        description: "experimentDataAnnotations.deleted.comments",
+      });
     });
   });
 });

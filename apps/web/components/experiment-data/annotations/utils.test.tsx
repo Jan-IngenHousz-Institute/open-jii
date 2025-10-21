@@ -48,8 +48,8 @@ global.ResizeObserver = class ResizeObserver {
 describe("getAnnotationData", () => {
   const comment1: Annotation = {
     id: uuidv4(),
-    userId: uuidv4(),
-    userName: "User One",
+    createdBy: uuidv4(),
+    createdByName: "User One",
     type: "comment",
     content: { text: "Test comment 1" },
     createdAt: "2025-09-01T00:00:00Z",
@@ -58,8 +58,8 @@ describe("getAnnotationData", () => {
 
   const flag1: Annotation = {
     id: uuidv4(),
-    userId: uuidv4(),
-    userName: "User Three",
+    createdBy: uuidv4(),
+    createdByName: "User Three",
     type: "flag",
     content: { flagType: "outlier", reason: "Flagged as outlier" },
     createdAt: "2025-09-03T00:00:00Z",
@@ -68,8 +68,8 @@ describe("getAnnotationData", () => {
 
   const flag2: Annotation = {
     id: uuidv4(),
-    userId: uuidv4(),
-    userName: "User Four",
+    createdBy: uuidv4(),
+    createdByName: "User Four",
     type: "flag",
     content: { flagType: "needs_review", reason: "Needs review" },
     createdAt: "2025-09-04T00:00:00Z",
@@ -102,8 +102,8 @@ describe("getAnnotationData", () => {
 describe("isAnnotationData", () => {
   const comment1: Annotation = {
     id: uuidv4(),
-    userId: uuidv4(),
-    userName: "User One",
+    createdBy: uuidv4(),
+    createdByName: "User One",
     type: "comment",
     content: { text: "Test comment 1" },
     createdAt: "2025-09-01T00:00:00Z",
@@ -112,8 +112,8 @@ describe("isAnnotationData", () => {
 
   const flag1: Annotation = {
     id: uuidv4(),
-    userId: uuidv4(),
-    userName: "User Three",
+    createdBy: uuidv4(),
+    createdByName: "User Three",
     type: "flag",
     content: { flagType: "outlier", reason: "Flagged as outlier" },
     createdAt: "2025-09-03T00:00:00Z",
@@ -533,8 +533,8 @@ describe("getAnnotationsColumn", () => {
     };
     const comment1: Annotation = {
       id: uuidv4(),
-      userId: uuidv4(),
-      userName: "User One",
+      createdBy: uuidv4(),
+      createdByName: "User One",
       type: "comment",
       content: { text: "Test comment 1" },
       createdAt: "2025-09-01T00:00:00Z",
@@ -572,8 +572,8 @@ describe("getTotalSelectedCounts", () => {
   function createComment(): Annotation {
     return {
       id: uuidv4(),
-      userId: uuidv4(),
-      userName: "User One",
+      createdBy: uuidv4(),
+      createdByName: "User One",
       type: "comment",
       content: { text: "Test comment 1" },
       createdAt: "2025-09-01T00:00:00Z",
@@ -584,8 +584,8 @@ describe("getTotalSelectedCounts", () => {
   function createFlag(): Annotation {
     return {
       id: uuidv4(),
-      userId: uuidv4(),
-      userName: "User Three",
+      createdBy: uuidv4(),
+      createdByName: "User Three",
       type: "flag",
       content: { flagType: "outlier", reason: "Flagged as outlier" },
       createdAt: "2025-09-03T00:00:00Z",
