@@ -2,13 +2,11 @@
 
 import { useExperimentCreate } from "@/hooks/experiment/useExperimentCreate/useExperimentCreate";
 import { useLocale } from "@/hooks/useLocale";
-import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import * as z from "zod";
+import { useState, useEffect } from "react";
 
 import type { CreateExperimentBody } from "@repo/api";
-import { zExperimentVisibility, zCreateExperimentBodyBase, validateEmbargoDate } from "@repo/api";
+import { zExperimentVisibility } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
   Button,
@@ -23,11 +21,11 @@ import {
 import type { WizardStep } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-import { DetailsStep } from "./steps/details-step";
-import { LocationsStep } from "./steps/locations-step";
-import { MembersVisibilityStep } from "./steps/members-visibility-step";
-import { ProtocolsStep } from "./steps/protocols-step";
-import { ReviewStep } from "./steps/review-step";
+import { DetailsStep, detailsSchema } from "./steps/details-step";
+import { LocationsStep, locationsSchema } from "./steps/locations-step";
+import { MembersVisibilityStep, membersVisibilitySchema } from "./steps/members-visibility-step";
+import { ProtocolsStep, protocolsSchema } from "./steps/protocols-step";
+import { ReviewStep, reviewSchema } from "./steps/review-step/review-step";
 
 export function NewExperimentForm() {
   const router = useRouter();
@@ -35,49 +33,8 @@ export function NewExperimentForm() {
   const locale = useLocale();
   const [hasFormData, setHasFormData] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const detailsSchema = zCreateExperimentBodyBase.pick({ name: true, description: true });
-
-  const membersVisibilityBase = zCreateExperimentBodyBase.pick({
-    members: true,
-    visibility: true,
-    embargoUntil: true,
-  });
-
-  const shape = membersVisibilityBase.shape;
-
-  const membersVisibilitySchema = z.object({
-    ...shape,
-    embargoUntil: shape.embargoUntil.refine(
-      (value) => {
-        // Create a dummy refinement context and capture whether issues were added
-        let hasIssue = false;
-        validateEmbargoDate(
-          value,
-          {
-            addIssue: () => {
-              hasIssue = true;
-            },
-          } as unknown as z.RefinementCtx,
-          ["embargoUntil"],
-        );
-        return !hasIssue;
-      },
-      {
-        message: "Embargo end date must be between tomorrow and 365 days from now",
-      },
-    ),
-  });
-  const protocolsLocationsSchema = zCreateExperimentBodyBase.pick({ protocols: true });
-
-  const locationsSchema = zCreateExperimentBodyBase.pick({ locations: true });
-
-  // For the final review step validate the combined schema of all previous steps
-  const reviewSchema = z.object({
-    ...detailsSchema.shape,
-    ...membersVisibilitySchema.shape,
-    ...protocolsLocationsSchema.shape,
-    ...locationsSchema.shape,
-  });
+  const [showDialog, setShowDialog] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
   // Wizard steps use translation strings so define them inside the component
   const steps: WizardStep<CreateExperimentBody>[] = [
@@ -96,7 +53,7 @@ export function NewExperimentForm() {
     {
       title: t("experiments.protocolsTitle"),
       description: t("experiments.protocolsDescription"),
-      validationSchema: protocolsLocationsSchema,
+      validationSchema: protocolsSchema,
       component: ProtocolsStep,
     },
     {
@@ -112,13 +69,6 @@ export function NewExperimentForm() {
       component: ReviewStep,
     },
   ];
-
-  // Use the unsaved changes warning hook
-  const { showDialog, dialogMessage, handleConfirmNavigation, handleCancelNavigation } =
-    useUnsavedChangesWarning({
-      hasUnsavedChanges: hasFormData && !isSubmitting,
-      message: t("experiments.unsavedChangesMessage"),
-    });
 
   const { mutate: createExperiment, isPending } = useExperimentCreate({
     onSuccess: (experimentId: string) => {
@@ -139,6 +89,54 @@ export function NewExperimentForm() {
   const handleFormChange = () => {
     if (!hasFormData) {
       setHasFormData(true);
+    }
+  };
+
+  // Block navigation when there are unsaved changes
+  useEffect(() => {
+    if (!hasFormData || isSubmitting) return;
+
+    // Intercept internal Next.js link clicks
+    const handleLinkClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest("a");
+
+      if (link?.href && !link.target && link.origin === window.location.origin) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        setPendingNavigation(() => () => {
+          window.location.href = link.href;
+        });
+        setShowDialog(true);
+      }
+    };
+
+    // Warn only on tab close or page refresh
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (showDialog) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("click", handleLinkClick, true);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("click", handleLinkClick, true);
+    };
+  }, [hasFormData, isSubmitting, showDialog]);
+
+  const handleCancelNavigation = () => {
+    setShowDialog(false);
+    setPendingNavigation(null);
+  };
+
+  const handleConfirmNavigation = () => {
+    setShowDialog(false);
+    if (pendingNavigation) {
+      pendingNavigation();
     }
   };
 
@@ -165,7 +163,7 @@ export function NewExperimentForm() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("experiments.unsavedChangesTitle")}</DialogTitle>
-            <DialogDescription>{dialogMessage}</DialogDescription>
+            <DialogDescription>{t("experiments.unsavedChangesMessage")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={handleCancelNavigation}>

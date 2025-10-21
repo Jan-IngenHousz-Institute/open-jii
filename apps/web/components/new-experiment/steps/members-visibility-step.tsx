@@ -1,5 +1,8 @@
 "use client";
 
+import * as z from "zod";
+
+import { zCreateExperimentBodyBase, validateEmbargoDate } from "@repo/api";
 import type { CreateExperimentBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { WizardStepButtons } from "@repo/ui/components";
@@ -7,6 +10,37 @@ import type { WizardStepProps } from "@repo/ui/components";
 
 import { NewExperimentMembersCard } from "../new-experiment-members-card";
 import { NewExperimentVisibilityCard } from "../new-experiment-visibility-card";
+
+const membersVisibilityBase = zCreateExperimentBodyBase.pick({
+  members: true,
+  visibility: true,
+  embargoUntil: true,
+});
+
+const shape = membersVisibilityBase.shape;
+
+export const membersVisibilitySchema = z.object({
+  ...shape,
+  embargoUntil: shape.embargoUntil.refine(
+    (value) => {
+      // Create a dummy refinement context and capture whether issues were added
+      let hasIssue = false;
+      validateEmbargoDate(
+        value,
+        {
+          addIssue: () => {
+            hasIssue = true;
+          },
+        } as unknown as z.RefinementCtx,
+        ["embargoUntil"],
+      );
+      return !hasIssue;
+    },
+    {
+      message: "Embargo end date must be between tomorrow and 365 days from now",
+    },
+  ),
+});
 
 export function MembersVisibilityStep({
   form,

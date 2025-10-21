@@ -1,11 +1,14 @@
 "use client";
 
+import { zCreateExperimentBodyBase } from "@repo/api";
 import type { CreateExperimentBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { WizardStepButtons } from "@repo/ui/components";
 import type { WizardStepProps } from "@repo/ui/components";
 
 import { NewExperimentProtocolsCard } from "../new-experiment-protocols-card";
+
+export const protocolsSchema = zCreateExperimentBodyBase.pick({ protocols: true });
 
 export function ProtocolsStep({
   form,
