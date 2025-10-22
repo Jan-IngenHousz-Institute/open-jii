@@ -196,9 +196,12 @@ raw_ambyte_schema = StructType([
 ])
 # COMMAND ----------
 
-# DBTITLE 1,Raw Ambyte Data Table
+# DBTITLE 1,Dynamic Ambyte Table Creation
+def create_ambyte_table_code():
+    """Generate code for ambyte streaming table."""
+    return f'''
 @dlt.table(
-    name=RAW_AMBYTE_TABLE,
+    name="{RAW_AMBYTE_TABLE}",
     comment="ambyte trace data processed from raw files stored in Databricks volume"
 )
 def raw_ambyte_data():
@@ -222,7 +225,7 @@ def raw_ambyte_data():
     
     for upload_dir in upload_directories:
         upload_dir_name = os.path.basename(upload_dir)
-        print(f"Processing upload directory: {upload_dir_name}")
+        print(f"Processing upload directory: {{upload_dir_name}}")
         
         # Parse upload time from directory name
         upload_time = parse_upload_time(upload_dir_name)
@@ -234,14 +237,14 @@ def raw_ambyte_data():
             byte_parent_folders = find_byte_folders(upload_dir)
             
             if byte_parent_folders:
-                print(f"Found {len(byte_parent_folders)} valid byte parent folders in {upload_dir_name}")
-                print(f"Byte parent folders: {[os.path.basename(x.rstrip('/')) for x in byte_parent_folders]}")
+                print(f"Found {{len(byte_parent_folders)}} valid byte parent folders in {{upload_dir_name}}")
+                print(f"Byte parent folders: {{[os.path.basename(x.rstrip('/')) for x in byte_parent_folders]}}")
             else:
-                print(f"No valid byte parent folders found in {upload_dir_name}")
+                print(f"No valid byte parent folders found in {{upload_dir_name}}")
                 continue
                 
         except Exception as e:
-            print(f"Error finding byte folders in {upload_dir_name}: {e}")
+            print(f"Error finding byte folders in {{upload_dir_name}}: {{e}}")
             continue
         
         # Process each byte folder within this upload directory
@@ -252,7 +255,7 @@ def raw_ambyte_data():
             files_per_byte, _ = load_files_per_byte(ambyte_folder, year_prefix=YEAR_PREFIX)
             files_per_byte = [lst for lst in files_per_byte if lst]
             
-            print(f"Loaded files for {ambyte_folder_name} in {upload_dir_name}: {len(files_per_byte)}")
+            print(f"Loaded files for {{ambyte_folder_name}} in {{upload_dir_name}}: {{len(files_per_byte)}}")
             
             # Process trace files
             df = process_trace_files(ambyte_folder_name, files_per_byte)
@@ -277,13 +280,29 @@ def raw_ambyte_data():
                     
                     all_data.append(spark_df)
                 except Exception as e:
-                    print(f"Error converting DataFrame to Spark DataFrame for {ambyte_folder_name} in {upload_dir_name}: {e}")
+                    print(f"Error converting DataFrame to Spark DataFrame for {{ambyte_folder_name}} in {{upload_dir_name}}: {{e}}")
     
     # Combine all spark dataframes if any were created
     if all_data:
         return all_data[0] if len(all_data) == 1 else all_data[0].unionAll(*all_data[1:])
     else:
         return spark.createDataFrame([], schema=raw_ambyte_schema)
+'''
+
+# Check if volume exists and only create table if it does
+try:
+    # Try to read from the volume path to check if it exists
+    volume_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads"
+    test_df = spark.read.format("text").load(volume_path)
+    # If we can create the DataFrame, the volume exists
+    print(f"Volume data-uploads exists at {volume_path}")
+    print("Creating streaming raw_ambyte_data table")
+    exec(create_ambyte_table_code(), globals())
+    print("Raw ambyte streaming table created successfully")
+        
+except Exception as e:
+    print(f"Volume data-uploads does not exist or is not accessible: {e}")
+    print("Skipping raw_ambyte_data table creation")
 
 # COMMAND ----------
 
