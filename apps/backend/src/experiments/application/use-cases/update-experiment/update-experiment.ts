@@ -59,7 +59,7 @@ export class UpdateExperimentUseCase {
           const updateFields = Object.keys(data).filter((key) => data[key] !== undefined);
           if (updateFields.length !== 1 || updateFields[0] !== "status") {
             this.logger.warn(
-              `Admin user ${userId} attempted to update fields other than status on archived experiment ${id}}`,
+              `Admin user ${userId} attempted to update fields other than status on archived experiment ${id}`,
             );
             return failure(
               AppError.forbidden("Only the status field can be updated on archived experiments"),
