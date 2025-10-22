@@ -22,7 +22,7 @@ import sys
 from typing import Dict, Any, List
 
 # Import the ambyte processing utilities
-from ambyte import process_trace_files, discover_and_validate_upload_directories, parse_upload_time, find_byte_folders, load_files_per_byte
+from ambyte import find_byte_folders, load_files_per_byte, process_trace_files, discover_and_validate_upload_directories, parse_upload_time
 # Import our macro processing library
 from multispeq import execute_macro_script, get_available_macros, process_macro_output_for_spark, infer_macro_schema
 
@@ -197,89 +197,93 @@ raw_ambyte_schema = StructType([
 # COMMAND ----------
 
 # DBTITLE 1,Raw Ambyte Data Table
-def create_ambyte_table_code():
-    """Generate code for ambyte streaming table."""
-    return '''
 @dlt.table(
     name=RAW_AMBYTE_TABLE,
     comment="ambyte trace data processed from raw files stored in Databricks volume"
 )
 def raw_ambyte_data():
     """
-    Streaming DLT table-generating function that processes Ambyte trace files from a Databricks volume
-    and creates a Delta table with the processed data using Auto Loader.
+    Main DLT table-generating function that processes Ambyte trace files from a Databricks volume
+    and creates a Delta table with the processed data.
     """
-    
     # Configuration - specify the base path in the Databricks volume
+    # This should be configured based on your actual volume mount point
     ambyte_base_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/ambyte"
     
-    # For streaming tables, we cannot use discovery functions in the main function
-    # Instead, use Auto Loader to stream files and process using pandas UDF
-    df = (
-        spark.readStream.format("cloudFiles")
-        .option("cloudFiles.format", "text")
-        .option("recursiveFileLookup", "true")
-        .option("cloudFiles.schemaLocation", f"/tmp/checkpoints/{EXPERIMENT_SCHEMA}/ambyte_schema")
-        .option("pathGlobFilter", "**/*.txt")  # Catch ANY .txt files first
-        .option("cloudFiles.allowOverwrites", "true")
-        .load(ambyte_base_path)
-    )
+    # Find all upload directories with the format upload_YYYYMMDD_SS
+    upload_directories, success = discover_and_validate_upload_directories(ambyte_base_path)
     
-    # First, let's add a simple transform to ensure we're detecting files at all
-    df_with_count = df.select(
-        F.lit("FILE_DETECTED").alias("detection_status"),
-        F.col("_metadata.file_path").alias("detected_path"),
-        F.length(F.col("value")).alias("file_size")
-    )
+    if not success or not upload_directories:
+        # Return an empty dataframe with the correct schema if no upload directories are found
+        return spark.createDataFrame([], schema=raw_ambyte_schema)
     
-    # Create a simple debug row for every file detected
-    debug_df = df_with_count.select(
-        F.current_timestamp().alias("Time"),
-        F.lit(None).cast("int").alias("SigF"),
-        F.lit(None).cast("int").alias("RefF"),
-        F.lit(None).cast("int").alias("Sun"),
-        F.lit(None).cast("int").alias("Leaf"),
-        F.lit(None).cast("int").alias("Sig7"),
-        F.lit(None).cast("int").alias("Ref7"),
-        F.lit(None).cast("int").alias("Actinic"),
-        F.lit(None).cast("float").alias("Temp"),
-        F.lit(None).cast("int").alias("Res"),
-        F.lit(None).cast("boolean").alias("Full"),
-        F.col("detection_status").alias("Type"),
-        F.col("file_size").alias("Count"),  
-        F.lit(None).cast("int").alias("PTS"),
-        F.lit(None).cast("float").alias("PAR"),
-        F.lit(None).cast("float").alias("raw"),
-        F.lit(None).cast("array<int>").alias("spec"),
-        F.lit(None).cast("float").alias("BoardT"),
-        F.regexp_extract(F.col("detected_path"), r".*/([^/]+)/[^/]*\\.txt$", 1).alias("ambyte_folder"),
-        F.when(F.regexp_extract(F.col("detected_path"), r".*/([0-9]+|unknown_ambit)/[^/]*\\.txt$", 1) == "unknown_ambit", 0)
-         .otherwise(F.regexp_extract(F.col("detected_path"), r".*/([0-9]+)/[^/]*\\.txt$", 1).cast("int"))
-         .alias("ambit_index"),
-        F.lit(None).cast("float").alias("meta_Actinic"),
-        F.lit(None).cast("int").alias("meta_Dark"),
-        F.regexp_extract(F.col("detected_path"), r".*/([^/]*upload_[^/]*)/.*", 1).alias("upload_directory"),
-        F.lit(None).cast("timestamp").alias("upload_time")
-    )
+    # Process each upload directory
+    all_data = []
     
-    # Return the debug dataframe first to see if files are being detected
-    return debug_df
-'''
-
-# Check if volume exists and only create table if it does
-try:
-    # Try to read from the volume path to check if it exists
-    volume_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads"
-    test_df = spark.read.format("text").load(volume_path)
-    # If we can create the DataFrame, the volume exists
-    print(f"Volume data-uploads exists at {volume_path}")
-    print("Creating streaming raw_ambyte_data table")
-    exec(create_ambyte_table_code(), globals())
-    print("Raw ambyte streaming table created successfully")
+    for upload_dir in upload_directories:
+        upload_dir_name = os.path.basename(upload_dir)
+        print(f"Processing upload directory: {upload_dir_name}")
         
-except Exception as e:
-    print(f"Volume data-uploads does not exist or is not accessible: {e}")
-    print("Skipping raw_ambyte_data table creation")
+        # Parse upload time from directory name
+        upload_time = parse_upload_time(upload_dir_name)
+        
+        # Find all Ambyte_N and unknown_ambyte folders within this upload directory
+        # Each of these folders should contain either 1-4 subfolders or unknown_ambit subfolder
+        try:
+            # Use the existing find_byte_folders function to discover valid byte parent folders
+            byte_parent_folders = find_byte_folders(upload_dir)
+            
+            if byte_parent_folders:
+                print(f"Found {len(byte_parent_folders)} valid byte parent folders in {upload_dir_name}")
+                print(f"Byte parent folders: {[os.path.basename(x.rstrip('/')) for x in byte_parent_folders]}")
+            else:
+                print(f"No valid byte parent folders found in {upload_dir_name}")
+                continue
+                
+        except Exception as e:
+            print(f"Error finding byte folders in {upload_dir_name}: {e}")
+            continue
+        
+        # Process each byte folder within this upload directory
+        for ambyte_folder in byte_parent_folders:
+            ambyte_folder_name = os.path.basename(ambyte_folder.rstrip('/'))
+            
+            # Load files from byte subfolders or unknown_ambit
+            files_per_byte, _ = load_files_per_byte(ambyte_folder, year_prefix=YEAR_PREFIX)
+            files_per_byte = [lst for lst in files_per_byte if lst]
+            
+            print(f"Loaded files for {ambyte_folder_name} in {upload_dir_name}: {len(files_per_byte)}")
+            
+            # Process trace files
+            df = process_trace_files(ambyte_folder_name, files_per_byte)
+            
+            if df is not None:
+                # Convert pandas DataFrame to Spark DataFrame
+                try:
+                    # Reset index to make Time a regular column
+                    df = df.reset_index()
+                    
+                    # Add upload directory info to the dataframe
+                    df['upload_directory'] = upload_dir_name
+                    
+                    # Add upload time to the dataframe (convert to pandas timestamp first)
+                    if upload_time is not None:
+                        df['upload_time'] = upload_time
+                    else:
+                        df['upload_time'] = None
+                    
+                    # Convert pandas DataFrame to Spark DataFrame
+                    spark_df = spark.createDataFrame(df)
+                    
+                    all_data.append(spark_df)
+                except Exception as e:
+                    print(f"Error converting DataFrame to Spark DataFrame for {ambyte_folder_name} in {upload_dir_name}: {e}")
+    
+    # Combine all spark dataframes if any were created
+    if all_data:
+        return all_data[0] if len(all_data) == 1 else all_data[0].unionAll(*all_data[1:])
+    else:
+        return spark.createDataFrame([], schema=raw_ambyte_schema)
 
 # COMMAND ----------
 
