@@ -50,32 +50,20 @@ export function ReviewStep({
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Details - full width */}
-        <div className="md:col-span-2">
-          <DetailsSection
-            formData={formData}
-            onEdit={() => (goToStep as (index: number) => void)(0)}
-          />
-        </div>
+        <DetailsSection className="md:col-span-2" formData={formData} onEdit={() => goToStep(0)} />
 
         {/* Members - full width */}
-        <div className="md:col-span-2">
-          <MembersVisibilitySection
-            formData={formData}
-            onEdit={() => (goToStep as (index: number) => void)(1)}
-          />
-        </div>
+        <MembersVisibilitySection
+          className="md:col-span-2"
+          formData={formData}
+          onEdit={() => goToStep(1)}
+        />
 
         {/* Protocols (left) */}
-        <ProtocolsSection
-          formData={formData}
-          onEdit={() => (goToStep as (index: number) => void)(2)}
-        />
+        <ProtocolsSection formData={formData} onEdit={() => goToStep(2)} />
 
         {/* Locations (right) */}
-        <LocationsSection
-          formData={formData}
-          onEdit={() => (goToStep as (index: number) => void)(3)}
-        />
+        <LocationsSection formData={formData} onEdit={() => goToStep(3)} />
       </div>
 
       <WizardStepButtons

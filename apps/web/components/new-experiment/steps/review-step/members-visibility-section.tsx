@@ -9,14 +9,19 @@ import { embargoUntilHelperString } from "../../embargo-utils";
 interface MembersVisibilitySectionProps {
   formData: CreateExperimentBody;
   onEdit: () => void;
+  className?: string;
 }
 
-export function MembersVisibilitySection({ formData, onEdit }: MembersVisibilitySectionProps) {
+export function MembersVisibilitySection({
+  formData,
+  onEdit,
+  className,
+}: MembersVisibilitySectionProps) {
   const { t } = useTranslation();
   const embargoPublicDate = embargoUntilHelperString(formData.embargoUntil, t);
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="text-base font-semibold">
           {t("experiments.membersAndVisibility")}

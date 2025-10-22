@@ -14,13 +14,14 @@ import {
 interface DetailsSectionProps {
   formData: CreateExperimentBody;
   onEdit: () => void;
+  className?: string;
 }
 
-export function DetailsSection({ formData, onEdit }: DetailsSectionProps) {
+export function DetailsSection({ formData, onEdit, className }: DetailsSectionProps) {
   const { t } = useTranslation();
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="text-base font-semibold">{t("experiments.detailsTitle")}</CardTitle>
         <Button type="button" onClick={onEdit} variant="link" size="sm">
