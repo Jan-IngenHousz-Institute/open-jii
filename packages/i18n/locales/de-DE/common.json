@@ -95,7 +95,7 @@
     "seeProtocolDetails": "Protokolldetails anzeigen",
     "family": "Familie:",
     "createdBy": "Erstellt von:",
-    "needAdminAccessArchived": "Nur Admins können auf die Einstellungen für archivierte Experimente zugreifen",
+    "needAdminAccessArchived": "Toegang tot instellingen geweigerd voor gearchiveerde experimenten",
     "needMemberAccess": "Sie müssen Mitglied sein, um auf die Experiment-Einstellungen zuzugreifen",
     "measurementPanelTitle": "Messprotokoll",
     "detailsTitle": "Details",

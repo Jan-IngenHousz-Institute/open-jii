@@ -180,19 +180,36 @@ describe("UpdateExperimentUseCase", () => {
     expect(result.error.message).toContain("You do not have access to this");
   });
 
-  it("should allow admin to update an archived experiment", async () => {
-    // Create experiment and archive by admin
+  it("should allow admin to update only the status of an archived experiment", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Archived Admin Update",
       userId: testUserId,
     });
+
+    // Archive
     await useCase.execute(experiment.id, { status: "archived" as const }, testUserId);
 
-    const updateData = { name: "Admin Updated Name" };
-    const result = await useCase.execute(experiment.id, updateData, testUserId);
+    // Try updating non-status field (should fail)
+    const forbiddenResult = await useCase.execute(
+      experiment.id,
+      { name: "Not Allowed" },
+      testUserId,
+    );
+    expect(forbiddenResult.isSuccess()).toBe(false);
+    assertFailure(forbiddenResult);
+    expect(forbiddenResult.error.code).toBe("FORBIDDEN");
+    expect(forbiddenResult.error.message).toContain(
+      "Only the status field can be updated on archived experiments",
+    );
 
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    expect(result.value.name).toBe("Admin Updated Name");
+    // Now test valid status update
+    const reopenResult = await useCase.execute(
+      experiment.id,
+      { status: "active" as const },
+      testUserId,
+    );
+    expect(reopenResult.isSuccess()).toBe(true);
+    assertSuccess(reopenResult);
+    expect(reopenResult.value.status).toBe("active");
   });
 });

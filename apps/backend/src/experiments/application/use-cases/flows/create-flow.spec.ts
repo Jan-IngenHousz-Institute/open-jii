@@ -64,60 +64,33 @@ describe("CreateFlowUseCase", () => {
     expect(created.graph).toEqual(graph);
   });
 
-  it("returns 403 when members attempt to create flow for archived experiments", async () => {
+  it("returns 403 when any user attempts to create flow for archived experiments", async () => {
+    // Create an archived experiment
     const { experiment } = await testApp.createExperiment({
       name: "Archived Exp",
       userId: ownerId,
     });
-    await testApp.addExperimentMember(experiment.id, memberId, "member");
 
-    // Mock experimentRepository.checkAccess to simulate archived experiment where member has access but is not admin
+    // Mock repository to simulate archived experiment regardless of role
     const experimentRepository = testApp.module.get(ExperimentRepository);
     vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
       success({
         experiment: { ...experiment, status: "archived" },
         hasAccess: true,
         hasArchiveAccess: false,
-        isAdmin: false,
-      }),
-    );
-
-    try {
-      const graph = testApp.sampleFlowGraph({ questionKind: "multi_choice" });
-      const result = await useCase.execute(experiment.id, memberId, graph);
-      expect(result.isFailure()).toBe(true);
-      assertFailure(result);
-      expect(result.error.statusCode).toBe(403);
-      expect(result.error.message).toContain("You do not have access to this experiment");
-    } finally {
-      vi.restoreAllMocks();
-    }
-  });
-
-  it("allows admins to create flow for archived experiments", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Archived Exp Admin",
-      userId: ownerId,
-    });
-
-    // Mock experimentRepository.checkAccess to simulate archived experiment and user is admin
-    const experimentRepository = testApp.module.get(ExperimentRepository);
-    vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-      success({
-        experiment: { ...experiment, status: "archived" },
-        hasAccess: true,
-        hasArchiveAccess: true,
         isAdmin: true,
       }),
     );
 
+    const graph = testApp.sampleFlowGraph({ questionKind: "multi_choice" });
+
     try {
-      const graph = testApp.sampleFlowGraph({ questionKind: "multi_choice" });
       const result = await useCase.execute(experiment.id, ownerId, graph);
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      const created = result.value;
-      expect(created.graph).toEqual(graph);
+
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(403);
+      expect(result.error.message).toContain("You do not have access to this experiment");
     } finally {
       vi.restoreAllMocks();
     }

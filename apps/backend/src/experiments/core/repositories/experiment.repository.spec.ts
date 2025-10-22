@@ -763,15 +763,15 @@ describe("ExperimentRepository", () => {
       expect(membership.length).toBe(0);
     });
 
-    it("should set hasArchiveAccess=false for non-admin members and true for admins on archived experiments", async () => {
-      // Arrange: create an experiment and archive it
+    it("should set hasArchiveAccess=false for all users when experiment is archived", async () => {
+      // Arrange: create an archived experiment
       const { experiment } = await testApp.createExperiment({
         name: "Archive Access Test",
         userId: testUserId,
         status: "archived",
       });
 
-      // Create a member user and add as regular member
+      // Create a member user and add them as a regular member
       const memberId = await testApp.createTestUser({ email: "archive-member@example.com" });
       await testApp.addExperimentMember(experiment.id, memberId, "member");
 
@@ -779,13 +779,14 @@ describe("ExperimentRepository", () => {
       const memberResult = await repository.checkAccess(experiment.id, memberId);
       expect(memberResult.isSuccess()).toBe(true);
       assertSuccess(memberResult);
-      expect(memberResult.value.experiment).toBeTruthy();
-      // Non-admin members should NOT have archive access
-      expect(memberResult.value.hasAccess).toBe(true);
-      expect(memberResult.value.isAdmin).toBe(false);
-      expect(memberResult.value.hasArchiveAccess).toBe(false);
 
-      // Now promote to admin by updating the role directly to avoid duplicate insert
+      const memberAccess = memberResult.value;
+      expect(memberAccess.experiment).toBeTruthy();
+      expect(memberAccess.hasAccess).toBe(true);
+      expect(memberAccess.isAdmin).toBe(false);
+      expect(memberAccess.hasArchiveAccess).toBe(false);
+
+      // Promote to admin directly
       await testApp.database
         .update(experimentMembers)
         .set({ role: "admin" })
@@ -796,14 +797,16 @@ describe("ExperimentRepository", () => {
           ),
         );
 
+      // Act again: check access for admin
       const adminResult = await repository.checkAccess(experiment.id, memberId);
       expect(adminResult.isSuccess()).toBe(true);
       assertSuccess(adminResult);
-      expect(adminResult.value.experiment).toBeTruthy();
-      // Admins should have archive access
-      expect(adminResult.value.hasAccess).toBe(true);
-      expect(adminResult.value.isAdmin).toBe(true);
-      expect(adminResult.value.hasArchiveAccess).toBe(true);
+
+      const adminAccess = adminResult.value;
+      expect(adminAccess.experiment).toBeTruthy();
+      expect(adminAccess.hasAccess).toBe(true);
+      expect(adminAccess.isAdmin).toBe(true);
+      expect(adminAccess.hasArchiveAccess).toBe(false);
     });
 
     it("should return null experiment and no access when experiment does not exist", async () => {

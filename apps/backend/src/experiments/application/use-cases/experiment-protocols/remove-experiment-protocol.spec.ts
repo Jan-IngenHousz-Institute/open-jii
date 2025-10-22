@@ -94,4 +94,27 @@ describe("RemoveExperimentProtocolUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
   });
+
+  it("should return FORBIDDEN when attempting to remove a protocol from an archived experiment", async () => {
+    // Create an experiment and archive it
+    const { experiment } = await testApp.createExperiment({
+      name: "Archived Protocol Remove Test",
+      userId: testUserId,
+      status: "archived",
+    });
+
+    // Create a protocol and associate it
+    const protocol = await testApp.createProtocol({
+      name: "Archived Test Protocol",
+      createdBy: testUserId,
+    });
+    await testApp.addExperimentProtocol(experiment.id, protocol.id);
+
+    // Attempt to remove as admin (creator)
+    const result = await useCase.execute(experiment.id, protocol.id, testUserId);
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+  });
 });

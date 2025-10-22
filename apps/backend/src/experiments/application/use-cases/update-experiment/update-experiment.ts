@@ -23,11 +23,11 @@ export class UpdateExperimentUseCase {
     return accessCheckResult.chain(
       async ({
         experiment,
-        hasArchiveAccess,
+        hasAccess,
         isAdmin,
       }: {
         experiment: ExperimentDto | null;
-        hasArchiveAccess: boolean;
+        hasAccess: boolean;
         isAdmin: boolean;
       }) => {
         if (!experiment) {
@@ -41,12 +41,38 @@ export class UpdateExperimentUseCase {
           return failure(AppError.forbidden("Only admins can archive experiments"));
         }
 
-        if (!hasArchiveAccess) {
+        if (!hasAccess) {
           this.logger.warn(`User ${userId} does not have access to experiment ${id}`);
           return failure(AppError.forbidden("You do not have access to this experiment"));
         }
 
-        this.logger.debug(`Updating experiment "${experiment.name}" (ID: ${id})`);
+        // Handling for archived experiments
+        if (experiment.status === "archived") {
+          if (!isAdmin) {
+            this.logger.warn(
+              `Non-admin user ${userId} attempted to update archived experiment ${id}`,
+            );
+            return failure(AppError.forbidden("You do not have access to this experiment"));
+          }
+
+          // Admins can only update the status field when experiment is archived
+          const updateFields = Object.keys(data).filter((key) => data[key] !== undefined);
+          if (updateFields.length !== 1 || updateFields[0] !== "status") {
+            this.logger.warn(
+              `Admin user ${userId} attempted to update fields other than status on archived experiment ${id}}`,
+            );
+            return failure(
+              AppError.forbidden("Only the status field can be updated on archived experiments"),
+            );
+          }
+
+          this.logger.debug(
+            `Admin ${userId} updating status of archived experiment "${experiment.name}" (ID: ${id})`,
+          );
+        } else {
+          this.logger.debug(`Updating experiment "${experiment.name}" (ID: ${id})`);
+        }
+
         // Update the experiment
         const updateResult = await this.experimentRepository.update(id, data);
         return updateResult.chain((updatedExperiments: ExperimentDto[]) => {

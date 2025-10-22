@@ -198,9 +198,9 @@ export class ExperimentRepository {
       const isMember = memberRole !== null;
       const isAdmin = memberRole === "admin";
 
-      // If experiment is archived, only admins have access
+      // If experiment is archived, no one has access
       // Otherwise, any member has access
-      const hasArchiveAccess = experiment.status === "archived" ? isAdmin : isMember;
+      const hasArchiveAccess = experiment.status === "archived" ? false : isMember;
 
       return { experiment, hasAccess: isMember, isAdmin, hasArchiveAccess };
     });

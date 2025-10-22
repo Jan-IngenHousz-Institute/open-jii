@@ -112,4 +112,27 @@ describe("AddExperimentMembersUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("FORBIDDEN");
   });
+
+  it("should return FORBIDDEN when attempting to add members to an archived experiment", async () => {
+    // Create an experiment and archive it
+    const { experiment } = await testApp.createExperiment({
+      name: "Archived Add Members Test",
+      userId: testUserId,
+      status: "archived",
+    });
+
+    // Create a user to add
+    const memberId = await testApp.createTestUser({ email: "archived-add-member@example.com" });
+
+    // Attempt to add as the creator/admin
+    const result = await useCase.execute(
+      experiment.id,
+      [{ userId: memberId, role: "member" }],
+      testUserId,
+    );
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+  });
 });
