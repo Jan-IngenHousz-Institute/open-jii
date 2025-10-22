@@ -8,7 +8,6 @@ import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExper
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { PaginationState, Updater } from "@tanstack/react-table";
 import { getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
-import { Download } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import z from "zod";
@@ -23,7 +22,6 @@ import {
 
 import { useTranslation } from "@repo/i18n";
 import {
-  Button,
   Form,
   Label,
   Pagination,
@@ -210,47 +208,22 @@ export function ExperimentDataTable({
   const loadingRowCount =
     pagination.pageIndex + 1 == totalPages ? totalRows % pagination.pageSize : pagination.pageSize;
 
-  const isBulkActionsEnabled = selectionForm.getValues("allRows").length > 0;
-
-  // Prevent form submission to avoid URL navigation
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-  };
-
   return (
     <Form {...selectionForm}>
-      <form onSubmit={handleSubmit}>
-        {/* <input type="hidden" name="allRows" /> */}
-        {/*TODO: The option with bulk actions will be removed as soon as the backend code is ready.*/}
-        {!isBulkActionsEnabled && (
-          <div className="mb-4 flex items-center justify-between">
-            <h5 className="text-base font-medium">{displayName ?? tableName}</h5>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDownloadModalOpen(true)}
-              className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              {t("experimentDataTable.download")}
-            </Button>
-          </div>
-        )}
-        {isBulkActionsEnabled && (
-          <>
-            <h5 className="text-base font-medium">{displayName ?? tableName}</h5>
-            <BulkActionsBar
-              experimentId={experimentId}
-              tableName={tableName}
-              rowIds={selectedRowIds}
-              totalComments={totalSelectedComments}
-              totalFlags={totalSelectedFlags}
-              clearSelection={() => selectionForm.setValue("selectedRowId", [])}
-              downloadTable={() => setDownloadModalOpen(true)}
-            />
-          </>
-        )}
+      <form>
+        <input type="hidden" name="allRows" />
+        <h5 className="text-base font-medium">
+          {t("experimentDataTable.table")} {tableName}
+        </h5>
+        <BulkActionsBar
+          experimentId={experimentId}
+          tableName={tableName}
+          rowIds={selectedRowIds}
+          totalComments={totalSelectedComments}
+          totalFlags={totalSelectedFlags}
+          clearSelection={() => selectionForm.setValue("selectedRowId", [])}
+          downloadTable={() => setDownloadModalOpen(true)}
+        />
         <div className="text-muted-foreground relative overflow-visible rounded-md border">
           <Table>
             <ExperimentTableHeader headerGroups={table.getHeaderGroups()} />
