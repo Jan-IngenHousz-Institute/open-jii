@@ -62,7 +62,7 @@
   "data": "Data",
   "experimentData": {
     "title": "Experiment Data",
-    "description": "View and manage data associated with this experiment.",
+    "description": "View and manage data associated with this experiment. Data is processed every 15 minutes",
     "uploadData": "Upload Data",
     "provisioning": {
       "title": "Experiment is Being Prepared",
