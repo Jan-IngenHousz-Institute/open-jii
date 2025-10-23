@@ -2,6 +2,7 @@ import React from "react";
 import { useExperimentFlow } from "~/hooks/use-experiment-flow";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
+import { FormValidationProvider } from "../hooks/use-form-validation";
 import { ActiveState } from "./flow-states/active-state";
 import { CompletedState } from "./flow-states/completed-state";
 import { EmptyState } from "./flow-states/empty-state";
@@ -61,21 +62,23 @@ export function CustomMeasurementFlowStep() {
   }
 
   return (
-    <ActiveState
-      currentNode={currentNode}
-      currentFlowStep={currentFlowStep}
-      flowNodesLength={flowNodes.length}
-      iterationCount={iterationCount}
-      onNext={nextStep}
-      onUpload={() => {
-        console.log("Upload clicked");
-        startNewIteration();
-      }}
-      onRetry={retryCurrentIteration}
-      onFinish={() => {
-        console.log("Finish flow clicked");
-        finishFlow();
-      }}
-    />
+    <FormValidationProvider>
+      <ActiveState
+        currentNode={currentNode}
+        currentFlowStep={currentFlowStep}
+        flowNodesLength={flowNodes.length}
+        iterationCount={iterationCount}
+        onNext={nextStep}
+        onUpload={() => {
+          console.log("Upload clicked");
+          startNewIteration();
+        }}
+        onRetry={retryCurrentIteration}
+        onFinish={() => {
+          console.log("Finish flow clicked");
+          finishFlow();
+        }}
+      />
+    </FormValidationProvider>
   );
 }

@@ -1,8 +1,10 @@
 import { clsx } from "clsx";
-import React, { useState } from "react";
+import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
+import { calculateGridLayout } from "~/screens/measurement-flow-screen/components/flow-nodes/question-types/utils/grid-layout";
 
+import { useFormValidation } from "../../../hooks/use-form-validation";
 import { QuestionContent } from "../../../types";
 
 interface MultipleChoiceQuestionProps {
@@ -11,66 +13,87 @@ interface MultipleChoiceQuestionProps {
 
 export function MultipleChoiceQuestion({ content }: MultipleChoiceQuestionProps) {
   const { classes } = useTheme();
-  const [selectedValues, setSelectedValues] = useState<string[]>([]);
+  const { setValid } = useFormValidation();
+  const [selectedValue, setSelectedValue] = React.useState<string | null>(null);
 
-  const handleOptionToggle = (value: string) => {
-    setSelectedValues((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
-    );
+  // Mock data for disabled options (previously used choices)
+  const [disabledOptions] = React.useState<string[]>([
+    // Example: some options that were used in previous cycles
+    // "Option 1", "Option 3"
+  ]);
+
+  const handleOptionSelect = (value: string) => {
+    if (disabledOptions.includes(value)) return; // Don't allow selection of disabled options
+    const newValue = selectedValue === value ? null : value;
+    setSelectedValue(newValue);
+
+    // Update form validation
+    if (content.required) {
+      setValid(newValue !== null);
+    }
   };
+
+  // Update validation on mount
+  React.useEffect(() => {
+    if (content.required) {
+      setValid(selectedValue !== null);
+    }
+  }, [content.required, selectedValue, setValid]);
+
+  // Calculate responsive grid layout
+  const numOptions = content.options?.length ?? 0;
+  const { buttonHeight, buttonWidth } = calculateGridLayout(numOptions);
 
   return (
     <View>
-      <View className="space-y-2">
-        {content.options?.map((option, index) => (
-          <TouchableOpacity
-            key={index}
-            className={clsx(
-              "flex-row items-center rounded-lg border p-3",
-              classes.border,
-              selectedValues.includes(option)
-                ? clsx("border-blue-500 bg-blue-50 dark:bg-blue-900/20", classes.card)
-                : classes.card,
-            )}
-            onPress={() => handleOptionToggle(option)}
-            activeOpacity={0.7}
-          >
-            <View
+      <View className="flex-row flex-wrap justify-center" style={{ gap: 8 }}>
+        {content.options?.map((option, index) => {
+          const isSelected = selectedValue === option;
+          const isDisabled = disabledOptions.includes(option);
+
+          return (
+            <TouchableOpacity
+              key={index}
               className={clsx(
-                "mr-3 h-5 w-5 items-center justify-center rounded border-2",
-                selectedValues.includes(option)
-                  ? "border-blue-500 bg-blue-500"
-                  : "border-gray-300 dark:border-gray-600",
+                "items-center justify-center rounded-lg border-2",
+                isSelected
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                  : isDisabled
+                    ? "border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800"
+                    : "border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800",
               )}
+              style={{
+                width: buttonWidth,
+                height: buttonHeight,
+              }}
+              onPress={() => handleOptionSelect(option)}
+              disabled={isDisabled}
+              activeOpacity={isDisabled ? 1 : 0.7}
             >
-              {selectedValues.includes(option) && (
-                <Text className="text-xs font-bold text-white">✓</Text>
-              )}
-            </View>
-            <Text
-              className={clsx(
-                "flex-1 text-base",
-                selectedValues.includes(option) ? classes.text : classes.textSecondary,
-              )}
-            >
-              {option}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                className={clsx(
+                  "px-2 text-center font-medium",
+                  isSelected
+                    ? "text-blue-600 dark:text-blue-400"
+                    : isDisabled
+                      ? "text-gray-400 dark:text-gray-500"
+                      : classes.text,
+                )}
+                numberOfLines={2}
+                style={{ fontSize: numOptions <= 2 ? 16 : numOptions <= 4 ? 14 : 12 }}
+              >
+                {option}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
-      <View className="mt-2">
-        {selectedValues.length > 0 && (
-          <Text className={clsx("text-sm", classes.textMuted)}>
-            Selected: {selectedValues.length} option{selectedValues.length !== 1 ? "s" : ""}
-          </Text>
-        )}
-        {content.required && selectedValues.length === 0 && (
-          <Text className={clsx("text-sm text-red-500", classes.text)}>
-            Please select at least one option
-          </Text>
-        )}
-      </View>
+      {disabledOptions.length > 0 && (
+        <Text className={clsx("mt-3 text-center text-xs", classes.textMuted)}>
+          Previously used options are disabled
+        </Text>
+      )}
     </View>
   );
 }

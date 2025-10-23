@@ -16,8 +16,6 @@ interface QuestionNodeProps {
 export function QuestionNode({ content }: QuestionNodeProps) {
   const { classes } = useTheme();
 
-  console.log("content", content);
-
   const renderQuestionType = () => {
     switch (content.kind) {
       case "text":
@@ -42,17 +40,10 @@ export function QuestionNode({ content }: QuestionNodeProps) {
   return (
     <View className={clsx("rounded-xl border", classes.card, classes.border)}>
       <View className="border-b border-gray-200 p-4 dark:border-gray-700">
-        <Text className={clsx("text-lg font-semibold", classes.text)}>Question</Text>
-        {content.required && (
-          <Text className={clsx("text-sm text-red-500", classes.text)}>* Required</Text>
-        )}
+        <Text className={clsx("text-lg font-semibold", classes.text)}>{content.text}</Text>
       </View>
 
-      <View className="p-4">
-        <Text className={clsx("mb-4 text-base leading-6", classes.text)}>{content.text}</Text>
-
-        {renderQuestionType()}
-      </View>
+      <View className="p-4">{renderQuestionType()}</View>
     </View>
   );
 }
