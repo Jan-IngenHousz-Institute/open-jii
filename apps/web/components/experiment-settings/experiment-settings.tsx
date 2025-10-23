@@ -11,7 +11,6 @@ import { ExperimentDetailsCard } from "./experiment-details-card";
 import { ExperimentInfoCard } from "./experiment-info-card";
 import { ExperimentLocationManagement } from "./experiment-location-management-card";
 import { ExperimentMemberManagement } from "./experiment-member-management-card";
-import { ExperimentProtocolManagement } from "./experiment-protocol-management-card";
 import { ExperimentVisibilityCard } from "./experiment-visibility-card";
 
 interface ExperimentSettingsProps {
@@ -88,9 +87,6 @@ export function ExperimentSettings({ experimentId, archived = false }: Experimen
           embargoUntil={experiment.embargoUntil}
         />
       </div>
-
-      {/* Protocol Management - New Row */}
-      <ExperimentProtocolManagement experimentId={experimentId} />
 
       {/* Location Management - New Row */}
       <ExperimentLocationManagement experimentId={experimentId} />
