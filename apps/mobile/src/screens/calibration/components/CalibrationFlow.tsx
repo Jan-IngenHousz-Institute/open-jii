@@ -184,6 +184,7 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
             progressPercentage={getProgressPercentage()}
             onUserInputChange={setCurrentUserInput}
             onTakeMeasurement={handleMeasurement}
+            onCancelMeasurement={console.log}
           />
         );
 

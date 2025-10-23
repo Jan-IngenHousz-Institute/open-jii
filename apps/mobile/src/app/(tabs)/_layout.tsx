@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home, User, FlaskConical, Activity, Settings } from "lucide-react-native";
+import { Home, User, FlaskConical, Activity, Settings, Workflow } from "lucide-react-native";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "~/hooks/use-theme";
@@ -54,6 +54,13 @@ export default function TabLayout() {
           options={{
             title: "Scan",
             tabBarIcon: ({ color, size }) => <Activity size={size} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="measurement-flow"
+          options={{
+            title: "Flow",
+            tabBarIcon: ({ color, size }) => <Workflow size={size} color={color} />,
           }}
         />
         <Tabs.Screen
