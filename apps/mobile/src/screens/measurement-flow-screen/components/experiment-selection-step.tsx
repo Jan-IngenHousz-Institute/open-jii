@@ -7,7 +7,6 @@ import { Dropdown } from "~/components/Dropdown";
 import { useExperiments } from "~/hooks/use-experiments";
 import { useTheme } from "~/hooks/use-theme";
 import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
-import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 interface ExperimentSelectionStepProps {
   onContinue?: (experimentId: string) => void;

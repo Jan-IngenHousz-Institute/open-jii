@@ -1,28 +1,25 @@
 import React from "react";
-import { View } from "react-native";
-import { Button } from "~/components/Button";
+import { View, Text, TouchableOpacity } from "react-native";
+import { useTheme } from "~/hooks/use-theme";
 
 interface BackButtonProps {
   onPress: () => void;
 }
 
 export function BackButton({ onPress }: BackButtonProps) {
+  const { colors } = useTheme();
+
   return (
     <View className="mb-4">
-      <Button
-        title="← Back"
+      <TouchableOpacity
         onPress={onPress}
-        style={{
-          width: "auto",
-          alignSelf: "flex-start",
-          paddingHorizontal: 16,
-          paddingVertical: 8,
-          backgroundColor: "transparent",
-          borderWidth: 1,
-          borderColor: "#6B7280",
-        }}
-        textStyle={{ color: "#6B7280", fontSize: 14 }}
-      />
+        className="self-start rounded-lg border border-gray-500 bg-transparent px-4 py-2"
+        activeOpacity={0.7}
+      >
+        <Text className="text-sm font-medium" style={{ color: colors.inactive }}>
+          ← Back
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
