@@ -1,5 +1,5 @@
 import React from "react";
-import { View } from "react-native";
+import { View, ScrollView } from "react-native";
 import { Button } from "~/components/Button";
 
 import { FlowNode } from "../../types";
@@ -38,12 +38,19 @@ export function ActiveState({
         iterationCount={iterationCount}
       />
 
-      {currentNode.type === "instruction" && <InstructionNode content={currentNode.content} />}
-      {currentNode.type === "question" && <QuestionNode content={currentNode.content} />}
-      {currentNode.type === "measurement" && <MeasurementNode content={currentNode.content} />}
-      {currentNode.type === "analysis" && <AnalysisNode content={currentNode.content} />}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 20 }}
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+      >
+        {currentNode.type === "instruction" && <InstructionNode content={currentNode.content} />}
+        {currentNode.type === "question" && <QuestionNode content={currentNode.content} />}
+        {currentNode.type === "measurement" && <MeasurementNode content={currentNode.content} />}
+        {currentNode.type === "analysis" && <AnalysisNode content={currentNode.content} />}
+      </ScrollView>
 
-      <View className="mt-8 items-center">
+      <View className="border-t border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
         {currentFlowStep < flowNodesLength - 1 ? (
           <Button title="Next" onPress={onNext} style={{ width: "100%" }} />
         ) : (
