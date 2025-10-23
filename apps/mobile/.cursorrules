@@ -34,5 +34,6 @@ React Native Component Organization Guidelines
 
 7. Naming & Code Style
 - Use dash case for directories and files.
+- All component files must use dash-case naming (e.g., `measurement-flow-screen.tsx`, `experiment-selection-step.tsx`).
 - Prefer the function keyword to lambda (arrow) for components/helpers.
 - Do not add types for things that can be automatically inferred by the TypeScript compiler.
