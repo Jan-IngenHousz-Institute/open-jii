@@ -14,10 +14,10 @@ export function MeasurementFlowScreen() {
     currentStep,
     flowNodes,
     currentFlowStep,
+    isFlowCompleted,
     setExperimentId,
     nextStep,
     previousStep,
-    previousFlowStep,
   } = useMeasurementFlowStore();
 
   const handleExperimentContinue = (experimentId: string) => {
@@ -28,11 +28,7 @@ export function MeasurementFlowScreen() {
   };
 
   const handleBackPress = () => {
-    if (currentStep > 0 && flowNodes.length > 0 && currentFlowStep > 0) {
-      previousFlowStep();
-    } else {
-      previousStep();
-    }
+    previousStep();
   };
 
   const shouldShowBackButton = currentStep > 0;

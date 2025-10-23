@@ -13,7 +13,7 @@ interface MeasurementFlowStore {
   currentFlowStep: number; // Current step within the flow (0-4 for 5 steps)
   isFlowCompleted: boolean;
 
-  // Experiment selection
+  // Navigation
   setExperimentId: (experimentId: string) => void;
   setCurrentStep: (step: number) => void;
   nextStep: () => void;
@@ -22,8 +22,6 @@ interface MeasurementFlowStore {
 
   // Flow orchestration
   setFlowNodes: (nodes: FlowNode[]) => void;
-  nextFlowStep: () => void;
-  previousFlowStep: () => void;
   completeFlow: () => void;
   resetFlow: () => void;
 }
@@ -40,30 +38,33 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
 
   setCurrentStep: (step) => set({ currentStep: step }),
 
-  nextStep: () => set((state) => ({ currentStep: state.currentStep + 1 })),
+  nextStep: () =>
+    set((state) => {
+      if (state.currentStep > 0 && state.flowNodes.length > 0) {
+        const nextFlowStep = state.currentFlowStep + 1;
+        const isCompleted = nextFlowStep >= state.flowNodes.length;
+        return {
+          currentFlowStep: isCompleted ? state.flowNodes.length : nextFlowStep,
+          isFlowCompleted: isCompleted,
+        };
+      } else {
+        return { currentStep: state.currentStep + 1 };
+      }
+    }),
 
-  previousStep: () => set((state) => ({ currentStep: Math.max(0, state.currentStep - 1) })),
+  previousStep: () =>
+    set((state) => {
+      if (state.currentStep > 0 && state.flowNodes.length > 0 && state.currentFlowStep > 0) {
+        return { currentFlowStep: state.currentFlowStep - 1, isFlowCompleted: false };
+      } else {
+        return { currentStep: Math.max(0, state.currentStep - 1) };
+      }
+    }),
 
   reset: () => set({ experimentId: undefined, currentStep: 0 }),
 
   // Flow orchestration
   setFlowNodes: (nodes) => set({ flowNodes: nodes, currentFlowStep: 0, isFlowCompleted: false }),
-
-  nextFlowStep: () =>
-    set((state) => {
-      const nextStep = state.currentFlowStep + 1;
-      const isCompleted = nextStep >= state.flowNodes.length;
-      return {
-        currentFlowStep: Math.min(nextStep, state.flowNodes.length - 1),
-        isFlowCompleted: isCompleted,
-      };
-    }),
-
-  previousFlowStep: () =>
-    set((state) => ({
-      currentFlowStep: Math.max(0, state.currentFlowStep - 1),
-      isFlowCompleted: false,
-    })),
 
   completeFlow: () => set({ isFlowCompleted: true }),
 
