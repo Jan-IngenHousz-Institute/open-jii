@@ -133,4 +133,23 @@ describe("AddExperimentProtocolsUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("FORBIDDEN");
   });
+
+  it("should return FORBIDDEN when attempting to add protocols to an archived experiment", async () => {
+    // Create an experiment and archive it
+    const { experiment } = await testApp.createExperiment({
+      name: "Archived Protocols Test",
+      userId: testUserId,
+      status: "archived",
+    });
+
+    const result = await useCase.execute(
+      experiment.id,
+      [{ protocolId: protocol1Id, order: 0 }],
+      testUserId,
+    );
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+  });
 });

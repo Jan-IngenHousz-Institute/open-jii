@@ -61,6 +61,14 @@ export function ExperimentSettings({ experimentId, archived = false }: Experimen
       </Alert>
     );
   }
+  if (archived) {
+    // For archived experiments show only the info card
+    return (
+      <div className="space-y-6">
+        <ExperimentInfoCard experimentId={experimentId} experiment={experiment} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

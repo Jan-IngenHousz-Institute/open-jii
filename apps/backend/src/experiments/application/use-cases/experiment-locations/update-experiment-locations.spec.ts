@@ -233,20 +233,20 @@ describe("UpdateExperimentLocationsUseCase", () => {
     expect(result.error.message).toContain("You do not have access to this experiment");
   });
 
-  it("should allow admins to update locations of archived experiments", async () => {
-    // Create an experiment
+  it("should forbid any user from updating locations of archived experiments", async () => {
+    // Create an archived experiment
     const { experiment } = await testApp.createExperiment({
       name: "Archived Experiment",
       userId: testUserId,
     });
 
-    // Mock experimentRepository.checkAccess to return the experiment as archived and user as admin
+    // Mock experimentRepository.checkAccess to return archived experiment
     const experimentRepository = testApp.module.get(ExperimentRepository);
     vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
       success({
         experiment: { ...experiment, status: "archived" },
         hasAccess: true,
-        hasArchiveAccess: true,
+        hasArchiveAccess: false,
         isAdmin: true,
       }),
     );
@@ -254,53 +254,15 @@ describe("UpdateExperimentLocationsUseCase", () => {
     const locationsToUpdate: CreateLocationDto[] = [
       {
         experimentId: experiment.id,
-        name: "Admin Updated Location",
-        latitude: 1.0,
-        longitude: 2.0,
+        name: "Attempted Update on Archived",
+        latitude: 1.23,
+        longitude: 4.56,
       },
     ];
 
     try {
       const result = await useCase.execute(experiment.id, locationsToUpdate, testUserId);
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value[0].name).toBe("Admin Updated Location");
-    } finally {
-      vi.restoreAllMocks();
-    }
-  });
 
-  it("should forbid non-admins from updating locations of archived experiments", async () => {
-    // Create an experiment
-    const { experiment } = await testApp.createExperiment({
-      name: "Archived Experiment Non-Admin",
-      userId: testUserId,
-    });
-
-    // Mock experimentRepository.checkAccess to return the experiment as archived and user as non-admin
-    const experimentRepository = testApp.module.get(ExperimentRepository);
-    vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
-      success({
-        experiment: { ...experiment, status: "archived" },
-        hasAccess: false,
-        hasArchiveAccess: false,
-        isAdmin: false,
-      }),
-    );
-
-    const anotherUserId = await testApp.createTestUser({});
-
-    const locationsToUpdate: CreateLocationDto[] = [
-      {
-        experimentId: experiment.id,
-        name: "Unauthorized Archived Update",
-        latitude: 3.0,
-        longitude: 4.0,
-      },
-    ];
-
-    try {
-      const result = await useCase.execute(experiment.id, locationsToUpdate, anotherUserId);
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
       expect(result.error.message).toContain("You do not have access to this experiment");
