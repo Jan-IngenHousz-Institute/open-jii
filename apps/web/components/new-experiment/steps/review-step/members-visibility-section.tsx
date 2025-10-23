@@ -13,6 +13,18 @@ interface MembersVisibilitySectionProps {
   className?: string;
 }
 
+const membersList = cva("space-y-2", {
+  variants: {
+    scrollable: {
+      true: "max-h-36 overflow-y-auto pr-2",
+      false: "",
+    },
+  },
+  defaultVariants: {
+    scrollable: false,
+  },
+});
+
 export function MembersVisibilitySection({
   formData,
   onEdit,
@@ -20,18 +32,6 @@ export function MembersVisibilitySection({
 }: MembersVisibilitySectionProps) {
   const { t } = useTranslation();
   const embargoPublicDate = embargoUntilHelperString(formData.embargoUntil, t);
-
-  const membersList = cva("space-y-2", {
-    variants: {
-      scrollable: {
-        true: "max-h-36 overflow-y-auto pr-2",
-        false: "",
-      },
-    },
-    defaultVariants: {
-      scrollable: false,
-    },
-  });
 
   return (
     <Card className={className}>

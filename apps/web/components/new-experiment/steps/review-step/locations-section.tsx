@@ -10,20 +10,20 @@ interface LocationsSectionProps {
   onEdit: () => void;
 }
 
+const locationsList = cva("space-y-2", {
+  variants: {
+    scrollable: {
+      true: "max-h-64 overflow-y-auto pr-2",
+      false: "",
+    },
+  },
+  defaultVariants: {
+    scrollable: false,
+  },
+});
+
 export function LocationsSection({ formData, onEdit }: LocationsSectionProps) {
   const { t } = useTranslation();
-
-  const locationsList = cva("space-y-2", {
-    variants: {
-      scrollable: {
-        true: "max-h-64 overflow-y-auto pr-2",
-        false: "",
-      },
-    },
-    defaultVariants: {
-      scrollable: false,
-    },
-  });
 
   return (
     <Card>
