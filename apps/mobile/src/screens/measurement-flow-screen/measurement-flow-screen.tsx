@@ -5,7 +5,7 @@ import { useTheme } from "~/hooks/use-theme";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 import { BackButton } from "./components/back-button";
-import { CustomMeasurementFlowStep } from "./components/custom-measurement-flow";
+import { CustomMeasurementFlowStep } from "./components/custom-measurement-flow-step";
 import { ExperimentSelectionStep } from "./components/experiment-selection-step";
 
 export function MeasurementFlowScreen() {
