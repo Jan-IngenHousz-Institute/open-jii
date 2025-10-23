@@ -1,6 +1,6 @@
 import { clsx } from "clsx";
 import React from "react";
-import { ScrollView, View } from "react-native";
+import { View } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
@@ -10,16 +10,7 @@ import { ExperimentSelectionStep } from "./components/experiment-selection-step"
 
 export function MeasurementFlowScreen() {
   const { classes } = useTheme();
-  const {
-    currentStep,
-    flowNodes,
-    currentFlowStep,
-    setExperimentId,
-    nextStep,
-    previousStep,
-  } = useMeasurementFlowStore();
-
-  const isFlowCompleted = currentFlowStep >= flowNodes.length;
+  const { currentStep, setExperimentId, nextStep, previousStep } = useMeasurementFlowStore();
 
   const handleExperimentContinue = (experimentId: string) => {
     setExperimentId(experimentId);
@@ -35,8 +26,8 @@ export function MeasurementFlowScreen() {
   const shouldShowBackButton = currentStep > 0;
 
   return (
-    <ScrollView className={clsx("flex-1", classes.background)}>
-      <View className="p-5">
+    <View className={clsx("flex-1", classes.background)}>
+      <View className="flex-1 p-5">
         {shouldShowBackButton && <BackButton onPress={handleBackPress} />}
 
         {currentStep === 0 ? (
@@ -45,6 +36,6 @@ export function MeasurementFlowScreen() {
           <CustomMeasurementFlowStep />
         )}
       </View>
-    </ScrollView>
+    </View>
   );
 }

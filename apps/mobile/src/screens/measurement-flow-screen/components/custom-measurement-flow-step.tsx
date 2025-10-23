@@ -10,18 +10,18 @@ import { LoadingState } from "./flow-states/loading-state";
 import { ReadyState } from "./flow-states/ready-state";
 
 export function CustomMeasurementFlowStep() {
-  const { 
-    experimentId, 
-    flowNodes, 
-    currentFlowStep, 
+  const {
+    experimentId,
+    flowNodes,
+    currentFlowStep,
     iterationCount,
     isFlowFinished,
-    setFlowNodes, 
+    setFlowNodes,
     nextStep,
     startNewIteration,
     retryCurrentIteration,
     finishFlow,
-    resetFlow
+    resetFlow,
   } = useMeasurementFlowStore();
 
   const isFlowCompleted = currentFlowStep >= flowNodes.length;
@@ -44,8 +44,8 @@ export function CustomMeasurementFlowStep() {
 
   if (isFlowCompleted && isFlowFinished) {
     return (
-      <CompletedState 
-        iterationCount={iterationCount} 
+      <CompletedState
+        iterationCount={iterationCount}
         onStartNew={() => {
           resetFlow();
         }}

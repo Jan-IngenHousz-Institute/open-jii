@@ -19,7 +19,10 @@ export function parseExperimentData(tables: ExperimentDataTable[]): ParsedTableD
   return tables
     .filter((table) => table.data) // Filter out tables without data
     .map((table) => {
-      const columns = table.data!.columns.map((col) => ({
+      if (!table.data) {
+        throw new Error("Missing table data");
+      }
+      const columns = table.data.columns.map((col) => ({
         name: col.name,
         displayName: formatColumnName(col.name),
         type: col.type_name,
@@ -33,8 +36,8 @@ export function parseExperimentData(tables: ExperimentDataTable[]): ParsedTableD
         name: table.name,
         displayName: formatTableName(table.name),
         columns,
-        rows: table.data!.rows,
-        totalRows: table.data!.totalRows,
+        rows: table.data.rows,
+        totalRows: table.data.totalRows,
         hasComplexData,
       };
     });

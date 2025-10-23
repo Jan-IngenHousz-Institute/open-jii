@@ -85,7 +85,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
     })),
 
   retryCurrentIteration: () =>
-    set((state) => ({
+    set(() => ({
       currentFlowStep: 0,
     })),
 

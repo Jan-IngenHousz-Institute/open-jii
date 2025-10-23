@@ -9,7 +9,11 @@ interface FlowProgressIndicatorProps {
   iterationCount: number;
 }
 
-export function FlowProgressIndicator({ currentStep, totalSteps, iterationCount }: FlowProgressIndicatorProps) {
+export function FlowProgressIndicator({
+  currentStep,
+  totalSteps,
+  iterationCount,
+}: FlowProgressIndicatorProps) {
   const { classes } = useTheme();
 
   return (
@@ -19,7 +23,7 @@ export function FlowProgressIndicator({ currentStep, totalSteps, iterationCount 
       </Text>
       <View className="flex-row items-center justify-between">
         <View className={clsx("h-2 flex-1 rounded-full", classes.surface)}>
-          <View 
+          <View
             className={clsx("h-full rounded-full", classes.button)}
             style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
           />

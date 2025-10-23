@@ -55,7 +55,7 @@ export const generateDeviceCommand = (step: ProtocolStep): string => {
 // Simulate data processing (JavaScript macro simulation)
 export const simulateDataProcessing = async (
   measurements: MeasurementData[],
-  protocol: CalibrationProtocol,
+  _protocol: CalibrationProtocol,
 ): Promise<ProcessedCalibrationOutput> => {
   // Simulate processing time
   await new Promise((resolve) => setTimeout(resolve, 3000));
