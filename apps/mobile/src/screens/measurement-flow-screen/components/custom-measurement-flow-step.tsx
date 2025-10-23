@@ -1,10 +1,17 @@
 import { clsx } from "clsx";
 import React from "react";
 import { View, Text } from "react-native";
+import { useExperimentFlow } from "~/hooks/use-experiment-flow";
 import { useTheme } from "~/hooks/use-theme";
+import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 export function CustomMeasurementFlowStep() {
   const { classes } = useTheme();
+  const { experimentId } = useMeasurementFlowStore();
+
+  const { data: { body } = {} } = useExperimentFlow(experimentId);
+
+  console.log("body", body);
 
   return (
     <View className={clsx("rounded-xl border p-6", classes.card, classes.border)}>
