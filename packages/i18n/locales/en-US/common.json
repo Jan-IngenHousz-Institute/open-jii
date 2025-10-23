@@ -80,6 +80,7 @@
     "experiment": "Experiment",
     "settings": "Experiment Settings",
     "settingsDescription": "Manage settings and members for this experiment.",
+    "settingsArchivedDescription": "Experiment is archived and it cannot be modified.",
     "noDescription": "No description provided",
     "experimentId": "Experiment ID",
     "descriptionTitle": "Description",

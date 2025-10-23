@@ -19,7 +19,9 @@ export default async function ExperimentSettingsPage({ params }: ExperimentSetti
     <div className="space-y-8">
       <div>
         <h4 className="text-lg font-medium">{t("experiments.settings")}</h4>
-        <p className="text-muted-foreground text-sm">{t("experiments.settingsDescription")}</p>
+        <p className="text-muted-foreground text-sm">
+          {t("experiments.settingsArchivedDescription")}
+        </p>
       </div>
 
       <div className="space-y-6">
