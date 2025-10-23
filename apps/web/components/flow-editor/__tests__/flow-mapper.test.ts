@@ -44,6 +44,33 @@ describe("FlowMapper.toReactFlow", () => {
     expect(edges).toHaveLength(0);
   });
 
+  it("maps API analysis node to React Flow node", () => {
+    const flow = buildApiFlow({
+      nodes: [
+        {
+          id: "analysis-node",
+          type: "analysis" as const,
+          name: "Data Analysis",
+          content: { macroId: "660e8400-e29b-41d4-a716-446655440000", params: { threshold: 10 } },
+          isStart: true,
+        },
+      ],
+    });
+    const { nodes } = FlowMapper.toReactFlow(flow);
+    expect(nodes).toHaveLength(1);
+    const n = nodes[0];
+    expect(n.id).toBe("analysis-node");
+    expect(n.type).toBe("ANALYSIS");
+    const data = n.data as FlowNodeDataWithSpec;
+    expect(data.title).toBe("Data Analysis");
+    expect(data.isStartNode).toBe(true);
+    expect(data.macroId).toBe("660e8400-e29b-41d4-a716-446655440000");
+    expect(data.stepSpecification).toEqual({
+      macroId: "660e8400-e29b-41d4-a716-446655440000",
+      params: { threshold: 10 },
+    });
+  });
+
   it("maps API number question to React Flow with NUMBER answer type", () => {
     const flow = buildApiFlow({
       nodes: [
@@ -144,10 +171,18 @@ describe("FlowMapper round-trip", () => {
           content: { protocolId: "550e8400-e29b-41d4-a716-446655440000", params: {} },
           isStart: false,
         },
+        {
+          id: "analysis-1",
+          type: "analysis" as const,
+          name: "Analysis 1",
+          content: { macroId: "660e8400-e29b-41d4-a716-446655440000", params: {} },
+          isStart: false,
+        },
       ],
       edges: [
         { id: "e1", source: "start-node", target: "instruction-1" },
         { id: "e2", source: "instruction-1", target: "measurement-1", label: "Next" },
+        { id: "e3", source: "measurement-1", target: "analysis-1" },
       ],
     });
 
@@ -295,6 +330,52 @@ describe("FlowMapper.toApiGraph validation", () => {
     data.protocolId = undefined;
     expect(() => FlowMapper.toApiGraph(react.nodes, react.edges)).toThrow(
       "A valid protocol must be selected for measurement nodes",
+    );
+  });
+
+  it("converts analysis node with macroId to API content", () => {
+    const flow = buildApiFlow({
+      nodes: [
+        {
+          id: "a1",
+          type: "analysis" as const,
+          name: "A1",
+          content: { macroId: "660e8400-e29b-41d4-a716-446655440000", params: {} },
+          isStart: true,
+        },
+      ],
+    });
+    const react = FlowMapper.toReactFlow(flow);
+    const data = react.nodes[0].data as FlowNodeDataWithSpec;
+    data.macroId = "770e8400-e29b-41d4-a716-446655440000"; // Simulate user selecting different macro
+
+    const result = FlowMapper.toApiGraph(react.nodes, react.edges);
+    expect(result.nodes[0].content).toEqual({
+      macroId: "770e8400-e29b-41d4-a716-446655440000",
+      params: {},
+    });
+  });
+
+  it("errors when analysis node missing macroId", () => {
+    const flow = buildApiFlow({
+      nodes: [
+        {
+          id: "a1",
+          type: "analysis" as const,
+          name: "A1",
+          content: { macroId: "660e8400-e29b-41d4-a716-446655440000", params: {} },
+          isStart: true,
+        },
+      ],
+    });
+    const react = FlowMapper.toReactFlow(flow);
+    // Simulate user clearing macroId (remove stepSpecification & macroId)
+    react.nodes[0].type = "ANALYSIS"; // ensure analysis type
+    const data = react.nodes[0].data as FlowNodeDataWithSpec;
+    data.stepSpecification = undefined;
+    data.macroId = undefined;
+    expect(() => FlowMapper.toApiGraph(react.nodes, react.edges)).toThrow(
+      "A valid macro must be selected for analysis nodes",
     );
   });
 });

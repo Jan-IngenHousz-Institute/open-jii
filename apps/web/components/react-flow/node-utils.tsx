@@ -10,7 +10,7 @@ import { nodeTypeColorMap } from "./node-config";
 const DEFAULT_STEP_SPECIFICATIONS = {
   QUESTION: { kind: "open_ended", text: "" },
   MEASUREMENT: { protocolId: undefined },
-  ANALYSIS: {},
+  ANALYSIS: { macroId: undefined },
 } as const;
 
 // Utility: map a possibly persisted string to a Position enum

@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 
 import { cn } from "../../lib/utils";
+import { cva } from "../../lib/utils";
 import { Button } from "../button";
 import type { ButtonProps } from "../button";
 import { Form } from "../form";
@@ -29,6 +30,10 @@ export interface WizardStepProps<T extends FieldValues = FieldValues> {
    * Move to the previous step
    */
   onPrevious: () => void;
+  /**
+   * Jump to a specific step index
+   */
+  goToStep: (index: number) => void;
   /**
    * Index of the current step
    */
@@ -120,7 +125,7 @@ export interface WizardStep<T extends FieldValues = FieldValues> {
   /**
    * Validation schema for this step
    */
-  validationSchema: z.ZodObject<any>;
+  validationSchema: z.AnyZodObject;
   /**
    * Component to render for this step
    */
@@ -176,6 +181,48 @@ export function WizardForm<T extends FieldValues>({
   showStepTitles = true,
   formProps = {},
 }: WizardFormProps<T>) {
+  // CVA variants for the step indicator circle and title
+  const stepCircle = cva(
+    "flex h-8 w-8 items-center justify-center rounded-full border text-sm font-medium transition-all duration-300 ease-in-out",
+    {
+      variants: {
+        state: {
+          default: "bg-background text-muted-foreground border-input",
+          completed: "bg-primary/80 text-primary-foreground",
+          active: "bg-primary text-primary-foreground scale-110 shadow-md",
+        },
+      },
+      defaultVariants: { state: "default" },
+    },
+  );
+
+  const stepTitle = cva(
+    "mt-2 text-center text-xs font-medium transition-all duration-300 ease-in-out",
+    {
+      variants: {
+        state: {
+          default: "text-muted-foreground opacity-70",
+          completed: "text-primary/80 opacity-80",
+          active: "text-primary translate-y-0 opacity-100",
+        },
+      },
+      defaultVariants: { state: "default" },
+    },
+  );
+
+  const connectorLine = cva(
+    "bg-primary/80 absolute left-0 top-0 h-full transition-all duration-500 ease-in-out",
+    {
+      variants: {
+        state: {
+          incomplete: "w-0",
+          complete: "w-full",
+        },
+      },
+      defaultVariants: { state: "incomplete" },
+    },
+  );
+
   // Current step index
   const [currentStepIndex, setCurrentStepIndex] = React.useState(0);
 
@@ -231,6 +278,13 @@ export function WizardForm<T extends FieldValues>({
     }
   };
 
+  // Jump to a specific step (index within activeSteps)
+  const goToStep = (index: number) => {
+    if (index >= 0 && index < activeSteps.length) {
+      setCurrentStepIndex(index);
+    }
+  };
+
   // Handle form submission (only on the last step)
   const handleSubmit = form.handleSubmit(async (data) => {
     if (currentStepIndex === activeSteps.length - 1) {
@@ -245,61 +299,40 @@ export function WizardForm<T extends FieldValues>({
       {/* Step indicators */}
       {showStepIndicator && (
         <div className="mb-6">
-          <div className="flex items-center justify-between">
-            {activeSteps.map((_step, index) => (
-              <React.Fragment key={index}>
-                {/* Step circle */}
-                <div
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium",
-                    index === currentStepIndex
-                      ? "bg-primary text-primary-foreground"
-                      : index < currentStepIndex
-                        ? "bg-primary/80 text-primary-foreground"
-                        : "border-input bg-background text-muted-foreground border",
-                  )}
-                >
-                  {index + 1}
-                </div>
+          <div className="flex items-start gap-1">
+            {activeSteps.map((_step, index) => {
+              const isActive = index === currentStepIndex;
+              const isCompleted = index < currentStepIndex;
+              const stepState = isActive ? "active" : isCompleted ? "completed" : "default";
+              const connectorState = isCompleted ? "complete" : "incomplete";
 
-                {/* Connector line */}
-                {index < activeSteps.length - 1 && (
-                  <div
-                    className={cn(
-                      "mx-2 h-[2px] flex-1",
-                      index < currentStepIndex ? "bg-primary/80" : "bg-border",
+              return (
+                <React.Fragment key={index}>
+                  {/* Step circle + label */}
+                  <div className="flex w-[50px] flex-col items-center transition-all duration-300 md:w-[80px]">
+                    <div className={stepCircle({ state: stepState })}>{index + 1}</div>
+
+                    {showStepTitles && (
+                      <div className={stepTitle({ state: stepState })}>
+                        {activeSteps[index]?.title}
+                      </div>
                     )}
-                  />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
+                  </div>
 
-          {/* Step titles */}
-          {showStepTitles && (
-            <div className="mt-2 flex items-center justify-between">
-              {activeSteps.map((step, index) => (
-                <div
-                  key={`title-${index}`}
-                  className={cn(
-                    "text-center text-xs font-medium",
-                    index === currentStepIndex
-                      ? "text-primary"
-                      : index < currentStepIndex
-                        ? "text-primary/80"
-                        : "text-muted-foreground",
+                  {/* Connector line */}
+                  {index < activeSteps.length - 1 && (
+                    <div className="flex flex-1 items-start pt-4">
+                      <div className="bg-border relative h-[2px] w-full overflow-hidden rounded-full">
+                        <div className={connectorLine({ state: connectorState })} />
+                      </div>
+                    </div>
                   )}
-                  style={{ width: `${100 / activeSteps.length}%` }}
-                >
-                  {step.title}
-                </div>
-              ))}
-            </div>
-          )}
+                </React.Fragment>
+              );
+            })}
+          </div>
         </div>
       )}
-
-      {/* Current step */}
       {currentStep && (
         <Form {...form}>
           <form onSubmit={handleSubmit} className="space-y-6" data-testid="form">
@@ -319,6 +352,7 @@ export function WizardForm<T extends FieldValues>({
               step: currentStep,
               onNext: handleNext,
               onPrevious: handlePrevious,
+              goToStep,
               stepIndex: currentStepIndex,
               totalSteps: activeSteps.length,
               isSubmitting,

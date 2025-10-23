@@ -254,16 +254,14 @@ export function ExperimentSidePanel({
           {/* AnalysisPanel for analysis node */}
           {displayNodeType === "ANALYSIS" && selectedNode && (
             <AnalysisPanel
-              selectedMeasurementOption={
-                typeof selectedNode.data.measurementOption === "string"
-                  ? selectedNode.data.measurementOption
-                  : ""
+              selectedMacroId={
+                typeof selectedNode.data.macroId === "string" ? selectedNode.data.macroId : ""
               }
-              onChange={(measurementOption) => {
+              onChange={(macroId) => {
                 if (onNodeDataChange) {
                   onNodeDataChange(selectedNode.id, {
                     ...selectedNode.data,
-                    measurementOption,
+                    macroId,
                   });
                 }
               }}

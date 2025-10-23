@@ -53,15 +53,11 @@ function ProtocolList({
         <CommandItem
           key={protocol.id}
           value={protocol.id}
-          className="mb-2 flex items-center justify-between gap-3 rounded border"
+          className="mb-1 flex items-center justify-between gap-2 rounded border p-2"
         >
-          <div className="flex min-w-0 flex-1 flex-col justify-center">
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
             {/* Protocol name */}
-            <div className="mb-1 flex items-center">
-              <h4 className="text-foreground flex-1 truncate text-sm font-medium">
-                {protocol.name}
-              </h4>
-            </div>
+            <h4 className="text-foreground truncate text-sm font-medium">{protocol.name}</h4>
 
             {/* Family */}
             <div className="text-muted-foreground truncate text-xs">
@@ -70,10 +66,10 @@ function ProtocolList({
             </div>
 
             {/* Created by */}
-            {protocol.createdBy && (
+            {protocol.createdByName && (
               <div className="text-muted-foreground truncate text-xs">
                 <span className="opacity-75">{t("experiments.createdBy")}</span>{" "}
-                <span className="font-medium">{protocol.createdBy}</span>
+                <span className="font-medium">{protocol.createdByName}</span>
               </div>
             )}
           </div>
@@ -83,13 +79,13 @@ function ProtocolList({
             <Button
               variant="ghost"
               size="icon"
-              className="text-primary hover:bg-accent/40 mt-1 p-0"
+              className="text-primary hover:bg-accent/40 h-8 w-8 p-0"
               title={t("experiments.addProtocol")}
               onClick={async (e) => handleAddProtocol(e, protocol.id)}
               disabled={isAddingProtocol}
               aria-label={t("experiments.addProtocol")}
             >
-              <PlusSquare className="h-6 w-6" />
+              <PlusSquare className="h-5 w-5" />
             </Button>
             {/* CTA button for more details */}
             <Link
@@ -98,9 +94,9 @@ function ProtocolList({
               rel="noopener noreferrer"
               title={t("experiments.seeProtocolDetails")}
               aria-label={t("experiments.seeProtocolDetails")}
-              className="group p-2.5"
+              className="group p-1.5"
             >
-              <ExternalLink className="group-hover:text-muted-foreground h-6 w-6 transition-colors" />
+              <ExternalLink className="group-hover:text-muted-foreground h-5 w-5 transition-colors" />
             </Link>
           </div>
         </CommandItem>
@@ -200,7 +196,7 @@ export function ProtocolSearchPopover({
   const hasSearchQuery = searchValue.length > 0;
 
   return (
-    <PopoverContent className="box-border w-auto min-w-40 max-w-60 p-0">
+    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
       <Command shouldFilter={false}>
         <SearchField
           searchValue={searchValue}

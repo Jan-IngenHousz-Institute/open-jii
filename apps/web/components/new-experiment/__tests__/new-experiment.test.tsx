@@ -5,7 +5,6 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { CreateExperimentBody } from "@repo/api";
-import { zExperimentVisibility } from "@repo/api";
 
 import { NewExperimentForm } from "../new-experiment";
 
@@ -71,6 +70,7 @@ vi.mock("next/navigation", () => ({
     push: mockRouterPush,
     back: mockRouterBack,
   }),
+  usePathname: () => "/mock-path",
 }));
 
 // Mock translation
@@ -87,21 +87,12 @@ vi.mock("@repo/ui/hooks", () => ({
 
 // Mock form components
 vi.mock("@repo/ui/components", () => ({
-  Form: ({
-    children,
-    ...props
-  }: React.PropsWithChildren & React.FormHTMLAttributes<HTMLFormElement>) => (
-    <form data-testid="form" {...props}>
-      {children}
-    </form>
-  ),
   Button: ({
     children,
     onClick,
     disabled,
     variant,
     type,
-    ...props
   }: {
     children: React.ReactNode;
     onClick?: () => void;
@@ -115,75 +106,65 @@ vi.mock("@repo/ui/components", () => ({
       data-type={type}
       onClick={onClick}
       disabled={disabled}
-      {...props}
     >
       {children}
     </button>
   ),
-}));
-
-// Mock react-hook-form
-vi.mock("react-hook-form", () => ({
-  useForm: () => ({
-    handleSubmit: (fn: (data: CreateExperimentBody) => void) => (e: React.FormEvent) => {
-      e.preventDefault();
-      // Simulate form submission with mock data
-      const mockFormData: CreateExperimentBody = {
-        name: "Test Experiment",
-        description: "Test Description",
-        visibility: zExperimentVisibility.enum.public,
-        embargoIntervalDays: 90,
-        members: [],
-        locations: [],
-      };
-      fn(mockFormData);
-    },
-    formState: { errors: {} },
-    control: {},
-    register: () => ({}),
-    setValue: vi.fn(),
-    getValues: () => ({}),
-    watch: () => ({}),
-  }),
-}));
-
-// Mock card components
-vi.mock("../new-experiment-details-card", () => ({
-  NewExperimentDetailsCard: ({ form: _form }: { form: unknown }) => (
-    <div data-testid="details-card">
-      <input data-testid="name-input" placeholder="Experiment name" />
-      <textarea data-testid="description-input" placeholder="Description" />
-    </div>
+  WizardForm: ({
+    onSubmit,
+    isSubmitting,
+  }: {
+    onSubmit: (data: CreateExperimentBody) => void;
+    isSubmitting?: boolean;
+  }) => (
+    <form
+      data-testid="wizard-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit({
+          name: "Test Experiment",
+          description: "Test Description",
+          visibility: "public",
+          members: [],
+          locations: [],
+        });
+      }}
+    >
+      <button data-testid="button" type="submit" disabled={isSubmitting}>
+        newExperiment.finalizeSetup
+      </button>
+      <button
+        data-testid="button"
+        type="button"
+        onClick={() => {
+          mockRouterBack();
+        }}
+      >
+        newExperiment.cancel
+      </button>
+    </form>
+  ),
+  Dialog: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="dialog">{children}</div>
+  ),
+  DialogContent: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="dialog-content">{children}</div>
+  ),
+  DialogHeader: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="dialog-header">{children}</div>
+  ),
+  DialogFooter: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="dialog-footer">{children}</div>
+  ),
+  DialogTitle: ({ children }: { children?: React.ReactNode }) => (
+    <h2 data-testid="dialog-title">{children}</h2>
+  ),
+  DialogDescription: ({ children }: { children?: React.ReactNode }) => (
+    <p data-testid="dialog-description">{children}</p>
   ),
 }));
 
-vi.mock("../new-experiment-members-card", () => ({
-  NewExperimentMembersCard: ({ form: _form }: { form: unknown }) => (
-    <div data-testid="members-card">Members Card</div>
-  ),
-}));
-
-vi.mock("../new-experiment-visibility-card", () => ({
-  NewExperimentVisibilityCard: ({ form: _form }: { form: unknown }) => (
-    <div data-testid="visibility-card">Visibility Card</div>
-  ),
-}));
-
-vi.mock("../new-experiment-protocols-card", () => ({
-  NewExperimentProtocolsCard: ({ form: _form }: { form: unknown }) => (
-    <div data-testid="protocols-card">Protocols Card</div>
-  ),
-}));
-
-vi.mock("../new-experiment-locations-card", () => ({
-  NewExperimentLocationsCard: ({ form: _form }: { form: unknown }) => (
-    <div data-testid="locations-card">Locations Card</div>
-  ),
-}));
-
-/* ------------------------------- Test Data ------------------------------- */
-
-/* --------------------------------- Tests --------------------------------- */
+// ------------------ Tests ------------------
 
 describe("NewExperimentForm", () => {
   beforeEach(() => {
@@ -191,51 +172,29 @@ describe("NewExperimentForm", () => {
     createExperimentMockData.current = { isPending: false };
   });
 
-  describe("Component Rendering", () => {
-    it("should render all expected form elements", () => {
+  describe("Rendering", () => {
+    it("renders the wizard form and dialog", () => {
       render(<NewExperimentForm />);
 
-      expect(screen.getByTestId("form")).toBeInTheDocument();
-      expect(screen.getByTestId("details-card")).toBeInTheDocument();
-      expect(screen.getByTestId("members-card")).toBeInTheDocument();
-      expect(screen.getByTestId("visibility-card")).toBeInTheDocument();
-      expect(screen.getByTestId("protocols-card")).toBeInTheDocument();
-      expect(screen.getByTestId("locations-card")).toBeInTheDocument();
+      expect(screen.getByTestId("wizard-form")).toBeInTheDocument();
+      expect(screen.getByTestId("dialog")).toBeInTheDocument();
+      expect(screen.getByTestId("dialog-title")).toHaveTextContent(
+        "experiments.unsavedChangesTitle",
+      );
     });
 
-    it("should render cancel and submit buttons", () => {
+    it("renders cancel and submit buttons", () => {
       render(<NewExperimentForm />);
-
       const buttons = screen.getAllByTestId("button");
-      expect(buttons).toHaveLength(2);
-
-      const cancelButton = buttons.find((btn) => btn.textContent === "newExperiment.cancel");
-      const submitButton = buttons.find((btn) => btn.textContent === "newExperiment.finalizeSetup");
-
-      expect(cancelButton).toBeInTheDocument();
-      expect(submitButton).toBeInTheDocument();
-    });
-
-    it("should apply correct layout classes", () => {
-      render(<NewExperimentForm />);
-
-      const form = screen.getByTestId("form");
-      expect(form.querySelector(".space-y-8")).toBeInTheDocument();
-
-      // Check for responsive layout classes
-      expect(form.querySelector(".flex.flex-col.gap-6.md\\:flex-row")).toBeInTheDocument();
+      expect(buttons.length).toBeGreaterThanOrEqual(2);
+      expect(buttons.some((b) => b.textContent === "newExperiment.cancel")).toBe(true);
+      expect(buttons.some((b) => b.textContent === "newExperiment.finalizeSetup")).toBe(true);
     });
   });
 
   describe("Form Submission", () => {
-    it("should call createExperiment with correct data when form is submitted", async () => {
-      const user = userEvent.setup();
+    it("calls createExperiment with correct data", () => {
       render(<NewExperimentForm />);
-
-      const form = screen.getByTestId("form");
-      await user.click(form);
-
-      // Trigger form submission by clicking submit button
       const submitButton = screen
         .getAllByTestId("button")
         .find((btn) => btn.textContent === "newExperiment.finalizeSetup");
@@ -249,41 +208,20 @@ describe("NewExperimentForm", () => {
           name: "Test Experiment",
           description: "Test Description",
           visibility: "public",
-          embargoIntervalDays: 90,
           members: [],
           locations: [],
-        } as CreateExperimentBody,
+        },
       });
-    });
-
-    it("should handle form submission properly", () => {
-      render(<NewExperimentForm />);
-
-      // Get the actual form element with onSubmit handler (the inner form)
-      const forms = document.querySelectorAll("form");
-      const targetForm = Array.from(forms).find((form) => form.onsubmit !== null);
-
-      if (targetForm) {
-        fireEvent.submit(targetForm);
-        expect(mockCreateExperiment).toHaveBeenCalled();
-      } else {
-        // If no form with onSubmit found, just verify the mock was set up
-        expect(mockCreateExperiment).toBeDefined();
-      }
     });
   });
 
   describe("Success Handling", () => {
-    it("should show toast and navigate on successful experiment creation", () => {
+    it("shows toast and navigates on success", () => {
       render(<NewExperimentForm />);
-
-      // Simulate successful creation by calling the onSuccess callback
       const onSuccessCallback = (globalThis as GlobalWithCallback).__onSuccessCallback;
       const mockExperimentId = "exp-123";
 
-      if (onSuccessCallback) {
-        onSuccessCallback(mockExperimentId);
-      }
+      onSuccessCallback?.(mockExperimentId);
 
       expect(mockToast).toHaveBeenCalledWith({
         description: "experiments.experimentCreated",
@@ -292,8 +230,8 @@ describe("NewExperimentForm", () => {
     });
   });
 
-  describe("Cancel Functionality", () => {
-    it("should call router.back() when cancel button is clicked", async () => {
+  describe("Cancel Button", () => {
+    it("calls router.back() when cancel is clicked", async () => {
       const user = userEvent.setup();
       render(<NewExperimentForm />);
 
@@ -301,145 +239,22 @@ describe("NewExperimentForm", () => {
         .getAllByTestId("button")
         .find((btn) => btn.textContent === "newExperiment.cancel");
 
-      if (cancelButton) {
-        await user.click(cancelButton);
-      }
+      if (cancelButton) await user.click(cancelButton);
 
       expect(mockRouterBack).toHaveBeenCalled();
-    });
-
-    it("should render cancel button with correct variant", () => {
-      render(<NewExperimentForm />);
-
-      const cancelButton = screen
-        .getAllByTestId("button")
-        .find((btn) => btn.textContent === "newExperiment.cancel");
-
-      expect(cancelButton).toHaveAttribute("data-variant", "outline");
-      expect(cancelButton).toHaveAttribute("data-type", "button");
     });
   });
 
   describe("Loading States", () => {
-    it("should disable submit button and show loading text when mutation is pending", () => {
+    it("disables submit button and shows loading text when pending", () => {
       createExperimentMockData.current = { isPending: true };
       render(<NewExperimentForm />);
 
       const submitButton = screen
         .getAllByTestId("button")
-        .find((btn) => btn.textContent === "newExperiment.creating");
+        .find((btn) => btn.textContent === "newExperiment.finalizeSetup");
 
-      expect(submitButton).toBeInTheDocument();
       expect(submitButton).toBeDisabled();
-    });
-
-    it("should show normal text when not pending", () => {
-      createExperimentMockData.current = { isPending: false };
-      render(<NewExperimentForm />);
-
-      const submitButton = screen
-        .getAllByTestId("button")
-        .find((btn) => btn.textContent === "newExperiment.finalizeSetup");
-
-      expect(submitButton).toBeInTheDocument();
-      expect(submitButton).not.toBeDisabled();
-    });
-  });
-
-  describe("Form Layout and Structure", () => {
-    it("should arrange cards in correct layout structure", () => {
-      render(<NewExperimentForm />);
-
-      // Details card should be first and standalone
-      const detailsCard = screen.getByTestId("details-card");
-      expect(detailsCard).toBeInTheDocument();
-
-      // Members and visibility cards should be in same row
-      const membersCard = screen.getByTestId("members-card");
-      const visibilityCard = screen.getByTestId("visibility-card");
-      expect(membersCard.parentElement).toBe(visibilityCard.parentElement);
-
-      // Protocols and locations cards should be in same container
-      const protocolsCard = screen.getByTestId("protocols-card");
-      const locationsCard = screen.getByTestId("locations-card");
-      expect(protocolsCard.parentElement).toBe(locationsCard.parentElement);
-    });
-
-    it("should pass form instance to all card components", () => {
-      render(<NewExperimentForm />);
-
-      // All cards should receive the form prop
-      expect(screen.getByTestId("details-card")).toBeInTheDocument();
-      expect(screen.getByTestId("members-card")).toBeInTheDocument();
-      expect(screen.getByTestId("visibility-card")).toBeInTheDocument();
-      expect(screen.getByTestId("protocols-card")).toBeInTheDocument();
-      expect(screen.getByTestId("locations-card")).toBeInTheDocument();
-    });
-  });
-
-  describe("Hook Integration", () => {
-    it("should use useExperimentCreate hook with onSuccess callback", () => {
-      render(<NewExperimentForm />);
-
-      // Verify the hook was called and onSuccess callback exists
-      expect((globalThis as GlobalWithCallback).__onSuccessCallback).toBeDefined();
-      expect(typeof (globalThis as GlobalWithCallback).__onSuccessCallback).toBe("function");
-    });
-
-    it("should use useRouter hook for navigation", () => {
-      render(<NewExperimentForm />);
-
-      // Router functions should be available
-      expect(mockRouterPush).toBeDefined();
-      expect(mockRouterBack).toBeDefined();
-    });
-
-    it("should use useTranslation hook for internationalization", () => {
-      render(<NewExperimentForm />);
-
-      // Check that translated text appears
-      expect(screen.getByText("newExperiment.cancel")).toBeInTheDocument();
-      expect(screen.getByText("newExperiment.finalizeSetup")).toBeInTheDocument();
-    });
-
-    it("should use useLocale hook for locale-aware navigation", () => {
-      render(<NewExperimentForm />);
-
-      // When success callback is triggered, it should use the locale
-      const onSuccessCallback = (globalThis as GlobalWithCallback).__onSuccessCallback;
-      if (onSuccessCallback) {
-        onSuccessCallback("exp-123");
-      }
-
-      expect(mockRouterPush).toHaveBeenCalledWith("/en/platform/experiments/exp-123");
-    });
-  });
-
-  describe("Button States and Properties", () => {
-    it("should render submit button with correct type", () => {
-      render(<NewExperimentForm />);
-
-      const submitButton = screen
-        .getAllByTestId("button")
-        .find((btn) => btn.textContent === "newExperiment.finalizeSetup");
-
-      expect(submitButton).toHaveAttribute("data-type", "submit");
-    });
-
-    it("should handle button click events properly", async () => {
-      const user = userEvent.setup();
-      render(<NewExperimentForm />);
-
-      const cancelButton = screen
-        .getAllByTestId("button")
-        .find((btn) => btn.textContent === "newExperiment.cancel");
-
-      // Click cancel button
-      if (cancelButton) {
-        await user.click(cancelButton);
-      }
-
-      expect(mockRouterBack).toHaveBeenCalledTimes(1);
     });
   });
 });

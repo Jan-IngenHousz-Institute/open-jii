@@ -34,11 +34,11 @@ export async function sendVerificationRequest(params: {
   });
 
   const emailHtml = await render(
-    VerificationRequest({ url, host, senderName: "OpenJII", qrCodeDataUrl }),
+    VerificationRequest({ url, host, senderName: "openJII", qrCodeDataUrl }),
     {},
   );
   const emailText = await render(
-    VerificationRequest({ url, host, senderName: "OpenJII", qrCodeDataUrl }),
+    VerificationRequest({ url, host, senderName: "openJII", qrCodeDataUrl }),
     {
       plainText: true,
     },
@@ -47,10 +47,10 @@ export async function sendVerificationRequest(params: {
   const result = transport.sendMail({
     to: identifier,
     from: {
-      name: "OpenJII",
+      name: "openJII",
       address: provider.from,
     },
-    subject: `Sign in to the OpenJII Platform`,
+    subject: `Sign in to the openJII Platform`,
     html: emailHtml,
     text: emailText,
   });
