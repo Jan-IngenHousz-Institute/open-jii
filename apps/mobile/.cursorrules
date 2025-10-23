@@ -37,3 +37,45 @@ React Native Component Organization Guidelines
 - All component files must use dash-case naming (e.g., `measurement-flow-screen.tsx`, `experiment-selection-step.tsx`).
 - Prefer the function keyword to lambda (arrow) for components/helpers.
 - Do not add types for things that can be automatically inferred by the TypeScript compiler.
+
+8. NativeWind Dark/Light Mode Styling
+- Always use the theme system for dark/light mode styling.
+- Import `useTheme` and `clsx` in every component that needs styling.
+- Use `classes.*` from `useTheme()` for theme-dependent styles.
+- Use `clsx` for conditional styling logic.
+
+Theme Classes Available:
+- `classes.background` - Main background (white/gray-900)
+- `classes.surface` - Surface background (gray-50/gray-800) 
+- `classes.card` - Card background (white/gray-700)
+- `classes.text` - Primary text (gray-900/white)
+- `classes.textSecondary` - Secondary text (gray-600/gray-300)
+- `classes.textMuted` - Muted text (gray-500/gray-400)
+- `classes.button` - Button background (blue-500/blue-600)
+- `classes.buttonText` - Button text (white)
+- `classes.input` - Input styling (full dark/light styles)
+- `classes.border` - Border color (gray-200/gray-600)
+
+Component Template:
+```typescript
+import React from "react";
+import { View, Text } from "react-native";
+import { clsx } from "clsx";
+import { useTheme } from "~/hooks/use-theme";
+
+export function ComponentName() {
+  const { classes } = useTheme();
+  
+  return (
+    <View className={clsx("p-4 rounded-lg", classes.background)}>
+      <Text className={classes.text}>Content</Text>
+    </View>
+  );
+}
+```
+
+Styling Rules:
+- Use `classes.*` for simple theme-dependent styles
+- Use `clsx` for complex conditional logic
+- Never hardcode colors or use `dark:` classes
+- Always combine base classes with theme classes using `clsx`
