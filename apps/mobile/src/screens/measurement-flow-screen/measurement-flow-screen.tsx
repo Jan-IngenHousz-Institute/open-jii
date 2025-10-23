@@ -14,11 +14,12 @@ export function MeasurementFlowScreen() {
     currentStep,
     flowNodes,
     currentFlowStep,
-    isFlowCompleted,
     setExperimentId,
     nextStep,
     previousStep,
   } = useMeasurementFlowStore();
+
+  const isFlowCompleted = currentFlowStep >= flowNodes.length;
 
   const handleExperimentContinue = (experimentId: string) => {
     setExperimentId(experimentId);

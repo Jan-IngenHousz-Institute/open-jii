@@ -10,8 +10,21 @@ import { LoadingState } from "./flow-states/loading-state";
 import { ReadyState } from "./flow-states/ready-state";
 
 export function CustomMeasurementFlowStep() {
-  const { experimentId, flowNodes, currentFlowStep, isFlowCompleted, setFlowNodes, nextStep } =
-    useMeasurementFlowStore();
+  const { 
+    experimentId, 
+    flowNodes, 
+    currentFlowStep, 
+    iterationCount,
+    isFlowFinished,
+    setFlowNodes, 
+    nextStep,
+    startNewIteration,
+    retryCurrentIteration,
+    finishFlow,
+    resetFlow
+  } = useMeasurementFlowStore();
+
+  const isFlowCompleted = currentFlowStep >= flowNodes.length;
 
   const { data: { body } = {}, isLoading, error } = useExperimentFlow(experimentId);
 
@@ -29,8 +42,15 @@ export function CustomMeasurementFlowStep() {
     return <ReadyState onStartFlow={() => setFlowNodes(body.graph.nodes)} />;
   }
 
-  if (isFlowCompleted) {
-    return <CompletedState />;
+  if (isFlowCompleted && isFlowFinished) {
+    return (
+      <CompletedState 
+        iterationCount={iterationCount} 
+        onStartNew={() => {
+          resetFlow();
+        }}
+      />
+    );
   }
 
   const currentNode = flowNodes[currentFlowStep];
@@ -44,7 +64,17 @@ export function CustomMeasurementFlowStep() {
       currentNode={currentNode}
       currentFlowStep={currentFlowStep}
       flowNodesLength={flowNodes.length}
+      iterationCount={iterationCount}
       onNext={nextStep}
+      onUpload={() => {
+        console.log("Upload clicked");
+        startNewIteration();
+      }}
+      onRetry={retryCurrentIteration}
+      onFinish={() => {
+        console.log("Finish flow clicked");
+        finishFlow();
+      }}
     />
   );
 }

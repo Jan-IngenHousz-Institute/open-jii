@@ -1,17 +1,13 @@
 import { create } from "zustand";
-
-interface FlowNode {
-  id: string;
-  type: "instruction" | "question" | "measurement" | "analysis";
-  content: any;
-}
+import { FlowNode } from "~/screens/measurement-flow-screen/types";
 
 interface MeasurementFlowStore {
   experimentId?: string;
   currentStep: number;
   flowNodes: FlowNode[];
   currentFlowStep: number; // Current step within the flow (0-4 for 5 steps)
-  isFlowCompleted: boolean;
+  iterationCount: number; // Number of completed iterations
+  isFlowFinished: boolean; // True when user explicitly finishes the flow
 
   // Navigation
   setExperimentId: (experimentId: string) => void;
@@ -22,8 +18,10 @@ interface MeasurementFlowStore {
 
   // Flow orchestration
   setFlowNodes: (nodes: FlowNode[]) => void;
-  completeFlow: () => void;
   resetFlow: () => void;
+  startNewIteration: () => void;
+  retryCurrentIteration: () => void;
+  finishFlow: () => void;
 }
 
 export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
@@ -31,7 +29,8 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
   currentStep: 0,
   flowNodes: [],
   currentFlowStep: 0,
-  isFlowCompleted: false,
+  iterationCount: 0,
+  isFlowFinished: false,
 
   // Experiment selection
   setExperimentId: (experimentId) => set({ experimentId }),
@@ -43,10 +42,14 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
       if (state.currentStep > 0 && state.flowNodes.length > 0) {
         const nextFlowStep = state.currentFlowStep + 1;
         const isCompleted = nextFlowStep >= state.flowNodes.length;
-        return {
-          currentFlowStep: isCompleted ? state.flowNodes.length : nextFlowStep,
-          isFlowCompleted: isCompleted,
-        };
+        if (isCompleted) {
+          return {
+            currentFlowStep: 0,
+            iterationCount: state.iterationCount + 1,
+          };
+        } else {
+          return { currentFlowStep: nextFlowStep };
+        }
       } else {
         return { currentStep: state.currentStep + 1 };
       }
@@ -55,7 +58,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
   previousStep: () =>
     set((state) => {
       if (state.currentStep > 0 && state.flowNodes.length > 0 && state.currentFlowStep > 0) {
-        return { currentFlowStep: state.currentFlowStep - 1, isFlowCompleted: false };
+        return { currentFlowStep: state.currentFlowStep - 1 };
       } else {
         return { currentStep: Math.max(0, state.currentStep - 1) };
       }
@@ -64,14 +67,31 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
   reset: () => set({ experimentId: undefined, currentStep: 0 }),
 
   // Flow orchestration
-  setFlowNodes: (nodes) => set({ flowNodes: nodes, currentFlowStep: 0, isFlowCompleted: false }),
-
-  completeFlow: () => set({ isFlowCompleted: true }),
+  setFlowNodes: (nodes) => set({ flowNodes: nodes, currentFlowStep: 0 }),
 
   resetFlow: () =>
     set({
+      currentStep: 0,
       flowNodes: [],
       currentFlowStep: 0,
-      isFlowCompleted: false,
+      iterationCount: 0,
+      isFlowFinished: false,
     }),
+
+  startNewIteration: () =>
+    set((state) => ({
+      currentFlowStep: 0,
+      iterationCount: state.iterationCount + 1,
+    })),
+
+  retryCurrentIteration: () =>
+    set((state) => ({
+      currentFlowStep: 0,
+    })),
+
+  finishFlow: () =>
+    set((state) => ({
+      currentFlowStep: state.flowNodes.length, // Mark as completed
+      isFlowFinished: true,
+    })),
 }));
