@@ -37,7 +37,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <ConnectionSetup />
         </View>
-        {uploads?.length && (
+        {uploads && uploads.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text
@@ -67,8 +67,8 @@ export default function HomeScreen() {
                 <UnsyncedScanItem
                   key={measurement.key}
                   id={measurement.key}
-                  timestamp={measurement.data.metadata.timestamp ?? "N/A"}
-                  experimentName={measurement.data.metadata.experimentName ?? "N/A"}
+                  timestamp={measurement.data?.metadata?.timestamp ?? "N/A"}
+                  experimentName={measurement.data?.metadata?.experimentName ?? "N/A"}
                   onDelete={() => removeFailedUpload(measurement.key)}
                   onSync={() => uploadOne(measurement.key)}
                 />

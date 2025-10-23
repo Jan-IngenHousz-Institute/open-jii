@@ -81,7 +81,7 @@ export function UnsyncedScanItem({
 
         {/* Swipe hint icon */}
         <View style={styles.dragHint}>
-          <ChevronLeft size={18} color={colors.light.inactive} />
+          <ChevronLeft size={18} color={theme.isDark ? colors.dark.inactive : colors.light.inactive} />
         </View>
       </View>
     </SwipeRow>
