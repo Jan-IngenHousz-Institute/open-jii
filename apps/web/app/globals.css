@@ -1,9 +1,78 @@
+/* Leaflet CSS for map components */
+/* @import "leaflet/dist/leaflet.css"; */
+
 /* Force remove border and shadow from React Flow nodes (strongest override) */
-.react-flow__node, .react-flow__node-default {
+.react-flow__node,
+.react-flow__node-default {
   border: none !important;
   box-shadow: none !important;
   background: transparent !important;
 }
+
+/* Plotly mode bar styling - stronger selectors to override inline styles */
+.modebar-container .modebar {
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: calc(var(--radius) - 2px) !important;
+  box-shadow:
+    0 1px 3px 0 rgb(0 0 0 / 0.1),
+    0 1px 2px -1px rgb(0 0 0 / 0.1) !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 2px !important;
+}
+
+.modebar-container .modebar-group {
+  background: transparent !important;
+  border: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: contents !important;
+}
+
+.modebar-container .modebar-btn {
+  background: transparent !important;
+  border: none !important;
+  border-radius: calc(var(--radius) - 4px) !important;
+  transition: all 0.2s ease !important;
+  margin: 0 2px !important;
+  padding: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.modebar-container .modebar-btn:hover {
+  background: hsl(var(--accent)) !important;
+}
+
+.modebar-container .modebar-btn svg,
+.modebar-container .modebar-btn svg path {
+  fill: hsl(var(--foreground)) !important;
+  opacity: 0.8 !important;
+  transition: all 0.2s ease !important;
+}
+
+.modebar-container .modebar-btn:hover svg,
+.modebar-container .modebar-btn:hover svg path {
+  fill: hsl(var(--foreground)) !important;
+  opacity: 1 !important;
+}
+
+.modebar-container .modebar-btn.active svg,
+.modebar-container .modebar-btn.active svg path {
+  fill: hsl(var(--primary)) !important;
+  opacity: 1 !important;
+}
+
+.dark .modebar-container .modebar {
+  background: hsl(var(--card)) !important;
+  border-color: hsl(var(--border)) !important;
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.3),
+    0 2px 4px -2px rgb(0 0 0 / 0.3) !important;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -50,12 +119,12 @@
     --ring: 180 100% 18.4%; /* Same as primary */
     --radius: 0.5rem;
 
-    /* Sidebar colors */
-    --sidebar-background: 180 100% 18.4%; /* Primary dark teal */
+  /* Sidebar colors */
+    --sidebar-background: 180 100% 9%; /* #002F2F */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 136 74% 58%; /* Secondary bright green */
     --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 180 50% 35%; /* Lighter teal for better hover visibility */
+    --sidebar-accent: 180 45% 18%; /* Primary dark green */
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 180 30% 25%;
     --sidebar-ring: 136 74% 58%;
@@ -94,12 +163,12 @@
     --input: 240 3.7% 15.9%;
     --ring: 180 80% 15%;
 
-    /* Dark mode sidebar */
-    --sidebar-background: 180 100% 10%;
+  /* Dark mode sidebar */
+    --sidebar-background: 180 100% 9%; /* #002F2F */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 136 60% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 180 30% 25%; /* Lighter teal for dark mode hover */
+    --sidebar-accent: 180 45% 18%; /* Primary dark green */
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 180 30% 20%;
     --sidebar-ring: 136 60% 45%;

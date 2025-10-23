@@ -30,6 +30,7 @@
     "@ts-rest/core": "^3.52.1",
     "@ts-rest/react-query": "^3.52.1",
     "@xyflow/react": "^12.8.2",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.507.0",
     "next": "^15.3.3",
     "react": "catalog:react19",
@@ -37,6 +38,7 @@
     "react-hook-form": "catalog:",
     "react-i18next": "15.5.2",
     "tailwind-merge": "^3.2.0",
+    "uuid": "^11.1.0",
     "zod": "catalog:"
   },
   "devDependencies": {

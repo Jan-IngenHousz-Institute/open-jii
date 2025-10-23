@@ -1,11 +1,14 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { ExperimentLocationsDisplay } from "@/components/experiment/experiment-locations-display";
 import { FlowEditor } from "@/components/flow-editor";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
+import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
 import { formatDate } from "@/util/date";
 import { CalendarIcon } from "lucide-react";
+import { notFound } from "next/navigation";
 import { use } from "react";
 
 import { useTranslation } from "@repo/i18n";
@@ -30,6 +33,9 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
   // Get flow data for this experiment
   const experiment = data?.body;
   const { data: experimentFlow } = useExperimentFlow(id);
+
+  // Get locations data for this experiment
+  const { data: locationsData, isLoading: locationsLoading } = useExperimentLocations(id);
   if (isLoading) {
     return <div>{t("loading")}</div>;
   }
@@ -45,6 +51,11 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
   // Body may still be undefined even if data exists; guard explicitly
   if (!experiment) {
     return <div>{t("notFound")}</div>;
+  }
+
+  // Check if experiment is archived - if so, redirect to not found (should use archive route)
+  if (experiment.status === "archived") {
+    notFound();
   }
 
   const getStatusBadge = (status: string) => {
@@ -112,6 +123,12 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           <RichTextRenderer content={experiment.description ?? ""} />
         </CardContent>
       </Card>
+
+      {/* Locations Display */}
+      <ExperimentLocationsDisplay
+        locations={locationsData?.body ?? []}
+        isLoading={locationsLoading}
+      />
 
       {/* Flow Display */}
       {experimentFlow?.body && (

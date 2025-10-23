@@ -43,11 +43,11 @@
     "noMeasurements": "No measurements recorded yet"
   },
   "flow": {
-    "title": "Experiment Flow",
+    "title": "Measurement Flow",
     "legend": "Legend",
-    "description": "Design and visualize your experiment workflow by connecting different steps and operations.",
-    "editDescription": "Design and visualize your experiment workflow by connecting different steps and operations.",
-    "staticDescription": "Visual overview of the experiment workflow",
+    "description": "Design and visualize your measurement workflow by connecting different steps and operations.",
+    "editDescription": "Design and visualize your measurement workflow by connecting different steps and operations.",
+    "staticDescription": "Visual overview of the measurement workflow",
     "tabLabel": "Flow",
     "saving": "Saving...",
     "saveFlow": "Save Flow",
@@ -62,14 +62,49 @@
   "data": "Data",
   "experimentData": {
     "title": "Experiment Data",
-    "description": "View and manage data associated with this experiment.",
-    "uploadData": "Upload Data"
+    "description": "View and manage data associated with this experiment. New data is processed every 15 minutes",
+    "uploadData": "Upload Data",
+    "provisioning": {
+      "title": "Experiment is Being Prepared",
+      "description": "The experiment infrastructure is currently being set up. Data access will be available once provisioning is complete.",
+      "tooltip": "During provisioning, the system is creating database schemas, setting up data pipelines, and configuring access permissions. This process usually takes a few minutes."
+    },
+    "provisioningFailed": {
+      "title": "Experiment Setup Failed",
+      "description": "There was an issue setting up the experiment infrastructure. Please contact support or try recreating the experiment."
+    }
   },
   "experiment": "Experiment",
   "experimentId": "Experiment ID",
   "created": "Created",
   "updated": "Updated",
   "descriptionTitle": "Description",
+  "details": {
+    "locations": {
+      "locationsTitle": "Experiment Locations",
+      "locationsCount": "{{count}} location",
+      "locationsCount_plural": "{{count}} locations",
+      "noLocations": "No locations",
+      "noLocationsDescription": "This experiment doesn't have any locations configured."
+    }
+  },
+  "settings": {
+    "locations": {
+      "title": "Location Management",
+      "description": "Configure and manage experiment locations",
+      "editLocations": "Edit Locations",
+      "count": "{{count}} location",
+      "count_plural": "{{count}} locations",
+      "noLocations": "No locations configured",
+      "noLocationsDescription": "Add locations to specify where this experiment takes place",
+      "viewMap": "View on Map",
+      "mapPreview": "Location Map Preview",
+      "editMode": "Edit Locations",
+      "editModeDescription": "Click on the map to add locations, click existing markers to edit or remove them",
+      "editingCount_one": "{{count}} location selected",
+      "editingCount_other": "{{count}} locations selected"
+    }
+  },
   "manageExperimentDescription": "View and manage experiment details, data, flow, and settings.",
   "loading": "Loading...",
   "failedToLoad": "Failed to load experiment",
@@ -78,6 +113,7 @@
   "errorLoadingExperiment": "An error occurred while loading the experiment",
   "experimentNotFound": "The experiment you're looking for could not be found",
   "needMemberAccess": "You need member access to perform this action",
+  "needAdminAccess": "You need admin access to perform this action",
   "previewMode": "Preview Mode",
   "editingMode": "Editing Mode",
   "validation": {

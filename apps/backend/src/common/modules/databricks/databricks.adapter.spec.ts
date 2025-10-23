@@ -167,6 +167,76 @@ describe("DatabricksAdapter", () => {
     });
   });
 
+  describe("downloadExperimentData", () => {
+    const schemaName = "exp_test_experiment_123";
+    const sqlStatement = "SELECT * FROM test_table";
+
+    it("should successfully download experiment data with external links", async () => {
+      const mockDownloadData = {
+        external_links: [
+          {
+            chunk_index: 0,
+            row_count: 1000,
+            row_offset: 0,
+            byte_count: 5242880,
+            external_link: "https://databricks-presigned-url.com/chunk0",
+            expiration: "2024-01-15T12:00:00.000Z",
+          },
+          {
+            chunk_index: 1,
+            row_count: 500,
+            row_offset: 1000,
+            byte_count: 2621440,
+            external_link: "https://databricks-presigned-url.com/chunk1",
+            expiration: "2024-01-15T12:00:00.000Z",
+          },
+        ],
+        totalRows: 1500,
+        format: "CSV",
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock SQL statement execution with EXTERNAL_LINKS disposition
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 2,
+              columns: [
+                { name: "id", type_name: "LONG", type_text: "BIGINT", position: 0 },
+                { name: "measurement", type_name: "DOUBLE", type_text: "DOUBLE", position: 1 },
+              ],
+            },
+            total_row_count: mockDownloadData.totalRows,
+            format: mockDownloadData.format,
+          },
+          result: {
+            external_links: mockDownloadData.external_links,
+            chunk_index: 0,
+            row_count: 0,
+            row_offset: 0,
+          },
+        });
+
+      // Execute download query
+      const result = await databricksAdapter.downloadExperimentData(schemaName, sqlStatement);
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual(mockDownloadData);
+    });
+  });
+
   describe("listTables", () => {
     const experimentName = "test_experiment";
     const experimentId = "123";
@@ -215,6 +285,360 @@ describe("DatabricksAdapter", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value.tables).toEqual(mockTablesResponse.tables);
+    });
+  });
+
+  describe("validateDataSources", () => {
+    const experimentName = "test_experiment";
+    const experimentId = "123";
+    const schemaName = `exp_${experimentName}_${experimentId}`;
+
+    it("should validate data sources successfully when table and columns exist", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock tables list API call
+      nock(databricksHost)
+        .get(DatabricksTablesService.TABLES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          tables: [
+            {
+              name: "sensor_data",
+              catalog_name: "main",
+              schema_name: schemaName,
+              table_type: "MANAGED",
+            },
+          ],
+        });
+
+      // Mock DESCRIBE table query to get column schema
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "mock-describe-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 3,
+              columns: [
+                { name: "col_name", type_name: "STRING", type_text: "STRING", position: 0 },
+                { name: "data_type", type_name: "STRING", type_text: "STRING", position: 1 },
+                { name: "comment", type_name: "STRING", type_text: "STRING", position: 2 },
+              ],
+            },
+            total_row_count: 3,
+            truncated: false,
+          },
+          result: {
+            data_array: [
+              ["timestamp", "TIMESTAMP", "Timestamp column"],
+              ["temperature", "DOUBLE", "Temperature readings"],
+              ["humidity", "DOUBLE", "Humidity readings"],
+            ],
+            chunk_index: 0,
+            row_count: 3,
+            row_offset: 0,
+          },
+        });
+
+      // Test data config
+      const dataConfig = {
+        tableName: "sensor_data",
+        dataSources: [
+          { tableName: "sensor_data", columnName: "timestamp" },
+          { tableName: "sensor_data", columnName: "temperature" },
+        ],
+      };
+
+      // Execute the method
+      const result = await databricksAdapter.validateDataSources(
+        dataConfig,
+        experimentName,
+        experimentId,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(true);
+    });
+
+    it("should fail when table does not exist", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock tables list API call - return empty array
+      nock(databricksHost).get(DatabricksTablesService.TABLES_ENDPOINT).query(true).reply(200, {
+        tables: [],
+      });
+
+      // Test data config with non-existent table
+      const dataConfig = {
+        tableName: "non_existent_table",
+        dataSources: [
+          { tableName: "non_existent_table", columnName: "timestamp" },
+          { tableName: "non_existent_table", columnName: "temperature" },
+        ],
+      };
+
+      // Execute the method
+      const result = await databricksAdapter.validateDataSources(
+        dataConfig,
+        experimentName,
+        experimentId,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toBe(
+        "Table 'non_existent_table' does not exist in this experiment",
+      );
+    });
+
+    it("should fail when columns do not exist in table", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock tables list API call
+      nock(databricksHost)
+        .get(DatabricksTablesService.TABLES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          tables: [
+            {
+              name: "sensor_data",
+              catalog_name: "main",
+              schema_name: schemaName,
+              table_type: "MANAGED",
+            },
+          ],
+        });
+
+      // Mock DESCRIBE table query - return limited columns
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "mock-describe-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 3,
+              columns: [
+                { name: "col_name", type_name: "STRING", type_text: "STRING", position: 0 },
+                { name: "data_type", type_name: "STRING", type_text: "STRING", position: 1 },
+                { name: "comment", type_name: "STRING", type_text: "STRING", position: 2 },
+              ],
+            },
+            total_row_count: 2,
+            truncated: false,
+          },
+          result: {
+            data_array: [
+              ["timestamp", "TIMESTAMP", "Timestamp column"],
+              ["temperature", "DOUBLE", "Temperature readings"],
+            ],
+            chunk_index: 0,
+            row_count: 2,
+            row_offset: 0,
+          },
+        });
+
+      // Test data config with non-existent column
+      const dataConfig = {
+        tableName: "sensor_data",
+        dataSources: [
+          { tableName: "sensor_data", columnName: "timestamp" },
+          { tableName: "sensor_data", columnName: "pressure" }, // Non-existent column
+        ],
+      };
+
+      // Execute the method
+      const result = await databricksAdapter.validateDataSources(
+        dataConfig,
+        experimentName,
+        experimentId,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toBe("Columns do not exist in table 'sensor_data': pressure");
+    });
+
+    it("should handle error when listing tables fails", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock tables list API call with an error
+      nock(databricksHost).get(DatabricksTablesService.TABLES_ENDPOINT).query(true).reply(500, {
+        error_code: "INTERNAL_ERROR",
+        message: "Failed to list tables",
+      });
+
+      // Test data config
+      const dataConfig = {
+        tableName: "sensor_data",
+        dataSources: [
+          { tableName: "sensor_data", columnName: "timestamp" },
+          { tableName: "sensor_data", columnName: "temperature" },
+        ],
+      };
+
+      // Execute the method
+      const result = await databricksAdapter.validateDataSources(
+        dataConfig,
+        experimentName,
+        experimentId,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to list tables");
+    });
+
+    it("should handle error when describing table schema fails", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock tables list API call
+      nock(databricksHost)
+        .get(DatabricksTablesService.TABLES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          tables: [
+            {
+              name: "sensor_data",
+              catalog_name: "main",
+              schema_name: schemaName,
+              table_type: "MANAGED",
+            },
+          ],
+        });
+
+      // Mock DESCRIBE table query with error
+      nock(databricksHost).post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`).reply(500, {
+        error_code: "INTERNAL_ERROR",
+        message: "Failed to describe table",
+      });
+
+      // Test data config
+      const dataConfig = {
+        tableName: "sensor_data",
+        dataSources: [
+          { tableName: "sensor_data", columnName: "timestamp" },
+          { tableName: "sensor_data", columnName: "temperature" },
+        ],
+      };
+
+      // Execute the method
+      const result = await databricksAdapter.validateDataSources(
+        dataConfig,
+        experimentName,
+        experimentId,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to get table schema");
+    });
+
+    it("should handle multiple missing columns correctly", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock tables list API call
+      nock(databricksHost)
+        .get(DatabricksTablesService.TABLES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          tables: [
+            {
+              name: "sensor_data",
+              catalog_name: "main",
+              schema_name: schemaName,
+              table_type: "MANAGED",
+            },
+          ],
+        });
+
+      // Mock DESCRIBE table query - return only one column
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "mock-describe-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 3,
+              columns: [
+                { name: "col_name", type_name: "STRING", type_text: "STRING", position: 0 },
+                { name: "data_type", type_name: "STRING", type_text: "STRING", position: 1 },
+                { name: "comment", type_name: "STRING", type_text: "STRING", position: 2 },
+              ],
+            },
+            total_row_count: 1,
+            truncated: false,
+          },
+          result: {
+            data_array: [["timestamp", "TIMESTAMP", "Timestamp column"]],
+            chunk_index: 0,
+            row_count: 1,
+            row_offset: 0,
+          },
+        });
+
+      // Test data config with multiple non-existent columns
+      const dataConfig = {
+        tableName: "sensor_data",
+        dataSources: [
+          { tableName: "sensor_data", columnName: "timestamp" }, // Exists
+          { tableName: "sensor_data", columnName: "pressure" }, // Missing
+          { tableName: "sensor_data", columnName: "humidity" }, // Missing
+          { tableName: "sensor_data", columnName: "pressure" }, // Duplicate missing
+        ],
+      };
+
+      // Execute the method
+      const result = await databricksAdapter.validateDataSources(
+        dataConfig,
+        experimentName,
+        experimentId,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toBe(
+        "Columns do not exist in table 'sensor_data': pressure, humidity",
+      );
     });
   });
 

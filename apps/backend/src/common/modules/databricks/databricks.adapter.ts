@@ -1,9 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { ExperimentVisualizationDto } from "../../../experiments/core/models/experiment-visualizations.model";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { MacroDto } from "../../../macros/core/models/macro.model";
 import { DatabricksPort as MacrosDatabricksPort } from "../../../macros/core/ports/databricks.port";
-import type { Result } from "../../utils/fp-utils";
+import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
 import type { UploadFileResponse } from "./services/files/files.types";
@@ -16,7 +17,7 @@ import type {
 import { DatabricksPipelinesService } from "./services/pipelines/pipelines.service";
 import type { DatabricksPipelineStartUpdateResponse } from "./services/pipelines/pipelines.types";
 import { DatabricksSqlService } from "./services/sql/sql.service";
-import type { SchemaData } from "./services/sql/sql.types";
+import type { SchemaData, DownloadLinksData } from "./services/sql/sql.types";
 import { DatabricksTablesService } from "./services/tables/tables.service";
 import type { ListTablesResponse } from "./services/tables/tables.types";
 import { DatabricksVolumesService } from "./services/volumes/volumes.service";
@@ -61,7 +62,24 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    * Execute a SQL query in a specific schema
    */
   async executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {
-    return this.sqlService.executeSqlQuery(schemaName, sqlStatement);
+    const result = await this.sqlService.executeSqlQuery(schemaName, sqlStatement, "INLINE");
+    return result as Result<SchemaData>;
+  }
+
+  /**
+   * Download experiment data using EXTERNAL_LINKS disposition for large datasets
+   */
+  async downloadExperimentData(
+    schemaName: string,
+    sqlStatement: string,
+  ): Promise<Result<DownloadLinksData>> {
+    const result = await this.sqlService.executeSqlQuery(
+      schemaName,
+      sqlStatement,
+      "EXTERNAL_LINKS",
+      "CSV",
+    );
+    return result as Result<DownloadLinksData>;
   }
 
   /**
@@ -72,6 +90,82 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     experimentId: string,
   ): Promise<Result<ListTablesResponse>> {
     return this.tablesService.listTables(experimentName, experimentId);
+  }
+
+  /**
+   * Validate that data sources (table and columns) exist in the experiment
+   */
+  async validateDataSources(
+    dataConfig: ExperimentVisualizationDto["dataConfig"],
+    experimentName: string,
+    experimentId: string,
+  ): Promise<Result<boolean>> {
+    this.logger.log(`Validating data sources for experiment ${experimentName} (${experimentId})`);
+
+    // Check if table exists in Databricks
+    const tablesResult = await this.listTables(experimentName, experimentId);
+
+    if (tablesResult.isFailure()) {
+      this.logger.error(`Failed to list tables: ${tablesResult.error.message}`);
+      return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
+    }
+
+    const tableExists = tablesResult.value.tables.some(
+      (table) => table.name === dataConfig.tableName,
+    );
+
+    if (!tableExists) {
+      this.logger.warn(
+        `Table '${dataConfig.tableName}' does not exist in experiment ${experimentName}`,
+      );
+      return failure(
+        AppError.badRequest(`Table '${dataConfig.tableName}' does not exist in this experiment`),
+      );
+    }
+
+    // Check if columns exist in the table by querying the table schema
+    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+    const schemaName = `exp_${cleanName}_${experimentId}`;
+    const schemaQuery = `DESCRIBE ${dataConfig.tableName}`;
+
+    this.logger.debug(`Executing schema query: ${schemaQuery} in schema: ${schemaName}`);
+    const schemaResult = await this.executeSqlQuery(schemaName, schemaQuery);
+
+    if (schemaResult.isFailure()) {
+      this.logger.error(`Failed to get table schema: ${schemaResult.error.message}`);
+      return failure(
+        AppError.internal(`Failed to get table schema: ${schemaResult.error.message}`),
+      );
+    }
+
+    // Extract column names from schema (first column contains column names)
+    const availableColumns = schemaResult.value.rows.map((row) => row[0]);
+
+    // Check columns for each data source
+    const allMissingColumns: string[] = [];
+
+    for (const dataSource of dataConfig.dataSources) {
+      if (!availableColumns.includes(dataSource.columnName)) {
+        allMissingColumns.push(dataSource.columnName);
+      }
+    }
+
+    if (allMissingColumns.length > 0) {
+      const uniqueMissingColumns = [...new Set(allMissingColumns)];
+      this.logger.warn(
+        `Missing columns in table '${dataConfig.tableName}': ${uniqueMissingColumns.join(", ")}`,
+      );
+      return failure(
+        AppError.badRequest(
+          `Columns do not exist in table '${dataConfig.tableName}': ${uniqueMissingColumns.join(", ")}`,
+        ),
+      );
+    }
+
+    this.logger.log(
+      `Data sources validation successful for table '${dataConfig.tableName}' with ${dataConfig.dataSources.length} data sources`,
+    );
+    return success(true);
   }
 
   /**

@@ -10,6 +10,7 @@ import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
 import { AsyncQueue } from "../../common/utils/async-queue";
 import { handleFailure } from "../../common/utils/fp-utils";
+import { DownloadExperimentDataUseCase } from "../application/use-cases/experiment-data/download-experiment-data";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data";
 import { UploadAmbyteDataUseCase } from "../application/use-cases/experiment-data/upload-ambyte-data";
 import { GetExperimentAccessUseCase } from "../application/use-cases/get-experiment-access/get-experiment-access";
@@ -23,13 +24,14 @@ export class ExperimentDataController {
     private readonly getExperimentDataUseCase: GetExperimentDataUseCase,
     private readonly getExperimentAccessUseCase: GetExperimentAccessUseCase,
     private readonly uploadAmbyteDataUseCase: UploadAmbyteDataUseCase,
+    private readonly downloadExperimentDataUseCase: DownloadExperimentDataUseCase,
   ) {}
 
   @TsRestHandler(contract.experiments.getExperimentData)
   getExperimentData(@CurrentUser() user: { id: string }) {
     return tsRestHandler(contract.experiments.getExperimentData, async ({ params, query }) => {
       const { id: experimentId } = params;
-      const { page, pageSize, tableName } = query;
+      const { page, pageSize, tableName, columns } = query;
 
       this.logger.log(`Processing data request for experiment ${experimentId} by user ${user.id}`);
 
@@ -37,6 +39,7 @@ export class ExperimentDataController {
         page,
         pageSize,
         tableName,
+        columns,
       });
 
       if (result.isSuccess()) {
@@ -80,6 +83,17 @@ export class ExperimentDataController {
       }
 
       const { experiment } = experimentAccessResult.value;
+
+      // Check if experiment is archived - no one can upload data to archived experiments
+      if (experiment.status === "archived") {
+        this.logger.warn(
+          `User ${user.id} attempted to upload data to archived experiment ${experimentId}`,
+        );
+        return {
+          status: StatusCodes.FORBIDDEN,
+          body: { message: "Cannot upload data to archived experiments" },
+        };
+      }
 
       // Prepare the upload environment by ensuring the required volume exists
       this.logger.log(
@@ -248,6 +262,38 @@ export class ExperimentDataController {
         return {
           status: StatusCodes.CREATED,
           body: result.value,
+        };
+      }
+
+      return handleFailure(result, this.logger);
+    });
+  }
+
+  @TsRestHandler(contract.experiments.downloadExperimentData)
+  downloadExperimentData(@CurrentUser() user: { id: string }) {
+    return tsRestHandler(contract.experiments.downloadExperimentData, async ({ params, query }) => {
+      const { id: experimentId } = params;
+      const { tableName } = query;
+
+      this.logger.log(
+        `Processing download request for experiment ${experimentId}, table ${tableName} by user ${user.id}`,
+      );
+
+      const result = await this.downloadExperimentDataUseCase.execute(experimentId, user.id, {
+        tableName,
+      });
+
+      if (result.isSuccess()) {
+        const data = result.value;
+
+        this.logger.log(
+          `Successfully prepared download links for experiment ${experimentId}, table ${tableName}. ` +
+            `Total chunks: ${data.externalLinks.length}`,
+        );
+
+        return {
+          status: StatusCodes.OK,
+          body: data,
         };
       }
 

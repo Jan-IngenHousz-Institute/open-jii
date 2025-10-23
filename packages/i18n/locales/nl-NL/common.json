@@ -88,7 +88,16 @@
     "addMembersDescription": "Beheer wie toegang heeft tot dit experiment",
     "addMemberPlaceholder": "Lid toevoegen",
     "visibilityTitle": "Zichtbaarheidsinstellingen",
-    "visibilityDescription": "Beheer de zichtbaarheid en embargo-periode van je experiment"
+    "visibilityDescription": "Beheer de zichtbaarheid en embargo-periode van je experiment",
+    "addProtocolsTitle": "Protocollen toevoegen",
+    "addProtocolsDescription": "Beheer en sorteer experimentprotocollen",
+    "addProtocolsPlaceholder": "Protocol toevoegen",
+    "locationsTitle": "Experimentlocaties",
+    "locationsDescription": "Selecteer geografische locaties waar dit experiment plaatsvindt",
+    "selectLocations": "Locaties selecteren",
+    "addLocationsTitle": "Locaties toevoegen",
+    "addLocationsDescription": "Klik op de kaart om experimentlocaties toe te voegen",
+    "locationsListTitle": "Geselecteerde locaties"
   },
   "experimentSettings": {
     "loading": "Experiment instellingen laden...",
@@ -151,6 +160,13 @@
     "loginToAccount": "Log in op je account",
     "continueWith": "Doorgaan met",
     "loginWith": "Inloggen met {{provider}}",
+    "loginWith-github": "Inloggen met GitHub",
+    "loginWith-nodemailer": "Inloggen met e-mail",
+    "loginWith-orcid": "Inloggen met ORCID",
+    "emailPlaceholder": "m@voorbeeld.com",
+    "emailRequired": "E-mail is verplicht",
+    "emailInvalid": "Voer een geldig e-mailadres in",
+    "sendingEmail": "We sturen je een e-mail...",
     "account": "Account",
     "userMenu": "Gebruikersmenu",
     "signingOut": "Uitloggen..."
@@ -182,7 +198,17 @@
     "unauthorized": "Ongeautoriseerde toegang",
     "forbidden": "Toegang verboden",
     "failedToLoadProtocol": "Protocol kon niet worden geladen",
-    "loginRequired": "Log in om toegang te krijgen tot deze pagina"
+    "loginRequired": "Log in om toegang te krijgen tot deze pagina",
+    "notFoundTitle": "404",
+    "notFoundHeading": "Pagina niet gevonden",
+    "notFoundMessage": "De pagina die je zoekt bestaat niet. Deze is mogelijk verplaatst, verwijderd of je hebt een verkeerde URL ingevoerd.",
+    "whereToGo": "Waar wil je naartoe?",
+    "goToHomepage": "Naar startpagina",
+    "accessPlatform": "Platform openen",
+    "learnAboutUs": "Meer over ons",
+    "needHelp": "Hulp nodig? Probeer terug te gaan naar de vorige pagina of neem contact op met de support.",
+    "goBack": "Terug",
+    "brandTagline": "Jan IngenHousz Instituut - Fotosynthese verbeteren voor een duurzame toekomst"
   },
   "footer": {
     "aboutUs": "Over ons",
@@ -296,6 +322,7 @@
     "previous": "Vorige",
     "next": "Volgende",
     "table": "Tabel",
-    "details": "Toon tabeldetails"
+    "details": "Toon tabeldetails",
+    "download": "Tabel downloaden"
   }
 }

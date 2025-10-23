@@ -1,5 +1,6 @@
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { CreateFlowUseCase } from "./create-flow";
 
 describe("CreateFlowUseCase", () => {
@@ -61,6 +62,38 @@ describe("CreateFlowUseCase", () => {
     assertSuccess(result);
     const created = result.value;
     expect(created.graph).toEqual(graph);
+  });
+
+  it("returns 403 when any user attempts to create flow for archived experiments", async () => {
+    // Create an archived experiment
+    const { experiment } = await testApp.createExperiment({
+      name: "Archived Exp",
+      userId: ownerId,
+    });
+
+    // Mock repository to simulate archived experiment regardless of role
+    const experimentRepository = testApp.module.get(ExperimentRepository);
+    vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+      success({
+        experiment: { ...experiment, status: "archived" },
+        hasAccess: true,
+        hasArchiveAccess: false,
+        isAdmin: true,
+      }),
+    );
+
+    const graph = testApp.sampleFlowGraph({ questionKind: "multi_choice" });
+
+    try {
+      const result = await useCase.execute(experiment.id, ownerId, graph);
+
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(403);
+      expect(result.error.message).toContain("You do not have access to this experiment");
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 
   it("creates flow when user is admin and no existing flow", async () => {

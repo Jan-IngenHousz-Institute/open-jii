@@ -5,13 +5,17 @@ import type {
   DatabricksJobRunResponse,
 } from "../../../common/modules/databricks/services/jobs/jobs.types";
 import type { DatabricksPipelineStartUpdateResponse } from "../../../common/modules/databricks/services/pipelines/pipelines.types";
-import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
+import type {
+  SchemaData,
+  DownloadLinksData,
+} from "../../../common/modules/databricks/services/sql/sql.types";
 import type { ListTablesResponse } from "../../../common/modules/databricks/services/tables/tables.types";
 import type {
   CreateVolumeParams,
   VolumeResponse,
 } from "../../../common/modules/databricks/services/volumes/volumes.types";
 import type { Result } from "../../../common/utils/fp-utils";
+import type { ExperimentVisualizationDto } from "../models/experiment-visualizations.model";
 
 /**
  * Injection token for the Databricks port
@@ -39,9 +43,31 @@ export interface DatabricksPort {
   executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>>;
 
   /**
+   * Download experiment data using EXTERNAL_LINKS disposition for large datasets
+   */
+  downloadExperimentData(
+    schemaName: string,
+    sqlStatement: string,
+  ): Promise<Result<DownloadLinksData>>;
+
+  /**
    * List tables in the schema for a specific experiment
    */
   listTables(experimentName: string, experimentId: string): Promise<Result<ListTablesResponse>>;
+
+  /**
+   * Validate that data sources (table and columns) exist in the experiment
+   *
+   * @param dataConfig - Configuration containing table name and column names to validate
+   * @param experimentName - Name of the experiment
+   * @param experimentId - ID of the experiment
+   * @returns Result indicating whether the data sources are valid
+   */
+  validateDataSources(
+    dataConfig: ExperimentVisualizationDto["dataConfig"],
+    experimentName: string,
+    experimentId: string,
+  ): Promise<Result<boolean>>;
 
   /**
    * Upload data to Databricks for a specific experiment.

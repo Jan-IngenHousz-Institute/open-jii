@@ -8,10 +8,12 @@ import { AuthError } from "next-auth";
 import { adapter, lambdaAdapter } from "./adapter";
 import { baseAuthConfig } from "./config";
 import { sendVerificationRequest } from "./email/verificationRequest";
+import ORCID from "./providers/orcid";
 
 interface InitAuthParams {
   authSecrets: Record<string, string>;
   dbSecrets: Record<string, string>;
+  sesSecrets: Record<string, string>;
   isLambda: boolean;
 }
 
@@ -19,22 +21,46 @@ export type NextAuth = NextAuthResult & {
   providerMap: { id: string; name: string }[];
 };
 
-export function initAuth({ authSecrets, dbSecrets, isLambda }: InitAuthParams): NextAuth {
+export function initAuth({
+  authSecrets,
+  dbSecrets,
+  sesSecrets,
+  isLambda,
+}: InitAuthParams): NextAuth {
   const providers: Provider[] = [
     GitHub({
       clientId: authSecrets.AUTH_GITHUB_ID || process.env.AUTH_GITHUB_ID,
       clientSecret: authSecrets.AUTH_GITHUB_SECRET || process.env.AUTH_GITHUB_SECRET,
     }),
   ];
-  if (authSecrets.AUTH_EMAIL_SERVER || process.env.AUTH_EMAIL_SERVER) {
+
+  if (authSecrets.AUTH_ORCID_ID || process.env.AUTH_ORCID_ID) {
+    providers.push(
+      ORCID({
+        clientId: authSecrets.AUTH_ORCID_ID || process.env.AUTH_ORCID_ID,
+        clientSecret: authSecrets.AUTH_ORCID_SECRET || process.env.AUTH_ORCID_SECRET,
+        environment:
+          authSecrets.AUTH_ORCID_ENVIRONMENT === "sandbox" ||
+          process.env.AUTH_ORCID_ENVIRONMENT === "sandbox"
+            ? "sandbox"
+            : "production",
+      }),
+    );
+  }
+
+  if (
+    (sesSecrets.AUTH_EMAIL_SERVER || process.env.AUTH_EMAIL_SERVER) &&
+    (sesSecrets.AUTH_EMAIL_FROM || process.env.AUTH_EMAIL_FROM)
+  ) {
     providers.push(
       Nodemailer({
-        server: authSecrets.AUTH_EMAIL_SERVER || process.env.AUTH_EMAIL_SERVER,
-        from: authSecrets.AUTH_EMAIL_FROM || process.env.AUTH_EMAIL_FROM,
+        server: sesSecrets.AUTH_EMAIL_SERVER || process.env.AUTH_EMAIL_SERVER,
+        from: sesSecrets.AUTH_EMAIL_FROM || process.env.AUTH_EMAIL_FROM,
         sendVerificationRequest,
       }),
     );
   }
+
   const authConfig: NextAuthConfig = {
     ...baseAuthConfig,
     secret: authSecrets.AUTH_SECRET || process.env.AUTH_SECRET,

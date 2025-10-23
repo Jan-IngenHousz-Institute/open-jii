@@ -33,6 +33,12 @@ vi.mock("@tanstack/react-table", () => ({
   }),
 }));
 
+// Mock lucide-react icons
+vi.mock("lucide-react", () => ({
+  ChevronDown: () => <div data-testid="chevron-down">▼</div>,
+  ChevronRight: () => <div data-testid="chevron-right">▶</div>,
+}));
+
 // Mock UI components
 vi.mock("@repo/ui/components", () => ({
   Skeleton: ({ className }: { className?: string }) => (
@@ -69,6 +75,46 @@ vi.mock("@repo/ui/components", () => ({
     </th>
   ),
   TableHeader: ({ children }: { children: React.ReactNode }) => <thead>{children}</thead>,
+  Collapsible: ({
+    children,
+    open,
+    onOpenChange: _onOpenChange,
+  }: {
+    children: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+  }) => (
+    <div data-testid="collapsible" data-open={open}>
+      {children}
+    </div>
+  ),
+  CollapsibleTrigger: ({
+    children,
+    asChild: _asChild,
+  }: {
+    children: React.ReactNode;
+    asChild?: boolean;
+  }) => <div data-testid="collapsible-trigger">{children}</div>,
+  CollapsibleContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="collapsible-content">{children}</div>
+  ),
+  Button: ({
+    children,
+    variant: _variant,
+    size: _size,
+    className,
+    onClick,
+  }: {
+    children: React.ReactNode;
+    variant?: string;
+    size?: string;
+    className?: string;
+    onClick?: () => void;
+  }) => (
+    <button className={className} onClick={onClick} data-testid="button">
+      {children}
+    </button>
+  ),
 }));
 
 describe("experiment-data-utils", () => {
@@ -106,6 +152,44 @@ describe("experiment-data-utils", () => {
     it("should handle null values", () => {
       const result = formatValue(null, "STRING");
       expect(result).toBeNull();
+    });
+
+    it("should render ExperimentDataTableMapCell for MAP type", () => {
+      const result = formatValue('{"key": "value"}', "MAP", "test-column");
+
+      // The result should be a React element (ExperimentDataTableMapCell)
+      expect(React.isValidElement(result)).toBe(true);
+
+      // Render it to check the component
+      render(<div>{result}</div>);
+      expect(screen.getByText("key:")).toBeInTheDocument();
+      expect(screen.getByText("value")).toBeInTheDocument();
+    });
+
+    it("should render ExperimentDataTableMapCell for MAP<STRING,STRING> type", () => {
+      const result = formatValue(
+        '{"name": "John", "role": "Admin"}',
+        "MAP<STRING,STRING>",
+        "test-column",
+      );
+
+      // The result should be a React element (ExperimentDataTableMapCell)
+      expect(React.isValidElement(result)).toBe(true);
+
+      // Render it to check the component
+      render(<div>{result}</div>);
+      expect(screen.getByText("2 entries")).toBeInTheDocument();
+    });
+
+    it("should render ExperimentDataTableMapCell for MAP<STRING,INT> type", () => {
+      const result = formatValue('{"count": 5, "total": 10}', "MAP<STRING,INT>", "test-column");
+
+      // The result should be a React element (ExperimentDataTableMapCell)
+      expect(React.isValidElement(result)).toBe(true);
+
+      // Render it to check the component
+      render(<div>{result}</div>);
+      expect(screen.getByText("2 entries")).toBeInTheDocument();
     });
   });
 

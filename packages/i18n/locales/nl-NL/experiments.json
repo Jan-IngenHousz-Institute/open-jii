@@ -56,13 +56,48 @@
   "experimentData": {
     "title": "Experimentgegevens",
     "description": "Bekijk en beheer gegevens die bij dit experiment horen.",
-    "uploadData": "Gegevens uploaden"
+    "uploadData": "Gegevens uploaden",
+    "provisioning": {
+      "title": "Experiment wordt voorbereid",
+      "description": "De experimentinfrastructuur wordt momenteel opgezet. Gegevenstoegang wordt beschikbaar zodra de inrichting is voltooid.",
+      "tooltip": "Tijdens het inrichten maakt het systeem databaseschema's aan, stelt gegevenspijplijnen in en configureert toegangsrechten. Dit proces duurt meestal enkele minuten."
+    },
+    "provisioningFailed": {
+      "title": "Experiment-instelling mislukt",
+      "description": "Er was een probleem bij het opzetten van de experimentinfrastructuur. Neem contact op met de ondersteuning of probeer het experiment opnieuw aan te maken."
+    }
   },
   "experiment": "Experiment",
   "experimentId": "Experiment-ID",
   "created": "Gemaakt",
   "updated": "Bijgewerkt",
   "descriptionTitle": "Beschrijving",
+  "details": {
+    "locations": {
+      "locationsTitle": "Experiment Locaties",
+      "locationsCount": "{{count}} locatie",
+      "locationsCount_plural": "{{count}} locaties",
+      "noLocations": "Geen locaties",
+      "noLocationsDescription": "Dit experiment heeft geen geconfigureerde locaties."
+    }
+  },
+  "settings": {
+    "locations": {
+      "title": "Locatie Beheer",
+      "description": "Experiment locaties configureren en beheren",
+      "editLocations": "Locaties bewerken",
+      "count": "{{count}} locatie",
+      "count_plural": "{{count}} locaties",
+      "noLocations": "Geen locaties geconfigureerd",
+      "noLocationsDescription": "Voeg locaties toe om aan te geven waar dit experiment plaatsvindt",
+      "viewMap": "Bekijk op kaart",
+      "mapPreview": "Locatie kaart voorbeeld",
+      "editMode": "Locaties bewerken",
+      "editModeDescription": "Klik op de kaart om locaties toe te voegen, klik op bestaande markeringen om ze te bewerken of te verwijderen",
+      "editingCount_one": "{{count}} locatie geselecteerd",
+      "editingCount_other": "{{count}} locaties geselecteerd"
+    }
+  },
   "manageExperimentDescription": "Bekijk en beheer experimentdetails, gegevens, flow en instellingen.",
   "loading": "Laden...",
   "failedToLoad": "Experiment laden mislukt",

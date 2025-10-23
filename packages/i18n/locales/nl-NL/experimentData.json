@@ -20,6 +20,22 @@
       "noResults": "Geen analyseresultaten beschikbaar.",
       "description": "Analyseresultaten en rapporten worden hier weergegeven zodra de gegevensverzameling begint."
     },
-    "uploadData": "Gegevens uploaden"
+    "uploadData": "Gegevens uploaden",
+    "downloadModal": {
+      "title": "Dataset downloaden",
+      "description": "Download voorbereiden voor de '{{tableName}}' dataset. Bij zeer grote datasets wordt de download automatisch opgesplitst in meerdere delen voor een soepele en efficiënte ervaring.",
+      "format": "Formaat",
+      "generateLinks": "Download voorbereiden",
+      "generating": "Download voorbereiden...",
+      "downloadAll": "Alle bestanden downloaden",
+      "downloadFiles": "Bestanden downloaden",
+      "rows": "rijen",
+      "error": "Download mislukt",
+      "success": {
+        "title": "Download voorbereiding voltooid!",
+        "description": "{{count}} bestand(en) klaar voor download. Totale grootte: {{totalSize}}, Totaal rijen: {{totalRows}}"
+      },
+      "fileChunk": "{{tableName}} - Deel {{chunkNumber}} van {{totalChunks}}"
+    }
   }
 }

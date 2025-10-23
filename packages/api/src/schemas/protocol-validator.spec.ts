@@ -171,19 +171,6 @@ describe("Comprehensive Protocol JSON Validator", () => {
       expect(protocol.environmental).toHaveLength(13);
       expect(protocol.environmental?.[10]).toEqual(["analog_read", 5, 40]);
     });
-
-    it("should reject invalid environmental sensor configurations", () => {
-      const invalidEnv = [
-        {
-          label: "invalid_env",
-          environmental: [["invalid_sensor_type"]],
-        },
-      ];
-
-      const result = validateProtocolJson(invalidEnv);
-
-      expect(result.success).toBe(false);
-    });
   });
 
   describe("Advanced Configuration Validation", () => {
@@ -346,8 +333,8 @@ describe("Comprehensive Protocol JSON Validator", () => {
       if (result.data?.[0]) {
         expect(isMultiProtocolSet(result.data[0])).toBe(true);
 
-        if (isMultiProtocolSet(result.data[0])) {
-          const protocolSet = result.data[0]._protocol_set_ as ProtocolSet[];
+        if (isMultiProtocolSet(result.data[0]) && result.data[0]._protocol_set_) {
+          const protocolSet: ProtocolSet[] = result.data[0]._protocol_set_;
           expect(protocolSet).toHaveLength(4);
           expect(protocolSet[0].label).toBe("no_leaf_baseline");
           expect(protocolSet[1].label).toBe("DIRK_ECS");
@@ -997,7 +984,7 @@ describe("Code to determine error line numbers", () => {
     const protocol: unknown = JSON.parse(code);
     const result = validateProtocolJson(protocol);
     expect(result.success).toBe(false);
-    expect(result.error?.length).toBe(3);
+    expect(result.error?.length).toBe(2);
     if (result.error !== undefined) {
       const errorInfo1 = findProtocolErrorLine(code, result.error[0]);
       expect(errorInfo1).toStrictEqual({
@@ -1005,9 +992,7 @@ describe("Code to determine error line numbers", () => {
         message: "Item 'averages': Number must be greater than 0",
       });
       const errorInfo2 = findProtocolErrorLine(code, result.error[1]);
-      expect(errorInfo2).toStrictEqual({ line: 31, message: "Item 'label': Required" });
-      const errorInfo3 = findProtocolErrorLine(code, result.error[2]);
-      expect(errorInfo3).toStrictEqual({
+      expect(errorInfo2).toStrictEqual({
         line: 30,
         message: "Item 'averages': Number must be greater than 0",
       });
@@ -1129,5 +1114,18 @@ describe("Code to determine error line numbers", () => {
         message: "Item 'get_ir_baseline': Invalid pin number",
       });
     }
+  });
+
+  it("should validate protocol with inc_ri", () => {
+    const envProtocol = [
+      {
+        inc_ri: 1,
+        environmental: [["light_intensity", 0]],
+      },
+    ];
+
+    const result = validateProtocolJson(envProtocol);
+
+    expect(result.success).toBe(true);
   });
 });

@@ -11,10 +11,12 @@ export const useExperiments = ({
   initialFilter = "my",
   initialStatus = undefined,
   initialSearch = "",
+  archived = false,
 }: {
   initialFilter?: ExperimentFilter;
   initialStatus?: ExperimentStatus | undefined;
   initialSearch?: string;
+  archived?: boolean;
 }) => {
   const [filter, setFilter] = useState<ExperimentFilter>(initialFilter);
   const [status, setStatus] = useState<ExperimentStatus | undefined>(initialStatus);
@@ -26,11 +28,11 @@ export const useExperiments = ({
     queryData: {
       query: {
         filter: filter === "all" ? undefined : filter,
-        status,
+        status: archived ? "archived" : status,
         search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
       },
     },
-    queryKey: ["experiments", filter, status, debouncedSearch],
+    queryKey: ["experiments", filter, status, debouncedSearch, archived],
   });
 
   // Return query result with filter, status, and search controls

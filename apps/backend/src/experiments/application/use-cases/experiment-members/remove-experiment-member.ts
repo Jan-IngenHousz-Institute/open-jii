@@ -45,6 +45,13 @@ export class RemoveExperimentMemberUseCase {
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
+        if (experiment.status === "archived") {
+          this.logger.warn(
+            `Attempt to remove member from archived experiment ${experimentId} by user ${currentUserId}`,
+          );
+          return failure(AppError.forbidden("Cannot remove members from archived experiments"));
+        }
+
         if (!hasAccess) {
           this.logger.warn(`User ${currentUserId} is not a member of experiment ${experimentId}`);
           return failure(AppError.forbidden("Only experiment members can remove members"));

@@ -21,27 +21,59 @@ vi.mock("@/lib/tsr", () => ({
 // Mock i18n
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        "experimentDataTable.loading": "Loading...",
-        "experimentDataTable.error": "Error loading data",
-        "experimentDataTable.noData": "No data available",
-        "experimentDataTable.table": "Table",
-        "experimentDataTable.totalRows": "Total rows",
-        "experimentDataTable.rowsPerPage": "Rows per page",
-        "experimentDataTable.page": "Page",
-        "experimentDataTable.pageOf": "of",
-        "experimentDataTable.previous": "Previous",
-        "experimentDataTable.next": "Next",
-        "experimentDataTable.noResults": "No results found",
-      };
-      return translations[key] || key;
-    },
+    t: (k: string) => k,
   }),
+}));
+
+// Mock BulkActionsBar
+vi.mock("~/components/experiment-data/annotations/bulk-actions-bar", () => ({
+  BulkActionsBar: () => <div data-testid="bulk-actions-bar">BulkActionsBar</div>,
 }));
 
 // Mock UI components
 vi.mock("@repo/ui/components", () => ({
+  Button: ({
+    children,
+    onClick,
+    className,
+    ...props
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    variant?: string;
+    size?: string;
+    className?: string;
+  }) => (
+    <button onClick={onClick} className={className} {...props}>
+      {children}
+    </button>
+  ),
+  Dialog: ({
+    children,
+    open,
+    onOpenChange: _onOpenChange,
+  }: {
+    children: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+  }) => (open ? <div data-testid="dialog">{children}</div> : null),
+  DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div className={className} data-testid="dialog-content">
+      {children}
+    </div>
+  ),
+  DialogDescription: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-description">{children}</div>
+  ),
+  DialogFooter: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-footer">{children}</div>
+  ),
+  DialogHeader: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-header">{children}</div>
+  ),
+  DialogTitle: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-title">{children}</div>
+  ),
   Label: ({ children }: { children: React.ReactNode }) => <label>{children}</label>,
   Pagination: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={className}>{children}</div>
@@ -126,6 +158,50 @@ vi.mock("@repo/ui/components", () => ({
   Skeleton: ({ className }: { className?: string }) => (
     <div data-testid="skeleton" className={className} />
   ),
+  Form: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
+    <div {...props}>{children}</div>
+  ),
+  FormField: ({
+    render,
+  }: {
+    render: (field: {
+      field: { value: string; onChange: (value: string) => void };
+    }) => React.ReactNode;
+  }) => {
+    const field = { value: "csv", onChange: vi.fn() };
+    return <>{render({ field })}</>;
+  },
+  FormItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  FormLabel: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <label className={className}>{children}</label>
+  ),
+  FormControl: ({ children }: { children: React.ReactNode }) => {
+    return <>{children}</>;
+  },
+  FormMessage: () => <div />,
+}));
+
+// Mock DataDownloadModal
+vi.mock("./data-download-modal/data-download-modal", () => ({
+  DataDownloadModal: ({
+    open,
+    onOpenChange,
+    experimentId,
+    tableName,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    experimentId: string;
+    tableName: string;
+  }) =>
+    open ? (
+      <div data-testid="data-download-modal">
+        <div>
+          Download Modal for {tableName} - {experimentId}
+        </div>
+        <button onClick={() => onOpenChange(false)}>Close</button>
+      </div>
+    ) : null,
 }));
 
 // Mock cn utility
@@ -135,13 +211,21 @@ vi.mock("@repo/ui/lib/utils", () => ({
 
 // Mock experiment data utils
 vi.mock("~/components/experiment-data/experiment-data-utils", () => ({
-  ExperimentDataRows: ({ rows, columnCount }: { rows: unknown[]; columnCount: number }) => (
-    <tr data-testid="experiment-data-rows">
-      <td colSpan={columnCount}>
-        {rows.length === 0 ? "No results found" : `${rows.length} rows`}
-      </td>
-    </tr>
-  ),
+  ExperimentDataRows: ({ rows, columnCount }: { rows: unknown[]; columnCount: number }) => {
+    if (rows.length === 0) {
+      return (
+        <tr data-testid="experiment-data-rows">
+          <td colSpan={columnCount}>No results found</td>
+        </tr>
+      );
+    }
+
+    return (
+      <tr data-testid="experiment-data-rows">
+        <td colSpan={columnCount}>{`${rows.length} rows`}</td>
+      </tr>
+    );
+  },
   ExperimentTableHeader: ({ headerGroups: _ }: { headerGroups: unknown[] }) => (
     <thead data-testid="experiment-table-header">
       <tr>
@@ -160,6 +244,71 @@ vi.mock("~/components/experiment-data/experiment-data-utils", () => ({
       <td colSpan={columnCount}>Loading {rowCount} rows...</td>
     </tr>
   ),
+}));
+
+// Mock chart components
+vi.mock("./experiment-data-table-chart-cell", () => ({
+  ExperimentDataTableChartCell: ({
+    data,
+    columnName,
+    onHover,
+    onLeave,
+    onClick,
+  }: {
+    data: number[] | string;
+    columnName: string;
+    onHover?: (data: number[], columnName: string) => void;
+    onLeave?: () => void;
+    onClick?: (data: number[], columnName: string) => void;
+  }) => (
+    <div
+      data-testid="chart-cell"
+      data-column={columnName}
+      onMouseEnter={() => {
+        if (onHover) {
+          onHover([1, 2, 3], columnName);
+        }
+      }}
+      onMouseLeave={() => {
+        if (onLeave) {
+          onLeave();
+        }
+      }}
+      onClick={() => {
+        if (onClick) {
+          onClick([1, 2, 3], columnName);
+        }
+      }}
+    >
+      Chart for {columnName}: {JSON.stringify(data)}
+    </div>
+  ),
+}));
+
+vi.mock("./experiment-data-table-chart", () => ({
+  ExperimentDataTableChart: ({
+    data,
+    columnName,
+    visible,
+    isClicked,
+    onClose,
+  }: {
+    data: number[];
+    columnName: string;
+    visible: boolean;
+    isClicked?: boolean;
+    onClose?: () => void;
+  }) =>
+    visible ? (
+      <div data-testid="large-chart" data-column={columnName} data-clicked={isClicked}>
+        Large chart for {columnName}: {JSON.stringify(data)}
+        {isClicked && onClose && (
+          <button onClick={onClose} data-testid="close-chart">
+            Close
+          </button>
+        )}
+      </div>
+    ) : null,
 }));
 
 const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
@@ -229,7 +378,7 @@ describe("ExperimentDataTable", () => {
       { wrapper: createWrapper() },
     );
 
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataTable.loading")).toBeInTheDocument();
   });
 
   it("should render error state", () => {
@@ -245,7 +394,7 @@ describe("ExperimentDataTable", () => {
       { wrapper: createWrapper() },
     );
 
-    expect(screen.getByText("Error loading data")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataTable.error")).toBeInTheDocument();
   });
 
   it("should render no data state", () => {
@@ -261,7 +410,7 @@ describe("ExperimentDataTable", () => {
       { wrapper: createWrapper() },
     );
 
-    expect(screen.getByText("No data available")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataTable.noData")).toBeInTheDocument();
   });
 
   it("should render table with data", () => {
@@ -277,8 +426,8 @@ describe("ExperimentDataTable", () => {
       { wrapper: createWrapper() },
     );
 
-    expect(screen.getByText("Table test_table")).toBeInTheDocument();
-    expect(screen.getByText("Total rows: 100")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataTable.table test_table")).toBeInTheDocument();
+    expect(screen.getByText("experimentDataTable.totalRows: 100")).toBeInTheDocument();
     expect(screen.getByTestId("experiment-table-header")).toBeInTheDocument();
     expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();
   });
@@ -423,6 +572,162 @@ describe("ExperimentDataTable", () => {
       },
       queryKey: ["experiment", "experiment-123", 1, 20, "test_table"],
       staleTime: 120000,
+    });
+  });
+
+  it("should render bulk actions bar", () => {
+    const mockUseQuery = vi.fn().mockReturnValue({
+      data: mockResponse,
+      isLoading: false,
+      error: null,
+    });
+    mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
+
+    render(
+      <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+      { wrapper: createWrapper() },
+    );
+
+    // Find and click download button
+    const bulkActionsBar = screen.getByTestId("bulk-actions-bar");
+    expect(bulkActionsBar).toBeInTheDocument();
+  });
+
+  describe("Chart functionality", () => {
+    const mockTableDataWithCharts = {
+      columns: [
+        { name: "id", type_name: "INT", type_text: "Integer" },
+        { name: "chart_data", type_name: "ARRAY<DOUBLE>", type_text: "Array of Doubles" },
+        { name: "name", type_name: "STRING", type_text: "String" },
+      ],
+      rows: [
+        { id: "1", chart_data: "[1.1, 2.2, 3.3]", name: "Test 1" },
+        { id: "2", chart_data: "[4.4, 5.5, 6.6]", name: "Test 2" },
+      ],
+      totalRows: 100,
+      truncated: false,
+    };
+
+    const mockResponseWithCharts = {
+      body: [
+        {
+          name: "test_table",
+          data: mockTableDataWithCharts,
+          totalPages: 10,
+          totalRows: 100,
+        },
+      ],
+    };
+
+    it("should render table with chart data correctly", () => {
+      const mockUseQuery = vi.fn().mockReturnValue({
+        data: mockResponseWithCharts,
+        isLoading: false,
+        error: null,
+      });
+      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
+
+      render(
+        <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+        { wrapper: createWrapper() },
+      );
+
+      // Should render table with chart data
+      expect(screen.getByTestId("experiment-table-header")).toBeInTheDocument();
+      expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();
+      expect(screen.getByText("2 rows")).toBeInTheDocument();
+    });
+
+    it("should handle chart state management correctly", () => {
+      const mockUseQuery = vi.fn().mockReturnValue({
+        data: mockResponseWithCharts,
+        isLoading: false,
+        error: null,
+      });
+      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
+
+      const { rerender } = render(
+        <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+        { wrapper: createWrapper() },
+      );
+
+      // Verify the table renders correctly
+      expect(screen.getByTestId("experiment-table-header")).toBeInTheDocument();
+      expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();
+
+      // Verify no chart is shown initially
+      expect(screen.queryByTestId("large-chart")).not.toBeInTheDocument();
+
+      // Re-render to ensure state management is working
+      rerender(
+        <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+      );
+
+      expect(screen.getByTestId("experiment-table-header")).toBeInTheDocument();
+    });
+
+    it("should handle empty chart data gracefully", () => {
+      const emptyChartData = {
+        columns: [
+          { name: "id", type_name: "INT", type_text: "Integer" },
+          { name: "empty_chart", type_name: "ARRAY<DOUBLE>", type_text: "Array of Doubles" },
+        ],
+        rows: [
+          { id: "1", empty_chart: "[]" },
+          { id: "2", empty_chart: "" },
+        ],
+        totalRows: 2,
+        truncated: false,
+      };
+
+      const mockUseQuery = vi.fn().mockReturnValue({
+        data: {
+          body: [
+            {
+              tableName: "test_table",
+              totalPages: 1,
+              totalRows: 2,
+              data: emptyChartData,
+            },
+          ],
+        },
+        isLoading: false,
+        error: null,
+      });
+      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
+
+      render(
+        <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+        { wrapper: createWrapper() },
+      );
+
+      // Should render table even with empty chart data
+      expect(screen.getByTestId("experiment-data-rows")).toBeInTheDocument();
+      expect(screen.getByText("2 rows")).toBeInTheDocument();
+    });
+
+    it("should verify chart components are properly integrated", () => {
+      const mockUseQuery = vi.fn().mockReturnValue({
+        data: mockResponseWithCharts,
+        isLoading: false,
+        error: null,
+      });
+      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
+
+      render(
+        <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+        { wrapper: createWrapper() },
+      );
+
+      // Verify chart components are properly mocked and accessible
+      expect(screen.getByTestId("experiment-table-header")).toBeInTheDocument();
+
+      // The detailed chart functionality is validated through the individual component tests
+      // This integration test verifies the table renders and state management works
+      expect(screen.queryByTestId("large-chart")).not.toBeInTheDocument();
+
+      // Verify the data contains chart columns
+      expect(screen.getByText("2 rows")).toBeInTheDocument();
     });
   });
 });

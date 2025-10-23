@@ -42,11 +42,10 @@
                     "enum": ["private", "public"],
                     "description": "Experiment visibility setting"
                   },
-                  "embargoIntervalDays": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "exclusiveMinimum": 0,
-                    "description": "Embargo period in days"
+                  "embargoUntil": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Embargo end date and time (ISO datetime string, will be stored as UTC in database)"
                   },
                   "members": {
                     "type": "array",
@@ -82,6 +81,46 @@
                       "required": ["protocolId"]
                     },
                     "description": "Optional array of protocol objects with protocolId and order to associate with the experiment"
+                  },
+                  "locations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255
+                        },
+                        "latitude": {
+                          "type": "number",
+                          "minimum": -90,
+                          "maximum": 90
+                        },
+                        "longitude": {
+                          "type": "number",
+                          "minimum": -180,
+                          "maximum": 180
+                        },
+                        "country": {
+                          "type": "string"
+                        },
+                        "region": {
+                          "type": "string"
+                        },
+                        "municipality": {
+                          "type": "string"
+                        },
+                        "postalCode": {
+                          "type": "string"
+                        },
+                        "addressLabel": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["name", "latitude", "longitude"]
+                    },
+                    "description": "Optional array of locations associated with the experiment"
                   }
                 },
                 "required": ["name"]
@@ -213,8 +252,9 @@
                         "type": "string",
                         "enum": ["private", "public"]
                       },
-                      "embargoIntervalDays": {
-                        "type": "integer"
+                      "embargoUntil": {
+                        "type": "string",
+                        "format": "date-time"
                       },
                       "createdBy": {
                         "type": "string",
@@ -267,6 +307,64 @@
                           }
                         },
                         "required": ["columns", "rows", "totalRows", "truncated"]
+                      },
+                      "locations": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 255
+                            },
+                            "latitude": {
+                              "type": "number",
+                              "minimum": -90,
+                              "maximum": 90
+                            },
+                            "longitude": {
+                              "type": "number",
+                              "minimum": -180,
+                              "maximum": 180
+                            },
+                            "country": {
+                              "type": "string"
+                            },
+                            "region": {
+                              "type": "string"
+                            },
+                            "municipality": {
+                              "type": "string"
+                            },
+                            "postalCode": {
+                              "type": "string"
+                            },
+                            "addressLabel": {
+                              "type": "string"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "latitude",
+                            "longitude",
+                            "createdAt",
+                            "updatedAt"
+                          ]
+                        }
                       }
                     },
                     "required": [
@@ -275,7 +373,7 @@
                       "description",
                       "status",
                       "visibility",
-                      "embargoIntervalDays",
+                      "embargoUntil",
                       "createdBy",
                       "createdAt",
                       "updatedAt"
@@ -356,8 +454,9 @@
                       "type": "string",
                       "enum": ["private", "public"]
                     },
-                    "embargoIntervalDays": {
-                      "type": "integer"
+                    "embargoUntil": {
+                      "type": "string",
+                      "format": "date-time"
                     },
                     "createdBy": {
                       "type": "string",
@@ -410,6 +509,64 @@
                         }
                       },
                       "required": ["columns", "rows", "totalRows", "truncated"]
+                    },
+                    "locations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 255
+                          },
+                          "latitude": {
+                            "type": "number",
+                            "minimum": -90,
+                            "maximum": 90
+                          },
+                          "longitude": {
+                            "type": "number",
+                            "minimum": -180,
+                            "maximum": 180
+                          },
+                          "country": {
+                            "type": "string"
+                          },
+                          "region": {
+                            "type": "string"
+                          },
+                          "municipality": {
+                            "type": "string"
+                          },
+                          "postalCode": {
+                            "type": "string"
+                          },
+                          "addressLabel": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "latitude",
+                          "longitude",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -418,7 +575,7 @@
                     "description",
                     "status",
                     "visibility",
-                    "embargoIntervalDays",
+                    "embargoUntil",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
@@ -496,9 +653,50 @@
                     "enum": ["private", "public"],
                     "description": "Updated visibility setting"
                   },
-                  "embargoIntervalDays": {
-                    "type": "integer",
-                    "description": "Updated embargo period in days"
+                  "embargoUntil": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Updated embargo end date and time (ISO datetime string, will be stored as UTC in database)"
+                  },
+                  "locations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255
+                        },
+                        "latitude": {
+                          "type": "number",
+                          "minimum": -90,
+                          "maximum": 90
+                        },
+                        "longitude": {
+                          "type": "number",
+                          "minimum": -180,
+                          "maximum": 180
+                        },
+                        "country": {
+                          "type": "string"
+                        },
+                        "region": {
+                          "type": "string"
+                        },
+                        "municipality": {
+                          "type": "string"
+                        },
+                        "postalCode": {
+                          "type": "string"
+                        },
+                        "addressLabel": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["name", "latitude", "longitude"]
+                    },
+                    "description": "Updated locations associated with the experiment"
                   }
                 }
               }
@@ -539,8 +737,9 @@
                       "type": "string",
                       "enum": ["private", "public"]
                     },
-                    "embargoIntervalDays": {
-                      "type": "integer"
+                    "embargoUntil": {
+                      "type": "string",
+                      "format": "date-time"
                     },
                     "createdBy": {
                       "type": "string",
@@ -593,6 +792,64 @@
                         }
                       },
                       "required": ["columns", "rows", "totalRows", "truncated"]
+                    },
+                    "locations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 255
+                          },
+                          "latitude": {
+                            "type": "number",
+                            "minimum": -90,
+                            "maximum": 90
+                          },
+                          "longitude": {
+                            "type": "number",
+                            "minimum": -180,
+                            "maximum": 180
+                          },
+                          "country": {
+                            "type": "string"
+                          },
+                          "region": {
+                            "type": "string"
+                          },
+                          "municipality": {
+                            "type": "string"
+                          },
+                          "postalCode": {
+                            "type": "string"
+                          },
+                          "addressLabel": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "latitude",
+                          "longitude",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -601,7 +858,7 @@
                     "description",
                     "status",
                     "visibility",
-                    "embargoIntervalDays",
+                    "embargoUntil",
                     "createdBy",
                     "createdAt",
                     "updatedAt"
@@ -723,8 +980,9 @@
                           "type": "string",
                           "enum": ["private", "public"]
                         },
-                        "embargoIntervalDays": {
-                          "type": "integer"
+                        "embargoUntil": {
+                          "type": "string",
+                          "format": "date-time"
                         },
                         "createdBy": {
                           "type": "string",
@@ -777,6 +1035,64 @@
                             }
                           },
                           "required": ["columns", "rows", "totalRows", "truncated"]
+                        },
+                        "locations": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 255
+                              },
+                              "latitude": {
+                                "type": "number",
+                                "minimum": -90,
+                                "maximum": 90
+                              },
+                              "longitude": {
+                                "type": "number",
+                                "minimum": -180,
+                                "maximum": 180
+                              },
+                              "country": {
+                                "type": "string"
+                              },
+                              "region": {
+                                "type": "string"
+                              },
+                              "municipality": {
+                                "type": "string"
+                              },
+                              "postalCode": {
+                                "type": "string"
+                              },
+                              "addressLabel": {
+                                "type": "string"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "latitude",
+                              "longitude",
+                              "createdAt",
+                              "updatedAt"
+                            ]
+                          }
                         }
                       },
                       "required": [
@@ -785,7 +1101,7 @@
                         "description",
                         "status",
                         "visibility",
-                        "embargoIntervalDays",
+                        "embargoUntil",
                         "createdBy",
                         "createdAt",
                         "updatedAt"
@@ -1159,7 +1475,6 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "default": 1,
                   "type": "integer",
                   "minimum": 1
                 }
@@ -1173,7 +1488,6 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "default": 5,
                   "type": "integer",
                   "minimum": 1,
                   "maximum": 100
@@ -1185,6 +1499,18 @@
             "name": "tableName",
             "in": "query",
             "description": "Optional table name to filter results to a specific table",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "name": "columns",
+            "in": "query",
+            "description": "Specific columns to fetch. If provided with tableName, fetches full data for these columns only",
             "content": {
               "application/json": {
                 "schema": {
@@ -3211,6 +3537,2395 @@
           },
           "400": {
             "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/data/download": {
+      "get": {
+        "description": "Generates download links for complete table data using EXTERNAL_LINKS disposition",
+        "summary": "Download experiment data",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          },
+          {
+            "name": "tableName",
+            "in": "query",
+            "description": "Name of the table to download",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "operationId": "experiments.downloadExperimentData",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "externalLinks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "externalLink": {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          "expiration": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "totalSize": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "rowCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": ["externalLink", "expiration", "totalSize", "rowCount"]
+                      }
+                    }
+                  },
+                  "required": ["externalLinks"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/locations": {
+      "get": {
+        "description": "Returns all locations associated with the specified experiment.",
+        "summary": "Get experiment locations",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          }
+        ],
+        "operationId": "experiments.getExperimentLocations",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      },
+                      "latitude": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "longitude": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      },
+                      "country": {
+                        "type": "string"
+                      },
+                      "region": {
+                        "type": "string"
+                      },
+                      "municipality": {
+                        "type": "string"
+                      },
+                      "postalCode": {
+                        "type": "string"
+                      },
+                      "addressLabel": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": ["id", "name", "latitude", "longitude", "createdAt", "updatedAt"]
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Associates one or more locations with an experiment.",
+        "summary": "Add locations to an experiment",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          }
+        ],
+        "operationId": "experiments.addExperimentLocations",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "locations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255
+                        },
+                        "latitude": {
+                          "type": "number",
+                          "minimum": -90,
+                          "maximum": 90
+                        },
+                        "longitude": {
+                          "type": "number",
+                          "minimum": -180,
+                          "maximum": 180
+                        },
+                        "country": {
+                          "type": "string"
+                        },
+                        "region": {
+                          "type": "string"
+                        },
+                        "municipality": {
+                          "type": "string"
+                        },
+                        "postalCode": {
+                          "type": "string"
+                        },
+                        "addressLabel": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["name", "latitude", "longitude"]
+                    }
+                  }
+                },
+                "required": ["locations"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      },
+                      "latitude": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "longitude": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      },
+                      "country": {
+                        "type": "string"
+                      },
+                      "region": {
+                        "type": "string"
+                      },
+                      "municipality": {
+                        "type": "string"
+                      },
+                      "postalCode": {
+                        "type": "string"
+                      },
+                      "addressLabel": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": ["id", "name", "latitude", "longitude", "createdAt", "updatedAt"]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "description": "Replaces all locations associated with an experiment.",
+        "summary": "Update experiment locations",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          }
+        ],
+        "operationId": "experiments.updateExperimentLocations",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "locations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255
+                        },
+                        "latitude": {
+                          "type": "number",
+                          "minimum": -90,
+                          "maximum": 90
+                        },
+                        "longitude": {
+                          "type": "number",
+                          "minimum": -180,
+                          "maximum": 180
+                        },
+                        "country": {
+                          "type": "string"
+                        },
+                        "region": {
+                          "type": "string"
+                        },
+                        "municipality": {
+                          "type": "string"
+                        },
+                        "postalCode": {
+                          "type": "string"
+                        },
+                        "addressLabel": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["name", "latitude", "longitude"]
+                    }
+                  }
+                },
+                "required": ["locations"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      },
+                      "latitude": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "longitude": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      },
+                      "country": {
+                        "type": "string"
+                      },
+                      "region": {
+                        "type": "string"
+                      },
+                      "municipality": {
+                        "type": "string"
+                      },
+                      "postalCode": {
+                        "type": "string"
+                      },
+                      "addressLabel": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": ["id", "name", "latitude", "longitude", "createdAt", "updatedAt"]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/locations/search": {
+      "get": {
+        "description": "Search for places using text query through AWS Location Service.",
+        "summary": "Search for places",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          {
+            "name": "maxResults",
+            "in": "query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "default": 10,
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 50
+                }
+              }
+            }
+          }
+        ],
+        "operationId": "experiments.searchPlaces",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      },
+                      "latitude": {
+                        "type": "number"
+                      },
+                      "longitude": {
+                        "type": "number"
+                      },
+                      "country": {
+                        "type": "string"
+                      },
+                      "region": {
+                        "type": "string"
+                      },
+                      "municipality": {
+                        "type": "string"
+                      },
+                      "postalCode": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["label", "latitude", "longitude"]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/locations/geocode": {
+      "get": {
+        "description": "Get place information for given coordinates through AWS Location Service.",
+        "summary": "Reverse geocode coordinates",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "latitude",
+            "in": "query",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "number",
+                  "minimum": -90,
+                  "maximum": 90,
+                  "nullable": true
+                }
+              }
+            }
+          },
+          {
+            "name": "longitude",
+            "in": "query",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "number",
+                  "minimum": -180,
+                  "maximum": 180,
+                  "nullable": true
+                }
+              }
+            }
+          }
+        ],
+        "operationId": "experiments.geocodeLocation",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string"
+                      },
+                      "latitude": {
+                        "type": "number"
+                      },
+                      "longitude": {
+                        "type": "number"
+                      },
+                      "country": {
+                        "type": "string"
+                      },
+                      "region": {
+                        "type": "string"
+                      },
+                      "municipality": {
+                        "type": "string"
+                      },
+                      "postalCode": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["label", "latitude", "longitude"]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/visualizations": {
+      "get": {
+        "description": "Retrieves a list of visualizations for a specific experiment",
+        "summary": "List experiment visualizations",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          },
+          {
+            "name": "chartFamily",
+            "in": "query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["basic", "scientific", "3d", "statistical"]
+                }
+              }
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "default": 50,
+                  "type": "integer",
+                  "minimum": 0,
+                  "exclusiveMinimum": 0,
+                  "maximum": 100
+                }
+              }
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "default": 0,
+                  "type": "integer",
+                  "minimum": 0,
+                  "nullable": true
+                }
+              }
+            }
+          }
+        ],
+        "operationId": "experiments.listExperimentVisualizations",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      },
+                      "description": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "experimentId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "chartFamily": {
+                        "type": "string",
+                        "enum": ["basic", "scientific", "3d", "statistical"]
+                      },
+                      "chartType": {
+                        "type": "string",
+                        "enum": [
+                          "line",
+                          "scatter",
+                          "bar",
+                          "pie",
+                          "area",
+                          "dot-plot",
+                          "bubble",
+                          "lollipop",
+                          "box-plot",
+                          "histogram",
+                          "violin-plot",
+                          "error-bar",
+                          "density-plot",
+                          "ridge-plot",
+                          "histogram-2d",
+                          "scatter2density",
+                          "spc-control-chart",
+                          "heatmap",
+                          "contour",
+                          "carpet",
+                          "ternary",
+                          "parallel-coordinates",
+                          "log-plot",
+                          "wind-rose",
+                          "radar",
+                          "polar",
+                          "correlation-matrix",
+                          "alluvial"
+                        ]
+                      },
+                      "config": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      },
+                      "dataConfig": {
+                        "type": "object",
+                        "properties": {
+                          "tableName": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "dataSources": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "tableName": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "columnName": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "role": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "seriesName": {
+                                  "type": "string"
+                                },
+                                "alias": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["tableName", "columnName", "role"]
+                            },
+                            "minItems": 1
+                          },
+                          "filters": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "column": {
+                                  "type": "string"
+                                },
+                                "operator": {
+                                  "type": "string",
+                                  "enum": [
+                                    "equals",
+                                    "not_equals",
+                                    "greater_than",
+                                    "less_than",
+                                    "contains",
+                                    "in"
+                                  ]
+                                },
+                                "value": {
+                                  "oneOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["column", "operator", "value"]
+                            }
+                          },
+                          "aggregation": {
+                            "type": "object",
+                            "properties": {
+                              "groupBy": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "functions": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "column": {
+                                      "type": "string"
+                                    },
+                                    "function": {
+                                      "type": "string",
+                                      "enum": ["sum", "avg", "count", "min", "max", "std", "var"]
+                                    },
+                                    "alias": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["column", "function"]
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "required": ["tableName", "dataSources"]
+                      },
+                      "createdBy": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "description",
+                      "experimentId",
+                      "chartFamily",
+                      "chartType",
+                      "dataConfig",
+                      "createdBy",
+                      "createdAt",
+                      "updatedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Creates a new visualization for an experiment with the provided configuration",
+        "summary": "Create experiment visualization",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          }
+        ],
+        "operationId": "experiments.createExperimentVisualization",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "chartFamily": {
+                    "type": "string",
+                    "enum": ["basic", "scientific", "3d", "statistical"]
+                  },
+                  "chartType": {
+                    "type": "string",
+                    "enum": [
+                      "line",
+                      "scatter",
+                      "bar",
+                      "pie",
+                      "area",
+                      "dot-plot",
+                      "bubble",
+                      "lollipop",
+                      "box-plot",
+                      "histogram",
+                      "violin-plot",
+                      "error-bar",
+                      "density-plot",
+                      "ridge-plot",
+                      "histogram-2d",
+                      "scatter2density",
+                      "spc-control-chart",
+                      "heatmap",
+                      "contour",
+                      "carpet",
+                      "ternary",
+                      "parallel-coordinates",
+                      "log-plot",
+                      "wind-rose",
+                      "radar",
+                      "polar",
+                      "correlation-matrix",
+                      "alluvial"
+                    ]
+                  },
+                  "config": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "dataConfig": {
+                    "type": "object",
+                    "properties": {
+                      "tableName": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "dataSources": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "tableName": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "columnName": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "role": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "seriesName": {
+                              "type": "string"
+                            },
+                            "alias": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["tableName", "columnName", "role"]
+                        },
+                        "minItems": 1
+                      },
+                      "filters": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "column": {
+                              "type": "string"
+                            },
+                            "operator": {
+                              "type": "string",
+                              "enum": [
+                                "equals",
+                                "not_equals",
+                                "greater_than",
+                                "less_than",
+                                "contains",
+                                "in"
+                              ]
+                            },
+                            "value": {
+                              "oneOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "required": ["column", "operator", "value"]
+                        }
+                      },
+                      "aggregation": {
+                        "type": "object",
+                        "properties": {
+                          "groupBy": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "functions": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "column": {
+                                  "type": "string"
+                                },
+                                "function": {
+                                  "type": "string",
+                                  "enum": ["sum", "avg", "count", "min", "max", "std", "var"]
+                                },
+                                "alias": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["column", "function"]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "required": ["tableName", "dataSources"]
+                  }
+                },
+                "required": ["name", "chartFamily", "chartType", "dataConfig"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "201",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255
+                    },
+                    "description": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "experimentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "chartFamily": {
+                      "type": "string",
+                      "enum": ["basic", "scientific", "3d", "statistical"]
+                    },
+                    "chartType": {
+                      "type": "string",
+                      "enum": [
+                        "line",
+                        "scatter",
+                        "bar",
+                        "pie",
+                        "area",
+                        "dot-plot",
+                        "bubble",
+                        "lollipop",
+                        "box-plot",
+                        "histogram",
+                        "violin-plot",
+                        "error-bar",
+                        "density-plot",
+                        "ridge-plot",
+                        "histogram-2d",
+                        "scatter2density",
+                        "spc-control-chart",
+                        "heatmap",
+                        "contour",
+                        "carpet",
+                        "ternary",
+                        "parallel-coordinates",
+                        "log-plot",
+                        "wind-rose",
+                        "radar",
+                        "polar",
+                        "correlation-matrix",
+                        "alluvial"
+                      ]
+                    },
+                    "config": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "dataConfig": {
+                      "type": "object",
+                      "properties": {
+                        "tableName": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "dataSources": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "tableName": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "columnName": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "role": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "seriesName": {
+                                "type": "string"
+                              },
+                              "alias": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["tableName", "columnName", "role"]
+                          },
+                          "minItems": 1
+                        },
+                        "filters": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "column": {
+                                "type": "string"
+                              },
+                              "operator": {
+                                "type": "string",
+                                "enum": [
+                                  "equals",
+                                  "not_equals",
+                                  "greater_than",
+                                  "less_than",
+                                  "contains",
+                                  "in"
+                                ]
+                              },
+                              "value": {
+                                "oneOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "required": ["column", "operator", "value"]
+                          }
+                        },
+                        "aggregation": {
+                          "type": "object",
+                          "properties": {
+                            "groupBy": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "functions": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "column": {
+                                    "type": "string"
+                                  },
+                                  "function": {
+                                    "type": "string",
+                                    "enum": ["sum", "avg", "count", "min", "max", "std", "var"]
+                                  },
+                                  "alias": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["column", "function"]
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "required": ["tableName", "dataSources"]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "description",
+                    "experimentId",
+                    "chartFamily",
+                    "chartType",
+                    "dataConfig",
+                    "createdBy",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/visualizations/{visualizationId}": {
+      "get": {
+        "description": "Retrieves a specific visualization by its ID",
+        "summary": "Get experiment visualization",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          },
+          {
+            "name": "visualizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the visualization"
+          }
+        ],
+        "operationId": "experiments.getExperimentVisualization",
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255
+                    },
+                    "description": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "experimentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "chartFamily": {
+                      "type": "string",
+                      "enum": ["basic", "scientific", "3d", "statistical"]
+                    },
+                    "chartType": {
+                      "type": "string",
+                      "enum": [
+                        "line",
+                        "scatter",
+                        "bar",
+                        "pie",
+                        "area",
+                        "dot-plot",
+                        "bubble",
+                        "lollipop",
+                        "box-plot",
+                        "histogram",
+                        "violin-plot",
+                        "error-bar",
+                        "density-plot",
+                        "ridge-plot",
+                        "histogram-2d",
+                        "scatter2density",
+                        "spc-control-chart",
+                        "heatmap",
+                        "contour",
+                        "carpet",
+                        "ternary",
+                        "parallel-coordinates",
+                        "log-plot",
+                        "wind-rose",
+                        "radar",
+                        "polar",
+                        "correlation-matrix",
+                        "alluvial"
+                      ]
+                    },
+                    "config": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "dataConfig": {
+                      "type": "object",
+                      "properties": {
+                        "tableName": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "dataSources": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "tableName": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "columnName": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "role": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "seriesName": {
+                                "type": "string"
+                              },
+                              "alias": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["tableName", "columnName", "role"]
+                          },
+                          "minItems": 1
+                        },
+                        "filters": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "column": {
+                                "type": "string"
+                              },
+                              "operator": {
+                                "type": "string",
+                                "enum": [
+                                  "equals",
+                                  "not_equals",
+                                  "greater_than",
+                                  "less_than",
+                                  "contains",
+                                  "in"
+                                ]
+                              },
+                              "value": {
+                                "oneOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "required": ["column", "operator", "value"]
+                          }
+                        },
+                        "aggregation": {
+                          "type": "object",
+                          "properties": {
+                            "groupBy": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "functions": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "column": {
+                                    "type": "string"
+                                  },
+                                  "function": {
+                                    "type": "string",
+                                    "enum": ["sum", "avg", "count", "min", "max", "std", "var"]
+                                  },
+                                  "alias": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["column", "function"]
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "required": ["tableName", "dataSources"]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "description",
+                    "experimentId",
+                    "chartFamily",
+                    "chartType",
+                    "dataConfig",
+                    "createdBy",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "description": "Updates an existing visualization with the provided data",
+        "summary": "Update experiment visualization",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          },
+          {
+            "name": "visualizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the visualization"
+          }
+        ],
+        "operationId": "experiments.updateExperimentVisualization",
+        "requestBody": {
+          "description": "Body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "chartFamily": {
+                    "type": "string",
+                    "enum": ["basic", "scientific", "3d", "statistical"]
+                  },
+                  "chartType": {
+                    "type": "string",
+                    "enum": [
+                      "line",
+                      "scatter",
+                      "bar",
+                      "pie",
+                      "area",
+                      "dot-plot",
+                      "bubble",
+                      "lollipop",
+                      "box-plot",
+                      "histogram",
+                      "violin-plot",
+                      "error-bar",
+                      "density-plot",
+                      "ridge-plot",
+                      "histogram-2d",
+                      "scatter2density",
+                      "spc-control-chart",
+                      "heatmap",
+                      "contour",
+                      "carpet",
+                      "ternary",
+                      "parallel-coordinates",
+                      "log-plot",
+                      "wind-rose",
+                      "radar",
+                      "polar",
+                      "correlation-matrix",
+                      "alluvial"
+                    ]
+                  },
+                  "config": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "dataConfig": {
+                    "type": "object",
+                    "properties": {
+                      "tableName": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "dataSources": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "tableName": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "columnName": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "role": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "seriesName": {
+                              "type": "string"
+                            },
+                            "alias": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["tableName", "columnName", "role"]
+                        },
+                        "minItems": 1
+                      },
+                      "filters": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "column": {
+                              "type": "string"
+                            },
+                            "operator": {
+                              "type": "string",
+                              "enum": [
+                                "equals",
+                                "not_equals",
+                                "greater_than",
+                                "less_than",
+                                "contains",
+                                "in"
+                              ]
+                            },
+                            "value": {
+                              "oneOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "required": ["column", "operator", "value"]
+                        }
+                      },
+                      "aggregation": {
+                        "type": "object",
+                        "properties": {
+                          "groupBy": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "functions": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "column": {
+                                  "type": "string"
+                                },
+                                "function": {
+                                  "type": "string",
+                                  "enum": ["sum", "avg", "count", "min", "max", "std", "var"]
+                                },
+                                "alias": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["column", "function"]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "required": ["tableName", "dataSources"]
+                  }
+                },
+                "required": ["name", "chartFamily", "chartType", "dataConfig"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255
+                    },
+                    "description": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "experimentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "chartFamily": {
+                      "type": "string",
+                      "enum": ["basic", "scientific", "3d", "statistical"]
+                    },
+                    "chartType": {
+                      "type": "string",
+                      "enum": [
+                        "line",
+                        "scatter",
+                        "bar",
+                        "pie",
+                        "area",
+                        "dot-plot",
+                        "bubble",
+                        "lollipop",
+                        "box-plot",
+                        "histogram",
+                        "violin-plot",
+                        "error-bar",
+                        "density-plot",
+                        "ridge-plot",
+                        "histogram-2d",
+                        "scatter2density",
+                        "spc-control-chart",
+                        "heatmap",
+                        "contour",
+                        "carpet",
+                        "ternary",
+                        "parallel-coordinates",
+                        "log-plot",
+                        "wind-rose",
+                        "radar",
+                        "polar",
+                        "correlation-matrix",
+                        "alluvial"
+                      ]
+                    },
+                    "config": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "dataConfig": {
+                      "type": "object",
+                      "properties": {
+                        "tableName": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "dataSources": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "tableName": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "columnName": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "role": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "seriesName": {
+                                "type": "string"
+                              },
+                              "alias": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["tableName", "columnName", "role"]
+                          },
+                          "minItems": 1
+                        },
+                        "filters": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "column": {
+                                "type": "string"
+                              },
+                              "operator": {
+                                "type": "string",
+                                "enum": [
+                                  "equals",
+                                  "not_equals",
+                                  "greater_than",
+                                  "less_than",
+                                  "contains",
+                                  "in"
+                                ]
+                              },
+                              "value": {
+                                "oneOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "required": ["column", "operator", "value"]
+                          }
+                        },
+                        "aggregation": {
+                          "type": "object",
+                          "properties": {
+                            "groupBy": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "functions": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "column": {
+                                    "type": "string"
+                                  },
+                                  "function": {
+                                    "type": "string",
+                                    "enum": ["sum", "avg", "count", "min", "max", "std", "var"]
+                                  },
+                                  "alias": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["column", "function"]
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "required": ["tableName", "dataSources"]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "description",
+                    "experimentId",
+                    "chartFamily",
+                    "chartType",
+                    "dataConfig",
+                    "createdBy",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Permanently deletes a visualization",
+        "summary": "Delete experiment visualization",
+        "tags": ["experiments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the experiment"
+          },
+          {
+            "name": "visualizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the visualization"
+          }
+        ],
+        "operationId": "experiments.deleteExperimentVisualization",
+        "responses": {
+          "204": {
+            "description": "204"
+          },
+          "401": {
+            "description": "401",
             "content": {
               "application/json": {
                 "schema": {

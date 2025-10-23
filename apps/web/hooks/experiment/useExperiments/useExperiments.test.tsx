@@ -115,7 +115,7 @@ describe("useExperiments", () => {
           search: undefined,
         },
       },
-      queryKey: ["experiments", "my", undefined, ""],
+      queryKey: ["experiments", "my", undefined, "", false],
     });
   });
 
@@ -139,7 +139,7 @@ describe("useExperiments", () => {
           search: undefined,
         },
       },
-      queryKey: ["experiments", "all", undefined, ""],
+      queryKey: ["experiments", "all", undefined, "", false],
     });
   });
 
@@ -224,7 +224,7 @@ describe("useExperiments", () => {
           search: "debounced search",
         },
       },
-      queryKey: ["experiments", "my", undefined, "debounced search"],
+      queryKey: ["experiments", "my", undefined, "debounced search", false],
     });
   });
 
@@ -250,7 +250,7 @@ describe("useExperiments", () => {
           search: undefined, // Should be undefined for empty string
         },
       },
-      queryKey: ["experiments", "my", undefined, ""],
+      queryKey: ["experiments", "my", undefined, "", false],
     });
 
     // Test whitespace string
@@ -268,7 +268,7 @@ describe("useExperiments", () => {
           search: undefined, // Should be undefined for whitespace
         },
       },
-      queryKey: ["experiments", "my", undefined, "   "],
+      queryKey: ["experiments", "my", undefined, "   ", false],
     });
   });
 
@@ -379,12 +379,14 @@ describe("useExperiments", () => {
       "my",
       "active",
       "search1",
+      false,
     ]);
     expect((calls[1]?.[0] as { queryKey: unknown[] }).queryKey).toEqual([
       "experiments",
       "member",
       "draft",
       "search2",
+      false,
     ]);
   });
 
@@ -413,7 +415,7 @@ describe("useExperiments", () => {
             search: undefined,
           },
         },
-        queryKey: ["experiments", filter, undefined, ""],
+        queryKey: ["experiments", filter, undefined, "", false],
       });
     });
   });

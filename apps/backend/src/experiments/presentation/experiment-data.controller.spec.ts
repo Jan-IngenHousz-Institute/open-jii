@@ -5,6 +5,7 @@ import type {
   ErrorResponse,
   ExperimentDataResponse,
   UploadExperimentDataResponse,
+  DownloadExperimentDataResponse,
 } from "@repo/api";
 import { contract } from "@repo/api";
 
@@ -89,7 +90,7 @@ describe("ExperimentDataController", () => {
           {
             name: "test_table",
             catalog_name: experiment.name,
-            schema_name: `exp_${experiment.name}_${experiment.id}`,
+            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
           },
@@ -127,7 +128,7 @@ describe("ExperimentDataController", () => {
       expect(response.body[0]).toMatchObject({
         name: "test_table",
         catalog_name: experiment.name,
-        schema_name: `exp_${experiment.name}_${experiment.id}`,
+        schema_name: `exp_test_experiment_for_data_${experiment.id}`,
         data: resultTableData,
         page: 1,
         pageSize: 5,
@@ -143,13 +144,13 @@ describe("ExperimentDataController", () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         1,
-        `exp_${experiment.name}_${experiment.id}`,
+        `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
         "SELECT COUNT(*) as count FROM test_table",
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         2,
-        `exp_${experiment.name}_${experiment.id}`,
+        `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
         "SELECT * FROM test_table LIMIT 5 OFFSET 0",
       );
     });
@@ -167,14 +168,14 @@ describe("ExperimentDataController", () => {
           {
             name: "bronze_data",
             catalog_name: "test_catalog",
-            schema_name: `exp_${experiment.name}_${experiment.id}`,
+            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
           },
           {
             name: "silver_data",
             catalog_name: "test_catalog",
-            schema_name: `exp_${experiment.name}_${experiment.id}`,
+            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
           },
@@ -264,13 +265,13 @@ describe("ExperimentDataController", () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         1,
-        `exp_${experiment.name}_${experiment.id}`,
+        `exp_test_experiment_for_tables_${experiment.id}`,
         "SELECT * FROM bronze_data LIMIT 5",
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         2,
-        `exp_${experiment.name}_${experiment.id}`,
+        `exp_test_experiment_for_tables_${experiment.id}`,
         "SELECT * FROM silver_data LIMIT 5",
       );
     });
@@ -375,7 +376,7 @@ describe("ExperimentDataController", () => {
           {
             name: "nonexistent_table",
             catalog_name: experiment.name,
-            schema_name: `exp_${experiment.name}_${experiment.id}`,
+            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
           },
@@ -441,7 +442,7 @@ describe("ExperimentDataController", () => {
           {
             name: "test_table",
             catalog_name: experiment.name,
-            schema_name: `exp_${experiment.name}_${experiment.id}`,
+            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
           },
@@ -484,7 +485,7 @@ describe("ExperimentDataController", () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
         2,
-        `exp_${experiment.name}_${experiment.id}`,
+        `exp_test_experiment_for_pagination_${experiment.id}`,
         "SELECT * FROM test_table LIMIT 10 OFFSET 10", // page 2 with pageSize 10
       );
     });
@@ -502,7 +503,7 @@ describe("ExperimentDataController", () => {
           {
             name: "existing_table",
             catalog_name: experiment.name,
-            schema_name: `exp_${experiment.name}_${experiment.id}`,
+            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
             table_type: "MANAGED" as const,
             created_at: Date.now(),
           },
@@ -773,6 +774,33 @@ describe("ExperimentDataController", () => {
         .expect(StatusCodes.FORBIDDEN);
     });
 
+    it("should return 403 when uploading to an archived experiment", async () => {
+      // Create an archived experiment owned by the test user
+      const { experiment } = await testApp.createExperiment({
+        name: "Archived Upload Experiment",
+        userId: testUserId,
+        status: "archived",
+      });
+
+      // Prepare a mock file buffer
+      const fileBuffer = Buffer.from("mock ambyte data content");
+
+      const path = testApp.resolvePath(contract.experiments.uploadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .set("Content-Type", "multipart/form-data")
+        .field("sourceType", "ambyte")
+        .attach("files", fileBuffer, "Ambyte_1/data.txt")
+        .expect(StatusCodes.FORBIDDEN)
+        .expect(({ body }: { body: { message: string } }) => {
+          expect(body.message).toBe("Cannot upload data to archived experiments");
+        });
+    });
+
     it("should reject invalid file formats", async () => {
       const fileName = "invalid.pdf"; // Not a .txt file
       const description = "Invalid file format";
@@ -922,6 +950,244 @@ describe("ExperimentDataController", () => {
         trimmedFileNames[1],
         expect.any(Buffer),
       );
+    });
+  });
+
+  describe("downloadExperimentData", () => {
+    it("should successfully prepare download links for table data", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test_Download_Experiment",
+        description: "Test Download Description",
+        status: "active",
+        visibility: "private",
+        userId: testUserId,
+      });
+
+      // Mock the external links data that would be returned by Databricks
+      const mockDownloadLinksData = {
+        external_links: [
+          {
+            chunk_index: 0,
+            row_count: 1000,
+            row_offset: 0,
+            byte_count: 50000,
+            external_link: "https://databricks-presigned-url.com/chunk0",
+            expiration: "2024-01-01T15:00:00.000Z",
+          },
+          {
+            chunk_index: 1,
+            row_count: 500,
+            row_offset: 1000,
+            byte_count: 25000,
+            external_link: "https://databricks-presigned-url.com/chunk1",
+            expiration: "2024-01-01T15:00:00.000Z",
+          },
+        ],
+        totalRows: 1500,
+        format: "CSV",
+      };
+
+      // Mock listTables to validate table exists
+      const mockTablesResponse = {
+        tables: [
+          {
+            name: "bronze_data",
+            catalog_name: "test_catalog",
+            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
+          },
+        ],
+      };
+
+      // Setup mocks
+      vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
+      vi.spyOn(databricksAdapter, "downloadExperimentData").mockResolvedValue(
+        success(mockDownloadLinksData),
+      );
+
+      // Get the path
+      const path = testApp.resolvePath(contract.experiments.downloadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      // Make the request
+      const response: SuperTestResponse<DownloadExperimentDataResponse> = await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .query({ tableName: "bronze_data" })
+        .expect(StatusCodes.OK);
+
+      // Verify the response structure
+      expect(response.body).toEqual({
+        externalLinks: [
+          {
+            externalLink: "https://databricks-presigned-url.com/chunk0",
+            expiration: "2024-01-01T15:00:00.000Z",
+            totalSize: 50000,
+            rowCount: 1000,
+          },
+          {
+            externalLink: "https://databricks-presigned-url.com/chunk1",
+            expiration: "2024-01-01T15:00:00.000Z",
+            totalSize: 25000,
+            rowCount: 500,
+          },
+        ],
+      });
+
+      // Verify the DatabricksAdapter was called correctly
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.name, experiment.id);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksAdapter.downloadExperimentData).toHaveBeenCalledWith(
+        `exp_test_download_experiment_${experiment.id}`,
+        "SELECT * FROM bronze_data",
+      );
+    });
+
+    it("should return 404 when experiment does not exist", async () => {
+      const nonExistentId = faker.string.uuid();
+
+      const path = testApp.resolvePath(contract.experiments.downloadExperimentData.path, {
+        id: nonExistentId,
+      });
+
+      await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .query({ tableName: "bronze_data" })
+        .expect(StatusCodes.NOT_FOUND)
+        .expect(({ body }: { body: ErrorResponse }) => {
+          expect(body.message).toContain("Experiment not found");
+        });
+    });
+
+    it("should return 403 when user doesn't have access to experiment", async () => {
+      // Create another user
+      const anotherUserId = await testApp.createTestUser({
+        email: "another@example.com",
+      });
+
+      // Create an experiment with the first user
+      const { experiment } = await testApp.createExperiment({
+        name: "Private_Download_Experiment",
+        visibility: "private",
+        userId: testUserId,
+      });
+
+      const path = testApp.resolvePath(contract.experiments.downloadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      // Try to download with the second user (no access)
+      await testApp
+        .get(path)
+        .withAuth(anotherUserId)
+        .query({ tableName: "bronze_data" })
+        .expect(StatusCodes.FORBIDDEN)
+        .expect(({ body }: { body: ErrorResponse }) => {
+          expect(body.message).toBe("Access denied to this experiment");
+        });
+    });
+
+    it("should return 404 when specified table does not exist", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test_Download_Experiment_No_Table",
+        userId: testUserId,
+      });
+
+      // Mock listTables to return empty tables
+      const mockTablesResponse = {
+        tables: [],
+      };
+
+      vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
+
+      const path = testApp.resolvePath(contract.experiments.downloadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .query({ tableName: "nonexistent_table" })
+        .expect(StatusCodes.NOT_FOUND)
+        .expect(({ body }: { body: ErrorResponse }) => {
+          expect(body.message).toContain("Table 'nonexistent_table' not found");
+        });
+    });
+
+    it("should return 401 when not authenticated", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test_Download_Experiment_Unauth",
+        userId: testUserId,
+      });
+
+      const path = testApp.resolvePath(contract.experiments.downloadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      await testApp
+        .get(path)
+        .withoutAuth()
+        .query({ tableName: "bronze_data" })
+        .expect(StatusCodes.UNAUTHORIZED);
+    });
+
+    it("should handle Databricks service errors appropriately", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test_Download_Experiment_Error",
+        userId: testUserId,
+      });
+
+      // Mock the DatabricksAdapter to return an error
+      vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(
+        failure(AppError.internal("Error retrieving tables from Databricks")),
+      );
+
+      const path = testApp.resolvePath(contract.experiments.downloadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .query({ tableName: "bronze_data" })
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR)
+        .expect(({ body }: { body: ErrorResponse }) => {
+          expect(body.message).toContain("Error retrieving tables from Databricks");
+        });
+    });
+
+    it("should validate required tableName query parameter", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test_Download_Experiment_Validation",
+        userId: testUserId,
+      });
+
+      const path = testApp.resolvePath(contract.experiments.downloadExperimentData.path, {
+        id: experiment.id,
+      });
+
+      // Make request without tableName query parameter
+      await testApp.get(path).withAuth(testUserId).expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should validate experiment ID format", async () => {
+      const invalidId = "not-a-uuid";
+      const path = testApp.resolvePath(contract.experiments.downloadExperimentData.path, {
+        id: invalidId,
+      });
+
+      await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .query({ tableName: "bronze_data" })
+        .expect(StatusCodes.BAD_REQUEST);
     });
   });
 });

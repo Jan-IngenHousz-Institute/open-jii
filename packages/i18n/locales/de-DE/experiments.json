@@ -63,13 +63,48 @@
   "experimentData": {
     "title": "Experimentdaten",
     "description": "Anzeigen und Verwalten von Daten, die mit diesem Experiment verbunden sind.",
-    "uploadData": "Daten hochladen"
+    "uploadData": "Daten hochladen",
+    "provisioning": {
+      "title": "Experiment wird vorbereitet",
+      "description": "Die Experiment-Infrastruktur wird derzeit eingerichtet. Der Datenzugang wird verfügbar sein, sobald die Bereitstellung abgeschlossen ist.",
+      "tooltip": "Während der Bereitstellung erstellt das System Datenbankschemas, richtet Daten-Pipelines ein und konfiguriert Zugriffsberechtigungen. Dieser Prozess dauert normalerweise einige Minuten."
+    },
+    "provisioningFailed": {
+      "title": "Experiment-Setup fehlgeschlagen",
+      "description": "Es gab ein Problem beim Einrichten der Experiment-Infrastruktur. Bitte kontaktieren Sie den Support oder versuchen Sie, das Experiment neu zu erstellen."
+    }
   },
   "experiment": "Experiment",
   "experimentId": "Experiment-ID",
   "created": "Erstellt",
   "updated": "Aktualisiert",
   "descriptionTitle": "Beschreibung",
+  "details": {
+    "locations": {
+      "locationsTitle": "Experiment-Standorte",
+      "locationsCount": "{{count}} Standort",
+      "locationsCount_plural": "{{count}} Standorte",
+      "noLocations": "Keine Standorte",
+      "noLocationsDescription": "Dieses Experiment hat keine konfigurierten Standorte."
+    }
+  },
+  "settings": {
+    "locations": {
+      "title": "Standort-Verwaltung",
+      "description": "Experiment-Standorte konfigurieren und verwalten",
+      "editLocations": "Standorte bearbeiten",
+      "count": "{{count}} Standort",
+      "count_plural": "{{count}} Standorte",
+      "noLocations": "Keine Standorte konfiguriert",
+      "noLocationsDescription": "Fügen Sie Standorte hinzu, um anzugeben, wo dieses Experiment stattfindet",
+      "viewMap": "Auf Karte anzeigen",
+      "mapPreview": "Standort-Kartenvorschau",
+      "editMode": "Standorte bearbeiten",
+      "editModeDescription": "Klicken Sie auf die Karte, um Standorte hinzuzufügen, klicken Sie auf vorhandene Markierungen, um sie zu bearbeiten oder zu entfernen",
+      "editingCount_one": "{{count}} Standort ausgewählt",
+      "editingCount_other": "{{count}} Standorte ausgewählt"
+    }
+  },
   "manageExperimentDescription": "Experimentdetails, Daten, Flow und Einstellungen anzeigen und verwalten.",
   "loading": "Laden...",
   "failedToLoad": "Experiment konnte nicht geladen werden",
@@ -78,6 +113,7 @@
   "errorLoadingExperiment": "Beim Laden des Experiments ist ein Fehler aufgetreten",
   "experimentNotFound": "Das gesuchte Experiment konnte nicht gefunden werden",
   "needMemberAccess": "Sie benötigen Mitgliederzugriff für diese Aktion",
+  "needAdminAccess": "Sie benötigen Admin-Zugriff für diese Aktion",
   "previewMode": "Vorschau-Modus",
   "editingMode": "Bearbeitungsmodus",
   "validation": {

@@ -20,6 +20,22 @@
       "noResults": "No analysis results available.",
       "description": "Analysis results and reports will appear here once data collection begins."
     },
-    "uploadData": "Upload Data"
+    "uploadData": "Upload Data",
+    "downloadModal": {
+      "title": "Download Dataset",
+      "description": "Prepare download for the '{{tableName}}' dataset. For very large datasets, the download is automatically split into multiple parts to ensure a smooth and efficient experience.",
+      "format": "Format",
+      "generateLinks": "Prepare Download",
+      "generating": "Preparing download...",
+      "downloadAll": "Download All Files",
+      "downloadFiles": "Download Files",
+      "rows": "rows",
+      "error": "Download failed",
+      "success": {
+        "title": "Download preparation complete!",
+        "description": "{{count}} file(s) ready for download. Total size: {{totalSize}}, Total rows: {{totalRows}}"
+      },
+      "fileChunk": "{{tableName}} - Part {{chunkNumber}} of {{totalChunks}}"
+    }
   }
 }
