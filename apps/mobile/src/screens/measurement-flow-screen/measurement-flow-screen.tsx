@@ -10,7 +10,15 @@ import { ExperimentSelectionStep } from "./components/experiment-selection-step"
 
 export function MeasurementFlowScreen() {
   const { classes } = useTheme();
-  const { currentStep, setExperimentId, nextStep, previousStep } = useMeasurementFlowStore();
+  const {
+    currentStep,
+    flowNodes,
+    currentFlowStep,
+    setExperimentId,
+    nextStep,
+    previousStep,
+    previousFlowStep,
+  } = useMeasurementFlowStore();
 
   const handleExperimentContinue = (experimentId: string) => {
     setExperimentId(experimentId);
@@ -19,11 +27,20 @@ export function MeasurementFlowScreen() {
     console.log("Current step:", currentStep + 1);
   };
 
+  const handleBackPress = () => {
+    if (currentStep > 0 && flowNodes.length > 0 && currentFlowStep > 0) {
+      previousFlowStep();
+    } else {
+      previousStep();
+    }
+  };
+
+  const shouldShowBackButton = currentStep > 0;
+
   return (
     <ScrollView className={clsx("flex-1", classes.background)}>
       <View className="p-5">
-        {/* Back Button - Only show for non-zero steps */}
-        {currentStep > 0 && <BackButton onPress={previousStep} />}
+        {shouldShowBackButton && <BackButton onPress={handleBackPress} />}
 
         {currentStep === 0 ? (
           <ExperimentSelectionStep onContinue={handleExperimentContinue} />

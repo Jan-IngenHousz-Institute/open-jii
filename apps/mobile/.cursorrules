@@ -38,6 +38,7 @@ React Native Component Organization Guidelines
 - All component files must use dash-case naming (e.g., `measurement-flow-screen.tsx`, `experiment-selection-step.tsx`).
 - Prefer the function keyword to lambda (arrow) for components/helpers.
 - Do not add types for things that can be automatically inferred by the TypeScript compiler.
+- Avoid comments unless implementing something particularly complex or non-obvious.
 
 8. NativeWind Dark/Light Mode Styling
 - Always use the theme system for dark/light mode styling.
