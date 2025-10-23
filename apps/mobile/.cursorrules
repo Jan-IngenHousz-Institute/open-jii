@@ -30,7 +30,8 @@ React Native Component Organization Guidelines
 
 6. Imports and Exports
 - Use barrel index.ts files inside screen folders for clean imports.
-- No deep imports into components/, hooks/, or utils/ — import through the screen’s folder index or the shared top-level folder.
+- No deep imports into components/, hooks/, or utils/ — import through the screen's folder index or the shared top-level folder.
+- NEVER create index.ts files unless explicitly requested by the user.
 
 7. Naming & Code Style
 - Use dash case for directories and files.
