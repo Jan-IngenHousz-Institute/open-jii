@@ -7,6 +7,7 @@ import { Dropdown } from "~/components/Dropdown";
 import { useExperiments } from "~/hooks/use-experiments";
 import { useTheme } from "~/hooks/use-theme";
 import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
+import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 interface ExperimentSelectionStepProps {
   onContinue?: (experimentId: string) => void;
@@ -77,7 +78,7 @@ export function ExperimentSelectionStep({ onContinue }: ExperimentSelectionStepP
           <Button
             title="Start measurement flow"
             onPress={() => {
-              if (onContinue && selectedExperimentId) {
+              if (selectedExperimentId && onContinue) {
                 onContinue(selectedExperimentId);
               }
             }}
