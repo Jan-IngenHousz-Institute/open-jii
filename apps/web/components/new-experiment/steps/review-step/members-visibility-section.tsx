@@ -3,6 +3,7 @@
 import type { CreateExperimentBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import { Button, Card, CardHeader, CardTitle, CardContent, Badge } from "@repo/ui/components";
+import { cva } from "@repo/ui/lib/utils";
 
 import { embargoUntilHelperString } from "../../embargo-utils";
 
@@ -19,6 +20,18 @@ export function MembersVisibilitySection({
 }: MembersVisibilitySectionProps) {
   const { t } = useTranslation();
   const embargoPublicDate = embargoUntilHelperString(formData.embargoUntil, t);
+
+  const membersList = cva("space-y-2", {
+    variants: {
+      scrollable: {
+        true: "max-h-36 overflow-y-auto pr-2",
+        false: "",
+      },
+    },
+    defaultVariants: {
+      scrollable: false,
+    },
+  });
 
   return (
     <Card className={className}>
@@ -49,12 +62,13 @@ export function MembersVisibilitySection({
           </div>
         )}
 
-        <div>
+        <div className="space-y-0">
           <div className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wider">
             {t("experiments.teamMembers")} ({formData.members?.length ?? 0})
           </div>
+
           {formData.members?.length ? (
-            <div className="grid gap-2">
+            <div className={membersList({ scrollable: formData.members.length >= 3 })}>
               {formData.members.map((m, i) => (
                 <div
                   key={m.userId || i}

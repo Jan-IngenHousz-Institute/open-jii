@@ -198,49 +198,6 @@ describe("ReviewStep", () => {
     });
   });
 
-  describe("Protocols", () => {
-    it("displays protocols count", () => {
-      render(
-        <TestWrapper
-          defaultValues={{
-            protocols: [
-              { protocolId: "p1", name: "Protocol 1" },
-              { protocolId: "p2", name: "Protocol 2" },
-            ],
-          }}
-        >
-          {(form) => <ReviewStep {...defaultProps} form={form} />}
-        </TestWrapper>,
-      );
-
-      expect(screen.getByText(/\(2\)/)).toBeInTheDocument();
-    });
-
-    it("displays protocol names", () => {
-      render(
-        <TestWrapper
-          defaultValues={{
-            protocols: [{ protocolId: "p1", name: "My Test Protocol" }],
-          }}
-        >
-          {(form) => <ReviewStep {...defaultProps} form={form} />}
-        </TestWrapper>,
-      );
-
-      expect(screen.getByText("My Test Protocol")).toBeInTheDocument();
-    });
-
-    it("shows message when no protocols added", () => {
-      render(
-        <TestWrapper defaultValues={{ protocols: [] }}>
-          {(form) => <ReviewStep {...defaultProps} form={form} />}
-        </TestWrapper>,
-      );
-
-      expect(screen.getByText("experiments.noProtocolsAdded")).toBeInTheDocument();
-    });
-  });
-
   describe("Locations", () => {
     it("displays locations count", () => {
       render(
@@ -297,21 +254,17 @@ describe("ReviewStep", () => {
 
       const editButtons = screen.getAllByText("common.edit");
 
-      // Click first edit button (details section - step 1)
+      // Click first edit button (details section - step 0)
       await user.click(editButtons[0]);
       expect(goToStep).toHaveBeenCalledWith(0);
 
-      // Click second edit button (members section - step 2)
+      // Click second edit button (members section - step 1)
       await user.click(editButtons[1]);
       expect(goToStep).toHaveBeenCalledWith(1);
 
-      // Click third edit button (protocols section - step 3)
+      // Click third edit button (locations section - step 2)
       await user.click(editButtons[2]);
       expect(goToStep).toHaveBeenCalledWith(2);
-
-      // Click fourth edit button (locations section - step 4)
-      await user.click(editButtons[3]);
-      expect(goToStep).toHaveBeenCalledWith(3);
     });
 
     it("renders navigation buttons", () => {

@@ -16,7 +16,6 @@ import {
 import { DetailsSection } from "./details-section";
 import { LocationsSection } from "./locations-section";
 import { MembersVisibilitySection } from "./members-visibility-section";
-import { ProtocolsSection } from "./protocols-section";
 
 // For the final review step validate the combined schema of all previous steps
 export const reviewSchema = z.object({
@@ -52,18 +51,11 @@ export function ReviewStep({
         {/* Details - full width */}
         <DetailsSection className="md:col-span-2" formData={formData} onEdit={() => goToStep(0)} />
 
-        {/* Members - full width */}
-        <MembersVisibilitySection
-          className="md:col-span-2"
-          formData={formData}
-          onEdit={() => goToStep(1)}
-        />
-
-        {/* Protocols (left) */}
-        <ProtocolsSection formData={formData} onEdit={() => goToStep(2)} />
+        {/* Members (left) */}
+        <MembersVisibilitySection formData={formData} onEdit={() => goToStep(1)} />
 
         {/* Locations (right) */}
-        <LocationsSection formData={formData} onEdit={() => goToStep(3)} />
+        <LocationsSection formData={formData} onEdit={() => goToStep(2)} />
       </div>
 
       <WizardStepButtons
