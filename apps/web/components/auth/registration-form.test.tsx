@@ -21,11 +21,12 @@ vi.mock("~/app/actions/auth", () => ({
 
 const createUserProfileMock = vi.fn();
 vi.mock("~/hooks/profile/useCreateUserProfile/useCreateUserProfile", () => ({
-  useCreateUserProfile: (opts: { onSuccess: () => void }) => ({
-    mutate: (args: unknown) => {
+  useCreateUserProfile: (opts: { onSuccess: () => Promise<void> | void }) => ({
+    mutateAsync: async (args: unknown) => {
       createUserProfileMock(args);
       // simulate success callback
-      opts.onSuccess();
+      await Promise.resolve(opts.onSuccess());
+      return Promise.resolve();
     },
   }),
 }));

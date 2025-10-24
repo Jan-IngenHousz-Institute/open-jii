@@ -1,8 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
 import { handleRegister } from "~/app/actions/auth";
@@ -37,7 +38,7 @@ export function RegistrationForm({
 }) {
   const { t } = useTranslation();
   const router = useRouter();
-
+  const [isPending, setIsPending] = useState(false);
   const registrationSchema = z
     .object({
       firstName: z.string().min(2, t("registration.firstNameError")),
@@ -67,7 +68,7 @@ export function RegistrationForm({
     },
   });
 
-  const { mutate: createUserProfile } = useCreateUserProfile({
+  const { mutateAsync: createUserProfile } = useCreateUserProfile({
     onSuccess: async () => {
       await handleRegister();
       toast({ description: t("registration.successMessage") });
@@ -75,14 +76,21 @@ export function RegistrationForm({
     },
   });
 
-  function onSubmit(data: Registration) {
-    createUserProfile({
-      body: {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        organization: data.organization,
-      },
-    });
+  async function onSubmit(data: Registration) {
+    if (isPending) return;
+    setIsPending(true);
+
+    try {
+      await createUserProfile({
+        body: {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          organization: data.organization,
+        },
+      });
+    } finally {
+      setIsPending(false);
+    }
   }
 
   return (
@@ -96,116 +104,119 @@ export function RegistrationForm({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* First name */}
-          <div className="space-y-2">
-            <FormField
-              control={form.control}
-              name="firstName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("registration.firstName")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder={t("registration.firstNamePlaceholder")}
-                      className="h-12 rounded-xl"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          <FormField
+            control={form.control}
+            name="firstName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("registration.firstName")}</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    placeholder={t("registration.firstNamePlaceholder")}
+                    className="h-12 rounded-xl"
+                    disabled={isPending}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           {/* Last name */}
-          <div className="space-y-2">
-            <FormField
-              control={form.control}
-              name="lastName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("registration.lastName")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder={t("registration.lastNamePlaceholder")}
-                      className="h-12 rounded-xl"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          <FormField
+            control={form.control}
+            name="lastName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("registration.lastName")}</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    placeholder={t("registration.lastNamePlaceholder")}
+                    className="h-12 rounded-xl"
+                    disabled={isPending}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           {/* Organization */}
-          <div className="space-y-2">
-            <FormField
-              control={form.control}
-              name="organization"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("registration.organization")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder={t("registration.organizationPlaceholder")}
-                      className="h-12 rounded-xl"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          <FormField
+            control={form.control}
+            name="organization"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("registration.organization")}</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    placeholder={t("registration.organizationPlaceholder")}
+                    className="h-12 rounded-xl"
+                    disabled={isPending}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           {/* Terms */}
-          <div className="space-y-3">
-            <FormField
-              control={form.control}
-              name="acceptedTerms"
-              render={({ field }) => (
-                <FormItem className="flex items-end space-x-2">
-                  <FormControl>
-                    <Checkbox
-                      id={field.name}
-                      name={field.name}
-                      checked={!!field.value}
-                      onCheckedChange={field.onChange}
-                      ref={field.ref}
-                      disabled={field.disabled}
-                      onBlur={field.onBlur}
-                    />
-                  </FormControl>
-                  <FormLabel className="left text-sm font-medium leading-none">
-                    {t("auth.termsPrefix")}
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <button type="button" className="cursor-pointer underline">
-                          {t("auth.terms")}
-                        </button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-lg">
-                        <DialogHeader>
-                          <DialogTitle>{termsData.title}</DialogTitle>
-                        </DialogHeader>
-                        <ScrollArea className="h-64 w-full rounded-md border p-4">
-                          {termsData.content}
-                        </ScrollArea>
-                      </DialogContent>
-                    </Dialog>
-                  </FormLabel>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          <FormField
+            control={form.control}
+            name="acceptedTerms"
+            render={({ field }) => (
+              <FormItem className="flex items-end space-x-2">
+                <FormControl>
+                  <Checkbox
+                    id={field.name}
+                    name={field.name}
+                    checked={!!field.value}
+                    onCheckedChange={field.onChange}
+                    ref={field.ref}
+                    disabled={isPending}
+                    onBlur={field.onBlur}
+                  />
+                </FormControl>
+                <FormLabel className="left text-sm font-medium leading-none">
+                  {t("auth.termsPrefix")}
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <button type="button" className="cursor-pointer underline">
+                        {t("auth.terms")}
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-lg">
+                      <DialogHeader>
+                        <DialogTitle>{termsData.title}</DialogTitle>
+                      </DialogHeader>
+                      <ScrollArea className="h-64 w-full rounded-md border p-4">
+                        {termsData.content}
+                      </ScrollArea>
+                    </DialogContent>
+                  </Dialog>
+                </FormLabel>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           {/* Submit */}
           <Button
             type="submit"
             className="bg-primary text-primary-foreground hover:bg-primary-light active:bg-primary-dark h-12 w-full rounded-xl"
+            disabled={isPending}
           >
-            {t("registration.register")}
+            {isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {t("registration.registering")}
+              </>
+            ) : (
+              t("registration.register")
+            )}
           </Button>
         </form>
       </Form>
