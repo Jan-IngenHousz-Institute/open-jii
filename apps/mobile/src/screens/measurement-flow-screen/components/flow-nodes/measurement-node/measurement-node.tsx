@@ -34,20 +34,23 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
   } = useScanner();
   const { data: device } = useConnectedDevice();
   const { showToast } = useToast();
-  const { nextStep } = useMeasurementFlowStore();
+  const { nextStep, setScanResult } = useMeasurementFlowStore();
 
   const protocol = protocols?.find((p) => p.value === content.protocolId);
 
   // Auto-proceed to next step when scan completes successfully
   React.useEffect(() => {
     if (scanResult && !isScanning) {
+      // Store the scan result for the analysis step
+      setScanResult(scanResult);
+
       // Small delay to show completion briefly
       const timer = setTimeout(() => {
         nextStep();
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [scanResult, isScanning, nextStep]);
+  }, [scanResult, isScanning, nextStep, setScanResult]);
 
   const handleStartScan = async () => {
     if (!device) {

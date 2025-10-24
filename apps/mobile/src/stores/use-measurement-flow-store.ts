@@ -8,6 +8,7 @@ interface MeasurementFlowStore {
   currentFlowStep: number; // Current step within the flow (0-4 for 5 steps)
   iterationCount: number; // Number of completed iterations
   isFlowFinished: boolean; // True when user explicitly finishes the flow
+  scanResult?: any; // Store the scan result from measurement step
 
   // Navigation
   setExperimentId: (experimentId: string) => void;
@@ -22,6 +23,7 @@ interface MeasurementFlowStore {
   startNewIteration: () => void;
   retryCurrentIteration: () => void;
   finishFlow: () => void;
+  setScanResult: (result: any) => void;
 }
 
 export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
@@ -31,6 +33,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
   currentFlowStep: 0,
   iterationCount: 0,
   isFlowFinished: false,
+  scanResult: undefined,
 
   // Experiment selection
   setExperimentId: (experimentId) => set({ experimentId }),
@@ -76,17 +79,20 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
       currentFlowStep: 0,
       iterationCount: 0,
       isFlowFinished: false,
+      scanResult: undefined,
     }),
 
   startNewIteration: () =>
     set((state) => ({
       currentFlowStep: 0,
       iterationCount: state.iterationCount + 1,
+      scanResult: undefined, // Clear scan result for new iteration
     })),
 
   retryCurrentIteration: () =>
     set(() => ({
       currentFlowStep: 0,
+      scanResult: undefined, // Clear scan result for retry
     })),
 
   finishFlow: () =>
@@ -94,4 +100,6 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
       currentFlowStep: state.flowNodes.length, // Mark as completed
       isFlowFinished: true,
     })),
+
+  setScanResult: (result) => set({ scanResult: result }),
 }));
