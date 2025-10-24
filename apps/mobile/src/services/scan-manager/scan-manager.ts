@@ -97,12 +97,13 @@ export function useScanner() {
 
     const macro = macros?.find((m) => m.value === macroId);
 
-    const result = await executeCommand(protocolCode);
+    const result = await executeCommand(protocolCode).catch(console.log);
+
     setBatteryLevel((result as any)?.device_battery);
     if (typeof result !== "object") {
       throw new Error("Invalid result");
     }
-    console.log("got result, processing...");
+
     return processScan(result, userId, macro?.filename, macro?.code, (errorMessage) =>
       showToast(errorMessage, "error"),
     );

@@ -28,7 +28,6 @@ export function CustomMeasurementFlowStep() {
   const isFlowCompleted = currentFlowStep >= flowNodes.length;
 
   const { data: { body } = {}, isLoading, error } = useExperimentFlow(experimentId);
-  console.log("body", body);
 
   const isFlowInitialized = flowNodes.length > 0;
 

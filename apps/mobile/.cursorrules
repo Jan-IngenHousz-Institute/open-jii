@@ -24,23 +24,32 @@ React Native Component Organization Guidelines
   - Data transformation, constants, and helper logic go into utils/.
 - This keeps each unit focused and readable.
 
-5. Shared Logic
+5. State-Based Component Slicing (When asked to "slicify")
+- Extract different states/conditions into separate components
+- Create a components/ subdirectory within the main component folder
+- Name components by their state: `NoDeviceState`, `ReadyState`, `ScanningState`, `ResultState`
+- Main component becomes an orchestrator that decides which state to render
+- Each state component handles its own logic and UI
+- Pass necessary props down to state components
+- Keep main component clean with simple conditional rendering logic
+
+6. Shared Logic
 - If a hook, utility, or component is used across multiple screens, move it into a top-level shared folder (e.g., common/, shared/, hooks/, or utils/ at the app root).
 - Avoid duplication across screen folders.
 
-6. Imports and Exports
+7. Imports and Exports
 - Use barrel index.ts files inside screen folders for clean imports.
 - No deep imports into components/, hooks/, or utils/ — import through the screen's folder index or the shared top-level folder.
 - NEVER create index.ts files unless explicitly requested by the user.
 
-7. Naming & Code Style
+8. Naming & Code Style
 - Use dash case for directories and files.
 - All component files must use dash-case naming (e.g., `measurement-flow-screen.tsx`, `experiment-selection-step.tsx`).
 - Prefer the function keyword to lambda (arrow) for components/helpers.
 - Do not add types for things that can be automatically inferred by the TypeScript compiler.
 - Avoid comments unless implementing something particularly complex or non-obvious.
 
-8. NativeWind Dark/Light Mode Styling
+9. NativeWind Dark/Light Mode Styling
 - Always use the theme system for dark/light mode styling.
 - Import `useTheme` and `clsx` in every component that needs styling.
 - Use `classes.*` from `useTheme()` for theme-dependent styles.
