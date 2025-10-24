@@ -48,6 +48,7 @@ export function processScan(
   } catch (e: any) {
     console.log("error executing local macro", e);
     onError?.(e.message);
+    throw e;
   }
 
   for (const sample of samples) {
