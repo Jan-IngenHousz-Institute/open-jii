@@ -20,6 +20,8 @@ const mockT = vi.fn((key: string) => {
     "auth.emailInvalid": "Invalid email address",
     "auth.sendEmail": "Send Email",
     "auth.sendingEmail": "Sending...",
+    "auth.continueWithEmail": "Sign in with Email",
+    "auth.continueWith": "Continue with",
     "auth.signInWith": "Sign in with",
     "auth.loginWith-nodemailer": "Sign in with Email",
     "auth.loginWith-github": "Sign in with GitHub",

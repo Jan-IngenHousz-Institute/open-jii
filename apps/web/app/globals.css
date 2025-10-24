@@ -112,7 +112,8 @@
     --highlight: 56 100% 75%;
     --highlight-foreground: 0 0% 0%;
 
-    --destructive: 0 72.22% 50.59%;
+    /* #f22020 = hsl(0 89% 53.73%) */
+    --destructive: 0 89% 53.73%;
     --destructive-foreground: 0 0% 98%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;

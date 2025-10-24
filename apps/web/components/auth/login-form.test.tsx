@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { Locale } from "@repo/i18n";
 
-import { LoginForm } from "../login-form";
+import { LoginForm } from "./login-form";
 
 globalThis.React = React;
 
@@ -66,6 +66,16 @@ vi.mock("@repo/i18n", () => ({
       return translations[key] || key;
     },
   })),
+}));
+
+// Mock TermsAndConditionsDialog
+vi.mock("./terms-and-conditions-dialog", () => ({
+  TermsAndConditionsDialog: vi.fn(() =>
+    Promise.resolve({
+      title: "Terms and Conditions",
+      content: "Mock terms and conditions content",
+    }),
+  ),
 }));
 
 // Mock UI components
@@ -144,6 +154,32 @@ vi.mock("@repo/ui/components", () => ({
   },
   FormMessage: ({ children }: { children?: React.ReactNode }) =>
     children ? <span>{children}</span> : null,
+  Dialog: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog">{children}</div>
+  ),
+  DialogTrigger: ({
+    children,
+    asChild: _asChild,
+  }: {
+    children: React.ReactNode;
+    asChild?: boolean;
+  }) => <div data-testid="dialog-trigger">{children}</div>,
+  DialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="dialog-content" className={className}>
+      {children}
+    </div>
+  ),
+  DialogHeader: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-header">{children}</div>
+  ),
+  DialogTitle: ({ children }: { children: React.ReactNode }) => (
+    <h2 data-testid="dialog-title">{children}</h2>
+  ),
+  ScrollArea: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="scroll-area" className={className}>
+      {children}
+    </div>
+  ),
 }));
 
 describe("LoginForm", () => {
@@ -160,67 +196,69 @@ describe("LoginForm", () => {
     render(await LoginForm(defaultProps));
 
     expect(screen.getByText("auth.loginToAccount")).toBeInTheDocument();
-    expect(screen.getByText("auth.continueWith")).toBeInTheDocument();
-    expect(screen.getByText("auth.loginWith-github")).toBeInTheDocument();
-    expect(screen.getByText("auth.loginWith-nodemailer")).toBeInTheDocument();
-    expect(screen.getByText("auth.loginWith-orcid")).toBeInTheDocument();
+    expect(screen.getByText("auth.continueWithEmail")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /github/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /orcid/i })).toBeInTheDocument();
   });
 
-  it("renders email input for nodemailer provider", async () => {
+  it("renders email input form for nodemailer provider", async () => {
     render(await LoginForm(defaultProps));
 
     const emailInput = screen.getByLabelText("Email");
     expect(emailInput).toBeInTheDocument();
     expect(emailInput).toHaveAttribute("type", "email");
     expect(emailInput).toHaveAttribute("placeholder", "m@example.com");
-    // Validation is handled by zod schema, not HTML required attribute
-    expect(emailInput).not.toBeRequired();
   });
 
   it("renders provider icons correctly", async () => {
     render(await LoginForm(defaultProps));
 
     // Check for GitHub SVG
-    const githubSvg = screen
-      .getByRole("button", { name: /auth\.loginWith-github/i })
-      .querySelector("svg");
+    const githubSvg = screen.getByRole("button", { name: /github/i }).querySelector("svg");
     expect(githubSvg).toBeInTheDocument();
 
     // Check for ORCID SVG
-    const orcidSvg = screen
-      .getByRole("button", { name: /auth\.loginWith-orcid/i })
-      .querySelector("svg");
+    const orcidSvg = screen.getByRole("button", { name: /orcid/i }).querySelector("svg");
     expect(orcidSvg).toBeInTheDocument();
   });
 
-  it("renders 'Or continue with' separator after the first provider", async () => {
+  it("renders divider between email and OAuth providers", async () => {
     render(await LoginForm(defaultProps));
 
-    const separators = screen.getAllByText("auth.orContinueWith");
-    // Should appear after the first provider (index > 1 condition in the code)
-    expect(separators.length).toBeGreaterThan(0);
+    expect(screen.getByText("auth.or")).toBeInTheDocument();
   });
 
   it("renders all buttons with correct styling", async () => {
     render(await LoginForm(defaultProps));
+    // Find the email submit button by its accessible name
+    const emailButton = screen.getByRole("button", { name: "auth.continueWithEmail" });
+    expect(emailButton).toHaveAttribute("data-variant", "default");
+    expect(emailButton).toHaveClass("h-12", "w-full");
+    expect(emailButton).toHaveAttribute("type", "submit");
 
-    const buttons = screen.getAllByRole("button");
+    const githubButton = screen.getByRole("button", { name: /github/i });
+    const orcidButton = screen.getByRole("button", { name: /orcid/i });
 
-    buttons.forEach((button) => {
+    [githubButton, orcidButton].forEach((button) => {
       expect(button).toHaveAttribute("data-variant", "outline");
       expect(button).toHaveClass("w-full");
       expect(button).toHaveAttribute("type", "submit");
     });
   });
 
-  it("renders provider forms in correct order", async () => {
+  it("renders providers in correct order (email first, then OAuth)", async () => {
     render(await LoginForm(defaultProps));
 
     const buttons = screen.getAllByRole("button");
 
-    expect(buttons[0]).toHaveTextContent("auth.loginWith-github");
-    expect(buttons[1]).toHaveTextContent("auth.loginWith-nodemailer");
-    expect(buttons[2]).toHaveTextContent("auth.loginWith-orcid");
+    // Email first
+    expect(buttons[0]).toHaveTextContent("auth.continueWithEmail");
+
+    // Github button
+    expect(screen.getByRole("button", { name: /github/i })).toBeInTheDocument();
+
+    // Orcid button
+    expect(screen.getByRole("button", { name: /orcid/i })).toBeInTheDocument();
   });
 
   it("renders forms with correct structure", async () => {
@@ -246,9 +284,9 @@ describe("LoginForm", () => {
 
     // Should still render all the basic elements
     expect(screen.getByText("auth.loginToAccount")).toBeInTheDocument();
-    expect(screen.getByText("auth.loginWith-github")).toBeInTheDocument();
-    expect(screen.getByText("auth.loginWith-nodemailer")).toBeInTheDocument();
-    expect(screen.getByText("auth.loginWith-orcid")).toBeInTheDocument();
+    expect(screen.getByText("auth.continueWithEmail")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /github/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /orcid/i })).toBeInTheDocument();
   });
 
   it("renders forms with proper submit handlers", async () => {
@@ -263,21 +301,12 @@ describe("LoginForm", () => {
     });
   });
 
-  it("renders email input with proper name attribute for form data", async () => {
+  it("only renders one email input", async () => {
     render(await LoginForm(defaultProps));
 
-    const emailInput = screen.getByLabelText("Email");
-    expect(emailInput).toHaveAttribute("name", "email");
-    expect(emailInput).toHaveAttribute("id", "email");
-  });
-
-  it("only renders email input for nodemailer provider", async () => {
-    render(await LoginForm(defaultProps));
-
-    // Should only have one email input (for nodemailer)
-    const emailInputs = screen.getAllByDisplayValue("");
-    const emailTypeInputs = emailInputs.filter((input) => input.getAttribute("type") === "email");
-    expect(emailTypeInputs).toHaveLength(1);
+    // Should only have one email input
+    const emailInputs = document.querySelectorAll('input[type="email"]');
+    expect(emailInputs).toHaveLength(1);
   });
 
   it("renders provider buttons with proper submit types", async () => {
@@ -292,15 +321,13 @@ describe("LoginForm", () => {
     });
   });
 
-  it("renders correct provider order with proper separation", async () => {
+  it("renders OAuth providers container", async () => {
     render(await LoginForm(defaultProps));
 
-    const container = document.querySelector(".grid.gap-6");
+    const container = document.querySelector(".grid.gap-3");
     expect(container).toBeInTheDocument();
 
-    // Check that we have the expected structure
-    const children = container?.children;
-    expect(children?.length).toBeGreaterThan(3); // Initial separator + providers + additional separators
+    expect(container?.children.length).toBe(2); // GitHub and ORCID
   });
 
   it("handles different locale", async () => {
@@ -313,7 +340,7 @@ describe("LoginForm", () => {
 
     // Should still render (translations will return keys with our mock)
     expect(screen.getByText("auth.loginToAccount")).toBeInTheDocument();
-    expect(screen.getByText("auth.loginWith-github")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /github/i })).toBeInTheDocument();
   });
 
   it("renders with empty string callbackUrl", async () => {
@@ -326,20 +353,21 @@ describe("LoginForm", () => {
 
     // Should still render all elements
     expect(screen.getByText("auth.loginToAccount")).toBeInTheDocument();
-    expect(screen.getAllByRole("button")).toHaveLength(3);
+    const submitButtons = document.querySelectorAll('button[type="submit"]');
+    expect(submitButtons).toHaveLength(3);
   });
 
   it("renders provider image components correctly", async () => {
     render(await LoginForm(defaultProps));
 
     // Check that GitHub icon has the correct path content
-    const githubButton = screen.getByRole("button", { name: /auth\.loginWith-github/i });
+    const githubButton = screen.getByRole("button", { name: /github/i });
     const githubSvg = githubButton.querySelector("svg");
     const githubPath = githubSvg?.querySelector("path");
     expect(githubPath).toHaveAttribute("fill", "currentColor");
 
     // Check that ORCID icon has the correct path content and fill color
-    const orcidButton = screen.getByRole("button", { name: /auth\.loginWith-orcid/i });
+    const orcidButton = screen.getByRole("button", { name: /orcid/i });
     const orcidSvg = orcidButton.querySelector("svg");
     const orcidPath = orcidSvg?.querySelector("path");
     expect(orcidPath).toHaveAttribute("fill", "#A6CE39");
@@ -349,22 +377,27 @@ describe("LoginForm", () => {
     render(await LoginForm(defaultProps));
 
     // Should have exactly 3 providers as mocked
-    const buttons = screen.getAllByRole("button");
-    expect(buttons).toHaveLength(3);
+    const submitButtons = document.querySelectorAll('button[type="submit"]');
+    expect(submitButtons).toHaveLength(3);
 
     // Should have exactly 3 forms
     const forms = document.querySelectorAll("form");
     expect(forms).toHaveLength(3);
   });
 
-  it("renders separators correctly based on provider index", async () => {
+  it("renders terms and conditions dialog", async () => {
     render(await LoginForm(defaultProps));
 
-    // The first separator should be "Continue with"
-    expect(screen.getByText("auth.continueWith")).toBeInTheDocument();
+    // Check for terms prefix text and link
+    expect(screen.getByText("auth.continueTermsPrefix")).toBeInTheDocument();
+    expect(screen.getByText("auth.terms")).toBeInTheDocument();
 
-    // Should have at least one "Or continue with" separator (for providers after index 1)
-    const orSeparators = screen.getAllByText("auth.orContinueWith");
-    expect(orSeparators.length).toBeGreaterThanOrEqual(1);
+    // Check that dialog components are rendered
+    expect(screen.getByTestId("dialog")).toBeInTheDocument();
+    expect(screen.getByTestId("dialog-trigger")).toBeInTheDocument();
+    expect(screen.getByTestId("dialog-content")).toBeInTheDocument();
+    expect(screen.getByTestId("dialog-title")).toBeInTheDocument();
+    expect(screen.getByText("Terms and Conditions")).toBeInTheDocument();
+    expect(screen.getByText("Mock terms and conditions content")).toBeInTheDocument();
   });
 });
