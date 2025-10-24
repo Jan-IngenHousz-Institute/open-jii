@@ -31,7 +31,7 @@ export class ExperimentDataController {
   getExperimentData(@CurrentUser() user: { id: string }) {
     return tsRestHandler(contract.experiments.getExperimentData, async ({ params, query }) => {
       const { id: experimentId } = params;
-      const { page, pageSize, tableName } = query;
+      const { page, pageSize, tableName, columns } = query;
 
       this.logger.log(`Processing data request for experiment ${experimentId} by user ${user.id}`);
 
@@ -39,6 +39,7 @@ export class ExperimentDataController {
         page,
         pageSize,
         tableName,
+        columns,
       });
 
       if (result.isSuccess()) {
@@ -82,6 +83,17 @@ export class ExperimentDataController {
       }
 
       const { experiment } = experimentAccessResult.value;
+
+      // Check if experiment is archived - no one can upload data to archived experiments
+      if (experiment.status === "archived") {
+        this.logger.warn(
+          `User ${user.id} attempted to upload data to archived experiment ${experimentId}`,
+        );
+        return {
+          status: StatusCodes.FORBIDDEN,
+          body: { message: "Cannot upload data to archived experiments" },
+        };
+      }
 
       // Prepare the upload environment by ensuring the required volume exists
       this.logger.log(

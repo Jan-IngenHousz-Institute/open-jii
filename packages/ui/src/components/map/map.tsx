@@ -138,19 +138,41 @@ export interface MapProps {
    * Reference point for distance calculations
    */
   referencePoint?: [number, number];
+  /**
+   * Whether to automatically fit map bounds to show all locations on initial load
+   */
+  fitBoundsOnMapLoad?: boolean;
 }
 
-// Component to handle map view changes
+// Component to handle map view changes and bounds fitting
 const MapViewController = ({
   center,
   zoom,
   shouldPan,
+  locations,
+  fitBoundsOnMapLoad,
 }: {
   center: [number, number];
   zoom?: number;
   shouldPan: boolean;
+  locations?: LocationPoint[];
+  fitBoundsOnMapLoad?: boolean;
 }) => {
   const map = useMap();
+  const [hasInitiallyFit, setHasInitiallyFit] = useState(false);
+
+  // Fit bounds on initial load if enabled and locations are available
+  useEffect(() => {
+    if (fitBoundsOnMapLoad && !hasInitiallyFit && locations && locations.length > 0) {
+      const bounds = L.latLngBounds(locations.map((loc) => [loc.latitude, loc.longitude]));
+      map.fitBounds(bounds, {
+        padding: [50, 50],
+        maxZoom: 15,
+        animate: true,
+      });
+      setHasInitiallyFit(true);
+    }
+  }, [map, locations, fitBoundsOnMapLoad, hasInitiallyFit]);
 
   useEffect(() => {
     if (shouldPan) {
@@ -201,6 +223,7 @@ export const Map = ({
   sidebarCollapsed = false,
   showDistances = false,
   referencePoint,
+  fitBoundsOnMapLoad = true,
 }: MapProps) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(sidebarCollapsed);
   const [selectedLocation, setSelectedLocation] = useState<LocationPoint | undefined>();
@@ -360,7 +383,7 @@ export const Map = ({
   );
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn("relative z-0", className)}>
       {/* Location Search Overlay */}
       {showLocationSearch && (
         <div className="absolute left-1/2 top-4 z-[1000] w-full max-w-md -translate-x-1/2 transform px-4">
@@ -432,7 +455,7 @@ export const Map = ({
       {/* Map Container */}
       <div
         className={cn(
-          "relative overflow-hidden rounded-lg border",
+          "relative z-0 overflow-hidden rounded-lg border",
           disabled && "cursor-not-allowed opacity-50",
         )}
         style={{ height, width: "100%" }}
@@ -450,7 +473,13 @@ export const Map = ({
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
 
-          <MapViewController center={mapCenter} zoom={mapZoom} shouldPan={shouldPanToLocation} />
+          <MapViewController
+            center={mapCenter}
+            zoom={mapZoom}
+            shouldPan={shouldPanToLocation}
+            locations={locations}
+            fitBoundsOnMapLoad={fitBoundsOnMapLoad}
+          />
 
           {showZoomControl && <ZoomControl position="topright" />}
           {showScale && <ScaleControl position="bottomright" />}

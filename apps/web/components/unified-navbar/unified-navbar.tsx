@@ -197,23 +197,13 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
       >
         {/* Logo/Brand */}
         <div className="col-start-1 col-end-2 flex items-center">
-          <Link
-            href={`/${locale}`}
-            className="flex items-center space-x-2 text-white transition-opacity hover:opacity-80"
-          >
-            <Image
-              src={
-                isLightNavbar
-                  ? "/jan-ingenhousz-institute-logo-header.png"
-                  : "/jan-ingenhousz-institute-logo-header-light.png"
-              }
-              alt="Jan IngenHousz Institute Logo"
-              height={32}
-              width={180}
-              className="h-8 w-auto"
-              priority
-            />
-          </Link>
+          <Image
+            src="/openJII-logo-vertical-yellow.svg"
+            alt="openJII logo"
+            width={210}
+            height={52}
+            className="h-11 w-auto"
+          />
         </div>
 
         {/* Navigation Links - Desktop */}

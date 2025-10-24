@@ -8,6 +8,7 @@ import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExper
 import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
 import { formatDate } from "@/util/date";
 import { CalendarIcon } from "lucide-react";
+import { notFound } from "next/navigation";
 import { use } from "react";
 
 import { useTranslation } from "@repo/i18n";
@@ -50,6 +51,11 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
   // Body may still be undefined even if data exists; guard explicitly
   if (!experiment) {
     return <div>{t("notFound")}</div>;
+  }
+
+  // Check if experiment is archived - if so, redirect to not found (should use archive route)
+  if (experiment.status === "archived") {
+    notFound();
   }
 
   const getStatusBadge = (status: string) => {

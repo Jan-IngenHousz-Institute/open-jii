@@ -2,7 +2,7 @@
 
 import { useDebounce } from "@/hooks/useDebounce";
 import { useUserSearch } from "@/hooks/useUserSearch";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
 import type { UserProfile, CreateExperimentBody } from "@repo/api";
@@ -16,6 +16,9 @@ import { UserSearchWithDropdown } from "../user-search-with-dropdown";
 interface Member {
   userId: string;
   role?: "admin" | "member";
+  firstName?: string;
+  lastName?: string;
+  email?: string | null;
 }
 
 interface NewExperimentMembersCardProps {
@@ -53,7 +56,16 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
   const handleAddMember = (profileId: string) => {
     const profile = availableProfiles.find((p) => p.userId === profileId);
     if (!profile) return;
-    form.setValue("members", [...members, { userId: profile.userId, role: "member" }]);
+    form.setValue("members", [
+      ...members,
+      {
+        userId: profile.userId,
+        role: "member",
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: profile.email,
+      },
+    ]);
     setAddedProfiles((prev) =>
       prev.some((p) => p.userId === profile.userId) ? prev : [...prev, profile],
     );
@@ -90,6 +102,21 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
 
     return allProfiles;
   }, [addedProfiles, userSearchData]);
+
+  useEffect(() => {
+    const hydratedProfiles = members
+      .filter((m) => m.firstName ?? m.lastName ?? m.email)
+      .map((m) => ({
+        userId: m.userId,
+        firstName: m.firstName ?? "",
+        lastName: m.lastName ?? "",
+        email: m.email ?? null,
+        bio: null,
+        organization: undefined,
+      }));
+
+    setAddedProfiles(hydratedProfiles);
+  }, [members]);
 
   return (
     <Card className="min-w-0 flex-1">

@@ -10,6 +10,10 @@ const mockLeaflet = vi.hoisted(() => ({
   default: {
     divIcon: vi.fn(() => ({ _leaflet_id: 1 })),
     atan2: Math.atan2,
+    latLngBounds: vi.fn((coords: any) => ({
+      _southWest: coords[0],
+      _northEast: coords[coords.length - 1],
+    })),
   },
 }));
 
@@ -46,6 +50,8 @@ vi.mock("react-leaflet", () => ({
   useMap: vi.fn(() => ({
     setView: vi.fn(),
     getZoom: vi.fn(() => 10),
+    getMaxZoom: vi.fn(() => 18),
+    fitBounds: vi.fn(),
   })),
 }));
 
@@ -757,6 +763,46 @@ describe("Map Component", () => {
       expect(screen.getByTestId("select-location-loc-1")).toBeInTheDocument();
       expect(screen.getByTestId("navigate-location-loc-1")).toBeInTheDocument();
       expect(screen.getByTestId("remove-location-loc-1")).toBeInTheDocument();
+    });
+  });
+
+  describe("Fit Bounds on Map Load", () => {
+    it("should render with fitBoundsOnMapLoad and single location", () => {
+      const singleLocation: LocationPoint[] = [
+        {
+          id: "single",
+          name: "Single Location",
+          latitude: 40.7829,
+          longitude: -73.9654,
+          country: "US",
+        },
+      ];
+
+      const { container } = render(<Map locations={singleLocation} fitBoundsOnMapLoad />);
+
+      expect(screen.getByTestId("map-container")).toBeInTheDocument();
+      expect(screen.getByText("Single Location")).toBeInTheDocument();
+    });
+
+    it("should work with custom maxZoom when fitBoundsOnMapLoad is enabled", () => {
+      const { container } = render(<Map {...defaultProps} fitBoundsOnMapLoad maxZoom={15} />);
+
+      const mapContainer = screen.getByTestId("map-container");
+      expect(mapContainer).toHaveAttribute("maxZoom", "15");
+    });
+
+    it("should work with fitBoundsOnMapLoad enabled by default", () => {
+      // Test that fitBoundsOnMapLoad defaults to true
+      const { container } = render(<Map {...defaultProps} />);
+
+      expect(screen.getByTestId("map-container")).toBeInTheDocument();
+    });
+
+    it("should render correctly when fitBoundsOnMapLoad is disabled explicitly", () => {
+      const { container } = render(<Map {...defaultProps} fitBoundsOnMapLoad={false} />);
+
+      expect(screen.getByTestId("map-container")).toBeInTheDocument();
+      expect(screen.getAllByTestId("marker")).toHaveLength(2);
     });
   });
 });

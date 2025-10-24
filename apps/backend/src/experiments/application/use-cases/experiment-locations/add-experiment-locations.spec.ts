@@ -153,6 +153,39 @@ describe("AddExperimentLocationsUseCase", () => {
     expect(result.error.message).toContain("You do not have access to this experiment");
   });
 
+  it("should forbid any user from adding locations to archived experiments", async () => {
+    // Create a test user who will NOT have admin access
+    const anotherUserId = await testApp.createTestUser({});
+
+    // Create an archived experiment with testUserId as the owner/admin
+    const { experiment } = await testApp.createExperiment({
+      name: "Archived Experiment No Access",
+      status: "archived",
+      userId: testUserId,
+    });
+
+    const locationsToAdd: CreateLocationDto[] = [
+      {
+        experimentId: experiment.id,
+        name: "Attempted Archived Location",
+        latitude: 52.52,
+        longitude: 13.405,
+      },
+    ];
+
+    // Try to add locations as the experiment owner/admin
+    const adminResult = await useCase.execute(experiment.id, locationsToAdd, testUserId);
+    expect(adminResult.isFailure()).toBe(true);
+    assertFailure(adminResult);
+    expect(adminResult.error.message).toContain("You do not have access to this experiment");
+
+    // Try to add locations as another non-admin user
+    const memberResult = await useCase.execute(experiment.id, locationsToAdd, anotherUserId);
+    expect(memberResult.isFailure()).toBe(true);
+    assertFailure(memberResult);
+    expect(memberResult.error.message).toContain("You do not have access to this experiment");
+  });
+
   it("should handle repository errors when creating locations fails", async () => {
     // Arrange
     const { experiment } = await testApp.createExperiment({

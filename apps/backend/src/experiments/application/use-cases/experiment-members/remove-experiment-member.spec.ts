@@ -102,4 +102,26 @@ describe("RemoveExperimentMemberUseCase", () => {
     expect(result.error.code).toBe("NOT_FOUND");
     expect(result.error.message).toContain("not found in this experiment");
   });
+
+  it("should return FORBIDDEN error when attempting to remove a member from an archived experiment", async () => {
+    // Create an experiment and archive it
+    const { experiment } = await testApp.createExperiment({
+      name: "Archived Remove Test",
+      userId: testUserId,
+      status: "archived",
+    });
+
+    // Add a regular member
+    const memberId = await testApp.createTestUser({
+      email: "archived-member@example.com",
+    });
+    await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+    // Attempt to remove as the creator/admin
+    const result = await useCase.execute(experiment.id, memberId, testUserId);
+
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+  });
 });

@@ -6,6 +6,7 @@ import {
   Code,
   FileSliders,
   Home,
+  LogIn,
   Microscope,
   RadioReceiver,
   Webcam,
@@ -20,9 +21,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarMenu,
   SidebarMenuButton,
-  SidebarMenuItem,
   SidebarRail,
 } from "@repo/ui/components";
 
@@ -112,15 +111,14 @@ export function AppSidebar({
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
-              <Link href={`/platform/`} locale={locale}>
-                <Image src="/logo-light.png" alt={translations.logoAlt} width={50} height={50} />
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <Image
+          src="/logo-open-yellow.svg"
+          alt={translations.openJII}
+          width={48}
+          height={12}
+          className="mt-2 align-middle group-data-[state=collapsed]:hidden"
+        />
+        <Image src="/logo-jii-yellow.svg" alt={translations.logoAlt} width={50} height={50} />
       </SidebarHeader>
       <SidebarContent>
         <NavItems items={processedNavDashboard} />
@@ -139,15 +137,18 @@ export function AppSidebar({
             }}
           />
         ) : (
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
-                <Link href="/" locale={locale}>
-                  <span className="text-base font-semibold">{translations.signIn}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+          <SidebarMenuButton
+            asChild
+            tooltip={translations.signIn}
+            className="group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!gap-0 group-data-[collapsible=icon]:!px-0"
+          >
+            <Link href="/" locale={locale}>
+              <LogIn className="group-data-[collapsible=icon]:mx-auto" />
+              <span className="text-base font-semibold group-data-[collapsible=icon]:hidden">
+                {translations.signIn}
+              </span>
+            </Link>
+          </SidebarMenuButton>
         )}
       </SidebarFooter>
       <SidebarRail />
