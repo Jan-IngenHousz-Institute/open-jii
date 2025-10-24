@@ -94,7 +94,7 @@ export function RegistrationForm({
   }
 
   return (
-    <div className="bg-card text-card-foreground ring-border flex h-full min-h-[600px] w-full flex-col rounded-2xl p-6 shadow-lg ring-1 lg:w-[460px] lg:rounded-2xl lg:p-10 lg:shadow-lg lg:ring-1">
+    <div className="bg-card text-card-foreground ring-border flex h-full min-h-[600px] w-full flex-col rounded-2xl p-6 shadow-lg ring-1 md:p-14">
       {/* Title */}
       <div className="mb-4 text-left">
         <h1 className="text-2xl font-bold">{t("registration.title")}</h1>

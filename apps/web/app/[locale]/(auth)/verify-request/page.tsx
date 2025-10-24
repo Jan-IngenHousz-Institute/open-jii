@@ -43,7 +43,7 @@ export default async function VerifyRequestPage(props: {
             <div className="flex flex-col p-0 md:mt-6 md:p-10">
               <div className="flex h-full w-full flex-col justify-center">
                 <div className="w-full max-w-none md:mx-0 md:max-w-md">
-                  <div className="bg-card text-card-foreground ring-border flex h-full min-h-[600px] w-full flex-col rounded-2xl p-6 shadow-lg ring-1 lg:w-[460px] lg:rounded-2xl lg:p-10 lg:shadow-lg lg:ring-1">
+                  <div className="bg-card text-card-foreground ring-border flex h-full min-h-[600px] w-full flex-col rounded-2xl p-6 shadow-lg ring-1 lg:p-14">
                     {/* Icon */}
                     <div className="mb-4 flex justify-center">
                       <span className="bg-primary/10 inline-flex items-center justify-center rounded-full p-3">

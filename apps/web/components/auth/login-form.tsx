@@ -10,6 +10,7 @@ import {
   DialogTitle,
   ScrollArea,
 } from "@repo/ui/components";
+import { cva } from "@repo/ui/lib/utils";
 
 import { LoginProviderForm } from "../login-provider-form";
 import { TermsAndConditionsDialog } from "./terms-and-conditions-dialog";
@@ -21,7 +22,7 @@ export async function LoginForm({ callbackUrl, locale }: { callbackUrl?: string;
   const termsData = await TermsAndConditionsDialog({ locale });
 
   return (
-    <div className="bg-card text-card-foreground ring-border flex min-h-[600px] w-full flex-col rounded-2xl p-8 shadow-lg ring-1 lg:w-[460px] lg:p-14">
+    <div className="bg-card text-card-foreground ring-border flex min-h-[600px] w-full flex-col rounded-2xl p-8 shadow-lg ring-1 md:p-14">
       {/* Title */}
       <h1 className="mb-4 text-left text-2xl font-bold">{t("auth.loginToAccount")}</h1>
 
@@ -65,6 +66,20 @@ export async function LoginForm({ callbackUrl, locale }: { callbackUrl?: string;
   );
 }
 
+const providerGridVariants = cva("mb-6 grid w-full grid-cols-1 gap-3", {
+  variants: {
+    count: {
+      1: "",
+      2: "md:grid-cols-2",
+      3: "md:grid-cols-3",
+      many: "md:grid-cols-1",
+    },
+  },
+  defaultVariants: {
+    count: 1,
+  },
+});
+
 function ProviderGrid({
   providers,
   callbackUrl,
@@ -74,13 +89,10 @@ function ProviderGrid({
   locale: Locale;
 }) {
   const count = providers.length;
-  let gridCols = "";
-  if (count === 2) gridCols = "md:grid-cols-2";
-  else if (count === 3) gridCols = "md:grid-cols-3";
-  else if (count > 3) gridCols = "md:grid-cols-1";
+  const variant = count === 2 ? 2 : count === 3 ? 3 : count > 3 ? "many" : 1;
 
   return (
-    <div className={`mb-6 grid w-full grid-cols-1 gap-3 ${gridCols}`}>
+    <div className={providerGridVariants({ count: variant })}>
       {providers.map((provider) => (
         <LoginProviderForm
           key={provider.id}
