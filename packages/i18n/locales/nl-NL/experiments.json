@@ -53,6 +53,12 @@
   },
   "overview": "Overzicht",
   "data": "Gegevens",
+  "analysis": {
+    "title": "Analyse",
+    "description": "Analyseer uw experimentgegevens met visualisaties en notebooks",
+    "visualizations": "Visualisaties",
+    "notebooks": "Notebooks"
+  },
   "experimentData": {
     "title": "Experimentgegevens",
     "description": "Bekijk en beheer gegevens die bij dit experiment horen.",

@@ -1,7 +1,7 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-import ExperimentVisualizationSelector from "@/components/experiment-visualizations/experiment-visualization-selector";
+import ExperimentVisualizationsDisplay from "@/components/experiment-visualizations/experiment-visualizations-display";
 import { ExperimentLocationsDisplay } from "@/components/experiment/experiment-locations-display";
 import { FlowEditor } from "@/components/flow-editor";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
@@ -133,7 +133,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
       </Card>
 
       {/* Visualizations Display */}
-      <ExperimentVisualizationSelector
+      <ExperimentVisualizationsDisplay
         experimentId={id}
         visualizations={visualizationsData?.body ?? []}
         isLoading={visualizationsLoading}
