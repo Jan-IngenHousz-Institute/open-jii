@@ -2,46 +2,30 @@
 
 import type { SampleTable } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentVisualizationUpdate } from "@/hooks/experiment/useExperimentVisualizationUpdate/useExperimentVisualizationUpdate";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
-import type { UseFormReturn } from "react-hook-form";
-import { useForm } from "react-hook-form";
 
 import type { ExperimentVisualization } from "@repo/api";
-import { zUpdateExperimentVisualizationBody } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import {
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  Input,
-  Textarea,
-} from "@repo/ui/components";
+import { WizardForm } from "@repo/ui/components";
+import type { WizardStepProps } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
-import ChartConfigurator, {
-  collectAllChartDataSources,
-} from "./chart-configurators/chart-configurator";
 import type { ChartFormValues } from "./chart-configurators/chart-configurator-util";
+import { getDefaultChartConfig } from "./chart-configurators/chart-configurator-util";
+import { AppearanceStep, appearanceSchema } from "./wizard-steps/appearance-step";
+// Import wizard steps
+import { BasicInfoStep, basicInfoSchema } from "./wizard-steps/basic-info-step";
+import { ChartTypeStep, chartTypeSchema } from "./wizard-steps/chart-type-step";
+import { DataSourceStep, dataSourceSchema } from "./wizard-steps/data-source-step";
 
 interface EditVisualizationFormProps {
   experimentId: string;
   visualization: ExperimentVisualization;
   sampleTables: SampleTable[];
   onSuccess: (visualizationId: string) => void;
-  onCancel: () => void;
   isLoading?: boolean;
+  isPreviewOpen: boolean;
+  onPreviewClose: () => void;
 }
 
 export default function EditVisualizationForm({
@@ -49,90 +33,119 @@ export default function EditVisualizationForm({
   visualization,
   sampleTables,
   onSuccess,
-  onCancel,
   isLoading: isLoadingTables = false,
+  isPreviewOpen = false,
+  onPreviewClose,
 }: EditVisualizationFormProps) {
   const { t } = useTranslation("experimentVisualizations");
-  const { t: tCommon } = useTranslation("common");
-  const [selectedChartType, setSelectedChartType] = useState<"line" | "scatter" | null>(
-    visualization.chartType as "line" | "scatter",
-  );
-
-  // Form setup with existing visualization data
-  const form = useForm({
-    resolver: zodResolver(zUpdateExperimentVisualizationBody),
-    defaultValues: {
-      name: visualization.name,
-      description: visualization.description ?? "",
-      chartFamily: visualization.chartFamily,
-      chartType: visualization.chartType,
-      config: visualization.config,
-      dataConfig: visualization.dataConfig,
-    },
-  });
 
   // Update visualization mutation
   const { mutate: updateVisualization, isPending } = useExperimentVisualizationUpdate({
     experimentId,
     onSuccess: (updatedVisualization) => {
-      toast({ description: t("updateSuccess") });
+      toast({ description: t("ui.messages.updateSuccess") });
       onSuccess(updatedVisualization.id);
     },
   });
 
-  // Use the imported collectAllChartDataSources function
-  const collectAllDataSources = () => {
-    return collectAllChartDataSources(form as UseFormReturn<ChartFormValues>);
+  // Form default values from existing visualization with merged defaults
+  const defaultValues: Partial<ChartFormValues> = {
+    name: visualization.name,
+    description: visualization.description ?? "",
+    chartFamily: visualization.chartFamily,
+    chartType: visualization.chartType,
+    config: {
+      ...getDefaultChartConfig(visualization.chartType),
+      ...visualization.config,
+    },
+    dataConfig: visualization.dataConfig,
   };
 
+  // Wizard steps configuration
+  const steps = [
+    {
+      title: t("wizard.steps.basicInfo.title"),
+      description: t("wizard.steps.basicInfo.description"),
+      validationSchema: basicInfoSchema,
+      component: (props: WizardStepProps<ChartFormValues>) => (
+        <BasicInfoStep
+          {...props}
+          experimentId={experimentId}
+          isPreviewOpen={isPreviewOpen}
+          onPreviewClose={onPreviewClose}
+        />
+      ),
+    },
+    {
+      title: t("wizard.steps.chartType.title"),
+      description: t("wizard.steps.chartType.description"),
+      validationSchema: chartTypeSchema,
+      component: (props: WizardStepProps<ChartFormValues>) => (
+        <ChartTypeStep
+          {...props}
+          experimentId={experimentId}
+          isPreviewOpen={isPreviewOpen}
+          onPreviewClose={onPreviewClose}
+        />
+      ),
+    },
+    {
+      title: t("wizard.steps.dataSource.title"),
+      description: t("wizard.steps.dataSource.description"),
+      validationSchema: dataSourceSchema,
+      component: (props: WizardStepProps<ChartFormValues>) => (
+        <DataSourceStep
+          {...props}
+          tables={sampleTables}
+          experimentId={experimentId}
+          isPreviewOpen={isPreviewOpen}
+          onPreviewClose={onPreviewClose}
+        />
+      ),
+    },
+    {
+      title: t("wizard.steps.appearance.title"),
+      description: t("wizard.steps.appearance.description"),
+      validationSchema: appearanceSchema,
+      component: (props: WizardStepProps<ChartFormValues>) => (
+        <AppearanceStep
+          {...props}
+          isEdit={true}
+          experimentId={experimentId}
+          isPreviewOpen={isPreviewOpen}
+          onPreviewClose={onPreviewClose}
+        />
+      ),
+    },
+  ];
+
   // Handle form submission
-  const onSubmit = form.handleSubmit(
-    (data) => {
-      // Explicitly collect all data sources before submission
-      const allDataSources = collectAllDataSources();
+  const handleSubmit = (data: ChartFormValues) => {
+    // Collect all data sources before submission
+    const allDataSources = data.dataConfig.dataSources
+      .filter((source) => source.columnName && source.columnName.trim() !== "")
+      .map((source) => ({
+        tableName: source.tableName,
+        columnName: source.columnName,
+        role: source.role,
+        alias: source.alias,
+      }));
 
-      // Ensure all data sources have required fields
-      const validDataSources = allDataSources
-        .filter((source) => source.columnName && source.columnName.trim() !== "")
-        .map((source) => ({
-          tableName: source.tableName,
-          columnName: source.columnName,
-          role: source.role, // Role is required so no default needed
-          alias: source.alias ?? "",
-        }));
+    const updatedData = {
+      ...data,
+      dataConfig: {
+        ...data.dataConfig,
+        dataSources: allDataSources,
+      },
+    };
 
-      const updatedData = {
-        ...data,
-        dataConfig: {
-          ...data.dataConfig,
-          dataSources: validDataSources,
-        },
-      };
-
-      updateVisualization({
-        params: {
-          id: experimentId,
-          visualizationId: visualization.id,
-        },
-        body: updatedData,
-      });
-    },
-    () => {
-      // Show a toast with validation error info
-      toast({
-        description:
-          "Please fill in all required fields. You need to select columns for your chart axes.",
-        title: "Validation Error",
-        variant: "destructive",
-      });
-    },
-  );
-
-  // Handle chart type selection - for edit form, preserve existing config
-  const handleChartTypeSelect = (chartType: "line" | "scatter") => {
-    setSelectedChartType(chartType);
-    form.setValue("chartType", chartType);
-    // Don't reset config when editing - let the user's existing configuration persist
+    updateVisualization({
+      params: {
+        id: experimentId,
+        visualizationId: visualization.id,
+      },
+      body: updatedData,
+    });
   };
 
   if (isLoadingTables) {
@@ -144,70 +157,16 @@ export default function EditVisualizationForm({
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={onSubmit} className="space-y-8">
-        {/* Name and Description */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("editDetails")}</CardTitle>
-            <CardDescription>{t("editDetailsDescription")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("name")}</FormLabel>
-                  <FormControl>
-                    <Input placeholder={t("namePlaceholder")} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("description")}</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder={t("descriptionPlaceholder")} {...field} />
-                  </FormControl>
-                  <FormDescription>{t("descriptionHelp")}</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Chart Configuration - using the new modular approach */}
-        <ChartConfigurator
-          form={form as UseFormReturn<ChartFormValues>}
-          tables={sampleTables}
-          selectedChartType={selectedChartType}
-          onChartTypeSelect={handleChartTypeSelect}
-        />
-
-        <div className="flex justify-between">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            {tCommon("cancel")}
-          </Button>
-          <Button type="submit" disabled={isPending || !selectedChartType}>
-            {isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {tCommon("updating")}
-              </>
-            ) : (
-              tCommon("update")
-            )}
-          </Button>
-        </div>
-      </form>
-    </Form>
+    <div className="space-y-6">
+      <WizardForm
+        steps={steps}
+        defaultValues={defaultValues}
+        onSubmit={handleSubmit}
+        isSubmitting={isPending}
+        showStepIndicator={true}
+        showStepTitles={true}
+        initialStep={2}
+      />
+    </div>
   );
 }

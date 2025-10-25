@@ -70,8 +70,8 @@ describe("ExperimentVisualizationRepository", () => {
         dataConfig: {
           tableName: "test_table",
           dataSources: [
-            { tableName: "test_table", columnName: "column1" },
-            { tableName: "test_table", columnName: "column2" },
+            { tableName: "test_table", columnName: "column1", role: "x", alias: "" },
+            { tableName: "test_table", columnName: "column2", role: "y", alias: "" },
           ],
         },
       };
@@ -95,6 +95,7 @@ describe("ExperimentVisualizationRepository", () => {
         config: createDto.config,
         dataConfig: createDto.dataConfig,
         createdBy: testUserId,
+        createdByName: "Test User",
         createdAt: expect.any(Date) as Date,
         updatedAt: expect.any(Date) as Date,
       });
@@ -109,6 +110,7 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: createDto.chartFamily,
         chartType: createDto.chartType,
         createdBy: testUserId,
+        createdByName: "Test User",
       });
     });
 
@@ -131,8 +133,8 @@ describe("ExperimentVisualizationRepository", () => {
         dataConfig: {
           tableName: "test_table",
           dataSources: [
-            { tableName: "test_table", columnName: "x_column" },
-            { tableName: "test_table", columnName: "y_column" },
+            { tableName: "test_table", columnName: "x_column", role: "x", alias: "" },
+            { tableName: "test_table", columnName: "y_column", role: "y", alias: "" },
           ],
         },
       };
@@ -152,6 +154,7 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: createDto.chartFamily,
         chartType: createDto.chartType,
         createdBy: testUserId,
+        createdByName: "Test User",
       });
     });
 
@@ -330,6 +333,7 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: createDto.chartFamily,
         chartType: createDto.chartType,
         createdBy: testUserId,
+        createdByName: "Test User",
       });
     });
 
@@ -391,6 +395,7 @@ describe("ExperimentVisualizationRepository", () => {
         dataConfig: updateDto.dataConfig,
         experimentId: testExperimentId,
         createdBy: testUserId,
+        createdByName: "Test User",
         createdAt: visualization.createdAt,
         updatedAt: expect.any(Date) as Date,
       });
@@ -442,7 +447,7 @@ describe("ExperimentVisualizationRepository", () => {
       assertSuccess(createResult);
       const visualization = createResult.value[0];
 
-      const partialUpdateDto = {
+      const partialUpdateDto: UpdateExperimentVisualizationDto = {
         name: "Updated Name Only",
       };
 

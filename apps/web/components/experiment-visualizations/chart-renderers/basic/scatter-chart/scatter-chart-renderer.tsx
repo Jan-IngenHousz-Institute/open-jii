@@ -3,6 +3,7 @@
 import React from "react";
 
 import type { ExperimentVisualization } from "@repo/api";
+import { useTranslation } from "@repo/i18n";
 import type { PlotlyChartConfig, ScatterSeriesData } from "@repo/ui/components";
 import { ScatterChart } from "@repo/ui/components";
 
@@ -13,12 +14,14 @@ export interface ScatterChartRendererProps {
 }
 
 export function ScatterChartRenderer({ visualization, data }: ScatterChartRendererProps) {
+  const { t } = useTranslation("experimentVisualizations");
+
   if (!data || data.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-muted-foreground text-center">
-          <div className="mb-2 text-lg font-medium">No Data Available</div>
-          <div className="text-sm">Please ensure your experiment has data to visualize</div>
+          <div className="mb-2 text-lg font-medium">{t("errors.noData")}</div>
+          <div className="text-sm">{t("errors.noDataFound")}</div>
         </div>
       </div>
     );
@@ -27,7 +30,7 @@ export function ScatterChartRenderer({ visualization, data }: ScatterChartRender
   try {
     // Ensure this is a scatter chart and we have data sources
     if (!visualization.config || visualization.chartType !== "scatter") {
-      throw new Error("Invalid chart type for scatter chart renderer");
+      throw new Error(t("errors.invalidChartType"));
     }
 
     // Get role-based data sources
@@ -38,11 +41,11 @@ export function ScatterChartRenderer({ visualization, data }: ScatterChartRender
     );
 
     if (!xDataSources.length || !xDataSources[0]?.columnName) {
-      throw new Error("X-axis column not configured");
+      throw new Error(t("errors.xAxisNotConfigured"));
     }
 
     if (!yDataSources.length || !yDataSources[0]?.columnName) {
-      throw new Error("Y-axis column not configured");
+      throw new Error(t("errors.yAxisNotConfigured"));
     }
 
     const xColumn = xDataSources[0].columnName;
@@ -124,9 +127,9 @@ export function ScatterChartRenderer({ visualization, data }: ScatterChartRender
     return (
       <div className="bg-destructive/10 text-destructive flex h-full items-center justify-center rounded-lg border">
         <div className="text-center">
-          <div className="mb-2 text-lg font-medium">Configuration Error</div>
+          <div className="mb-2 text-lg font-medium">{t("errors.configurationError")}</div>
           <div className="text-sm">
-            {error instanceof Error ? error.message : "Invalid chart configuration"}
+            {error instanceof Error ? error.message : t("errors.invalidConfiguration")}
           </div>
         </div>
       </div>

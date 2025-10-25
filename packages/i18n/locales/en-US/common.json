@@ -32,6 +32,7 @@
     "days": "days",
     "created": "Created",
     "updated": "Updated",
+    "updating": "Updating...",
     "currentName": "Current name",
     "currentLanguage": "Current language",
     "dangerZone": "Danger Zone",

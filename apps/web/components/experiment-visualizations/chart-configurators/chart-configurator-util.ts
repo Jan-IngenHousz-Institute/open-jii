@@ -16,6 +16,19 @@ export interface ChartFormValues
   config: ChartConfig;
 }
 
+// Default color for the first series
+const DEFAULT_PRIMARY_COLOR = "#3b82f6";
+
+// Helper function to generate a random hex color
+const generateRandomColor = (): string => {
+  return (
+    "#" +
+    Math.floor(Math.random() * 0xffffff)
+      .toString(16)
+      .padStart(6, "0")
+  );
+};
+
 // Helper function to get default config for chart type
 export const getDefaultChartConfig = (chartType: string): ChartConfig => {
   const baseDefaults: Partial<ChartConfig> = {
@@ -33,11 +46,13 @@ export const getDefaultChartConfig = (chartType: string): ChartConfig => {
     case "scatter":
       return {
         ...baseDefaults,
+        colorAxisTitle: "",
         mode: "markers",
+        color: [DEFAULT_PRIMARY_COLOR],
         marker: {
           size: 6,
           symbol: "circle",
-          showscale: false,
+          showscale: true,
           colorscale: "Viridis",
           colorbar: {
             title: {
@@ -45,19 +60,27 @@ export const getDefaultChartConfig = (chartType: string): ChartConfig => {
             },
           },
         },
-      } as ChartConfig;
+      };
 
     case "line":
       return {
         ...baseDefaults,
         mode: "lines",
+        color: [DEFAULT_PRIMARY_COLOR],
         line: {
           width: 2,
+          smoothing: 0,
         },
         connectgaps: true,
-      } as ChartConfig;
+      };
 
     default:
-      return baseDefaults as ChartConfig;
+      return baseDefaults;
   }
+};
+
+// Helper function to get default color for a series by index
+export const getDefaultSeriesColor = (seriesIndex: number): string => {
+  // First series gets the primary color, subsequent series get random colors
+  return seriesIndex === 0 ? DEFAULT_PRIMARY_COLOR : generateRandomColor();
 };

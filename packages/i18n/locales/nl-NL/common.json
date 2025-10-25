@@ -30,6 +30,7 @@
     "days": "dagen",
     "created": "Aangemaakt",
     "updated": "Bijgewerkt",
+    "updating": "Bijwerken...",
     "currentName": "Huidige naam",
     "currentLanguage": "Huidige taal",
     "dangerZone": "Gevaarlijke zone",
@@ -330,6 +331,7 @@
     "pageOf": "van",
     "previous": "Vorige",
     "next": "Volgende",
+    "back": "Terug",
     "table": "Tabel",
     "details": "Toon tabeldetails",
     "download": "Tabel downloaden"
