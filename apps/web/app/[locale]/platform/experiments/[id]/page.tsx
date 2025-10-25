@@ -1,11 +1,13 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import ExperimentVisualizationsDisplay from "@/components/experiment-visualizations/experiment-visualizations-display";
 import { ExperimentLocationsDisplay } from "@/components/experiment/experiment-locations-display";
 import { FlowEditor } from "@/components/flow-editor";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
 import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
+import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
 import { formatDate } from "@/util/date";
 import { CalendarIcon } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -36,6 +38,12 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
 
   // Get locations data for this experiment
   const { data: locationsData, isLoading: locationsLoading } = useExperimentLocations(id);
+
+  // Get visualizations data for this experiment
+  const { data: visualizationsData, isLoading: visualizationsLoading } =
+    useExperimentVisualizations({
+      experimentId: id,
+    });
   if (isLoading) {
     return <div>{t("loading")}</div>;
   }
@@ -123,6 +131,13 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           <RichTextRenderer content={experiment.description ?? ""} />
         </CardContent>
       </Card>
+
+      {/* Visualizations Display */}
+      <ExperimentVisualizationsDisplay
+        experimentId={id}
+        visualizations={visualizationsData?.body ?? []}
+        isLoading={visualizationsLoading}
+      />
 
       {/* Locations Display */}
       <ExperimentLocationsDisplay
