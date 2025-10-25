@@ -60,6 +60,12 @@
   },
   "overview": "Übersicht",
   "data": "Daten",
+  "analysis": {
+    "title": "Analyse",
+    "description": "Analysieren Sie Ihre Experimentdaten mit Visualisierungen und Notebooks",
+    "visualizations": "Visualisierungen",
+    "notebooks": "Notebooks"
+  },
   "experimentData": {
     "title": "Experimentdaten",
     "description": "Anzeigen und Verwalten von Daten, die mit diesem Experiment verbunden sind.",

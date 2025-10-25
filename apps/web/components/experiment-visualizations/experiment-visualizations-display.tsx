@@ -7,30 +7,26 @@ import { useTranslation } from "@repo/i18n";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@repo/ui/components";
 
 import { useExperimentVisualizationData } from "../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import ExperimentVisualizationRenderer from "./experiment-visualization-renderer";
 
-interface ExperimentVisualizationSelectorProps {
+interface ExperimentVisualizationsDisplayProps {
   experimentId: string;
   visualizations: ExperimentVisualization[];
   isLoading?: boolean;
 }
 
-export default function ExperimentVisualizationSelector({
+export default function ExperimentVisualizationsDisplay({
   experimentId,
   visualizations,
   isLoading = false,
-}: ExperimentVisualizationSelectorProps) {
+}: ExperimentVisualizationsDisplayProps) {
   const { t } = useTranslation("experimentVisualizations");
   const [selectedVisualizationId, setSelectedVisualizationId] = useState<string>("");
 
@@ -58,12 +54,8 @@ export default function ExperimentVisualizationSelector({
   if (isLoading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>{t("selector.title")}</CardTitle>
-          <CardDescription>{t("selector.description")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-muted-foreground text-sm">{t("loading")}</div>
+        <CardContent className="pt-6">
+          <div className="text-muted-foreground text-sm">{t("ui.messages.loading")}</div>
         </CardContent>
       </Card>
     );
@@ -72,11 +64,7 @@ export default function ExperimentVisualizationSelector({
   if (visualizations.length === 0) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>{t("selector.title")}</CardTitle>
-          <CardDescription>{t("selector.description")}</CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <div className="text-muted-foreground text-sm">{t("selector.noVisualizations")}</div>
         </CardContent>
       </Card>
@@ -85,34 +73,16 @@ export default function ExperimentVisualizationSelector({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{t("selector.title")}</CardTitle>
-        <CardDescription>{t("selector.description")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-3">
-          <label htmlFor="visualization-select" className="text-sm font-medium">
-            {t("selector.selectVisualization")}
-          </label>
+      <CardContent className="space-y-6 pt-6">
+        <div>
           <Select value={selectedVisualizationId} onValueChange={setSelectedVisualizationId}>
-            <SelectTrigger
-              id="visualization-select"
-              className="h-auto min-h-[2.5rem] w-full max-w-2xl py-2 text-left"
-            >
+            <SelectTrigger className="h-auto w-fit border-none p-0 text-xl font-semibold shadow-none hover:bg-transparent focus:ring-0">
               {selectedVisualization ? (
-                <div className="flex flex-col items-start gap-1 text-left">
-                  <span className="text-sm font-medium leading-tight">
-                    {selectedVisualization.name}
-                  </span>
-                  <span className="text-muted-foreground text-xs capitalize">
-                    {t(
-                      `chartTypes.${selectedVisualization.chartType}`,
-                      selectedVisualization.chartType,
-                    )}
-                  </span>
-                </div>
+                <span className="text-xl font-semibold">{selectedVisualization.name}</span>
               ) : (
-                <SelectValue placeholder={t("selector.placeholder")} />
+                <span className="text-muted-foreground text-xl font-semibold">
+                  Select a visualization
+                </span>
               )}
             </SelectTrigger>
             <SelectContent>
@@ -122,11 +92,13 @@ export default function ExperimentVisualizationSelector({
                     <span className="font-medium">{visualization.name}</span>
                     {visualization.description && (
                       <span className="text-muted-foreground text-xs">
-                        {visualization.description}
+                        {visualization.description.length > 60
+                          ? `${visualization.description.substring(0, 60)}...`
+                          : visualization.description}
                       </span>
                     )}
                     <span className="text-muted-foreground text-xs capitalize">
-                      {t(`chartTypes.${visualization.chartType}`, visualization.chartType)}
+                      {t(`charts.types.${visualization.chartType}`, visualization.chartType)}
                     </span>
                   </div>
                 </SelectItem>
@@ -149,7 +121,6 @@ export default function ExperimentVisualizationSelector({
                 height={450}
                 showTitle={false}
                 showDescription={false}
-                isPreview={false}
               />
             )}
           </div>

@@ -20,25 +20,27 @@ import {
   SelectValue,
 } from "@repo/ui/components";
 
-import type { ChartFormValues } from "../chart-configurator-util";
+import type { ChartFormValues } from "../../chart-configurator-util";
 
 interface XAxisConfigurationProps {
   form: UseFormReturn<ChartFormValues>;
   table: SampleTable;
-  onColumnSelect: (columnType: string, columnName: string) => void;
   xAxisDataSources?: { field: { columnName: string; role: string }; index: number }[];
 }
 
 export default function XAxisConfiguration({
   form,
   table,
-  onColumnSelect,
   xAxisDataSources,
 }: XAxisConfigurationProps) {
   const { t } = useTranslation("experimentVisualizations");
 
   const handleXAxisColumnChange = (value: string) => {
-    onColumnSelect("x", value);
+    // Update table name for X-axis data source if needed
+    const tableName = form.getValues("dataConfig.tableName");
+    const xAxisDataSourceIndex = xAxisDataSources?.[0]?.index ?? 0;
+    form.setValue(`dataConfig.dataSources.${xAxisDataSourceIndex}.tableName`, tableName);
+
     // Auto-fill X-axis title if it's empty
     const currentXAxisTitle = form.getValues("config.xAxisTitle");
     if (!currentXAxisTitle || currentXAxisTitle.trim() === "") {
@@ -47,10 +49,7 @@ export default function XAxisConfiguration({
   };
 
   return (
-    <div className="rounded-lg border bg-white p-4">
-      <h4 className="text-muted-foreground mb-3 text-sm font-medium uppercase tracking-wide">
-        {t("xAxisConfiguration")}
-      </h4>
+    <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <FormField
           control={form.control}
@@ -61,7 +60,9 @@ export default function XAxisConfiguration({
           }
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-sm font-medium">{t("configuration.xAxis")}</FormLabel>
+              <FormLabel className="text-sm font-medium">
+                {t("configuration.columns.xAxis")}
+              </FormLabel>
               <Select
                 value={String(field.value)}
                 onValueChange={(value) => {
@@ -71,7 +72,7 @@ export default function XAxisConfiguration({
               >
                 <FormControl>
                   <SelectTrigger className="h-10 bg-white">
-                    <SelectValue placeholder={t("configuration.selectColumn")} />
+                    <SelectValue placeholder={t("configuration.columns.select")} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -97,12 +98,12 @@ export default function XAxisConfiguration({
           name="config.xAxisTitle"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-sm font-medium">{t("xAxisTitle")}</FormLabel>
+              <FormLabel className="text-sm font-medium">{t("configuration.axes.title")}</FormLabel>
               <FormControl>
                 <Input
-                  placeholder={t("enterAxisTitle")}
+                  placeholder={t("configuration.placeholders.enterAxisTitle")}
                   className="h-10 bg-white"
-                  value={typeof field.value === "string" ? field.value : ""}
+                  value={field.value}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
                   name={field.name}
@@ -119,7 +120,7 @@ export default function XAxisConfiguration({
           name="config.xAxisType"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-sm font-medium">{t("configuration.axisType")}</FormLabel>
+              <FormLabel className="text-sm font-medium">{t("configuration.axes.type")}</FormLabel>
               <Select value={String(field.value)} onValueChange={field.onChange}>
                 <FormControl>
                   <SelectTrigger className="h-10 bg-white">
@@ -127,9 +128,9 @@ export default function XAxisConfiguration({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="linear">{t("axisTypes.linear")}</SelectItem>
-                  <SelectItem value="log">{t("axisTypes.log")}</SelectItem>
-                  <SelectItem value="date">{t("axisTypes.date")}</SelectItem>
+                  <SelectItem value="linear">{t("configuration.axisTypes.linear")}</SelectItem>
+                  <SelectItem value="log">{t("configuration.axisTypes.log")}</SelectItem>
+                  <SelectItem value="date">{t("configuration.axisTypes.date")}</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />

@@ -1,8 +1,6 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 
-import ExperimentVisualizationDetailPage from "../../../../../../../components/experiment-visualizations/experiment-visualization-detail-page";
-
-interface PageProps {
+interface VisualizationDetailRedirectPageProps {
   params: Promise<{
     locale: string;
     id: string;
@@ -10,17 +8,10 @@ interface PageProps {
   }>;
 }
 
-export default async function VisualizationDetailPage({ params }: PageProps) {
-  const { id: experimentId, visualizationId } = await params;
-
-  if (!experimentId || !visualizationId) {
-    notFound();
-  }
-
-  return (
-    <ExperimentVisualizationDetailPage
-      experimentId={experimentId}
-      visualizationId={visualizationId}
-    />
-  );
+export default async function VisualizationDetailRedirectPage({
+  params,
+}: VisualizationDetailRedirectPageProps) {
+  const { locale, id, visualizationId } = await params;
+  // Redirect to the new analysis/visualizations/[id] location
+  redirect(`/${locale}/platform/experiments/${id}/analysis/visualizations/${visualizationId}`);
 }
