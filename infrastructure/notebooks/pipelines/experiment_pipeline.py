@@ -3,35 +3,32 @@
 # Implementation of experiment-specific medallion architecture pipeline
 # Processes data from central silver layer into experiment-specific bronze/silver/gold tables
 
-%pip install mini-racer numpy scipy
+%pip install /Workspace/Shared/wheels/multispeq-0.1.0-py3-none-any.whl
+%pip install /Workspace/Shared/wheels/mini_racer-0.12.4-py3-none-manylinux_2_31_x86_64.whl
 
 # COMMAND ----------
 
 import dlt
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
-from pyspark.sql.types import StringType, TimestampType, DoubleType, StructType, StructField, IntegerType, FloatType, BooleanType, ArrayType
+from pyspark.sql.types import StringType, TimestampType, DoubleType, StructType, StructField, IntegerType, FloatType, BooleanType, ArrayType, MapType
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import pandas_udf
 from delta.tables import DeltaTable
+import pandas as pd
 import os
 import json
 import sys
 from typing import Dict, Any, List
 
-sys.path.append("/Workspace/Shared/lib")
 # Import the ambyte processing utilities
-from ambyte_parsing import find_byte_folders, load_files_per_byte, process_trace_files
-# Import volume I/O utilities
-from volume_io import discover_and_validate_upload_directories, parse_upload_time
-
-sys.path.append("/Workspace/Shared/notebooks/lib/multispeq/macro")
+from ambyte import find_byte_folders, load_files_per_byte, process_trace_files, discover_and_validate_upload_directories, parse_upload_time
 # Import our macro processing library
-from macro import execute_macro_script, get_available_macros, process_macro_output_for_spark
+from multispeq import execute_macro_script, get_available_macros, process_macro_output_for_spark, infer_macro_schema
 
 # COMMAND ----------
 
 # DBTITLE 1,Pipeline Configuration
-# Runtime configuration parameters
 EXPERIMENT_ID = spark.conf.get("EXPERIMENT_ID", "")  # Experiment identifier
 EXPERIMENT_SCHEMA = spark.conf.get("EXPERIMENT_SCHEMA", "")  # Target schema for output
 CATALOG_NAME = spark.conf.get("CATALOG_NAME", "open_jii_dev")
@@ -71,19 +68,26 @@ if ENABLE_MACRO_PROCESSING:
     }
 )
 def device():
-    """Extract device metadata from central silver table filtered for MultispeQ data"""
-    return (
-        spark.read.table(f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}")
-        .filter(F.col("experiment_id") == EXPERIMENT_ID)  # Filter for specific experiment
+    df = (
+        spark.read.table("open_jii_dev.centrum.clean_data")
+        .filter(F.col("experiment_id") == EXPERIMENT_ID)
         .select(
             F.col("device_name"),
             F.col("device_version"),
             F.col("device_id"),
             F.col("device_battery"),
             F.col("device_firmware"),
-            F.current_timestamp().alias("processed_timestamp")
+            F.col("processed_timestamp")
         )
-        .dropDuplicates(["device_id", "device_firmware"])
+    )
+    return (
+        df.groupBy("device_id", "device_firmware")
+          .agg(
+              F.max("device_name").alias("device_name"),
+              F.max("device_version").alias("device_version"),
+              F.max("device_battery").alias("device_battery"),
+              F.max("processed_timestamp").alias("processed_timestamp")
+          )
     )
 
 # COMMAND ----------
@@ -100,17 +104,30 @@ def device():
 )
 def sample():
     """Extract sample metadata and create references to measurement sets from central silver table"""
-    return (
-        spark.read.table(f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}")
+    base_df = (
+        spark.readStream.table(f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}")
         .filter(F.col("experiment_id") == EXPERIMENT_ID)  # Filter for specific experiment
+    )
+    
+    # Process sample data and include user_answers columns directly
+    return (
+        base_df
         .select(
             F.col("device_id"),
             F.col("device_name"),
+            F.col("timestamp"),
+            F.col("plot_number"),
+            F.col("plant"),
+            F.col("stem_count"),
             F.explode(F.from_json(F.col("sample"), "array<string>")).alias("sample_data_str")
         )
         .select(
             F.col("device_id"),
             F.col("device_name"),
+            F.col("timestamp"),
+            F.col("plot_number"),
+            F.col("plant"),
+            F.col("stem_count"),
             F.get_json_object(F.col("sample_data_str"), "$.v_arrays").alias("v_arrays"),
             F.get_json_object(F.col("sample_data_str"), "$.set_repeats").cast("int").alias("set_repeats"),
             F.get_json_object(F.col("sample_data_str"), "$.protocol_id").alias("protocol_id"),
@@ -177,12 +194,14 @@ raw_ambyte_schema = StructType([
     StructField("upload_directory", StringType(), True),
     StructField("upload_time", TimestampType(), True)
 ])
-
 # COMMAND ----------
 
-# DBTITLE 1,Raw Ambyte Data Table
+# DBTITLE 1,Dynamic Ambyte Table Creation
+def create_ambyte_table_code():
+    """Generate code for ambyte streaming table."""
+    return f'''
 @dlt.table(
-    name=RAW_AMBYTE_TABLE,
+    name="{RAW_AMBYTE_TABLE}",
     comment="ambyte trace data processed from raw files stored in Databricks volume"
 )
 def raw_ambyte_data():
@@ -206,7 +225,7 @@ def raw_ambyte_data():
     
     for upload_dir in upload_directories:
         upload_dir_name = os.path.basename(upload_dir)
-        print(f"Processing upload directory: {upload_dir_name}")
+        print(f"Processing upload directory: {{upload_dir_name}}")
         
         # Parse upload time from directory name
         upload_time = parse_upload_time(upload_dir_name)
@@ -218,14 +237,14 @@ def raw_ambyte_data():
             byte_parent_folders = find_byte_folders(upload_dir)
             
             if byte_parent_folders:
-                print(f"Found {len(byte_parent_folders)} valid byte parent folders in {upload_dir_name}")
-                print(f"Byte parent folders: {[os.path.basename(x.rstrip('/')) for x in byte_parent_folders]}")
+                print(f"Found {{len(byte_parent_folders)}} valid byte parent folders in {{upload_dir_name}}")
+                print(f"Byte parent folders: {{[os.path.basename(x.rstrip('/')) for x in byte_parent_folders]}}")
             else:
-                print(f"No valid byte parent folders found in {upload_dir_name}")
+                print(f"No valid byte parent folders found in {{upload_dir_name}}")
                 continue
                 
         except Exception as e:
-            print(f"Error finding byte folders in {upload_dir_name}: {e}")
+            print(f"Error finding byte folders in {{upload_dir_name}}: {{e}}")
             continue
         
         # Process each byte folder within this upload directory
@@ -236,7 +255,7 @@ def raw_ambyte_data():
             files_per_byte, _ = load_files_per_byte(ambyte_folder, year_prefix=YEAR_PREFIX)
             files_per_byte = [lst for lst in files_per_byte if lst]
             
-            print(f"Loaded files for {ambyte_folder_name} in {upload_dir_name}: {len(files_per_byte)}")
+            print(f"Loaded files for {{ambyte_folder_name}} in {{upload_dir_name}}: {{len(files_per_byte)}}")
             
             # Process trace files
             df = process_trace_files(ambyte_folder_name, files_per_byte)
@@ -261,28 +280,43 @@ def raw_ambyte_data():
                     
                     all_data.append(spark_df)
                 except Exception as e:
-                    print(f"Error converting DataFrame to Spark DataFrame for {ambyte_folder_name} in {upload_dir_name}: {e}")
+                    print(f"Error converting DataFrame to Spark DataFrame for {{ambyte_folder_name}} in {{upload_dir_name}}: {{e}}")
     
     # Combine all spark dataframes if any were created
     if all_data:
         return all_data[0] if len(all_data) == 1 else all_data[0].unionAll(*all_data[1:])
     else:
         return spark.createDataFrame([], schema=raw_ambyte_schema)
-    
+'''
+
+# Check if volume exists and only create table if it does
+try:
+    # Try to read from the volume path to check if it exists
+    volume_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads"
+    test_df = spark.read.format("text").load(volume_path)
+    # If we can create the DataFrame, the volume exists
+    print(f"Volume data-uploads exists at {volume_path}")
+    print("Creating streaming raw_ambyte_data table")
+    exec(create_ambyte_table_code(), globals())
+    print("Raw ambyte streaming table created successfully")
+        
+except Exception as e:
+    print(f"Volume data-uploads does not exist or is not accessible: {e}")
+    print("Skipping raw_ambyte_data table creation")
 
 # COMMAND ----------
 
 # DBTITLE 1,Macro Processing Pipeline
 def create_macro_tables():
     """
-    Create DLT tables for each macro found in the experiment data
-    This function should be called after the pipeline initialization
+    Create DLT tables for each macro found in the experiment data.
+    This function analyzes macro outputs to generate proper schemas.
     """
     if not ENABLE_MACRO_PROCESSING:
-        return []
+        return [], [], {}
     
-    # Get the distinct macros from the central silver table for this experiment
     try:
+        # Get all macros used in the experiment
         macros_df = (
             spark.read.table(
                 f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}"
@@ -294,26 +328,70 @@ def create_macro_tables():
             .distinct()
         )
         
-        # Get available macros and process each one
+        # Get a sample row for schema inference
+        sample_row = (
+            spark.read.table(
+                f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}"
+            )
+            .filter(F.col("experiment_id") == EXPERIMENT_ID)
+            .filter(F.col("macros").isNotNull())
+            .filter(F.size(F.col("macros")) > 0)
+            .first()
+        )
+        
         available_macros = get_available_macros(MACROS_PATH)
         experiment_macros = [row.macro_name for row in macros_df.collect()]
         
         print(f"Available macros: {available_macros}")
         print(f"Macros used in experiment: {experiment_macros}")
         
-        return experiment_macros, available_macros
+        # Generate schemas for each macro
+        macro_schemas = {}
+        if sample_row:
+            # Prepare sample data for macro execution
+            sample_data = {
+                "device_id": sample_row["device_id"],
+                "device_name": sample_row["device_name"],
+                "experiment_id": sample_row["experiment_id"],
+                "sample": sample_row["sample"],
+                "macros": sample_row["macros"],
+            }
+            sample_data = {k: v for k, v in sample_data.items() if v is not None}
+            
+            print("Inferring schemas for macros using sample data...")
+            for macro_name in experiment_macros:
+                if macro_name in available_macros:
+                    print(f"Inferring schema for macro: {macro_name}")
+                    schema = infer_macro_schema(macro_name, sample_data, MACROS_PATH)
+                    if schema:
+                        macro_schemas[macro_name] = schema
+                        print(f"Schema for {macro_name}: {len(schema.fields)} fields")
+                    else:
+                        print(f"Warning: Could not infer schema for macro {macro_name}")
+                else:
+                    print(f"Warning: Macro {macro_name} referenced in data but script not found")
+        else:
+            print("Warning: No sample data found for schema inference")
+        
+        return experiment_macros, available_macros, macro_schemas
     except Exception as e:
         print(f"Error reading macros from central table: {str(e)}")
-        return [], []
+        return [], [], {}
 
-
-def create_macro_table_code(macro_name: str) -> str:
+def create_macro_table_code(macro_name: str, macro_schema: StructType) -> str:
     """
-    Generate Python code for a macro table function
+    Generate Python code for a macro streaming table function.
+    UDF returns JSON string, then we parse it using the inferred StructType schema.
+    """
+    # Base schema for the UDF output (just the essential fields + JSON)
+    udf_schema = (
+        "device_id string, device_name string, plot_number int, plant string, stem_count int, "
+        "processed_timestamp timestamp, macro_output_json string"
+    )
     
-    Since DLT requires tables to be defined at module level with decorators,
-    we need to dynamically generate and execute the function definitions.
-    """
+    # Convert StructType to a string representation for the exec'd code
+    schema_str = str(macro_schema)
+    
     return f'''
 @dlt.table(
     name="macro_{macro_name}",
@@ -324,83 +402,115 @@ def create_macro_table_code(macro_name: str) -> str:
     }}
 )
 def macro_{macro_name}_table():
-    """Process records through the {macro_name} macro and create output table"""
-    # Read data that has this macro
     base_df = (
-        spark.read.table(f"{{CATALOG_NAME}}.{{CENTRAL_SCHEMA}}.{{CENTRAL_SILVER_TABLE}}")
+        spark.readStream.table(f"{{CATALOG_NAME}}.{{CENTRAL_SCHEMA}}.{{CENTRAL_SILVER_TABLE}}")
         .filter(F.col("experiment_id") == EXPERIMENT_ID)
         .filter(F.array_contains(F.col("macros"), "{macro_name}"))
     )
-    
-    # Collect all data to process through macro
-    rows_data = base_df.collect()
-    processed_rows = []
-    
-    for row in rows_data:
-        try:
-            # Prepare input data for the macro
+
+    @pandas_udf("{udf_schema}")
+    def process_macro_udf(pdf: pd.DataFrame) -> pd.DataFrame:
+        import json
+        import pandas as pd
+        results = []
+        for _, row in pdf.iterrows():
             input_data = {{
-                "device_id": getattr(row, 'device_id', None),
-                "device_name": getattr(row, 'device_name', None),
-                "experiment_id": getattr(row, 'experiment_id', None),
-                "sample": getattr(row, 'sample', None),
-                "macros": getattr(row, 'macros', None),
+                "device_id": row.get("device_id"),
+                "device_name": row.get("device_name"),
+                "experiment_id": row.get("experiment_id"),
+                "sample": row.get("sample"),
+                "macros": row.get("macros"),
+            }}
+            input_data = {{k: v for k, v in input_data.items() if v is not None}}
+            try:
+                raw_macro_output = execute_macro_script("{macro_name}", input_data, MACROS_PATH)
+                if raw_macro_output is not None:
+                    macro_output = process_macro_output_for_spark(raw_macro_output)
+                    debug_str = json.dumps(macro_output)
+                else:
+                    debug_str = "None"
+            except Exception as e:
+                macro_output = {{}}
+                debug_str = f"error: {{str(e)}}"
+            
+            # Create result row with base fields only
+            result_row = {{
+                "device_id": row.get("device_id"),
+                "device_name": row.get("device_name"),
+                "plot_number": row.get("plot_number"),
+                "plant": row.get("plant"),
+                "stem_count": row.get("stem_count"),
+                "processed_timestamp": pd.Timestamp.now(),
+                "macro_output_json": debug_str
             }}
             
-            # Remove None values
-            input_data = {{k: v for k, v in input_data.items() if v is not None}}
-            
-            # Execute the macro using the library function
-            output = execute_macro_script("{macro_name}", input_data, MACROS_PATH)
-            
-            if output:
-                # Add metadata to output
-                output["macro_name"] = "{macro_name}"
-                
-                # Process output for Spark compatibility using library function
-                processed_output = process_macro_output_for_spark(output)
-                processed_rows.append(processed_output)
+            results.append(result_row)
         
-        except Exception as e:
-            print(f"Error processing row for macro {macro_name}: {{str(e)}}")
-            continue
-    
-    if processed_rows:
-        df = spark.createDataFrame(processed_rows)
-        return df.withColumn("processed_timestamp", F.current_timestamp())
-    else:
-        # Return empty DataFrame with minimal schema
-        minimal_schema = StructType([
-            StructField("macro_name", StringType(), False),
-            StructField("experiment_id", StringType(), False),
-            StructField("processed_timestamp", TimestampType(), False)
-        ])
-        empty_df = spark.createDataFrame([], minimal_schema)
-        return empty_df.withColumn("processed_timestamp", F.current_timestamp())
-'''
+        if results:
+            return pd.DataFrame(results)
+        else:
+            # Return empty DataFrame with correct columns
+            return pd.DataFrame(columns=[
+                "device_id", "device_name", "plot_number", "plant", "stem_count", 
+                "processed_timestamp", "macro_output_json"
+            ])
 
+    # Apply the pandas UDF to get the base data with JSON
+    processed_df = base_df.withColumn(
+        "macro_struct", process_macro_udf(F.struct([base_df[x] for x in base_df.columns]))
+    ).select("macro_struct.*")
+    
+    # Now parse the JSON using the inferred StructType schema with from_json
+    try:
+        macro_schema_def = {schema_str}
+        
+        # Parse the JSON using from_json with the inferred schema
+        parsed_json_df = processed_df.withColumn(
+            "parsed_macro_output",
+            F.from_json(F.col("macro_output_json"), macro_schema_def)
+        )
+        
+        # Expand the parsed struct into individual columns
+        parsed_columns = []
+        for field in macro_schema_def.fields:
+            parsed_columns.append(F.col(f"parsed_macro_output.{{field.name}}").alias(field.name))
+        
+        # Select all base columns plus the parsed macro fields
+        final_df = parsed_json_df.select(
+            # Base columns
+            F.col("device_id"),
+            F.col("device_name"),
+            F.col("plot_number"),
+            F.col("plant"),
+            F.col("stem_count"),
+            F.col("processed_timestamp"),
+            # Parsed macro fields
+            *parsed_columns
+        )
+        
+        return final_df
+        
+    except Exception as e:
+        print(f"JSON parsing failed for macro {macro_name}: {{e}}")
+        return processed_df
+'''
 
 # Initialize macro processing by generating table functions at module level
 if ENABLE_MACRO_PROCESSING:
     try:
-        experiment_macros, available_macros = create_macro_tables()
-        
-        # Generate and execute table function code for each macro
+        experiment_macros, available_macros, macro_schemas = create_macro_tables()
         for macro_name in experiment_macros:
-            if macro_name in available_macros:
+            if macro_name in available_macros and macro_name in macro_schemas:
                 print(f"Creating DLT table function for macro: {macro_name}")
-                
-                # Generate the function code
-                table_code = create_macro_table_code(macro_name)
-                
-                # Execute the code to define the function at module level
+                schema = macro_schemas[macro_name]
+                table_code = create_macro_table_code(macro_name, schema)
                 exec(table_code, globals())
-                
             else:
-                print(f"Warning: Macro {macro_name} referenced in data but script not found")
-        
+                if macro_name not in available_macros:
+                    print(f"Warning: Macro {macro_name} referenced in data but script not found")
+                if macro_name not in macro_schemas:
+                    print(f"Warning: Could not infer schema for macro {macro_name}")
         print("Macro processing setup complete")
-        
     except Exception as e:
         print(f"Error setting up macro processing: {str(e)}")
         print("Continuing without macro processing...")
