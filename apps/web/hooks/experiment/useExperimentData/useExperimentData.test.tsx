@@ -805,6 +805,18 @@ describe("useExperimentData", () => {
       expect(result.current.sampleTables).toHaveLength(2);
       expect(result.current.sampleTables[0]).toEqual({
         name: "table1",
+        columns: expect.arrayContaining([
+          expect.objectContaining({
+            name: "id",
+            type_name: "INT",
+            type_text: "Integer",
+          }),
+          expect.objectContaining({
+            name: "name",
+            type_name: "STRING",
+            type_text: "String",
+          }),
+        ]),
         tableMetadata: {
           columns: expect.arrayContaining([
             expect.objectContaining({
@@ -822,9 +834,17 @@ describe("useExperimentData", () => {
           totalRows: 2,
         },
         tableRows: mockExperimentData.rows,
+        totalRows: 2,
       });
       expect(result.current.sampleTables[1]).toEqual({
         name: "table2",
+        columns: expect.arrayContaining([
+          expect.objectContaining({
+            name: "count",
+            type_name: "BIGINT",
+            type_text: "Big Integer",
+          }),
+        ]),
         tableMetadata: {
           columns: expect.arrayContaining([
             expect.objectContaining({
@@ -837,6 +857,7 @@ describe("useExperimentData", () => {
           totalRows: 1,
         },
         tableRows: [{ count: "42" }],
+        totalRows: 1,
       });
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();
