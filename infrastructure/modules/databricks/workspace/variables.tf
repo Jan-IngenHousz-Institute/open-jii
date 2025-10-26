@@ -3,6 +3,11 @@ variable "aws_region" {
   type        = string
 }
 
+variable "environment" {
+  description = "Deployment environment (e.g., dev, staging, production)"
+  type        = string
+}
+
 variable "databricks_account_id" {
   description = "Databricks Account ID"
   type        = string

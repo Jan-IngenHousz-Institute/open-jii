@@ -61,7 +61,8 @@ module "kinesis" {
 }
 
 module "iot_core" {
-  source = "../../modules/iot-core"
+  source      = "../../modules/iot-core"
+  environment = var.environment
 
   timestream_table           = "measurements"
   timestream_database        = "open_jii_${var.environment}_data_ingest_db"
@@ -83,12 +84,16 @@ module "cognito" {
 }
 
 module "vpc" {
-  source = "../../modules/vpc"
+  source      = "../../modules/vpc"
+  environment = var.environment
 }
 
 module "vpc_endpoints" {
-  source                  = "../../modules/vpc-endpoints"
-  aws_region              = var.aws_region
+  source = "../../modules/vpc-endpoints"
+
+  aws_region  = var.aws_region
+  environment = var.environment
+
   vpc_id                  = module.vpc.vpc_id
   private_route_table_ids = module.vpc.private_rt_ids
   public_route_table_ids  = module.vpc.public_rt_ids
@@ -118,8 +123,10 @@ module "metastore_s3" {
 }
 
 module "databricks_workspace" {
-  source                = "../../modules/databricks/workspace"
+  source = "../../modules/databricks/workspace"
+
   aws_region            = var.aws_region
+  environment           = var.environment
   databricks_account_id = var.databricks_account_id
   bucket_name           = module.databricks_workspace_s3.bucket_id
   vpc_id                = module.vpc.vpc_id

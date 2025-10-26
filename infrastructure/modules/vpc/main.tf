@@ -11,7 +11,7 @@ resource "aws_vpc" "this" {
   cidr_block           = var.cidr_block
   enable_dns_support   = true
   enable_dns_hostnames = true
-  tags                 = { Name = "open-jii-vpc-dev" }
+  tags                 = { Name = "open-jii-vpc-${var.environment}" }
 }
 
 # -----------------
@@ -19,14 +19,14 @@ resource "aws_vpc" "this" {
 # -----------------
 resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.this.id
-  tags   = { Name = "open-jii-igw-dev" }
+  tags   = { Name = "open-jii-igw-${var.environment}" }
 }
 
 # -----------------------
 # Default Security Group
 # -----------------------
 resource "aws_security_group" "default" {
-  name        = "open-jii-default-sg-dev"
+  name        = "open-jii-default-sg-${var.environment}"
   description = "Default security group for OpenJII VPC"
   vpc_id      = aws_vpc.this.id
 
@@ -42,20 +42,20 @@ resource "aws_security_group" "default" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  tags = { Name = "open-jii-default-sg-dev" }
+  tags = { Name = "open-jii-default-sg-${var.environment}" }
 }
 
 # -------------------------
 # Aurora DB Security Group
 # -------------------------
 resource "aws_security_group" "aurora_sg" {
-  name        = "open-jii-aurora-sg-dev"
+  name        = "open-jii-aurora-sg-${var.environment}"
   description = "Security group for Aurora DB"
   vpc_id      = aws_vpc.this.id
 
 
   tags = {
-    "Name" = "open-jii-aurora-sg-dev"
+    "Name" = "open-jii-aurora-sg-${var.environment}"
   }
 }
 
@@ -212,7 +212,7 @@ resource "aws_subnet" "public" {
   cidr_block              = cidrsubnet(var.cidr_block, var.subnet_bits, count.index)
   availability_zone       = element(data.aws_availability_zones.available.names, count.index)
   map_public_ip_on_launch = true
-  tags                    = { Name = "open-jii-public-subnet-${count.index}-dev" }
+  tags                    = { Name = "open-jii-public-subnet-${count.index}-${var.environment}" }
 }
 
 # ----------------
@@ -223,7 +223,7 @@ resource "aws_subnet" "private" {
   vpc_id            = aws_vpc.this.id
   cidr_block        = cidrsubnet(var.cidr_block, var.subnet_bits, count.index + 100)
   availability_zone = element(data.aws_availability_zones.available.names, count.index)
-  tags              = { Name = "open-jii-private-subnet-${count.index}-dev" }
+  tags              = { Name = "open-jii-private-subnet-${count.index}-${var.environment}" }
 }
 
 # ----------------------
@@ -247,7 +247,7 @@ resource "aws_subnet" "isolated" {
   vpc_id            = aws_vpc.this.id
   cidr_block        = cidrsubnet(var.cidr_block, var.subnet_bits, count.index + 200)
   availability_zone = element(data.aws_availability_zones.available.names, count.index)
-  tags              = { Name = "open-jii-isolated-subnet-${count.index}-dev" }
+  tags              = { Name = "open-jii-isolated-subnet-${count.index}-${var.environment}" }
 }
 
 # -------------------
@@ -255,7 +255,7 @@ resource "aws_subnet" "isolated" {
 # -------------------
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.this.id
-  tags   = { Name = "open-jii-public-rt-dev" }
+  tags   = { Name = "open-jii-public-rt-${var.environment}" }
 }
 
 resource "aws_route" "public_internet" {
@@ -282,7 +282,7 @@ resource "aws_nat_gateway" "nat" {
   count         = var.az_count
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
-  tags          = { Name = "open-jii-nat-${count.index}-dev" }
+  tags          = { Name = "open-jii-nat-${count.index}-${var.environment}" }
 }
 
 # ---------------------
@@ -291,7 +291,7 @@ resource "aws_nat_gateway" "nat" {
 resource "aws_route_table" "private" {
   count  = var.az_count
   vpc_id = aws_vpc.this.id
-  tags   = { Name = "open-jii-private-rt-${count.index}-dev" }
+  tags   = { Name = "open-jii-private-rt-${count.index}-${var.environment}" }
 }
 
 resource "aws_route" "private_nat" {
@@ -312,7 +312,7 @@ resource "aws_route_table_association" "private_assoc" {
 # ---------------------
 resource "aws_route_table" "isolated" {
   vpc_id = aws_vpc.this.id
-  tags   = { Name = "open-jii-isolated-rt-dev" }
+  tags   = { Name = "open-jii-isolated-rt-${var.environment}" }
 }
 
 resource "aws_route_table_association" "isolated_assoc" {

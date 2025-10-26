@@ -7,7 +7,7 @@ resource "aws_vpc_endpoint" "s3" {
   service_name      = "com.amazonaws.${var.aws_region}.s3"
   vpc_endpoint_type = "Gateway"
   route_table_ids   = local.all_route_table_ids
-  tags              = { Name = "open-jii-s3-vpc-endpoint-dev" }
+  tags              = { Name = "open-jii-s3-vpc-endpoint-${var.environment}" }
 }
 
 resource "aws_vpc_endpoint" "sts" {
@@ -17,7 +17,7 @@ resource "aws_vpc_endpoint" "sts" {
   subnet_ids          = var.private_subnet_ids
   private_dns_enabled = true
   security_group_ids  = var.security_group_ids
-  tags                = { Name = "open-jii-sts-vpc-endpoint-dev" }
+  tags                = { Name = "open-jii-sts-vpc-endpoint-${var.environment}" }
 }
 
 resource "aws_vpc_endpoint" "kinesis_streams" {
@@ -27,5 +27,5 @@ resource "aws_vpc_endpoint" "kinesis_streams" {
   subnet_ids          = var.private_subnet_ids
   private_dns_enabled = true
   security_group_ids  = var.security_group_ids
-  tags                = { Name = "open-jii-kinesis-vpc-endpoint-dev" }
+  tags                = { Name = "open-jii-kinesis-vpc-endpoint-${var.environment}" }
 }

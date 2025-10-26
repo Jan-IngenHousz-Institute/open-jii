@@ -16,12 +16,12 @@ data "databricks_aws_assume_role_policy" "this" {
 data "databricks_aws_crossaccount_policy" "this" {}
 
 resource "aws_iam_role" "cross_account_role" {
-  name               = "open-jii-databricks-crossaccount-role-dev"
+  name               = "open-jii-databricks-crossaccount-role-${var.environment}"
   assume_role_policy = data.databricks_aws_assume_role_policy.this.json
 }
 
 resource "aws_iam_role_policy" "this" {
-  name   = "open-jii-databricks-s3-policy-dev"
+  name   = "open-jii-databricks-s3-policy-${var.environment}"
   role   = aws_iam_role.cross_account_role.id
   policy = data.databricks_aws_crossaccount_policy.this.json
 }
@@ -29,7 +29,7 @@ resource "aws_iam_role_policy" "this" {
 resource "databricks_mws_networks" "this" {
   provider           = databricks.mws
   account_id         = var.databricks_account_id
-  network_name       = "open-jii-mws-network-dev"
+  network_name       = "open-jii-mws-network-${var.environment}"
   security_group_ids = [var.sg_id]
   subnet_ids         = var.private_subnets
   vpc_id             = var.vpc_id
@@ -39,20 +39,20 @@ resource "databricks_mws_storage_configurations" "this" {
   provider                   = databricks.mws
   account_id                 = var.databricks_account_id
   bucket_name                = var.bucket_name
-  storage_configuration_name = "open-jii-mws-storage-configuration-dev"
+  storage_configuration_name = "open-jii-mws-storage-configuration-${var.environment}"
 }
 
 resource "databricks_mws_credentials" "this" {
   provider         = databricks.mws
   role_arn         = aws_iam_role.cross_account_role.arn
-  credentials_name = "open-jii-mws-creds-dev"
+  credentials_name = "open-jii-mws-creds-${var.environment}"
 }
 
 resource "databricks_mws_workspaces" "this" {
   provider       = databricks.mws
   account_id     = var.databricks_account_id
   aws_region     = var.aws_region
-  workspace_name = "open-jii-databricks-workspace-dev"
+  workspace_name = "open-jii-databricks-workspace-${var.environment}"
 
   credentials_id           = databricks_mws_credentials.this.credentials_id
   storage_configuration_id = databricks_mws_storage_configurations.this.storage_configuration_id
@@ -62,13 +62,13 @@ resource "databricks_mws_workspaces" "this" {
 }
 
 resource "databricks_credential" "kinesis" {
-  name     = var.kinesis_role_name
+  name     = "${var.kinesis_role_name}-${var.environment}"
   provider = databricks.workspace
   aws_iam_role {
     role_arn = var.kinesis_role_arn
   }
   purpose = "SERVICE"
-  comment = "Kinesis access credential managed by Terraform"
+  comment = "Kinesis access credential managed by Terraform for ${var.environment}"
 }
 
 resource "databricks_mws_permission_assignment" "workspace_access" {
