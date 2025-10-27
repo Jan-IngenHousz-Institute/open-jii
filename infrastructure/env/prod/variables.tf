@@ -51,37 +51,37 @@ variable "kinesis_credential_id" {
 #   default     = 3020
 # }
 
-# # Authentication secrets
-# variable "auth_secret" {
-#   description = "Authentication secret token"
-#   type        = string
-#   sensitive   = true
+# Authentication secrets
+variable "auth_secret" {
+  description = "Authentication secret token"
+  type        = string
+  sensitive   = true
 
-# }
+}
 
-# variable "github_oauth_client_id" {
-#   description = "GitHub OAuth client ID"
-#   type        = string
-#   sensitive   = true
-# }
+variable "github_oauth_client_id" {
+  description = "GitHub OAuth client ID"
+  type        = string
+  sensitive   = true
+}
 
-# variable "github_oauth_client_secret" {
-#   description = "GitHub OAuth client secret"
-#   type        = string
-#   sensitive   = true
-# }
+variable "github_oauth_client_secret" {
+  description = "GitHub OAuth client secret"
+  type        = string
+  sensitive   = true
+}
 
-# variable "orcid_oauth_client_id" {
-#   description = "ORCID OAuth client ID"
-#   type        = string
-#   sensitive   = true
-# }
+variable "orcid_oauth_client_id" {
+  description = "ORCID OAuth client ID"
+  type        = string
+  sensitive   = true
+}
 
-# variable "orcid_oauth_client_secret" {
-#   description = "ORCID OAuth client secret"
-#   type        = string
-#   sensitive   = true
-# }
+variable "orcid_oauth_client_secret" {
+  description = "ORCID OAuth client secret"
+  type        = string
+  sensitive   = true
+}
 
 # # Backend x Databricks webhook secrets
 # variable "backend_webhook_api_key_id" {
@@ -120,27 +120,27 @@ variable "kinesis_credential_id" {
 #   sensitive   = true
 # }
 
-# # Contentful configuration variables
-# variable "contentful_space_id" {
-#   description = "Contentful space ID"
-#   type        = string
-#   sensitive   = true
-# }
+# Contentful configuration variables
+variable "contentful_space_id" {
+  description = "Contentful space ID"
+  type        = string
+  sensitive   = true
+}
 
-# variable "contentful_access_token" {
-#   description = "Contentful access token"
-#   type        = string
-#   sensitive   = true
-# }
+variable "contentful_access_token" {
+  description = "Contentful access token"
+  type        = string
+  sensitive   = true
+}
 
-# variable "contentful_preview_access_token" {
-#   description = "Contentful preview access token"
-#   type        = string
-#   sensitive   = true
-# }
+variable "contentful_preview_access_token" {
+  description = "Contentful preview access token"
+  type        = string
+  sensitive   = true
+}
 
-# variable "contentful_preview_secret" {
-#   description = "Contentful preview secret"
-#   type        = string
-#   sensitive   = true
-# }
+variable "contentful_preview_secret" {
+  description = "Contentful preview secret"
+  type        = string
+  sensitive   = true
+}

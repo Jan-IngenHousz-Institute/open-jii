@@ -34,75 +34,81 @@ resource "aws_ecr_repository_policy" "this" {
   repository = aws_ecr_repository.this.name
   policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [
-      {
-        Sid    = "AllowECSPull",
-        Effect = "Allow",
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        },
-        # Minimal permissions for ECS tasks to pull images
-        Action = [
-          "ecr:GetDownloadUrlForLayer",     # Download image layers
-          "ecr:BatchGetImage",              # Get image manifests
-          "ecr:BatchCheckLayerAvailability" # Check if layers exist
-        ],
-        Condition = {
-          # Restrict to specific ECS service ARN for added security
-          ArnLike = {
-            "aws:SourceArn" = "arn:aws:ecs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:service/${var.environment}/${var.service_name}"
+    Statement = concat(
+      [
+        {
+          Sid    = "AllowECSPull",
+          Effect = "Allow",
+          Principal = {
+            Service = "ecs-tasks.amazonaws.com"
           },
-          # Enforce HTTPS/TLS for all connections
-          Bool = {
-            "aws:SecureTransport" = "true"
+          # Minimal permissions for ECS tasks to pull images
+          Action = [
+            "ecr:GetDownloadUrlForLayer",     # Download image layers
+            "ecr:BatchGetImage",              # Get image manifests
+            "ecr:BatchCheckLayerAvailability" # Check if layers exist
+          ],
+          Condition = {
+            # Restrict to specific ECS service ARN for added security
+            ArnLike = {
+              "aws:SourceArn" = "arn:aws:ecs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:service/${var.environment}/${var.service_name}"
+            },
+            # Enforce HTTPS/TLS for all connections
+            Bool = {
+              "aws:SecureTransport" = "true"
+            }
           }
         }
-      },
-      {
-        Sid    = "AllowCICDPush",
-        Effect = "Allow",
-        Principal = {
-          AWS = var.ci_cd_role_arn
-        },
-        # CI/CD pipeline permissions for building and pushing images
-        Action = [
-          "ecr:GetAuthorizationToken", # Get temporary credentials
-          "ecr:PutImage",              # Push complete images
-          "ecr:InitiateLayerUpload",   # Start layer upload
-          "ecr:UploadLayerPart",       # Upload layer chunks
-          "ecr:CompleteLayerUpload",   # Finalize layer upload
-          "ecr:TagResource",           # Add tags to images
-          "ecr:DescribeImages"         # List and describe images
-        ],
-        Condition = {
-          Bool = {
-            "aws:SecureTransport" = "true"
+      ],
+      var.ci_cd_role_arn != null ? [
+        {
+          Sid    = "AllowCICDPush",
+          Effect = "Allow",
+          Principal = {
+            AWS = var.ci_cd_role_arn
+          },
+          # CI/CD pipeline permissions for building and pushing images
+          Action = [
+            "ecr:GetAuthorizationToken", # Get temporary credentials
+            "ecr:PutImage",              # Push complete images
+            "ecr:InitiateLayerUpload",   # Start layer upload
+            "ecr:UploadLayerPart",       # Upload layer chunks
+            "ecr:CompleteLayerUpload",   # Finalize layer upload
+            "ecr:TagResource",           # Add tags to images
+            "ecr:DescribeImages"         # List and describe images
+          ],
+          Condition = {
+            Bool = {
+              "aws:SecureTransport" = "true"
+            }
           }
         }
-      },
-      {
-        Sid    = "AllowTFTesterPush",
-        Effect = "Allow",
-        Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/terraform-tester-dev"
-        },
-        # CI/CD pipeline permissions for building and pushing images
-        Action = [
-          "ecr:GetAuthorizationToken", # Get temporary credentials
-          "ecr:PutImage",              # Push complete images
-          "ecr:InitiateLayerUpload",   # Start layer upload
-          "ecr:UploadLayerPart",       # Upload layer chunks
-          "ecr:CompleteLayerUpload",   # Finalize layer upload
-          "ecr:TagResource",           # Add tags to images
-          "ecr:DescribeImages"         # List and describe images
-        ],
-        Condition = {
-          Bool = {
-            "aws:SecureTransport" = "true"
+      ] : [],
+      [
+        {
+          Sid    = "AllowTFTesterPush",
+          Effect = "Allow",
+          Principal = {
+            AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/terraform-tester-${var.environment}"
+          },
+          # CI/CD pipeline permissions for building and pushing images
+          Action = [
+            "ecr:GetAuthorizationToken", # Get temporary credentials
+            "ecr:PutImage",              # Push complete images
+            "ecr:InitiateLayerUpload",   # Start layer upload
+            "ecr:UploadLayerPart",       # Upload layer chunks
+            "ecr:CompleteLayerUpload",   # Finalize layer upload
+            "ecr:TagResource",           # Add tags to images
+            "ecr:DescribeImages"         # List and describe images
+          ],
+          Condition = {
+            Bool = {
+              "aws:SecureTransport" = "true"
+            }
           }
         }
-      }
-    ]
+      ]
+    )
   })
 }
 
