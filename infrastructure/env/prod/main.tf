@@ -388,45 +388,46 @@ module "databricks_workspace" {
 #   }
 # }
 
-# module "aurora_db" {
-#   source                 = "../../modules/aurora_db"
-#   cluster_identifier     = "open-jii-dev-db-cluster"
-#   database_name          = "openjii_dev_db"
-#   master_username        = "openjii_dev_admin"
-#   db_subnet_group_name   = module.vpc.db_subnet_group_name
-#   vpc_security_group_ids = [module.vpc.aurora_security_group_id]
+module "aurora_db" {
+  source                 = "../../modules/aurora_db"
+  cluster_identifier     = "open-jii-${var.environment}-db-cluster"
+  database_name          = "openjii_${var.environment}_db"
+  master_username        = "openjii_${var.environment}_admin"
+  db_subnet_group_name   = module.vpc.db_subnet_group_name
+  vpc_security_group_ids = [module.vpc.aurora_security_group_id]
 
-#   max_capacity             = 1.0  # Conservative max for dev
-#   min_capacity             = 0    # Minimum cost-effective setting (at 0, auto-pause feature is enabled)
-#   seconds_until_auto_pause = 1800 # Auto-pause after 30 minutes of inactivity
-#   backup_retention_period  = 3    # Reduced retention for dev
-#   skip_final_snapshot      = true # Skip snapshot on deletion in dev
-# }
+  environment              = var.environment
+  max_capacity             = 1.0
+  min_capacity             = 0
+  seconds_until_auto_pause = 1800
+  backup_retention_period  = 6
+  skip_final_snapshot      = false
+}
 
-# # Authentication secrets
-# module "auth_secrets" {
-#   source = "../../modules/secrets-manager"
+# Authentication secrets
+module "auth_secrets" {
+  source = "../../modules/secrets-manager"
 
-#   name        = "openjii-auth-secrets-dev"
-#   description = "Authentication and OAuth secrets for the OpenJII services"
+  name        = "openjii-auth-secrets-${var.environment}"
+  description = "Authentication and OAuth secrets for the OpenJII services"
 
-#   # Store secrets as JSON using variables
-#   secret_string = jsonencode({
-#     AUTH_SECRET        = var.auth_secret
-#     AUTH_GITHUB_ID     = var.github_oauth_client_id
-#     AUTH_GITHUB_SECRET = var.github_oauth_client_secret
-#     AUTH_ORCID_ID      = var.orcid_oauth_client_id
-#     AUTH_ORCID_SECRET  = var.orcid_oauth_client_secret
-#   })
+  # Store secrets as JSON using variables
+  secret_string = jsonencode({
+    AUTH_SECRET        = var.auth_secret
+    AUTH_GITHUB_ID     = var.github_oauth_client_id
+    AUTH_GITHUB_SECRET = var.github_oauth_client_secret
+    AUTH_ORCID_ID      = var.orcid_oauth_client_id
+    AUTH_ORCID_SECRET  = var.orcid_oauth_client_secret
+  })
 
-#   tags = {
-#     Environment = "dev"
-#     Project     = "open-jii"
-#     ManagedBy   = "terraform"
-#     Component   = "backend"
-#     SecretType  = "authentication"
-#   }
-# }
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+    SecretType  = "authentication"
+  }
+}
 
 # # Databricks API secrets
 # module "databricks_secrets" {
@@ -456,29 +457,29 @@ module "databricks_workspace" {
 #   }
 # }
 
-# # Contentful secrets
-# module "contentful_secrets" {
-#   source = "../../modules/secrets-manager"
+# Contentful secrets
+module "contentful_secrets" {
+  source = "../../modules/secrets-manager"
 
-#   name        = "openjii-contentful-secrets-dev"
-#   description = "Contentful API secrets for the OpenJII services"
+  name        = "openjii-contentful-secrets-${var.environment}"
+  description = "Contentful API secrets for the OpenJII services"
 
-#   # Store secrets as JSON using variables
-#   secret_string = jsonencode({
-#     CONTENTFUL_SPACE_ID             = var.contentful_space_id
-#     CONTENTFUL_ACCESS_TOKEN         = var.contentful_access_token
-#     CONTENTFUL_PREVIEW_ACCESS_TOKEN = var.contentful_preview_access_token
-#     CONTENTFUL_PREVIEW_SECRET       = var.contentful_preview_secret
-#   })
+  # Store secrets as JSON using variables
+  secret_string = jsonencode({
+    CONTENTFUL_SPACE_ID             = var.contentful_space_id
+    CONTENTFUL_ACCESS_TOKEN         = var.contentful_access_token
+    CONTENTFUL_PREVIEW_ACCESS_TOKEN = var.contentful_preview_access_token
+    CONTENTFUL_PREVIEW_SECRET       = var.contentful_preview_secret
+  })
 
-#   tags = {
-#     Environment = "dev"
-#     Project     = "open-jii"
-#     ManagedBy   = "terraform"
-#     Component   = "web"
-#     SecretType  = "contentful"
-#   }
-# }
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "web"
+    SecretType  = "contentful"
+  }
+}
 
 # # SES Email Service for transactional emails
 # module "ses" {
@@ -530,31 +531,31 @@ module "databricks_workspace" {
 #   }
 # }
 
-# # WAF for OpenNext Web Application
-# module "opennext_waf" {
-#   source = "../../modules/waf"
+# WAF for OpenNext Web Application
+module "opennext_waf" {
+  source = "../../modules/waf"
 
-#   service_name       = "opennext"
-#   environment        = "dev"
-#   rate_limit         = 500
-#   log_retention_days = 30
+  service_name       = "opennext"
+  environment        = var.environment
+  rate_limit         = 500
+  log_retention_days = 30
 
-#   # Apply restrictive rate limiting to sensitive routes with flexible configuration
-#   restrictive_rate_limit_routes = [
-#     {
-#       search_string         = "login"
-#       positional_constraint = "CONTAINS_WORD"
-#       method                = "POST"
-#     },
-#   ]
+  # Apply restrictive rate limiting to sensitive routes with flexible configuration
+  restrictive_rate_limit_routes = [
+    {
+      search_string         = "login"
+      positional_constraint = "CONTAINS_WORD"
+      method                = "POST"
+    },
+  ]
 
-#   tags = {
-#     Environment = "dev"
-#     Project     = "open-jii"
-#     ManagedBy   = "terraform"
-#     Component   = "frontend"
-#   }
-# }
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "frontend"
+  }
+}
 
 # # OpenNext Next.js Application Infrastructure
 # module "opennext" {
@@ -628,92 +629,92 @@ module "databricks_workspace" {
 #   }
 # }
 
-# module "migration_runner_ecr" {
-#   source = "../../modules/ecr"
+module "migration_runner_ecr" {
+  source = "../../modules/ecr"
 
-#   aws_region  = var.aws_region
-#   environment = "dev"
+  aws_region  = var.aws_region
+  environment = var.environment
 
-#   repository_name               = "db-migration-runner-ecr"
-#   service_name                  = "db-migration-runner"
-#   enable_vulnerability_scanning = true
-#   encryption_type               = "KMS"
-#   image_tag_mutability          = "MUTABLE"
+  repository_name               = "db-migration-runner-ecr"
+  service_name                  = "db-migration-runner"
+  enable_vulnerability_scanning = true
+  encryption_type               = "KMS"
+  image_tag_mutability          = "MUTABLE"
 
-#   ci_cd_role_arn = module.iam_oidc.role_arn
+  #ci_cd_role_arn = module.iam_oidc.role_arn
 
-#   tags = {
-#     Environment = "dev"
-#     Project     = "open-jii"
-#     ManagedBy   = "terraform"
-#     Component   = "database-migrations"
-#   }
-# }
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "database-migrations"
+  }
+}
 
-# module "migration_runner_ecs" {
-#   source = "../../modules/ecs"
+module "migration_runner_ecs" {
+  source = "../../modules/ecs"
 
-#   region      = var.aws_region
-#   environment = "dev"
+  region      = var.aws_region
+  environment = var.environment
 
-#   create_ecs_service = false
-#   service_name       = "db-migration-runner"
+  create_ecs_service = false
+  service_name       = "db-migration-runner"
 
-#   repository_url = module.migration_runner_ecr.repository_url
-#   repository_arn = module.migration_runner_ecr.repository_arn
+  repository_url = module.migration_runner_ecr.repository_url
+  repository_arn = module.migration_runner_ecr.repository_arn
 
-#   security_groups = [module.vpc.migration_task_security_group_id]
-#   subnets         = module.vpc.private_subnets
-#   vpc_id          = module.vpc.vpc_id
+  security_groups = [module.vpc.migration_task_security_group_id]
+  subnets         = module.vpc.private_subnets
+  vpc_id          = module.vpc.vpc_id
 
-#   desired_count      = 1
-#   cpu                = 256
-#   memory             = 512
-#   use_spot_instances = false
-#   enable_autoscaling = false
+  desired_count      = 1
+  cpu                = 256
+  memory             = 512
+  use_spot_instances = false
+  enable_autoscaling = false
 
-#   enable_container_healthcheck = false
-#   enable_circuit_breaker       = true
+  enable_container_healthcheck = false
+  enable_circuit_breaker       = true
 
-#   log_group_name     = "/aws/ecs/db-migration-runner-dev"
-#   log_retention_days = 30
+  log_group_name     = "/aws/ecs/db-migration-runner-${var.environment}"
+  log_retention_days = 30
 
 
-#   # Secrets configuration
-#   secrets = [
-#     {
-#       name      = "DB_CREDENTIALS"
-#       valueFrom = module.aurora_db.master_user_secret_arn
-#     }
-#   ]
+  # Secrets configuration
+  secrets = [
+    {
+      name      = "DB_CREDENTIALS"
+      valueFrom = module.aurora_db.master_user_secret_arn
+    }
+  ]
 
-#   # Environment variables for the migration runner
-#   environment_variables = [
-#     {
-#       name  = "DB_HOST"
-#       value = module.aurora_db.cluster_endpoint
-#     },
-#     {
-#       name  = "DB_NAME"
-#       value = module.aurora_db.database_name
-#     },
-#     {
-#       name  = "DB_PORT"
-#       value = module.aurora_db.cluster_port
-#     },
-#     {
-#       name  = "LOG_LEVEL"
-#       value = "debug"
-#     },
-#   ]
+  # Environment variables for the migration runner
+  environment_variables = [
+    {
+      name  = "DB_HOST"
+      value = module.aurora_db.cluster_endpoint
+    },
+    {
+      name  = "DB_NAME"
+      value = module.aurora_db.database_name
+    },
+    {
+      name  = "DB_PORT"
+      value = module.aurora_db.cluster_port
+    },
+    {
+      name  = "LOG_LEVEL"
+      value = "debug"
+    },
+  ]
 
-#   tags = {
-#     Environment = "dev"
-#     Project     = "open-jii"
-#     ManagedBy   = "terraform"
-#     Component   = "database-migrations"
-#   }
-# }
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "database-migrations"
+  }
+}
 
 # module "backend_ecr" {
 #   source = "../../modules/ecr"
@@ -725,7 +726,7 @@ module "databricks_workspace" {
 #   max_image_count               = 10
 #   enable_vulnerability_scanning = true
 #   encryption_type               = "KMS"
-#   image_tag_mutability          = "MUTABLE" # Set to MUTABLE for dev, but should be IMMUTABLE for prod
+#   image_tag_mutability          = "MUTABLE"
 
 #   ci_cd_role_arn = module.iam_oidc.role_arn
 
@@ -935,34 +936,34 @@ module "databricks_workspace" {
 #   }
 # }
 
-# module "backend_waf" {
-#   source = "../../modules/waf"
+module "backend_waf" {
+  source = "../../modules/waf"
 
-#   service_name       = "backend"
-#   environment        = "dev"
-#   rate_limit         = 500
-#   log_retention_days = 30
+  service_name       = "backend"
+  environment        = var.environment
+  rate_limit         = 500
+  log_retention_days = 30
 
-#   large_body_bypass_routes = [
-#     {
-#       search_string         = "/upload"
-#       positional_constraint = "ENDS_WITH"
-#       method                = "POST"
-#     },
-#     {
-#       search_string         = "/api/v1/macros"
-#       positional_constraint = "STARTS_WITH"
-#       method                = "POST"
-#     }
-#   ]
+  large_body_bypass_routes = [
+    {
+      search_string         = "/upload"
+      positional_constraint = "ENDS_WITH"
+      method                = "POST"
+    },
+    {
+      search_string         = "/api/v1/macros"
+      positional_constraint = "STARTS_WITH"
+      method                = "POST"
+    }
+  ]
 
-#   tags = {
-#     Environment = "dev"
-#     Project     = "open-jii"
-#     ManagedBy   = "terraform"
-#     Component   = "backend"
-#   }
-# }
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+  }
+}
 
 # # CloudFront distribution in front of the backend API
 # module "backend_cloudfront" {
@@ -997,22 +998,22 @@ module "databricks_workspace" {
 #   }
 # }
 
-# # WAF for Documentation Site
-# module "docs_waf" {
-#   source = "../../modules/waf"
+# WAF for Documentation Site
+module "docs_waf" {
+  source = "../../modules/waf"
 
-#   service_name       = "docs"
-#   environment        = "dev"
-#   rate_limit         = 500
-#   log_retention_days = 30
+  service_name       = "docs"
+  environment        = var.environment
+  rate_limit         = 500
+  log_retention_days = 30
 
-#   tags = {
-#     Environment = "dev"
-#     Project     = "open-jii"
-#     ManagedBy   = "Terraform"
-#     Component   = "documentation-waf"
-#   }
-# }
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "Terraform"
+    Component   = "documentation-waf"
+  }
+}
 
 # module "docs_cloudfront" {
 #   source          = "../../modules/cloudfront"
@@ -1063,20 +1064,20 @@ module "databricks_workspace" {
 #   }
 # }
 
-# # AWS Location Service for search and geocoding
-# module "location_service" {
-#   source = "../../modules/location-service"
+# AWS Location Service for search and geocoding
+module "location_service" {
+  source = "../../modules/location-service"
 
-#   place_index_name = "open-jii-${var.environment}-places-index"
-#   data_source      = "Esri"
-#   description      = "Place Index for OpenJII search and geocoding operations"
-#   intended_use     = "SingleUse"
-#   iam_policy_name  = "OpenJII-${var.environment}-LocationServicePolicy"
+  place_index_name = "open-jii-${var.environment}-places-index"
+  data_source      = "Esri"
+  description      = "Place Index for OpenJII search and geocoding operations"
+  intended_use     = "SingleUse"
+  iam_policy_name  = "OpenJII-${var.environment}-LocationServicePolicy"
 
-#   tags = {
-#     Environment = "dev"
-#     Project     = "open-jii"
-#     ManagedBy   = "terraform"
-#     Component   = "location-service"
-#   }
-# }
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "location-service"
+  }
+}

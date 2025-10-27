@@ -389,12 +389,13 @@ module "experiment_provisioning_job" {
 
 module "aurora_db" {
   source                 = "../../modules/aurora_db"
-  cluster_identifier     = "open-jii-dev-db-cluster"
-  database_name          = "openjii_dev_db"
-  master_username        = "openjii_dev_admin"
+  cluster_identifier     = "open-jii-${var.environment}-db-cluster"
+  database_name          = "openjii_${var.environment}_db"
+  master_username        = "openjii_${var.environment}_admin"
   db_subnet_group_name   = module.vpc.db_subnet_group_name
   vpc_security_group_ids = [module.vpc.aurora_security_group_id]
 
+  environment              = var.environment
   max_capacity             = 1.0  # Conservative max for dev
   min_capacity             = 0    # Minimum cost-effective setting (at 0, auto-pause feature is enabled)
   seconds_until_auto_pause = 1800 # Auto-pause after 30 minutes of inactivity
@@ -406,7 +407,7 @@ module "aurora_db" {
 module "auth_secrets" {
   source = "../../modules/secrets-manager"
 
-  name        = "openjii-auth-secrets-dev"
+  name        = "openjii-auth-secrets-${var.environment}"
   description = "Authentication and OAuth secrets for the OpenJII services"
 
   # Store secrets as JSON using variables
@@ -419,7 +420,7 @@ module "auth_secrets" {
   })
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "backend"
@@ -447,7 +448,7 @@ module "databricks_secrets" {
   })
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "backend"
@@ -459,7 +460,7 @@ module "databricks_secrets" {
 module "contentful_secrets" {
   source = "../../modules/secrets-manager"
 
-  name        = "openjii-contentful-secrets-dev"
+  name        = "openjii-contentful-secrets-${var.environment}"
   description = "Contentful API secrets for the OpenJII services"
 
   # Store secrets as JSON using variables
@@ -471,7 +472,7 @@ module "contentful_secrets" {
   })
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "web"
@@ -548,7 +549,7 @@ module "opennext_waf" {
   ]
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "frontend"
@@ -631,7 +632,7 @@ module "migration_runner_ecr" {
   source = "../../modules/ecr"
 
   aws_region  = var.aws_region
-  environment = "dev"
+  environment = var.environment
 
   repository_name               = "db-migration-runner-ecr"
   service_name                  = "db-migration-runner"
@@ -642,7 +643,7 @@ module "migration_runner_ecr" {
   ci_cd_role_arn = module.iam_oidc.role_arn
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "database-migrations"
@@ -653,7 +654,7 @@ module "migration_runner_ecs" {
   source = "../../modules/ecs"
 
   region      = var.aws_region
-  environment = "dev"
+  environment = var.environment
 
   create_ecs_service = false
   service_name       = "db-migration-runner"
@@ -674,7 +675,7 @@ module "migration_runner_ecs" {
   enable_container_healthcheck = false
   enable_circuit_breaker       = true
 
-  log_group_name     = "/aws/ecs/db-migration-runner-dev"
+  log_group_name     = "/aws/ecs/db-migration-runner-${var.environment}"
   log_retention_days = 30
 
 
@@ -707,7 +708,7 @@ module "migration_runner_ecs" {
   ]
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "database-migrations"
@@ -938,7 +939,7 @@ module "backend_waf" {
   source = "../../modules/waf"
 
   service_name       = "backend"
-  environment        = "dev"
+  environment        = var.environment
   rate_limit         = 500
   log_retention_days = 30
 
@@ -956,7 +957,7 @@ module "backend_waf" {
   ]
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "backend"
@@ -1001,12 +1002,12 @@ module "docs_waf" {
   source = "../../modules/waf"
 
   service_name       = "docs"
-  environment        = "dev"
+  environment        = var.environment
   rate_limit         = 500
   log_retention_days = 30
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "Terraform"
     Component   = "documentation-waf"
@@ -1073,7 +1074,7 @@ module "location_service" {
   iam_policy_name  = "OpenJII-${var.environment}-LocationServicePolicy"
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "location-service"

@@ -84,3 +84,8 @@ variable "kms_key_deletion_window" {
     error_message = "KMS key deletion window must be between 7 and 30 days."
   }
 }
+
+variable "environment" {
+  description = "Environment name (e.g., dev, prod, staging)"
+  type        = string
+}

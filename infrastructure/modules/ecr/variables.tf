@@ -74,4 +74,5 @@ variable "service_name" {
 variable "ci_cd_role_arn" {
   description = "ARN of the IAM role used by the CI/CD system to push images"
   type        = string
+  default     = null
 }
