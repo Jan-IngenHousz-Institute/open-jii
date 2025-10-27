@@ -4,6 +4,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production"]).default("development"),
   ENVIRONMENT_PREFIX: z.string().optional().default("dev"),
   NEXT_PUBLIC_BASE_URL: z.string().url().optional().default("http://localhost:3000"),
+  NEXT_PUBLIC_POSTHOG_KEY: z.string().default("phc_bAOjcJ4S1mw8I5bSlDHUDmNeOaLuo4dhPiqWmyNdWLd"),
+  NEXT_PUBLIC_POSTHOG_HOST: z.string().url().optional().default("https://eu.i.posthog.com"),
   VERCEL_AUTOMATION_BYPASS_SECRET: z.string().optional(),
   CONTENTFUL_SPACE_ID: z.string().optional(),
   CONTENTFUL_ACCESS_TOKEN: z.string().optional(),
