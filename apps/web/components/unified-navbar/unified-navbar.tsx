@@ -1,7 +1,7 @@
 "use client";
 
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { User, Home, BookOpen, LogOut, Menu, LogIn, Sprout } from "lucide-react";
+import { User, Home, BookOpen, LogOut, Menu, Sprout } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,8 +22,8 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui/components";
 
-import { handleLogout } from "../app/actions/auth";
-import { useGetUserProfile } from "../hooks/profile/useGetUserProfile/useGetUserProfile";
+import { handleLogout } from "../../app/actions/auth";
+import { useGetUserProfile } from "../../hooks/profile/useGetUserProfile/useGetUserProfile";
 
 interface UnifiedNavbarProps {
   locale: Locale;
@@ -45,14 +45,7 @@ function UserMenu({
   const { t } = useTranslation();
 
   if (!session?.user) {
-    return (
-      <Button variant="ghost" size="sm" asChild>
-        <Link href={`/${locale}/platform`} className="flex items-center gap-2">
-          <LogIn className="h-4 w-4" />
-          <span className="hidden sm:inline">{t("navigation.platform", "Go to Platform")}</span>
-        </Link>
-      </Button>
-    );
+    return null;
   }
 
   return (
@@ -126,8 +119,6 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
   const { t } = useTranslation();
   const pathname = usePathname();
 
-  const isAuthenticated = !!session?.user;
-
   const { data: userProfile } = useGetUserProfile(session?.user.id ?? "");
   const profile = userProfile?.body;
   const displayName =
@@ -139,7 +130,7 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
     });
   };
 
-  // Navigation items (memoised)
+  // Navigation items
   const navItems = useMemo(
     () => [
       {
@@ -164,21 +155,46 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
         href: `/${locale}/platform`,
         label: t("navigation.platform", "Platform"),
         icon: Sprout,
-        isActive: pathname.startsWith(`/${locale}/platform`),
-        requiresAuth: true,
+        isActive:
+          pathname.startsWith(`/${locale}/platform`) ||
+          pathname.startsWith(`/${locale}/login`) ||
+          pathname.startsWith(`/${locale}/register`) ||
+          pathname.startsWith(`/api/auth/verify-request`) ||
+          pathname.startsWith(`/${locale}/verify-request`),
       },
     ],
     [locale, t, pathname],
   );
 
-  const visibleNavItems = useMemo(
-    () => navItems.filter((item) => !item.requiresAuth || isAuthenticated),
-    [navItems, isAuthenticated],
-  );
+  // Absolute positioning for overlay effect on the pages below
+  const isOverlay =
+    pathname.startsWith(`/${locale}/platform`) ||
+    pathname.startsWith(`/${locale}/login`) ||
+    pathname.startsWith(`/${locale}/register`) ||
+    pathname.startsWith(`/api/auth/verify-request`) ||
+    pathname.startsWith(`/${locale}/verify-request`);
+
+  const isLightNavbar =
+    pathname === `/` ||
+    pathname === `/${locale}` ||
+    pathname.startsWith(`/${locale}/about`) ||
+    pathname.startsWith(`/${locale}/blog`);
 
   return (
-    <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
-      <nav className="container mx-auto grid h-16 grid-cols-3 items-center px-4">
+    <header
+      className={`z-50 w-full ${
+        isOverlay
+          ? "pointer-events-auto absolute left-0 top-0 bg-gradient-to-b from-black/80 to-transparent text-white"
+          : isLightNavbar
+            ? "border-border sticky top-0 border-b bg-white/60 text-black backdrop-blur-md"
+            : "sticky top-0 bg-gradient-to-b from-black/80 to-transparent text-white"
+      }`}
+    >
+      <nav
+        className={`font-notosans container mx-auto grid h-16 grid-cols-3 items-center px-4 ${
+          isLightNavbar ? "text-black" : "text-white"
+        }`}
+      >
         {/* Logo/Brand */}
         <div className="col-start-1 col-end-2 flex items-center">
           <Image
@@ -192,19 +208,36 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
 
         {/* Navigation Links - Desktop */}
         <div className="col-start-2 col-end-3 hidden items-center justify-center space-x-6 md:flex">
-          {visibleNavItems.map((item) => {
+          {navItems.map((item) => {
             const Icon = item.icon;
+
+            // Remove hover effect for selected (active) nav item
+            const linkClass = item.isActive
+              ? `flex items-center space-x-2 text-sm font-medium ${
+                  isLightNavbar ? "text-primary font-bold" : "text-jii-bright-green font-bold"
+                }`
+              : `flex items-center space-x-2 text-sm font-medium transition-colors ${
+                  isLightNavbar
+                    ? "text-muted-foreground hover:text-primary"
+                    : "text-white/70 hover:text-white"
+                }`;
+
+            const iconClass = item.isActive
+              ? isLightNavbar
+                ? "h-4 w-4 text-jii-dark-green"
+                : "h-4 w-4 text-jii-bright-green"
+              : isLightNavbar
+                ? "h-4 w-4 text-muted-foreground group-hover:text-primary"
+                : "h-4 w-4 text-white/70 group-hover:text-white";
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`hover:text-primary flex items-center space-x-2 text-sm font-medium transition-colors ${
-                  item.isActive ? "text-primary" : "text-muted-foreground"
-                }`}
+                className={`${linkClass} group`}
                 aria-current={item.isActive ? "page" : undefined}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className={iconClass} />
                 <span>{item.label}</span>
               </Link>
             );
@@ -236,9 +269,9 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
                   <Menu className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuContent align="end" className="font-notosans w-56">
                 {/* Navigation items */}
-                {visibleNavItems.map((item) => {
+                {navItems.map((item) => {
                   const Icon = item.icon;
 
                   return (
@@ -258,16 +291,9 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
                 })}
 
                 {/* Mobile auth section */}
-                <DropdownMenuSeparator />
-                {!session?.user ? (
-                  <DropdownMenuItem asChild>
-                    <Link href={`/${locale}/platform`} className="flex items-center space-x-3">
-                      <LogIn className="h-4 w-4" />
-                      <span>{t("navigation.platform", "Go to Platform")}</span>
-                    </Link>
-                  </DropdownMenuItem>
-                ) : (
+                {session?.user && (
                   <>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem disabled>
                       <div className="flex w-full items-center gap-3">
                         {session.user.image && (

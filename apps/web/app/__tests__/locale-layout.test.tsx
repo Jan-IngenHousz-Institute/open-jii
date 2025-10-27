@@ -26,6 +26,16 @@ vi.mock("next/font/google", () => ({
     style: {},
     variable: "--font-overpass",
   }),
+  Inter: () => ({
+    className: "font-inter",
+    style: {},
+    variable: "--font-inter",
+  }),
+  Noto_Sans: () => ({
+    className: "font-noto-sans",
+    style: {},
+    variable: "--font-noto-sans",
+  }),
 }));
 
 // Mock translations provider
