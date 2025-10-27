@@ -59,7 +59,7 @@ describe("UpdateMacroUseCase", () => {
     vi.spyOn(databricksAdapter, "uploadMacroCode").mockResolvedValue(success({}));
 
     // Act
-    const result = await useCase.execute(createdMacro.id, updateData);
+    const result = await useCase.execute(createdMacro.id, updateData, testUserId);
 
     // Assert
     expect(result.isSuccess()).toBe(true);
@@ -99,7 +99,7 @@ describe("UpdateMacroUseCase", () => {
     };
 
     // Act
-    const result = await useCase.execute(createdMacro.id, updateData);
+    const result = await useCase.execute(createdMacro.id, updateData, testUserId);
 
     // Assert
     expect(result.isSuccess()).toBe(true);
@@ -123,7 +123,7 @@ describe("UpdateMacroUseCase", () => {
     };
 
     // Act
-    const result = await useCase.execute(nonExistentId, updateData);
+    const result = await useCase.execute(nonExistentId, updateData, testUserId);
 
     // Assert
     expect(result.isSuccess()).toBe(false);
@@ -160,7 +160,7 @@ describe("UpdateMacroUseCase", () => {
     };
 
     // Act
-    const result = await useCase.execute(createdMacro.id, updateData);
+    const result = await useCase.execute(createdMacro.id, updateData, testUserId);
 
     // Assert
     expect(result.isSuccess()).toBe(false);
@@ -191,7 +191,7 @@ describe("UpdateMacroUseCase", () => {
     const uploadMacroCodeSpy = vi.spyOn(databricksAdapter, "uploadMacroCode");
 
     // Act
-    const result = await useCase.execute(createdMacro.id, updateData);
+    const result = await useCase.execute(createdMacro.id, updateData, testUserId);
 
     // Assert
     expect(result.isSuccess()).toBe(true);
@@ -228,7 +228,7 @@ describe("UpdateMacroUseCase", () => {
     };
 
     // Act
-    const result = await useCase.execute(createdMacro.id, updateData);
+    const result = await useCase.execute(createdMacro.id, updateData, testUserId);
 
     // Assert
     expect(result.isSuccess()).toBe(true);
@@ -240,5 +240,37 @@ describe("UpdateMacroUseCase", () => {
       language: macroData.language,
       createdBy: testUserId,
     });
+  });
+
+  it("should return forbidden error when user is not the creator", async () => {
+    // Arrange
+    const macroData: CreateMacroDto = {
+      name: "Someone Else's Macro",
+      description: "Created by another user",
+      language: "python",
+      code: "cHl0aG9uIGNvZGU=",
+    };
+
+    // Create a macro with testUserId
+    const createResult = await macroRepository.create(macroData, testUserId);
+    assertSuccess(createResult);
+    const createdMacro = createResult.value[0];
+
+    // Create another user
+    const anotherUserId = await testApp.createTestUser({ email: "another@example.com" });
+
+    const updateData = {
+      name: "Trying to Update",
+      description: "This should fail",
+    };
+
+    // Act - try to update with a different user
+    const result = await useCase.execute(createdMacro.id, updateData, anotherUserId);
+
+    // Assert
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(403);
+    expect(result.error.message).toBe("Only the macro creator can update this macro");
   });
 });

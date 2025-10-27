@@ -57,7 +57,7 @@ describe("DeleteMacroUseCase", () => {
     vi.spyOn(databricksAdapter, "deleteMacroCode").mockResolvedValue(success({}));
 
     // Act
-    const result = await useCase.execute(createdMacro.id);
+    const result = await useCase.execute(createdMacro.id, testUserId);
 
     // Assert
     expect(result.isSuccess()).toBe(true);
@@ -78,7 +78,7 @@ describe("DeleteMacroUseCase", () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
 
     // Act
-    const result = await useCase.execute(nonExistentId);
+    const result = await useCase.execute(nonExistentId, testUserId);
 
     // Assert
     expect(result.isSuccess()).toBe(false);
@@ -115,7 +115,7 @@ describe("DeleteMacroUseCase", () => {
     );
 
     // Act
-    const result = await useCase.execute(createdMacro.id);
+    const result = await useCase.execute(createdMacro.id, testUserId);
 
     // Assert
     expect(result.isSuccess()).toBe(true);
@@ -155,7 +155,7 @@ describe("DeleteMacroUseCase", () => {
     );
 
     // Act
-    const result = await useCase.execute(createdMacro.id);
+    const result = await useCase.execute(createdMacro.id, testUserId);
 
     // Assert
     expect(result.isSuccess()).toBe(false);
@@ -168,10 +168,37 @@ describe("DeleteMacroUseCase", () => {
     const invalidId = "invalid-uuid-format";
 
     // Act
-    const result = await useCase.execute(invalidId);
+    const result = await useCase.execute(invalidId, testUserId);
 
     // Assert
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
+  });
+
+  it("should return forbidden error when user is not the creator", async () => {
+    // Arrange
+    const macroData: CreateMacroDto = {
+      name: "Someone Else's Macro",
+      description: "Created by another user",
+      language: "python",
+      code: "cHl0aG9uIGNvZGU=",
+    };
+
+    // Create a macro with testUserId
+    const createResult = await macroRepository.create(macroData, testUserId);
+    assertSuccess(createResult);
+    const createdMacro = createResult.value[0];
+
+    // Create another user
+    const anotherUserId = await testApp.createTestUser({ email: "another@example.com" });
+
+    // Act - try to delete with a different user
+    const result = await useCase.execute(createdMacro.id, anotherUserId);
+
+    // Assert
+    expect(result.isSuccess()).toBe(false);
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(403);
+    expect(result.error.message).toBe("Only the macro creator can delete this macro");
   });
 });

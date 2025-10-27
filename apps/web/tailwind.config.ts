@@ -30,6 +30,8 @@ export default {
         foreground: "hsl(var(--foreground))",
         primary: {
           DEFAULT: "#005e5e", // Dark teal
+          light: "#007575",
+          dark: "#005151",
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
@@ -43,6 +45,13 @@ export default {
         accent: {
           DEFAULT: "#afd7f4", // Light blue
           light: "#d7ebfa", // Lighter blue (50%)
+          foreground: "#000000",
+        },
+        // Light surface color for panels/cards (used for login containers etc.)
+        surface: {
+          DEFAULT: "#EDF2F6",
+          dark: "#E7EDF2",
+          light: "#F6F8FA",
           foreground: "#000000",
         },
         highlight: {
@@ -89,6 +98,8 @@ export default {
       fontFamily: {
         poppins: ["Poppins", "sans-serif"],
         overpass: ["Overpass", "sans-serif"],
+        inter: ["Inter", "sans-serif"],
+        notosans: ["Noto Sans", "sans-serif"],
       },
     },
   },
