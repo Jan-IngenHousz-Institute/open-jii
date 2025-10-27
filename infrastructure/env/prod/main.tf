@@ -41,10 +41,10 @@ module "logs_bucket" {
 }
 
 module "docusaurus_s3" {
-  source            = "../../modules/s3"
-  enable_versioning = false
-  bucket_name       = "open-jii-docs-public-${var.environment}"
-  # cloudfront_distribution_arn = module.docs_cloudfront.cloudfront_distribution_arn
+  source                      = "../../modules/s3"
+  enable_versioning           = false
+  bucket_name                 = "open-jii-docs-public-${var.environment}"
+  cloudfront_distribution_arn = module.docs_cloudfront.cloudfront_distribution_arn
 }
 
 module "timestream" {
@@ -481,55 +481,55 @@ module "contentful_secrets" {
   }
 }
 
-# # SES Email Service for transactional emails
-# module "ses" {
-#   source = "../../modules/ses"
+# SES Email Service for transactional emails
+module "ses" {
+  source = "../../modules/ses"
 
-#   region          = var.aws_region
-#   domain_name     = var.domain_name
-#   subdomain       = "mail"
-#   environment     = var.environment
-#   route53_zone_id = module.route53.route53_zone_id
+  region                 = var.aws_region
+  domain_name            = var.domain_name
+  subdomain              = "mail"
+  environment            = var.environment
+  use_environment_prefix = false
+  route53_zone_id        = module.route53.route53_zone_id
 
-#   allowed_from_addresses = [
-#     "auth@mail.${var.environment}.${var.domain_name}",
-#   ]
+  allowed_from_addresses = [
+    "auth@mail.${var.domain_name}",
+  ]
 
-#   create_smtp_user            = true
-#   enable_event_publishing     = true
-#   enable_dmarc_reports        = true
-#   dmarc_report_retention_days = 90
+  create_smtp_user            = true
+  enable_event_publishing     = true
+  enable_dmarc_reports        = true
+  dmarc_report_retention_days = 90
 
-#   tags = {
-#     Environment = "dev"
-#     Project     = "open-jii"
-#     ManagedBy   = "terraform"
-#     Component   = "email"
-#   }
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "email"
+  }
+}
 
-# }
+# SES SMTP secrets for application use
+module "ses_secrets" {
+  source = "../../modules/secrets-manager"
 
-# # SES SMTP secrets for application use
-# module "ses_secrets" {
-#   source = "../../modules/secrets-manager"
+  name        = "openjii-ses-secrets-${var.environment}"
+  description = "SES SMTP credentials for transactional email sending"
 
-#   name        = "openjii-ses-secrets-dev"
-#   description = "SES SMTP credentials for transactional email sending"
+  # Store SES SMTP credentials as JSON
+  secret_string = jsonencode({
+    AUTH_EMAIL_SERVER = module.ses.auth_email_server
+    AUTH_EMAIL_FROM   = "auth@mail.${var.domain_name}"
+  })
 
-#   # Store SES SMTP credentials as JSON
-#   secret_string = jsonencode({
-#     AUTH_EMAIL_SERVER = module.ses.auth_email_server
-#     AUTH_EMAIL_FROM   = "auth@mail.${var.environment}.${var.domain_name}"
-#   })
-
-#   tags = {
-#     Environment = "dev"
-#     Project     = "open-jii"
-#     ManagedBy   = "terraform"
-#     Component   = "email"
-#     SecretType  = "ses"
-#   }
-# }
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "email"
+    SecretType  = "ses"
+  }
+}
 
 # WAF for OpenNext Web Application
 module "opennext_waf" {
@@ -557,77 +557,77 @@ module "opennext_waf" {
   }
 }
 
-# # OpenNext Next.js Application Infrastructure
-# module "opennext" {
-#   source = "../../modules/opennext"
+# OpenNext Next.js Application Infrastructure
+module "opennext" {
+  source = "../../modules/opennext"
 
-#   project_name = "open-jii"
-#   environment  = var.environment
-#   region       = var.aws_region
+  project_name = "open-jii"
+  environment  = var.environment
+  region       = var.aws_region
 
-#   # Domain configuration - now uncommented and connected
-#   domain_name     = module.route53.environment_domain
-#   certificate_arn = module.route53.cloudfront_certificate_arns["web"]
-#   hosted_zone_id  = module.route53.route53_zone_id
+  # Domain configuration - now uncommented and connected
+  domain_name     = module.route53.environment_domain
+  certificate_arn = module.route53.cloudfront_certificate_arns["web"]
+  hosted_zone_id  = module.route53.route53_zone_id
 
-#   function_url_authorization_type = "AWS_IAM"
+  function_url_authorization_type = "AWS_IAM"
 
-#   # VPC configuration for server Lambda database access
-#   enable_server_vpc               = true
-#   server_subnet_ids               = module.vpc.private_subnets
-#   server_lambda_security_group_id = module.vpc.server_lambda_security_group_id
+  # VPC configuration for server Lambda database access
+  enable_server_vpc               = true
+  server_subnet_ids               = module.vpc.private_subnets
+  server_lambda_security_group_id = module.vpc.server_lambda_security_group_id
 
-#   # WAF integration
-#   waf_acl_id = module.opennext_waf.cloudfront_web_acl_arn
+  # WAF integration
+  waf_acl_id = module.opennext_waf.cloudfront_web_acl_arn
 
-#   # Logging configuration
-#   enable_logging = true
-#   log_bucket     = module.logs_bucket.bucket_id
+  # Logging configuration
+  enable_logging = true
+  log_bucket     = module.logs_bucket.bucket_id
 
-#   # Secrets Manager Integration
-#   db_credentials_secret_arn = module.aurora_db.master_user_secret_arn
-#   oauth_secret_arn          = module.auth_secrets.secret_arn
-#   contentful_secret_arn     = module.contentful_secrets.secret_arn
-#   ses_secret_arn            = module.ses_secrets.secret_arn
+  # Secrets Manager Integration
+  db_credentials_secret_arn = module.aurora_db.master_user_secret_arn
+  oauth_secret_arn          = module.auth_secrets.secret_arn
+  contentful_secret_arn     = module.contentful_secrets.secret_arn
+  ses_secret_arn            = module.ses_secrets.secret_arn
 
-#   server_environment_variables = {
-#     COOKIE_DOMAIN = ".${var.environment}.${var.domain_name}"
-#     DB_HOST       = module.aurora_db.cluster_endpoint
-#     DB_PORT       = module.aurora_db.cluster_port
-#     DB_NAME       = module.aurora_db.database_name
-#     NODE_ENV      = "production"
-#   }
+  server_environment_variables = {
+    COOKIE_DOMAIN = ".${var.domain_name}"
+    DB_HOST       = module.aurora_db.cluster_endpoint
+    DB_PORT       = module.aurora_db.cluster_port
+    DB_NAME       = module.aurora_db.database_name
+    NODE_ENV      = "production"
+  }
 
-#   # Performance configuration
-#   enable_lambda_warming = true
-#   price_class           = "PriceClass_100"
+  # Performance configuration
+  enable_lambda_warming = true
+  price_class           = "PriceClass_100"
 
-#   # Monitoring configuration
-#   enable_cloudwatch_logs = true
-#   log_retention_days     = 14
-#   enable_xray_tracing    = false
+  # Monitoring configuration
+  enable_cloudwatch_logs = true
+  log_retention_days     = 14
+  enable_xray_tracing    = false
 
-#   # Resource configuration
-#   server_memory_size     = 1024
-#   image_memory_size      = 1536
-#   revalidate_memory_size = 512
-#   warmer_memory_size     = 512
+  # Resource configuration
+  server_memory_size     = 1024
+  image_memory_size      = 1536
+  revalidate_memory_size = 512
+  warmer_memory_size     = 512
 
-#   # DynamoDB configuration
-#   dynamodb_billing_mode         = "PAY_PER_REQUEST"
-#   enable_point_in_time_recovery = true
+  # DynamoDB configuration
+  dynamodb_billing_mode         = "PAY_PER_REQUEST"
+  enable_point_in_time_recovery = true
 
-#   # SQS configuration
-#   enable_dlq        = true
-#   max_receive_count = 3
+  # SQS configuration
+  enable_dlq        = true
+  max_receive_count = 3
 
-#   tags = {
-#     Project     = "open-jii"
-#     Environment = "dev"
-#     Component   = "nextjs-app"
-#     ManagedBy   = "terraform"
-#   }
-# }
+  tags = {
+    Project     = "open-jii"
+    Environment = var.environment
+    Component   = "nextjs-app"
+    ManagedBy   = "terraform"
+  }
+}
 
 module "migration_runner_ecr" {
   source = "../../modules/ecr"
@@ -716,61 +716,61 @@ module "migration_runner_ecs" {
   }
 }
 
-# module "backend_ecr" {
-#   source = "../../modules/ecr"
+module "backend_ecr" {
+  source = "../../modules/ecr"
 
-#   aws_region                    = var.aws_region
-#   environment                   = "dev"
-#   repository_name               = "open-jii-backend"
-#   service_name                  = "backend"
-#   max_image_count               = 10
-#   enable_vulnerability_scanning = true
-#   encryption_type               = "KMS"
-#   image_tag_mutability          = "MUTABLE"
+  aws_region                    = var.aws_region
+  environment                   = var.environment
+  repository_name               = "open-jii-backend"
+  service_name                  = "backend"
+  max_image_count               = 10
+  enable_vulnerability_scanning = true
+  encryption_type               = "KMS"
+  image_tag_mutability          = "MUTABLE"
 
-#   ci_cd_role_arn = module.iam_oidc.role_arn
+  #ci_cd_role_arn = module.iam_oidc.role_arn
 
-#   tags = {
-#     Environment = "dev"
-#     Project     = "open-jii"
-#     ManagedBy   = "terraform"
-#     Component   = "backend"
-#   }
-# }
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+  }
+}
 
-# module "backend_alb" {
-#   source = "../../modules/alb"
+module "backend_alb" {
+  source = "../../modules/alb"
 
-#   service_name      = "backend"
-#   vpc_id            = module.vpc.vpc_id
-#   public_subnet_ids = module.vpc.public_subnets
-#   container_port    = var.backend_container_port
-#   security_groups   = [module.vpc.alb_security_group_id]
-#   environment       = "dev"
+  service_name      = "backend"
+  vpc_id            = module.vpc.vpc_id
+  public_subnet_ids = module.vpc.public_subnets
+  container_port    = var.backend_container_port
+  security_groups   = [module.vpc.alb_security_group_id]
+  environment       = var.environment
 
-#   # Health check configuration
-#   health_check_path                = "/health"
-#   health_check_timeout             = 5
-#   health_check_interval            = 90
-#   health_check_healthy_threshold   = 3
-#   health_check_unhealthy_threshold = 3
-#   health_check_matcher             = "200-299"
+  # Health check configuration
+  health_check_path                = "/health"
+  health_check_timeout             = 5
+  health_check_interval            = 90
+  health_check_healthy_threshold   = 3
+  health_check_unhealthy_threshold = 3
+  health_check_matcher             = "200-299"
 
-#   # SSL/TLS configuration for HTTPS - Uses the certificate from the default region (e.g., eu-central-1)
-#   certificate_arn         = module.route53.regional_services_certificate_arn
-#   cloudfront_header_value = var.api_cloudfront_header_value
+  # SSL/TLS configuration for HTTPS - Uses the certificate from the default region (e.g., eu-central-1)
+  certificate_arn         = module.route53.regional_services_certificate_arn
+  cloudfront_header_value = var.api_cloudfront_header_value
 
-#   # Enable access logs for better security and troubleshooting
-#   enable_access_logs = true
-#   access_logs_bucket = module.logs_bucket.bucket_id
+  # Enable access logs for better security and troubleshooting
+  enable_access_logs = true
+  access_logs_bucket = module.logs_bucket.bucket_id
 
-#   tags = {
-#     Environment = "dev"
-#     Project     = "open-jii"
-#     ManagedBy   = "terraform"
-#     Component   = "backend"
-#   }
-# }
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+  }
+}
 
 # module "backend_ecs" {
 #   source = "../../modules/ecs"
@@ -966,37 +966,37 @@ module "backend_waf" {
 }
 
 # # CloudFront distribution in front of the backend API
-# module "backend_cloudfront" {
-#   source = "../../modules/backend-cloudfront"
+module "backend_cloudfront" {
+  source = "../../modules/backend-cloudfront"
 
-#   service_name    = "backend"
-#   environment     = "dev"
-#   alb_domain_name = module.backend_alb.alb_dns_name
+  service_name    = "backend"
+  environment     = var.environment
+  alb_domain_name = module.backend_alb.alb_dns_name
 
-#   # Custom header for ALB protection
-#   custom_header_value = var.api_cloudfront_header_value
+  # Custom header for ALB protection
+  custom_header_value = var.api_cloudfront_header_value
 
-#   # CloudFront settings
-#   price_class = "PriceClass_100" # Use only North America and Europe for dev
-#   default_ttl = 0                # API shouldn't cache by default
-#   max_ttl     = 0                # API shouldn't cache by default
+  # CloudFront settings
+  price_class = "PriceClass_100" # Use only North America and Europe
+  default_ttl = 0                # API shouldn't cache by default
+  max_ttl     = 0                # API shouldn't cache by default
 
-#   # Security settings
-#   certificate_arn = module.route53.cloudfront_certificate_arns["api"] # Use the us-east-1 certificate for 'api'
-#   custom_domain   = module.route53.api_domain
-#   waf_acl_id      = module.backend_waf.cloudfront_web_acl_arn
+  # Security settings
+  certificate_arn = module.route53.cloudfront_certificate_arns["api"] # Use the us-east-1 certificate for 'api'
+  custom_domain   = module.route53.api_domain
+  waf_acl_id      = module.backend_waf.cloudfront_web_acl_arn
 
-#   # Logging settings
-#   enable_logging = true
-#   log_bucket     = module.logs_bucket.bucket_id
+  # Logging settings
+  enable_logging = true
+  log_bucket     = module.logs_bucket.bucket_id
 
-#   tags = {
-#     Environment = "dev"
-#     Project     = "open-jii"
-#     ManagedBy   = "terraform"
-#     Component   = "backend"
-#   }
-# }
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+  }
+}
 
 # WAF for Documentation Site
 module "docs_waf" {
@@ -1015,54 +1015,72 @@ module "docs_waf" {
   }
 }
 
-# module "docs_cloudfront" {
-#   source          = "../../modules/cloudfront"
-#   aws_region      = var.aws_region
-#   bucket_name     = module.docusaurus_s3.bucket_name
-#   certificate_arn = module.route53.cloudfront_certificate_arns["docs"]
-#   custom_domain   = module.route53.docs_domain
-#   waf_acl_id      = module.docs_waf.cloudfront_web_acl_arn
+# # CloudFront distribution for documentation site
+module "docs_cloudfront" {
+  source          = "../../modules/cloudfront"
+  aws_region      = var.aws_region
+  bucket_name     = module.docusaurus_s3.bucket_name
+  certificate_arn = module.route53.cloudfront_certificate_arns["docs"]
+  custom_domain   = module.route53.docs_domain
+  waf_acl_id      = module.docs_waf.cloudfront_web_acl_arn
 
-#   # TODO: Add tags, logging configuration
-# }
+  # TODO: Add tags, logging configuration
+}
 
-# # Route53 configuration for OpenJII services
-# module "route53" {
-#   source = "../../modules/route53"
+# Route53 configuration for OpenJII services
+module "route53" {
+  source = "../../modules/route53"
 
-#   domain_name = var.domain_name
-#   environment = var.environment
+  domain_name            = var.domain_name
+  environment            = var.environment
+  use_environment_prefix = false # Prod owns the root domain (openjii.org)
 
-#   # Input for CloudFront domains that need us-east-1 certificates
-#   cloudfront_domain_configs = {
-#     "api"  = "api.${var.environment}.${var.domain_name}"  # For the backend API
-#     "docs" = "docs.${var.environment}.${var.domain_name}" # For the Docusaurus static site
-#     "web"  = "${var.environment}.${var.domain_name}"      # For the OpenNext frontend
-#   }
+  # Input for CloudFront domains that need us-east-1 certificates
+  cloudfront_domain_configs = {
+    "api"  = "api.${var.domain_name}"
+    "docs" = "docs.${var.domain_name}"
+    "web"  = var.domain_name
+  }
 
-#   cloudfront_records = {
-#     # Root Domain Record
-#     "" = {
-#       domain_name    = module.opennext.cloudfront_domain_name
-#       hosted_zone_id = module.opennext.cloudfront_hosted_zone_id
-#     },
-#     # Documentation Site Record
-#     "docs" = {
-#       domain_name    = module.docs_cloudfront.cloudfront_distribution_domain_name
-#       hosted_zone_id = module.docs_cloudfront.cloudfront_hosted_zone_id
-#     },
-#     # Backend API Record
-#     "api" = {
-#       domain_name    = module.backend_cloudfront.cloudfront_distribution_domain_name
-#       hosted_zone_id = module.backend_cloudfront.cloudfront_hosted_zone_id
-#     }
-#   }
+  # cloudfront_records = {
+  #   # Root Domain Record
+  #   "" = {
+  #     domain_name    = module.opennext.cloudfront_domain_name
+  #     hosted_zone_id = module.opennext.cloudfront_hosted_zone_id
+  #   },
+  #   # Documentation Site Record
+  #   "docs" = {
+  #     domain_name    = module.docs_cloudfront.cloudfront_distribution_domain_name
+  #     hosted_zone_id = module.docs_cloudfront.cloudfront_hosted_zone_id
+  #   },
+  #   # Backend API Record
+  #   "api" = {
+  #     domain_name    = module.backend_cloudfront.cloudfront_distribution_domain_name
+  #     hosted_zone_id = module.backend_cloudfront.cloudfront_hosted_zone_id
+  #   }
+  # }
 
-#   tags = {
-#     Environment = "dev"
-#     ManagedBy   = "Terraform"
-#   }
-# }
+  tags = {
+    Environment = var.environment
+    ManagedBy   = "Terraform"
+  }
+}
+
+# Create NS delegation record for dev.domain_name in prod's hosted zone
+module "dev_subdomain_delegation" {
+  source = "../../modules/route53-delegation"
+
+  parent_zone_id = module.route53.route53_zone_id
+  subdomain      = "dev.${var.domain_name}"
+
+  # Read nameservers from dev account's SSM Parameter Store
+  ssm_parameter_config = {
+    parameter_name    = "/open-jii/route53/dev-nameservers"
+    source_account_id = var.dev_account_id
+    assume_role_name  = "open-jii-dev-nameservers-CrossAccountReader"
+    aws_region        = var.aws_region
+  }
+}
 
 # AWS Location Service for search and geocoding
 module "location_service" {

@@ -33,7 +33,7 @@ module "logs_bucket" {
   enable_versioning = false
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "Terraform"
     Component   = "logging"
@@ -432,7 +432,7 @@ module "auth_secrets" {
 module "databricks_secrets" {
   source = "../../modules/secrets-manager"
 
-  name        = "openjii-databricks-secrets-dev"
+  name        = "openjii-databricks-secrets-${var.environment}"
   description = "Databricks connection secrets for the OpenJII services"
 
   # Store secrets as JSON using variables
@@ -500,7 +500,7 @@ module "ses" {
   dmarc_report_retention_days = 90
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "email"
@@ -512,7 +512,7 @@ module "ses" {
 module "ses_secrets" {
   source = "../../modules/secrets-manager"
 
-  name        = "openjii-ses-secrets-dev"
+  name        = "openjii-ses-secrets-${var.environment}"
   description = "SES SMTP credentials for transactional email sending"
 
   # Store SES SMTP credentials as JSON
@@ -522,7 +522,7 @@ module "ses_secrets" {
   })
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "email"
@@ -535,7 +535,7 @@ module "opennext_waf" {
   source = "../../modules/waf"
 
   service_name       = "opennext"
-  environment        = "dev"
+  environment        = var.environment
   rate_limit         = 500
   log_retention_days = 30
 
@@ -622,7 +622,7 @@ module "opennext" {
 
   tags = {
     Project     = "open-jii"
-    Environment = "dev"
+    Environment = var.environment
     Component   = "nextjs-app"
     ManagedBy   = "terraform"
   }
@@ -719,18 +719,18 @@ module "backend_ecr" {
   source = "../../modules/ecr"
 
   aws_region                    = var.aws_region
-  environment                   = "dev"
+  environment                   = var.environment
   repository_name               = "open-jii-backend"
   service_name                  = "backend"
   max_image_count               = 10
   enable_vulnerability_scanning = true
   encryption_type               = "KMS"
-  image_tag_mutability          = "MUTABLE" # Set to MUTABLE for dev, but should be IMMUTABLE for prod
+  image_tag_mutability          = "MUTABLE"
 
   ci_cd_role_arn = module.iam_oidc.role_arn
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "backend"
@@ -745,7 +745,7 @@ module "backend_alb" {
   public_subnet_ids = module.vpc.public_subnets
   container_port    = var.backend_container_port
   security_groups   = [module.vpc.alb_security_group_id]
-  environment       = "dev"
+  environment       = var.environment
 
   # Health check configuration
   health_check_path                = "/health"
@@ -764,7 +764,7 @@ module "backend_alb" {
   access_logs_bucket = module.logs_bucket.bucket_id
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "backend"
@@ -775,7 +775,7 @@ module "backend_ecs" {
   source = "../../modules/ecs"
 
   region      = var.aws_region
-  environment = "dev"
+  environment = var.environment
 
   # Unlike migration runner, we want a long-running service
   create_ecs_service = true
@@ -823,7 +823,7 @@ module "backend_ecs" {
   enable_circuit_breaker_with_rollback = true
 
   # Logs configuration
-  log_group_name     = "/aws/ecs/backend-service-dev"
+  log_group_name     = "/aws/ecs/backend-service-${var.environment}"
   log_retention_days = 30
 
   # Secrets configuration
@@ -928,7 +928,7 @@ module "backend_ecs" {
   ]
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "backend"
@@ -969,7 +969,7 @@ module "backend_cloudfront" {
   source = "../../modules/backend-cloudfront"
 
   service_name    = "backend"
-  environment     = "dev"
+  environment     = var.environment
   alb_domain_name = module.backend_alb.alb_dns_name
 
   # Custom header for ALB protection
@@ -990,7 +990,7 @@ module "backend_cloudfront" {
   log_bucket     = module.logs_bucket.bucket_id
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "backend"
@@ -1014,6 +1014,7 @@ module "docs_waf" {
   }
 }
 
+# CloudFront distribution for documentation site
 module "docs_cloudfront" {
   source          = "../../modules/cloudfront"
   aws_region      = var.aws_region
@@ -1029,8 +1030,9 @@ module "docs_cloudfront" {
 module "route53" {
   source = "../../modules/route53"
 
-  domain_name = var.domain_name
-  environment = var.environment
+  domain_name           = var.domain_name
+  environment           = var.environment
+  use_environment_prefix = true  # Creates dev.domain_name hosted zone
 
   # Input for CloudFront domains that need us-east-1 certificates
   cloudfront_domain_configs = {
@@ -1058,8 +1060,30 @@ module "route53" {
   }
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     ManagedBy   = "Terraform"
+  }
+}
+
+# Share Route53 nameservers with prod account via SSM Parameter Store
+module "nameservers_ssm" {
+  source = "../../modules/ssm-parameter-cross-account"
+
+  parameter_name        = "/open-jii/route53/${var.environment}-nameservers"
+  parameter_name_prefix = "open-jii-${var.environment}-nameservers"
+  description           = "Route53 nameservers for ${var.environment}.${var.domain_name} hosted zone"
+  parameter_type        = "StringList"
+  parameter_value       = join(",", module.route53.name_servers)
+
+  # Allow specific IAM user from prod account to read this parameter
+  trusted_principals = [
+    "arn:aws:iam::${var.prod_account_id}:user/terraform-tester-prod"
+  ]
+
+  tags = {
+    Environment = var.environment
+    ManagedBy   = "Terraform"
+    Purpose     = "Cross-account DNS delegation"
   }
 }
 

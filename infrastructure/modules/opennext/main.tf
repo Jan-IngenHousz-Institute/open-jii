@@ -185,15 +185,15 @@ module "server_function" {
 
   environment_variables = merge({
     # Cache bucket configuration
-    CACHE_BUCKET_REGION = data.aws_region.current.name
+    CACHE_BUCKET_REGION = data.aws_region.current.id
     CACHE_BUCKET_NAME   = aws_s3_bucket.cache.bucket
 
     # DynamoDB configuration
-    CACHE_BUCKET_REGION = data.aws_region.current.name
+    CACHE_BUCKET_REGION = data.aws_region.current.id
     CACHE_DYNAMO_TABLE  = module.dynamodb.table_name
 
     # Revalidation queue configuration
-    REVALIDATION_QUEUE_REGION = data.aws_region.current.name
+    REVALIDATION_QUEUE_REGION = data.aws_region.current.id
     REVALIDATION_QUEUE_URL    = module.sqs.queue_url
 
     # Credentials and secrets
