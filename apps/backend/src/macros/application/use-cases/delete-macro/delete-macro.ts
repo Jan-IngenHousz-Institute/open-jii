@@ -13,7 +13,7 @@ export class DeleteMacroUseCase {
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
 
-  async execute(id: string): Promise<Result<void>> {
+  async execute(id: string, userId: string): Promise<Result<void>> {
     this.logger.log(`Deleting macro with id: ${id}`);
 
     // First, check if the macro exists
@@ -29,6 +29,12 @@ export class DeleteMacroUseCase {
     }
 
     const macro = macroResult.value;
+
+    // Check if user is the creator
+    if (macro.createdBy !== userId) {
+      this.logger.warn(`User ${userId} attempted to delete macro ${id} without permission`);
+      return failure(AppError.forbidden("Only the macro creator can delete this macro"));
+    }
 
     // Delete from Databricks first - use filename, not name
     const databricksResult = await this.databricksPort.deleteMacroCode(macro.filename);

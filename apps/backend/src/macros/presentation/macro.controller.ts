@@ -83,9 +83,9 @@ export class MacroController {
 
   @TsRestHandler(macroContract.updateMacro)
   @UseGuards(AuthGuard)
-  updateMacro(@CurrentUser() _user: User) {
+  updateMacro(@CurrentUser() user: User) {
     return tsRestHandler(macroContract.updateMacro, async ({ params, body }) => {
-      const result = await this.updateMacroUseCase.execute(params.id, body);
+      const result = await this.updateMacroUseCase.execute(params.id, body, user.id);
 
       if (result.isSuccess()) {
         return {
@@ -100,9 +100,9 @@ export class MacroController {
 
   @TsRestHandler(macroContract.deleteMacro)
   @UseGuards(AuthGuard)
-  deleteMacro(@CurrentUser() _user: User) {
+  deleteMacro(@CurrentUser() user: User) {
     return tsRestHandler(macroContract.deleteMacro, async ({ params }) => {
-      const result = await this.deleteMacroUseCase.execute(params.id);
+      const result = await this.deleteMacroUseCase.execute(params.id, user.id);
 
       if (result.isSuccess()) {
         return {
