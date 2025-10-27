@@ -320,7 +320,7 @@ describe("MacroController", () => {
         createdByName: "Test User",
       });
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(updateMacroUseCase.execute).toHaveBeenCalledWith(macroId, updateData);
+      expect(updateMacroUseCase.execute).toHaveBeenCalledWith(macroId, updateData, testUserId);
     });
 
     it("should handle macro not found", async () => {
@@ -382,7 +382,7 @@ describe("MacroController", () => {
         createdByName: "Test User",
       });
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(updateMacroUseCase.execute).toHaveBeenCalledWith(macroId, updateData);
+      expect(updateMacroUseCase.execute).toHaveBeenCalledWith(macroId, updateData, testUserId);
     });
 
     it("should require authentication", async () => {
@@ -391,6 +391,25 @@ describe("MacroController", () => {
         .put(contract.macros.updateMacro.path.replace(":id", faker.string.uuid()))
         .send({ name: "Updated Name" })
         .expect(StatusCodes.UNAUTHORIZED);
+    });
+
+    it("should handle forbidden when user is not the creator", async () => {
+      // Arrange
+      const macroId = faker.string.uuid();
+      const updateData = {
+        name: "Trying to Update",
+      };
+
+      vi.spyOn(updateMacroUseCase, "execute").mockResolvedValue(
+        failure(AppError.forbidden("Only the macro creator can update this macro")),
+      );
+
+      // Act & Assert
+      await testApp
+        .put(contract.macros.updateMacro.path.replace(":id", macroId))
+        .withAuth(testUserId)
+        .send(updateData)
+        .expect(StatusCodes.FORBIDDEN);
     });
   });
 
@@ -408,7 +427,7 @@ describe("MacroController", () => {
 
       // Assert
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(deleteMacroUseCase.execute).toHaveBeenCalledWith(macroId);
+      expect(deleteMacroUseCase.execute).toHaveBeenCalledWith(macroId, testUserId);
     });
 
     it("should handle macro not found", async () => {
@@ -444,6 +463,20 @@ describe("MacroController", () => {
       await testApp
         .delete(contract.macros.deleteMacro.path.replace(":id", faker.string.uuid()))
         .expect(StatusCodes.UNAUTHORIZED);
+    });
+
+    it("should handle forbidden when user is not the creator", async () => {
+      // Arrange
+      const macroId = faker.string.uuid();
+      vi.spyOn(deleteMacroUseCase, "execute").mockResolvedValue(
+        failure(AppError.forbidden("Only the macro creator can delete this macro")),
+      );
+
+      // Act & Assert
+      await testApp
+        .delete(contract.macros.deleteMacro.path.replace(":id", macroId))
+        .withAuth(testUserId)
+        .expect(StatusCodes.FORBIDDEN);
     });
   });
 
