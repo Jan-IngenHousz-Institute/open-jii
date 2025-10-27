@@ -39,17 +39,22 @@ variable "kinesis_credential_id" {
   type        = string
 }
 
-# variable "domain_name" {
-#   description = "Base domain name (e.g., my-company.com)"
-#   type        = string
-#   default     = "openjii.org"
-# }
+variable "dev_account_id" {
+  description = "The AWS account ID for the dev environment."
+  type        = string
+}
 
-# variable "backend_container_port" {
-#   description = "Backend container port"
-#   type        = number
-#   default     = 3020
-# }
+variable "domain_name" {
+  description = "Base domain name (e.g., my-company.com)"
+  type        = string
+  default     = "openjii.org"
+}
+
+variable "backend_container_port" {
+  description = "Backend container port"
+  type        = number
+  default     = 3020
+}
 
 # Authentication secrets
 variable "auth_secret" {
@@ -114,11 +119,11 @@ variable "orcid_oauth_client_secret" {
 #   sensitive   = true
 # }
 
-# variable "api_cloudfront_header_value" {
-#   description = "Custom header value for CloudFront-ALB authentication"
-#   type        = string
-#   sensitive   = true
-# }
+variable "api_cloudfront_header_value" {
+  description = "Custom header value for CloudFront-ALB authentication"
+  type        = string
+  sensitive   = true
+}
 
 # Contentful configuration variables
 variable "contentful_space_id" {
