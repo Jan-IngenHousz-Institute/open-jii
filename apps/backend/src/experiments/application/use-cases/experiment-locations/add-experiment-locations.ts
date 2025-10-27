@@ -43,8 +43,7 @@ export class AddExperimentLocationsUseCase {
           return failure(AppError.notFound("Experiment not found"));
         }
 
-        // For public experiments, allow anyone to add locations
-        if (!hasArchiveAccess && experiment.visibility !== "public") {
+        if (!hasArchiveAccess) {
           this.logger.warn(
             `User ${userId} attempted to add locations to experiment ${experimentId} without proper permissions`,
           );
