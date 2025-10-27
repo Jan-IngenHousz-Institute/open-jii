@@ -66,9 +66,9 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("@/components/language-switcher", () => ({
+vi.mock("@/components/multi-language", () => ({
   LanguageSwitcher: ({ locale }: { locale: string }) => (
-    <div data-testid="language-switcher">{locale}</div>
+    <div data-testid="multi-language">{locale}</div>
   ),
 }));
 

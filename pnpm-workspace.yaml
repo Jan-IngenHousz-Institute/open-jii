@@ -17,6 +17,9 @@ catalog:
   "@types/node": ^22.15.3
   nodemailer: ^7.0.7
   "@types/nodemailer": ^6.4.17
+  posthog-js: ^1.279.1
+  posthog-node: ^5.10.2
+  next: ^15.5.6
 
 catalogs:
   react19:
