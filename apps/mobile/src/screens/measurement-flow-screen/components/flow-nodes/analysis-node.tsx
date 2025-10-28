@@ -1,7 +1,7 @@
 import { clsx } from "clsx";
 import React from "react";
 import { View, Text } from "react-native";
-import { MeasurementResult } from "~/components/measurement-result";
+import { MeasurementResult } from "~/components/measurement-result/measurement-result";
 import { useMacros } from "~/hooks/use-macros";
 import { useTheme } from "~/hooks/use-theme";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
