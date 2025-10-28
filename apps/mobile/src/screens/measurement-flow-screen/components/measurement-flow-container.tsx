@@ -1,27 +1,15 @@
 import React from "react";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
-import { FormValidationProvider } from "../hooks/use-form-validation";
 import { ActiveState } from "./flow-states/active-state";
 import { CompletedState } from "./flow-states/completed-state";
 import { EmptyState } from "./flow-states/empty-state";
-import { ErrorState } from "./flow-states/error-state";
+// import { ErrorState } from "./flow-states/error-state";
 import { LoadingState } from "./flow-states/loading-state";
 
 export function MeasurementFlowContainer() {
-  const {
-    experimentId,
-    flowNodes,
-    currentFlowStep,
-    iterationCount,
-    isFlowFinished,
-    setFlowNodes,
-    nextStep,
-    startNewIteration,
-    retryCurrentIteration,
-    finishFlow,
-    resetFlow,
-  } = useMeasurementFlowStore();
+  const { flowNodes, currentFlowStep, iterationCount, isFlowFinished, resetFlow } =
+    useMeasurementFlowStore();
 
   const isFlowCompleted = currentFlowStep >= flowNodes.length;
 
@@ -51,13 +39,11 @@ export function MeasurementFlowContainer() {
   }
 
   return (
-    <FormValidationProvider>
-      <ActiveState
-        currentNode={currentNode}
-        currentFlowStep={currentFlowStep}
-        flowNodesLength={flowNodes.length}
-        iterationCount={iterationCount}
-      />
-    </FormValidationProvider>
+    <ActiveState
+      currentNode={currentNode}
+      currentFlowStep={currentFlowStep}
+      flowNodesLength={flowNodes.length}
+      iterationCount={iterationCount}
+    />
   );
 }

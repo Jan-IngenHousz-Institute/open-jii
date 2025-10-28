@@ -5,7 +5,6 @@ import { Button } from "~/components/Button";
 import { useTheme } from "~/hooks/use-theme";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
-import { useFormValidation } from "../../hooks/use-form-validation";
 import { QuestionContent } from "../../types";
 import { MultipleChoiceQuestion } from "./question-types/multiple-choice-question";
 import { NumberQuestion } from "./question-types/number-question";
@@ -19,18 +18,30 @@ interface QuestionNodeProps {
 export function QuestionNode({ content }: QuestionNodeProps) {
   const { classes } = useTheme();
   const { nextStep } = useMeasurementFlowStore();
-  const { isValid } = useFormValidation();
+  const [answerValue, setAnswerValue] = React.useState<string>("");
 
   const renderQuestionType = () => {
     switch (content.kind) {
       case "text":
-        return <TextQuestion content={content} />;
+        return <TextQuestion content={content} value={answerValue} onChange={setAnswerValue} />;
       case "number":
-        return <NumberQuestion content={content} />;
+        return <NumberQuestion content={content} value={answerValue} onChange={setAnswerValue} />;
       case "single_choice":
-        return <SingleChoiceQuestion content={content} />;
+        return (
+          <SingleChoiceQuestion
+            content={content}
+            selectedValue={answerValue}
+            onSelect={(value) => setAnswerValue(value)}
+          />
+        );
       case "multi_choice":
-        return <MultipleChoiceQuestion content={content} />;
+        return (
+          <MultipleChoiceQuestion
+            content={content}
+            selectedValue={answerValue}
+            onSelect={(value) => setAnswerValue(value)}
+          />
+        );
       default:
         return (
           <View className="p-4">
@@ -41,6 +52,8 @@ export function QuestionNode({ content }: QuestionNodeProps) {
         );
     }
   };
+
+  const currentIsValid = !content.required || !!answerValue;
 
   return (
     <View className={clsx("flex-1 rounded-xl border", classes.card, classes.border)}>
@@ -54,7 +67,7 @@ export function QuestionNode({ content }: QuestionNodeProps) {
         <Button
           title="Next"
           onPress={nextStep}
-          isDisabled={content.required && !isValid}
+          isDisabled={!currentIsValid}
           style={{ width: "100%" }}
         />
       </View>

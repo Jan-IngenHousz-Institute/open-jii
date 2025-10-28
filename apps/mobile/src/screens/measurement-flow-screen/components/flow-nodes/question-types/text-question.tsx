@@ -7,19 +7,25 @@ import { QuestionContent } from "../../../types";
 
 interface TextQuestionProps {
   content: QuestionContent;
+  value: string;
+  onChange: (text: string) => void;
 }
 
-export function TextQuestion({ content }: TextQuestionProps) {
+export function TextQuestion({ content, value, onChange }: TextQuestionProps) {
   const { classes } = useTheme();
-  const [value, setValue] = useState("");
+  const [internal, setInternal] = useState(value);
+  const handleChange = (text: string) => {
+    setInternal(text);
+    onChange(text);
+  };
 
   return (
     <View>
       <TextInput
         className={clsx("rounded-lg border p-3 text-base", classes.input, classes.border)}
         placeholder={content.placeholder ?? "Enter your answer..."}
-        value={value}
-        onChangeText={setValue}
+        value={internal}
+        onChangeText={handleChange}
         multiline
         numberOfLines={3}
         textAlignVertical="top"

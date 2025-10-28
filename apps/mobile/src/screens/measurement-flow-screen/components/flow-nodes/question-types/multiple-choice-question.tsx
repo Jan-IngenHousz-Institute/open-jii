@@ -4,17 +4,20 @@ import { View, Text, TouchableOpacity } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 import { calculateGridLayout } from "~/screens/measurement-flow-screen/components/flow-nodes/question-types/utils/grid-layout";
 
-import { useFormValidation } from "../../../hooks/use-form-validation";
 import { QuestionContent } from "../../../types";
 
 interface MultipleChoiceQuestionProps {
   content: QuestionContent;
+  selectedValue: string;
+  onSelect: (value: string) => void;
 }
 
-export function MultipleChoiceQuestion({ content }: MultipleChoiceQuestionProps) {
+export function MultipleChoiceQuestion({
+  content,
+  selectedValue,
+  onSelect,
+}: MultipleChoiceQuestionProps) {
   const { classes } = useTheme();
-  const { setValid } = useFormValidation();
-  const [selectedValue, setSelectedValue] = React.useState<string | null>(null);
 
   // Mock data for disabled options (previously used choices)
   const [disabledOptions] = React.useState<string[]>([
@@ -24,21 +27,12 @@ export function MultipleChoiceQuestion({ content }: MultipleChoiceQuestionProps)
 
   const handleOptionSelect = (value: string) => {
     if (disabledOptions.includes(value)) return; // Don't allow selection of disabled options
-    const newValue = selectedValue === value ? null : value;
-    setSelectedValue(newValue);
-
-    // Update form validation
-    if (content.required) {
-      setValid(newValue !== null);
-    }
+    const newValue = selectedValue === value ? "" : value;
+    onSelect(newValue);
   };
 
   // Update validation on mount
-  React.useEffect(() => {
-    if (content.required) {
-      setValid(selectedValue !== null);
-    }
-  }, [content.required, selectedValue, setValid]);
+  // validity is reported via handleOptionSelect; no effects needed
 
   // Calculate responsive grid layout
   const numOptions = content.options?.length ?? 0;

@@ -1,20 +1,24 @@
 import { clsx } from "clsx";
-import React, { useState } from "react";
+import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 
 import { QuestionContent } from "../../../types";
 
-interface SingleChoiceQuestionProps {
+export interface SingleChoiceQuestionProps {
   content: QuestionContent;
+  selectedValue: string;
+  onSelect: (value: string) => void;
 }
 
-export function SingleChoiceQuestion({ content }: SingleChoiceQuestionProps) {
+export function SingleChoiceQuestion({
+  content,
+  selectedValue,
+  onSelect,
+}: SingleChoiceQuestionProps) {
   const { classes } = useTheme();
-  const [selectedValue, setSelectedValue] = useState<string | null>(null);
-
   const handleOptionSelect = (value: string) => {
-    setSelectedValue(value);
+    onSelect(value);
   };
 
   return (
