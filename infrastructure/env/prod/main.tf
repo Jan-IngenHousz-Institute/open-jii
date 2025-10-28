@@ -300,10 +300,10 @@ module "pipeline_scheduler" {
 
   tasks = [
     {
-      key           = "trigger_centrum_pipeline"
-      task_type     = "pipeline"
-      compute_type  = "serverless"
-      pipeline_id   = module.centrum_pipeline.pipeline_id
+      key          = "trigger_centrum_pipeline"
+      task_type    = "pipeline"
+      compute_type = "serverless"
+      pipeline_id  = module.centrum_pipeline.pipeline_id
     },
     {
       key           = "trigger_experiment_pipelines"
@@ -606,11 +606,12 @@ module "opennext" {
   ses_secret_arn            = module.ses_secrets.secret_arn
 
   server_environment_variables = {
-    COOKIE_DOMAIN = ".${var.domain_name}"
-    DB_HOST       = module.aurora_db.cluster_endpoint
-    DB_PORT       = module.aurora_db.cluster_port
-    DB_NAME       = module.aurora_db.database_name
-    NODE_ENV      = "production"
+    COOKIE_DOMAIN      = ".${var.domain_name}"
+    DB_HOST            = module.aurora_db.cluster_endpoint
+    DB_PORT            = module.aurora_db.cluster_port
+    DB_NAME            = module.aurora_db.database_name
+    NODE_ENV           = "production"
+    ENVIRONMENT_PREFIX = var.environment
   }
 
   # Performance configuration
