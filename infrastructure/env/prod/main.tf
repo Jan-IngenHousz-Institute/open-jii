@@ -280,7 +280,7 @@ module "pipeline_scheduler" {
 
   # Schedule: Every 15 minutes after the hour (0, 15, 30, 45) between 9am and 9pm (UTC)
   # Format: "seconds minutes hours day-of-month month day-of-week"
-  schedule = "0 0,15,30,45 9-21 * * ?"
+  schedule = "0 0,15,30,45 6-18 * * ?"
 
   max_concurrent_runs           = 1
   use_serverless                = true
@@ -312,7 +312,9 @@ module "pipeline_scheduler" {
       notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipelines_orchestrator_task"
 
       parameters = {
-        "catalog_name" = module.databricks_catalog.catalog_name
+        "catalog_name"            = module.databricks_catalog.catalog_name,
+        "central_schema"          = "centrum",
+        "experiment_status_table" = "experiment_status"
       }
 
       depends_on = "trigger_centrum_pipeline"
