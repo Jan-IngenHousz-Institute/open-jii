@@ -7,7 +7,7 @@ import { EmptyState } from "./flow-states/empty-state";
 import { LoadingState } from "./flow-states/loading-state";
 
 export function MeasurementFlowContainer() {
-  const { flowNodes, currentFlowStep, iterationCount, isFlowFinished, resetFlow, finishFlow } =
+  const { flowNodes, currentFlowStep, iterationCount, isFlowFinished, resetFlow } =
     useMeasurementFlowStore();
 
   const isFlowCompleted = currentFlowStep >= flowNodes.length;
