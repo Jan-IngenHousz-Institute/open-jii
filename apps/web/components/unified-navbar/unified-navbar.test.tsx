@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@testing-library/jest-dom";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -145,11 +145,6 @@ vi.mock("@repo/ui/components", () => {
   };
 });
 
-const handleLogoutMock = vi.fn(() => Promise.resolve());
-vi.mock("../../app/actions/auth", () => ({
-  handleLogout: (...args: Parameters<typeof handleLogoutMock>) => handleLogoutMock(...args),
-}));
-
 vi.mock("lucide-react", () => {
   const Icon = ({ className }: { className?: string }) => (
     <span data-testid="icon" className={className} />
@@ -287,11 +282,11 @@ describe("<UnifiedNavbar />", () => {
     const account = within(desktopDropdown).getByRole("link", { name: /Account/i });
     expect(account).toHaveAttribute("href", "/en-US/platform/account/settings");
 
-    const signOutBtn = within(desktopDropdown).getByRole("button", { name: /Sign Out/i });
-    expect(signOutBtn).toBeInTheDocument();
+    const signOutLink = within(desktopDropdown).getByRole("link", { name: /Sign Out/i });
+    expect(signOutLink).toBeInTheDocument();
   });
 
-  it("submits sign out and passes correct redirect when on non-platform route", () => {
+  it("navigates to signout page when sign out is clicked", () => {
     renderNavbar({
       locale: "en-US",
       pathname: "/en-US/blog",
@@ -299,15 +294,12 @@ describe("<UnifiedNavbar />", () => {
     });
 
     const desktopDropdown = screen.getAllByTestId("dropdown-content")[0];
-    const signOutBtn = within(desktopDropdown).getByRole("button", { name: /Sign Out/i });
-    fireEvent.click(signOutBtn);
+    const signOutLink = within(desktopDropdown).getByRole("link", { name: /Sign Out/i });
 
-    expect(handleLogoutMock).toHaveBeenCalledWith({
-      redirectTo: "/en-US/blog",
-    });
+    expect(signOutLink).toHaveAttribute("href", "/en-US/platform/signout?hideBackground=true");
   });
 
-  it("submits sign out and redirects to locale root when currently on /platform", () => {
+  it("navigates to signout page when currently on /platform", () => {
     renderNavbar({
       locale: "en-US",
       pathname: "/en-US/platform",
@@ -315,12 +307,9 @@ describe("<UnifiedNavbar />", () => {
     });
 
     const desktopDropdown = screen.getAllByTestId("dropdown-content")[0];
-    const signOutBtn = within(desktopDropdown).getByRole("button", { name: /Sign Out/i });
-    fireEvent.click(signOutBtn);
+    const signOutLink = within(desktopDropdown).getByRole("link", { name: /Sign Out/i });
 
-    expect(handleLogoutMock).toHaveBeenCalledWith({
-      redirectTo: "/en-US",
-    });
+    expect(signOutLink).toHaveAttribute("href", "/en-US/platform/signout?hideBackground=true");
   });
 
   it("mobile menu trigger is present (icon button)", () => {
