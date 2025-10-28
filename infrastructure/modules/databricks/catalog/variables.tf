@@ -16,6 +16,12 @@ variable "external_bucket_id" {
   default     = null
 }
 
+variable "external_location_path" {
+  description = "Path within the S3 bucket for the catalog storage root"
+  type        = string
+  default     = "external"
+}
+
 variable "grants" {
   description = "Map of principals to their permissions on the catalog"
   type = map(object({

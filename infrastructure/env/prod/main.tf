@@ -113,26 +113,6 @@ module "databricks_workspace_s3" {
   custom_policy_json = module.databricks_workspace_s3_policy.policy_json
 }
 
-# module "metastore_s3" {
-#   source      = "../../modules/metastore-s3"
-#   bucket_name = "open-jii-databricks-uc-root-bucket"
-
-#   providers = {
-#     databricks.workspace = databricks.workspace
-#   }
-# }
-
-module "node_service_principal" {
-  source = "../../modules/databricks/service_principal"
-
-  display_name  = "node-service-principal-${var.environment}"
-  create_secret = true
-
-  providers = {
-    databricks.mws = databricks.mws
-  }
-}
-
 module "databricks_workspace" {
   source = "../../modules/databricks/workspace"
 
@@ -156,237 +136,270 @@ module "databricks_workspace" {
   }
 }
 
-# module "databricks_metastore" {
-#   source         = "../../modules/databricks/metastore"
-#   metastore_name = "open_jii_metastore_aws_eu_central_1"
-#   region         = var.aws_region
-#   owner          = "account users"
-#   workspace_ids  = [module.databricks_workspace.workspace_id]
+module "node_service_principal" {
+  source = "../../modules/databricks/service_principal"
 
-#   providers = {
-#     databricks.mws = databricks.mws
-#   }
+  display_name  = "node-service-principal-${var.environment}"
+  create_secret = true
 
-#   depends_on = [module.databricks_workspace]
-# }
+  providers = {
+    databricks.mws = databricks.mws
+  }
+}
 
-# module "experiment_secret_scope" {
-#   source = "../../modules/databricks/secret_scope"
+# Create storage credential for accessing centralized metastore
+module "storage_credential" {
+  source = "../../modules/databricks/workspace-storage-credential"
 
-#   scope_name = "node-webhook-secret-scope-${var.environment}"
-#   secrets = {
-#     webhook_api_key_id = var.backend_webhook_api_key_id
-#     webhook_secret     = var.backend_webhook_secret
-#   }
+  credential_name = "open-jii-${var.environment}-metastore-access"
+  role_name       = "open-jii-${var.environment}-uc-access"
+  environment     = var.environment
+  bucket_name     = var.centralized_metastore_bucket_name
 
-#   acl_principals  = [module.node_service_principal.service_principal_application_id]
-#   acl_permissions = ["READ"]
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
 
-#   providers = {
-#     databricks.workspace = databricks.workspace
-#   }
-# }
+  depends_on = [module.databricks_workspace]
+}
 
-# module "databricks_catalog" {
-#   source             = "../../modules/databricks/catalog"
-#   catalog_name       = "open_jii_${var.environment}"
-#   external_bucket_id = module.metastore_s3.bucket_name
+# Create external location for this environment
+module "external_location" {
+  source = "../../modules/databricks/external-location"
 
-#   grants = {
-#     node_service_principal = {
-#       principal = module.node_service_principal.service_principal_application_id
-#       privileges = [
-#         "BROWSE",
-#         "CREATE_FUNCTION",
-#         "CREATE_MATERIALIZED_VIEW",
-#         "CREATE_MODEL",
-#         "CREATE_MODEL_VERSION",
-#         "CREATE_SCHEMA",
-#         "CREATE_TABLE",
-#         "CREATE_VOLUME",
-#         "READ_VOLUME",
-#         "SELECT",
-#         "USE_CATALOG",
-#         "USE_SCHEMA"
-#       ]
-#     }
-#   }
+  external_location_name  = "external-${var.environment}"
+  bucket_name             = var.centralized_metastore_bucket_name
+  external_location_path  = "external/${var.environment}"
+  storage_credential_name = module.storage_credential.storage_credential_name
+  environment             = var.environment
+  comment                 = "External location for ${var.environment} environment data"
 
-#   providers = {
-#     databricks.workspace = databricks.workspace
-#   }
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
 
-#   depends_on = [module.databricks_metastore, module.node_service_principal]
-# }
+  depends_on = [module.storage_credential]
+}
 
-# module "centrum_pipeline" {
-#   source = "../../modules/databricks/pipeline"
+module "experiment_secret_scope" {
+  source = "../../modules/databricks/secret_scope"
 
-#   name         = "Centrum-DLT-Pipeline-DEV"
-#   schema_name  = "centrum"
-#   catalog_name = module.databricks_catalog.catalog_name
+  scope_name = "node-webhook-secret-scope-${var.environment}"
+  secrets = {
+    webhook_api_key_id = var.backend_webhook_api_key_id
+    webhook_secret     = var.backend_webhook_secret
+  }
 
-#   notebook_paths = [
-#     "/Workspace/Shared/notebooks/pipelines/centrum_pipeline"
-#   ]
+  acl_principals  = [module.node_service_principal.service_principal_application_id]
+  acl_permissions = ["READ"]
 
-#   configuration = {
-#     "BRONZE_TABLE"            = "raw_data"
-#     "SILVER_TABLE"            = "clean_data"
-#     "RAW_KINESIS_TABLE"       = "raw_kinesis_data"
-#     "KINESIS_STREAM_NAME"     = module.kinesis.kinesis_stream_name
-#     "SERVICE_CREDENTIAL_NAME" = module.kinesis.role_name
-#     "CHECKPOINT_PATH"         = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
-#   }
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
 
-#   continuous_mode  = false
-#   development_mode = true
-#   serverless       = true
+module "databricks_catalog" {
+  source       = "../../modules/databricks/catalog"
+  catalog_name = "open_jii_${var.environment}"
 
-#   run_as = {
-#     service_principal_name = module.node_service_principal.service_principal_application_id
-#   }
+  external_bucket_id     = var.centralized_metastore_bucket_name
+  external_location_path = "external/${var.environment}"
 
-#   permissions = [
-#     {
-#       principal_application_id = module.node_service_principal.service_principal_application_id
-#       permission_level         = "CAN_RUN"
-#     }
-#   ]
+  grants = {
+    node_service_principal = {
+      principal = module.node_service_principal.service_principal_application_id
+      privileges = [
+        "BROWSE",
+        "CREATE_FUNCTION",
+        "CREATE_MATERIALIZED_VIEW",
+        "CREATE_MODEL",
+        "CREATE_MODEL_VERSION",
+        "CREATE_SCHEMA",
+        "CREATE_TABLE",
+        "CREATE_VOLUME",
+        "READ_VOLUME",
+        "SELECT",
+        "USE_CATALOG",
+        "USE_SCHEMA"
+      ]
+    }
+  }
 
-#   providers = {
-#     databricks.workspace = databricks.workspace
-#   }
-# }
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
 
-# module "pipeline_scheduler" {
-#   source = "../../modules/databricks/job"
+  depends_on = [module.node_service_principal]
+}
 
-#   name        = "Pipeline-Scheduler-DEV"
-#   description = "Orchestrates central pipeline execution followed by all experiment pipelines every 15 minutes between 9am and 9pm"
+module "centrum_pipeline" {
+  source = "../../modules/databricks/pipeline"
 
-#   # Schedule: Every 15 minutes after the hour (0, 15, 30, 45) between 9am and 9pm (UTC)
-#   # Format: "seconds minutes hours day-of-month month day-of-week"
-#   schedule = "0 0,15,30,45 9-21 * * ?"
+  name         = "Centrum-DLT-Pipeline-PROD"
+  schema_name  = "centrum"
+  catalog_name = module.databricks_catalog.catalog_name
 
-#   max_concurrent_runs           = 1
-#   use_serverless                = true
-#   continuous                    = false
-#   serverless_performance_target = "STANDARD"
+  notebook_paths = [
+    "/Workspace/Shared/notebooks/pipelines/centrum_pipeline"
+  ]
 
-#   run_as = {
-#     service_principal_name = module.node_service_principal.service_principal_application_id
-#   }
+  configuration = {
+    "BRONZE_TABLE"            = "raw_data"
+    "SILVER_TABLE"            = "clean_data"
+    "RAW_KINESIS_TABLE"       = "raw_kinesis_data"
+    "KINESIS_STREAM_NAME"     = module.kinesis.kinesis_stream_name
+    "SERVICE_CREDENTIAL_NAME" = "unity-catalog-kinesis-role-${var.environment}"
+    "CHECKPOINT_PATH"         = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
+  }
 
-#   # Configure task retries
-#   task_retry_config = {
-#     retries                   = 2
-#     min_retry_interval_millis = 60000
-#     retry_on_timeout          = true
-#   }
+  continuous_mode  = false
+  development_mode = true
+  serverless       = true
 
-#   tasks = [
-#     {
-#       key           = "trigger_centrum_pipeline"
-#       task_type     = "pipeline"
-#       compute_type  = "serverless"
-#       pipeline_id   = module.centrum_pipeline.pipeline_id
-#     },
-#     {
-#       key           = "trigger_experiment_pipelines"
-#       task_type     = "notebook"
-#       compute_type  = "serverless"
-#       notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipelines_orchestrator_task"
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
 
-#       parameters = {
-#         "catalog_name" = module.databricks_catalog.catalog_name
-#       }
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_RUN"
+    }
+  ]
 
-#       depends_on = "trigger_centrum_pipeline"
-#     },
-#   ]
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
 
-#   permissions = [
-#     {
-#       principal_application_id = module.node_service_principal.service_principal_application_id
-#       permission_level         = "CAN_MANAGE_RUN"
-#     }
-#   ]
+module "pipeline_scheduler" {
+  source = "../../modules/databricks/job"
 
-#   providers = {
-#     databricks.workspace = databricks.workspace
-#   }
+  name        = "Pipeline-Scheduler-PROD"
+  description = "Orchestrates central pipeline execution followed by all experiment pipelines every 15 minutes between 9am and 9pm"
 
-#   depends_on = [module.centrum_pipeline]
-# }
+  # Schedule: Every 15 minutes after the hour (0, 15, 30, 45) between 9am and 9pm (UTC)
+  # Format: "seconds minutes hours day-of-month month day-of-week"
+  schedule = "0 0,15,30,45 9-21 * * ?"
 
-# module "experiment_provisioning_job" {
-#   source = "../../modules/databricks/job"
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
 
-#   name        = "Experiment-Provisioning-Job-DEV"
-#   description = "Creates Delta Live Tables pipelines for experiments and reports status to backend webhook"
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
 
-#   max_concurrent_runs           = 1
-#   use_serverless                = true
-#   continuous                    = false
-#   serverless_performance_target = "STANDARD"
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
 
-#   run_as = {
-#     service_principal_name = module.node_service_principal.service_principal_application_id
-#   }
+  tasks = [
+    {
+      key           = "trigger_centrum_pipeline"
+      task_type     = "pipeline"
+      compute_type  = "serverless"
+      pipeline_id   = module.centrum_pipeline.pipeline_id
+    },
+    {
+      key           = "trigger_experiment_pipelines"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipelines_orchestrator_task"
 
-#   # Configure task retries
-#   task_retry_config = {
-#     retries                   = 3
-#     min_retry_interval_millis = 60000
-#     retry_on_timeout          = true
-#   }
+      parameters = {
+        "catalog_name" = module.databricks_catalog.catalog_name
+      }
 
-#   tasks = [
-#     {
-#       key           = "experiment_pipeline_create"
-#       task_type     = "notebook"
-#       compute_type  = "serverless"
-#       notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipeline_create_task"
+      depends_on = "trigger_centrum_pipeline"
+    },
+  ]
 
-#       parameters = {
-#         "experiment_id"            = "{{experiment_id}}"
-#         "experiment_name"          = "{{experiment_name}}"
-#         "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
-#         "catalog_name"             = module.databricks_catalog.catalog_name
-#         "central_schema"           = "centrum"
-#       }
-#     },
-#     {
-#       key           = "experiment_status_update"
-#       task_type     = "notebook"
-#       compute_type  = "serverless"
-#       notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_status_update_task"
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
 
-#       parameters = {
-#         "experiment_id"       = "{{experiment_id}}"
-#         "job_run_id"          = "{{job.run_id}}"
-#         "task_run_id"         = "{{task.run_id}}"
-#         "create_result_state" = "{{tasks.experiment_pipeline_create.result_state}}"
-#         "webhook_url"         = "https://${module.route53.api_domain}${var.backend_status_update_webhook_path}"
-#         "key_scope"           = module.experiment_secret_scope.scope_name
-#       }
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
 
-#       depends_on = "experiment_pipeline_create"
-#     },
-#   ]
+  depends_on = [module.centrum_pipeline]
+}
 
-#   permissions = [
-#     {
-#       principal_application_id = module.node_service_principal.service_principal_application_id
-#       permission_level         = "CAN_MANAGE_RUN"
-#     }
-#   ]
+module "experiment_provisioning_job" {
+  source = "../../modules/databricks/job"
 
-#   providers = {
-#     databricks.workspace = databricks.workspace
-#   }
-# }
+  name        = "Experiment-Provisioning-Job-PROD"
+  description = "Creates Delta Live Tables pipelines for experiments and reports status to backend webhook"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 3
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key           = "experiment_pipeline_create"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipeline_create_task"
+
+      parameters = {
+        "experiment_id"            = "{{experiment_id}}"
+        "experiment_name"          = "{{experiment_name}}"
+        "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
+        "catalog_name"             = module.databricks_catalog.catalog_name
+        "central_schema"           = "centrum"
+      }
+    },
+    {
+      key           = "experiment_status_update"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_status_update_task"
+
+      parameters = {
+        "experiment_id"       = "{{experiment_id}}"
+        "job_run_id"          = "{{job.run_id}}"
+        "task_run_id"         = "{{task.run_id}}"
+        "create_result_state" = "{{tasks.experiment_pipeline_create.result_state}}"
+        "webhook_url"         = "https://${module.route53.api_domain}${var.backend_status_update_webhook_path}"
+        "key_scope"           = module.experiment_secret_scope.scope_name
+      }
+
+      depends_on = "experiment_pipeline_create"
+    },
+  ]
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
 
 module "aurora_db" {
   source                 = "../../modules/aurora_db"
@@ -429,33 +442,33 @@ module "auth_secrets" {
   }
 }
 
-# # Databricks API secrets
-# module "databricks_secrets" {
-#   source = "../../modules/secrets-manager"
+# Databricks API secrets
+module "databricks_secrets" {
+  source = "../../modules/secrets-manager"
 
-#   name        = "openjii-databricks-secrets-dev"
-#   description = "Databricks connection secrets for the OpenJII services"
+  name        = "openjii-databricks-secrets-${var.environment}"
+  description = "Databricks connection secrets for the OpenJII services"
 
-#   # Store secrets as JSON using variables
-#   secret_string = jsonencode({
-#     DATABRICKS_HOST               = module.databricks_workspace.workspace_url
-#     DATABRICKS_CLIENT_ID          = module.node_service_principal.service_principal_application_id
-#     DATABRICKS_CLIENT_SECRET      = module.node_service_principal.service_principal_secret_value
-#     DATABRICKS_JOB_ID             = module.experiment_provisioning_job.job_id
-#     DATABRICKS_WAREHOUSE_ID       = var.backend_databricks_warehouse_id
-#     DATABRICKS_WEBHOOK_API_KEY_ID = var.backend_webhook_api_key_id
-#     DATABRICKS_WEBHOOK_SECRET     = var.backend_webhook_secret
-#     DATABRICKS_WEBHOOK_API_KEY    = var.backend_webhook_api_key
-#   })
+  # Store secrets as JSON using variables
+  secret_string = jsonencode({
+    DATABRICKS_HOST               = module.databricks_workspace.workspace_url
+    DATABRICKS_CLIENT_ID          = module.node_service_principal.service_principal_application_id
+    DATABRICKS_CLIENT_SECRET      = module.node_service_principal.service_principal_secret_value
+    DATABRICKS_JOB_ID             = module.experiment_provisioning_job.job_id
+    DATABRICKS_WAREHOUSE_ID       = var.backend_databricks_warehouse_id
+    DATABRICKS_WEBHOOK_API_KEY_ID = var.backend_webhook_api_key_id
+    DATABRICKS_WEBHOOK_SECRET     = var.backend_webhook_secret
+    DATABRICKS_WEBHOOK_API_KEY    = var.backend_webhook_api_key
+  })
 
-#   tags = {
-#     Environment = "dev"
-#     Project     = "open-jii"
-#     ManagedBy   = "terraform"
-#     Component   = "backend"
-#     SecretType  = "databricks"
-#   }
-# }
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+    SecretType  = "databricks"
+  }
+}
 
 # Contentful secrets
 module "contentful_secrets" {
@@ -772,169 +785,169 @@ module "backend_alb" {
   }
 }
 
-# module "backend_ecs" {
-#   source = "../../modules/ecs"
+module "backend_ecs" {
+  source = "../../modules/ecs"
 
-#   region      = var.aws_region
-#   environment = "dev"
+  region      = var.aws_region
+  environment = var.environment
 
-#   # Unlike migration runner, we want a long-running service
-#   create_ecs_service = true
-#   service_name       = "backend"
+  # Unlike migration runner, we want a long-running service
+  create_ecs_service = true
+  service_name       = "backend"
 
-#   repository_url = module.backend_ecr.repository_url
-#   repository_arn = module.backend_ecr.repository_arn
+  repository_url = module.backend_ecr.repository_url
+  repository_arn = module.backend_ecr.repository_arn
 
-#   # Networking configuration
-#   vpc_id          = module.vpc.vpc_id
-#   subnets         = module.vpc.private_subnets
-#   security_groups = [module.vpc.ecs_security_group_id]
+  # Networking configuration
+  vpc_id          = module.vpc.vpc_id
+  subnets         = module.vpc.private_subnets
+  security_groups = [module.vpc.ecs_security_group_id]
 
-#   # Container configuration
-#   container_port = var.backend_container_port
+  # Container configuration
+  container_port = var.backend_container_port
 
-#   # Task size
-#   cpu               = 512  # 0.5 vCPU
-#   memory            = 1024 # 1 GB
-#   container_cpu     = 512  # 0.5 vCPU
-#   container_memory  = 1024 # 1 GB
-#   ephemeral_storage = 21   # Minimum size (21 GiB)
+  # Task size
+  cpu               = 512  # 0.5 vCPU
+  memory            = 1024 # 1 GB
+  container_cpu     = 512  # 0.5 vCPU
+  container_memory  = 1024 # 1 GB
+  ephemeral_storage = 21   # Minimum size (21 GiB)
 
-#   # Load balancer integration
-#   target_group_arn = module.backend_alb.target_group_arn
+  # Load balancer integration
+  target_group_arn = module.backend_alb.target_group_arn
 
-#   # Auto-scaling settings
-#   enable_autoscaling = true
-#   min_capacity       = 1  # Scale down to 1 task
-#   max_capacity       = 3  # Scale up to 3 tasks
-#   cpu_threshold      = 80 # Scale out at 80% CPU usage
+  # Auto-scaling settings
+  enable_autoscaling = true
+  min_capacity       = 1  # Scale down to 1 task
+  max_capacity       = 3  # Scale up to 3 tasks
+  cpu_threshold      = 80 # Scale out at 80% CPU usage
 
-#   # Mixed capacity strategy for cost optimization and stability
-#   enable_mixed_capacity = true
-#   fargate_spot_weight   = 0.8 # 80% of tasks on Spot for dev environment (cost saving)
-#   fargate_base_count    = 1   # Keep at least 1 task on regular Fargate for stability 
-#   desired_count         = 1
+  # Mixed capacity strategy for cost optimization and stability
+  enable_mixed_capacity = true
+  fargate_spot_weight   = 0.8 # 80% of tasks on Spot for dev environment (cost saving)
+  fargate_base_count    = 1   # Keep at least 1 task on regular Fargate for stability 
+  desired_count         = 1
 
-#   # Container health checks
-#   enable_container_healthcheck = true
-#   health_check_path            = "/health"
+  # Container health checks
+  enable_container_healthcheck = true
+  health_check_path            = "/health"
 
-#   # Deployment configuration
-#   enable_circuit_breaker               = true
-#   enable_circuit_breaker_with_rollback = true
+  # Deployment configuration
+  enable_circuit_breaker               = true
+  enable_circuit_breaker_with_rollback = true
 
-#   # Logs configuration
-#   log_group_name     = "/aws/ecs/backend-service-dev"
-#   log_retention_days = 30
+  # Logs configuration
+  log_group_name     = "/aws/ecs/backend-service-${var.environment}"
+  log_retention_days = 30
 
-#   # Secrets configuration
-#   secrets = [
-#     {
-#       name      = "AUTH_GITHUB_ID"
-#       valueFrom = "${module.auth_secrets.secret_arn}:AUTH_GITHUB_ID::"
-#     },
-#     {
-#       name      = "AUTH_GITHUB_SECRET"
-#       valueFrom = "${module.auth_secrets.secret_arn}:AUTH_GITHUB_SECRET::"
-#     },
-#     {
-#       name      = "AUTH_SECRET"
-#       valueFrom = "${module.auth_secrets.secret_arn}:AUTH_SECRET::"
-#     },
-#     {
-#       name      = "DATABRICKS_CLIENT_ID"
-#       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_CLIENT_ID::"
-#     },
-#     {
-#       name      = "DATABRICKS_CLIENT_SECRET"
-#       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_CLIENT_SECRET::"
-#     },
-#     {
-#       name      = "DATABRICKS_HOST"
-#       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_HOST::"
-#     },
-#     {
-#       name      = "DATABRICKS_JOB_ID"
-#       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_JOB_ID::"
-#     },
-#     {
-#       name      = "DATABRICKS_WAREHOUSE_ID"
-#       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WAREHOUSE_ID::"
-#     },
-#     {
-#       name      = "DATABRICKS_WEBHOOK_API_KEY_ID"
-#       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_API_KEY_ID::"
-#     },
-#     {
-#       name      = "DATABRICKS_WEBHOOK_API_KEY"
-#       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_API_KEY::"
-#     },
-#     {
-#       name      = "DATABRICKS_WEBHOOK_SECRET"
-#       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_SECRET::"
-#     },
-#     {
-#       name      = "DB_CREDENTIALS"
-#       valueFrom = module.aurora_db.master_user_secret_arn
-#     },
-#   ]
+  # Secrets configuration
+  secrets = [
+    {
+      name      = "AUTH_GITHUB_ID"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_GITHUB_ID::"
+    },
+    {
+      name      = "AUTH_GITHUB_SECRET"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_GITHUB_SECRET::"
+    },
+    {
+      name      = "AUTH_SECRET"
+      valueFrom = "${module.auth_secrets.secret_arn}:AUTH_SECRET::"
+    },
+    {
+      name      = "DATABRICKS_CLIENT_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_CLIENT_ID::"
+    },
+    {
+      name      = "DATABRICKS_CLIENT_SECRET"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_CLIENT_SECRET::"
+    },
+    {
+      name      = "DATABRICKS_HOST"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_HOST::"
+    },
+    {
+      name      = "DATABRICKS_JOB_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_JOB_ID::"
+    },
+    {
+      name      = "DATABRICKS_WAREHOUSE_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WAREHOUSE_ID::"
+    },
+    {
+      name      = "DATABRICKS_WEBHOOK_API_KEY_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_API_KEY_ID::"
+    },
+    {
+      name      = "DATABRICKS_WEBHOOK_API_KEY"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_API_KEY::"
+    },
+    {
+      name      = "DATABRICKS_WEBHOOK_SECRET"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_SECRET::"
+    },
+    {
+      name      = "DB_CREDENTIALS"
+      valueFrom = module.aurora_db.master_user_secret_arn
+    },
+  ]
 
-#   # Environment variables for the backend service
-#   environment_variables = [
-#     {
-#       name  = "DATABRICKS_CATALOG_NAME"
-#       value = module.databricks_catalog.catalog_name
-#     },
-#     {
-#       name  = "DB_HOST"
-#       value = module.aurora_db.cluster_endpoint
-#     },
-#     {
-#       name  = "DB_NAME"
-#       value = module.aurora_db.database_name
-#     },
-#     {
-#       name  = "DB_PORT"
-#       value = module.aurora_db.cluster_port
-#     },
-#     {
-#       name  = "LOG_LEVEL"
-#       value = "debug"
-#     },
-#     {
-#       name  = "CORS_ENABLED"
-#       value = "true"
-#     },
-#     {
-#       name  = "CORS_ORIGINS"
-#       value = "https://${module.route53.environment_domain}"
-#     },
-#     {
-#       name  = "COOKIE_DOMAIN"
-#       value = ".${var.environment}.${var.domain_name}"
-#     },
-#     {
-#       name  = "AWS_LOCATION_PLACE_INDEX_NAME"
-#       value = module.location_service.place_index_name
-#     },
-#     {
-#       name  = "AWS_REGION"
-#       value = var.aws_region
-#     }
-#   ]
+  # Environment variables for the backend service
+  environment_variables = [
+    {
+      name  = "DATABRICKS_CATALOG_NAME"
+      value = module.databricks_catalog.catalog_name
+    },
+    {
+      name  = "DB_HOST"
+      value = module.aurora_db.cluster_endpoint
+    },
+    {
+      name  = "DB_NAME"
+      value = module.aurora_db.database_name
+    },
+    {
+      name  = "DB_PORT"
+      value = module.aurora_db.cluster_port
+    },
+    {
+      name  = "LOG_LEVEL"
+      value = "debug"
+    },
+    {
+      name  = "CORS_ENABLED"
+      value = "true"
+    },
+    {
+      name  = "CORS_ORIGINS"
+      value = "https://${module.route53.environment_domain}"
+    },
+    {
+      name  = "COOKIE_DOMAIN"
+      value = ".${var.domain_name}"
+    },
+    {
+      name  = "AWS_LOCATION_PLACE_INDEX_NAME"
+      value = module.location_service.place_index_name
+    },
+    {
+      name  = "AWS_REGION"
+      value = var.aws_region
+    }
+  ]
 
-#   # Additional IAM policies for the task role
-#   additional_task_role_policy_arns = [
-#     module.location_service.iam_policy_arn
-#   ]
+  # Additional IAM policies for the task role
+  additional_task_role_policy_arns = [
+    module.location_service.iam_policy_arn
+  ]
 
-#   tags = {
-#     Environment = "dev"
-#     Project     = "open-jii"
-#     ManagedBy   = "terraform"
-#     Component   = "backend"
-#   }
-# }
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+  }
+}
 
 module "backend_waf" {
   source = "../../modules/waf"
