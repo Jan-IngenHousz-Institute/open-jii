@@ -8,6 +8,7 @@ import { useExperimentFlowQuery } from "~/hooks/use-experiment-flow-query";
 import { useExperiments } from "~/hooks/use-experiments";
 import { useTheme } from "~/hooks/use-theme";
 import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
+import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 export function ExperimentSelectionStep() {
@@ -16,6 +17,7 @@ export function ExperimentSelectionStep() {
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
   const { setExperimentId, setFlowNodes, nextStep } = useMeasurementFlowStore();
   const { fetchExperimentFlow, isFetching } = useExperimentFlowQuery(selectedExperimentId);
+  const { clearHistory } = useFlowAnswersStore();
 
   const selectedExperiment = experiments.find((exp) => exp.value === selectedExperimentId);
 
@@ -87,13 +89,13 @@ export function ExperimentSelectionStep() {
                 return;
               }
 
+              // Clear previous answers when starting a new flow
+              clearHistory();
+
               setExperimentId(selectedExperimentId);
 
               const nodes = await fetchExperimentFlow();
-              if (nodes?.length) {
-                setFlowNodes(nodes);
-              }
-
+              setFlowNodes(nodes ?? []);
               nextStep();
             }}
             isDisabled={!selectedExperimentId || isFetching}

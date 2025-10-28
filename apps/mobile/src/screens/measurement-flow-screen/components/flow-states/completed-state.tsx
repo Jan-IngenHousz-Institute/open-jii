@@ -3,11 +3,18 @@ import React from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
 import { useTheme } from "~/hooks/use-theme";
+import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 export function CompletedState() {
   const { classes } = useTheme();
   const { iterationCount, startNewIteration, resetFlow } = useMeasurementFlowStore();
+  const { clearHistory } = useFlowAnswersStore();
+
+  const handleFinishFlow = () => {
+    resetFlow();
+    clearHistory();
+  };
 
   return (
     <View className={clsx("flex-1 rounded-xl border", classes.card, classes.border)}>
@@ -28,7 +35,7 @@ export function CompletedState() {
         <View className="flex-row gap-3">
           <Button
             title="Finish Flow"
-            onPress={resetFlow}
+            onPress={handleFinishFlow}
             variant="outline"
             style={{ flex: 1 }}
             textStyle={{ color: "#ef4444" }}

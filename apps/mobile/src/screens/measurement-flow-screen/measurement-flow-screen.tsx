@@ -3,6 +3,7 @@ import { useKeepAwake } from "expo-keep-awake";
 import React from "react";
 import { View } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
+import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 import { BackButton } from "./components/back-button";
@@ -14,6 +15,7 @@ export function MeasurementFlowScreen() {
   useKeepAwake();
   const { classes } = useTheme();
   const { currentStep, previousStep, resetFlow } = useMeasurementFlowStore();
+  const { clearHistory } = useFlowAnswersStore();
 
   const handleBackPress = () => {
     previousStep();
@@ -21,6 +23,7 @@ export function MeasurementFlowScreen() {
 
   const handleEndFlow = () => {
     resetFlow();
+    clearHistory();
   };
 
   const shouldShowNavigationButtons = currentStep > 0;
