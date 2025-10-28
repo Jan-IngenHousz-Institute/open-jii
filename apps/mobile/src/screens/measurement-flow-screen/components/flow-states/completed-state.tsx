@@ -7,7 +7,7 @@ import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 export function CompletedState() {
   const { classes } = useTheme();
-  const { iterationCount, startNewIteration } = useMeasurementFlowStore();
+  const { iterationCount, startNewIteration, resetFlow } = useMeasurementFlowStore();
 
   return (
     <View className={clsx("flex-1 rounded-xl border", classes.card, classes.border)}>
@@ -28,7 +28,16 @@ export function CompletedState() {
       </View>
 
       <View className="border-t border-gray-200 p-4 dark:border-gray-700">
-        <Button title="Start New Cycle" onPress={startNewIteration} style={{ width: "100%" }} />
+        <View className="flex-row gap-3">
+          <Button
+            title="Finish Flow"
+            onPress={resetFlow}
+            variant="outline"
+            style={{ flex: 1 }}
+            textStyle={{ color: "#ef4444" }}
+          />
+          <Button title="Start New Cycle" onPress={startNewIteration} style={{ flex: 1 }} />
+        </View>
       </View>
     </View>
   );
