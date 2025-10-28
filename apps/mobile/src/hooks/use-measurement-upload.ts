@@ -4,27 +4,84 @@ import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
 import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
 
-export function useMeasurementUpload({ experimentName, experimentId, protocolName }) {
+interface PrepareMeasurementArgs {
+  rawMeasurement: any;
+  userId: string;
+  macroFilename: string;
+  timestamp: string;
+}
+
+function prepareMeasurementForUpload({
+  rawMeasurement,
+  userId,
+  macroFilename,
+  timestamp,
+}: PrepareMeasurementArgs) {
+  if ("sample" in rawMeasurement && rawMeasurement.sample) {
+    const samples = Array.isArray(rawMeasurement.sample)
+      ? rawMeasurement.sample
+      : [rawMeasurement.sample];
+
+    for (const sample of samples) {
+      sample.macros = macroFilename ? [macroFilename] : [];
+    }
+  }
+
+  return {
+    ...rawMeasurement,
+    timestamp,
+    userId,
+  };
+}
+
+export function useUpload() {
   const { showToast } = useToast();
   const { saveFailedUpload } = useFailedUploads();
 
   const { loading: isUploading, execute: uploadMeasurement } = useAsyncCallback(
-    async (measurementResult: any) => {
-      if (typeof measurementResult !== "object") return;
+    async ({
+      rawMeasurement,
+      timestamp,
+      experimentName,
+      experimentId,
+      protocolName,
+      userId,
+      macroFilename,
+    }: {
+      rawMeasurement: any;
+      timestamp: string;
+      experimentName: string;
+      experimentId: string;
+      protocolName: string;
+      userId: string;
+      macroFilename: string;
+    }) => {
+      if (typeof rawMeasurement !== "object") {
+        return;
+      }
+
+      const measurementData = prepareMeasurementForUpload({
+        rawMeasurement,
+        userId,
+        macroFilename,
+        timestamp,
+      });
+
       const topic = getMultispeqMqttTopic({ experimentId, protocolName });
+
       try {
-        await sendMqttEvent(topic, measurementResult);
+        await sendMqttEvent(topic, measurementData);
         showToast("Measurement uploaded!", "success");
       } catch (e: any) {
         console.log("Upload failed", e);
         showToast("Upload not available, upload it later from Home screen", "error");
         await saveFailedUpload({
           topic,
-          measurementResult,
+          measurementResult: measurementData,
           metadata: {
             experimentName,
             protocolName,
-            timestamp: measurementResult.timestamp,
+            timestamp: measurementData.timestamp,
           },
         });
       }
