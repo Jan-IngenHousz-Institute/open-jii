@@ -161,7 +161,7 @@ describe("useExperiments", () => {
 
     expect(result.current.filter).toBe("member");
   });
-  
+
   it("should update search state", () => {
     const mockUseQuery = vi.fn().mockReturnValue({
       data: undefined,
