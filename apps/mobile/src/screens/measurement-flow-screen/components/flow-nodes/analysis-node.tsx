@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import React, { useEffect } from "react";
+import React from "react";
 import { View, Text } from "react-native";
 import { MeasurementResult } from "~/components/measurement-result";
 import { useMacros } from "~/hooks/use-macros";

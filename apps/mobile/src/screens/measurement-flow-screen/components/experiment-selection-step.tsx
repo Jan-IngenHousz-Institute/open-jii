@@ -38,42 +38,42 @@ export function ExperimentSelectionStep() {
             Step 1: Select Experiment
           </Text>
 
-        {isLoading && (
-          <View className="items-center py-8">
-            <ActivityIndicator size="large" color="#005e5e" />
-            <Text className={clsx("mt-4 text-center", classes.textSecondary)}>
-              Loading experiments...
-            </Text>
-          </View>
-        )}
+          {isLoading && (
+            <View className="items-center py-8">
+              <ActivityIndicator size="large" color="#005e5e" />
+              <Text className={clsx("mt-4 text-center", classes.textSecondary)}>
+                Loading experiments...
+              </Text>
+            </View>
+          )}
 
-        {!isLoading && error && (
-          <View className="items-center py-8">
-            <Text className={clsx("text-center text-red-500", classes.text)}>
-              Failed to load experiments. Please try again.
-            </Text>
-          </View>
-        )}
+          {!isLoading && error && (
+            <View className="items-center py-8">
+              <Text className={clsx("text-center text-red-500", classes.text)}>
+                Failed to load experiments. Please try again.
+              </Text>
+            </View>
+          )}
 
-        {!isLoading && !error && (
-          <>
-            <Dropdown
-              label="Available Experiments"
-              options={experiments}
-              selectedValue={selectedExperimentId}
-              onSelect={(value) => setSelectedExperimentId(value)}
-              placeholder="Choose an experiment to continue"
-            />
+          {!isLoading && !error && (
+            <>
+              <Dropdown
+                label="Available Experiments"
+                options={experiments}
+                selectedValue={selectedExperimentId}
+                onSelect={(value) => setSelectedExperimentId(value)}
+                placeholder="Choose an experiment to continue"
+              />
 
-            {selectedExperiment?.description && (
-              <View className="mt-4 rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
-                <Text className={clsx("text-sm", classes.textSecondary)}>
-                  {selectedExperiment.description}
-                </Text>
-              </View>
-            )}
-          </>
-        )}
+              {selectedExperiment?.description && (
+                <View className="mt-4 rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
+                  <Text className={clsx("text-sm", classes.textSecondary)}>
+                    {selectedExperiment.description}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
         </View>
 
         {/* Action Button footer inside card for consistent layout */}
@@ -99,7 +99,6 @@ export function ExperimentSelectionStep() {
           />
         </View>
       </View>
-      
     </View>
   );
 }
