@@ -161,8 +161,8 @@ describe("useExperiments", () => {
 
     expect(result.current.filter).toBe("member");
   });
-
-  fix: Remove duplicate experiments in filters and simplify experiment visibility logic  fix: Remove duplicate experiments in filters and simplify experiment visibility logic  it("should update search state", () => {
+  
+  it("should update search state", () => {
     const mockUseQuery = vi.fn().mockReturnValue({
       data: undefined,
       error: null,
