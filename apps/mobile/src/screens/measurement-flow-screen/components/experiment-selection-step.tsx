@@ -1,6 +1,6 @@
 import { clsx } from "clsx";
 import React from "react";
-import { View, Text } from "react-native";
+import { View, Text, ScrollView } from "react-native";
 import { ActivityIndicator } from "react-native";
 import { Button } from "~/components/Button";
 import { Dropdown } from "~/components/Dropdown";
@@ -65,11 +65,13 @@ export function ExperimentSelectionStep() {
                 placeholder="Choose an experiment to continue"
               />
 
-              {selectedExperiment?.description && (
-                <View className="mt-4 rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
-                  <Text className={clsx("text-sm", classes.textSecondary)}>
-                    {selectedExperiment.description}
-                  </Text>
+              {selectedExperiment?.fullDescription && (
+                <View className="mt-4 flex-1 rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
+                  <ScrollView className="flex-1">
+                    <Text className={clsx("text-sm", classes.textSecondary)}>
+                      {selectedExperiment.fullDescription}
+                    </Text>
+                  </ScrollView>
                 </View>
               )}
             </>
