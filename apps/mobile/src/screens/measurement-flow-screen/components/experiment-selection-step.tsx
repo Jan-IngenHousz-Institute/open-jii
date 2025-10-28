@@ -32,10 +32,11 @@ export function ExperimentSelectionStep() {
       </View>
 
       {/* Experiment Selection Card */}
-      <View className={clsx("rounded-xl border p-6", classes.card, classes.border)}>
-        <Text className={clsx("mb-4 text-xl font-semibold", classes.text)}>
-          Step 1: Select Experiment
-        </Text>
+      <View className={clsx("rounded-xl border", classes.card, classes.border)}>
+        <View className="p-6">
+          <Text className={clsx("mb-4 text-xl font-semibold", classes.text)}>
+            Step 1: Select Experiment
+          </Text>
 
         {isLoading && (
           <View className="items-center py-8">
@@ -73,11 +74,10 @@ export function ExperimentSelectionStep() {
             )}
           </>
         )}
-      </View>
+        </View>
 
-      {/* Action Button */}
-      {selectedExperiment && (
-        <View className="mt-8">
+        {/* Action Button footer inside card for consistent layout */}
+        <View className="border-t border-gray-200 p-4 dark:border-gray-700">
           <Button
             title="Start measurement flow"
             onPress={async () => {
@@ -94,11 +94,12 @@ export function ExperimentSelectionStep() {
 
               nextStep();
             }}
-            isDisabled={isFetching}
+            isDisabled={!selectedExperimentId || isFetching}
             style={{ width: "100%" }}
           />
         </View>
-      )}
+      </View>
+      
     </View>
   );
 }

@@ -1,15 +1,13 @@
 import { clsx } from "clsx";
 import React from "react";
 import { View, Text, ActivityIndicator } from "react-native";
-import { Button } from "~/components/Button";
 import { useTheme } from "~/hooks/use-theme";
 
 interface ScanningStateProps {
-  onCancel: () => void;
   scanResult?: any;
 }
 
-export function ScanningState({ onCancel, scanResult }: ScanningStateProps) {
+export function ScanningState({ scanResult }: ScanningStateProps) {
   const { classes, colors } = useTheme();
 
   // Show completion message if scan just finished
@@ -30,13 +28,6 @@ export function ScanningState({ onCancel, scanResult }: ScanningStateProps) {
     <View className="items-center py-8">
       <ActivityIndicator size="large" color={colors.primary.dark} />
       <Text className={clsx("mt-4 text-center", classes.textSecondary)}>Measuring...</Text>
-      <Button
-        title="Cancel Measurement"
-        onPress={onCancel}
-        variant="outline"
-        style={{ marginTop: 16, width: "100%" }}
-        textStyle={{ color: colors.semantic.error }}
-      />
     </View>
   );
 }

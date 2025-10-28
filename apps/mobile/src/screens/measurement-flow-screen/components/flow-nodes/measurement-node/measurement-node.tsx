@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import { useKeepAwake } from "expo-keep-awake";
 import React from "react";
 import { View, Text } from "react-native";
+import { Button } from "~/components/Button";
 import { useToast } from "~/context/toast-context";
 import { useProtocols } from "~/hooks/use-protocols";
 import { useTheme } from "~/hooks/use-theme";
@@ -38,20 +39,6 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
 
   const protocol = protocols?.find((p) => p.value === content.protocolId);
 
-  // Auto-proceed to next step when scan completes successfully
-  React.useEffect(() => {
-    if (scanResult && !isScanning) {
-      // Store the scan result for the analysis step
-      setScanResult(scanResult);
-
-      // Small delay to show completion briefly
-      const timer = setTimeout(() => {
-        nextStep();
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [scanResult, isScanning, nextStep, setScanResult]);
-
   const handleStartScan = async () => {
     if (!device) {
       showToast("Not connected to sensor", "error");
@@ -65,7 +52,9 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     resetScan();
     try {
       // For measurement node, we only execute the protocol scan, no macro
-      await executeScan(content.protocolId, "");
+      const result = await executeScan(content.protocolId, "");
+      setScanResult(result);
+      nextStep();
     } catch (error) {
       console.log("scan error", error);
       showToast("Scan error", "error");
@@ -82,10 +71,34 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     }
 
     if (isScanning) {
-      return <ScanningState onCancel={resetScan} scanResult={scanResult} />;
+      return (
+        <View className="flex-1">
+          <View className="flex-1 p-4">
+            <ScanningState scanResult={scanResult} />
+          </View>
+          <View className="border-t border-gray-200 p-4 dark:border-gray-700">
+            <Button
+              title="Cancel Measurement"
+              onPress={resetScan}
+              variant="outline"
+              style={{ width: "100%" }}
+              textStyle={{ color: "#ef4444" }}
+            />
+          </View>
+        </View>
+      );
     }
 
-    return <ReadyState protocol={protocol} onStartScan={handleStartScan} />;
+    return (
+      <View className="flex-1">
+        <View className="flex-1 items-center justify-center p-4">
+          <ReadyState protocol={protocol} />
+        </View>
+        <View className="border-t border-gray-200 p-4 dark:border-gray-700">
+          <Button title="Start Measurement" onPress={handleStartScan} style={{ width: "100%" }} />
+        </View>
+      </View>
+    );
   };
 
   return (
@@ -97,7 +110,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
         )}
       </View>
 
-      <View className="flex-1 p-4">{renderState()}</View>
+      <View className="flex-1">{renderState()}</View>
     </View>
   );
 }

@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Text } from "react-native";
 import { MeasurementResult } from "~/components/measurement-result";
 import { useMacros } from "~/hooks/use-macros";
@@ -50,7 +50,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       console.error("Error processing scan result with macro:", error);
       setProcessingError(error instanceof Error ? error.message : "Unknown processing error");
     }
-  }, [scanResult, macro]);
+  }, [scanResult, JSON.stringify(macro)]);
 
   const renderContent = () => {
     if (!scanResult) {
