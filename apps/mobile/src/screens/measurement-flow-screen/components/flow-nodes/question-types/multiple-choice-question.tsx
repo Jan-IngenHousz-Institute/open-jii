@@ -2,6 +2,7 @@ import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
+import { Checkbox } from "~/components/Checkbox";
 import { useTheme } from "~/hooks/use-theme";
 import { calculateGridLayout } from "~/screens/measurement-flow-screen/components/flow-nodes/question-types/utils/grid-layout";
 
@@ -41,6 +42,7 @@ export function MultipleChoiceQuestion({
   disabledOptions = [],
 }: MultipleChoiceQuestionProps) {
   const { classes } = useTheme();
+  const [isAutoincrement, setIsAutoincrement] = React.useState(false);
 
   const handleOptionSelect = (value: string) => {
     if (disabledOptions.includes(value)) return; // Don't allow selection of disabled options
@@ -52,7 +54,7 @@ export function MultipleChoiceQuestion({
   const { buttonHeight, buttonWidth } = calculateGridLayout(numOptions);
 
   return (
-    <View>
+    <View className="flex-1">
       <View className="flex-row flex-wrap justify-center" style={{ gap: 8 }}>
         {content.options?.map((option, index) => {
           const isSelected = selectedValue === option;
@@ -88,6 +90,11 @@ export function MultipleChoiceQuestion({
           Previously used options are disabled
         </Text>
       )}
+
+      {/* Autoincrement checkbox at the very bottom */}
+      <View className="mt-auto">
+        <Checkbox value={isAutoincrement} text="Auto Increment" onChange={setIsAutoincrement} />
+      </View>
     </View>
   );
 }
