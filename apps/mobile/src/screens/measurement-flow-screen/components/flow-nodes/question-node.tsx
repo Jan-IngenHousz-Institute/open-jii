@@ -3,35 +3,48 @@ import React from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
 import { useTheme } from "~/hooks/use-theme";
+import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
-import { QuestionContent } from "../../types";
+import { FlowNode } from "../../types";
 import { MultipleChoiceQuestion } from "./question-types/multiple-choice-question";
 import { NumberQuestion } from "./question-types/number-question";
 import { SingleChoiceQuestion } from "./question-types/single-choice-question";
 import { TextQuestion } from "./question-types/text-question";
 
 interface QuestionNodeProps {
-  content: QuestionContent;
+  node: FlowNode;
 }
 
-export function QuestionNode({ content }: QuestionNodeProps) {
+export function QuestionNode({ node }: QuestionNodeProps) {
   const { classes } = useTheme();
-  const { nextStep } = useMeasurementFlowStore();
-  const [answerValue, setAnswerValue] = React.useState<string>("");
+  const { nextStep, iterationCount } = useMeasurementFlowStore();
+  const { setAnswer, getAnswer } = useFlowAnswersStore();
+
+  const content = node.content;
+
+  // Get current answer from store
+  const answerValue = getAnswer(iterationCount, node.name) ?? "";
+
+  // Handler to update answer in store
+  const handleAnswerChange = (value: string) => {
+    setAnswer(iterationCount, node.name, value);
+  };
 
   const renderQuestionType = () => {
     switch (content.kind) {
       case "text":
-        return <TextQuestion content={content} value={answerValue} onChange={setAnswerValue} />;
+        return <TextQuestion content={content} value={answerValue} onChange={handleAnswerChange} />;
       case "number":
-        return <NumberQuestion content={content} value={answerValue} onChange={setAnswerValue} />;
+        return (
+          <NumberQuestion content={content} value={answerValue} onChange={handleAnswerChange} />
+        );
       case "single_choice":
         return (
           <SingleChoiceQuestion
             content={content}
             selectedValue={answerValue}
-            onSelect={(value) => setAnswerValue(value)}
+            onSelect={handleAnswerChange}
           />
         );
       case "multi_choice":
@@ -39,7 +52,7 @@ export function QuestionNode({ content }: QuestionNodeProps) {
           <MultipleChoiceQuestion
             content={content}
             selectedValue={answerValue}
-            onSelect={(value) => setAnswerValue(value)}
+            onSelect={handleAnswerChange}
           />
         );
       default:
@@ -66,10 +79,7 @@ export function QuestionNode({ content }: QuestionNodeProps) {
       <View className="border-t border-gray-200 p-4 dark:border-gray-700">
         <Button
           title="Next"
-          onPress={() => {
-            setAnswerValue("");
-            nextStep();
-          }}
+          onPress={nextStep}
           isDisabled={!currentIsValid}
           style={{ width: "100%" }}
         />

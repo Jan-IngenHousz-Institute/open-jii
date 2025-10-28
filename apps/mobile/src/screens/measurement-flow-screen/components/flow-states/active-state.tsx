@@ -24,7 +24,7 @@ export function ActiveState({ currentNode }: ActiveStateProps) {
         keyboardShouldPersistTaps="handled"
       >
         {currentNode.type === "instruction" && <InstructionNode content={currentNode.content} />}
-        {currentNode.type === "question" && <QuestionNode content={currentNode.content} />}
+        {currentNode.type === "question" && <QuestionNode node={currentNode} />}
         {currentNode.type === "measurement" && <MeasurementNode content={currentNode.content} />}
         {currentNode.type === "analysis" && <AnalysisNode content={currentNode.content} />}
       </ScrollView>

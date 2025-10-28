@@ -9,6 +9,7 @@ interface PrepareMeasurementArgs {
   userId: string;
   macroFilename: string;
   timestamp: string;
+  extraFields: Record<string, string>;
 }
 
 function prepareMeasurementForUpload({
@@ -16,6 +17,7 @@ function prepareMeasurementForUpload({
   userId,
   macroFilename,
   timestamp,
+  extraFields,
 }: PrepareMeasurementArgs) {
   if ("sample" in rawMeasurement && rawMeasurement.sample) {
     const samples = Array.isArray(rawMeasurement.sample)
@@ -28,6 +30,7 @@ function prepareMeasurementForUpload({
   }
 
   return {
+    ...extraFields,
     ...rawMeasurement,
     timestamp,
     userId,
@@ -47,6 +50,7 @@ export function useMeasurementUpload() {
       protocolId,
       userId,
       macroFilename,
+      extraFields = {},
     }: {
       rawMeasurement: any;
       timestamp: string;
@@ -55,6 +59,7 @@ export function useMeasurementUpload() {
       protocolId: string;
       userId: string;
       macroFilename: string;
+      extraFields?: Record<string, string>;
     }) => {
       if (typeof rawMeasurement !== "object") {
         return;
@@ -65,6 +70,7 @@ export function useMeasurementUpload() {
         userId,
         macroFilename,
         timestamp,
+        extraFields,
       });
 
       const topic = getMultispeqMqttTopic({ experimentId, protocolId });

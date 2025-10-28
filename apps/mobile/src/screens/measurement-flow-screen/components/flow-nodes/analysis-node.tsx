@@ -8,6 +8,7 @@ import { useMacro } from "~/hooks/use-macro";
 import { useMeasurementUpload } from "~/hooks/use-measurement-upload";
 import { useSessionStore } from "~/hooks/use-session-store";
 import { useTheme } from "~/hooks/use-theme";
+import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 interface AnalysisNodeProps {
@@ -20,13 +21,14 @@ interface AnalysisNodeProps {
 export function AnalysisNode({ content }: AnalysisNodeProps) {
   const { classes } = useTheme();
   const { macro, isLoading } = useMacro(content.macroId);
-  const { scanResult, previousStep, experimentId, protocolId, finishFlow } =
+  const { scanResult, previousStep, experimentId, protocolId, finishFlow, iterationCount } =
     useMeasurementFlowStore();
   const { experiment } = useExperiment(experimentId);
   const { session } = useSessionStore();
   const experimentName = experiment?.name ?? "Experiment";
 
   const analysisTimestampRef = useRef<string>(new Date().toISOString());
+  const { getCycleAnswers } = useFlowAnswersStore();
 
   const { isUploading, uploadMeasurement } = useMeasurementUpload();
 
@@ -106,6 +108,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       protocolId,
       userId: session?.data?.user?.id,
       macroFilename: macro?.filename,
+      extraFields: getCycleAnswers(iterationCount),
     });
     finishFlow();
   };
