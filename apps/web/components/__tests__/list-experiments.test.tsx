@@ -79,7 +79,7 @@ describe("ListExperiments", () => {
     vi.clearAllMocks();
     (useExperiments as ReturnType<typeof vi.fn>).mockReturnValue({
       data: { body: [{ id: "1", name: "Exp 1" }] },
-      filter: "my",
+      filter: "member",
       setFilter: mockSetFilter,
       status: undefined,
       setStatus: mockSetStatus,
@@ -96,7 +96,7 @@ describe("ListExperiments", () => {
   it("renders empty state when no experiments", () => {
     (useExperiments as ReturnType<typeof vi.fn>).mockReturnValue({
       data: { body: [] },
-      filter: "my",
+      filter: "member",
       setFilter: mockSetFilter,
       status: undefined,
       setStatus: mockSetStatus,
@@ -111,7 +111,7 @@ describe("ListExperiments", () => {
   it("renders loading state when data is undefined", () => {
     (useExperiments as ReturnType<typeof vi.fn>).mockReturnValue({
       data: undefined,
-      filter: "my",
+      filter: "member",
       setFilter: mockSetFilter,
       status: undefined,
       setStatus: mockSetStatus,
@@ -134,7 +134,7 @@ describe("ListExperiments", () => {
     // simulate search not empty
     (useExperiments as ReturnType<typeof vi.fn>).mockReturnValue({
       data: { body: [] },
-      filter: "my",
+      filter: "member",
       setFilter: mockSetFilter,
       status: undefined,
       setStatus: mockSetStatus,
@@ -150,49 +150,15 @@ describe("ListExperiments", () => {
   it("changes filter via select", () => {
     render(<ListExperiments />);
 
-    // Find the filter select (first select)
-    const filterSelects = screen.getAllByTestId("select");
-    const filterSelect = filterSelects[0];
-
-    // Find the button inside the filter select and click it
-    const button = filterSelect.querySelector("button");
-    if (button) {
-      fireEvent.click(button);
-      expect(mockSetFilter).toHaveBeenCalledWith("member");
-    } else {
-      throw new Error("Filter select button not found");
-    }
-  });
-
-  it("changes status via select", () => {
-    render(<ListExperiments />);
-
-    // Find the status select (second select)
-    const statusSelects = screen.getAllByTestId("select");
-    const statusSelect = statusSelects[1];
-
-    // Find the button inside the status select and click it
-    const button = statusSelect.querySelector("button");
-    if (button) {
-      fireEvent.click(button);
-      expect(mockSetStatus).toHaveBeenCalledWith("draft");
-    } else {
-      throw new Error("Status select button not found");
-    }
+    // The select should be rendered with value "member"
+    const selects = screen.getAllByTestId("select");
+    expect(selects.length).toBe(1); // Only filter select, no status select
   });
 
   it("combines filter and search functionality", () => {
     render(<ListExperiments />);
 
-    // First change the filter
-    const filterSelect = screen.getAllByTestId("select")[0];
-    const filterButton = filterSelect.querySelector("button");
-    if (filterButton) {
-      fireEvent.click(filterButton);
-      expect(mockSetFilter).toHaveBeenCalledWith("member");
-    }
-
-    // Then add a search term
+    // Add a search term
     const input = screen.getByPlaceholderText("experiments.searchExperiments");
     fireEvent.change(input, { target: { value: "test search" } });
     expect(mockSetSearch).toHaveBeenCalledWith("test search");
@@ -209,7 +175,7 @@ describe("ListExperiments", () => {
     const searchWithValue = "test";
     (useExperiments as ReturnType<typeof vi.fn>).mockReturnValue({
       data: { body: [] },
-      filter: "my",
+      filter: "member",
       setFilter: mockSetFilter,
       status: undefined,
       setStatus: mockSetStatus,

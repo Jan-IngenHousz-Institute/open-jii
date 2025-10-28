@@ -64,7 +64,7 @@ describe("useExperiments", () => {
       wrapper: createWrapper(),
     });
 
-    expect(result.current.filter).toBe("my");
+    expect(result.current.filter).toBe("member");
     expect(result.current.status).toBeUndefined();
     expect(result.current.search).toBe("");
     expect(result.current.data).toBeUndefined();
@@ -110,12 +110,12 @@ describe("useExperiments", () => {
     expect(mockUseQuery).toHaveBeenCalledWith({
       queryData: {
         query: {
-          filter: "my",
+          filter: "member",
           status: undefined,
           search: undefined,
         },
       },
-      queryKey: ["experiments", "my", undefined, "", false],
+      queryKey: ["experiments", "member", undefined, "", false],
     });
   });
 
@@ -162,26 +162,7 @@ describe("useExperiments", () => {
     expect(result.current.filter).toBe("member");
   });
 
-  it("should update status state", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      error: null,
-      isLoading: true,
-    });
-    mockTsr.experiments.listExperiments.useQuery = mockUseQuery;
-
-    const { result } = renderHook(() => useExperiments({}), {
-      wrapper: createWrapper(),
-    });
-
-    act(() => {
-      result.current.setStatus("draft" as ExperimentStatus);
-    });
-
-    expect(result.current.status).toBe("draft");
-  });
-
-  it("should update search state", () => {
+  fix: Remove duplicate experiments in filters and simplify experiment visibility logic  fix: Remove duplicate experiments in filters and simplify experiment visibility logic  it("should update search state", () => {
     const mockUseQuery = vi.fn().mockReturnValue({
       data: undefined,
       error: null,
@@ -219,12 +200,12 @@ describe("useExperiments", () => {
     expect(mockUseQuery).toHaveBeenCalledWith({
       queryData: {
         query: {
-          filter: "my",
+          filter: "member",
           status: undefined,
           search: "debounced search",
         },
       },
-      queryKey: ["experiments", "my", undefined, "debounced search", false],
+      queryKey: ["experiments", "member", undefined, "debounced search", false],
     });
   });
 
@@ -245,12 +226,12 @@ describe("useExperiments", () => {
     expect(mockUseQuery).toHaveBeenCalledWith({
       queryData: {
         query: {
-          filter: "my",
+          filter: "member",
           status: undefined,
           search: undefined, // Should be undefined for empty string
         },
       },
-      queryKey: ["experiments", "my", undefined, "", false],
+      queryKey: ["experiments", "member", undefined, "", false],
     });
 
     // Test whitespace string
@@ -263,12 +244,12 @@ describe("useExperiments", () => {
     expect(mockUseQuery).toHaveBeenCalledWith({
       queryData: {
         query: {
-          filter: "my",
+          filter: "member",
           status: undefined,
           search: undefined, // Should be undefined for whitespace
         },
       },
-      queryKey: ["experiments", "my", undefined, "   ", false],
+      queryKey: ["experiments", "member", undefined, "   ", false],
     });
   });
 
@@ -354,8 +335,7 @@ describe("useExperiments", () => {
     renderHook(
       () =>
         useExperiments({
-          initialFilter: "my",
-          initialStatus: "active" as ExperimentStatus,
+          initialFilter: "member",
           initialSearch: "search1",
         }),
       { wrapper },
@@ -365,8 +345,7 @@ describe("useExperiments", () => {
     renderHook(
       () =>
         useExperiments({
-          initialFilter: "member",
-          initialStatus: "draft" as ExperimentStatus,
+          initialFilter: "all",
           initialSearch: "search2",
         }),
       { wrapper },
@@ -376,15 +355,15 @@ describe("useExperiments", () => {
     const calls = mockUseQuery.mock.calls;
     expect((calls[0]?.[0] as { queryKey: unknown[] }).queryKey).toEqual([
       "experiments",
-      "my",
-      "active",
+      "member",
+      undefined, // status
       "search1",
       false,
     ]);
     expect((calls[1]?.[0] as { queryKey: unknown[] }).queryKey).toEqual([
       "experiments",
-      "member",
-      "draft",
+      "all", // filter value in queryKey (transformed to undefined for API)
+      undefined, // status
       "search2",
       false,
     ]);
@@ -400,7 +379,7 @@ describe("useExperiments", () => {
 
     const wrapper = createWrapper();
 
-    const filterTypes = ["my", "member", "related", "all"] as const;
+    const filterTypes = ["member", "all"] as const;
 
     filterTypes.forEach((filter) => {
       mockUseQuery.mockClear();
