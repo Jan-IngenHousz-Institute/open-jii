@@ -19,7 +19,7 @@ interface MultipleChoiceQuestionProps {
 const optionContainer = cva("items-center justify-center rounded-lg border-2", {
   variants: {
     state: {
-      selected: "border-blue-500 bg-blue-50 dark:bg-blue-900/20",
+      selected: "border-green-500 bg-green-50 dark:bg-green-900/20",
       disabled: "border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800",
       default: "border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800",
     },
@@ -29,7 +29,7 @@ const optionContainer = cva("items-center justify-center rounded-lg border-2", {
 const optionText = cva("px-2 text-center font-medium", {
   variants: {
     state: {
-      selected: "text-blue-600 dark:text-blue-400",
+      selected: "text-green-600 dark:text-green-400",
       disabled: "text-gray-400 dark:text-gray-500",
       default: "",
     },
