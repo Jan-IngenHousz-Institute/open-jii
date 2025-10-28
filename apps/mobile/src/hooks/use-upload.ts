@@ -4,20 +4,19 @@ import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
 import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
 
-interface UseUploadProps {
-  experimentName: string;
-  experimentId: string;
-  protocolName: string;
+interface PrepareMeasurementArgs {
+  rawMeasurement: any;
   userId: string;
   macroFilename: string;
+  timestamp: string;
 }
 
-function prepareMeasurementForUpload(
-  rawMeasurement: any,
-  userId: string,
-  macroFilename: string,
-  timestamp: string,
-) {
+function prepareMeasurementForUpload({
+  rawMeasurement,
+  userId,
+  macroFilename,
+  timestamp,
+}: PrepareMeasurementArgs) {
   if ("sample" in rawMeasurement && rawMeasurement.sample) {
     const samples = Array.isArray(rawMeasurement.sample)
       ? rawMeasurement.sample
@@ -35,27 +34,36 @@ function prepareMeasurementForUpload(
   };
 }
 
+interface UseUploadArgs {
+  experimentName: string;
+  experimentId: string;
+  protocolName: string;
+  userId: string;
+  macroFilename: string;
+}
+
 export function useUpload({
   experimentName,
   experimentId,
   protocolName,
   userId,
   macroFilename,
-}: UseUploadProps) {
+}: UseUploadArgs) {
   const { showToast } = useToast();
   const { saveFailedUpload } = useFailedUploads();
 
   const { loading: isUploading, execute: uploadMeasurement } = useAsyncCallback(
     async (rawMeasurement: any, timestamp: string) => {
-      if (typeof rawMeasurement !== "object") return;
+      if (typeof rawMeasurement !== "object") {
+        return;
+      }
 
-      // Prepare measurement data for upload (similar to processScan but without macro processing)
-      const measurementData = prepareMeasurementForUpload(
+      const measurementData = prepareMeasurementForUpload({
         rawMeasurement,
         userId,
         macroFilename,
         timestamp,
-      );
+      });
 
       const topic = getMultispeqMqttTopic({ experimentId, protocolName });
 
