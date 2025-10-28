@@ -15,9 +15,6 @@ interface FlowAnswersStore {
 
   // Get answers for a specific cycle
   getCycleAnswers: (cycle: number) => Record<string, string> | undefined;
-
-  // Get all answers for a specific question across all cycles
-  getQuestionAnswers: (name: string) => string[];
 }
 
 export const useFlowAnswersStore = create<FlowAnswersStore>((set, get) => ({
@@ -54,12 +51,5 @@ export const useFlowAnswersStore = create<FlowAnswersStore>((set, get) => ({
   getCycleAnswers: (cycle: number) => {
     const state = get();
     return state.answersHistory[cycle];
-  },
-
-  getQuestionAnswers: (name: string) => {
-    const state = get();
-    return state.answersHistory
-      .map((cycleAnswers) => cycleAnswers[name])
-      .filter((answer): answer is string => answer !== undefined);
   },
 }));
