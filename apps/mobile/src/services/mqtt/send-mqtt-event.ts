@@ -9,7 +9,7 @@ export async function sendMqttEvent(topic: string, payload: object) {
 
   const resultPromise = new Promise<ReceivedMessage>((resolve, reject) => {
     emitter.on("messageDelivered", (message) => {
-      console.log("message delivered to topic", topic);
+      console.log("message delivered to topic", JSON.stringify(payload), topic);
       resolve(message);
     });
     emitter.on("connectionLost", (error) => reject(new Error(error.errorMessage)));
