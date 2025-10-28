@@ -4,7 +4,7 @@ import React from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
 import { useToast } from "~/context/toast-context";
-import { useProtocols } from "~/hooks/use-protocols";
+import { useProtocol } from "~/hooks/use-protocol";
 import { useTheme } from "~/hooks/use-theme";
 import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-manager";
 import { useScanner } from "~/services/scan-manager/scan-manager";
@@ -25,7 +25,7 @@ interface MeasurementNodeProps {
 export function MeasurementNode({ content }: MeasurementNodeProps) {
   useKeepAwake();
   const { classes } = useTheme();
-  const { protocols } = useProtocols();
+  const { protocol } = useProtocol(content.protocolId);
   const {
     executeScan,
     isScanning,
@@ -36,8 +36,6 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
   const { data: device } = useConnectedDevice();
   const { showToast } = useToast();
   const { nextStep, setScanResult } = useMeasurementFlowStore();
-
-  const protocol = protocols?.find((p) => p.value === content.protocolId);
 
   const handleStartScan = async () => {
     if (!device) {
@@ -106,7 +104,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
       <View className="border-b border-gray-200 p-4 dark:border-gray-700">
         <Text className={clsx("text-lg font-semibold", classes.text)}>Measurement</Text>
         {protocol && (
-          <Text className={clsx("text-sm", classes.textSecondary)}>Protocol: {protocol.label}</Text>
+          <Text className={clsx("text-sm", classes.textSecondary)}>Protocol: {protocol.name}</Text>
         )}
       </View>
 

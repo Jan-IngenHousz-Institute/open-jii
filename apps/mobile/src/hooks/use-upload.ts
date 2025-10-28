@@ -34,26 +34,28 @@ function prepareMeasurementForUpload({
   };
 }
 
-interface UseUploadArgs {
-  experimentName: string;
-  experimentId: string;
-  protocolName: string;
-  userId: string;
-  macroFilename: string;
-}
-
-export function useUpload({
-  experimentName,
-  experimentId,
-  protocolName,
-  userId,
-  macroFilename,
-}: UseUploadArgs) {
+export function useUpload() {
   const { showToast } = useToast();
   const { saveFailedUpload } = useFailedUploads();
 
   const { loading: isUploading, execute: uploadMeasurement } = useAsyncCallback(
-    async (rawMeasurement: any, timestamp: string) => {
+    async ({
+      rawMeasurement,
+      timestamp,
+      experimentName,
+      experimentId,
+      protocolName,
+      userId,
+      macroFilename,
+    }: {
+      rawMeasurement: any;
+      timestamp: string;
+      experimentName: string;
+      experimentId: string;
+      protocolName: string;
+      userId: string;
+      macroFilename: string;
+    }) => {
       if (typeof rawMeasurement !== "object") {
         return;
       }

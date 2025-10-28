@@ -3,13 +3,17 @@ import React, { useRef } from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
 import { MeasurementResult } from "~/components/measurement-result/measurement-result";
+import { useExperiment } from "~/hooks/use-experiment";
 import { useMacro } from "~/hooks/use-macro";
+import { useProtocol } from "~/hooks/use-protocol";
+import { useSessionStore } from "~/hooks/use-session-store";
 import { useTheme } from "~/hooks/use-theme";
+import { useUpload } from "~/hooks/use-upload";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 interface AnalysisNodeProps {
   content: {
-    params: Record<string, unknown>;
+    params: Record<string, any>;
     macroId: string;
   };
 }
@@ -17,9 +21,15 @@ interface AnalysisNodeProps {
 export function AnalysisNode({ content }: AnalysisNodeProps) {
   const { classes } = useTheme();
   const { macro, isLoading } = useMacro(content.macroId);
-  const { scanResult, previousStep } = useMeasurementFlowStore();
+  const { scanResult, previousStep, nextStep, experimentId } = useMeasurementFlowStore();
+  const { experiment } = useExperiment(experimentId);
+  const { protocol } = useProtocol(content?.params?.protocolId);
+  const { session } = useSessionStore();
+  const experimentName = experiment?.name ?? "Experiment";
 
   const analysisTimestampRef = useRef<string>(new Date().toISOString());
+
+  const { isUploading, uploadMeasurement } = useUpload();
 
   const renderContent = () => {
     if (!scanResult) {
@@ -63,13 +73,41 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
         rawMeasurement={scanResult}
         macro={macro}
         timestamp={analysisTimestampRef.current}
-        experimentName={macro.name}
+        experimentName={experimentName}
       />
     );
   };
 
-  const handleUploadMeasurement = () => {
-    console.log("uploading");
+  const handleUploadMeasurement = async () => {
+    if (!scanResult) {
+      return;
+    }
+
+    if (!experimentId) {
+      throw new Error("Missing experiment id");
+    }
+    if (!protocol?.name) {
+      throw new Error("Missing protocol name");
+    }
+
+    if (!session?.data?.user?.id) {
+      throw new Error("Missing user id");
+    }
+
+    if (!macro?.filename) {
+      throw new Error("Missing macro filename");
+    }
+
+    await uploadMeasurement({
+      rawMeasurement: scanResult,
+      timestamp: analysisTimestampRef.current,
+      experimentName,
+      experimentId: experimentId,
+      protocolName: protocol?.name,
+      userId: session?.data?.user?.id,
+      macroFilename: macro?.filename,
+    });
+    nextStep();
   };
 
   const handleRetry = () => {
@@ -91,7 +129,12 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
             style={{ flex: 1 }}
             textStyle={{ color: "#ef4444" }}
           />
-          <Button title="Upload" onPress={handleUploadMeasurement} style={{ flex: 1 }} />
+          <Button
+            title={isUploading ? "Uploading..." : "Upload"}
+            onPress={handleUploadMeasurement}
+            disabled={isUploading}
+            style={{ flex: 1 }}
+          />
         </View>
       </View>
     </View>

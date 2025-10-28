@@ -4,7 +4,7 @@ import { View, Text } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 
 interface ReadyStateProps {
-  protocol?: { label: string };
+  protocol?: { name: string };
 }
 
 export function ReadyState({ protocol }: ReadyStateProps) {
@@ -13,7 +13,7 @@ export function ReadyState({ protocol }: ReadyStateProps) {
   return (
     <View className="items-center py-8">
       <Text className={clsx("mb-6 text-center", classes.textSecondary)}>
-        Ready to take measurement with protocol: {protocol?.label ?? "Unknown"}
+        Ready to take measurement with protocol: {protocol?.name ?? "Unknown"}
       </Text>
     </View>
   );
