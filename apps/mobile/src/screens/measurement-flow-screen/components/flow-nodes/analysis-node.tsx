@@ -121,7 +121,6 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       <View className="border-b border-gray-200 p-4 dark:border-gray-700">
         <Text className={clsx("text-lg font-semibold", classes.text)}>Analysis</Text>
       </View>
-
       <View className="p-4">{renderContent()}</View>
     </View>
   );

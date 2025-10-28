@@ -81,5 +81,3 @@ export function MeasurementResult({ data, timestamp, experimentName }: Measureme
     </>
   );
 }
-
-// no StyleSheet; styling done via NativeWind classes combined with theme classes
