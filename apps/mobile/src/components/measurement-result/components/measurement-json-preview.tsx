@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { X } from "lucide-react-native";
+import { Calendar, FlaskConical, X } from "lucide-react-native";
 import React from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
@@ -18,15 +18,26 @@ export function MeasurementJsonPreview({ data, timestamp, experimentName, onClos
         )}
       >
         <View className="flex-1">
-          <Text className={clsx("text-lg font-bold", classes.text)}>Measurement Result</Text>
-          {timestamp && (
-            <Text className={clsx("mt-0.5 text-xs", classes.textSecondary)}>
-              {formatIsoDateString(timestamp)}
+          <View className="mb-1 flex-row items-center">
+            <FlaskConical size={20} color={colors.primary.dark} />
+            <Text className={clsx("ml-2 text-xl font-bold", classes.text)}>
+              Measurement Results
             </Text>
+          </View>
+          {timestamp && (
+            <View className="mb-1 flex-row items-center">
+              <Calendar size={14} color={colors.primary.dark} />
+              <Text className={clsx("ml-1 text-xs", classes.textSecondary)}>
+                {formatIsoDateString(timestamp)}
+              </Text>
+            </View>
+          )}
+          {experimentName && (
+            <Text className={clsx("text-sm font-medium", classes.text)}>{experimentName}</Text>
           )}
         </View>
         <TouchableOpacity
-          className={clsx("h-9 w-9 items-center justify-center rounded-full", classes.card)}
+          className={clsx("h-10 w-10 items-center justify-center rounded-full", classes.card)}
           onPress={onClose}
           activeOpacity={0.7}
         >
