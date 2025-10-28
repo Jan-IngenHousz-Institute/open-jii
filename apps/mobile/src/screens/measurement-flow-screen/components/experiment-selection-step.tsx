@@ -20,7 +20,7 @@ export function ExperimentSelectionStep() {
   const selectedExperiment = experiments.find((exp) => exp.value === selectedExperimentId);
 
   return (
-    <View>
+    <View className="flex-1">
       {/* Header */}
       <View className="mb-8">
         <Text className={clsx("mb-2 text-center text-3xl font-bold", classes.text)}>
@@ -32,8 +32,8 @@ export function ExperimentSelectionStep() {
       </View>
 
       {/* Experiment Selection Card */}
-      <View className={clsx("rounded-xl border", classes.card, classes.border)}>
-        <View className="p-6">
+      <View className={clsx("flex-1 rounded-xl border", classes.card, classes.border)}>
+        <View className="flex-1 p-6">
           <Text className={clsx("mb-4 text-xl font-semibold", classes.text)}>
             Step 1: Select Experiment
           </Text>
