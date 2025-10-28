@@ -1,6 +1,7 @@
+import { clsx } from "clsx";
 import { Calendar, FlaskConical, X } from "lucide-react-native";
 import React from "react";
-import { Text, TouchableOpacity, View, StyleSheet } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 import { formatIsoDateString } from "~/utils/format-iso-date-string";
 
@@ -11,124 +12,43 @@ interface MeasurementHeaderProps {
 }
 
 export function MeasurementHeader({ timestamp, experimentName, onClose }: MeasurementHeaderProps) {
-  const theme = useTheme();
-  const { colors } = theme;
+  const { classes, colors } = useTheme();
 
   return (
     <View
-      style={[
-        styles.header,
-        {
-          backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
-          borderBottomColor: theme.isDark ? colors.dark.border : colors.light.border,
-        },
-      ]}
+      className={clsx(
+        "flex-row items-center justify-between border-b px-4 py-3",
+        classes.surface,
+        classes.border,
+      )}
     >
-      <View style={styles.headerContent}>
-        <View style={styles.titleContainer}>
+      <View className="flex-1">
+        <View className="mb-1 flex-row items-center">
           <FlaskConical size={20} color={colors.primary.dark} />
-          <Text
-            style={[
-              styles.title,
-              {
-                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-              },
-            ]}
-          >
-            Measurement Results
-          </Text>
+          <Text className={clsx("ml-2 text-xl font-bold", classes.text)}>Measurement Results</Text>
         </View>
 
         {timestamp && (
-          <View style={styles.timestampContainer}>
-            <Calendar
-              size={14}
-              color={theme.isDark ? colors.dark.inactive : colors.light.inactive}
-            />
-            <Text
-              style={[
-                styles.timestamp,
-                {
-                  color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-                },
-              ]}
-            >
+          <View className="mb-1 flex-row items-center">
+            <Calendar size={14} color={colors.primary.dark} />
+            <Text className={clsx("ml-1 text-xs", classes.textSecondary)}>
               {formatIsoDateString(timestamp)}
             </Text>
           </View>
         )}
 
         {experimentName && (
-          <Text
-            style={[
-              styles.experimentName,
-              {
-                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-              },
-            ]}
-          >
-            {experimentName}
-          </Text>
+          <Text className={clsx("text-sm font-medium", classes.text)}>{experimentName}</Text>
         )}
       </View>
 
       <TouchableOpacity
-        style={[
-          styles.closeButton,
-          {
-            backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
-          },
-        ]}
+        className={clsx("ml-3 h-10 w-10 items-center justify-center rounded-full", classes.card)}
         onPress={onClose}
         activeOpacity={0.7}
       >
-        <X size={20} color={theme.isDark ? colors.dark.onSurface : colors.light.onSurface} />
+        <X size={20} color={colors.primary.dark} />
       </TouchableOpacity>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  titleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginLeft: 8,
-  },
-  timestampContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  timestamp: {
-    fontSize: 12,
-    marginLeft: 4,
-  },
-  experimentName: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 12,
-  },
-});
