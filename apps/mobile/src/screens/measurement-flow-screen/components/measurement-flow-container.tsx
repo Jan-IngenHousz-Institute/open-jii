@@ -1,5 +1,4 @@
 import React from "react";
-import { useExperimentFlow } from "~/hooks/use-experiment-flow";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 import { FormValidationProvider } from "../hooks/use-form-validation";
@@ -8,9 +7,8 @@ import { CompletedState } from "./flow-states/completed-state";
 import { EmptyState } from "./flow-states/empty-state";
 import { ErrorState } from "./flow-states/error-state";
 import { LoadingState } from "./flow-states/loading-state";
-import { ReadyState } from "./flow-states/ready-state";
 
-export function CustomMeasurementFlowStep() {
+export function MeasurementFlowContainer() {
   const {
     experimentId,
     flowNodes,
@@ -27,20 +25,12 @@ export function CustomMeasurementFlowStep() {
 
   const isFlowCompleted = currentFlowStep >= flowNodes.length;
 
-  const { data: { body } = {}, isLoading, error } = useExperimentFlow(experimentId);
-
   const isFlowInitialized = flowNodes.length > 0;
 
-  if (isLoading) {
+  // Flow nodes are initialized from the experiment selection step's handler
+
+  if (!isFlowInitialized) {
     return <LoadingState />;
-  }
-
-  if (error) {
-    return <ErrorState />;
-  }
-
-  if (!isFlowInitialized && body) {
-    return <ReadyState onStartFlow={() => setFlowNodes(body.graph.nodes)} />;
   }
 
   if (isFlowCompleted && isFlowFinished) {

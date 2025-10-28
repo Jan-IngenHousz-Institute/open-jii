@@ -4,18 +4,18 @@ import { View, Text } from "react-native";
 import { ActivityIndicator } from "react-native";
 import { Button } from "~/components/Button";
 import { Dropdown } from "~/components/Dropdown";
+import { useExperimentFlowQuery } from "~/hooks/use-experiment-flow-query";
 import { useExperiments } from "~/hooks/use-experiments";
 import { useTheme } from "~/hooks/use-theme";
 import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
+import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
-interface ExperimentSelectionStepProps {
-  onContinue?: (experimentId: string) => void;
-}
-
-export function ExperimentSelectionStep({ onContinue }: ExperimentSelectionStepProps) {
+export function ExperimentSelectionStep() {
   const { classes } = useTheme();
   const { experiments, isLoading, error } = useExperiments();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
+  const { setExperimentId, setFlowNodes, nextStep } = useMeasurementFlowStore();
+  const { fetchExperimentFlow, isFetching } = useExperimentFlowQuery(selectedExperimentId);
 
   const selectedExperiment = experiments.find((exp) => exp.value === selectedExperimentId);
 
@@ -37,20 +37,24 @@ export function ExperimentSelectionStep({ onContinue }: ExperimentSelectionStepP
           Step 1: Select Experiment
         </Text>
 
-        {isLoading ? (
+        {isLoading && (
           <View className="items-center py-8">
             <ActivityIndicator size="large" color="#005e5e" />
             <Text className={clsx("mt-4 text-center", classes.textSecondary)}>
               Loading experiments...
             </Text>
           </View>
-        ) : error ? (
+        )}
+
+        {!isLoading && error && (
           <View className="items-center py-8">
             <Text className={clsx("text-center text-red-500", classes.text)}>
               Failed to load experiments. Please try again.
             </Text>
           </View>
-        ) : (
+        )}
+
+        {!isLoading && !error && (
           <>
             <Dropdown
               label="Available Experiments"
@@ -76,11 +80,21 @@ export function ExperimentSelectionStep({ onContinue }: ExperimentSelectionStepP
         <View className="mt-8">
           <Button
             title="Start measurement flow"
-            onPress={() => {
-              if (selectedExperimentId && onContinue) {
-                onContinue(selectedExperimentId);
+            onPress={async () => {
+              if (!selectedExperimentId) {
+                return;
               }
+
+              setExperimentId(selectedExperimentId);
+
+              const nodes = await fetchExperimentFlow();
+              if (nodes?.length) {
+                setFlowNodes(nodes);
+              }
+
+              nextStep();
             }}
+            isDisabled={isFetching}
             style={{ width: "100%" }}
           />
         </View>
