@@ -34,7 +34,7 @@ function prepareMeasurementForUpload({
   };
 }
 
-export function useUpload() {
+export function useMeasurementUpload() {
   const { showToast } = useToast();
   const { saveFailedUpload } = useFailedUploads();
 
@@ -44,7 +44,7 @@ export function useUpload() {
       timestamp,
       experimentName,
       experimentId,
-      protocolName,
+      protocolId,
       userId,
       macroFilename,
     }: {
@@ -52,7 +52,7 @@ export function useUpload() {
       timestamp: string;
       experimentName: string;
       experimentId: string;
-      protocolName: string;
+      protocolId: string;
       userId: string;
       macroFilename: string;
     }) => {
@@ -67,7 +67,7 @@ export function useUpload() {
         timestamp,
       });
 
-      const topic = getMultispeqMqttTopic({ experimentId, protocolName });
+      const topic = getMultispeqMqttTopic({ experimentId, protocolId });
 
       try {
         await sendMqttEvent(topic, measurementData);
@@ -80,7 +80,7 @@ export function useUpload() {
           measurementResult: measurementData,
           metadata: {
             experimentName,
-            protocolName,
+            protocolName: protocolId,
             timestamp: measurementData.timestamp,
           },
         });

@@ -5,10 +5,9 @@ import { Button } from "~/components/Button";
 import { MeasurementResult } from "~/components/measurement-result/measurement-result";
 import { useExperiment } from "~/hooks/use-experiment";
 import { useMacro } from "~/hooks/use-macro";
-import { useProtocol } from "~/hooks/use-protocol";
+import { useMeasurementUpload } from "~/hooks/use-measurement-upload";
 import { useSessionStore } from "~/hooks/use-session-store";
 import { useTheme } from "~/hooks/use-theme";
-import { useUpload } from "~/hooks/use-upload";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
 interface AnalysisNodeProps {
@@ -24,13 +23,12 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
   const { scanResult, previousStep, experimentId, protocolId, finishFlow } =
     useMeasurementFlowStore();
   const { experiment } = useExperiment(experimentId);
-  const { protocol } = useProtocol(protocolId);
   const { session } = useSessionStore();
   const experimentName = experiment?.name ?? "Experiment";
 
   const analysisTimestampRef = useRef<string>(new Date().toISOString());
 
-  const { isUploading, uploadMeasurement } = useUpload();
+  const { isUploading, uploadMeasurement } = useMeasurementUpload();
 
   const renderContent = () => {
     if (!scanResult) {
@@ -87,7 +85,8 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     if (!experimentId) {
       throw new Error("Missing experiment id");
     }
-    if (!protocol?.name) {
+
+    if (!protocolId) {
       throw new Error("Missing protocol name");
     }
 
@@ -103,8 +102,8 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       rawMeasurement: scanResult,
       timestamp: analysisTimestampRef.current,
       experimentName,
-      experimentId: experimentId,
-      protocolName: protocol?.name,
+      experimentId,
+      protocolId,
       userId: session?.data?.user?.id,
       macroFilename: macro?.filename,
     });

@@ -5,8 +5,8 @@ const { MQTT_TOPIC, CLIENT_ID } = assertEnvVariables({
   CLIENT_ID: process.env.CLIENT_ID,
 });
 
-export function getMultispeqMqttTopic({ experimentId, protocolName }) {
+export function getMultispeqMqttTopic({ experimentId, protocolId }) {
   return MQTT_TOPIC.replace(":clientId", CLIENT_ID)
     .replace(":experimentId", experimentId)
-    .replace(":protocolName", protocolName);
+    .replace(":protocolId", protocolId);
 }
