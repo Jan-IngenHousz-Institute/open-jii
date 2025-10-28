@@ -7,19 +7,19 @@ import { Chart } from "./chart";
 import { KeyValue } from "./key-value";
 import { MeasurementHeader } from "./measurement-header";
 
-interface MeasurementOutputPreviewProps {
+interface ProcessedMeasurementPreviewProps {
   output: any[];
   timestamp?: string;
   onClose: () => void;
   experimentName?: string;
 }
 
-export function MeasurementOutputPreview({
+export function ProcessedMeasurementPreview({
   output: outputs,
   timestamp,
   onClose,
   experimentName,
-}: MeasurementOutputPreviewProps) {
+}: ProcessedMeasurementPreviewProps) {
   const { classes } = useTheme();
 
   if (!outputs || outputs.length === 0) {

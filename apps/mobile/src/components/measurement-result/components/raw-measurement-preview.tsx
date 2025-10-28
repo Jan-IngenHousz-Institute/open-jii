@@ -5,7 +5,7 @@ import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 import { formatIsoDateString } from "~/utils/format-iso-date-string";
 
-export function MeasurementJsonPreview({ data, timestamp, experimentName, onClose }) {
+export function RawMeasurementPreview({ data, timestamp, experimentName, onClose }) {
   const { classes, colors } = useTheme();
 
   return (

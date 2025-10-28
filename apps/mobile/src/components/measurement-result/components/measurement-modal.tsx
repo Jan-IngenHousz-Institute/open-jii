@@ -1,7 +1,7 @@
 import React from "react";
 import { Modal } from "react-native";
-import { MeasurementJsonPreview } from "~/components/measurement-result/components/measurement-json-preview";
-import { MeasurementOutputPreview } from "~/components/measurement-result/components/measurement-output-preview";
+import { ProcessedMeasurementPreview } from "~/components/measurement-result/components/processed-measurement-preview";
+import { RawMeasurementPreview } from "~/components/measurement-result/components/raw-measurement-preview";
 
 interface Props {
   visible: boolean;
@@ -20,14 +20,14 @@ export function MeasurementModal({ visible, data, timestamp, experimentName, onC
       onRequestClose={onClose}
     >
       {data?.output ? (
-        <MeasurementOutputPreview
+        <ProcessedMeasurementPreview
           output={data.output}
           timestamp={timestamp}
           experimentName={experimentName}
           onClose={onClose}
         />
       ) : (
-        <MeasurementJsonPreview
+        <RawMeasurementPreview
           data={data}
           timestamp={timestamp}
           experimentName={experimentName}

@@ -4,8 +4,8 @@ import React, { useState } from "react";
 import { View, Modal, Text, TouchableOpacity } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
 
-import { MeasurementJsonPreview } from "./components/measurement-json-preview";
-import { MeasurementOutputPreview } from "./components/measurement-output-preview";
+import { ProcessedMeasurementPreview } from "./components/processed-measurement-preview";
+import { RawMeasurementPreview } from "./components/raw-measurement-preview";
 
 interface MeasurementResultProps {
   data: any;
@@ -62,7 +62,7 @@ export function MeasurementResult({ data, timestamp, experimentName }: Measureme
       </View>
 
       <Modal visible={showRaw} animationType="slide" presentationStyle="fullScreen">
-        <MeasurementJsonPreview
+        <RawMeasurementPreview
           data={data}
           timestamp={timestamp}
           experimentName={experimentName}
@@ -71,7 +71,7 @@ export function MeasurementResult({ data, timestamp, experimentName }: Measureme
       </Modal>
 
       <Modal visible={showProcessed} animationType="slide" presentationStyle="fullScreen">
-        <MeasurementOutputPreview
+        <ProcessedMeasurementPreview
           output={data?.output}
           timestamp={timestamp}
           experimentName={experimentName}
