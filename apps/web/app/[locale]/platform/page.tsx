@@ -30,7 +30,7 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
       <DashboardSection
         title={t("dashboard.yourExperiments")}
         seeAllLabel={t("dashboard.seeAll")}
-        seeAllHref="/platform/experiments"
+        seeAllHref="/platform/experiments?filter=all"
         locale={locale}
       >
         <UserExperimentsSection />

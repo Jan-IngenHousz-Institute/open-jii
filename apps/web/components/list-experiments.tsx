@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { ExperimentOverviewCards } from "~/components/experiment-overview-cards";
+import { useExperimentFilter } from "~/hooks/experiment/useExperimentFilter";
 import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments";
 
 import { useTranslation } from "@repo/i18n";
@@ -19,8 +20,10 @@ interface ListExperimentsProps {
 }
 
 export function ListExperiments({ archived = false }: ListExperimentsProps) {
-  const { data, filter, setFilter, search, setSearch } = useExperiments({
+  const { filter, setFilter } = useExperimentFilter();
+  const { data, search, setSearch } = useExperiments({
     archived,
+    initialFilter: filter,
   });
   const { t } = useTranslation();
 
@@ -47,11 +50,7 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
           )}
         </div>
         <div className="flex w-full flex-col gap-4 md:w-auto md:flex-row md:items-center md:gap-8">
-          <Select
-            defaultValue="member"
-            value={filter}
-            onValueChange={(value: "member" | "all") => setFilter(value)}
-          >
+          <Select value={filter} onValueChange={setFilter}>
             <SelectTrigger className="w-full md:w-[180px]">
               <SelectValue placeholder="Filter experiments" />
             </SelectTrigger>
