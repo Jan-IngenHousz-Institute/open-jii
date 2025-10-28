@@ -50,7 +50,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
       case "multi_choice":
         return (
           <MultipleChoiceQuestion
-            content={content}
+            node={node}
             selectedValue={answerValue}
             onSelect={handleAnswerChange}
           />

@@ -3,6 +3,7 @@ import { create } from "zustand";
 
 interface FlowAnswersStore {
   answersHistory: Record<string, string>[];
+  autoincrementSettings: Record<string, boolean>;
 
   // Set an answer for a specific cycle and question
   setAnswer: (cycle: number, name: string, value: string) => void;
@@ -15,10 +16,17 @@ interface FlowAnswersStore {
 
   // Get answers for a specific cycle
   getCycleAnswers: (cycle: number) => Record<string, string> | undefined;
+
+  // Set autoincrement setting for a variable
+  setAutoincrement: (name: string, enabled: boolean) => void;
+
+  // Check if autoincrement is enabled for a variable
+  isAutoincrementEnabled: (name: string) => boolean;
 }
 
 export const useFlowAnswersStore = create<FlowAnswersStore>((set, get) => ({
   answersHistory: [],
+  autoincrementSettings: {},
 
   setAnswer: (cycle: number, name: string, value: string) => {
     set((state) => {
@@ -40,7 +48,7 @@ export const useFlowAnswersStore = create<FlowAnswersStore>((set, get) => ({
   },
 
   clearHistory: () => {
-    set({ answersHistory: [] });
+    set({ answersHistory: [], autoincrementSettings: {} });
   },
 
   getAnswer: (cycle: number, name: string) => {
@@ -51,5 +59,19 @@ export const useFlowAnswersStore = create<FlowAnswersStore>((set, get) => ({
   getCycleAnswers: (cycle: number) => {
     const state = get();
     return state.answersHistory[cycle];
+  },
+
+  setAutoincrement: (name: string, enabled: boolean) => {
+    set((state) => ({
+      autoincrementSettings: {
+        ...state.autoincrementSettings,
+        [camelCase(name)]: enabled,
+      },
+    }));
+  },
+
+  isAutoincrementEnabled: (name: string) => {
+    const state = get();
+    return state.autoincrementSettings[camelCase(name)] ?? false;
   },
 }));

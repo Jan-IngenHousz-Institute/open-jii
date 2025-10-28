@@ -5,11 +5,12 @@ import { View, Text, TouchableOpacity } from "react-native";
 import { Checkbox } from "~/components/Checkbox";
 import { useTheme } from "~/hooks/use-theme";
 import { calculateGridLayout } from "~/screens/measurement-flow-screen/components/flow-nodes/question-types/utils/grid-layout";
+import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 
-import { QuestionContent } from "../../../types";
+import { FlowNode } from "../../../types";
 
 interface MultipleChoiceQuestionProps {
-  content: QuestionContent;
+  node: FlowNode;
   selectedValue: string;
   onSelect: (value: string) => void;
   disabledOptions?: string[];
@@ -36,13 +37,15 @@ const optionText = cva("px-2 text-center font-medium", {
 });
 
 export function MultipleChoiceQuestion({
-  content,
+  node,
   selectedValue,
   onSelect,
   disabledOptions = [],
 }: MultipleChoiceQuestionProps) {
   const { classes } = useTheme();
-  const [isAutoincrement, setIsAutoincrement] = React.useState(false);
+  const { setAutoincrement, isAutoincrementEnabled } = useFlowAnswersStore();
+
+  const content = node.content;
 
   const handleOptionSelect = (value: string) => {
     if (disabledOptions.includes(value)) return; // Don't allow selection of disabled options
@@ -93,7 +96,11 @@ export function MultipleChoiceQuestion({
 
       {/* Autoincrement checkbox at the very bottom */}
       <View className="mt-auto">
-        <Checkbox value={isAutoincrement} text="Auto Increment" onChange={setIsAutoincrement} />
+        <Checkbox
+          value={isAutoincrementEnabled(node.name)}
+          text="Auto Increment"
+          onChange={(enabled) => setAutoincrement(node.name, enabled)}
+        />
       </View>
     </View>
   );
