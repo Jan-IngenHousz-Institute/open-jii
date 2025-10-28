@@ -427,12 +427,12 @@ describe("Experiment Schema", () => {
       // Test combinations
       expect(
         zExperimentFilterQuery.parse({
-          filter: "my",
+          filter: "member",
           status: "active",
           search: "my experiment",
         }),
       ).toEqual({
-        filter: "my",
+        filter: "member",
         status: "active",
         search: "my experiment",
       });
