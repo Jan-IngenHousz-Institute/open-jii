@@ -10,24 +10,12 @@ import { FlowProgressIndicator } from "../flow-progress-indicator";
 
 interface ActiveStateProps {
   currentNode: FlowNode;
-  currentFlowStep: number;
-  flowNodesLength: number;
-  iterationCount: number;
 }
 
-export function ActiveState({
-  currentNode,
-  currentFlowStep,
-  flowNodesLength,
-  iterationCount,
-}: ActiveStateProps) {
+export function ActiveState({ currentNode }: ActiveStateProps) {
   return (
     <View style={{ flex: 1 }}>
-      <FlowProgressIndicator
-        currentStep={currentFlowStep}
-        totalSteps={flowNodesLength}
-        iterationCount={iterationCount}
-      />
+      <FlowProgressIndicator />
 
       <ScrollView
         style={{ flex: 1 }}

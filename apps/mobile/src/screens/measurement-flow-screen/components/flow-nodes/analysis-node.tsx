@@ -1,6 +1,7 @@
 import { clsx } from "clsx";
 import React from "react";
 import { View, Text } from "react-native";
+import { Button } from "~/components/Button";
 import { MeasurementResult } from "~/components/measurement-result/measurement-result";
 import { useMacros } from "~/hooks/use-macros";
 import { useTheme } from "~/hooks/use-theme";
@@ -17,7 +18,7 @@ interface AnalysisNodeProps {
 export function AnalysisNode({ content }: AnalysisNodeProps) {
   const { classes } = useTheme();
   const { macros } = useMacros();
-  const { scanResult } = useMeasurementFlowStore();
+  const { scanResult, previousStep } = useMeasurementFlowStore();
   const [processedResult, setProcessedResult] = React.useState<any>(null);
   const [processingError, setProcessingError] = React.useState<string | null>(null);
 
@@ -114,12 +115,32 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     );
   };
 
+  const handleUploadMeasurement = () => {
+    console.log("uploading");
+  };
+
+  const handleRetry = () => {
+    previousStep();
+  };
+
   return (
-    <View className={clsx("rounded-xl border", classes.card, classes.border)}>
+    <View className={clsx("flex-1 rounded-xl border", classes.card, classes.border)}>
       <View className="border-b border-gray-200 p-4 dark:border-gray-700">
         <Text className={clsx("text-lg font-semibold", classes.text)}>Analysis</Text>
       </View>
-      <View className="p-4">{renderContent()}</View>
+      <View className="flex-1 p-4">{renderContent()}</View>
+      <View className="border-t border-gray-200 p-4 dark:border-gray-700">
+        <View className="flex-row gap-3">
+          <Button
+            title="Retry"
+            onPress={handleRetry}
+            variant="outline"
+            style={{ flex: 1 }}
+            textStyle={{ color: "#ef4444" }}
+          />
+          <Button title="Upload" onPress={handleUploadMeasurement} style={{ flex: 1 }} />
+        </View>
+      </View>
     </View>
   );
 }

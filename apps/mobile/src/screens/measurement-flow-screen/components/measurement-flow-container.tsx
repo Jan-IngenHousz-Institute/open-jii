@@ -37,12 +37,5 @@ export function MeasurementFlowContainer() {
     return <EmptyState />;
   }
 
-  return (
-    <ActiveState
-      currentNode={currentNode}
-      currentFlowStep={currentFlowStep}
-      flowNodesLength={flowNodes.length}
-      iterationCount={iterationCount}
-    />
-  );
+  return <ActiveState currentNode={currentNode} />;
 }
