@@ -4,11 +4,10 @@ import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { ActiveState } from "./flow-states/active-state";
 import { CompletedState } from "./flow-states/completed-state";
 import { EmptyState } from "./flow-states/empty-state";
-// import { ErrorState } from "./flow-states/error-state";
 import { LoadingState } from "./flow-states/loading-state";
 
 export function MeasurementFlowContainer() {
-  const { flowNodes, currentFlowStep, iterationCount, isFlowFinished, resetFlow } =
+  const { flowNodes, currentFlowStep, iterationCount, isFlowFinished, resetFlow, finishFlow } =
     useMeasurementFlowStore();
 
   const isFlowCompleted = currentFlowStep >= flowNodes.length;
