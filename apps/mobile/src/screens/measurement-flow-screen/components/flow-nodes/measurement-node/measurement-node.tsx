@@ -1,6 +1,5 @@
 import { clsx } from "clsx";
-import { useKeepAwake } from "expo-keep-awake";
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
 import { useToast } from "~/context/toast-context";
@@ -23,7 +22,6 @@ interface MeasurementNodeProps {
 }
 
 export function MeasurementNode({ content }: MeasurementNodeProps) {
-  useKeepAwake();
   const { classes } = useTheme();
   const { protocol } = useProtocol(content.protocolId);
   const {
@@ -35,7 +33,11 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
   } = useScanner();
   const { data: device } = useConnectedDevice();
   const { showToast } = useToast();
-  const { nextStep, setScanResult } = useMeasurementFlowStore();
+  const { nextStep, setScanResult, setProtocolId } = useMeasurementFlowStore();
+
+  useEffect(() => {
+    setProtocolId(content.protocolId);
+  }, [setProtocolId, content.protocolId]);
 
   const handleStartScan = async () => {
     if (!device) {
@@ -65,7 +67,22 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     }
 
     if (scanError) {
-      return <ErrorState error={scanError} onRetry={handleStartScan} />;
+      return (
+        <View className="flex-1">
+          <View className="flex-1 p-4">
+            <ErrorState error={scanError} />
+          </View>
+          <View className="border-t border-gray-200 p-4 dark:border-gray-700">
+            <Button
+              title="Retry"
+              onPress={handleStartScan}
+              variant="outline"
+              style={{ width: "100%" }}
+              textStyle={{ color: "#ef4444" }}
+            />
+          </View>
+        </View>
+      );
     }
 
     if (isScanning) {
@@ -93,7 +110,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
           <ReadyState protocol={protocol} />
         </View>
         <View className="border-t border-gray-200 p-4 dark:border-gray-700">
-          <Button title="Start Measurement" onPress={handleStartScan} style={{ width: "100%" }} />
+          <Button title="Measure" onPress={handleStartScan} style={{ width: "100%" }} />
         </View>
       </View>
     );

@@ -7,14 +7,12 @@ import { EmptyState } from "./flow-states/empty-state";
 import { LoadingState } from "./flow-states/loading-state";
 
 export function MeasurementFlowContainer() {
-  const { flowNodes, currentFlowStep, iterationCount, isFlowFinished, resetFlow } =
+  const { flowNodes, currentFlowStep, iterationCount, isFlowFinished, startNewIteration } =
     useMeasurementFlowStore();
 
   const isFlowCompleted = currentFlowStep >= flowNodes.length;
 
   const isFlowInitialized = flowNodes.length > 0;
-
-  // Flow nodes are initialized from the experiment selection step's handler
 
   if (!isFlowInitialized) {
     return <LoadingState />;
@@ -25,7 +23,7 @@ export function MeasurementFlowContainer() {
       <CompletedState
         iterationCount={iterationCount}
         onStartNew={() => {
-          resetFlow();
+          startNewIteration();
         }}
       />
     );

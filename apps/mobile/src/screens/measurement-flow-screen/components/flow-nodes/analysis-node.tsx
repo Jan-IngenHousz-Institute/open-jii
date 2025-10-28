@@ -21,9 +21,10 @@ interface AnalysisNodeProps {
 export function AnalysisNode({ content }: AnalysisNodeProps) {
   const { classes } = useTheme();
   const { macro, isLoading } = useMacro(content.macroId);
-  const { scanResult, previousStep, nextStep, experimentId } = useMeasurementFlowStore();
+  const { scanResult, previousStep, experimentId, protocolId, finishFlow } =
+    useMeasurementFlowStore();
   const { experiment } = useExperiment(experimentId);
-  const { protocol } = useProtocol(content?.params?.protocolId);
+  const { protocol } = useProtocol(protocolId);
   const { session } = useSessionStore();
   const experimentName = experiment?.name ?? "Experiment";
 
@@ -107,7 +108,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       userId: session?.data?.user?.id,
       macroFilename: macro?.filename,
     });
-    nextStep();
+    finishFlow();
   };
 
   const handleRetry = () => {
@@ -131,7 +132,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
           />
           <Button
             title={isUploading ? "Uploading..." : "Upload"}
-            onPress={handleUploadMeasurement}
+            onPress={() => handleUploadMeasurement().catch(console.log)}
             disabled={isUploading}
             style={{ flex: 1 }}
           />

@@ -3,6 +3,7 @@ import { FlowNode } from "~/screens/measurement-flow-screen/types";
 
 interface MeasurementFlowStore {
   experimentId?: string;
+  protocolId?: string;
   currentStep: number;
   flowNodes: FlowNode[];
   currentFlowStep: number; // Current step within the flow (0-4 for 5 steps)
@@ -12,6 +13,7 @@ interface MeasurementFlowStore {
 
   // Navigation
   setExperimentId: (experimentId: string) => void;
+  setProtocolId: (protocolId: string) => void;
   setCurrentStep: (step: number) => void;
   nextStep: () => void;
   previousStep: () => void;
@@ -28,6 +30,7 @@ interface MeasurementFlowStore {
 
 export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
   experimentId: undefined,
+  protocolId: undefined,
   currentStep: 0,
   flowNodes: [],
   currentFlowStep: 0,
@@ -37,6 +40,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
 
   // Experiment selection
   setExperimentId: (experimentId) => set({ experimentId }),
+  setProtocolId: (protocolId) => set({ protocolId }),
 
   setCurrentStep: (step) => set({ currentStep: step }),
 
@@ -50,24 +54,21 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
             currentFlowStep: 0,
             iterationCount: state.iterationCount + 1,
           };
-        } else {
-          return { currentFlowStep: nextFlowStep };
         }
-      } else {
-        return { currentStep: state.currentStep + 1 };
+        return { currentFlowStep: nextFlowStep };
       }
+      return { currentStep: state.currentStep + 1 };
     }),
 
   previousStep: () =>
     set((state) => {
       if (state.currentStep > 0 && state.flowNodes.length > 0 && state.currentFlowStep > 0) {
         return { currentFlowStep: state.currentFlowStep - 1 };
-      } else {
-        return { currentStep: Math.max(0, state.currentStep - 1) };
       }
+      return { currentStep: Math.max(0, state.currentStep - 1) };
     }),
 
-  reset: () => set({ experimentId: undefined, currentStep: 0 }),
+  reset: () => set({ experimentId: undefined, protocolId: undefined, currentStep: 0 }),
 
   // Flow orchestration
   setFlowNodes: (nodes) => set({ flowNodes: nodes, currentFlowStep: 0 }),
@@ -80,6 +81,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
       iterationCount: 0,
       isFlowFinished: false,
       scanResult: undefined,
+      protocolId: undefined,
     }),
 
   startNewIteration: () =>

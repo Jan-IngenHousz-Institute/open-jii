@@ -13,17 +13,26 @@ export function CompletedState({ iterationCount, onStartNew }: CompletedStatePro
   const { classes } = useTheme();
 
   return (
-    <View className={clsx("rounded-xl border p-6", classes.card, classes.border)}>
-      <Text className={clsx("mb-4 text-center text-xl font-semibold", classes.text)}>
-        ✅ Flow Finished!
-      </Text>
-      <Text className={clsx("mb-2 text-center", classes.textSecondary)}>
-        You have finished the measurement flow. Thank you for your work!
-      </Text>
-      <Text className={clsx("mb-6 text-center text-sm", classes.textMuted)}>
-        Cycle {iterationCount}
-      </Text>
-      <Button title="Start New Flow" onPress={onStartNew} style={{ width: "100%" }} />
+    <View className={clsx("flex-1 rounded-xl border", classes.card, classes.border)}>
+      <View className="border-b border-gray-200 p-4 dark:border-gray-700">
+        <Text className={clsx("text-lg font-semibold", classes.text)}>Flow Complete</Text>
+      </View>
+
+      <View className="flex-1 items-center justify-center p-4">
+        <Text className={clsx("mb-4 text-center text-xl font-semibold", classes.text)}>
+          Cycle Complete
+        </Text>
+        <Text className={clsx("mb-2 text-center", classes.textSecondary)}>
+          You have finished the measurement flow.
+        </Text>
+        <Text className={clsx("text-center text-sm", classes.textMuted)}>
+          Cycle {iterationCount + 1}
+        </Text>
+      </View>
+
+      <View className="border-t border-gray-200 p-4 dark:border-gray-700">
+        <Button title="Start New Cycle" onPress={onStartNew} style={{ width: "100%" }} />
+      </View>
     </View>
   );
 }

@@ -1,15 +1,13 @@
 import { clsx } from "clsx";
 import React from "react";
 import { View, Text } from "react-native";
-import { Button } from "~/components/Button";
 import { useTheme } from "~/hooks/use-theme";
 
 interface ErrorStateProps {
   error: any;
-  onRetry: () => void;
 }
 
-export function ErrorState({ error, onRetry }: ErrorStateProps) {
+export function ErrorState({ error }: ErrorStateProps) {
   const { classes } = useTheme();
 
   return (
@@ -20,7 +18,6 @@ export function ErrorState({ error, onRetry }: ErrorStateProps) {
       <Text className={clsx("mb-6 text-center", classes.textSecondary)}>
         {error?.message ?? "An error occurred during measurement"}
       </Text>
-      <Button title="Retry Measurement" onPress={onRetry} style={{ width: "100%" }} />
     </View>
   );
 }
