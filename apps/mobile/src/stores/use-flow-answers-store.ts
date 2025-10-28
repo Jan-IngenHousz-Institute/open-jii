@@ -1,3 +1,4 @@
+import { camelCase } from "lodash";
 import { create } from "zustand";
 
 interface FlowAnswersStore {
@@ -34,7 +35,7 @@ export const useFlowAnswersStore = create<FlowAnswersStore>((set, get) => ({
       // Set the answer for the specific cycle and question
       newHistory[cycle] = {
         ...newHistory[cycle],
-        [name]: value,
+        [camelCase(name)]: value,
       };
 
       return { answersHistory: newHistory };
@@ -47,7 +48,7 @@ export const useFlowAnswersStore = create<FlowAnswersStore>((set, get) => ({
 
   getAnswer: (cycle: number, name: string) => {
     const state = get();
-    return state.answersHistory[cycle]?.[name];
+    return state.answersHistory[cycle]?.[camelCase(name)];
   },
 
   getCycleAnswers: (cycle: number) => {
