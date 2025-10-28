@@ -79,7 +79,7 @@ describe("VerifyRequestPage", () => {
     expect(mockRedirect).toHaveBeenCalledWith(`/${locale}/`);
   });
 
-  it("applies background image style", async () => {
+  it("renders background image using Next.js Image component", async () => {
     // Mock Math.random to ensure consistent background image
     const mockMathRandom = vi.spyOn(Math, "random").mockReturnValue(0.5);
 
@@ -92,14 +92,16 @@ describe("VerifyRequestPage", () => {
 
     const container = document.querySelector(".relative.min-h-svh");
     expect(container).toBeInTheDocument();
+    expect(container).toHaveClass("overflow-hidden");
 
-    expect(container).toHaveClass("bg-cover", "bg-center", "bg-no-repeat");
+    // Check for Next.js Image component with correct props
+    const image = document.querySelector('img[alt="Verify request background"]');
+    expect(image).toBeInTheDocument();
 
-    // If the style is set, check it contains the expected parts
-    if (container && (container as HTMLElement).style.backgroundImage) {
-      expect((container as HTMLElement).style.backgroundImage).toContain("url('/login-background-");
-      expect((container as HTMLElement).style.backgroundImage).toContain("linear-gradient");
-    }
+    // Check for gradient overlay
+    const gradient = document.querySelector(".bg-gradient-to-l");
+    expect(gradient).toBeInTheDocument();
+    expect(gradient).toHaveClass("from-black", "via-black/80", "to-black/40");
 
     mockMathRandom.mockRestore();
   });

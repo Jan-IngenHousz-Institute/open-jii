@@ -2,6 +2,7 @@ import { UnifiedNavbar } from "@/components/unified-navbar/unified-navbar";
 import { auth } from "@/lib/auth";
 import type { SearchParamsType } from "@/util/searchParams";
 import { getFirstSearchParam } from "@/util/searchParams";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { AuthHeroSection } from "~/components/auth/auth-hero-section";
 import { RegistrationForm } from "~/components/auth/registration-form";
@@ -36,13 +37,14 @@ export default async function UserRegistrationPage(props: {
   return (
     <>
       <UnifiedNavbar locale={locale} session={session} />
-      <div
-        className="relative min-h-svh w-full bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: `linear-gradient(to left, rgba(0,0,0,1), rgba(0,0,0,0.8), rgba(0,0,0,0.4)), url('${bgImage}')`,
-        }}
-      >
-        <div className="mx-auto max-w-7xl">
+      <div className="relative min-h-svh w-full overflow-hidden">
+        {/* Background Image */}
+        <Image src={bgImage} alt="Registration background" fill priority className="object-cover" />
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 z-10 bg-gradient-to-l from-black via-black/80 to-black/40" />
+
+        {/* Content */}
+        <div className="relative z-20 mx-auto max-w-7xl">
           <div className="grid min-h-svh w-full grid-cols-1 md:grid-cols-2">
             {/* Left side: Registration form */}
             <div className="flex flex-col p-0 md:mt-6 md:p-10">
