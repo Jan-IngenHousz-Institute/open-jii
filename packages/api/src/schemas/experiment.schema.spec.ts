@@ -407,7 +407,7 @@ describe("Experiment Schema", () => {
       expect(zExperimentFilterQuery.parse({})).toEqual({});
 
       // Test filter field
-      expect(zExperimentFilterQuery.parse({ filter: "my" })).toEqual({ filter: "my" });
+      expect(zExperimentFilterQuery.parse({ filter: "member" })).toEqual({ filter: "member" });
       expect(() => zExperimentFilterQuery.parse({ filter: "unknown" })).toThrow();
 
       // Test status field
