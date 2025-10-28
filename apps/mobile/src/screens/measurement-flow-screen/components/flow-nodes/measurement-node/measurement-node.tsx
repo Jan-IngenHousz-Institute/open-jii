@@ -52,7 +52,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     resetScan();
     try {
       // For measurement node, we only execute the protocol scan, no macro
-      const result = await executeScan(content.protocolId, "");
+      const result = await executeScan(content.protocolId);
       setScanResult(result);
       nextStep();
     } catch (error) {

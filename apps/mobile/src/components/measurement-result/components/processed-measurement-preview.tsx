@@ -8,7 +8,7 @@ import { KeyValue } from "./key-value";
 import { MeasurementHeader } from "./measurement-header";
 
 interface ProcessedMeasurementPreviewProps {
-  output: any[];
+  output?: any[];
   timestamp?: string;
   onClose: () => void;
   experimentName?: string;

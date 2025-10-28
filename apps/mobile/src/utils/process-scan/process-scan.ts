@@ -65,3 +65,23 @@ export function executeMacro(code: string, json: object) {
   const fn = new Function("json", macroSource);
   return fn(json);
 }
+
+export function applyMacro(result: object, macroCodeBase64: string): object[] {
+  if (!("sample" in result)) {
+    throw new Error("Result does not contain sample data");
+  }
+
+  const { sample } = result;
+
+  if (!sample) {
+    throw new Error("Sample data is missing");
+  }
+
+  const samples = Array.isArray(sample) ? sample : [sample];
+
+  const code = atob(macroCodeBase64);
+  console.log("executing macro");
+  const output: object[] = samples.map((sample) => executeMacro(code, sample));
+
+  return output;
+}

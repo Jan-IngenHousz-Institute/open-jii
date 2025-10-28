@@ -1,22 +1,34 @@
 import { clsx } from "clsx";
 import { CheckCircle2, FileText, BarChart2, ChevronRight } from "lucide-react-native";
 import React, { useState } from "react";
+import { useAsync } from "react-async-hook";
 import { View, Modal, Text, TouchableOpacity } from "react-native";
 import { useTheme } from "~/hooks/use-theme";
+import { applyMacro } from "~/utils/process-scan/process-scan";
 
 import { ProcessedMeasurementPreview } from "./components/processed-measurement-preview";
 import { RawMeasurementPreview } from "./components/raw-measurement-preview";
 
 interface MeasurementResultProps {
-  data: any;
+  rawMeasurement: any;
+  macro: any;
   timestamp?: string;
   experimentName?: string;
 }
 
-export function MeasurementResult({ data, timestamp, experimentName }: MeasurementResultProps) {
+export function MeasurementResult({
+  rawMeasurement,
+  macro,
+  timestamp,
+  experimentName,
+}: MeasurementResultProps) {
   const { classes, colors } = useTheme();
   const [showRaw, setShowRaw] = useState(false);
   const [showProcessed, setShowProcessed] = useState(false);
+
+  const { result: processedMeasurement, error: processingError } = useAsync(() => {
+    return Promise.resolve(applyMacro(rawMeasurement, macro.code));
+  }, [rawMeasurement, macro.code]);
 
   return (
     <>
@@ -51,19 +63,35 @@ export function MeasurementResult({ data, timestamp, experimentName }: Measureme
             )}
             activeOpacity={0.7}
             onPress={() => setShowProcessed(true)}
+            disabled={!!processingError}
           >
             <View className="flex-row items-center gap-2">
-              <BarChart2 size={18} color={colors.primary.dark} />
-              <Text className={clsx("text-[15px] font-medium", classes.text)}>View result</Text>
+              <BarChart2 size={18} color={processingError ? "#9ca3af" : colors.primary.dark} />
+              <Text
+                className={clsx(
+                  "text-[15px] font-medium",
+                  processingError ? classes.textMuted : classes.text,
+                )}
+              >
+                {processingError ? "Processing failed" : "View result"}
+              </Text>
             </View>
-            <ChevronRight size={16} color={colors.primary.dark} />
+            {!processingError && <ChevronRight size={16} color={colors.primary.dark} />}
           </TouchableOpacity>
+
+          {processingError && (
+            <View className="mt-2 rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
+              <Text className={clsx("text-sm text-red-600 dark:text-red-400", classes.text)}>
+                Processing Error: {processingError.message}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
 
       <Modal visible={showRaw} animationType="slide" presentationStyle="fullScreen">
         <RawMeasurementPreview
-          data={data}
+          data={rawMeasurement}
           timestamp={timestamp}
           experimentName={experimentName}
           onClose={() => setShowRaw(false)}
@@ -72,7 +100,7 @@ export function MeasurementResult({ data, timestamp, experimentName }: Measureme
 
       <Modal visible={showProcessed} animationType="slide" presentationStyle="fullScreen">
         <ProcessedMeasurementPreview
-          output={data?.output}
+          output={processedMeasurement}
           timestamp={timestamp}
           experimentName={experimentName}
           onClose={() => setShowProcessed(false)}

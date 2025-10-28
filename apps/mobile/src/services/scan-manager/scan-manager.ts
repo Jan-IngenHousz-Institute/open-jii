@@ -1,10 +1,7 @@
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import RNBluetoothClassic from "react-native-bluetooth-classic";
-import { useToast } from "~/context/toast-context";
 import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
-import { useMacros } from "~/hooks/use-macros";
 import { useProtocols } from "~/hooks/use-protocols";
-import { useSessionStore } from "~/hooks/use-session-store";
 import {
   getConnectedSerialPortConnection,
   useConnectedDevice,
@@ -13,7 +10,6 @@ import { bluetoothDeviceToMultispeqStream } from "~/services/multispeq-communica
 import { serialPortToMultispeqStream } from "~/services/multispeq-communication/android-serial-port-connection/serial-port-to-multispeq-stream";
 import { MultispeqCommandExecutor } from "~/services/multispeq-communication/multispeq-command-executor";
 import { Device } from "~/types/device";
-import { processScan } from "~/utils/process-scan/process-scan";
 
 async function createBluetoothMultiseqCommandExecutor(device: Device | undefined) {
   if (!device) {
@@ -75,13 +71,8 @@ export function useScannerCommandExecutor() {
 
 export function useScanner() {
   const { executeCommand } = useScannerCommandExecutor();
-  const { macros } = useMacros();
-  const { session } = useSessionStore();
   const { protocols } = useProtocols();
   const { setBatteryLevel } = useDeviceConnectionStore();
-  const { showToast } = useToast();
-
-  const userId = session?.data.user.id;
 
   const {
     execute: executeScan,
@@ -89,13 +80,11 @@ export function useScanner() {
     loading: isScanning,
     error,
     result,
-  } = useAsyncCallback(async (protocolId: string, macroId: string) => {
+  } = useAsyncCallback(async (protocolId: string) => {
     const protocolCode = protocols?.find((p) => p.value === protocolId)?.code;
     if (!protocolCode) {
       return;
     }
-
-    const macro = macros?.find((m) => m.value === macroId);
 
     const result = await executeCommand(protocolCode).catch(console.log);
 
@@ -104,9 +93,7 @@ export function useScanner() {
       throw new Error("Invalid result");
     }
 
-    return processScan(result, userId, macro?.filename, macro?.code, (errorMessage) =>
-      showToast(errorMessage, "error"),
-    );
+    return result;
   });
 
   return {
