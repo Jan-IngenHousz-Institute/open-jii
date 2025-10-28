@@ -94,7 +94,6 @@ export function MultipleChoiceQuestion({
         </Text>
       )}
 
-      {/* Autoincrement checkbox at the very bottom */}
       <View className="mt-auto">
         <Checkbox
           value={isAutoincrementEnabled(node.name)}

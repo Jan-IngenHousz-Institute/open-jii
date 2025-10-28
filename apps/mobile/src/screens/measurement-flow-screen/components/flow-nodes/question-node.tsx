@@ -19,7 +19,7 @@ interface QuestionNodeProps {
 export function QuestionNode({ node }: QuestionNodeProps) {
   const { classes } = useTheme();
   const { nextStep, iterationCount } = useMeasurementFlowStore();
-  const { setAnswer, getAnswer } = useFlowAnswersStore();
+  const { setAnswer, getAnswer, isAutoincrementEnabled } = useFlowAnswersStore();
 
   const content = node.content;
 
@@ -29,6 +29,22 @@ export function QuestionNode({ node }: QuestionNodeProps) {
   // Handler to update answer in store
   const handleAnswerChange = (value: string) => {
     setAnswer(iterationCount, node.name, value);
+  };
+
+  const handleNextStep = () => {
+    // Handle autoincrement for multi_choice questions
+    if (content.kind === "multi_choice") {
+      const isAutoincrement = isAutoincrementEnabled(node.name);
+      if (isAutoincrement && answerValue) {
+        const options = content.options ?? [];
+        const currentIndex = options.indexOf(answerValue);
+        const nextValue = options[currentIndex + 1] ?? answerValue;
+        setAnswer(iterationCount + 1, node.name, nextValue);
+      } else if (!isAutoincrement) {
+        setAnswer(iterationCount + 1, node.name, answerValue);
+      }
+    }
+    nextStep();
   };
 
   const renderQuestionType = () => {
@@ -79,7 +95,7 @@ export function QuestionNode({ node }: QuestionNodeProps) {
       <View className="border-t border-gray-200 p-4 dark:border-gray-700">
         <Button
           title="Next"
-          onPress={nextStep}
+          onPress={handleNextStep}
           isDisabled={!currentIsValid}
           style={{ width: "100%" }}
         />
