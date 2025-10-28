@@ -1,5 +1,6 @@
 import React from "react";
-import { Text, View, StyleSheet } from "react-native";
+import { Text, View } from "react-native";
+import { clsx } from "clsx";
 import { useTheme } from "~/hooks/use-theme";
 
 interface KeyValueProps {
@@ -8,38 +9,13 @@ interface KeyValueProps {
 }
 
 export function KeyValue({ name, value }: KeyValueProps) {
-  const theme = useTheme();
-  const { colors } = theme;
+  const { classes, colors } = useTheme();
 
   return (
-    <View
-      style={[
-        styles.keyValueContainer,
-        {
-          backgroundColor: theme.isDark ? colors.dark.card : colors.light.card,
-          borderColor: theme.isDark ? colors.dark.border : colors.light.border,
-        },
-      ]}
-    >
-      <View style={styles.keyValueRow}>
-        <Text
-          style={[
-            styles.keyText,
-            {
-              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-            },
-          ]}
-        >
-          {name}
-        </Text>
-        <Text
-          style={[
-            styles.valueText,
-            {
-              color: colors.primary.dark,
-            },
-          ]}
-        >
+    <View className={clsx("mb-2 rounded-xl border px-4 py-4", classes.card, classes.border)}>
+      <View className="flex-row items-center justify-between">
+        <Text className={clsx("flex-1 text-base font-semibold", classes.text)}>{name}</Text>
+        <Text className="text-base font-bold" style={{ color: colors.primary.dark }}>
           {value}
         </Text>
       </View>
@@ -47,27 +23,3 @@ export function KeyValue({ name, value }: KeyValueProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  keyValueContainer: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  keyValueRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  keyText: {
-    fontSize: 16,
-    fontWeight: "600",
-    flex: 1,
-  },
-  valueText: {
-    fontSize: 16,
-    fontWeight: "700",
-    textAlign: "right",
-  },
-});
