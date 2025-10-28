@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments";
@@ -12,6 +13,15 @@ globalThis.React = React;
 vi.mock("~/hooks/experiment/useExperiments/useExperiments", () => ({
   useExperiments: vi.fn(),
 }));
+
+// Mock Next.js navigation
+vi.mock("next/navigation", () => ({
+  useRouter: vi.fn(),
+  useSearchParams: vi.fn(),
+}));
+
+const mockUseRouter = useRouter as ReturnType<typeof vi.fn>;
+const mockUseSearchParams = useSearchParams as ReturnType<typeof vi.fn>;
 
 // Mock translation
 vi.mock("@repo/i18n", () => ({
@@ -44,10 +54,10 @@ vi.mock("@repo/ui/components", () => ({
         data-testid="select-trigger"
         onClick={() => {
           // Simulate selecting different values based on the current value
-          if (value === "my" || defaultValue === "my") {
-            onValueChange("member");
+          if (value === "member" || defaultValue === "member") {
+            onValueChange("all");
           } else if (value === "all" || !value) {
-            onValueChange("draft");
+            onValueChange("member");
           }
         }}
       >
@@ -77,6 +87,17 @@ describe("ListExperiments", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Set up Next.js navigation mocks
+    const mockReplace = vi.fn();
+    const mockSearchParams = new URLSearchParams();
+
+    mockUseRouter.mockReturnValue({
+      replace: mockReplace,
+    });
+
+    mockUseSearchParams.mockReturnValue(mockSearchParams);
+
     (useExperiments as ReturnType<typeof vi.fn>).mockReturnValue({
       data: { body: [{ id: "1", name: "Exp 1" }] },
       filter: "member",
