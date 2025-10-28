@@ -106,13 +106,11 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
     }
 
     return (
-      <View style={{ height: 400 }}>
-        <MeasurementResult
-          data={processedResult}
-          timestamp={processedResult?.timestamp}
-          experimentName={macro?.label ?? "Analysis"}
-        />
-      </View>
+      <MeasurementResult
+        data={processedResult}
+        timestamp={processedResult?.timestamp}
+        experimentName={macro?.label ?? "Analysis"}
+      />
     );
   };
 

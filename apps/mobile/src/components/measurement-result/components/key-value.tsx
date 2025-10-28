@@ -1,6 +1,6 @@
+import { clsx } from "clsx";
 import React from "react";
 import { Text, View } from "react-native";
-import { clsx } from "clsx";
 import { useTheme } from "~/hooks/use-theme";
 
 interface KeyValueProps {
@@ -22,4 +22,3 @@ export function KeyValue({ name, value }: KeyValueProps) {
     </View>
   );
 }
-

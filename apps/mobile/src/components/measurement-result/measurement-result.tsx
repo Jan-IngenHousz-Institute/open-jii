@@ -20,7 +20,7 @@ export function MeasurementResult({ data, timestamp, experimentName }: Measureme
 
   return (
     <>
-      <View className={clsx("flex-1 rounded-xl p-4", classes.card, classes.border)}>
+      <View className={clsx("rounded-xl p-4", classes.card, classes.border)}>
         <View className="mb-3 flex-row items-center gap-2">
           <CheckCircle2 size={18} color="#10b981" />
           <Text className={clsx("text-base font-semibold", classes.text)}>Scan successful</Text>
