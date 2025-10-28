@@ -66,7 +66,10 @@ export function QuestionNode({ content }: QuestionNodeProps) {
       <View className="border-t border-gray-200 p-4 dark:border-gray-700">
         <Button
           title="Next"
-          onPress={nextStep}
+          onPress={() => {
+            setAnswerValue("");
+            nextStep();
+          }}
           isDisabled={!currentIsValid}
           style={{ width: "100%" }}
         />

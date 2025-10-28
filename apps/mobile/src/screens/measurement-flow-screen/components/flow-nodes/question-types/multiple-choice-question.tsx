@@ -1,3 +1,4 @@
+import { cva } from "class-variance-authority";
 import { clsx } from "clsx";
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
@@ -10,20 +11,36 @@ interface MultipleChoiceQuestionProps {
   content: QuestionContent;
   selectedValue: string;
   onSelect: (value: string) => void;
+  disabledOptions?: string[];
 }
+
+const optionContainer = cva("items-center justify-center rounded-lg border-2", {
+  variants: {
+    state: {
+      selected: "border-blue-500 bg-blue-50 dark:bg-blue-900/20",
+      disabled: "border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800",
+      default: "border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800",
+    },
+  },
+});
+
+const optionText = cva("px-2 text-center font-medium", {
+  variants: {
+    state: {
+      selected: "text-blue-600 dark:text-blue-400",
+      disabled: "text-gray-400 dark:text-gray-500",
+      default: "",
+    },
+  },
+});
 
 export function MultipleChoiceQuestion({
   content,
   selectedValue,
   onSelect,
+  disabledOptions = [],
 }: MultipleChoiceQuestionProps) {
   const { classes } = useTheme();
-
-  // Mock data for disabled options (previously used choices)
-  const [disabledOptions] = React.useState<string[]>([
-    // Example: some options that were used in previous cycles
-    // "Option 1", "Option 3"
-  ]);
 
   const handleOptionSelect = (value: string) => {
     if (disabledOptions.includes(value)) return; // Don't allow selection of disabled options
@@ -31,10 +48,6 @@ export function MultipleChoiceQuestion({
     onSelect(newValue);
   };
 
-  // Update validation on mount
-  // validity is reported via handleOptionSelect; no effects needed
-
-  // Calculate responsive grid layout
   const numOptions = content.options?.length ?? 0;
   const { buttonHeight, buttonWidth } = calculateGridLayout(numOptions);
 
@@ -45,17 +58,11 @@ export function MultipleChoiceQuestion({
           const isSelected = selectedValue === option;
           const isDisabled = disabledOptions.includes(option);
 
+          const state = isSelected ? "selected" : isDisabled ? "disabled" : "default";
           return (
             <TouchableOpacity
               key={index}
-              className={clsx(
-                "items-center justify-center rounded-lg border-2",
-                isSelected
-                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                  : isDisabled
-                    ? "border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800"
-                    : "border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800",
-              )}
+              className={optionContainer({ state })}
               style={{
                 width: buttonWidth,
                 height: buttonHeight,
@@ -65,14 +72,7 @@ export function MultipleChoiceQuestion({
               activeOpacity={isDisabled ? 1 : 0.7}
             >
               <Text
-                className={clsx(
-                  "px-2 text-center font-medium",
-                  isSelected
-                    ? "text-blue-600 dark:text-blue-400"
-                    : isDisabled
-                      ? "text-gray-400 dark:text-gray-500"
-                      : classes.text,
-                )}
+                className={clsx(optionText({ state }), state === "default" && classes.text)}
                 numberOfLines={2}
                 style={{ fontSize: numOptions <= 2 ? 16 : numOptions <= 4 ? 14 : 12 }}
               >
