@@ -92,7 +92,11 @@ export async function connectToDevice(device: Device) {
 
 export async function disconnectFromDevice(device: Device) {
   if (device.type === "bluetooth-classic") {
-    await RNBluetoothClassic.disconnectFromDevice(device.id);
+    try {
+      await RNBluetoothClassic.disconnectFromDevice(device.id);
+    } catch {
+      // no action, we're already disconnected
+    }
     return;
   }
   if (device.type === "usb") {

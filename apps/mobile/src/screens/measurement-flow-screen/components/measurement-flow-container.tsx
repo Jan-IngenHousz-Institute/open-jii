@@ -57,16 +57,6 @@ export function MeasurementFlowContainer() {
         currentFlowStep={currentFlowStep}
         flowNodesLength={flowNodes.length}
         iterationCount={iterationCount}
-        onNext={nextStep}
-        onUpload={() => {
-          console.log("Upload clicked");
-          startNewIteration();
-        }}
-        onRetry={retryCurrentIteration}
-        onFinish={() => {
-          console.log("Finish flow clicked");
-          finishFlow();
-        }}
       />
     </FormValidationProvider>
   );

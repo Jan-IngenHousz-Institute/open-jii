@@ -89,7 +89,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
   };
 
   return (
-    <View className={clsx("rounded-xl border", classes.card, classes.border)}>
+    <View className={clsx("flex-1 rounded-xl border", classes.card, classes.border)}>
       <View className="border-b border-gray-200 p-4 dark:border-gray-700">
         <Text className={clsx("text-lg font-semibold", classes.text)}>Measurement</Text>
         {protocol && (
@@ -97,7 +97,7 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
         )}
       </View>
 
-      <View className="p-4">{renderState()}</View>
+      <View className="flex-1 p-4">{renderState()}</View>
     </View>
   );
 }

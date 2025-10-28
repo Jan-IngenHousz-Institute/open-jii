@@ -1,8 +1,11 @@
 import { clsx } from "clsx";
 import React from "react";
 import { View, Text } from "react-native";
+import { Button } from "~/components/Button";
 import { useTheme } from "~/hooks/use-theme";
+import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
+import { useFormValidation } from "../../hooks/use-form-validation";
 import { QuestionContent } from "../../types";
 import { MultipleChoiceQuestion } from "./question-types/multiple-choice-question";
 import { NumberQuestion } from "./question-types/number-question";
@@ -15,6 +18,8 @@ interface QuestionNodeProps {
 
 export function QuestionNode({ content }: QuestionNodeProps) {
   const { classes } = useTheme();
+  const { nextStep } = useMeasurementFlowStore();
+  const { isValid } = useFormValidation();
 
   const renderQuestionType = () => {
     switch (content.kind) {
@@ -38,12 +43,21 @@ export function QuestionNode({ content }: QuestionNodeProps) {
   };
 
   return (
-    <View className={clsx("rounded-xl border", classes.card, classes.border)}>
+    <View className={clsx("flex-1 rounded-xl border", classes.card, classes.border)}>
       <View className="border-b border-gray-200 p-4 dark:border-gray-700">
         <Text className={clsx("text-lg font-semibold", classes.text)}>{content.text}</Text>
       </View>
 
-      <View className="p-4">{renderQuestionType()}</View>
+      <View className="flex-1 p-4">{renderQuestionType()}</View>
+
+      <View className="border-t border-gray-200 p-4 dark:border-gray-700">
+        <Button
+          title="Next"
+          onPress={nextStep}
+          isDisabled={content.required && !isValid}
+          style={{ width: "100%" }}
+        />
+      </View>
     </View>
   );
 }
