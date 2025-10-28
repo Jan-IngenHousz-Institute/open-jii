@@ -11,6 +11,7 @@ import {
   simulateDataProcessing,
 } from "../utils/load-protocol";
 import { CompletionStep } from "./CompletionStep";
+import { DemoDisclaimer } from "./DemoDisclaimer";
 import { GainCalibrationStep } from "./GainCalibrationStep";
 import { MeasurementsStep } from "./MeasurementsStep";
 import { ProcessingStep } from "./ProcessingStep";
@@ -213,6 +214,7 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
       ]}
       contentContainerStyle={styles.contentContainer}
     >
+      <DemoDisclaimer />
       {renderCurrentStep()}
     </ScrollView>
   );

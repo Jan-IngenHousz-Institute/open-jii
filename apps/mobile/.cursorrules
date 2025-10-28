@@ -50,6 +50,8 @@ React Native Component Organization Guidelines
 - Avoid comments unless implementing something particularly complex or non-obvious.
 
 9. NativeWind Dark/Light Mode Styling
+- ALWAYS use NativeWind/Tailwind classes for ALL new components unless explicitly stated otherwise.
+- Never use StyleSheet.create() for new components - use className props with Tailwind classes instead.
 - Always use the theme system for dark/light mode styling.
 - Import `useTheme` and `clsx` in every component that needs styling.
 - Use `classes.*` from `useTheme()` for theme-dependent styles.
