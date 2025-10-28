@@ -12,15 +12,12 @@ export function CompletedState() {
   return (
     <View className={clsx("flex-1 rounded-xl border", classes.card, classes.border)}>
       <View className="border-b border-gray-200 p-4 dark:border-gray-700">
-        <Text className={clsx("text-lg font-semibold", classes.text)}>Flow Complete</Text>
+        <Text className={clsx("text-lg font-semibold", classes.text)}>Cycle Complete</Text>
       </View>
 
       <View className="flex-1 items-center justify-center p-4">
-        <Text className={clsx("mb-4 text-center text-xl font-semibold", classes.text)}>
-          Cycle Complete
-        </Text>
         <Text className={clsx("mb-2 text-center", classes.textSecondary)}>
-          You have finished the measurement flow.
+          You have finished the measurement flow cycle.
         </Text>
         <Text className={clsx("text-center text-sm", classes.textMuted)}>
           Cycle {iterationCount + 1}
