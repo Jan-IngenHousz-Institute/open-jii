@@ -150,3 +150,15 @@ variable "contentful_preview_secret" {
   type        = string
   sensitive   = true
 }
+
+# Data Governance Account Configuration
+variable "data_governance_account_id" {
+  description = "AWS Account ID of the data governance account where centralized metastore resources are managed"
+  type        = string
+}
+
+variable "centralized_metastore_bucket_name" {
+  description = "Name of the centralized S3 bucket for Unity Catalog metastore storage in data governance account"
+  type        = string
+  default     = "open-jii-databricks-uc-eu-central-1-metastore"
+}

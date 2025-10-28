@@ -13,7 +13,7 @@ resource "databricks_catalog" "this" {
   provider     = databricks.workspace
   name         = var.catalog_name
   comment      = var.catalog_comment
-  storage_root = "s3://${var.external_bucket_id}/external"
+  storage_root = "s3://${var.external_bucket_id}/${var.external_location_path}"
 }
 
 # Grant permissions on the catalog
