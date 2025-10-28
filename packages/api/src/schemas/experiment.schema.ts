@@ -667,10 +667,7 @@ export const zAddExperimentMembersBody = z.object({
 });
 
 export const zExperimentFilterQuery = z.object({
-  filter: z
-    .enum(["my", "member", "related"])
-    .optional()
-    .describe("Filter experiments by relationship to the user"),
+  filter: z.enum(["member"]).optional().describe("Filter experiments by relationship to the user"),
   status: zExperimentStatus.optional().describe("Filter experiments by their status"),
   search: z.string().optional().describe("Search term for experiment name"),
 });

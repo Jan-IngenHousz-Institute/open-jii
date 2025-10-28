@@ -5,10 +5,10 @@ import type { ExperimentStatus } from "@repo/api";
 
 import { useDebounce } from "../../useDebounce";
 
-export type ExperimentFilter = "my" | "member" | "related" | "all";
+export type ExperimentFilter = "member" | "all";
 
 export const useExperiments = ({
-  initialFilter = "my",
+  initialFilter = "member",
   initialStatus = undefined,
   initialSearch = "",
   archived = false,

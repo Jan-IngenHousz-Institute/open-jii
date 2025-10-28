@@ -6,9 +6,9 @@ import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments
 import { Skeleton } from "@repo/ui/components";
 
 export function UserExperimentsSection() {
-  // Get only user's experiments (my experiments) with a limit for dashboard view
+  // Get only user's experiments (member experiments) with a limit for dashboard view
   const { data } = useExperiments({
-    initialFilter: "my",
+    initialFilter: "member",
     initialStatus: undefined,
     initialSearch: "",
   });

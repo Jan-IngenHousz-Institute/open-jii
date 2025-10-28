@@ -300,7 +300,7 @@ describe("ExperimentController", () => {
       const response = await testApp
         .get(contract.experiments.listExperiments.path)
         .withAuth(mainUserId)
-        .query({ filter: "related", status: "active", search: "Searchable" })
+        .query({ status: "active", search: "Searchable" })
         .expect(StatusCodes.OK);
 
       // Assert
@@ -345,7 +345,7 @@ describe("ExperimentController", () => {
       );
     });
 
-    it("should filter experiments correctly with 'my' filter", async () => {
+    it("should filter experiments correctly with 'member' filter", async () => {
       // Create an experiment owned by test user
       const { experiment } = await testApp.createExperiment({
         name: "My Experiment",
@@ -365,7 +365,7 @@ describe("ExperimentController", () => {
       const response: SuperTestResponse<ExperimentList> = await testApp
         .get(contract.experiments.listExperiments.path)
         .withAuth(testUserId)
-        .query({ userId: testUserId, filter: "my" })
+        .query({ userId: testUserId, filter: "member" })
         .expect(StatusCodes.OK);
 
       expect(response.body).toHaveLength(1);
@@ -428,7 +428,7 @@ describe("ExperimentController", () => {
       const response: SuperTestResponse<ExperimentList> = await testApp
         .get(contract.experiments.listExperiments.path)
         .withAuth(testUserId)
-        .query({ filter: "my", status: "active" })
+        .query({ filter: "member", status: "active" })
         .expect(StatusCodes.OK);
 
       expect(response.body).toHaveLength(1);
