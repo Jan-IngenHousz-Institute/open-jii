@@ -13,7 +13,7 @@ export function MeasurementJsonPreview({ data, timestamp, experimentName, onClos
       <View
         className={clsx(
           "flex-row items-center justify-between border-b px-4 py-3",
-          classes.card,
+          classes.surface,
           classes.border,
         )}
       >
