@@ -8,7 +8,7 @@ export function useExperiments() {
     queryKey: ["experiments"],
     queryData: {
       query: {
-        filter: "related",
+        filter: "member",
       },
     },
   });

@@ -13,7 +13,7 @@ const customApiFetcher = async (args: ApiFetcherArgs) => {
 
   const enhancedHeaders = {
     ...args.headers,
-    Cookie: token ? `__Secure-authjs.session-token=${token}` : "",
+    Cookie: token ? `__Secure-authjs.dev.session-token=${token}` : "",
   };
 
   return tsRestFetchApi({
