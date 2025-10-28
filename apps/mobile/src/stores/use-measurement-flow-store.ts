@@ -85,11 +85,23 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>((set) => ({
     }),
 
   startNewIteration: () =>
-    set((state) => ({
-      currentFlowStep: 0,
-      iterationCount: state.iterationCount + 1,
-      scanResult: undefined, // Clear scan result for new iteration
-    })),
+    set((state) => {
+      const newState = {
+        currentFlowStep: 0,
+        iterationCount: state.iterationCount + 1,
+        scanResult: undefined, // Clear scan result for new iteration
+      };
+
+      // Check if first step is instruction and skip it
+      if (state.flowNodes.length > 0 && state.flowNodes[0]?.type === "instruction") {
+        return {
+          ...newState,
+          currentFlowStep: 1, // Skip to second step
+        };
+      }
+
+      return newState;
+    }),
 
   retryCurrentIteration: () =>
     set(() => ({

@@ -3,14 +3,11 @@ import React from "react";
 import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
 import { useTheme } from "~/hooks/use-theme";
+import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 
-interface CompletedStateProps {
-  iterationCount: number;
-  onStartNew: () => void;
-}
-
-export function CompletedState({ iterationCount, onStartNew }: CompletedStateProps) {
+export function CompletedState() {
   const { classes } = useTheme();
+  const { iterationCount, startNewIteration } = useMeasurementFlowStore();
 
   return (
     <View className={clsx("flex-1 rounded-xl border", classes.card, classes.border)}>
@@ -31,7 +28,7 @@ export function CompletedState({ iterationCount, onStartNew }: CompletedStatePro
       </View>
 
       <View className="border-t border-gray-200 p-4 dark:border-gray-700">
-        <Button title="Start New Cycle" onPress={onStartNew} style={{ width: "100%" }} />
+        <Button title="Start New Cycle" onPress={startNewIteration} style={{ width: "100%" }} />
       </View>
     </View>
   );
