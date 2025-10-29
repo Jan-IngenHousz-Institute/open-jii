@@ -2,7 +2,6 @@
 
 import { X } from "lucide-react";
 import { ExperimentOverviewCards } from "~/components/experiment-overview-cards";
-import { useExperimentFilter } from "~/hooks/experiment/useExperimentFilter";
 import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments";
 
 import { useTranslation } from "@repo/i18n";
@@ -20,10 +19,8 @@ interface ListExperimentsProps {
 }
 
 export function ListExperiments({ archived = false }: ListExperimentsProps) {
-  const { filter, setFilter } = useExperimentFilter();
-  const { data, search, setSearch } = useExperiments({
+  const { data, filter, setFilter, search, setSearch } = useExperiments({
     archived,
-    initialFilter: filter,
   });
   const { t } = useTranslation();
 
