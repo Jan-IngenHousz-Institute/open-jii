@@ -97,7 +97,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
       </div>
 
       <h1
-        className="text-jii-dark-green mb-5 text-5xl font-extrabold leading-tight md:text-6xl"
+        className="text-jii-dark-green mb-5 break-words text-5xl font-extrabold leading-tight md:text-6xl"
         {...inspectorProps({ fieldId: "title" })}
       >
         {currentHero.title}
