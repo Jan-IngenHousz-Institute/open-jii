@@ -37,10 +37,15 @@ describe("AuthHeroSection", () => {
     expect(screen.getByText("auth.heroDescription")).toBeInTheDocument();
   });
 
-  it("renders brand name and powered by text", async () => {
+  it("renders OpenJII logo and powered by text", async () => {
     render(await AuthHeroSection({ locale }));
 
-    expect(screen.getByText("auth.brandName")).toBeInTheDocument();
+    const openJiiLogo = screen.getByAltText("OpenJII Logo");
+    expect(openJiiLogo).toBeInTheDocument();
+
+    const src = openJiiLogo.getAttribute("src") ?? "";
+    expect(decodeURIComponent(src)).toContain("/openJII-logo-BW-horizontal-white.svg");
+
     expect(screen.getByText("auth.poweredBy")).toBeInTheDocument();
   });
 
@@ -53,7 +58,7 @@ describe("AuthHeroSection", () => {
     const src = logo.getAttribute("src") ?? "";
 
     // decode %2F back into "/" so we can assert the filename is present
-    expect(decodeURIComponent(src)).toContain("/jan-ingenhousz-institute-logo-header-light.png");
+    expect(decodeURIComponent(src)).toContain("/jan-ingenhousz-institute-logo-header-light.svg");
 
     expect(logo).toHaveAttribute("width", "140");
     expect(logo).toHaveAttribute("height", "28");

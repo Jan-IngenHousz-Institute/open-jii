@@ -24,11 +24,18 @@ export async function AuthHeroSection({ locale }: AuthHeroSectionProps) {
         {t("auth.heroDescription")}
       </p>
 
-      <div className="mt-10 flex items-center space-x-3 text-white">
-        <span className="text-base font-semibold sm:text-lg">{t("auth.brandName")}</span>
-        <span className="text-sm sm:text-base">{t("auth.poweredBy")}</span>
+      <div className="mt-10 flex items-center gap-3 text-white">
         <Image
-          src="/jan-ingenhousz-institute-logo-header-light.png"
+          src="/openJII-logo-BW-horizontal-white.svg"
+          alt="OpenJII Logo"
+          width={160}
+          height={80}
+          className="h-12 w-auto"
+          priority
+        />
+        <span className="-ml-1 text-sm sm:text-base">{t("auth.poweredBy")}</span>
+        <Image
+          src="/jan-ingenhousz-institute-logo-header-light.svg"
           alt={t("auth.instituteAlt")}
           width={140}
           height={28}
