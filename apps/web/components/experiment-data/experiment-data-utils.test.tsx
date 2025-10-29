@@ -292,7 +292,7 @@ describe("experiment-data-utils", () => {
 
       // The result should be a React element (ExperimentDataTableChartCell)
       expect(React.isValidElement(result)).toBe(true);
-      
+
       // Since we can't easily test the chart component without full setup,
       // we'll just verify it's a valid React element
       expect(result).toBeDefined();

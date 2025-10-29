@@ -82,7 +82,7 @@ describe("ExperimentDataTableArrayCell", () => {
   it("should render single item inline for one entry with single property", () => {
     const singleItemData = '[{"question_label": "question1"}]';
     render(<ExperimentDataTableArrayCell data={singleItemData} columnName="test" />);
-    
+
     expect(screen.getByText("question_label:")).toBeInTheDocument();
     expect(screen.getByText("question1")).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
@@ -101,7 +101,7 @@ describe("ExperimentDataTableArrayCell", () => {
       { question_label: "question1", question_text: "text1", question_answer: "answer1" },
       { question_label: "question2", question_text: "text2", question_answer: "answer2" },
     ]);
-    
+
     render(<ExperimentDataTableArrayCell data={multipleItemsData} columnName="test" />);
 
     expect(screen.getByText("2 items")).toBeInTheDocument();
@@ -127,7 +127,7 @@ describe("ExperimentDataTableArrayCell", () => {
       { question_label: "question1", question_text: "What is your name?", question_answer: "John" },
       { question_label: "question2", question_text: "What is your age?", question_answer: "25" },
     ]);
-    
+
     render(<ExperimentDataTableArrayCell data={testData} columnName="test" />);
 
     // Initially collapsed
@@ -150,14 +150,14 @@ describe("ExperimentDataTableArrayCell", () => {
         tags: ["developer", "typescript"],
       },
     ]);
-    
+
     render(<ExperimentDataTableArrayCell data={nestedData} columnName="test" />);
     expect(screen.getByText("1 item")).toBeInTheDocument();
   });
 
   it("should handle array items with null and undefined values", () => {
     const dataWithNulls = JSON.stringify([{ name: "John", age: null, active: undefined }]);
-    
+
     render(<ExperimentDataTableArrayCell data={dataWithNulls} columnName="test" />);
     expect(screen.getByText("1 item")).toBeInTheDocument();
   });
@@ -167,7 +167,7 @@ describe("ArrayExpandedContent", () => {
   it("should return null as it doesn't render anything directly", () => {
     const mockRef = { current: null };
     const items = [{ key: "value" }];
-    
+
     const { container } = render(<ArrayExpandedContent items={items} cellRef={mockRef} />);
     expect(container.firstChild).toBeNull();
   });
@@ -175,7 +175,7 @@ describe("ArrayExpandedContent", () => {
   it("should handle empty items array", () => {
     const mockRef = { current: null };
     const items: Record<string, unknown>[] = [];
-    
+
     const { container } = render(<ArrayExpandedContent items={items} cellRef={mockRef} />);
     expect(container.firstChild).toBeNull();
   });
@@ -185,7 +185,7 @@ describe("ArrayExpandedContent", () => {
     const tableRow = document.createElement("tr");
     const tableCell = document.createElement("td");
     const table = document.createElement("table");
-    
+
     tableRow.appendChild(tableCell);
     table.appendChild(tableRow);
     document.body.appendChild(table);
@@ -195,13 +195,13 @@ describe("ArrayExpandedContent", () => {
       { question_label: "question1", question_text: "What is your name?" },
       { question_label: "question2", question_text: "What is your age?" },
     ];
-    
+
     render(<ArrayExpandedContent items={items} cellRef={mockRef} />);
-    
+
     // Verify that the effect would attempt to create expanded content
     // The actual DOM manipulation happens in useEffect, which doesn't execute synchronously in tests
     expect(mockRef.current).toBe(tableCell);
-    
+
     // Cleanup
     document.body.removeChild(table);
   });
@@ -230,7 +230,7 @@ describe("parseArrayData", () => {
         "question_text": "text2"
       }
     ]`;
-    
+
     render(<ExperimentDataTableArrayCell data={formattedArray} columnName="test" />);
     expect(screen.getByText("2 items")).toBeInTheDocument();
   });
@@ -256,10 +256,10 @@ describe("formatValue", () => {
         arrayValue: [1, 2, 3],
       },
     ]);
-    
+
     render(<ExperimentDataTableArrayCell data={testData} columnName="test" />);
     expect(screen.getByText("1 item")).toBeInTheDocument();
-    
+
     // The component should handle all these value types without throwing errors
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
