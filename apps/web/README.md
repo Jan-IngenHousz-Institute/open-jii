@@ -2,6 +2,22 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Prerequisites
+
+1. Copy `.env.example` to `.env.local` and configure environment variables:
+
+```bash
+cp .env.example .env.local
+```
+
+2. Add your PostHog API key (get it from https://app.posthog.com/project/settings):
+
+```bash
+NEXT_PUBLIC_POSTHOG_KEY=phc_YOUR_KEY_HERE
+```
+
+### Run Development Server
+
 First, run the development server:
 
 ```bash
@@ -19,6 +35,12 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load Inter, a custom Google Font.
+
+## Documentation
+
+- [PostHog Integration](./docs/POSTHOG.md) - Feature flags and analytics setup
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
 ## Learn More
 

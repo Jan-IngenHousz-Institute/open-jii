@@ -1,16 +1,32 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { env } from "../env";
+import { POSTHOG_CLIENT_CONFIG } from "../lib/posthog-config";
 
+/**
+ * PostHog provider component that initializes the PostHog client
+ * Should be placed at the root of the application to ensure tracking works
+ *
+ * @example
+ * ```tsx
+ * <PostHogProvider>
+ *   <App />
+ * </PostHogProvider>
+ * ```
+ */
 export function PostHogProvider({ children }: { children: ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
+  const initAttempted = useRef(false);
 
   useEffect(() => {
-    // Skip initialization if no valid key
+    // Prevent double initialization in strict mode
+    if (initAttempted.current) return;
+    initAttempted.current = true;
 
+    // Skip initialization if no valid key
     if (!env.NEXT_PUBLIC_POSTHOG_KEY || env.NEXT_PUBLIC_POSTHOG_KEY.startsWith("phc_0000")) {
       console.warn("[PostHog] Skipping initialization - no valid API key configured");
       setIsInitialized(true);
@@ -18,25 +34,28 @@ export function PostHogProvider({ children }: { children: ReactNode }) {
     }
 
     // Dynamic import to avoid Turbopack bundling issues
-    void import("posthog-js").then((posthogModule) => {
-      const posthog = posthogModule.default;
+    void import("posthog-js")
+      .then((posthogModule) => {
+        const posthog = posthogModule.default;
 
-      posthog.init(env.NEXT_PUBLIC_POSTHOG_KEY, {
-        api_host: "/ingest",
-        ui_host: env.NEXT_PUBLIC_POSTHOG_HOST,
-        person_profiles: "identified_only",
-        defaults: "2025-05-24",
-        capture_pageview: true,
-        capture_pageleave: true,
-        capture_exceptions: true,
-        debug: env.NODE_ENV === "development",
+        // Check if already initialized (hot reload)
+        if (posthog.__loaded) {
+          setIsInitialized(true);
+          return;
+        }
+
+        posthog.init(env.NEXT_PUBLIC_POSTHOG_KEY, POSTHOG_CLIENT_CONFIG);
+      })
+      .catch((error) => {
+        console.error("[PostHog] Failed to initialize:", error);
+      })
+      .finally(() => {
+        setIsInitialized(true);
       });
-
-      setIsInitialized(true);
-    });
   }, []);
 
-  // Don't render children until PostHog is initialized to ensure tracking works
+  // Render children immediately to avoid blocking app render
+  // Feature flags will be loaded asynchronously
   if (!isInitialized) {
     return <>{children}</>;
   }
