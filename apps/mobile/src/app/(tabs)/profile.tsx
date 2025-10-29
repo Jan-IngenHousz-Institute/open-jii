@@ -10,10 +10,8 @@ import { Toast } from "~/components/Toast";
 import { colors } from "~/constants/colors";
 import { useSessionStore } from "~/hooks/use-session-store";
 import { useTheme } from "~/hooks/use-theme";
-import { assertEnvVariables } from "~/utils/assert";
+import { getEnvVar } from "~/stores/environment-store";
 import { formatIsoDateString } from "~/utils/format-iso-date-string";
-
-const { NEXT_AUTH_URI } = assertEnvVariables({ NEXT_AUTH_URI: process.env.NEXT_AUTH_URI });
 
 export default function ProfileScreen() {
   const { clearSession, session } = useSessionStore();
@@ -33,7 +31,7 @@ export default function ProfileScreen() {
   };
 
   const handleOpenWebProfile = async () => {
-    const url = NEXT_AUTH_URI + "/en-US/platform/experiments";
+    const url = getEnvVar("NEXT_AUTH_URI") + "/en-US/platform/experiments";
     const canOpen = await Linking.canOpenURL(url);
 
     if (canOpen) {

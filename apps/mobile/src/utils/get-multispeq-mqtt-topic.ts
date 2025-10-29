@@ -1,12 +1,8 @@
-import { assertEnvVariables } from "~/utils/assert";
-
-const { MQTT_TOPIC, CLIENT_ID } = assertEnvVariables({
-  MQTT_TOPIC: process.env.MQTT_TOPIC,
-  CLIENT_ID: process.env.CLIENT_ID,
-});
+import { getEnvVar } from "~/stores/environment-store";
 
 export function getMultispeqMqttTopic({ experimentId, protocolId }) {
-  return MQTT_TOPIC.replace(":clientId", CLIENT_ID)
+  return getEnvVar("MQTT_TOPIC")
+    .replace(":clientId", getEnvVar("CLIENT_ID"))
     .replace(":experimentId", experimentId)
     .replace(":protocolId", protocolId);
 }
