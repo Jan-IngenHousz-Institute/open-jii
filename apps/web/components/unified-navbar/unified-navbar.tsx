@@ -170,7 +170,9 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
     pathname === `/` ||
     pathname === `/${locale}` ||
     pathname.startsWith(`/${locale}/about`) ||
-    pathname.startsWith(`/${locale}/blog`);
+    pathname.startsWith(`/${locale}/blog`) ||
+    pathname.startsWith(`/${locale}/faq`) ||
+    pathname.startsWith(`/${locale}/policies`);
 
   return (
     <header
