@@ -64,6 +64,16 @@ describe("getColumnWidth", () => {
     expect(getColumnWidth("MAP<INT,")).toBeUndefined();
     expect(getColumnWidth("MAP<DOUBLE,STRING>")).toBeUndefined();
   });
+
+  it("should return 120 for ARRAY<STRUCT<...>> column type", () => {
+    expect(getColumnWidth("ARRAY<STRUCT<question_label: STRING>>")).toBe(120);
+    expect(getColumnWidth("ARRAY<STRUCT<name: STRING, age: INT>>")).toBe(120);
+    expect(
+      getColumnWidth(
+        "ARRAY<STRUCT<question_label: STRING, question_text: STRING, question_answer: STRING>>",
+      ),
+    ).toBe(120);
+  });
 });
 
 describe("useExperimentData", () => {
@@ -284,21 +294,33 @@ describe("useExperimentData", () => {
       const mockDataWithMixedTypes: ExperimentData = {
         columns: [
           { name: "chart_data", type_name: "ARRAY<DOUBLE>", type_text: "Array of Doubles" },
-          { name: "id", type_name: "INT", type_text: "Integer" },
+          {
+            name: "struct_data",
+            type_name: "ARRAY<STRUCT<name: STRING, age: INT>>",
+            type_text: "Array of Structs",
+          },
+          { name: "id", type_name: "ID", type_text: "ID" },
+          { name: "annotations", type_name: "ANNOTATIONS", type_text: "Annotations" },
           { name: "timestamp", type_name: "TIMESTAMP", type_text: "Timestamp" },
           { name: "map_data", type_name: "MAP<STRING,STRING>", type_text: "Map of Strings" },
           { name: "name", type_name: "STRING", type_text: "String" },
           { name: "value", type_name: "DOUBLE", type_text: "Double" },
+          { name: "count", type_name: "INT", type_text: "Integer" },
+          { name: "amount", type_name: "BIGINT", type_text: "Big Integer" },
           { name: "other", type_name: "UNKNOWN", type_text: "Unknown Type" },
         ],
         rows: [
           {
             chart_data: "[1,2,3]",
+            struct_data: '[{"name": "John", "age": 30}]',
             id: "1",
+            annotations: "[]",
             timestamp: "2023-01-01T10:00:00",
             map_data: '{"key1": "value1", "key2": "value2"}',
             name: "Test",
             value: "10.5",
+            count: "5",
+            amount: "1000000",
             other: "something",
           },
         ],
@@ -335,16 +357,20 @@ describe("useExperimentData", () => {
       expect(columns).toBeDefined();
 
       // Verify columns are sorted by type precedence:
-      // 1. TIMESTAMP, 2. MAP, 3. STRING, 4. DOUBLE/INT, 5. ARRAY, 6. Others
+      // 1. ID, 2. ANNOTATIONS, 3. TIMESTAMP, 4. MAP/ARRAY<STRUCT>, 5. STRING, 6. DOUBLE/INT/BIGINT, 7. ARRAY, 8. Others
       const columnOrder = columns?.map((col) => col.accessorKey);
       expect(columnOrder).toEqual([
-        "timestamp", // TIMESTAMP (precedence 1)
-        "map_data", // MAP<STRING,STRING> (precedence 2)
-        "name", // STRING (precedence 3)
-        "id", // INT (precedence 4)
-        "value", // DOUBLE (precedence 4)
-        "chart_data", // ARRAY<DOUBLE> (precedence 5)
-        "other", // UNKNOWN (precedence 6)
+        "id", // ID (precedence 1)
+        "annotations", // ANNOTATIONS (precedence 2)
+        "timestamp", // TIMESTAMP (precedence 3)
+        "struct_data", // ARRAY<STRUCT<...>> (precedence 4)
+        "map_data", // MAP<STRING,STRING> (precedence 4)
+        "name", // STRING (precedence 5)
+        "value", // DOUBLE (precedence 6)
+        "count", // INT (precedence 6)
+        "amount", // BIGINT (precedence 6)
+        "chart_data", // ARRAY<DOUBLE> (precedence 7)
+        "other", // UNKNOWN (precedence 8)
       ]);
     });
 

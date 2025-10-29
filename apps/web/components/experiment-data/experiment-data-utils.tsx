@@ -6,6 +6,7 @@ import type { DataRow } from "~/hooks/experiment/useExperimentData/useExperiment
 import { useTranslation } from "@repo/i18n";
 import { Skeleton, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components";
 
+import { ExperimentDataTableArrayCell } from "./experiment-data-table-array-cell";
 import { ExperimentDataTableChartCell } from "./experiment-data-table-chart-cell";
 import { ExperimentDataTableMapCell } from "./experiment-data-table-map-cell";
 
@@ -40,6 +41,13 @@ export function formatValue(
         />
       );
     default: {
+      // Check if the type contains ARRAY<STRUCT<...>>
+      if (type.includes("ARRAY<STRUCT<")) {
+        return (
+          <ExperimentDataTableArrayCell data={value as string} columnName={columnName ?? "Array"} />
+        );
+      }
+
       // Check if the type contains MAP
       if (type.includes("MAP<STRING,") || type === "MAP") {
         return (

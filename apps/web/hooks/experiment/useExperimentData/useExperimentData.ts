@@ -92,7 +92,12 @@ function createTableColumns({
       case "BIGINT":
         return 6;
       default:
-        if (typeName === "MAP" || typeName.startsWith("MAP<")) return 4;
+        if (
+          typeName === "MAP" ||
+          typeName.startsWith("MAP<") ||
+          typeName.startsWith("ARRAY<STRUCT<")
+        )
+          return 4;
         if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 7;
         return 8; // Other types at the end
     }

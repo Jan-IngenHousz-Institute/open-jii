@@ -117,6 +117,55 @@ vi.mock("@repo/ui/components", () => ({
   ),
 }));
 
+// Mock experiment data table components
+vi.mock("./experiment-data-table-array-cell", () => ({
+  ExperimentDataTableArrayCell: ({ data }: { data: string }) => {
+    try {
+      const parsed = JSON.parse(data) as unknown;
+      if (Array.isArray(parsed)) {
+        const count = parsed.length;
+        return (
+          <div data-testid="array-cell">
+            {count} {count === 1 ? "item" : "items"}
+          </div>
+        );
+      }
+    } catch {
+      // If parsing fails, just return the data
+    }
+    return <div data-testid="array-cell">{data}</div>;
+  },
+}));
+
+vi.mock("./experiment-data-table-chart-cell", () => ({
+  ExperimentDataTableChartCell: ({ data }: { data: string }) => (
+    <div data-testid="chart-cell">{data}</div>
+  ),
+}));
+
+vi.mock("./experiment-data-table-map-cell", () => ({
+  ExperimentDataTableMapCell: ({ data }: { data: string }) => {
+    try {
+      const parsed = JSON.parse(data) as unknown;
+      if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+        const entries = Object.entries(parsed as Record<string, unknown>);
+        if (entries.length === 1) {
+          const [key, value] = entries[0];
+          return (
+            <div data-testid="map-cell">
+              <span className="font-medium">{key}:</span> {String(value)}
+            </div>
+          );
+        }
+        return <div data-testid="map-cell">{entries.length} entries</div>;
+      }
+    } catch {
+      // If parsing fails, just return the data
+    }
+    return <div data-testid="map-cell">{data}</div>;
+  },
+}));
+
 describe("experiment-data-utils", () => {
   describe("formatValue", () => {
     it("should format numeric values with right alignment", () => {
@@ -190,6 +239,82 @@ describe("experiment-data-utils", () => {
       // Render it to check the component
       render(<div>{result}</div>);
       expect(screen.getByText("2 entries")).toBeInTheDocument();
+    });
+
+    it("should render ExperimentDataTableArrayCell for ARRAY<STRUCT<...>> type", () => {
+      const arrayData = JSON.stringify([
+        { question_label: "question1", question_text: "text1", question_answer: "answer1" },
+        { question_label: "question2", question_text: "text2", question_answer: "answer2" },
+      ]);
+      const result = formatValue(
+        arrayData,
+        "ARRAY<STRUCT<question_label: STRING, question_text: STRING, question_answer: STRING>>",
+        "test-column",
+      );
+
+      // The result should be a React element (ExperimentDataTableArrayCell)
+      expect(React.isValidElement(result)).toBe(true);
+
+      // Render it to check the component
+      render(<div>{result}</div>);
+      expect(screen.getByText("2 items")).toBeInTheDocument();
+    });
+
+    it("should render ExperimentDataTableArrayCell for nested ARRAY<STRUCT<...>> type", () => {
+      const arrayData = JSON.stringify([{ name: "John", details: { age: 30, city: "NYC" } }]);
+      const result = formatValue(
+        arrayData,
+        "ARRAY<STRUCT<name: STRING, details: STRUCT<age: INT, city: STRING>>>",
+        "test-column",
+      );
+
+      // The result should be a React element (ExperimentDataTableArrayCell)
+      expect(React.isValidElement(result)).toBe(true);
+
+      // Render it to check the component
+      render(<div>{result}</div>);
+      expect(screen.getByText("1 item")).toBeInTheDocument();
+    });
+
+    it("should render ExperimentDataTableChartCell for numeric ARRAY types", () => {
+      const mockOnChartHover = vi.fn();
+      const mockOnChartLeave = vi.fn();
+      const mockOnChartClick = vi.fn();
+
+      const result = formatValue(
+        "[1.5, 2.3, 3.7, 4.2]",
+        "ARRAY<DOUBLE>",
+        "test-column",
+        mockOnChartHover,
+        mockOnChartLeave,
+        mockOnChartClick,
+      );
+
+      // The result should be a React element (ExperimentDataTableChartCell)
+      expect(React.isValidElement(result)).toBe(true);
+      
+      // Since we can't easily test the chart component without full setup,
+      // we'll just verify it's a valid React element
+      expect(result).toBeDefined();
+    });
+
+    it("should handle ARRAY type with numeric arrays in default case", () => {
+      const mockOnChartHover = vi.fn();
+      const mockOnChartLeave = vi.fn();
+      const mockOnChartClick = vi.fn();
+
+      const result = formatValue(
+        "[1, 2, 3, 4, 5]",
+        "ARRAY<NUMERIC>",
+        "test-column",
+        mockOnChartHover,
+        mockOnChartLeave,
+        mockOnChartClick,
+      );
+
+      // The result should be a React element (ExperimentDataTableChartCell)
+      expect(React.isValidElement(result)).toBe(true);
+      expect(result).toBeDefined();
     });
   });
 
