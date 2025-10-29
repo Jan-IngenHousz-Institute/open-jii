@@ -64,6 +64,12 @@ class ExperimentPipelineOrchestrator:
         try:
             logger.info(f"Querying fresh experiments from {catalog_name}.{schema_name}.{status_table_name}")
             
+            # Validate identifiers
+            identifier_pattern = re.compile(r'^[a-zA-Z0-9_-]+$')
+            for name, value in [("catalog_name", catalog_name), ("schema_name", schema_name), ("status_table_name", status_table_name)]:
+                if not identifier_pattern.match(value):
+                    raise ValueError(f"Invalid identifier for {name}: {value}")
+            
             # Full table path with catalog and schema
             full_table_path = f"{catalog_name}.{schema_name}.{status_table_name}"
             
