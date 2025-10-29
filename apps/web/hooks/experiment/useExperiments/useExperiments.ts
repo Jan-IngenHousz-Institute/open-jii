@@ -27,7 +27,7 @@ export const useExperiments = ({
   const rawFilter = searchParams.get("filter");
 
   const [filter, setFilterState] = useState<ExperimentFilter>(
-    rawFilter === "all" ? "all" : initialFilter,
+    rawFilter === "all" ? "all" : rawFilter === "member" ? "member" : initialFilter,
   );
   const [status, setStatus] = useState<ExperimentStatus | undefined>(initialStatus);
   const [search, setSearch] = useState<string>(initialSearch);

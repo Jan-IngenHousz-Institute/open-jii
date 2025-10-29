@@ -480,7 +480,7 @@ describe("useExperiments", () => {
     });
 
     // Should call router.push to clean up the URL
-    expect(mockPush).toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith("/platform/experiments", { scroll: false });
   });
 
   it("should not clean up URL when filter is 'all'", () => {
@@ -545,7 +545,6 @@ describe("useExperiments", () => {
     });
 
     // Should remove the filter parameter from URL
-    const lastCall = mockPush.mock.calls[mockPush.mock.calls.length - 1];
-    expect(lastCall[0]).toBe("/platform/experiments");
+    expect(mockPush).toHaveBeenLastCalledWith("/platform/experiments", { scroll: false });
   });
 });
