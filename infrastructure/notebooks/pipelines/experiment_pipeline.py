@@ -69,8 +69,8 @@ if ENABLE_MACRO_PROCESSING:
     }
 )
 def device():
-    df = (
-        spark.read.table("open_jii_dev.centrum.clean_data")
+    df = (    
+        spark.read.table(f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}")
         .filter(F.col("experiment_id") == EXPERIMENT_ID)
         .select(
             F.col("device_name"),

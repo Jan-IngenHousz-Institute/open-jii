@@ -238,12 +238,14 @@ def experiment_status():
     )
     
     # Calculate freshness status
+    # Compare timestamp difference in seconds against threshold converted to seconds
+    freshness_threshold_seconds = FRESHNESS_THRESHOLD_MINUTES * 60
     status_df = (
         experiment_status_df
         .withColumn(
             "status",
             F.when(
-                (current_timestamp.cast("long") - F.col("latest_processed_timestamp").cast("long")) / 60 <= FRESHNESS_THRESHOLD_MINUTES,
+                (current_timestamp.cast("long") - F.col("latest_processed_timestamp").cast("long")) <= freshness_threshold_seconds,
                 F.lit("fresh")
             ).otherwise(F.lit("stale"))
         )

@@ -140,8 +140,10 @@ def process_macro_output_for_spark(output: Dict[str, Any]) -> Dict[str, Any]:
         original_type = type(value).__name__
         
         if isinstance(value, dict):
-            # Keep dictionaries as-is for proper schema inference
-            print(f"[MACRO] Kept dict '{key}' as dictionary for schema inference")
+            # Flatten dict: convert all keys and values to strings for MAP<STRING,STRING>
+            processed_output[key] = {str(k): str(v) for k, v in value.items()}
+            conversions_made += 1
+            print(f"[MACRO] Flattened dict '{key}' to MAP<STRING,STRING>")
         elif isinstance(value, str):
             try:
                 parsed = json.loads(value)
