@@ -32,12 +32,5 @@ export function orderFlowNodes(nodes: FlowNode[], edges: FlowEdge[]): FlowNode[]
     current = nextId ? idToNode.get(nextId) : undefined;
   }
 
-  // Append any unvisited nodes to keep a total ordering (fallback)
-  for (const node of nodes) {
-    if (!visited.has(node.id)) {
-      ordered.push(node);
-    }
-  }
-
   return ordered;
 }

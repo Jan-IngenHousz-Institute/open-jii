@@ -10,13 +10,14 @@ import { useTheme } from "~/hooks/use-theme";
 import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
+import { orderFlowNodes } from "~/utils/order-flow-nodes";
 
 export function ExperimentSelectionStep() {
   const { classes } = useTheme();
   const { experiments, isLoading, error } = useExperiments();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
   const { setExperimentId, setFlowNodes, nextStep } = useMeasurementFlowStore();
-  const { fetchExperimentFlow, isFetching } = useExperimentFlowQuery(selectedExperimentId);
+  const { refetch: fetchExperimentFlow, isFetching } = useExperimentFlowQuery(selectedExperimentId);
   const { clearHistory } = useFlowAnswersStore();
 
   const selectedExperiment = experiments.find((exp) => exp.value === selectedExperimentId);
@@ -94,8 +95,11 @@ export function ExperimentSelectionStep() {
 
               setExperimentId(selectedExperimentId);
 
-              const nodes = await fetchExperimentFlow();
-              setFlowNodes(nodes ?? []);
+              const experimentFlow = await fetchExperimentFlow();
+              const { nodes = [], edges = [] } = experimentFlow?.data?.body?.graph ?? {};
+
+              const orderedNodes = orderFlowNodes(nodes, edges);
+              setFlowNodes(orderedNodes);
               nextStep();
             }}
             isDisabled={!selectedExperimentId || isFetching}
