@@ -15,6 +15,12 @@ from delta.tables import DeltaTable
 
 # DBTITLE 1,Schema Definition
 # Define schema for sensor data to parse JSON payloads
+question_schema = StructType([
+    StructField("question_label", StringType(), True),
+    StructField("question_text", StringType(), True),
+    StructField("question_answer", StringType(), True)
+])
+
 sensor_schema = StructType([
     StructField("topic", StringType(), False),
     StructField("device_name", StringType(), True),
@@ -25,7 +31,7 @@ sensor_schema = StructType([
     StructField("sample", StringType(), True),
     StructField("timestamp", TimestampType(), False),
     StructField("output", StringType(), True),
-    StructField("user_answers", MapType(StringType(), StringType()), True)
+    StructField("questions", ArrayType(question_schema), True)
 ])
 
 # COMMAND ----------
@@ -162,28 +168,10 @@ def clean_data():
         ).otherwise(F.array())
     )
     
-    # Extract user_answers from the parsed_data (same level as device_id, device_name, etc.)
+    # Extract questions from the parsed_data and keep in original array structure
     df = df.withColumn(
-        "user_answers_json",
-        F.col("parsed_data.user_answers")
-    )
-    
-    # Extract specific user answer fields as separate columns
-    df = df.withColumn(
-        "plot_number",
-        F.when(F.col("user_answers_json").isNotNull(),
-            F.get_json_object(F.to_json(F.col("user_answers_json")), "$.59988").cast("int")
-        ).otherwise(F.lit(None).cast("int"))
-    ).withColumn(
-        "plant",
-        F.when(F.col("user_answers_json").isNotNull(),
-            F.get_json_object(F.to_json(F.col("user_answers_json")), "$.59989")
-        ).otherwise(F.lit(None).cast("string"))
-    ).withColumn(
-        "stem_count",
-        F.when(F.col("user_answers_json").isNotNull(),
-            F.get_json_object(F.to_json(F.col("user_answers_json")), "$.59994").cast("int")
-        ).otherwise(F.lit(None).cast("int"))
+        "questions",
+        F.col("parsed_data.questions")
     )
     
     # Select final columns for silver layer
@@ -196,9 +184,7 @@ def clean_data():
         "sample",
         "output",
         "macros",
-        "plot_number",
-        "plant", 
-        "stem_count",
+        "questions",
         "experiment_id",
         "timestamp",
         "date",
@@ -257,7 +243,7 @@ def experiment_status():
         .withColumn(
             "status",
             F.when(
-                (current_timestamp.cast("long") - F.col("latest_timestamp").cast("long")) / 60 <= FRESHNESS_THRESHOLD_MINUTES,
+                (current_timestamp.cast("long") - F.col("latest_processed_timestamp").cast("long")) / 60 <= FRESHNESS_THRESHOLD_MINUTES,
                 F.lit("fresh")
             ).otherwise(F.lit("stale"))
         )

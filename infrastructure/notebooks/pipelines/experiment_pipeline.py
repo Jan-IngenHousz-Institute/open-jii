@@ -4,6 +4,7 @@
 # Processes data from central silver layer into experiment-specific bronze/silver/gold tables
 
 %pip install /Workspace/Shared/wheels/multispeq-0.1.0-py3-none-any.whl
+%pip install /Workspace/Shared/wheels/ambyte-0.2.0-py3-none-any.whl
 %pip install /Workspace/Shared/wheels/mini_racer-0.12.4-py3-none-manylinux_2_31_x86_64.whl
 
 # COMMAND ----------
@@ -22,7 +23,7 @@ import sys
 from typing import Dict, Any, List
 
 # Import the ambyte processing utilities
-from ambyte import find_byte_folders, load_files_per_byte, process_trace_files, discover_and_validate_upload_directories, parse_upload_time
+#from ambyte import prepare_ambyte_files, process_trace_files
 # Import our macro processing library
 from multispeq import execute_macro_script, get_available_macros, process_macro_output_for_spark, infer_macro_schema
 
@@ -109,25 +110,21 @@ def sample():
         .filter(F.col("experiment_id") == EXPERIMENT_ID)  # Filter for specific experiment
     )
     
-    # Process sample data and include user_answers columns directly
+    # Process sample data and include questions columns directly
     return (
         base_df
         .select(
             F.col("device_id"),
             F.col("device_name"),
             F.col("timestamp"),
-            F.col("plot_number"),
-            F.col("plant"),
-            F.col("stem_count"),
+            F.col("questions"),
             F.explode(F.from_json(F.col("sample"), "array<string>")).alias("sample_data_str")
         )
         .select(
             F.col("device_id"),
             F.col("device_name"),
             F.col("timestamp"),
-            F.col("plot_number"),
-            F.col("plant"),
-            F.col("stem_count"),
+            F.col("questions"),
             F.get_json_object(F.col("sample_data_str"), "$.v_arrays").alias("v_arrays"),
             F.get_json_object(F.col("sample_data_str"), "$.set_repeats").cast("int").alias("set_repeats"),
             F.get_json_object(F.col("sample_data_str"), "$.protocol_id").alias("protocol_id"),
@@ -167,142 +164,162 @@ def sample():
 # COMMAND ----------
 
 # DBTITLE 1,Raw Ambyte Data Table Schema
-# Define the schema for the raw ambyte data table
-raw_ambyte_schema = StructType([
-    StructField("Time", TimestampType(), False),
-    StructField("SigF", IntegerType(), True),
-    StructField("RefF", IntegerType(), True),
-    StructField("Sun", IntegerType(), True),
-    StructField("Leaf", IntegerType(), True),
-    StructField("Sig7", IntegerType(), True),
-    StructField("Ref7", IntegerType(), True),
-    StructField("Actinic", IntegerType(), True),
-    StructField("Temp", FloatType(), True),
-    StructField("Res", IntegerType(), True),
-    StructField("Full", BooleanType(), True),
-    StructField("Type", StringType(), True),
-    StructField("Count", IntegerType(), True),
-    StructField("PTS", IntegerType(), True),
-    StructField("PAR", FloatType(), True),
-    StructField("raw", FloatType(), True),
-    StructField("spec", ArrayType(IntegerType()), True),
-    StructField("BoardT", FloatType(), True),
-    StructField("ambyte_folder", StringType(), True),
-    StructField("ambit_index", IntegerType(), True),
-    StructField("meta_Actinic", FloatType(), True),
-    StructField("meta_Dark", IntegerType(), True),
-    StructField("upload_directory", StringType(), True),
-    StructField("upload_time", TimestampType(), True)
-])
-# COMMAND ----------
+# # Define the schema for the raw ambyte data table
+# raw_ambyte_schema = StructType([
+#     StructField("Time", TimestampType(), False),
+#     StructField("SigF", IntegerType(), True),
+#     StructField("RefF", IntegerType(), True),
+#     StructField("Sun", IntegerType(), True),
+#     StructField("Leaf", IntegerType(), True),
+#     StructField("Sig7", IntegerType(), True),
+#     StructField("Ref7", IntegerType(), True),
+#     StructField("Actinic", IntegerType(), True),
+#     StructField("Temp", FloatType(), True),
+#     StructField("Res", IntegerType(), True),
+#     StructField("Full", BooleanType(), True),
+#     StructField("Type", StringType(), True),
+#     StructField("Count", IntegerType(), True),
+#     StructField("PTS", IntegerType(), True),
+#     StructField("PAR", FloatType(), True),
+#     StructField("raw", FloatType(), True),
+#     StructField("spec", ArrayType(IntegerType()), True),
+#     StructField("BoardT", FloatType(), True),
+#     StructField("ambyte_folder", StringType(), True),
+#     StructField("ambit_index", IntegerType(), True),
+#     StructField("meta_Actinic", FloatType(), True),
+#     StructField("meta_Dark", IntegerType(), True),
+#     StructField("upload_directory", StringType(), True),
+#     StructField("upload_time", TimestampType(), True)
+# ])
+# # COMMAND ----------
 
-# DBTITLE 1,Dynamic Ambyte Table Creation
-def create_ambyte_table_code():
-    """Generate code for ambyte streaming table."""
-    return f'''
-@dlt.table(
-    name="{RAW_AMBYTE_TABLE}",
-    comment="ambyte trace data processed from raw files stored in Databricks volume"
-)
-def raw_ambyte_data():
-    """
-    Main DLT table-generating function that processes Ambyte trace files from a Databricks volume
-    and creates a Delta table with the processed data.
-    """
-    # Configuration - specify the base path in the Databricks volume
-    # This should be configured based on your actual volume mount point
-    ambyte_base_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/ambyte"
+# # DBTITLE 1,Raw Ambyte Data Table
+# def create_ambyte_table_code():
+#     """Generate code for ambyte streaming table."""
+#     return '''
+# @dlt.table(
+#     name=RAW_AMBYTE_TABLE,
+#     comment="ambyte trace data processed from raw files stored in Databricks volume"
+# )
+# def raw_ambyte_data():
+#     """
+#     Streaming DLT table-generating function that processes Ambyte trace files from a Databricks volume
+#     and creates a Delta table with the processed data using Auto Loader.
+#     """
     
-    # Find all upload directories with the format upload_YYYYMMDD_SS
-    upload_directories, success = discover_and_validate_upload_directories(ambyte_base_path)
+#     # Configuration - specify the base path in the Databricks volume
+#     ambyte_base_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/ambyte"
     
-    if not success or not upload_directories:
-        # Return an empty dataframe with the correct schema if no upload directories are found
-        return spark.createDataFrame([], schema=raw_ambyte_schema)
+#     # For streaming tables, we cannot use discovery functions in the main function
+#     # Instead, use Auto Loader to stream files and process using pandas UDF
+#     df = (
+#         spark.readStream.format("cloudFiles")
+#         .option("cloudFiles.format", "text")
+#         .option("recursiveFileLookup", "true")
+#         .option("cloudFiles.schemaLocation", f"/tmp/checkpoints/{EXPERIMENT_SCHEMA}/ambyte_schema")
+#         .option("pathGlobFilter", f"{YEAR_PREFIX}*_.txt")
+#         .option("cloudFiles.allowOverwrites", "true")
+#         .option("cloudFiles.ignoreDataLoss", "true")
+#         .load(ambyte_base_path)
+#     )
     
-    # Process each upload directory
-    all_data = []
+#     # Add file path information
+#     df = df.withColumn("file_path", F.col("_metadata.file_path"))
     
-    for upload_dir in upload_directories:
-        upload_dir_name = os.path.basename(upload_dir)
-        print(f"Processing upload directory: {{upload_dir_name}}")
+#     # Filter to only process data files (same logic as existing load_files_per_byte)
+#     df = df.filter(
+#         F.col("file_path").rlike(f".*/{YEAR_PREFIX}.*_.txt$")
+#     )
+    
+#     # Extract upload directory and ambyte folder information from file path using string functions
+#     # Split path by "/" and extract relevant parts
+#     path_parts = F.split(F.col("file_path"), "/")
+    
+#     # Find upload directory (contains "upload_")
+#     df = df.withColumn("upload_dir", 
+#         F.expr("filter(split(file_path, '/'), x -> x like 'upload_%')[0]")
+#     )
+    
+#     # Find ambyte folder (contains "Ambyte_" or "unknown_ambyte")  
+#     df = df.withColumn("ambyte_folder",
+#         F.expr("filter(split(file_path, '/'), x -> x like 'Ambyte_%' or x = 'unknown_ambyte')[0]")
+#     )
+    
+#     # Find ambit index (numeric folders 1-4 or "unknown_ambit")
+#     df = df.withColumn("ambit_index",
+#         F.expr("filter(split(file_path, '/'), x -> x in ('1','2','3','4','unknown_ambit'))[0]")
+#     )
+    
+#     # Create ambyte folder path by reconstructing path up to ambyte folder
+#     df = df.withColumn("ambyte_folder_path",
+#         F.expr("concat_ws('/', slice(split(file_path, '/'), 1, size(split(file_path, '/')) - 2))")
+#     )
+    
+#     # TODO: Need to handle streaming aggregation issue
+#     # For now, return the dataframe without groupBy to avoid streaming aggregation error
+    
+#     # Define pandas UDF
+#     @pandas_udf(returnType=ArrayType(raw_ambyte_schema))
+#     def process_ambyte_folder(folder_data: pd.Series, upload_dirs: pd.Series, ambyte_folders: pd.Series) -> pd.Series:
+#         """
+#         Process ambyte folders
+#         """
         
-        # Parse upload time from directory name
-        upload_time = parse_upload_time(upload_dir_name)
+#         all_results = []
         
-        # Find all Ambyte_N and unknown_ambyte folders within this upload directory
-        # Each of these folders should contain either 1-4 subfolders or unknown_ambit subfolder
-        try:
-            # Use the existing find_byte_folders function to discover valid byte parent folders
-            byte_parent_folders = find_byte_folders(upload_dir)
+#         for files_data, upload_dir, ambyte_folder in zip(folder_data, upload_dirs, ambyte_folders):
+#             # Organize files using embedded function (exact copy of volume_io.prepare_ambyte_files)
+#             organized_data = prepare_ambyte_files(files_data, upload_dir, ambyte_folder)
             
-            if byte_parent_folders:
-                print(f"Found {{len(byte_parent_folders)}} valid byte parent folders in {{upload_dir_name}}")
-                print(f"Byte parent folders: {{[os.path.basename(x.rstrip('/')) for x in byte_parent_folders]}}")
-            else:
-                print(f"No valid byte parent folders found in {{upload_dir_name}}")
-                continue
+#             if organized_data is None:
+#                 continue
                 
-        except Exception as e:
-            print(f"Error finding byte folders in {{upload_dir_name}}: {{e}}")
-            continue
+#             files_per_byte, upload_time, folder_name = organized_data
+            
+#             try:                
+#                 df_result = process_trace_files(folder_name or 'unknown', files_per_byte)
+                
+#                 if df_result is not None:
+#                     df_result = df_result.reset_index()
+#                     df_result[\'upload_directory\'] = upload_dir
+#                     df_result[\'upload_time\'] = upload_time
+                    
+#                     records = df_result.to_dict(\'records\')
+#                     all_results.extend(records)
+                    
+#             except Exception as e:
+#                 print(f"Error processing ambyte folder {folder_name}: {e}")
+#                 continue
         
-        # Process each byte folder within this upload directory
-        for ambyte_folder in byte_parent_folders:
-            ambyte_folder_name = os.path.basename(ambyte_folder.rstrip('/'))
-            
-            # Load files from byte subfolders or unknown_ambit
-            files_per_byte, _ = load_files_per_byte(ambyte_folder, year_prefix=YEAR_PREFIX)
-            files_per_byte = [lst for lst in files_per_byte if lst]
-            
-            print(f"Loaded files for {{ambyte_folder_name}} in {{upload_dir_name}}: {{len(files_per_byte)}}")
-            
-            # Process trace files
-            df = process_trace_files(ambyte_folder_name, files_per_byte)
-            
-            if df is not None:
-                # Convert pandas DataFrame to Spark DataFrame
-                try:
-                    # Reset index to make Time a regular column
-                    df = df.reset_index()
-                    
-                    # Add upload directory info to the dataframe
-                    df['upload_directory'] = upload_dir_name
-                    
-                    # Add upload time to the dataframe (convert to pandas timestamp first)
-                    if upload_time is not None:
-                        df['upload_time'] = upload_time
-                    else:
-                        df['upload_time'] = None
-                    
-                    # Convert pandas DataFrame to Spark DataFrame
-                    spark_df = spark.createDataFrame(df)
-                    
-                    all_data.append(spark_df)
-                except Exception as e:
-                    print(f"Error converting DataFrame to Spark DataFrame for {{ambyte_folder_name}} in {{upload_dir_name}}: {{e}}")
+#         return pd.Series([all_results])
     
-    # Combine all spark dataframes if any were created
-    if all_data:
-        return all_data[0] if len(all_data) == 1 else all_data[0].unionAll(*all_data[1:])
-    else:
-        return spark.createDataFrame([], schema=raw_ambyte_schema)
-'''
+#     # Apply pandas UDF to process ambyte folders using existing logic
+#     df = df.select(
+#         F.explode(
+#             process_ambyte_folder(F.col("file_data"), F.col("upload_dir"), F.col("ambyte_folder"))
+#         ).alias("parsed_data")
+#     )
+    
+#     # Expand the parsed data into individual columns matching the schema
+#     df = df.select("parsed_data.*")
+    
+#     return df
+# '''
 
-# Check if volume exists and only create table if it does
-try:
-    # Try to read from the volume path to check if it exists
-    volume_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads"
-    test_df = spark.read.format("text").load(volume_path)
-    # If we can create the DataFrame, the volume exists
-    print(f"Volume data-uploads exists at {volume_path}")
-    print("Creating streaming raw_ambyte_data table")
-    exec(create_ambyte_table_code(), globals())
-    print("Raw ambyte streaming table created successfully")
+# # Check if volume exists and only create table if it does
+# try:
+#     # Try to read from the volume path to check if it exists
+#     volume_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads"
+#     test_df = spark.read.format("text").load(volume_path)
+#     # If we can create the DataFrame, the volume exists
+#     print(f"Volume data-uploads exists at {volume_path}")
+#     print("Creating streaming raw_ambyte_data table")
+#     exec(create_ambyte_table_code(), globals())
+#     print("Raw ambyte table created successfully")
         
-except Exception as e:
-    print(f"Volume data-uploads does not exist or is not accessible: {e}")
-    print("Skipping raw_ambyte_data table creation")
+# except Exception as e:
+#     print(f"Volume data-uploads does not exist or is not accessible: {e}")
+#     print("Skipping raw_ambyte_data table creation")
 
 # COMMAND ----------
 
@@ -328,39 +345,41 @@ def create_macro_tables():
             .distinct()
         )
         
-        # Get a sample row for schema inference
-        sample_row = (
-            spark.read.table(
-                f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}"
-            )
-            .filter(F.col("experiment_id") == EXPERIMENT_ID)
-            .filter(F.col("macros").isNotNull())
-            .filter(F.size(F.col("macros")) > 0)
-            .first()
-        )
-        
         available_macros = get_available_macros(MACROS_PATH)
         experiment_macros = [row.macro_name for row in macros_df.collect()]
         
         print(f"Available macros: {available_macros}")
         print(f"Macros used in experiment: {experiment_macros}")
         
-        # Generate schemas for each macro
+        # Generate schemas for each macro using macro-specific sample data
         macro_schemas = {}
-        if sample_row:
-            # Prepare sample data for macro execution
-            sample_data = {
-                "device_id": sample_row["device_id"],
-                "device_name": sample_row["device_name"],
-                "experiment_id": sample_row["experiment_id"],
-                "sample": sample_row["sample"],
-                "macros": sample_row["macros"],
-            }
-            sample_data = {k: v for k, v in sample_data.items() if v is not None}
-            
-            print("Inferring schemas for macros using sample data...")
-            for macro_name in experiment_macros:
-                if macro_name in available_macros:
+        print("Inferring schemas for macros using macro-specific sample data...")
+        
+        for macro_name in experiment_macros:
+            if macro_name in available_macros:
+                print(f"Getting sample data for macro: {macro_name}")
+                
+                # Get a sample row that specifically contains this macro
+                macro_sample_row = (
+                    spark.read.table(
+                        f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}"
+                    )
+                    .filter(F.col("experiment_id") == EXPERIMENT_ID)
+                    .filter(F.array_contains(F.col("macros"), macro_name))
+                    .first()
+                )
+                
+                if macro_sample_row:
+                    # Prepare sample data specific to this macro
+                    sample_data = {
+                        "device_id": macro_sample_row["device_id"],
+                        "device_name": macro_sample_row["device_name"],
+                        "experiment_id": macro_sample_row["experiment_id"],
+                        "sample": macro_sample_row["sample"],
+                        "macros": macro_sample_row["macros"],
+                    }
+                    sample_data = {k: v for k, v in sample_data.items() if v is not None}
+                    
                     print(f"Inferring schema for macro: {macro_name}")
                     schema = infer_macro_schema(macro_name, sample_data, MACROS_PATH)
                     if schema:
@@ -369,9 +388,9 @@ def create_macro_tables():
                     else:
                         print(f"Warning: Could not infer schema for macro {macro_name}")
                 else:
-                    print(f"Warning: Macro {macro_name} referenced in data but script not found")
-        else:
-            print("Warning: No sample data found for schema inference")
+                    print(f"Warning: No sample data found for macro {macro_name}")
+            else:
+                print(f"Warning: Macro {macro_name} referenced in data but script not found")
         
         return experiment_macros, available_macros, macro_schemas
     except Exception as e:
@@ -385,7 +404,7 @@ def create_macro_table_code(macro_name: str, macro_schema: StructType) -> str:
     """
     # Base schema for the UDF output (just the essential fields + JSON)
     udf_schema = (
-        "device_id string, device_name string, plot_number int, plant string, stem_count int, "
+        "device_id string, device_name string, questions array<struct<question_label:string,question_text:string,question_answer:string>>, "
         "processed_timestamp timestamp, macro_output_json string"
     )
     
@@ -420,6 +439,7 @@ def macro_{macro_name}_table():
                 "experiment_id": row.get("experiment_id"),
                 "sample": row.get("sample"),
                 "macros": row.get("macros"),
+                "questions": row.get("questions"),
             }}
             input_data = {{k: v for k, v in input_data.items() if v is not None}}
             try:
@@ -437,9 +457,7 @@ def macro_{macro_name}_table():
             result_row = {{
                 "device_id": row.get("device_id"),
                 "device_name": row.get("device_name"),
-                "plot_number": row.get("plot_number"),
-                "plant": row.get("plant"),
-                "stem_count": row.get("stem_count"),
+                "questions": row.get("questions"),
                 "processed_timestamp": pd.Timestamp.now(),
                 "macro_output_json": debug_str
             }}
@@ -451,8 +469,7 @@ def macro_{macro_name}_table():
         else:
             # Return empty DataFrame with correct columns
             return pd.DataFrame(columns=[
-                "device_id", "device_name", "plot_number", "plant", "stem_count", 
-                "processed_timestamp", "macro_output_json"
+                "device_id", "device_name", "questions", "processed_timestamp", "macro_output_json"
             ])
 
     # Apply the pandas UDF to get the base data with JSON
@@ -480,9 +497,7 @@ def macro_{macro_name}_table():
             # Base columns
             F.col("device_id"),
             F.col("device_name"),
-            F.col("plot_number"),
-            F.col("plant"),
-            F.col("stem_count"),
+            F.col("questions"),
             F.col("processed_timestamp"),
             # Parsed macro fields
             *parsed_columns
