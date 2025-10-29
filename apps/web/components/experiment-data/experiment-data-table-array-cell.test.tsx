@@ -1,62 +1,12 @@
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   ExperimentDataTableArrayCell,
   ArrayExpandedContent,
 } from "./experiment-data-table-array-cell";
-
-// Mock lucide-react icons
-vi.mock("lucide-react", () => ({
-  ChevronDown: () => <div data-testid="chevron-down">▼</div>,
-  ChevronRight: () => <div data-testid="chevron-right">▶</div>,
-}));
-
-// Mock UI components
-vi.mock("@repo/ui/components", () => ({
-  Collapsible: ({
-    children,
-    open,
-    onOpenChange: _onOpenChange,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }) => (
-    <div data-testid="collapsible" data-open={open}>
-      {children}
-    </div>
-  ),
-  CollapsibleTrigger: ({
-    children,
-    asChild: _asChild,
-  }: {
-    children: React.ReactNode;
-    asChild?: boolean;
-  }) => <div data-testid="collapsible-trigger">{children}</div>,
-  CollapsibleContent: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="collapsible-content">{children}</div>
-  ),
-  Button: ({
-    children,
-    variant: _variant,
-    size: _size,
-    className,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    variant?: string;
-    size?: string;
-    className?: string;
-    onClick?: () => void;
-  }) => (
-    <button className={className} onClick={onClick} data-testid="button">
-      {children}
-    </button>
-  ),
-}));
 
 describe("ExperimentDataTableArrayCell", () => {
   it("should render simple text for non-array data", () => {
