@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home, User, FlaskConical, Settings, Workflow } from "lucide-react-native";
+import { User, FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "~/hooks/use-theme";
@@ -39,7 +39,7 @@ export default function TabLayout() {
           name="index"
           options={{
             title: "Connect",
-            tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
+            tabBarIcon: ({ color, size }) => <Bluetooth size={size} color={color} />,
           }}
         />
         <Tabs.Screen
