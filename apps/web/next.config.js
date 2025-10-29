@@ -51,29 +51,8 @@ const nextConfig = {
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
 
-  webpack: (config, { isServer, webpack }) => {
-    if (isServer) {
-      // Don't bundle posthog-js on the server - it's client-only
-      config.externals = [...(config.externals || []), "posthog-js"];
-    } else {
-      // For client-side, provide fallbacks for Node.js modules that posthog-js references
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-        child_process: false,
-      };
-
-      // Handle node: protocol imports by replacing them with empty modules
-      config.plugins.push(
-        new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
-          resource.request = resource.request.replace(/^node:/, "");
-        }),
-      );
-    }
-    return config;
-  },
+  // Externalize posthog-node for server-side only
+  serverExternalPackages: ["posthog-node"],
 };
 
 export default nextConfig;

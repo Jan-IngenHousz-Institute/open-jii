@@ -1,6 +1,7 @@
 import { PostHog } from "posthog-node";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+import { FEATURE_FLAGS } from "./posthog-config";
 import {
   getPostHogClient,
   isFeatureFlagEnabled,
@@ -64,10 +65,10 @@ describe("posthog-server", () => {
       const mockIsFeatureEnabled = vi.mocked(client.isFeatureEnabled);
       mockIsFeatureEnabled.mockResolvedValue(true);
 
-      const result = await isFeatureFlagEnabled("test-flag");
+      const result = await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
 
       expect(result).toBe(true);
-      expect(mockIsFeatureEnabled).toHaveBeenCalledWith("test-flag", "anonymous");
+      expect(mockIsFeatureEnabled).toHaveBeenCalledWith(FEATURE_FLAGS.MULTI_LANGUAGE, "anonymous");
     });
 
     it("should return false when feature flag is disabled", async () => {
@@ -75,7 +76,7 @@ describe("posthog-server", () => {
       const mockIsFeatureEnabled = vi.mocked(client.isFeatureEnabled);
       mockIsFeatureEnabled.mockResolvedValue(false);
 
-      const result = await isFeatureFlagEnabled("test-flag");
+      const result = await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
 
       expect(result).toBe(false);
     });
@@ -85,7 +86,7 @@ describe("posthog-server", () => {
       const mockIsFeatureEnabled = vi.mocked(client.isFeatureEnabled);
       mockIsFeatureEnabled.mockResolvedValue(undefined);
 
-      const result = await isFeatureFlagEnabled("test-flag");
+      const result = await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
 
       expect(result).toBe(false);
     });
@@ -95,9 +96,9 @@ describe("posthog-server", () => {
       const mockIsFeatureEnabled = vi.mocked(client.isFeatureEnabled);
       mockIsFeatureEnabled.mockResolvedValue(true);
 
-      await isFeatureFlagEnabled("test-flag", "user-123");
+      await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE, "user-123");
 
-      expect(mockIsFeatureEnabled).toHaveBeenCalledWith("test-flag", "user-123");
+      expect(mockIsFeatureEnabled).toHaveBeenCalledWith(FEATURE_FLAGS.MULTI_LANGUAGE, "user-123");
     });
 
     it("should return false and log error when PostHog fails", async () => {
@@ -106,7 +107,7 @@ describe("posthog-server", () => {
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       mockIsFeatureEnabled.mockRejectedValue(new Error("PostHog error"));
 
-      const result = await isFeatureFlagEnabled("test-flag");
+      const result = await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
 
       expect(result).toBe(false);
       expect(consoleErrorSpy).toHaveBeenCalledWith(
