@@ -19,9 +19,9 @@ interface MultipleChoiceQuestionProps {
 const optionContainer = cva("items-center justify-center rounded-lg border-2", {
   variants: {
     state: {
-      selected: "border-green-500 bg-green-50 dark:bg-green-900/20",
-      disabled: "border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800",
-      default: "border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800",
+      selected: "border-green-500 bg-green-50",
+      disabled: "border-gray-200 bg-gray-100",
+      default: "border-gray-300 bg-white",
     },
   },
 });
