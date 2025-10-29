@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 import { locales, defaultLocale } from "@repo/i18n/config";
 
+import { FEATURE_FLAGS } from "./lib/posthog-config";
 import { isFeatureFlagEnabled } from "./lib/posthog-server";
 
 // Simple locale detection and redirection function
@@ -31,7 +32,7 @@ async function handleI18nRouting(request: NextRequest) {
 
   if (currentLocale && currentLocale !== defaultLocale) {
     // Check if multi-language feature flag is enabled
-    const isMultiLanguageEnabled = await isFeatureFlagEnabled("multi-language");
+    const isMultiLanguageEnabled = await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
 
     if (!isMultiLanguageEnabled) {
       // Rewrite to 404 page for non-English locales when feature is disabled
