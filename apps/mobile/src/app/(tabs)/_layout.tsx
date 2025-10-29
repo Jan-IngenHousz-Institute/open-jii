@@ -38,7 +38,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="index"
           options={{
-            title: "Home",
+            title: "Connect",
             tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
           }}
         />
@@ -52,7 +52,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="measurement-flow"
           options={{
-            title: "Flow",
+            title: "Measure",
             tabBarIcon: ({ color, size }) => <Workflow size={size} color={color} />,
           }}
         />
