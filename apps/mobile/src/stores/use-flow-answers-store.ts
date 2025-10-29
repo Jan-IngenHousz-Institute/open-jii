@@ -1,4 +1,3 @@
-import { camelCase } from "lodash";
 import { create } from "zustand";
 
 interface FlowAnswersStore {
@@ -40,7 +39,7 @@ export const useFlowAnswersStore = create<FlowAnswersStore>((set, get) => ({
       // Set the answer for the specific cycle and question
       newHistory[cycle] = {
         ...newHistory[cycle],
-        [camelCase(name)]: value,
+        [name]: value,
       };
 
       return { answersHistory: newHistory };
@@ -53,7 +52,7 @@ export const useFlowAnswersStore = create<FlowAnswersStore>((set, get) => ({
 
   getAnswer: (cycle: number, name: string) => {
     const state = get();
-    return state.answersHistory[cycle]?.[camelCase(name)];
+    return state.answersHistory[cycle]?.[name];
   },
 
   getCycleAnswers: (cycle: number) => {
@@ -65,13 +64,13 @@ export const useFlowAnswersStore = create<FlowAnswersStore>((set, get) => ({
     set((state) => ({
       autoincrementSettings: {
         ...state.autoincrementSettings,
-        [camelCase(name)]: enabled,
+        [name]: enabled,
       },
     }));
   },
 
   isAutoincrementEnabled: (name: string) => {
     const state = get();
-    return state.autoincrementSettings[camelCase(name)] ?? false;
+    return state.autoincrementSettings[name] ?? false;
   },
 }));

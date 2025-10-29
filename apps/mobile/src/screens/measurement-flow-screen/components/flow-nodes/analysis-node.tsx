@@ -10,6 +10,7 @@ import { useSessionStore } from "~/hooks/use-session-store";
 import { useTheme } from "~/hooks/use-theme";
 import { useFlowAnswersStore } from "~/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
+import { convertCycleAnswersToArray } from "~/utils/convert-cycle-answers-to-array";
 
 interface AnalysisNodeProps {
   content: {
@@ -21,8 +22,15 @@ interface AnalysisNodeProps {
 export function AnalysisNode({ content }: AnalysisNodeProps) {
   const { classes } = useTheme();
   const { macro, isLoading } = useMacro(content.macroId);
-  const { scanResult, previousStep, experimentId, protocolId, finishFlow, iterationCount } =
-    useMeasurementFlowStore();
+  const {
+    scanResult,
+    previousStep,
+    experimentId,
+    protocolId,
+    finishFlow,
+    iterationCount,
+    flowNodes,
+  } = useMeasurementFlowStore();
   const { experiment } = useExperiment(experimentId);
   const { session } = useSessionStore();
   const experimentName = experiment?.name ?? "Experiment";
@@ -108,7 +116,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       protocolId,
       userId: session?.data?.user?.id,
       macroFilename: macro?.filename,
-      extraFields: getCycleAnswers(iterationCount),
+      questions: convertCycleAnswersToArray(getCycleAnswers(iterationCount), flowNodes),
     });
     finishFlow();
   };

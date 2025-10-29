@@ -2,6 +2,7 @@ import { useAsyncCallback } from "react-async-hook";
 import { useToast } from "~/context/toast-context";
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
+import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
 
 interface PrepareMeasurementArgs {
@@ -9,7 +10,7 @@ interface PrepareMeasurementArgs {
   userId: string;
   macroFilename: string;
   timestamp: string;
-  extraFields: Record<string, string>;
+  questions: AnswerData[];
 }
 
 function prepareMeasurementForUpload({
@@ -17,7 +18,7 @@ function prepareMeasurementForUpload({
   userId,
   macroFilename,
   timestamp,
-  extraFields,
+  questions,
 }: PrepareMeasurementArgs) {
   if ("sample" in rawMeasurement && rawMeasurement.sample) {
     const samples = Array.isArray(rawMeasurement.sample)
@@ -30,10 +31,10 @@ function prepareMeasurementForUpload({
   }
 
   return {
-    ...extraFields,
-    ...rawMeasurement,
+    questions,
     timestamp,
     userId,
+    ...rawMeasurement,
   };
 }
 
@@ -50,7 +51,7 @@ export function useMeasurementUpload() {
       protocolId,
       userId,
       macroFilename,
-      extraFields = {},
+      questions,
     }: {
       rawMeasurement: any;
       timestamp: string;
@@ -59,7 +60,7 @@ export function useMeasurementUpload() {
       protocolId: string;
       userId: string;
       macroFilename: string;
-      extraFields?: Record<string, string>;
+      questions: AnswerData[];
     }) => {
       if (typeof rawMeasurement !== "object") {
         return;
@@ -70,7 +71,7 @@ export function useMeasurementUpload() {
         userId,
         macroFilename,
         timestamp,
-        extraFields,
+        questions,
       });
 
       const topic = getMultispeqMqttTopic({ experimentId, protocolId });
