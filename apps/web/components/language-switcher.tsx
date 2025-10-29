@@ -2,7 +2,6 @@
 
 import { usePostHogFeatureFlag } from "@/hooks/use-posthog-feature-flags";
 import { Globe } from "lucide-react";
-import { Languages } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
