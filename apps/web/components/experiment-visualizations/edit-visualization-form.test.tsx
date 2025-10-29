@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
 import type { SampleTable } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentVisualizationUpdate } from "@/hooks/experiment/useExperimentVisualizationUpdate/useExperimentVisualizationUpdate";
 import "@testing-library/jest-dom/vitest";
@@ -6,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ExperimentVisualization } from "@repo/api";
+import type { WizardFormProps } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 import EditVisualizationForm from "./edit-visualization-form";
@@ -28,39 +30,38 @@ vi.mock(
 );
 
 vi.mock("@repo/ui/components", () => ({
-  WizardForm: vi.fn(({ onSubmit, defaultValues, isSubmitting, steps, initialStep = 0 }) => {
-    // Render the component from the current step to trigger the step component functions
-    const StepComponent = steps[initialStep]?.component;
+  WizardForm: vi.fn(
+    ({ onSubmit, defaultValues, isSubmitting, steps, initialStep = 0 }: WizardFormProps) => {
+      const StepComponent = steps[initialStep].component;
 
-    return (
-      <form
-        data-testid="wizard-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSubmit(defaultValues);
-        }}
-      >
-        <div data-testid="is-submitting">{isSubmitting ? "true" : "false"}</div>
-        <div data-testid="step-content">
-          {StepComponent && (
+      return (
+        <form
+          data-testid="wizard-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void onSubmit(defaultValues as any);
+          }}
+        >
+          <div data-testid="is-submitting">{isSubmitting ? "true" : "false"}</div>
+          <div data-testid="step-content">
             <StepComponent
               form={{} as any}
               step={steps[initialStep]}
-              onNext={() => {}}
-              onPrevious={() => {}}
-              goToStep={() => {}}
+              onNext={() => undefined}
+              onPrevious={() => undefined}
+              goToStep={() => undefined}
               stepIndex={initialStep}
               totalSteps={steps.length}
               isSubmitting={isSubmitting}
             />
-          )}
-        </div>
-        <button type="submit" data-testid="submit-button">
-          Submit
-        </button>
-      </form>
-    );
-  }),
+          </div>
+          <button type="submit" data-testid="submit-button">
+            Submit
+          </button>
+        </form>
+      );
+    },
+  ),
 }));
 
 vi.mock("./wizard-steps/basic-info-step", () => ({
@@ -120,9 +121,12 @@ describe("EditVisualizationForm", () => {
   const mockSampleTables: SampleTable[] = [
     {
       name: "test_table",
+      totalRows: 100,
+      tableMetadata: {} as never,
+      tableRows: [],
       columns: [
-        { name: "x", type: "DOUBLE" },
-        { name: "y", type: "DOUBLE" },
+        { name: "x", type_name: "DOUBLE", type_text: "double" },
+        { name: "y", type_name: "DOUBLE", type_text: "double" },
       ],
     },
   ];
