@@ -60,19 +60,25 @@ describe("getColumnWidth", () => {
     expect(getColumnWidth("")).toBeUndefined();
   });
 
-  it("should return undefined for MAP without STRING key", () => {
-    expect(getColumnWidth("MAP<INT,")).toBeUndefined();
-    expect(getColumnWidth("MAP<DOUBLE,STRING>")).toBeUndefined();
+  it("should return 200 for MAP with STRING key and space", () => {
+    expect(getColumnWidth("MAP<STRING, STRING>")).toBe(200);
+    expect(getColumnWidth("MAP<STRING, INT>")).toBe(200);
   });
 
-  it("should return 120 for ARRAY<STRUCT<...>> column type", () => {
-    expect(getColumnWidth("ARRAY<STRUCT<question_label: STRING>>")).toBe(120);
-    expect(getColumnWidth("ARRAY<STRUCT<name: STRING, age: INT>>")).toBe(120);
+  it("should return 200 for ARRAY<STRUCT<...>> column type", () => {
+    expect(getColumnWidth("ARRAY<STRUCT<question_label: STRING>>")).toBe(200);
+    expect(getColumnWidth("ARRAY<STRUCT<name: STRING, age: INT>>")).toBe(200);
     expect(
       getColumnWidth(
         "ARRAY<STRUCT<question_label: STRING, question_text: STRING, question_answer: STRING>>",
       ),
-    ).toBe(120);
+    ).toBe(200);
+  });
+
+  it("should return 120 for other ARRAY types", () => {
+    expect(getColumnWidth("ARRAY")).toBe(120);
+    expect(getColumnWidth("ARRAY<DOUBLE>")).toBe(120);
+    expect(getColumnWidth("ARRAY<STRING>")).toBe(120);
   });
 });
 
@@ -100,10 +106,10 @@ describe("useExperimentData", () => {
   describe("useExperimentData", () => {
     const mockExperimentData: ExperimentData = {
       columns: [
-        { name: "id", type_name: "INT", type_text: "Integer" },
-        { name: "name", type_name: "STRING", type_text: "String" },
-        { name: "value", type_name: "DOUBLE", type_text: "Double" },
-        { name: "timestamp", type_name: "TIMESTAMP", type_text: "Timestamp" },
+        { name: "id", type_name: "INT", type_text: "INT" },
+        { name: "name", type_name: "STRING", type_text: "STRING" },
+        { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" },
+        { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
       ],
       rows: [
         { id: "1", name: "Test 1", value: "10.5", timestamp: "2023-01-01T10:00:00" },
@@ -293,21 +299,21 @@ describe("useExperimentData", () => {
     it("should sort columns by type precedence correctly", () => {
       const mockDataWithMixedTypes: ExperimentData = {
         columns: [
-          { name: "chart_data", type_name: "ARRAY<DOUBLE>", type_text: "Array of Doubles" },
+          { name: "chart_data", type_name: "ARRAY", type_text: "ARRAY<DOUBLE>" },
           {
             name: "struct_data",
-            type_name: "ARRAY<STRUCT<name: STRING, age: INT>>",
-            type_text: "Array of Structs",
+            type_name: "ARRAY",
+            type_text: "ARRAY<STRUCT<name: STRING, age: INT>>",
           },
           { name: "id", type_name: "ID", type_text: "ID" },
-          { name: "annotations", type_name: "ANNOTATIONS", type_text: "Annotations" },
-          { name: "timestamp", type_name: "TIMESTAMP", type_text: "Timestamp" },
-          { name: "map_data", type_name: "MAP<STRING,STRING>", type_text: "Map of Strings" },
-          { name: "name", type_name: "STRING", type_text: "String" },
-          { name: "value", type_name: "DOUBLE", type_text: "Double" },
-          { name: "count", type_name: "INT", type_text: "Integer" },
-          { name: "amount", type_name: "BIGINT", type_text: "Big Integer" },
-          { name: "other", type_name: "UNKNOWN", type_text: "Unknown Type" },
+          { name: "annotations", type_name: "ANNOTATIONS", type_text: "ANNOTATIONS" },
+          { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+          { name: "map_data", type_name: "MAP", type_text: "MAP<STRING, STRING>" },
+          { name: "name", type_name: "STRING", type_text: "STRING" },
+          { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" },
+          { name: "count", type_name: "INT", type_text: "INT" },
+          { name: "amount", type_name: "BIGINT", type_text: "BIGINT" },
+          { name: "other", type_name: "UNKNOWN", type_text: "UNKNOWN" },
         ],
         rows: [
           {
@@ -377,10 +383,10 @@ describe("useExperimentData", () => {
     it("should set smaller width for array columns", () => {
       const mockDataWithArrays: ExperimentData = {
         columns: [
-          { name: "id", type_name: "INT", type_text: "Integer" },
-          { name: "chart_data", type_name: "ARRAY<DOUBLE>", type_text: "Array of Doubles" },
-          { name: "array_data", type_name: "ARRAY", type_text: "Array" },
-          { name: "name", type_name: "STRING", type_text: "String" },
+          { name: "id", type_name: "INT", type_text: "INT" },
+          { name: "chart_data", type_name: "ARRAY", type_text: "ARRAY<DOUBLE>" },
+          { name: "array_data", type_name: "ARRAY", type_text: "ARRAY<STRING>" },
+          { name: "name", type_name: "STRING", type_text: "STRING" },
         ],
         rows: [{ id: "1", chart_data: "[1,2,3]", array_data: "[a,b,c]", name: "Test" }],
         totalRows: 1,
@@ -729,8 +735,8 @@ describe("useExperimentData", () => {
   describe("useExperimentSampleData", () => {
     const mockExperimentData: ExperimentData = {
       columns: [
-        { name: "id", type_name: "INT", type_text: "Integer" },
-        { name: "name", type_name: "STRING", type_text: "String" },
+        { name: "id", type_name: "INT", type_text: "INT" },
+        { name: "name", type_name: "STRING", type_text: "STRING" },
       ],
       rows: [
         { id: "1", name: "Sample 1" },
@@ -751,7 +757,7 @@ describe("useExperimentData", () => {
         {
           name: "table2",
           data: {
-            columns: [{ name: "count", type_name: "BIGINT", type_text: "Big Integer" }],
+            columns: [{ name: "count", type_name: "BIGINT", type_text: "BIGINT" }],
             rows: [{ count: "42" }],
             totalRows: 1,
             truncated: false,
