@@ -42,7 +42,6 @@ def extract_parameters() -> Dict[str, str]:
 # COMMAND ----------
 
 # DBTITLE 1,Experiment Pipeline Orchestrator
-
 class ExperimentPipelineOrchestrator:
     """Orchestrates execution of all experiment pipelines."""
     
@@ -139,7 +138,18 @@ class ExperimentPipelineOrchestrator:
         Extract experiment_id from pipeline configuration.
         """
         try:
-            config = getattr(pipeline_details, "configuration", None)
+            # Try to get the spec as a dict or attribute
+            spec = getattr(pipeline_details, "spec", None)
+            if spec is None and isinstance(pipeline_details, dict):
+                spec = pipeline_details.get("spec")
+            # Now get configuration from spec
+            config = None
+            if spec:
+                if isinstance(spec, dict):
+                    config = spec.get("configuration")
+                else:
+                    config = getattr(spec, "configuration", None)
+            logger.debug(f"Pipeline configuration: {config}")
             if config and isinstance(config, dict):
                 return config.get("EXPERIMENT_ID")
             logger.debug("Could not find EXPERIMENT_ID in pipeline configuration")
@@ -147,8 +157,6 @@ class ExperimentPipelineOrchestrator:
         except Exception as e:
             logger.warning(f"Error extracting experiment_id from pipeline configuration: {e}")
             return None
-    
-
     
     def trigger_pipeline(self, pipeline_info: Dict[str, str]) -> Dict[str, Any]:
         """
@@ -243,7 +251,6 @@ class ExperimentPipelineOrchestrator:
 # COMMAND ----------
 
 # DBTITLE 1,Execution and Reporting
-
 def print_execution_summary(results: List[Dict[str, Any]]) -> None:
     """Print formatted execution summary."""
     successful = [r for r in results if r['status'] == 'TRIGGERED']
