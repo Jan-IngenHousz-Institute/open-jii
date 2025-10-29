@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useTranslation } from "@repo/i18n";
+import type { WizardFormProps } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 import type { ChartFormValues } from "./chart-configurators/chart-configurator-util";
@@ -22,14 +23,13 @@ vi.mock("./chart-configurators/chart-configurator-util", () => ({
 
 // Mock WizardForm and Card components
 vi.mock("@repo/ui/components", () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  WizardForm: vi.fn(({ defaultValues, onSubmit }: any) => {
+  WizardForm: vi.fn(({ defaultValues, onSubmit }: WizardFormProps<ChartFormValues>) => {
     return (
       <div data-testid="wizard-form">
         <button
           onClick={() => {
-            if (defaultValues && onSubmit) {
-              onSubmit(defaultValues as ChartFormValues);
+            if (defaultValues) {
+              void onSubmit(defaultValues as ChartFormValues);
             }
           }}
         >
@@ -38,16 +38,11 @@ vi.mock("@repo/ui/components", () => ({
       </div>
     );
   }),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Card: ({ children }: any) => <div data-testid="card">{children}</div>,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  CardHeader: ({ children }: any) => <div>{children}</div>,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  CardTitle: ({ children }: any) => <h3>{children}</h3>,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  CardDescription: ({ children }: any) => <p>{children}</p>,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  CardContent: ({ children }: any) => <div>{children}</div>,
+  Card: ({ children }: { children: React.ReactNode }) => <div data-testid="card">{children}</div>,
+  CardHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardTitle: ({ children }: { children: React.ReactNode }) => <h3>{children}</h3>,
+  CardDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  CardContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 describe("NewVisualizationForm", () => {
@@ -147,6 +142,7 @@ describe("NewVisualizationForm", () => {
       await waitFor(() => {
         expect(mockCreateVisualization).toHaveBeenCalledWith({
           params: { id: "exp-123" },
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           body: expect.objectContaining({
             name: "",
             description: "",
@@ -172,7 +168,9 @@ describe("NewVisualizationForm", () => {
       await waitFor(() => {
         expect(mockWithEmptySource).toHaveBeenCalledWith(
           expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             body: expect.objectContaining({
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
               dataConfig: expect.objectContaining({
                 dataSources: [],
               }),
@@ -192,23 +190,25 @@ describe("NewVisualizationForm", () => {
 
       // Mock WizardForm to submit data with whitespace columns
       const { WizardForm } = await import("@repo/ui/components");
-      (WizardForm as ReturnType<typeof vi.fn>).mockImplementation(({ onSubmit, defaultValues }) => {
-        const dataWithWhitespace = {
-          ...defaultValues,
-          dataConfig: {
-            tableName: "measurements",
-            dataSources: [
-              { tableName: "measurements", columnName: "  ", role: "x", alias: "" },
-              { tableName: "measurements", columnName: "temp", role: "y", alias: "" },
-            ],
-          },
-        };
-        return (
-          <div data-testid="wizard-form">
-            <button onClick={() => onSubmit(dataWithWhitespace as ChartFormValues)}>Submit</button>
-          </div>
-        );
-      });
+      (WizardForm as ReturnType<typeof vi.fn>).mockImplementation(
+        ({ onSubmit, defaultValues }: WizardFormProps) => {
+          const dataWithWhitespace = {
+            ...defaultValues,
+            dataConfig: {
+              tableName: "measurements",
+              dataSources: [
+                { tableName: "measurements", columnName: "  ", role: "x", alias: "" },
+                { tableName: "measurements", columnName: "temp", role: "y", alias: "" },
+              ],
+            },
+          } as ChartFormValues;
+          return (
+            <div data-testid="wizard-form">
+              <button onClick={() => void onSubmit(dataWithWhitespace)}>Submit</button>
+            </div>
+          );
+        },
+      );
 
       render(<NewVisualizationForm {...defaultProps} />);
 
@@ -217,7 +217,9 @@ describe("NewVisualizationForm", () => {
       await waitFor(() => {
         expect(mockWithWhitespace).toHaveBeenCalledWith(
           expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             body: expect.objectContaining({
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
               dataConfig: expect.objectContaining({
                 dataSources: [
                   { tableName: "measurements", columnName: "temp", role: "y", alias: "" },
@@ -239,28 +241,30 @@ describe("NewVisualizationForm", () => {
 
       // Mock WizardForm to submit data with aliases
       const { WizardForm } = await import("@repo/ui/components");
-      (WizardForm as ReturnType<typeof vi.fn>).mockImplementation(({ onSubmit, defaultValues }) => {
-        const dataWithAliases = {
-          ...defaultValues,
-          dataConfig: {
-            tableName: "measurements",
-            dataSources: [
-              {
-                tableName: "measurements",
-                columnName: "temp",
-                role: "x",
-                alias: "Temperature",
-              },
-              { tableName: "measurements", columnName: "", role: "y", alias: "Value" },
-            ],
-          },
-        };
-        return (
-          <div data-testid="wizard-form">
-            <button onClick={() => onSubmit(dataWithAliases as ChartFormValues)}>Submit</button>
-          </div>
-        );
-      });
+      (WizardForm as ReturnType<typeof vi.fn>).mockImplementation(
+        ({ onSubmit, defaultValues }: WizardFormProps) => {
+          const dataWithAliases = {
+            ...defaultValues,
+            dataConfig: {
+              tableName: "measurements",
+              dataSources: [
+                {
+                  tableName: "measurements",
+                  columnName: "temp",
+                  role: "x",
+                  alias: "Temperature",
+                },
+                { tableName: "measurements", columnName: "", role: "y", alias: "Value" },
+              ],
+            },
+          } as ChartFormValues;
+          return (
+            <div data-testid="wizard-form">
+              <button onClick={() => void onSubmit(dataWithAliases)}>Submit</button>
+            </div>
+          );
+        },
+      );
 
       render(<NewVisualizationForm {...defaultProps} />);
 
@@ -269,7 +273,9 @@ describe("NewVisualizationForm", () => {
       await waitFor(() => {
         expect(mockWithAliases).toHaveBeenCalledWith(
           expect.objectContaining({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             body: expect.objectContaining({
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
               dataConfig: expect.objectContaining({
                 dataSources: [
                   {
@@ -288,7 +294,7 @@ describe("NewVisualizationForm", () => {
   });
 
   describe("Success Handling", () => {
-    it("should show toast and call onSuccess when creation succeeds", async () => {
+    it("should show toast and call onSuccess when creation succeeds", () => {
       let successCallback: ((visualization: { id: string }) => void) | undefined;
       (useExperimentVisualizationCreate as ReturnType<typeof vi.fn>).mockImplementation(
         ({ onSuccess }: { onSuccess: (visualization: { id: string }) => void }) => {
