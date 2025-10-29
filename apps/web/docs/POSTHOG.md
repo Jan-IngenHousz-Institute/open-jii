@@ -14,10 +14,14 @@ PostHog is integrated for:
 
 ### Client-Side
 
-- **PostHogProvider**: Initializes PostHog client once at app root
+- **PostHogProvider**: Initializes PostHog client via CDN script injection
 - **usePostHogFeatureFlag**: React hook for checking feature flags in components
+- Uses global `window.posthog` object for better Turbopack compatibility
 - Automatic page view tracking
 - Real-time feature flag updates
+
+**Why CDN approach?**  
+Using CDN script injection avoids bundling `posthog-js` with Turbopack, which prevents issues with Node.js built-in module references. This is the recommended approach for Next.js 15+ with Turbopack.
 
 ### Server-Side
 
@@ -255,9 +259,39 @@ clearFeatureFlagCache();
 - **Client-side**: Single initialization, async loading
 - **Server-side**: 60s cache TTL, 1000 entry LRU cache
 - **Middleware**: Average overhead <5ms (cached)
+- **Turbopack**: Fully compatible with Next.js Turbopack for fast development
+
+## Technical Details
+
+### Turbopack Compatibility
+
+The PostHog integration is fully compatible with Next.js Turbopack:
+
+- **Dynamic imports**: PostHog is loaded dynamically on the client to avoid bundling issues
+- **Server externals**: `posthog-js` is marked as a server external package (client-only)
+- **No webpack config**: Uses Next.js native `serverExternalPackages` instead of webpack config
+- **Development**: Run with `pnpm dev` (uses `--turbopack` flag)
+
+### Build Configuration
+
+```javascript
+// next.config.js
+const nextConfig = {
+  // PostHog proxy rewrites
+  async rewrites() {
+    return [
+      { source: "/ingest/static/:path*", destination: "https://eu-assets.i.posthog.com/static/:path*" },
+      { source: "/ingest/:path*", destination: "https://eu.i.posthog.com/:path*" },
+    ];
+  },
+  skipTrailingSlashRedirect: true,
+  serverExternalPackages: ["posthog-js"], // Prevent server-side bundling
+};
+```
 
 ## Further Reading
 
 - [PostHog Documentation](https://posthog.com/docs)
 - [Feature Flags Best Practices](https://posthog.com/docs/feature-flags/best-practices)
 - [Next.js Middleware](https://nextjs.org/docs/app/building-your-application/routing/middleware)
+- [Next.js Turbopack](https://nextjs.org/docs/architecture/turbopack)

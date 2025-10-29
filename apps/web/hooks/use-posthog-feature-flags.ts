@@ -4,6 +4,17 @@ import { FEATURE_FLAG_DEFAULTS } from "@/lib/posthog-config";
 import type { FeatureFlagKey } from "@/lib/posthog-config";
 import { useEffect, useState } from "react";
 
+// Extend window type to include posthog
+declare global {
+  interface Window {
+    posthog?: {
+      __loaded?: boolean;
+      isFeatureEnabled: (flagKey: string) => boolean | undefined;
+      onFeatureFlags: (callback: () => void) => () => void;
+    };
+  }
+}
+
 /**
  * Hook to check if a PostHog feature flag is enabled
  * Handles loading, caching, and real-time updates from PostHog
@@ -28,73 +39,63 @@ export function usePostHogFeatureFlag(flagKey: FeatureFlagKey): boolean | null {
     let timeoutId: NodeJS.Timeout | undefined;
     let unsubscribe: (() => void) | undefined;
 
-    const initializePostHog = async () => {
+    const setupFeatureFlag = () => {
+      const posthog = window.posthog;
+      if (!posthog || !isMounted) return;
+
+      const value = posthog.isFeatureEnabled(flagKey);
+      setIsEnabled(value ?? FEATURE_FLAG_DEFAULTS[flagKey]);
+
+      // Listen for feature flag updates
       try {
-        // Dynamically import posthog-js to avoid SSR issues
-        const posthogModule = await import("posthog-js");
-        const posthog = posthogModule.default;
-
-        const setupFeatureFlag = () => {
+        unsubscribe = posthog.onFeatureFlags(() => {
           if (!isMounted) return;
-
-          const value = posthog.isFeatureEnabled(flagKey);
-          setIsEnabled(value ?? FEATURE_FLAG_DEFAULTS[flagKey]);
-
-          // Listen for feature flag updates
-          unsubscribe = posthog.onFeatureFlags(() => {
-            if (!isMounted) return;
-            const updatedValue = posthog.isFeatureEnabled(flagKey);
-            setIsEnabled(updatedValue ?? FEATURE_FLAG_DEFAULTS[flagKey]);
-          });
-        };
-
-        // Check if PostHog is initialized
-        if (posthog.__loaded) {
-          setupFeatureFlag();
-        } else {
-          // If not initialized yet, wait for it with exponential backoff
-          let attempts = 0;
-          const maxAttempts = 10;
-
-          checkInterval = setInterval(
-            () => {
-              attempts++;
-
-              if (posthog.__loaded) {
-                if (checkInterval) clearInterval(checkInterval);
-                setupFeatureFlag();
-              } else if (attempts >= maxAttempts) {
-                if (checkInterval) clearInterval(checkInterval);
-                // Fail to default value if PostHog never loads
-                if (isMounted) {
-                  console.warn(
-                    `[usePostHogFeatureFlag] PostHog not loaded after ${maxAttempts} attempts, using default`,
-                  );
-                  setIsEnabled(FEATURE_FLAG_DEFAULTS[flagKey]);
-                }
-              }
-            },
-            100 * Math.pow(1.5, Math.min(attempts, 5)),
-          ); // Exponential backoff
-
-          // Cleanup timeout
-          timeoutId = setTimeout(() => {
-            if (checkInterval) clearInterval(checkInterval);
-            if (isMounted) {
-              console.warn("[usePostHogFeatureFlag] PostHog initialization timeout");
-              setIsEnabled(FEATURE_FLAG_DEFAULTS[flagKey]);
-            }
-          }, 5000);
-        }
+          const updatedValue = posthog.isFeatureEnabled(flagKey);
+          setIsEnabled(updatedValue ?? FEATURE_FLAG_DEFAULTS[flagKey]);
+        });
       } catch (error) {
-        console.error("[usePostHogFeatureFlag] Failed to load PostHog:", error);
-        if (isMounted) {
-          setIsEnabled(FEATURE_FLAG_DEFAULTS[flagKey]);
-        }
+        console.warn("[usePostHogFeatureFlag] Could not subscribe to feature flag updates:", error);
       }
     };
 
-    void initializePostHog();
+    // Check if PostHog is already loaded
+    if (window.posthog?.__loaded) {
+      setupFeatureFlag();
+    } else {
+      // If not loaded yet, wait for it with exponential backoff
+      let attempts = 0;
+      const maxAttempts = 10;
+
+      checkInterval = setInterval(
+        () => {
+          attempts++;
+
+          if (window.posthog?.__loaded) {
+            if (checkInterval) clearInterval(checkInterval);
+            setupFeatureFlag();
+          } else if (attempts >= maxAttempts) {
+            if (checkInterval) clearInterval(checkInterval);
+            // Fail to default value if PostHog never loads
+            if (isMounted) {
+              console.warn(
+                `[usePostHogFeatureFlag] PostHog not loaded after ${maxAttempts} attempts, using default`,
+              );
+              setIsEnabled(FEATURE_FLAG_DEFAULTS[flagKey]);
+            }
+          }
+        },
+        100 * Math.pow(1.5, Math.min(attempts, 5)),
+      ); // Exponential backoff
+
+      // Cleanup timeout
+      timeoutId = setTimeout(() => {
+        if (checkInterval) clearInterval(checkInterval);
+        if (isMounted) {
+          console.warn("[usePostHogFeatureFlag] PostHog initialization timeout");
+          setIsEnabled(FEATURE_FLAG_DEFAULTS[flagKey]);
+        }
+      }, 5000);
+    }
 
     // Cleanup function to prevent memory leaks
     return () => {
