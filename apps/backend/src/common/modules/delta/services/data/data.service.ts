@@ -1,6 +1,5 @@
 import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
-import * as Arrow from "apache-arrow";
 
 import { Result, success, failure, AppError } from "../../../../utils/fp-utils";
 import type { SchemaData } from "../../../databricks/services/sql/sql.types";
@@ -95,7 +94,8 @@ export class DeltaDataService {
   }
 
   /**
-   * Download and parse a single Parquet file using Apache Arrow
+   * Download and parse a single Parquet file using hyparquet
+   * hyparquet is a zero-dependency, pure JavaScript Parquet reader with native TypeScript support
    */
   private async downloadAndParseParquetFile(file: DeltaFile): Promise<Result<(string | null)[][]>> {
     try {
@@ -107,24 +107,25 @@ export class DeltaDataService {
         timeout: this.configService.getRequestTimeout(),
       });
 
-      const parquetData = new Uint8Array(response.data as ArrayBuffer);
+      const arrayBuffer = response.data as ArrayBuffer;
 
-      // Parse Parquet file with Apache Arrow
-      const reader = Arrow.RecordBatchReader.from(parquetData);
-      const table = new Arrow.Table(reader);
+      // Dynamic import for ES module
+      const { parquetReadObjects } = await import("hyparquet");
 
-      // Convert Arrow table to rows format
+      // Parse Parquet file using hyparquet
+      // parquetReadObjects returns an array of objects: [{ col1: val1, col2: val2 }, ...]
+      const objects = (await parquetReadObjects({
+        file: arrayBuffer, // hyparquet accepts ArrayBuffer directly
+      })) as Record<string, unknown>[];
+
+      // Convert objects to rows format: [[val1, val2], [val1, val2], ...]
       const rows: (string | null)[][] = [];
 
-      // Iterate through each row
-      for (let rowIndex = 0; rowIndex < table.numRows; rowIndex++) {
+      for (const obj of objects) {
         const row: (string | null)[] = [];
 
-        // Iterate through each column
-        for (let colIndex = 0; colIndex < table.schema.fields.length; colIndex++) {
-          const column = table.getChildAt(colIndex);
-          const value: unknown = column?.get(rowIndex);
-
+        // Extract values in column order (Object.values maintains insertion order in modern JS)
+        for (const value of Object.values(obj)) {
           // Convert value to string or null for compatibility with SchemaData
           if (value === null || value === undefined) {
             row.push(null);
@@ -134,6 +135,8 @@ export class DeltaDataService {
             row.push(String(value));
           } else if (value instanceof Date) {
             row.push(value.toISOString());
+          } else if (typeof value === "bigint") {
+            row.push(value.toString());
           } else {
             // For complex types, stringify
             row.push(JSON.stringify(value));

@@ -186,6 +186,9 @@ importers:
       http-status-codes:
         specifier: ^2.3.0
         version: 2.3.0
+      hyparquet:
+        specifier: ^1.20.1
+        version: 1.20.1
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -12773,6 +12776,9 @@ packages:
 
   humanize-ms@1.2.1:
     resolution: {integrity: sha512-Fl70vYtsAFb/C06PTS9dZBo7ihau+Tu/DNCk/OyHhea07S+aeMWpFFkUaXRa8fI+ScZbEI8dfSxwY7gxZ9SAVQ==}
+
+  hyparquet@1.20.1:
+    resolution: {integrity: sha512-3A7cnSQDFcmbs+kljXNhXn0O2/8aNJgkS1Tjwd5jLEIaRxmjO+TtxNWAfl72ab4YjYMpxv1TPVjOTJsfNdaeDg==}
 
   hyperlinker@1.0.0:
     resolution: {integrity: sha512-Ty8UblRWFEcfSuIaajM34LdPXIhbs1ajEX/BBPv24J+enSVaEVY63xQ6lTO9VRYS5LAoghIG0IDJ+p+IPzKUQQ==}
@@ -37441,6 +37447,8 @@ snapshots:
   humanize-ms@1.2.1:
     dependencies:
       ms: 2.1.3
+
+  hyparquet@1.20.1: {}
 
   hyperlinker@1.0.0: {}
 
