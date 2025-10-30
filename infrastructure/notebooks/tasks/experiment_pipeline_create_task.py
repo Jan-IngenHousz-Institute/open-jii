@@ -17,6 +17,10 @@ from databricks.sdk.service.pipelines import (
     CreatePipelineResponse,
     StartUpdateResponse
 )
+from databricks.sdk.service.sharing import (
+    SharedDataObject,
+    SharedDataObjectDataObjectType
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -34,6 +38,7 @@ class PipelineConfig:
     catalog_name: str
     central_schema: str
     experiment_pipeline_path: str
+    delta_share_name: str = "jii_experiment_data_share"  # Name of the Delta Share
     
     @property
     def experiment_schema(self) -> str:
@@ -46,6 +51,11 @@ class PipelineConfig:
         """Standardized pipeline name."""
         clean_name = self.experiment_name.lower().strip().replace(' ', '_')
         return f"exp-{clean_name}-DLT-Pipeline-DEV"
+    
+    @property
+    def full_schema_name(self) -> str:
+        """Full schema name including catalog for Delta Sharing."""
+        return f"{self.catalog_name}.{self.experiment_schema}"
     
     def validate(self) -> None:
         """Validate required configuration parameters."""
@@ -68,6 +78,8 @@ class PipelineCreationResult:
     update_id: Optional[str]
     was_existing: bool
     config: PipelineConfig
+    schema_added_to_share: bool = False
+    share_error: Optional[str] = None
 
 # COMMAND ----------
 
@@ -230,6 +242,64 @@ class ExperimentPipelineManager:
         except Exception as e:
             logger.error(f"Failed to retrieve pipeline status: {e}")
             raise
+    
+    def add_schema_to_share(self, config: PipelineConfig) -> Tuple[bool, Optional[str]]:
+        """
+        Add experiment schema to Delta Share for external data sharing.
+        
+        This enables the experiment data to be automatically shared with external
+        recipients without requiring Terraform reapplication.
+        
+        Args:
+            config: Pipeline configuration containing schema and share details
+            
+        Returns:
+            Tuple of (success: bool, error_message: Optional[str])
+        """
+        try:
+            share_name = config.delta_share_name
+            schema_full_name = config.full_schema_name
+            
+            logger.info(f"Adding schema '{schema_full_name}' to share '{share_name}'")
+            
+            # Check if share exists
+            try:
+                existing_share = self.client.shares.get(name=share_name)
+                logger.info(f"Found existing share: {share_name}")
+            except Exception:
+                logger.warning(f"Share '{share_name}' not found. It must be created via Terraform first.")
+                return False, f"Share '{share_name}' does not exist. Please create it via Terraform."
+            
+            # Check if schema is already in the share
+            existing_objects = existing_share.objects or []
+            for obj in existing_objects:
+                if obj.name == schema_full_name and obj.data_object_type == SharedDataObjectDataObjectType.SCHEMA:
+                    logger.info(f"Schema '{schema_full_name}' already exists in share '{share_name}'")
+                    return True, None
+            
+            # Add schema to share
+            shared_object = SharedDataObject(
+                name=schema_full_name,
+                data_object_type=SharedDataObjectDataObjectType.SCHEMA,
+                comment=f"Experiment: {config.experiment_name} (ID: {config.experiment_id})"
+            )
+            
+            # Update share with new schema
+            updated_objects = list(existing_objects) + [shared_object]
+            
+            self.client.shares.update(
+                name=share_name,
+                objects=updated_objects,
+                comment=existing_share.comment
+            )
+            
+            logger.info(f"Successfully added schema '{schema_full_name}' to share '{share_name}'")
+            return True, None
+            
+        except Exception as e:
+            error_msg = f"Failed to add schema to share: {str(e)}"
+            logger.error(error_msg)
+            return False, error_msg
 
 # COMMAND ----------
 
@@ -254,22 +324,32 @@ def create_or_update_experiment_pipeline(config: PipelineConfig) -> PipelineCrea
         logger.info("Using existing pipeline and triggering execution")
         update_id = manager.trigger_execution(existing_pipeline_id, config.experiment_id)
         
+        # Add schema to Delta Share
+        schema_added, share_error = manager.add_schema_to_share(config)
+        
         return PipelineCreationResult(
             pipeline_id=existing_pipeline_id,
             update_id=update_id,
             was_existing=True,
-            config=config
+            config=config,
+            schema_added_to_share=schema_added,
+            share_error=share_error
         )
     else:
         logger.info("Creating new pipeline")
         pipeline_id = manager.create_pipeline(config)
         update_id = manager.trigger_execution(pipeline_id, config.experiment_id)
         
+        # Add schema to Delta Share
+        schema_added, share_error = manager.add_schema_to_share(config)
+        
         return PipelineCreationResult(
             pipeline_id=pipeline_id,
             update_id=update_id,
             was_existing=False,
-            config=config
+            config=config,
+            schema_added_to_share=schema_added,
+            share_error=share_error
         )
 
 def print_execution_summary(result: PipelineCreationResult) -> None:
@@ -286,6 +366,18 @@ def print_execution_summary(result: PipelineCreationResult) -> None:
     print(f"Target Schema: {result.config.experiment_schema}")
     print(f"Pipeline Name: {result.config.pipeline_name}")
     print(f"Scheduling: Managed by unified scheduler (runs every 15min, 9am-9pm UTC)")
+    print(f"\n{'='*50}")
+    print(f"Delta Sharing Configuration")
+    print(f"{'='*50}")
+    print(f"Share Name: {result.config.delta_share_name}")
+    print(f"Schema Added: {'✅ Yes' if result.schema_added_to_share else '❌ No'}")
+    if result.share_error:
+        print(f"⚠️  Warning: {result.share_error}")
+        print(f"Note: Data will still be processed, but not automatically shared externally.")
+    else:
+        print(f"Status: Experiment data will be automatically shared with external recipients")
+        print(f"Shared Schema: {result.config.full_schema_name}")
+        print(f"Auto-updates: New tables in this schema are automatically included")
     print(f"{'='*50}\n")
 
 # COMMAND ----------
