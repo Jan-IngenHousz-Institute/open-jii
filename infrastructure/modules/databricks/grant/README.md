@@ -7,6 +7,7 @@ This module **grants a recipient access to a Delta share** in Databricks Unity C
 Grants are the connection between shares (collections of data) and recipients (data consumers). Once a grant is created, the recipient can use their bearer token or OAuth credentials to query the shared tables via the Delta Sharing protocol.
 
 ### Key Concepts:
+
 - **Grant**: Permission linking a recipient to a share
 - **Share**: The data being shared (created via share module)
 - **Recipient**: The entity receiving access (created via recipient module)
@@ -14,9 +15,9 @@ Grants are the connection between shares (collections of data) and recipients (d
 
 ## 🛠 Resources Used
 
-| Resource            | Description                                    | Documentation                                                                                          |
-| ------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `databricks_grant`  | Grants recipient access to a share             | [Databricks Grant](https://registry.terraform.io/providers/databricks/databricks/latest/docs/resources/grant) |
+| Resource           | Description                        | Documentation                                                                                                 |
+| ------------------ | ---------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `databricks_grant` | Grants recipient access to a share | [Databricks Grant](https://registry.terraform.io/providers/databricks/databricks/latest/docs/resources/grant) |
 
 ## ⚙️ Usage
 
@@ -47,7 +48,7 @@ module "experiment_share" {
   }
 
   share_name = "photophysiology_data"
-  
+
   tables = [
     {
       name = "open_jii_prod.experiments.measurements"
@@ -92,7 +93,7 @@ module "experiment_share" {
   }
 
   share_name = "public_research_data"
-  
+
   tables = [
     {
       name = "catalog.schema.measurements"
@@ -168,7 +169,7 @@ module "share_2023" {
   }
 
   share_name = "data_2023"
-  
+
   tables = [
     { name = "catalog.schema.measurements_2023" }
   ]
@@ -182,7 +183,7 @@ module "share_2024" {
   }
 
   share_name = "data_2024"
-  
+
   tables = [
     { name = "catalog.schema.measurements_2024" }
   ]
@@ -214,10 +215,10 @@ module "grant_2024" {
 
 ## 🔑 Inputs
 
-| Name           | Description                                  | Type     | Default | Required |
-| -------------- | -------------------------------------------- | -------- | ------- | -------- |
-| share_name     | Name of the share to grant access to         | `string` | n/a     | ✅ Yes   |
-| recipient_name | Name of the recipient receiving access       | `string` | n/a     | ✅ Yes   |
+| Name           | Description                            | Type     | Default | Required |
+| -------------- | -------------------------------------- | -------- | ------- | -------- |
+| share_name     | Name of the share to grant access to   | `string` | n/a     | ✅ Yes   |
+| recipient_name | Name of the recipient receiving access | `string` | n/a     | ✅ Yes   |
 
 ## 📤 Outputs
 
@@ -257,7 +258,7 @@ module "data_share" {
   }
 
   share_name = "experiment_data"
-  
+
   tables = [
     {
       name    = "${module.catalog.catalog_name}.${module.schema.schema_name}.measurements"
@@ -303,6 +304,7 @@ module "data_grant" {
 ### Granting Access
 
 When a grant is created:
+
 - ✅ Recipient can immediately access all tables in the share
 - ✅ Recipient uses their bearer token to authenticate
 - ✅ Access follows IP restrictions set on the recipient (if any)
@@ -317,6 +319,7 @@ terraform destroy -target=module.data_grant
 ```
 
 This will:
+
 - ❌ Immediately revoke recipient's access to the share
 - ✅ Preserve the share (other recipients can still access it)
 - ✅ Preserve the recipient (they can still access other shares)
@@ -324,18 +327,20 @@ This will:
 ### Access Patterns
 
 **Temporary Access**:
+
 ```hcl
 # Grant access for a limited time, then revoke
 module "temp_grant" {
   source         = "../../modules/databricks/grant"
   share_name     = "temporary_share"
   recipient_name = "temp_recipient"
-  
+
   # Use lifecycle or external automation to destroy after X days
 }
 ```
 
 **Staged Rollout**:
+
 ```hcl
 # Grant access to dev share first, then prod
 module "dev_grant" {
@@ -348,7 +353,7 @@ module "prod_grant" {
   source         = "../../modules/databricks/grant"
   share_name     = "prod_data_share"
   recipient_name = "new_partner"
-  
+
   # Only create after dev testing is complete
   count = var.promote_to_prod ? 1 : 0
 }
@@ -374,12 +379,14 @@ module "prod_grant" {
 After creating a grant, verify access:
 
 ### From Databricks UI:
+
 1. Navigate to **Data** > **Delta Sharing** > **Shares**
 2. Select your share
 3. View **Recipients** tab
 4. Verify recipient is listed with access
 
 ### From Recipient Side:
+
 ```python
 # Recipient can test access using Delta Sharing client
 import delta_sharing
@@ -407,6 +414,7 @@ df = delta_sharing.load_as_pandas(f"{profile_file}#share.schema.table")
 ## 🤝 Contributing
 
 When making changes to this module:
+
 1. Update examples in this README
 2. Test grant creation and revocation
 3. Validate Terraform syntax with `terraform validate`
