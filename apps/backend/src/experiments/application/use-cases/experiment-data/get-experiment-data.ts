@@ -13,7 +13,7 @@ import type { SchemaDataDto } from "../../services/data-transformation/data-tran
 import { UserTransformationService } from "../../services/data-transformation/user-metadata/user-transformation.service";
 
 /**
- * Single table data structure that forms our array response
+ * Single table data structure
  */
 export interface TableDataDto {
   name: string;
@@ -28,7 +28,7 @@ export interface TableDataDto {
 }
 
 /**
- * Response is now an array of table data
+ * Response is an array of table data
  */
 export type ExperimentDataDto = TableDataDto[];
 
@@ -50,7 +50,7 @@ export class GetExperimentDataUseCase {
     this.logger.log(
       `Getting experiment data for experiment ${experimentId}, user ${userId}, query: ${JSON.stringify(
         query,
-      )}, using Delta Sharing`,
+      )}`,
     );
 
     // Check if experiment exists and user has access
@@ -68,6 +68,7 @@ export class GetExperimentDataUseCase {
           this.logger.warn(`Experiment with ID ${experimentId} not found`);
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
+
         if (!hasAccess && experiment.visibility !== "public") {
           this.logger.warn(
             `User ${userId} attempted to access data of experiment ${experimentId} without proper permissions`,
@@ -94,7 +95,7 @@ export class GetExperimentDataUseCase {
 
         // Direct conditional logic for data fetching
         if (tableName && columns) {
-          // Specific columns from a table, full data
+          // Specific columns from a table (full data, no pagination)
           this.logger.debug(
             `Fetching data for experiment ${experimentId} in full-columns mode (table: ${tableName}) (columns: ${columns})`,
           );
@@ -107,14 +108,14 @@ export class GetExperimentDataUseCase {
             orderBy,
             orderDirection,
           );
+          return this.fetchSpecificColumns(tableName, columns, experiment, experimentId);
         } else if (tableName) {
           // Single table with pagination
           this.logger.debug(
-            `Fetching data for experiment ${experimentId} in paginated mode (table: ${tableName})`,
+            `Fetching paginated data from table ${tableName} for experiment ${experimentId}`,
           );
-          return await this.fetchSingleTablePaginated(
+          return this.fetchSingleTablePaginated(
             tableName,
-            schemaName,
             experiment,
             page,
             pageSize,
@@ -166,7 +167,6 @@ export class GetExperimentDataUseCase {
   private async fetchSpecificColumns(
     tableName: string,
     columns: string,
-    schemaName: string,
     experiment: ExperimentDto,
     experimentId: string,
     orderBy?: string,
@@ -205,13 +205,17 @@ export class GetExperimentDataUseCase {
     const dataResult = await this.databricksPort.executeSqlQuery(schemaName, sqlQuery);
 
     if (dataResult.isFailure()) {
+      this.logger.error(
+        `Failed to get columns from table ${tableName}: ${dataResult.error.message}`,
+      );
       return failure(AppError.internal(`Failed to get table data: ${dataResult.error.message}`));
     }
 
-    const totalRows = dataResult.value.totalRows;
+    const schemaData = dataResult.value;
+    const totalRows = schemaData.totalRows;
+    const schemaName = this.buildSchemaName(experiment.name, experimentId);
 
-    // Create response
-    const response: ExperimentDataDto = [
+    return success([
       {
         name: table.name,
         displayName: table.properties?.display_name ?? table.name,
@@ -223,9 +227,7 @@ export class GetExperimentDataUseCase {
         totalRows,
         totalPages: 1,
       },
-    ];
-
-    return success(response);
+    ]);
   }
 
   /**
@@ -233,7 +235,6 @@ export class GetExperimentDataUseCase {
    */
   private async fetchSingleTablePaginated(
     tableName: string,
-    schemaName: string,
     experiment: ExperimentDto,
     page: number,
     pageSize: number,
@@ -247,10 +248,7 @@ export class GetExperimentDataUseCase {
     }
     const table = tableResult.value;
 
-    // Use Delta Sharing methods
-    this.logger.debug(`Fetching table data using Delta Sharing with pagination`);
-
-    // Get row count using Delta port
+    // Get row count
     const countResult = await this.deltaPort.getTableRowCount(
       experiment.name,
       experimentId,
@@ -258,12 +256,16 @@ export class GetExperimentDataUseCase {
     );
 
     if (countResult.isFailure()) {
+      this.logger.error(
+        `Failed to get row count for table ${tableName}: ${countResult.error.message}`,
+      );
       return failure(AppError.internal(`Failed to get row count: ${countResult.error.message}`));
     }
 
     const totalRows = countResult.value;
+    const totalPages = Math.ceil(totalRows / pageSize);
 
-    // Get table data with pagination
+    // Get paginated data
     const dataResult = await this.deltaPort.getTableData(
       experiment.name,
       experimentId,
@@ -296,11 +298,13 @@ export class GetExperimentDataUseCase {
     const dataResult = await this.databricksPort.executeSqlQuery(schemaName, sqlQuery);
 
     if (dataResult.isFailure()) {
+      this.logger.error(`Failed to get table data for ${tableName}: ${dataResult.error.message}`);
       return failure(AppError.internal(`Failed to get table data: ${dataResult.error.message}`));
     }
 
-    // Create response
-    const response: ExperimentDataDto = [
+    const schemaName = this.buildSchemaName(experiment.name, experimentId);
+
+    return success([
       {
         name: table.name,
         displayName: table.properties?.display_name ?? table.name,
@@ -312,9 +316,7 @@ export class GetExperimentDataUseCase {
         totalRows,
         totalPages,
       },
-    ];
-
-    return success(response);
+    ]);
   }
 
   /**
@@ -325,6 +327,7 @@ export class GetExperimentDataUseCase {
     const tablesResult = await this.databricksPort.listTables(schemaName);
 
     if (tablesResult.isFailure()) {
+      this.logger.error(`Failed to list tables: ${tablesResult.error.message}`);
       return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
     }
 

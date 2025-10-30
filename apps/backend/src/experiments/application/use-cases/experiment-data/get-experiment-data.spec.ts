@@ -1,4 +1,5 @@
 import nock from "nock";
+import { vi } from "vitest";
 
 import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import { DatabricksAuthService } from "../../../../common/modules/databricks/services/auth/auth.service";
@@ -15,8 +16,6 @@ import { TestHarness } from "../../../../test/test-harness";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { UserTransformationService } from "../../services/data-transformation/user-metadata/user-transformation.service";
 import { GetExperimentDataUseCase } from "./get-experiment-data";
-
-const DATABRICKS_HOST = "https://test-databricks.example.com";
 
 describe("GetExperimentDataUseCase", () => {
   const testApp = TestHarness.App;
@@ -39,7 +38,6 @@ describe("GetExperimentDataUseCase", () => {
 
     useCase = testApp.module.get(GetExperimentDataUseCase);
 
-    // Reset any mocks before each test
     vi.restoreAllMocks();
     nock.cleanAll();
   });
@@ -607,14 +605,12 @@ describe("GetExperimentDataUseCase", () => {
   it("should return not found error when experiment does not exist", async () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
 
-    // Act
     const result = await useCase.execute(nonExistentId, testUserId, {
       tableName: "non_existent_table",
       page: 1,
       pageSize: 20,
     });
 
-    // Assert result is failure
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
@@ -622,7 +618,6 @@ describe("GetExperimentDataUseCase", () => {
   });
 
   it("should return forbidden error when user does not have access to private experiment", async () => {
-    // Create experiment with another user
     const otherUserId = await testApp.createTestUser({
       email: "other@example.com",
     });
@@ -631,18 +626,16 @@ describe("GetExperimentDataUseCase", () => {
       name: "Private Experiment",
       description: "Private experiment",
       status: "active",
-      visibility: "private", // Important: set to private
-      userId: otherUserId, // Created by another user
+      visibility: "private",
+      userId: otherUserId,
     });
 
-    // Act
     const result = await useCase.execute(experiment.id, testUserId, {
       tableName: "some_table",
       page: 1,
       pageSize: 20,
     });
 
-    // Assert result is failure
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.code).toBe("FORBIDDEN");
