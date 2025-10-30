@@ -29,7 +29,8 @@ def extract_parameters() -> Dict[str, str]:
         params = {
             "catalog_name": dbutils.widgets.get("catalog_name"),
             "schema_name": dbutils.widgets.get("central_schema"),
-            "experiment_status_table": dbutils.widgets.get("experiment_status_table")
+            "experiment_status_table": dbutils.widgets.get("experiment_status_table"),
+            "environment": dbutils.widgets.get("environment") if dbutils.widgets.get("environment") else "DEV"
         }
         
         logger.info(f"Configuration extracted: {params}")
@@ -45,9 +46,11 @@ def extract_parameters() -> Dict[str, str]:
 class ExperimentPipelineOrchestrator:
     """Orchestrates execution of all experiment pipelines."""
     
-    def __init__(self, workspace_client: Optional[WorkspaceClient] = None):
+    def __init__(self, workspace_client: Optional[WorkspaceClient] = None, environment: str = "DEV"):
         self.client = workspace_client or WorkspaceClient()
         self.spark = SparkSession.builder.getOrCreate()
+        self.environment = environment.upper()
+        self.pipeline_suffix = f"-DLT-Pipeline-{self.environment}"
     
     def get_fresh_experiment_ids(self, catalog_name: str, schema_name: str, status_table_name: str) -> Set[str]:
         """
@@ -106,7 +109,7 @@ class ExperimentPipelineOrchestrator:
             
             for pipeline in pipelines:
                 # Filter for experiment pipelines
-                if pipeline.name and pipeline.name.startswith('exp-') and pipeline.name.endswith('-DLT-Pipeline-DEV'):
+                if pipeline.name and pipeline.name.startswith('exp-') and pipeline.name.endswith(self.pipeline_suffix):
                     # Get pipeline configuration to extract experiment_id
                     pipeline_id = pipeline.pipeline_id
                     try:
@@ -290,7 +293,7 @@ def main() -> None:
         params = extract_parameters()
         
         # Initialize orchestrator
-        orchestrator = ExperimentPipelineOrchestrator()
+        orchestrator = ExperimentPipelineOrchestrator(environment=params["environment"])
         
         # Get fresh experiment IDs from the experiment_status table
         fresh_experiment_ids = orchestrator.get_fresh_experiment_ids(

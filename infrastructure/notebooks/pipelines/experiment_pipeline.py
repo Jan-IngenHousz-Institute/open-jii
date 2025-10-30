@@ -30,11 +30,11 @@ from multispeq import execute_macro_script, get_available_macros, process_macro_
 # COMMAND ----------
 
 # DBTITLE 1,Pipeline Configuration
-EXPERIMENT_ID = spark.conf.get("EXPERIMENT_ID", "")  # Experiment identifier
-EXPERIMENT_SCHEMA = spark.conf.get("EXPERIMENT_SCHEMA", "")  # Target schema for output
-CATALOG_NAME = spark.conf.get("CATALOG_NAME", "open_jii_dev")
-CENTRAL_SCHEMA = spark.conf.get("CENTRAL_SCHEMA", "centrum")
-CENTRAL_SILVER_TABLE = spark.conf.get("CENTRAL_SILVER_TABLE", "clean_data")
+EXPERIMENT_ID = spark.conf.get("EXPERIMENT_ID")  # Experiment identifier
+EXPERIMENT_SCHEMA = spark.conf.get("EXPERIMENT_SCHEMA")  # Target schema for output
+CATALOG_NAME = spark.conf.get("CATALOG_NAME")
+CENTRAL_SCHEMA = spark.conf.get("CENTRAL_SCHEMA")
+CENTRAL_SILVER_TABLE = spark.conf.get("CENTRAL_SILVER_TABLE")
 
 # Constants for ambyte processing
 YEAR_PREFIX = "2025"
