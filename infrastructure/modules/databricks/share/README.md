@@ -16,16 +16,18 @@ Delta Sharing is an open protocol for secure data sharing. A **share** allows yo
 
 ## 🛠 Resources Used
 
-| Resource              | Description                                    | Documentation                                                                                          |
-| --------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `databricks_share`    | Creates a Delta Sharing share object           | [Databricks Share](https://registry.terraform.io/providers/databricks/databricks/latest/docs/resources/share) |
+| Resource           | Description                          | Documentation                                                                                                 |
+| ------------------ | ------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `databricks_share` | Creates a Delta Sharing share object | [Databricks Share](https://registry.terraform.io/providers/databricks/databricks/latest/docs/resources/share) |
 
 ## 🔄 Hybrid Schema Management
 
 This module supports **two ways** to add schemas to a share:
 
-### 1. Terraform (Static Schemas) 
+### 1. Terraform (Static Schemas)
+
 Use for schemas that exist at plan time (e.g., `central`, `analytics`):
+
 ```hcl
 schemas = [
   { name = "central", comment = "Centralized cleaned data" }
@@ -33,7 +35,9 @@ schemas = [
 ```
 
 ### 2. Python SDK (Dynamic Schemas)
+
 Use for schemas created at runtime (e.g., experiment schemas):
+
 ```python
 # Automatically added by experiment_pipeline_create_task.py
 manager.add_schema_to_share(config)
@@ -64,7 +68,7 @@ module "jii_data_share" {
       comment = "Centralized cleaned sensor data from all devices"
     }
   ]
-  
+
   # Dynamic schemas (e.g., exp_photosynthesis_exp001) are added at runtime
   # by the experiment_pipeline_create_task.py notebook
 }
@@ -119,7 +123,8 @@ module "multi_schema_share" {
   ]
 }
 ```
-```
+
+````
 
 ### Share with Partition Filtering
 
@@ -230,7 +235,7 @@ module "research_grant" {
   share_name     = module.research_share.share_name
   recipient_name = module.partner_recipient.recipient_name
 }
-```
+````
 
 ## � Security Best Practices
 
@@ -252,6 +257,7 @@ module "research_grant" {
 ### Automatic Updates
 
 When you share a schema, recipients automatically get access to:
+
 - All existing tables, views, and volumes in the schema
 - Any new tables, views, or volumes added to the schema in the future
 - Full table history (time travel support)
@@ -259,8 +265,9 @@ When you share a schema, recipients automatically get access to:
 ### Limitations
 
 ⚠️ **Note**: When sharing entire schemas:
+
 - Table aliases are not available
-- Partition filtering is not available  
+- Partition filtering is not available
 - Tables automatically include full history
 
 If you need these features, share individual tables instead of schemas.
@@ -283,6 +290,7 @@ If you need these features, share individual tables instead of schemas.
 ## 🤝 Contributing
 
 When making changes to this module:
+
 1. Update examples in this README
 2. Test with actual Databricks workspace
 3. Validate Terraform syntax with `terraform validate`
