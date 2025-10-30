@@ -278,9 +278,9 @@ module "pipeline_scheduler" {
   name        = "Pipeline-Scheduler-PROD"
   description = "Orchestrates central pipeline execution followed by all experiment pipelines every 15 minutes between 9am and 9pm"
 
-  # Schedule: Every 15 minutes after the hour (0, 15, 30, 45) between 9am and 9pm (UTC)
+  # Schedule: Every 30 minutes (0, 30) between 9am and 9pm (UTC)
   # Format: "seconds minutes hours day-of-month month day-of-week"
-  schedule = "0 0,15,30,45 6-18 * * ?"
+  schedule = "0 0,30 6-18 * * ?"
 
   max_concurrent_runs           = 1
   use_serverless                = true
@@ -930,6 +930,10 @@ module "backend_ecs" {
       value = ".${var.domain_name}"
     },
     {
+      name  = "ENVIRONMENT_PREFIX"
+      value = var.environment
+    },
+    {
       name  = "AWS_LOCATION_PLACE_INDEX_NAME"
       value = module.location_service.place_index_name
     },
@@ -1058,23 +1062,23 @@ module "route53" {
     "web"  = var.domain_name
   }
 
-  # cloudfront_records = {
-  #   # Root Domain Record
-  #   "" = {
-  #     domain_name    = module.opennext.cloudfront_domain_name
-  #     hosted_zone_id = module.opennext.cloudfront_hosted_zone_id
-  #   },
-  #   # Documentation Site Record
-  #   "docs" = {
-  #     domain_name    = module.docs_cloudfront.cloudfront_distribution_domain_name
-  #     hosted_zone_id = module.docs_cloudfront.cloudfront_hosted_zone_id
-  #   },
-  #   # Backend API Record
-  #   "api" = {
-  #     domain_name    = module.backend_cloudfront.cloudfront_distribution_domain_name
-  #     hosted_zone_id = module.backend_cloudfront.cloudfront_hosted_zone_id
-  #   }
-  # }
+  cloudfront_records = {
+    # Root Domain Record
+    "" = {
+      domain_name    = module.opennext.cloudfront_domain_name
+      hosted_zone_id = module.opennext.cloudfront_hosted_zone_id
+    },
+    # Documentation Site Record
+    "docs" = {
+      domain_name    = module.docs_cloudfront.cloudfront_distribution_domain_name
+      hosted_zone_id = module.docs_cloudfront.cloudfront_hosted_zone_id
+    },
+    # Backend API Record
+    "api" = {
+      domain_name    = module.backend_cloudfront.cloudfront_distribution_domain_name
+      hosted_zone_id = module.backend_cloudfront.cloudfront_hosted_zone_id
+    }
+  }
 
   tags = {
     Environment = var.environment

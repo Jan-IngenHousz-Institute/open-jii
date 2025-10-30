@@ -24,7 +24,7 @@ output "smtp_server" {
 
 output "auth_email_server" {
   description = "Complete AUTH_EMAIL_SERVER string for Auth.js"
-  value       = var.create_smtp_user ? "smtp://${aws_iam_access_key.ses_smtp[0].id}:${aws_iam_access_key.ses_smtp[0].ses_smtp_password_v4}@email-smtp.${var.region}.amazonaws.com:587" : null
+  value       = var.create_smtp_user ? "smtp://${urlencode(aws_iam_access_key.ses_smtp[0].id)}:${urlencode(aws_iam_access_key.ses_smtp[0].ses_smtp_password_v4)}@email-smtp.${var.region}.amazonaws.com:587" : null
   sensitive   = true
 }
 
