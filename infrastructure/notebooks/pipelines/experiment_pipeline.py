@@ -114,6 +114,7 @@ def sample():
     return (
         base_df
         .select(
+            F.col("id"),
             F.col("device_id"),
             F.col("device_name"),
             F.col("timestamp"),
@@ -121,6 +122,7 @@ def sample():
             F.explode(F.from_json(F.col("sample"), "array<string>")).alias("sample_data_str")
         )
         .select(
+            F.col("id"),
             F.col("device_id"),
             F.col("device_name"),
             F.col("timestamp"),
@@ -404,7 +406,7 @@ def create_macro_table_code(macro_name: str, macro_schema: StructType) -> str:
     """
     # Base schema for the UDF output (just the essential fields + JSON)
     udf_schema = (
-        "device_id string, device_name string, questions array<struct<question_label:string,question_text:string,question_answer:string>>, "
+        "id long, device_id string, device_name string, timestamp timestamp, questions array<struct<question_label:string,question_text:string,question_answer:string>>, "
         "processed_timestamp timestamp, macro_output_json string"
     )
     
@@ -455,8 +457,10 @@ def macro_{macro_name}_table():
             
             # Create result row with base fields only
             result_row = {{
+                "id": row.get("id"),
                 "device_id": row.get("device_id"),
                 "device_name": row.get("device_name"),
+                "timestamp": row.get("timestamp"),
                 "questions": row.get("questions"),
                 "processed_timestamp": pd.Timestamp.now(),
                 "macro_output_json": debug_str
@@ -469,7 +473,7 @@ def macro_{macro_name}_table():
         else:
             # Return empty DataFrame with correct columns
             return pd.DataFrame(columns=[
-                "device_id", "device_name", "questions", "processed_timestamp", "macro_output_json"
+                "id", "device_id", "device_name", "timestamp", "questions", "processed_timestamp", "macro_output_json"
             ])
 
     # Apply the pandas UDF to get the base data with JSON
@@ -495,8 +499,10 @@ def macro_{macro_name}_table():
         # Select all base columns plus the parsed macro fields
         final_df = parsed_json_df.select(
             # Base columns
+            F.col("id"),
             F.col("device_id"),
             F.col("device_name"),
+            F.col("timestamp"),
             F.col("questions"),
             F.col("processed_timestamp"),
             # Parsed macro fields
