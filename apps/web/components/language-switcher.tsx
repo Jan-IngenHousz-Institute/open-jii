@@ -1,5 +1,7 @@
 "use client";
 
+import { usePostHogFeatureFlag } from "@/hooks/use-posthog-feature-flags";
+import { FEATURE_FLAGS } from "@/lib/posthog-config";
 import { Globe } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -13,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui/components";
 
-const locales = [
+const allLocales = [
   { code: "en-US" as const, name: "English", flag: "🇺🇸" },
   { code: "de-DE" as const, name: "Deutsch", flag: "🇩🇪" },
   // { code: "nl-NL" as const, name: "Nederlands", flag: "🇳🇱" },
@@ -25,6 +27,17 @@ interface LanguageSwitcherProps {
 
 export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
   const pathname = usePathname();
+  const isMultiLanguageEnabled = usePostHogFeatureFlag(FEATURE_FLAGS.MULTI_LANGUAGE);
+
+  // If feature flag is disabled, only show English
+  const locales = isMultiLanguageEnabled
+    ? allLocales
+    : allLocales.filter((l) => l.code === "en-US");
+
+  // Hide the language switcher if only one language is available
+  if (locales.length <= 1) {
+    return null;
+  }
 
   // Generate language switch URL
   const getLanguageSwitchUrl = (newLocale: Locale) => {

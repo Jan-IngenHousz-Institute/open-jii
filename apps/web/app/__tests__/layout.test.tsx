@@ -1,9 +1,14 @@
 import "@testing-library/jest-dom";
 import { render } from "@testing-library/react";
 import React from "react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import RootLayout, { metadata } from "../layout";
+
+// Mock the PostHogProvider to avoid environment variable dependencies
+vi.mock("../../providers/PostHogProvider", () => ({
+  PostHogProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
 
 describe("RootLayout Component", () => {
   it("should render children correctly", () => {

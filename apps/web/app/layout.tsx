@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { PostHogProvider } from "../providers/PostHogProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -28,7 +29,9 @@ interface RootLayoutProps {
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html>
-      <body className="h-full">{children}</body>
+      <body className="h-full">
+        <PostHogProvider>{children}</PostHogProvider>
+      </body>
     </html>
   );
 }
