@@ -809,12 +809,12 @@ describe("useExperimentData", () => {
           expect.objectContaining({
             name: "id",
             type_name: "INT",
-            type_text: "Integer",
+            type_text: "INT",
           }),
           expect.objectContaining({
             name: "name",
             type_name: "STRING",
-            type_text: "String",
+            type_text: "STRING",
           }),
         ]),
         tableMetadata: {
@@ -842,7 +842,7 @@ describe("useExperimentData", () => {
           expect.objectContaining({
             name: "count",
             type_name: "BIGINT",
-            type_text: "Big Integer",
+            type_text: "BIGINT",
           }),
         ]),
         tableMetadata: {
