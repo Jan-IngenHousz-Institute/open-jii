@@ -4,12 +4,12 @@ import {
   useContentfulInspectorMode,
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
-import { documentToReactComponents } from "@contentful/rich-text-react-renderer";
 import type { Document } from "@contentful/rich-text-types";
 import Image from "next/image";
 import React from "react";
 
 import type { PageAboutFieldsFragment } from "../lib/__generated/sdk";
+import { CtfRichText } from "./contentful/ctf-rich-text";
 
 interface AboutContentProps {
   about: PageAboutFieldsFragment;
@@ -61,7 +61,7 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
         </div>
       )}
 
-      {/* Title + Rich Text */}
+      {/* Text Content */}
       <div
         className={`flex flex-col justify-center text-left ${
           currentAbout.image?.url ? "w-full md:flex-1" : "w-full"
@@ -73,19 +73,11 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
         >
           {currentAbout.title}
         </h1>
-        {currentAbout.description?.json ? (
-          <div
-            className={`text-xl leading-relaxed text-gray-700 ${
-              currentAbout.image?.url ? "" : "mx-0"
-            }`}
-            style={
-              !currentAbout.image?.url ? { marginLeft: 0, marginRight: 0, textAlign: "left" } : {}
-            }
-            {...inspectorProps({ fieldId: "description" })}
-          >
-            {documentToReactComponents(currentAbout.description.json as Document)}
+        {currentAbout.description?.json && (
+          <div className="text-lg" {...inspectorProps({ fieldId: "description" })}>
+            <CtfRichText json={currentAbout.description.json as Document} />
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   );

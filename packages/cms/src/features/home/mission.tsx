@@ -4,13 +4,13 @@ import {
   useContentfulInspectorMode,
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
-import { documentToReactComponents } from "@contentful/rich-text-react-renderer";
 import type { Document } from "@contentful/rich-text-types";
 import { Globe } from "lucide-react";
 import Image from "next/image";
 import React from "react";
 
 import type { PageHomeMissionFieldsFragment } from "../../lib/__generated/sdk";
+import { CtfRichText } from "../contentful/ctf-rich-text";
 
 interface HomeAboutMissionProps {
   missionData: PageHomeMissionFieldsFragment;
@@ -38,21 +38,22 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
   });
   return (
     <section className="mx-auto mt-16 flex w-full max-w-7xl flex-col items-center gap-12 rounded-3xl border border-white/20 bg-white/60 p-12 shadow-2xl backdrop-blur-sm md:flex-row md:items-stretch md:gap-16">
-      <div className="flex-1 text-center md:text-left">
+      <div className="flex-1 text-left">
         <h2
           className="from-jii-medium-green to-jii-dark-green mb-6 bg-gradient-to-r bg-clip-text text-4xl font-bold text-transparent"
           {...inspectorProps({ fieldId: "title" })}
         >
           {currentMission.title}
         </h2>
-        {currentMission.about?.json ? (
-          <div
-            className="mb-8 text-lg leading-relaxed text-gray-600"
-            {...inspectorProps({ fieldId: "about" })}
-          >
-            {documentToReactComponents(currentMission.about.json as Document)}
+
+        {/* About Rich Text */}
+        {currentMission.about?.json && (
+          <div className="mb-8 text-lg" {...inspectorProps({ fieldId: "about" })}>
+            <CtfRichText json={currentMission.about.json as Document} />
           </div>
-        ) : null}
+        )}
+
+        {/* Mission Section */}
         <div className="rounded-2xl border-l-4 border-emerald-400 bg-gradient-to-r from-emerald-50 to-blue-50 p-8">
           <h3
             className="mb-4 flex items-center space-x-2 text-2xl font-bold text-emerald-700"
@@ -61,17 +62,19 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
             <Globe className="h-6 w-6" />
             <span>{currentMission.subtitle}</span>
           </h3>
-          {currentMission.mission?.json ? (
+
+          {currentMission.mission?.json && (
             <div
               className="font-medium leading-relaxed text-gray-700"
               {...inspectorProps({ fieldId: "mission" })}
             >
-              {documentToReactComponents(currentMission.mission.json as Document)}
+              <CtfRichText json={currentMission.mission.json as Document} />
             </div>
-          ) : null}
+          )}
         </div>
       </div>
-      {/* Image section only if image exists */}
+
+      {/* Image section */}
       {currentMission.image?.url && (
         <div className="w-full md:flex-1">
           <div

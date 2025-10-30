@@ -4,13 +4,13 @@ import {
   useContentfulInspectorMode,
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
-import { documentToReactComponents } from "@contentful/rich-text-react-renderer";
 import type { Document } from "@contentful/rich-text-types";
 import React from "react";
 
 import { useTranslation } from "@repo/i18n";
 
 import type { PageTermsAndConditionsFieldsFragment } from "../lib/__generated/sdk";
+import { CtfRichText } from "./contentful/ctf-rich-text";
 
 interface TermsAndConditionsContentProps {
   termsAndConditions: PageTermsAndConditionsFieldsFragment | null;
@@ -52,12 +52,12 @@ export const TermsAndConditionsContent: React.FC<TermsAndConditionsContentProps>
   });
 
   return (
-    <div className="space-y-2 text-sm">
-      {currentTermsAndConditions.content?.json ? (
+    <div className="text-sm">
+      {currentTermsAndConditions.content?.json && (
         <div {...inspectorProps({ fieldId: "content" })}>
-          {documentToReactComponents(currentTermsAndConditions.content.json as Document)}
+          <CtfRichText json={currentTermsAndConditions.content.json as Document} />
         </div>
-      ) : null}
+      )}
     </div>
   );
 };
