@@ -12,6 +12,7 @@ import analyticsConfig from "./common/config/analytics.config";
 import awsConfig from "./common/config/aws.config";
 import databaseConfig from "./common/config/database.config";
 import databricksConfig from "./common/config/databricks.config";
+import deltaConfig from "./common/config/delta.config";
 import emailConfig from "./common/config/email.config";
 import { DatabaseModule } from "./common/database/database.module";
 import { AnalyticsModule } from "./common/modules/analytics/analytics.module";
@@ -26,7 +27,14 @@ import { UserModule } from "./users/user.module";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, databricksConfig, awsConfig, emailConfig, analyticsConfig],
+      load: [
+        databaseConfig,
+        databricksConfig,
+        awsConfig,
+        emailConfig,
+        analyticsConfig,
+        deltaConfig,
+      ],
     }),
     LoggerModule.forRoot({
       pinoHttp: {
