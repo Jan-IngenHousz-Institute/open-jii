@@ -42,10 +42,12 @@ const ID_COLUMN_NAME = "id";
 export function getColumnWidth(typeName: string): number | undefined {
   // Set very small width for id column to accommodate checkboxes
   if (typeName === "ID") return 30;
+  // Set medium width for array of struct columns that contain collapsible content
+  if (typeName.startsWith("ARRAY<STRUCT<")) return 200;
   // Set smaller width for array columns that contain charts
   if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 120;
   // Set medium width for map columns that contain collapsible content
-  if (typeName === "MAP" || typeName.startsWith("MAP<STRING,")) return 200;
+  if (typeName === "MAP" || typeName.startsWith("MAP<")) return 200;
   return undefined;
 }
 
@@ -92,7 +94,12 @@ function createTableColumns({
       case "BIGINT":
         return 6;
       default:
-        if (typeName === "MAP" || typeName.startsWith("MAP<")) return 4;
+        if (
+          typeName === "MAP" ||
+          typeName.startsWith("MAP<") ||
+          typeName.startsWith("ARRAY<STRUCT<")
+        )
+          return 4;
         if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 7;
         return 8; // Other types at the end
     }
@@ -100,8 +107,8 @@ function createTableColumns({
 
   // Sort columns by type precedence
   const sortedColumns = [...data.columns].sort((a, b) => {
-    const precedenceA = getTypePrecedence(a.type_name);
-    const precedenceB = getTypePrecedence(b.type_name);
+    const precedenceA = getTypePrecedence(a.type_text);
+    const precedenceB = getTypePrecedence(b.type_text);
     return precedenceA - precedenceB;
   });
 
@@ -142,13 +149,13 @@ function createTableColumns({
   sortedColumns.forEach((dataColumn) => {
     columns.push(
       columnHelper.accessor(dataColumn.name, {
-        header: getHeader(dataColumn.type_name, dataColumn.name),
-        size: getColumnWidth(dataColumn.type_name),
+        header: getHeader(dataColumn.type_text, dataColumn.name),
+        size: getColumnWidth(dataColumn.type_text),
         meta: {
-          type: dataColumn.type_name,
+          type: dataColumn.type_text,
         },
         cell: ({ row }) => {
-          return getRow(dataColumn.type_name, dataColumn.name, row);
+          return getRow(dataColumn.type_text, dataColumn.name, row);
         },
       }),
     );

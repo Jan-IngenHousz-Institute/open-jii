@@ -170,7 +170,9 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
     pathname === `/` ||
     pathname === `/${locale}` ||
     pathname.startsWith(`/${locale}/about`) ||
-    pathname.startsWith(`/${locale}/blog`);
+    pathname.startsWith(`/${locale}/blog`) ||
+    pathname.startsWith(`/${locale}/faq`) ||
+    pathname.startsWith(`/${locale}/policies`);
 
   return (
     <header
@@ -190,7 +192,11 @@ export function UnifiedNavbar({ locale, session }: UnifiedNavbarProps) {
         {/* Logo/Brand */}
         <div className="col-start-1 col-end-2 flex items-center">
           <Image
-            src="/openJII-logo-vertical-yellow.svg"
+            src={
+              isLightNavbar
+                ? "/openJII-logo-vertical-yellow.svg"
+                : "/openJII-logo-BW-vertical-white.svg"
+            }
             alt="openJII logo"
             width={210}
             height={52}
