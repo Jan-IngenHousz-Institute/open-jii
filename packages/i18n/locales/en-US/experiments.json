@@ -46,7 +46,7 @@
     "title": "Measurement Flow",
     "legend": "Legend",
     "description": "Design and visualize your measurement workflow by connecting different steps and operations.",
-    "editDescription": "Design and visualize your measurement workflow by connecting different steps and operations.",
+    "editDescription": "Design and visualize your measurement workflow by connecting different steps and operations. Please make sure every block has a uniquely named 'label' and the flow has 1 Measurement block and 1 Analysis block.",
     "staticDescription": "Visual overview of the measurement workflow",
     "tabLabel": "Flow",
     "saving": "Saving...",
@@ -62,7 +62,7 @@
   "data": "Data",
   "experimentData": {
     "title": "Experiment Data",
-    "description": "View and manage data associated with this experiment. New data is processed every 15 minutes",
+    "description": "View and manage data associated with this experiment. New data is processed every 15 minutes. Timestamps are in UTC (Coordinated Universal Time)",
     "uploadData": "Upload Data",
     "provisioning": {
       "title": "Experiment is Being Prepared",
@@ -163,10 +163,10 @@
     "requiredDescription": "Participants must answer this question to continue",
     "answerTypeLabel": "Answer Type",
     "answerTypes": {
-      "TEXT": "Text",
+      "TEXT": "Text (under construction)",
       "SELECT": "Multiple Choice",
-      "NUMBER": "Number",
-      "BOOLEAN": "Yes/No"
+      "NUMBER": "Number (under construction)",
+      "BOOLEAN": "Yes/No (under construction)"
     },
     "answerOptionsLabel": "Answer Options",
     "answerOptionPlaceholder": "Enter an answer option",
