@@ -86,6 +86,7 @@ catalogs:
 overrides:
   react: 19.1.0
   react-dom: 19.1.0
+  '@auth/core': 0.41.1
 
 patchedDependencies:
   react-native-usb-serialport-for-android:
@@ -709,8 +710,8 @@ importers:
   packages/auth:
     dependencies:
       '@auth/core':
-        specifier: ^0.40.0
-        version: 0.40.0(nodemailer@7.0.10)
+        specifier: 0.41.1
+        version: 0.41.1(nodemailer@7.0.10)
       '@auth/drizzle-adapter':
         specifier: ^1.10.0
         version: 1.10.0(nodemailer@7.0.10)
@@ -1498,26 +1499,12 @@ packages:
   '@asyncapi/studio@0.24.3':
     resolution: {integrity: sha512-rt4NKnF2BDawRz8HBZtbxFA/mHgr+5HFDcGqaUGU/Ag/CGgNANfPXLlbRbwYVmJ8RPoXxDre7inf62/dMvih6A==}
 
-  '@auth/core@0.40.0':
-    resolution: {integrity: sha512-n53uJE0RH5SqZ7N1xZoMKekbHfQgjd0sAEyUbE+IYJnmuQkbvuZnXItCU7d+i7Fj8VGOgqvNO7Mw4YfBTlZeQw==}
+  '@auth/core@0.41.1':
+    resolution: {integrity: sha512-t9cJ2zNYAdWMacGRMT6+r4xr1uybIdmYa49calBPeTqwgAFPV/88ac9TEvCR85pvATiSPt8VaNf+Gt24JIT/uw==}
     peerDependencies:
       '@simplewebauthn/browser': ^9.0.1
       '@simplewebauthn/server': ^9.0.2
-      nodemailer: ^6.8.0
-    peerDependenciesMeta:
-      '@simplewebauthn/browser':
-        optional: true
-      '@simplewebauthn/server':
-        optional: true
-      nodemailer:
-        optional: true
-
-  '@auth/core@0.41.0':
-    resolution: {integrity: sha512-Wd7mHPQ/8zy6Qj7f4T46vg3aoor8fskJm6g2Zyj064oQ3+p0xNZXAV60ww0hY+MbTesfu29kK14Zk5d5JTazXQ==}
-    peerDependencies:
-      '@simplewebauthn/browser': ^9.0.1
-      '@simplewebauthn/server': ^9.0.2
-      nodemailer: ^6.8.0
+      nodemailer: ^7.0.7
     peerDependenciesMeta:
       '@simplewebauthn/browser':
         optional: true
@@ -20280,17 +20267,7 @@ snapshots:
       - ts-node
       - utf-8-validate
 
-  '@auth/core@0.40.0(nodemailer@7.0.10)':
-    dependencies:
-      '@panva/hkdf': 1.2.1
-      jose: 6.0.11
-      oauth4webapi: 3.5.1
-      preact: 10.24.3
-      preact-render-to-string: 6.5.11(preact@10.24.3)
-    optionalDependencies:
-      nodemailer: 7.0.10
-
-  '@auth/core@0.41.0(nodemailer@7.0.10)':
+  '@auth/core@0.41.1(nodemailer@7.0.10)':
     dependencies:
       '@panva/hkdf': 1.2.1
       jose: 6.0.11
@@ -20302,7 +20279,7 @@ snapshots:
 
   '@auth/drizzle-adapter@1.10.0(nodemailer@7.0.10)':
     dependencies:
-      '@auth/core': 0.40.0(nodemailer@7.0.10)
+      '@auth/core': 0.41.1(nodemailer@7.0.10)
     transitivePeerDependencies:
       - '@simplewebauthn/browser'
       - '@simplewebauthn/server'
@@ -20310,7 +20287,7 @@ snapshots:
 
   '@auth/express@0.11.0(express@5.1.0)(nodemailer@7.0.10)':
     dependencies:
-      '@auth/core': 0.40.0(nodemailer@7.0.10)
+      '@auth/core': 0.41.1(nodemailer@7.0.10)
       express: 5.1.0
     transitivePeerDependencies:
       - '@simplewebauthn/browser'
@@ -39815,7 +39792,7 @@ snapshots:
 
   next-auth@5.0.0-beta.30(next@15.3.4(@babel/core@7.12.9)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(nodemailer@7.0.10)(react@19.1.0):
     dependencies:
-      '@auth/core': 0.41.0(nodemailer@7.0.10)
+      '@auth/core': 0.41.1(nodemailer@7.0.10)
       next: 15.3.4(@babel/core@7.12.9)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       react: 19.1.0
     optionalDependencies:
