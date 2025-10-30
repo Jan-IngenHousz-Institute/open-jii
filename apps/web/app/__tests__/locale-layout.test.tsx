@@ -38,50 +38,27 @@ vi.mock("next/font/google", () => ({
   }),
 }));
 
-// Mock translations provider
-vi.mock("@/components/translations-provider", () => ({
-  TranslationsProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
-// Mock all modules that might use env
-vi.mock("../../env", () => ({
-  env: {
-    NODE_ENV: "test",
-    NEXT_PUBLIC_BASE_URL: "http://localhost:3000",
-    NEXT_PUBLIC_ENABLE_DEVTOOLS: "false",
-  },
-}));
-
-vi.mock("../providers/QueryProvider", () => ({
-  QueryProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
 vi.mock("next/headers", () => ({
   draftMode: vi.fn(() => ({ isEnabled: false })),
 }));
 
+const mockLandingMetadata = vi.fn();
+
+vi.mock("~/lib/contentful", () => ({
+  getContentfulClients: vi.fn(() =>
+    Promise.resolve({
+      client: {
+        landingMetadata: mockLandingMetadata,
+      },
+      previewClient: {
+        landingMetadata: mockLandingMetadata,
+      },
+    }),
+  ),
+}));
+
 vi.mock("@repo/i18n/server", () => ({
-  default: () => Promise.resolve({ t: (key: string) => key, resources: {} }),
-}));
-
-vi.mock("@repo/cms", () => ({
-  ContentfulProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
-vi.mock("@repo/i18n/client", () => ({
-  TranslationsProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
-vi.mock("next-auth/react", () => ({
-  SessionProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
-vi.mock("@repo/auth/client", () => ({
-  SessionProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
-vi.mock("@repo/cms/contentful", () => ({
-  ContentfulPreviewProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  default: () => Promise.resolve({ t: (key: string) => key }),
 }));
 
 describe("LocaleLayout Component", () => {
@@ -93,13 +70,6 @@ describe("LocaleLayout Component", () => {
   it("should render without crashing", async () => {
     const { container } = render(await LocaleLayout(mockProps));
     expect(container).toBeInTheDocument();
-  });
-
-  it("should generate metadata correctly", async () => {
-    const metadata = await generateMetadata({
-      params: Promise.resolve({ locale: "en-US" as const }),
-    });
-    expect(metadata).toBeDefined();
   });
 
   it("should handle different locales", async () => {
@@ -114,5 +84,42 @@ describe("LocaleLayout Component", () => {
   it("should render basic structure", async () => {
     const result = render(await LocaleLayout(mockProps));
     expect(result.container.firstChild).toBeTruthy();
+  });
+});
+
+describe("generateMetadata", () => {
+  it("should generate metadata from Contentful when data is available", async () => {
+    mockLandingMetadata.mockResolvedValueOnce({
+      landingMetadataCollection: {
+        items: [
+          {
+            title: "CMS Title",
+            description: "CMS Description",
+          },
+        ],
+      },
+    });
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ locale: "en-US" as const }),
+    });
+
+    expect(metadata).toEqual({
+      title: "CMS Title",
+      description: "CMS Description",
+    });
+  });
+
+  it("should use fallback values when Contentful query fails", async () => {
+    mockLandingMetadata.mockRejectedValueOnce(new Error("Network error"));
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ locale: "en-US" as const }),
+    });
+
+    expect(metadata).toEqual({
+      title: "openJII",
+      description: "jii.aboutDescription",
+    });
   });
 });
