@@ -46,7 +46,7 @@
     "title": "Measurement Flow",
     "legend": "Legend",
     "description": "Design and visualize your measurement workflow by connecting different steps and operations.",
-    "editDescription": "Design and visualize your measurement workflow by connecting different steps and operations.",
+    "editDescription": "Design and visualize your measurement workflow by connecting different steps and operations. Please make sure every block has a uniquely named 'label' and the flow has 1 Measurement block and 1 Analysis block.",
     "staticDescription": "Visual overview of the measurement workflow",
     "tabLabel": "Flow",
     "saving": "Saving...",
