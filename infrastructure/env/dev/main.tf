@@ -317,7 +317,8 @@ module "pipeline_scheduler" {
       parameters = {
         "catalog_name"            = module.databricks_catalog.catalog_name,
         "central_schema"          = "centrum",
-        "experiment_status_table" = "experiment_status"
+        "experiment_status_table" = "experiment_status",
+        "environment"             = upper(var.environment)
       }
 
       depends_on = "trigger_centrum_pipeline"
@@ -373,6 +374,7 @@ module "experiment_provisioning_job" {
         "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
         "catalog_name"             = module.databricks_catalog.catalog_name
         "central_schema"           = "centrum"
+        "environment"              = upper(var.environment)
       }
     },
     {
