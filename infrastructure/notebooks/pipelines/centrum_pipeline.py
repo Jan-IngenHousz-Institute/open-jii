@@ -174,8 +174,25 @@ def clean_data():
         F.col("parsed_data.questions")
     )
     
+    # Create a unique id for each row
+    # Hash based on experiment_id, device_id, timestamp, sample, and ingestion_timestamp
+    # This ensures each ingestion gets a unique ID, even for duplicate measurements
+    df = df.withColumn(
+        "id",
+        F.abs(
+            F.hash(
+                F.col("experiment_id"),
+                F.col("device_id"),
+                F.col("timestamp"),
+                F.col("sample"),
+                F.col("ingestion_timestamp")
+            )
+        )
+    )
+    
     # Select final columns for silver layer
     return df.select(
+        "id",
         "device_id",
         "device_name",
         "device_version",
