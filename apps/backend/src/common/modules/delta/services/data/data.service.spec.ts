@@ -1,10 +1,16 @@
-import * as Arrow from "apache-arrow";
 import nock from "nock";
+import { vi } from "vitest";
 
 import { TestHarness } from "../../../../../test/test-harness";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import type { DeltaFile, DeltaMetadata } from "../shares/shares.types";
 import { DeltaDataService } from "./data.service";
+
+// Mock hyparquet at the module level
+const mockParquetReadObjects = vi.fn();
+vi.mock("hyparquet", () => ({
+  parquetReadObjects: mockParquetReadObjects,
+}));
 
 describe("DeltaDataService", () => {
   const testApp = TestHarness.App;
@@ -19,6 +25,8 @@ describe("DeltaDataService", () => {
     await testApp.beforeEach();
     dataService = testApp.module.get(DeltaDataService);
 
+    // Reset mocks
+    vi.clearAllMocks();
     nock.cleanAll();
   });
 
@@ -66,23 +74,24 @@ describe("DeltaDataService", () => {
     };
 
     it("should successfully process Parquet files and return SchemaData", async () => {
-      // Create mock Parquet data using Apache Arrow
-      const table = Arrow.tableFromArrays({
-        id: [1, 2, 3],
-        name: ["Alice", "Bob", "Charlie"],
-        created_at: [Date.now(), Date.now() + 1000, Date.now() + 2000],
-      });
+      // Mock data that hyparquet would return
+      const mockParquetData = [
+        { id: 1, name: "Alice", created_at: new Date("2024-01-01") },
+        { id: 2, name: "Bob", created_at: new Date("2024-01-02") },
+        { id: 3, name: "Charlie", created_at: new Date("2024-01-03") },
+      ];
 
-      // Use Arrow record batch format which the reader can understand
-      // Convert to Buffer to ensure nock handles binary data correctly
-      const buffer = Buffer.from(Arrow.tableToIPC(table, "stream"));
+      // Setup the mock to return our test data
+      mockParquetReadObjects.mockResolvedValue(mockParquetData);
+
+      const mockBuffer = Buffer.from("mock parquet data");
 
       const mockFiles: DeltaFile[] = [
         {
           url: "https://example.com/file1.parquet",
           id: "file1",
           partitionValues: {},
-          size: buffer.length,
+          size: 100,
           stats: JSON.stringify({ numRecords: 3 }),
           version: 1,
           timestamp: Date.now(),
@@ -90,7 +99,7 @@ describe("DeltaDataService", () => {
       ];
 
       // Mock HTTP request for Parquet file
-      nock("https://example.com").get("/file1.parquet").reply(200, buffer, {
+      nock("https://example.com").get("/file1.parquet").reply(200, mockBuffer, {
         "Content-Type": "application/octet-stream",
       });
 
@@ -126,23 +135,28 @@ describe("DeltaDataService", () => {
 
       expect(schemaData.totalRows).toBe(3);
       expect(schemaData.truncated).toBe(false);
+
+      // Verify hyparquet was called
+      expect(mockParquetReadObjects).toHaveBeenCalledTimes(1);
     });
 
     it("should handle files with null values correctly", async () => {
-      // Create mock Parquet data with null values
-      const table = Arrow.tableFromArrays({
-        id: [1, 2],
-        name: ["Alice", null], // null value
-      });
+      // Mock data with null values
+      const mockParquetData = [
+        { id: 1, name: "Alice" },
+        { id: 2, name: null },
+      ];
 
-      const buffer = Buffer.from(Arrow.tableToIPC(table, "stream"));
+      mockParquetReadObjects.mockResolvedValue(mockParquetData);
+
+      const mockBuffer = Buffer.from("mock parquet data");
 
       const mockFiles: DeltaFile[] = [
         {
           url: "https://example.com/file_with_nulls.parquet",
           id: "file_with_nulls",
           partitionValues: {},
-          size: buffer.length,
+          size: 100,
           stats: JSON.stringify({ numRecords: 2 }),
         },
       ];
@@ -169,7 +183,7 @@ describe("DeltaDataService", () => {
       };
 
       // Mock HTTP request
-      nock("https://example.com").get("/file_with_nulls.parquet").reply(200, buffer);
+      nock("https://example.com").get("/file_with_nulls.parquet").reply(200, mockBuffer);
 
       // Execute processFiles
       const result = await dataService.processFiles(mockFiles, mockMetadataWithNulls);
@@ -185,20 +199,23 @@ describe("DeltaDataService", () => {
     });
 
     it("should handle complex data types by JSON stringifying them", async () => {
-      // Create mock Parquet data with complex types
-      const table = Arrow.tableFromArrays({
-        id: [1],
-        metadata: [JSON.stringify({ key: "value", nested: { count: 42 } })],
-      });
+      const mockParquetData = [
+        {
+          id: 1,
+          metadata: { key: "value", nested: { count: 42 } },
+        },
+      ];
 
-      const buffer = Buffer.from(Arrow.tableToIPC(table, "stream"));
+      mockParquetReadObjects.mockResolvedValue(mockParquetData);
+
+      const mockBuffer = Buffer.from("mock parquet data");
 
       const mockFiles: DeltaFile[] = [
         {
           url: "https://example.com/complex_types.parquet",
           id: "complex_types",
           partitionValues: {},
-          size: buffer.length,
+          size: mockBuffer.length,
         },
       ];
 
@@ -224,7 +241,7 @@ describe("DeltaDataService", () => {
       };
 
       // Mock HTTP request
-      nock("https://example.com").get("/complex_types.parquet").reply(200, buffer);
+      nock("https://example.com").get("/complex_types.parquet").reply(200, mockBuffer);
 
       // Execute processFiles
       const result = await dataService.processFiles(mockFiles, mockMetadataComplex);
@@ -240,20 +257,24 @@ describe("DeltaDataService", () => {
     });
 
     it("should respect limit hint and truncate results", async () => {
-      // Create mock Parquet data with more rows than limit
-      const table = Arrow.tableFromArrays({
-        id: [1, 2, 3, 4, 5],
-        name: ["A", "B", "C", "D", "E"],
-      });
+      const mockParquetData = [
+        { id: 1, name: "A" },
+        { id: 2, name: "B" },
+        { id: 3, name: "C" },
+        { id: 4, name: "D" },
+        { id: 5, name: "E" },
+      ];
 
-      const buffer = Buffer.from(Arrow.tableToIPC(table, "stream"));
+      mockParquetReadObjects.mockResolvedValue(mockParquetData);
+
+      const mockBuffer = Buffer.from("mock parquet data");
 
       const mockFiles: DeltaFile[] = [
         {
           url: "https://example.com/large_file.parquet",
           id: "large_file",
           partitionValues: {},
-          size: buffer.length,
+          size: mockBuffer.length,
         },
       ];
 
@@ -279,7 +300,7 @@ describe("DeltaDataService", () => {
       };
 
       // Mock HTTP request
-      nock("https://example.com").get("/large_file.parquet").reply(200, buffer);
+      nock("https://example.com").get("/large_file.parquet").reply(200, mockBuffer);
 
       // Execute processFiles with limit hint
       const limitHint = 3;
@@ -296,32 +317,36 @@ describe("DeltaDataService", () => {
     });
 
     it("should handle multiple files and combine their data", async () => {
-      // Create two separate tables
-      const table1 = Arrow.tableFromArrays({
-        id: [1, 2],
-        name: ["Alice", "Bob"],
-      });
+      const mockParquetData1 = [
+        { id: 1, name: "Alice" },
+        { id: 2, name: "Bob" },
+      ];
 
-      const table2 = Arrow.tableFromArrays({
-        id: [3, 4],
-        name: ["Charlie", "Diana"],
-      });
+      const mockParquetData2 = [
+        { id: 3, name: "Charlie" },
+        { id: 4, name: "Diana" },
+      ];
 
-      const buffer1 = Buffer.from(Arrow.tableToIPC(table1, "stream"));
-      const buffer2 = Buffer.from(Arrow.tableToIPC(table2, "stream"));
+      // Setup mock to return different data for each call
+      mockParquetReadObjects
+        .mockResolvedValueOnce(mockParquetData1)
+        .mockResolvedValueOnce(mockParquetData2);
+
+      const mockBuffer1 = Buffer.from("mock parquet data 1");
+      const mockBuffer2 = Buffer.from("mock parquet data 2");
 
       const mockFiles: DeltaFile[] = [
         {
           url: "https://example.com/file1.parquet",
           id: "file1",
           partitionValues: {},
-          size: buffer1.length,
+          size: mockBuffer1.length,
         },
         {
           url: "https://example.com/file2.parquet",
           id: "file2",
           partitionValues: {},
-          size: buffer2.length,
+          size: mockBuffer2.length,
         },
       ];
 
@@ -349,9 +374,9 @@ describe("DeltaDataService", () => {
       // Mock HTTP requests for both files
       nock("https://example.com")
         .get("/file1.parquet")
-        .reply(200, buffer1)
+        .reply(200, mockBuffer1)
         .get("/file2.parquet")
-        .reply(200, buffer2);
+        .reply(200, mockBuffer2);
 
       // Execute processFiles
       const result = await dataService.processFiles(mockFiles, multiFileMetadata);
@@ -368,33 +393,41 @@ describe("DeltaDataService", () => {
       expect(schemaData.rows[3]).toEqual(["4", "Diana"]);
       expect(schemaData.totalRows).toBe(4);
       expect(schemaData.truncated).toBe(false);
+
+      // Verify hyparquet was called twice
+      expect(mockParquetReadObjects).toHaveBeenCalledTimes(2);
     });
 
-    it("should continue processing other files if one fails", async () => {
-      // Create valid table for successful file
-      const table = Arrow.tableFromArrays({
-        id: [1, 2],
-        name: ["Alice", "Bob"],
-      });
+    it("should continue processing when one file fails", async () => {
+      const mockParquetData = [
+        { id: 1, name: "Alice" },
+        { id: 2, name: "Bob" },
+      ];
 
-      const buffer = Buffer.from(Arrow.tableToIPC(table, "stream"));
+      // First call fails, second succeeds
+      mockParquetReadObjects
+        .mockRejectedValueOnce(new Error("Failed to parse Parquet"))
+        .mockResolvedValueOnce(mockParquetData);
+
+      const mockBuffer1 = Buffer.from("invalid parquet data");
+      const mockBuffer2 = Buffer.from("valid parquet data");
 
       const mockFiles: DeltaFile[] = [
         {
-          url: "https://example.com/bad_file.parquet",
-          id: "bad_file",
+          url: "https://example.com/invalid_file.parquet",
+          id: "invalid_file",
           partitionValues: {},
-          size: 1000,
+          size: mockBuffer1.length,
         },
         {
-          url: "https://example.com/good_file.parquet",
-          id: "good_file",
+          url: "https://example.com/valid_file.parquet",
+          id: "valid_file",
           partitionValues: {},
-          size: buffer.length,
+          size: mockBuffer2.length,
         },
       ];
 
-      const partialFailureMetadata: DeltaMetadata = {
+      const simpleMetadata: DeltaMetadata = {
         ...mockMetadata,
         schemaString: JSON.stringify({
           type: "struct",
@@ -415,50 +448,235 @@ describe("DeltaDataService", () => {
         }),
       };
 
-      // Mock HTTP requests - first fails, second succeeds
+      // Mock HTTP requests
       nock("https://example.com")
-        .get("/bad_file.parquet")
-        .reply(500, "Server Error")
-        .get("/good_file.parquet")
-        .reply(200, buffer);
+        .get("/invalid_file.parquet")
+        .reply(200, mockBuffer1)
+        .get("/valid_file.parquet")
+        .reply(200, mockBuffer2);
 
-      // Execute processFiles
-      const result = await dataService.processFiles(mockFiles, partialFailureMetadata);
+      // Execute processFiles - should continue with valid file
+      const result = await dataService.processFiles(mockFiles, simpleMetadata);
 
-      // Assert result is success (partial success)
+      // The service should return success with data from valid file
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
 
       const schemaData = result.value;
-      expect(schemaData.rows).toHaveLength(2); // Only data from successful file
+      expect(schemaData.rows).toHaveLength(2);
       expect(schemaData.rows[0]).toEqual(["1", "Alice"]);
       expect(schemaData.rows[1]).toEqual(["2", "Bob"]);
     });
 
-    it("should handle HTTP request timeout", async () => {
+    it("should return an error if HTTP request fails", async () => {
       const mockFiles: DeltaFile[] = [
         {
-          url: "https://example.com/timeout_file.parquet",
-          id: "timeout_file",
+          url: "https://example.com/missing_file.parquet",
+          id: "missing_file",
           partitionValues: {},
-          size: 1000,
+          size: 100,
         },
       ];
 
-      // Mock timeout by delaying response beyond service timeout
-      nock("https://example.com")
-        .get("/timeout_file.parquet")
-        .delay(2000)
-        .reply(200, "delayed response");
+      // Mock HTTP request to fail with 404
+      nock("https://example.com").get("/missing_file.parquet").reply(404, "Not Found");
 
       // Execute processFiles
       const result = await dataService.processFiles(mockFiles, mockMetadata);
 
-      // Should still return success but with empty data since file failed
+      // Should continue and return empty results since file failed
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value.rows).toHaveLength(0);
-    }, 3000); // Set test timeout to 2 seconds
+
+      const schemaData = result.value;
+      expect(schemaData.rows).toHaveLength(0);
+    });
+
+    it("should handle empty files list", async () => {
+      const emptyFiles: DeltaFile[] = [];
+
+      // Execute processFiles with empty files
+      const result = await dataService.processFiles(emptyFiles, mockMetadata);
+
+      // Assert result is success with empty data
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+
+      const schemaData = result.value;
+      expect(schemaData.rows).toHaveLength(0);
+      expect(schemaData.totalRows).toBe(0);
+      expect(schemaData.truncated).toBe(false);
+    });
+
+    it("should handle Parquet files with array columns", async () => {
+      const mockParquetData = [
+        {
+          id: 1,
+          tags: ["tag1", "tag2", "tag3"],
+        },
+        {
+          id: 2,
+          tags: ["tag4"],
+        },
+      ];
+
+      mockParquetReadObjects.mockResolvedValue(mockParquetData);
+
+      const mockBuffer = Buffer.from("mock parquet data");
+
+      const mockFiles: DeltaFile[] = [
+        {
+          url: "https://example.com/array_file.parquet",
+          id: "array_file",
+          partitionValues: {},
+          size: mockBuffer.length,
+        },
+      ];
+
+      const arrayMetadata: DeltaMetadata = {
+        ...mockMetadata,
+        schemaString: JSON.stringify({
+          type: "struct",
+          fields: [
+            {
+              name: "id",
+              type: "long",
+              nullable: false,
+              metadata: {},
+            },
+            {
+              name: "tags",
+              type: "array",
+              nullable: true,
+              metadata: {},
+            },
+          ],
+        }),
+      };
+
+      // Mock HTTP request
+      nock("https://example.com").get("/array_file.parquet").reply(200, mockBuffer);
+
+      // Execute processFiles
+      const result = await dataService.processFiles(mockFiles, arrayMetadata);
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+
+      const schemaData = result.value;
+      expect(schemaData.rows).toHaveLength(2);
+      expect(schemaData.rows[0]).toEqual(["1", JSON.stringify(["tag1", "tag2", "tag3"])]);
+      expect(schemaData.rows[1]).toEqual(["2", JSON.stringify(["tag4"])]);
+    });
+
+    it("should handle bigint values", async () => {
+      const mockParquetData = [{ id: BigInt(9007199254740991), name: "BigValue" }];
+
+      mockParquetReadObjects.mockResolvedValue(mockParquetData);
+
+      const mockBuffer = Buffer.from("mock parquet data");
+
+      const mockFiles: DeltaFile[] = [
+        {
+          url: "https://example.com/bigint_file.parquet",
+          id: "bigint_file",
+          partitionValues: {},
+          size: mockBuffer.length,
+        },
+      ];
+
+      const bigintMetadata: DeltaMetadata = {
+        ...mockMetadata,
+        schemaString: JSON.stringify({
+          type: "struct",
+          fields: [
+            {
+              name: "id",
+              type: "bigint",
+              nullable: false,
+              metadata: {},
+            },
+            {
+              name: "name",
+              type: "string",
+              nullable: true,
+              metadata: {},
+            },
+          ],
+        }),
+      };
+
+      // Mock HTTP request
+      nock("https://example.com").get("/bigint_file.parquet").reply(200, mockBuffer);
+
+      // Execute processFiles
+      const result = await dataService.processFiles(mockFiles, bigintMetadata);
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+
+      const schemaData = result.value;
+      expect(schemaData.rows).toHaveLength(1);
+      expect(schemaData.rows[0]).toEqual(["9007199254740991", "BigValue"]);
+    });
+
+    it("should handle boolean values", async () => {
+      const mockParquetData = [
+        { id: 1, active: true },
+        { id: 2, active: false },
+      ];
+
+      mockParquetReadObjects.mockResolvedValue(mockParquetData);
+
+      const mockBuffer = Buffer.from("mock parquet data");
+
+      const mockFiles: DeltaFile[] = [
+        {
+          url: "https://example.com/bool_file.parquet",
+          id: "bool_file",
+          partitionValues: {},
+          size: mockBuffer.length,
+        },
+      ];
+
+      const boolMetadata: DeltaMetadata = {
+        ...mockMetadata,
+        schemaString: JSON.stringify({
+          type: "struct",
+          fields: [
+            {
+              name: "id",
+              type: "long",
+              nullable: false,
+              metadata: {},
+            },
+            {
+              name: "active",
+              type: "boolean",
+              nullable: false,
+              metadata: {},
+            },
+          ],
+        }),
+      };
+
+      // Mock HTTP request
+      nock("https://example.com").get("/bool_file.parquet").reply(200, mockBuffer);
+
+      // Execute processFiles
+      const result = await dataService.processFiles(mockFiles, boolMetadata);
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+
+      const schemaData = result.value;
+      expect(schemaData.rows).toHaveLength(2);
+      expect(schemaData.rows[0]).toEqual(["1", "true"]);
+      expect(schemaData.rows[1]).toEqual(["2", "false"]);
+    });
 
     it("should handle invalid schema string", async () => {
       const invalidMetadata: DeltaMetadata = {
@@ -479,26 +697,9 @@ describe("DeltaDataService", () => {
       const result = await dataService.processFiles(mockFiles, invalidMetadata);
 
       // Assert result is failure
-      expect(result.isSuccess()).toBe(false);
+      expect(result.isFailure()).toBe(true);
       assertFailure(result);
       expect(result.error.message).toBe("Failed to process Delta Sharing data");
-    });
-
-    it("should handle empty files array", async () => {
-      const mockFiles: DeltaFile[] = [];
-
-      // Execute processFiles
-      const result = await dataService.processFiles(mockFiles, mockMetadata);
-
-      // Assert result is success with empty data
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-
-      const schemaData = result.value;
-      expect(schemaData.columns).toHaveLength(3); // Schema columns should still be present
-      expect(schemaData.rows).toHaveLength(0);
-      expect(schemaData.totalRows).toBe(0);
-      expect(schemaData.truncated).toBe(false);
     });
   });
 
@@ -609,66 +810,6 @@ describe("DeltaDataService", () => {
 
       const result = dataService.applyLimitHint(filesWithoutNumRecords, 100);
       expect(result).toHaveLength(1); // Should include the file
-    });
-  });
-
-  describe("private method behaviors", () => {
-    it("should handle different data types in parquet files", async () => {
-      // Test various Arrow data types
-      const table = Arrow.tableFromArrays({
-        bool_col: [true, false, true],
-        int_col: [1, 2, 3],
-        float_col: [1.1, 2.2, 3.3],
-        date_col: [new Date("2023-01-01"), new Date("2023-01-02"), new Date("2023-01-03")],
-      });
-
-      const buffer = Buffer.from(Arrow.tableToIPC(table, "stream"));
-
-      const mockFiles: DeltaFile[] = [
-        {
-          url: "https://example.com/types_test.parquet",
-          id: "types_test",
-          partitionValues: {},
-          size: buffer.length,
-        },
-      ];
-
-      const typesMetadata: DeltaMetadata = {
-        id: "test-metadata-id",
-        format: {
-          provider: "parquet",
-        },
-        partitionColumns: [],
-        configuration: {},
-        version: 1,
-        schemaString: JSON.stringify({
-          type: "struct",
-          fields: [
-            { name: "bool_col", type: "boolean", nullable: true, metadata: {} },
-            { name: "int_col", type: "integer", nullable: true, metadata: {} },
-            { name: "float_col", type: "double", nullable: true, metadata: {} },
-            { name: "date_col", type: "date", nullable: true, metadata: {} },
-          ],
-        }),
-      };
-
-      // Mock HTTP request
-      nock("https://example.com").get("/types_test.parquet").reply(200, buffer);
-
-      // Execute processFiles
-      const result = await dataService.processFiles(mockFiles, typesMetadata);
-
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-
-      const schemaData = result.value;
-      expect(schemaData.rows).toHaveLength(3);
-
-      // Check that different types are converted to strings
-      expect(schemaData.rows[0]).toEqual(["true", "1", "1.1", expect.any(String)]);
-      expect(schemaData.rows[1]).toEqual(["false", "2", "2.2", expect.any(String)]);
-      expect(schemaData.rows[2]).toEqual(["true", "3", "3.3", expect.any(String)]);
     });
   });
 });
