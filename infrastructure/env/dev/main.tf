@@ -113,26 +113,17 @@ module "databricks_workspace_s3" {
   custom_policy_json = module.databricks_workspace_s3_policy.policy_json
 }
 
-# Metastore resources moved to data-governance account
-# module "metastore_s3" {
-#   source      = "../../modules/metastore-s3"
-#   bucket_name = "open-jii-databricks-uc-root-bucket"
-# 
-#   providers = {
-#     databricks.workspace = databricks.workspace
-#   }
-# }
-
 module "databricks_workspace" {
   source = "../../modules/databricks/workspace"
 
   aws_region            = var.aws_region
   environment           = var.environment
   databricks_account_id = var.databricks_account_id
-  bucket_name           = module.databricks_workspace_s3.bucket_id
-  vpc_id                = module.vpc.vpc_id
-  private_subnets       = module.vpc.private_subnets
-  sg_id                 = module.vpc.default_sg_id
+
+  bucket_name     = module.databricks_workspace_s3.bucket_id
+  vpc_id          = module.vpc.vpc_id
+  private_subnets = module.vpc.private_subnets
+  sg_id           = module.vpc.default_sg_id
 
   kinesis_role_arn  = module.kinesis.role_arn
   kinesis_role_name = module.kinesis.role_name
@@ -144,21 +135,6 @@ module "databricks_workspace" {
     databricks.workspace = databricks.workspace
   }
 }
-
-# Metastore moved to data-governance account - workspace will be assigned via data governance
-# module "databricks_metastore" {
-#   source         = "../../modules/databricks/metastore"
-#   metastore_name = "open_jii_metastore_aws_eu_central_1"
-#   region         = var.aws_region
-#   owner          = "account users"
-#   workspace_ids  = [module.databricks_workspace.workspace_id]
-# 
-#   providers = {
-#     databricks.mws = databricks.mws
-#   }
-# 
-#   depends_on = [module.databricks_workspace]
-# }
 
 module "node_service_principal" {
   source = "../../modules/databricks/service_principal"
@@ -174,11 +150,11 @@ module "node_service_principal" {
 # Create storage credential for accessing centralized metastore
 module "storage_credential" {
   source = "../../modules/databricks/workspace-storage-credential"
-  
-  credential_name      = "open-jii-${var.environment}-metastore-access"
-  role_name            = "open-jii-${var.environment}-uc-access"  
-  environment          = var.environment
-  bucket_name          = var.centralized_metastore_bucket_name
+
+  credential_name = "open-jii-${var.environment}-metastore-access"
+  role_name       = "open-jii-${var.environment}-uc-access"
+  environment     = var.environment
+  bucket_name     = var.centralized_metastore_bucket_name
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -190,13 +166,13 @@ module "storage_credential" {
 # Create external location for this environment
 module "external_location" {
   source = "../../modules/databricks/external-location"
-  
-  external_location_name   = "external-${var.environment}"
-  bucket_name              = var.centralized_metastore_bucket_name  # Centralized metastore bucket
-  external_location_path   = "external/${var.environment}"
-  storage_credential_name  = "open-jii-${var.environment}-metastore-access"  # Created by storage credential module below
-  environment              = var.environment
-  comment                  = "External location for ${var.environment} environment data"
+
+  external_location_name  = "external-${var.environment}"
+  bucket_name             = var.centralized_metastore_bucket_name
+  external_location_path  = "external/${var.environment}"
+  storage_credential_name = module.storage_credential.storage_credential_name
+  environment             = var.environment
+  comment                 = "External location for ${var.environment} environment data"
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -223,9 +199,11 @@ module "experiment_secret_scope" {
 }
 
 module "databricks_catalog" {
-  source             = "../../modules/databricks/catalog"
-  catalog_name       = "open_jii_${var.environment}"
-  external_bucket_id = module.external_location.external_location_id
+  source       = "../../modules/databricks/catalog"
+  catalog_name = "open_jii_${var.environment}"
+
+  external_bucket_id     = var.centralized_metastore_bucket_name
+  external_location_path = "external/${var.environment}"
 
   grants = {
     node_service_principal = {
@@ -270,7 +248,7 @@ module "centrum_pipeline" {
     "SILVER_TABLE"            = "clean_data"
     "RAW_KINESIS_TABLE"       = "raw_kinesis_data"
     "KINESIS_STREAM_NAME"     = module.kinesis.kinesis_stream_name
-    "SERVICE_CREDENTIAL_NAME" = module.kinesis.role_name
+    "SERVICE_CREDENTIAL_NAME" = "unity-catalog-kinesis-role-${var.environment}"
     "CHECKPOINT_PATH"         = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
   }
 
