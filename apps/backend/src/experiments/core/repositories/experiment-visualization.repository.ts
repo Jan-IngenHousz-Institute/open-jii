@@ -1,6 +1,8 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { eq, experimentVisualizations, desc } from "@repo/database";
+import { UserProfileDto } from "src/users/core/models/user.model";
+
+import { eq, experimentVisualizations, desc, profiles } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -22,9 +24,19 @@ export class ExperimentVisualizationRepository {
       const results = await this.database
         .select()
         .from(experimentVisualizations)
+        .innerJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
         .where(eq(experimentVisualizations.experimentId, experimentId))
         .orderBy(desc(experimentVisualizations.createdAt));
-      return results as ExperimentVisualizationDto[];
+
+      return results.map((result) => {
+        const augmentedResult = result.experiment_visualizations as ExperimentVisualizationDto;
+        const profile = result.profiles as Partial<UserProfileDto>;
+        augmentedResult.createdByName =
+          profile.firstName && profile.lastName
+            ? `${profile.firstName} ${profile.lastName}`
+            : undefined;
+        return augmentedResult;
+      });
     });
   }
 
@@ -34,7 +46,7 @@ export class ExperimentVisualizationRepository {
     createdBy: string,
   ): Promise<Result<ExperimentVisualizationDto[]>> {
     return tryCatch(async () => {
-      const results = await this.database
+      const insertResults = await this.database
         .insert(experimentVisualizations)
         .values({
           experimentId,
@@ -47,7 +59,23 @@ export class ExperimentVisualizationRepository {
           createdBy,
         })
         .returning();
-      return results as ExperimentVisualizationDto[];
+
+      // Fetch the created record with profile information
+      const results = await this.database
+        .select()
+        .from(experimentVisualizations)
+        .innerJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
+        .where(eq(experimentVisualizations.id, insertResults[0].id));
+
+      return results.map((result) => {
+        const augmentedResult = result.experiment_visualizations as ExperimentVisualizationDto;
+        const profile = result.profiles as Partial<UserProfileDto>;
+        augmentedResult.createdByName =
+          profile.firstName && profile.lastName
+            ? `${profile.firstName} ${profile.lastName}`
+            : undefined;
+        return augmentedResult;
+      });
     });
   }
 
@@ -56,6 +84,7 @@ export class ExperimentVisualizationRepository {
       const result = await this.database
         .select()
         .from(experimentVisualizations)
+        .innerJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
         .where(eq(experimentVisualizations.id, id))
         .limit(1);
 
@@ -63,7 +92,13 @@ export class ExperimentVisualizationRepository {
         return null;
       }
 
-      return result[0] as ExperimentVisualizationDto;
+      const augmentedResult = result[0].experiment_visualizations as ExperimentVisualizationDto;
+      const profile = result[0].profiles as Partial<UserProfileDto>;
+      augmentedResult.createdByName =
+        profile.firstName && profile.lastName
+          ? `${profile.firstName} ${profile.lastName}`
+          : undefined;
+      return augmentedResult;
     });
   }
 
@@ -72,12 +107,27 @@ export class ExperimentVisualizationRepository {
     dto: UpdateExperimentVisualizationDto,
   ): Promise<Result<ExperimentVisualizationDto[]>> {
     return tryCatch(async () => {
-      const results = await this.database
+      await this.database
         .update(experimentVisualizations)
         .set(dto)
-        .where(eq(experimentVisualizations.id, id))
-        .returning();
-      return results as ExperimentVisualizationDto[];
+        .where(eq(experimentVisualizations.id, id));
+
+      // Fetch the updated record with profile information
+      const results = await this.database
+        .select()
+        .from(experimentVisualizations)
+        .innerJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
+        .where(eq(experimentVisualizations.id, id));
+
+      return results.map((result) => {
+        const augmentedResult = result.experiment_visualizations as ExperimentVisualizationDto;
+        const profile = result.profiles as Partial<UserProfileDto>;
+        augmentedResult.createdByName =
+          profile.firstName && profile.lastName
+            ? `${profile.firstName} ${profile.lastName}`
+            : undefined;
+        return augmentedResult;
+      });
     });
   }
 

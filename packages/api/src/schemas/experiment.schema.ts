@@ -464,6 +464,7 @@ export const zExperimentVisualization = z.object({
   config: zChartConfig,
   dataConfig: zChartDataConfig,
   createdBy: z.string().uuid(),
+  createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
