@@ -42,5 +42,56 @@
     "save": "Änderungen speichern",
     "saving": "Speichern...",
     "saved": "Kontoeinstellungen gespeichert"
+  },
+  "dangerZone": {
+    "title": "Gefahrenzone",
+    "deactivate": {
+      "title": "Konto deaktivieren",
+      "description": "Deaktivieren Sie Ihr Konto vorübergehend.",
+      "button": "Deaktivieren",
+      "buttonDeactivated": "Deaktiviert",
+      "dialogTitle": "Konto deaktivieren",
+      "dialogDescription": "Dies wird Ihr Konto vorübergehend deaktivieren und Ihr Profil vor anderen Benutzern verbergen.",
+      "warningTitle": "Was passiert, wenn Sie deaktivieren:",
+      "warningList": {
+        "profileHidden": "Ihr Profil wird vor anderen Forschern verborgen",
+        "noRequests": "Sie erhalten keine Kooperationsanfragen mehr",
+        "contentAccessible": "Ihre Experimente, Makros und Protokolle bleiben für Kooperationspartner zugänglich",
+        "loggedOut": "Sie werden von Ihrem Konto abgemeldet",
+        "canReactivate": "Sie können Ihr Konto durch erneutes Anmelden reaktivieren"
+      },
+      "confirmPrompt": "Geben Sie",
+      "confirmWord": "deaktivieren",
+      "confirmSuffix": "ein, um zu bestätigen:",
+      "confirmPlaceholder": "Geben Sie 'deaktivieren' hier ein",
+      "buttonSaving": "Speichern...",
+      "buttonConfirm": "Konto deaktivieren",
+      "successMessage": "Konto deaktiviert"
+    },
+    "delete": {
+      "title": "Konto löschen",
+      "description": "Löschen Sie Ihr Konto und alle zugehörigen Daten dauerhaft. Dies kann nicht rückgängig gemacht werden.",
+      "button": "Konto löschen",
+      "dialogTitle": "Konto löschen",
+      "dialogDescription": "Diese Aktion kann nicht rückgängig gemacht werden. Ihre persönlichen Daten werden dauerhaft gelöscht, aber Ihre veröffentlichten Beiträge bleiben erhalten.",
+      "warningEraseTitle": "Dies wird gelöscht:",
+      "warningEraseList": {
+        "profile": "Ihr Profil und persönliche Informationen",
+        "email": "Ihre E-Mail-Adresse und Kontaktdaten",
+        "teams": "Ihre Teammitgliedschaften"
+      },
+      "warningPreserveTitle": "Ihre Inhalte bleiben erhalten:",
+      "warningPreserveList": {
+        "content": "Experimente, Makros und Protokolle bleiben intakt und das Eigentum wird auf ein Systemkonto übertragen"
+      },
+      "confirmPrompt": "Geben Sie",
+      "confirmWord": "löschen",
+      "confirmSuffix": "ein, um zu bestätigen:",
+      "confirmPlaceholder": "Geben Sie 'löschen' hier ein",
+      "buttonDeleting": "Wird gelöscht...",
+      "buttonConfirm": "Konto löschen",
+      "successMessage": "Konto gelöscht. Ihre persönlichen Daten wurden gelöscht, aber Ihre veröffentlichten Beiträge bleiben einem Systemkonto zugeordnet."
+    },
+    "cancel": "Abbrechen"
   }
 }

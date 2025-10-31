@@ -221,11 +221,13 @@ export class TestHarness {
     name = faker.person.fullName(),
     emailVerified = null,
     image = null,
+    activated = true,
   }: {
     email?: string;
     name?: string;
     emailVerified?: Date | null;
     image?: string | null;
+    activated?: boolean;
   } = {}): Promise<string> {
     const [user] = await this.database
       .insert(users)
@@ -245,6 +247,7 @@ export class TestHarness {
       userId: user.id,
       firstName,
       lastName,
+      activated,
     });
 
     return user.id;

@@ -506,6 +506,72 @@ describe("MacroRepository", () => {
     });
   });
 
+  describe("anonymization", () => {
+    it("should return real names for activated profiles", async () => {
+      const activeUserId = await testApp.createTestUser({ name: "Active User", activated: true });
+
+      await repository.create(
+        {
+          name: "Active Macro",
+          description: "From active user",
+          language: "python",
+          code: "YWN0aXZlIGNvZGU=",
+        },
+        activeUserId,
+      );
+
+      const result = await repository.findAll();
+      assertSuccess(result);
+      const macro = result.value.find((m) => m.name === "Active Macro");
+
+      expect(macro?.createdByName).toBe("Active User");
+    });
+
+    it("should anonymize names for deactivated profiles", async () => {
+      const inactiveUserId = await testApp.createTestUser({
+        name: "Hidden User",
+        activated: false,
+      });
+
+      await repository.create(
+        {
+          name: "Hidden Macro",
+          description: "From inactive user",
+          language: "r",
+          code: "aGlkZGVuIGNvZGU=",
+        },
+        inactiveUserId,
+      );
+
+      const result = await repository.findAll();
+      assertSuccess(result);
+      const macro = result.value.find((m) => m.name === "Hidden Macro");
+
+      expect(macro?.createdByName).toBe("Unknown User");
+    });
+
+    it("should anonymize names in findById as well", async () => {
+      const inactiveUserId = await testApp.createTestUser({ name: "Ghost User", activated: false });
+
+      const createResult = await repository.create(
+        {
+          name: "Ghost Macro",
+          description: "Invisible macro",
+          language: "python",
+          code: "Z2hvc3QgbWFjcm8=",
+        },
+        inactiveUserId,
+      );
+      assertSuccess(createResult);
+      const createdMacro = createResult.value[0];
+
+      const result = await repository.findById(createdMacro.id);
+      assertSuccess(result);
+
+      expect(result.value?.createdByName).toBe("Unknown User");
+    });
+  });
+
   describe("update", () => {
     it("should update macro with all fields", async () => {
       // Arrange

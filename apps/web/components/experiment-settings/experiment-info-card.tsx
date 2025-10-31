@@ -119,7 +119,9 @@ export function ExperimentInfoCard({ experimentId, experiment }: ExperimentInfoC
             <span className="font-medium">{t("experimentSettings.created")} by:</span> {adminName}
             <span className="text-muted-foreground flex items-center gap-x-1">
               <Mail className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate text-xs md:max-w-[200px] md:text-sm">{adminEmail}</span>
+              <span className="truncate text-xs md:max-w-[200px] md:text-sm">
+                {adminEmail ?? t("experimentSettings.noEmail")}
+              </span>
             </span>
           </div>
           <div>
