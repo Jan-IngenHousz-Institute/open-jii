@@ -4,7 +4,6 @@
 # Processes data from central silver layer into experiment-specific bronze/silver/gold tables
 
 %pip install /Workspace/Shared/wheels/multispeq-0.1.0-py3-none-any.whl
-%pip install /Workspace/Shared/wheels/ambyte-0.2.0-py3-none-any.whl
 %pip install /Workspace/Shared/wheels/mini_racer-0.12.4-py3-none-manylinux_2_31_x86_64.whl
 
 # COMMAND ----------
@@ -22,8 +21,6 @@ import json
 import sys
 from typing import Dict, Any, List
 
-# Import the ambyte processing utilities
-#from ambyte import prepare_ambyte_files, process_trace_files
 # Import our macro processing library
 from multispeq import execute_macro_script, get_available_macros, process_macro_output_for_spark, infer_macro_schema
 
@@ -37,7 +34,7 @@ CENTRAL_SCHEMA = spark.conf.get("CENTRAL_SCHEMA")
 CENTRAL_SILVER_TABLE = spark.conf.get("CENTRAL_SILVER_TABLE")
 
 # Constants for ambyte processing
-YEAR_PREFIX = "2025"
+# YEAR_PREFIX is now used by the ambyte_processing_task instead of this pipeline
 
 # Macro processing configuration
 MACROS_PATH = "/Workspace/Shared/macros"  # Path to macro scripts
@@ -165,164 +162,45 @@ def sample():
 
 # COMMAND ----------
 
-# DBTITLE 1,Raw Ambyte Data Table Schema
-# # Define the schema for the raw ambyte data table
-# raw_ambyte_schema = StructType([
-#     StructField("Time", TimestampType(), False),
-#     StructField("SigF", IntegerType(), True),
-#     StructField("RefF", IntegerType(), True),
-#     StructField("Sun", IntegerType(), True),
-#     StructField("Leaf", IntegerType(), True),
-#     StructField("Sig7", IntegerType(), True),
-#     StructField("Ref7", IntegerType(), True),
-#     StructField("Actinic", IntegerType(), True),
-#     StructField("Temp", FloatType(), True),
-#     StructField("Res", IntegerType(), True),
-#     StructField("Full", BooleanType(), True),
-#     StructField("Type", StringType(), True),
-#     StructField("Count", IntegerType(), True),
-#     StructField("PTS", IntegerType(), True),
-#     StructField("PAR", FloatType(), True),
-#     StructField("raw", FloatType(), True),
-#     StructField("spec", ArrayType(IntegerType()), True),
-#     StructField("BoardT", FloatType(), True),
-#     StructField("ambyte_folder", StringType(), True),
-#     StructField("ambit_index", IntegerType(), True),
-#     StructField("meta_Actinic", FloatType(), True),
-#     StructField("meta_Dark", IntegerType(), True),
-#     StructField("upload_directory", StringType(), True),
-#     StructField("upload_time", TimestampType(), True)
-# ])
-# # COMMAND ----------
+# DBTITLE 1,Raw Ambyte Data Table Schema (Optional - Auto-inferred from parquet)
+# Schema is inferred automatically from the parquet files written by ambyte_processing_task
+# The processed files contain all columns including:
+# - Time, SigF, RefF, Sun, Leaf, Sig7, Ref7, Actinic, Temp, Res
+# - Full, Type, Count, PTS, PAR, raw, spec, BoardT
+# - ambyte_folder, ambit_index
+# - meta_Actinic, meta_Dark (from df.attrs)
+# - upload_directory, upload_time, processed_at
 
-# # DBTITLE 1,Raw Ambyte Data Table
-# def create_ambyte_table_code():
-#     """Generate code for ambyte streaming table."""
-#     return '''
-# @dlt.table(
-#     name=RAW_AMBYTE_TABLE,
-#     comment="ambyte trace data processed from raw files stored in Databricks volume"
-# )
-# def raw_ambyte_data():
-#     """
-#     Streaming DLT table-generating function that processes Ambyte trace files from a Databricks volume
-#     and creates a Delta table with the processed data using Auto Loader.
-#     """
-    
-#     # Configuration - specify the base path in the Databricks volume
-#     ambyte_base_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/ambyte"
-    
-#     # For streaming tables, we cannot use discovery functions in the main function
-#     # Instead, use Auto Loader to stream files and process using pandas UDF
-#     df = (
-#         spark.readStream.format("cloudFiles")
-#         .option("cloudFiles.format", "text")
-#         .option("recursiveFileLookup", "true")
-#         .option("cloudFiles.schemaLocation", f"/tmp/checkpoints/{EXPERIMENT_SCHEMA}/ambyte_schema")
-#         .option("pathGlobFilter", f"{YEAR_PREFIX}*_.txt")
-#         .option("cloudFiles.allowOverwrites", "true")
-#         .option("cloudFiles.ignoreDataLoss", "true")
-#         .load(ambyte_base_path)
-#     )
-    
-#     # Add file path information
-#     df = df.withColumn("file_path", F.col("_metadata.file_path"))
-    
-#     # Filter to only process data files (same logic as existing load_files_per_byte)
-#     df = df.filter(
-#         F.col("file_path").rlike(f".*/{YEAR_PREFIX}.*_.txt$")
-#     )
-    
-#     # Extract upload directory and ambyte folder information from file path using string functions
-#     # Split path by "/" and extract relevant parts
-#     path_parts = F.split(F.col("file_path"), "/")
-    
-#     # Find upload directory (contains "upload_")
-#     df = df.withColumn("upload_dir", 
-#         F.expr("filter(split(file_path, '/'), x -> x like 'upload_%')[0]")
-#     )
-    
-#     # Find ambyte folder (contains "Ambyte_" or "unknown_ambyte")  
-#     df = df.withColumn("ambyte_folder",
-#         F.expr("filter(split(file_path, '/'), x -> x like 'Ambyte_%' or x = 'unknown_ambyte')[0]")
-#     )
-    
-#     # Find ambit index (numeric folders 1-4 or "unknown_ambit")
-#     df = df.withColumn("ambit_index",
-#         F.expr("filter(split(file_path, '/'), x -> x in ('1','2','3','4','unknown_ambit'))[0]")
-#     )
-    
-#     # Create ambyte folder path by reconstructing path up to ambyte folder
-#     df = df.withColumn("ambyte_folder_path",
-#         F.expr("concat_ws('/', slice(split(file_path, '/'), 1, size(split(file_path, '/')) - 2))")
-#     )
-    
-#     # TODO: Need to handle streaming aggregation issue
-#     # For now, return the dataframe without groupBy to avoid streaming aggregation error
-    
-#     # Define pandas UDF
-#     @pandas_udf(returnType=ArrayType(raw_ambyte_schema))
-#     def process_ambyte_folder(folder_data: pd.Series, upload_dirs: pd.Series, ambyte_folders: pd.Series) -> pd.Series:
-#         """
-#         Process ambyte folders
-#         """
-        
-#         all_results = []
-        
-#         for files_data, upload_dir, ambyte_folder in zip(folder_data, upload_dirs, ambyte_folders):
-#             # Organize files using embedded function (exact copy of volume_io.prepare_ambyte_files)
-#             organized_data = prepare_ambyte_files(files_data, upload_dir, ambyte_folder)
-            
-#             if organized_data is None:
-#                 continue
-                
-#             files_per_byte, upload_time, folder_name = organized_data
-            
-#             try:                
-#                 df_result = process_trace_files(folder_name or 'unknown', files_per_byte)
-                
-#                 if df_result is not None:
-#                     df_result = df_result.reset_index()
-#                     df_result[\'upload_directory\'] = upload_dir
-#                     df_result[\'upload_time\'] = upload_time
-                    
-#                     records = df_result.to_dict(\'records\')
-#                     all_results.extend(records)
-                    
-#             except Exception as e:
-#                 print(f"Error processing ambyte folder {folder_name}: {e}")
-#                 continue
-        
-#         return pd.Series([all_results])
-    
-#     # Apply pandas UDF to process ambyte folders using existing logic
-#     df = df.select(
-#         F.explode(
-#             process_ambyte_folder(F.col("file_data"), F.col("upload_dir"), F.col("ambyte_folder"))
-#         ).alias("parsed_data")
-#     )
-    
-#     # Expand the parsed data into individual columns matching the schema
-#     df = df.select("parsed_data.*")
-    
-#     return df
-# '''
+# COMMAND ----------
 
-# # Check if volume exists and only create table if it does
-# try:
-#     # Try to read from the volume path to check if it exists
-#     volume_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads"
-#     test_df = spark.read.format("text").load(volume_path)
-#     # If we can create the DataFrame, the volume exists
-#     print(f"Volume data-uploads exists at {volume_path}")
-#     print("Creating streaming raw_ambyte_data table")
-#     exec(create_ambyte_table_code(), globals())
-#     print("Raw ambyte table created successfully")
-        
-# except Exception as e:
-#     print(f"Volume data-uploads does not exist or is not accessible: {e}")
-#     print("Skipping raw_ambyte_data table creation")
-
+# DBTITLE 1,Raw Ambyte Data Table
+@dlt.table(
+    name=RAW_AMBYTE_TABLE,
+    comment="ambyte trace data from processed parquet files (streaming table)"
+)
+def raw_ambyte_data():
+    """
+    Streaming table that reads pre-processed Ambyte data from parquet files.
+    The ambyte_processing_task must be run first to generate the parquet files.
+    """
+    # Path to processed parquet files
+    processed_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/processed-ambyte"
+    
+    # Path for schema metadata (persistent location in volumes)
+    schema_location = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/_schemas/ambyte_schema"
+    
+    # Read all parquet files recursively using cloudFiles for auto loader (streaming)
+    # This will automatically detect new files as they are added
+    # Schema location stores inferred schema and checkpoint data for Auto Loader
+    return (
+        spark.readStream
+        .format("cloudFiles")
+        .option("cloudFiles.format", "parquet")
+        .option("cloudFiles.schemaLocation", schema_location)
+        .option("recursiveFileLookup", "true")
+        .load(processed_path)
+    )
+    
 # COMMAND ----------
 
 # DBTITLE 1,Macro Processing Pipeline
