@@ -2,6 +2,7 @@ import type { Options } from "@contentful/rich-text-react-renderer";
 import { documentToReactComponents } from "@contentful/rich-text-react-renderer";
 import type { Document, Node } from "@contentful/rich-text-types";
 import { BLOCKS, INLINES, MARKS } from "@contentful/rich-text-types";
+import Link from "next/link";
 import React from "react";
 
 import type { ComponentRichImage } from "../../lib/__generated/sdk";
@@ -81,16 +82,16 @@ export const contentfulBaseRichTextOptions = ({ links }: ContentfulRichTextInter
 
     // Inline hyperlinks
     [INLINES.HYPERLINK]: (node: Node, children: React.ReactNode) => {
-      const uri = (node.data as { uri?: string })?.uri;
+      const uri = (node.data as { uri?: string })?.uri ?? "#";
       return (
-        <a
+        <Link
           href={uri}
           target="_blank"
           rel="noopener noreferrer"
           className="text-emerald-700 hover:underline"
         >
           {children}
-        </a>
+        </Link>
       );
     },
 
