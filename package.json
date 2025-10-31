@@ -55,7 +55,8 @@
   "pnpm": {
     "overrides": {
       "react": "catalog:react19",
-      "react-dom": "catalog:react19"
+      "react-dom": "catalog:react19",
+      "@auth/core": "0.41.1"
     }
   }
 }
