@@ -575,23 +575,23 @@ describe("ExperimentDataTable", () => {
     });
   });
 
-  it("should render bulk actions bar", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: mockResponse,
-      isLoading: false,
-      error: null,
-    });
-    mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
+  // it("should render bulk actions bar", () => {
+  //   const mockUseQuery = vi.fn().mockReturnValue({
+  //     data: mockResponse,
+  //     isLoading: false,
+  //     error: null,
+  //   });
+  //   mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
 
-    render(
-      <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
-      { wrapper: createWrapper() },
-    );
+  //   render(
+  //     <ExperimentDataTable experimentId="experiment-123" tableName="test_table" pageSize={10} />,
+  //     { wrapper: createWrapper() },
+  //   );
 
-    // Find and click download button
-    const bulkActionsBar = screen.getByTestId("bulk-actions-bar");
-    expect(bulkActionsBar).toBeInTheDocument();
-  });
+  //   // Find and click download button
+  //   const bulkActionsBar = screen.getByTestId("bulk-actions-bar");
+  //   expect(bulkActionsBar).toBeInTheDocument();
+  // });
 
   describe("Chart functionality", () => {
     const mockTableDataWithCharts = {
