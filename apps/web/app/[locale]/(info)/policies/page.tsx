@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { getContentfulClients } from "~/lib/contentful";
 
@@ -9,14 +10,35 @@ interface PoliciesPageProps {
   params: Promise<{ locale: Locale }>;
 }
 
-export default async function PoliciesPage({ params }: PoliciesPageProps) {
-  const { locale } = await params;
-
-  const { isEnabled: preview } = await draftMode();
+async function getPoliciesData(locale: Locale, preview: boolean) {
   const { previewClient, client } = await getContentfulClients();
   const gqlClient = preview ? previewClient : client;
   const policiesQuery = await gqlClient.pagePolicies({ locale, preview });
-  const policies = policiesQuery.pagePoliciesCollection?.items[0] as PagePoliciesFieldsFragment;
+  return policiesQuery.pagePoliciesCollection?.items[0] as PagePoliciesFieldsFragment;
+}
+
+export async function generateMetadata({ params }: PoliciesPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const { isEnabled: preview } = await draftMode();
+  const policies = await getPoliciesData(locale, preview);
+
+  const metadata: Metadata = {};
+
+  if (policies.pageTitle) {
+    metadata.title = policies.pageTitle as string;
+  }
+
+  if (policies.pageDescription) {
+    metadata.description = policies.pageDescription as string;
+  }
+
+  return metadata;
+}
+
+export default async function PoliciesPage({ params }: PoliciesPageProps) {
+  const { locale } = await params;
+  const { isEnabled: preview } = await draftMode();
+  const policies = await getPoliciesData(locale, preview);
 
   return <PoliciesContent policies={policies} locale={locale} preview={preview} />;
 }

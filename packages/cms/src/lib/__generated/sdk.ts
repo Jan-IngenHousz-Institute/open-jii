@@ -697,6 +697,10 @@ export enum ComponentFaqQuestionLinkingCollectionsPageFaqCollectionOrder {
   InternalNameDesc = "internalName_DESC",
   IntroAsc = "intro_ASC",
   IntroDesc = "intro_DESC",
+  PageDescriptionAsc = "pageDescription_ASC",
+  PageDescriptionDesc = "pageDescription_DESC",
+  PageTitleAsc = "pageTitle_ASC",
+  PageTitleDesc = "pageTitle_DESC",
   SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
   SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
   SysIdAsc = "sys_id_ASC",
@@ -1783,6 +1787,8 @@ export type PageAbout = Entry &
     image?: Maybe<Asset>;
     internalName?: Maybe<Scalars["String"]["output"]>;
     linkedFrom?: Maybe<PageAboutLinkingCollections>;
+    pageDescription?: Maybe<Scalars["String"]["output"]>;
+    pageTitle?: Maybe<Scalars["String"]["output"]>;
     sys: Sys;
     title?: Maybe<Scalars["String"]["output"]>;
   };
@@ -1806,6 +1812,16 @@ export type PageAboutInternalNameArgs = {
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageAbout) */
 export type PageAboutLinkedFromArgs = {
   allowedLocales?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageAbout) */
+export type PageAboutPageDescriptionArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageAbout) */
+export type PageAboutPageTitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageAbout) */
@@ -1884,6 +1900,20 @@ export type PageAboutFilter = {
   internalName_not?: InputMaybe<Scalars["String"]["input"]>;
   internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
   internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageDescription?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  pageDescription_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageDescription_not?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageTitle?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  pageTitle_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageTitle_not?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   sys?: InputMaybe<SysFilter>;
   title?: InputMaybe<Scalars["String"]["input"]>;
   title_contains?: InputMaybe<Scalars["String"]["input"]>;
@@ -1909,6 +1939,10 @@ export type PageAboutLinkingCollectionsEntryCollectionArgs = {
 export enum PageAboutOrder {
   InternalNameAsc = "internalName_ASC",
   InternalNameDesc = "internalName_DESC",
+  PageDescriptionAsc = "pageDescription_ASC",
+  PageDescriptionDesc = "pageDescription_DESC",
+  PageTitleAsc = "pageTitle_ASC",
+  PageTitleDesc = "pageTitle_DESC",
   SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
   SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
   SysIdAsc = "sys_id_ASC",
@@ -2233,6 +2267,8 @@ export type PageFaq = Entry &
     internalName?: Maybe<Scalars["String"]["output"]>;
     intro?: Maybe<Scalars["String"]["output"]>;
     linkedFrom?: Maybe<PageFaqLinkingCollections>;
+    pageDescription?: Maybe<Scalars["String"]["output"]>;
+    pageTitle?: Maybe<Scalars["String"]["output"]>;
     questionsCollection?: Maybe<PageFaqQuestionsCollection>;
     sys: Sys;
     title?: Maybe<Scalars["String"]["output"]>;
@@ -2251,6 +2287,16 @@ export type PageFaqIntroArgs = {
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageFaq) */
 export type PageFaqLinkedFromArgs = {
   allowedLocales?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageFaq) */
+export type PageFaqPageDescriptionArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageFaq) */
+export type PageFaqPageTitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageFaq) */
@@ -2294,6 +2340,20 @@ export type PageFaqFilter = {
   intro_not?: InputMaybe<Scalars["String"]["input"]>;
   intro_not_contains?: InputMaybe<Scalars["String"]["input"]>;
   intro_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageDescription?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  pageDescription_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageDescription_not?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageTitle?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  pageTitle_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageTitle_not?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   questions?: InputMaybe<CfComponentFaqQuestionNestedFilter>;
   questionsCollection_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
   sys?: InputMaybe<SysFilter>;
@@ -2323,6 +2383,10 @@ export enum PageFaqOrder {
   InternalNameDesc = "internalName_DESC",
   IntroAsc = "intro_ASC",
   IntroDesc = "intro_DESC",
+  PageDescriptionAsc = "pageDescription_ASC",
+  PageDescriptionDesc = "pageDescription_DESC",
+  PageTitleAsc = "pageTitle_ASC",
+  PageTitleDesc = "pageTitle_DESC",
   SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
   SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
   SysIdAsc = "sys_id_ASC",
@@ -3106,6 +3170,8 @@ export type PagePolicies = Entry &
     contentfulMetadata: ContentfulMetadata;
     internalName?: Maybe<Scalars["String"]["output"]>;
     linkedFrom?: Maybe<PagePoliciesLinkingCollections>;
+    pageDescription?: Maybe<Scalars["String"]["output"]>;
+    pageTitle?: Maybe<Scalars["String"]["output"]>;
     sys: Sys;
     title?: Maybe<Scalars["String"]["output"]>;
   };
@@ -3123,6 +3189,16 @@ export type PagePoliciesInternalNameArgs = {
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pagePolicies) */
 export type PagePoliciesLinkedFromArgs = {
   allowedLocales?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pagePolicies) */
+export type PagePoliciesPageDescriptionArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pagePolicies) */
+export type PagePoliciesPageTitleArgs = {
+  locale?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pagePolicies) */
@@ -3200,6 +3276,20 @@ export type PagePoliciesFilter = {
   internalName_not?: InputMaybe<Scalars["String"]["input"]>;
   internalName_not_contains?: InputMaybe<Scalars["String"]["input"]>;
   internalName_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageDescription?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  pageDescription_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageDescription_not?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageDescription_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageTitle?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
+  pageTitle_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  pageTitle_not?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
+  pageTitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
   sys?: InputMaybe<SysFilter>;
   title?: InputMaybe<Scalars["String"]["input"]>;
   title_contains?: InputMaybe<Scalars["String"]["input"]>;
@@ -3225,6 +3315,10 @@ export type PagePoliciesLinkingCollectionsEntryCollectionArgs = {
 export enum PagePoliciesOrder {
   InternalNameAsc = "internalName_ASC",
   InternalNameDesc = "internalName_DESC",
+  PageDescriptionAsc = "pageDescription_ASC",
+  PageDescriptionDesc = "pageDescription_DESC",
+  PageTitleAsc = "pageTitle_ASC",
+  PageTitleDesc = "pageTitle_DESC",
   SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
   SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
   SysIdAsc = "sys_id_ASC",
@@ -4123,6 +4217,8 @@ export type LandingMetadataQuery = {
 
 export type PageAboutFieldsFragment = {
   __typename: "PageAbout";
+  pageTitle?: string | null;
+  pageDescription?: string | null;
   internalName?: string | null;
   title?: string | null;
   sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
@@ -4247,6 +4343,8 @@ export type FaqQuestionFieldsFragment = {
 
 export type PageFaqFieldsFragment = {
   __typename: "PageFaq";
+  pageTitle?: string | null;
+  pageDescription?: string | null;
   internalName?: string | null;
   title?: string | null;
   intro?: string | null;
@@ -4439,6 +4537,8 @@ export type PageLandingCollectionQuery = {
 
 export type PagePoliciesFieldsFragment = {
   __typename: "PagePolicies";
+  pageTitle?: string | null;
+  pageDescription?: string | null;
   internalName?: string | null;
   title?: string | null;
   sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
@@ -4588,6 +4688,8 @@ export const PageAboutFieldsFragmentDoc: ReturnType<typeof gql> = gql`
       publishedAt
       environmentId
     }
+    pageTitle
+    pageDescription
     internalName
     title
     description {
@@ -4738,6 +4840,8 @@ export const PageFaqFieldsFragmentDoc: ReturnType<typeof gql> = gql`
       publishedAt
       environmentId
     }
+    pageTitle
+    pageDescription
     internalName
     title
     intro
@@ -4900,6 +5004,8 @@ export const PagePoliciesFieldsFragmentDoc: ReturnType<typeof gql> = gql`
       publishedAt
       environmentId
     }
+    pageTitle
+    pageDescription
     internalName
     title
     content {
