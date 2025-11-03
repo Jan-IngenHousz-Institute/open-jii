@@ -5,6 +5,8 @@ fragment PageAboutFields on PageAbout {
     publishedAt
     environmentId
   }
+  pageTitle
+  pageDescription
   internalName
   title
   description {
