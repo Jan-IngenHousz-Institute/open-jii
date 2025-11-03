@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // eslint-disable-next-line import/first
-import { setTestMode, setTestFeatureFlag } from "./lib/posthog-server";
+import { setTestMode, setTestFeatureFlag, clearFeatureFlagCache } from "./lib/posthog-server";
 // eslint-disable-next-line import/first
 import { middleware } from "./middleware";
 
@@ -25,10 +25,12 @@ describe("middleware", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setTestMode(true);
+    clearFeatureFlagCache();
   });
 
   afterEach(() => {
     setTestMode(false);
+    clearFeatureFlagCache();
   });
 
   describe("locale redirection", () => {

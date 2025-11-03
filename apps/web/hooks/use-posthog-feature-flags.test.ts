@@ -16,7 +16,11 @@ describe("usePostHogFeatureFlag", () => {
     vi.clearAllMocks();
     mockPostHog.__loaded = false;
     mockPostHog.isFeatureEnabled.mockReturnValue(null);
-    mockPostHog.onFeatureFlags.mockImplementation(() => undefined);
+    // Default: immediately invoke callback when onFeatureFlags is called
+    mockPostHog.onFeatureFlags.mockImplementation((callback: () => void) => {
+      callback();
+      return () => undefined;
+    });
 
     // Set window.posthog
     window.posthog = mockPostHog;
@@ -27,10 +31,10 @@ describe("usePostHogFeatureFlag", () => {
     delete window.posthog;
   });
 
-  it("should return null initially", () => {
+  it("should return false initially", () => {
     const { result } = renderHook(() => usePostHogFeatureFlag(FEATURE_FLAGS.MULTI_LANGUAGE));
 
-    expect(result.current).toBeNull();
+    expect(result.current).toBe(false);
   });
 
   it("should return true when feature flag is enabled and PostHog is loaded", async () => {
@@ -69,17 +73,19 @@ describe("usePostHogFeatureFlag", () => {
   });
 
   it("should wait for PostHog to load if not loaded initially", async () => {
-    mockPostHog.__loaded = false;
-    mockPostHog.isFeatureEnabled.mockReturnValue(true);
+    // Don't set window.posthog initially to simulate loading state
+    delete window.posthog;
 
     const { result } = renderHook(() => usePostHogFeatureFlag(FEATURE_FLAGS.MULTI_LANGUAGE));
 
-    expect(result.current).toBeNull();
+    expect(result.current).toBe(false);
 
     // Simulate PostHog loading after a short delay
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 150));
-      mockPostHog.__loaded = true;
+      // Now set PostHog as loaded
+      mockPostHog.isFeatureEnabled.mockReturnValue(true);
+      window.posthog = mockPostHog;
     });
 
     await waitFor(
@@ -102,12 +108,14 @@ describe("usePostHogFeatureFlag", () => {
   });
 
   it("should update value when feature flags change", async () => {
-    mockPostHog.__loaded = true;
     mockPostHog.isFeatureEnabled.mockReturnValue(true);
 
     let onFeatureFlagsCallback: (() => void) | undefined;
     mockPostHog.onFeatureFlags.mockImplementation((callback: () => void) => {
       onFeatureFlagsCallback = callback;
+      // Call the callback immediately (simulating PostHog behavior)
+      callback();
+      return () => undefined;
     });
 
     const { result } = renderHook(() => usePostHogFeatureFlag(FEATURE_FLAGS.MULTI_LANGUAGE));
@@ -152,9 +160,6 @@ describe("usePostHogFeatureFlag", () => {
   });
 
   it("should use different flag keys for testing (all use same in real tests)", async () => {
-    mockPostHog.__loaded = true;
-    mockPostHog.onFeatureFlags.mockImplementation(() => undefined);
-
     // Test first flag
     mockPostHog.isFeatureEnabled.mockReturnValue(true);
     const { result: resultA } = renderHook(() =>
@@ -180,21 +185,21 @@ describe("usePostHogFeatureFlag", () => {
     expect(resultB.current).toBe(false);
   });
 
-  it("should stop checking after 5 seconds if PostHog never loads", async () => {
+  it("should stop checking after 10 seconds if PostHog never loads", async () => {
     vi.useFakeTimers();
     mockPostHog.__loaded = false;
 
     const { result } = renderHook(() => usePostHogFeatureFlag(FEATURE_FLAGS.MULTI_LANGUAGE));
 
-    expect(result.current).toBeNull();
+    expect(result.current).toBe(false);
 
-    // Advance past 5 second timeout
+    // Advance past 10 second timeout
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(6000);
+      await vi.advanceTimersByTimeAsync(11000);
     });
 
-    // Should still be null after timeout (PostHog never loaded)
-    expect(result.current).toBeNull();
+    // Should fall back to default (false) after timeout
+    expect(result.current).toBe(false);
 
     vi.useRealTimers();
   });

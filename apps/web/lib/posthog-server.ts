@@ -179,17 +179,20 @@ export async function isFeatureFlagEnabled(
   flagKey: FeatureFlagKey,
   distinctId = "anonymous",
 ): Promise<boolean> {
-  // Use test override if in test mode
-  if (testMode) {
-    return testFeatureFlags.get(flagKey) ?? FEATURE_FLAG_DEFAULTS[flagKey];
-  }
-
   const cacheKey = `${flagKey}:${distinctId}`;
 
-  // Check cache first
+  // Check cache first (before test mode check to ensure caching works in tests)
   const cachedValue = featureFlagCache.get(cacheKey);
   if (cachedValue !== null) {
     return cachedValue;
+  }
+
+  // Use test override if in test mode
+  if (testMode) {
+    const value = testFeatureFlags.get(flagKey) ?? FEATURE_FLAG_DEFAULTS[flagKey];
+    // Cache the test value
+    featureFlagCache.set(cacheKey, value);
+    return value;
   }
 
   try {

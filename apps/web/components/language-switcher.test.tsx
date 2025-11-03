@@ -35,7 +35,7 @@ vi.mock("next/link", () => ({
 
 // Mock lucide-react
 vi.mock("lucide-react", () => ({
-  Languages: () => <div data-testid="languages-icon" />,
+  Globe: () => <div data-testid="globe-icon" />,
 }));
 
 // Mock UI components
@@ -87,7 +87,7 @@ describe("LanguageSwitcher", () => {
     render(<LanguageSwitcher locale="en-US" />);
 
     expect(screen.getByTestId("dropdown-trigger")).toBeInTheDocument();
-    expect(screen.getByTestId("languages-icon")).toBeInTheDocument();
+    expect(screen.getByTestId("globe-icon")).toBeInTheDocument();
   });
 
   it("should show current locale flag when rendered", () => {
