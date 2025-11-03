@@ -29,13 +29,10 @@ export const POSTHOG_CLIENT_CONFIG = {
   capture_pageview: true,
   capture_pageleave: true,
   capture_exceptions: true,
-  debug: env.NODE_ENV === "development",
+  debug: false, // Set to true for debugging PostHog issues
   // Performance optimization
   loaded: (posthog: { __loaded?: boolean }) => {
     posthog.__loaded = true;
-    if (env.NODE_ENV === "development") {
-      console.info("[PostHog] Client initialized and ready");
-    }
   },
 } as const;
 
