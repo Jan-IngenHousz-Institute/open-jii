@@ -18,6 +18,8 @@ fragment PageFaqFields on PageFaq {
     publishedAt
     environmentId
   }
+  pageTitle
+  pageDescription
   internalName
   title
   intro
