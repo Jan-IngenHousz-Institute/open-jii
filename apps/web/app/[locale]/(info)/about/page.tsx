@@ -25,11 +25,11 @@ export async function generateMetadata({ params }: AboutPageProps): Promise<Meta
   const metadata: Metadata = {};
 
   if (about.pageTitle) {
-    metadata.title = about.pageTitle as string;
+    metadata.title = about.pageTitle;
   }
 
   if (about.pageDescription) {
-    metadata.description = about.pageDescription as string;
+    metadata.description = about.pageDescription;
   }
 
   return metadata;

@@ -25,11 +25,11 @@ export async function generateMetadata({ params }: PoliciesPageProps): Promise<M
   const metadata: Metadata = {};
 
   if (policies.pageTitle) {
-    metadata.title = policies.pageTitle as string;
+    metadata.title = policies.pageTitle;
   }
 
   if (policies.pageDescription) {
-    metadata.description = policies.pageDescription as string;
+    metadata.description = policies.pageDescription;
   }
 
   return metadata;

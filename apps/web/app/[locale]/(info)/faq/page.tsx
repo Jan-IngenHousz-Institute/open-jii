@@ -25,11 +25,11 @@ export async function generateMetadata({ params }: FaqPageProps): Promise<Metada
   const metadata: Metadata = {};
 
   if (faq.pageTitle) {
-    metadata.title = faq.pageTitle as string;
+    metadata.title = faq.pageTitle;
   }
 
   if (faq.pageDescription) {
-    metadata.description = faq.pageDescription as string;
+    metadata.description = faq.pageDescription;
   }
 
   return metadata;
