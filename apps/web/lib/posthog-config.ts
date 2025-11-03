@@ -22,7 +22,7 @@ export const FEATURE_FLAG_DEFAULTS: Record<FeatureFlagKey, boolean> = {
  * PostHog client configuration for browser
  */
 export const POSTHOG_CLIENT_CONFIG = {
-  api_host: "/ingest",
+  api_host: env.NEXT_PUBLIC_POSTHOG_HOST,
   ui_host: env.NEXT_PUBLIC_POSTHOG_HOST,
   person_profiles: "identified_only",
   defaults: "2025-05-24",
@@ -31,9 +31,10 @@ export const POSTHOG_CLIENT_CONFIG = {
   capture_exceptions: true,
   debug: env.NODE_ENV === "development",
   // Performance optimization
-  loaded: (_posthog: unknown) => {
+  loaded: (posthog: { __loaded?: boolean }) => {
+    posthog.__loaded = true;
     if (env.NODE_ENV === "development") {
-      console.info("[PostHog] Client initialized successfully");
+      console.info("[PostHog] Client initialized and ready");
     }
   },
 } as const;

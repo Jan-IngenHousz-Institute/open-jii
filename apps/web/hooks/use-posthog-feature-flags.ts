@@ -58,19 +58,18 @@ export function usePostHogFeatureFlag(flagKey: FeatureFlagKey): boolean | null {
       }
     };
 
-    // Check if PostHog is already loaded
-    if (window.posthog?.__loaded) {
+    // Check if PostHog is already loaded (check for actual methods, not just __loaded flag)
+    if (window.posthog && typeof window.posthog.isFeatureEnabled === "function") {
       setupFeatureFlag();
     } else {
       // If not loaded yet, wait for it with exponential backoff
       let attempts = 0;
-      const maxAttempts = 10;
+      const maxAttempts = 20; // Increased from 10
 
       checkInterval = setInterval(
         () => {
           attempts++;
-
-          if (window.posthog?.__loaded) {
+          if (window.posthog && typeof window.posthog.isFeatureEnabled === "function") {
             if (checkInterval) clearInterval(checkInterval);
             setupFeatureFlag();
           } else if (attempts >= maxAttempts) {
@@ -87,14 +86,14 @@ export function usePostHogFeatureFlag(flagKey: FeatureFlagKey): boolean | null {
         100 * Math.pow(1.5, Math.min(attempts, 5)),
       ); // Exponential backoff
 
-      // Cleanup timeout
+      // Cleanup timeout - increased from 5s to 10s
       timeoutId = setTimeout(() => {
         if (checkInterval) clearInterval(checkInterval);
         if (isMounted) {
           console.warn("[usePostHogFeatureFlag] PostHog initialization timeout");
           setIsEnabled(FEATURE_FLAG_DEFAULTS[flagKey]);
         }
-      }, 5000);
+      }, 10000);
     }
 
     // Cleanup function to prevent memory leaks
