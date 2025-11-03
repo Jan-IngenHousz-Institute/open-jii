@@ -1,7 +1,7 @@
 import type { AccessorKeyColumnDef, Row } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import type React from "react";
-import { useEffect } from "react";
+// import { useEffect } from "react";
 import { useMemo } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import type { AnnotationsRowIdentifier } from "~/components/experiment-data/annotations/utils";
@@ -214,20 +214,20 @@ export const useExperimentData = (
   const tableData = data?.body[0];
 
   // Add all row id's to form
-  const allRowIds = useMemo(() => {
-    if (tableData?.data) {
-      if (tableData.data.columns.find((col) => col.name === ID_COLUMN_NAME)) {
-        // Extract all row IDs from the data
-        return tableData.data.rows.map((row) => row[ID_COLUMN_NAME] as string);
-      }
-      return [];
-    }
-  }, [tableData]);
-  useEffect(() => {
-    if (selectionForm) {
-      selectionForm.setValue("allRows", allRowIds ?? []);
-    }
-  }, [selectionForm, allRowIds]);
+  // const allRowIds = useMemo(() => {
+  //   if (tableData?.data) {
+  //     if (tableData.data.columns.find((col) => col.name === ID_COLUMN_NAME)) {
+  //       // Extract all row IDs from the data
+  //       return tableData.data.rows.map((row) => row[ID_COLUMN_NAME] as string);
+  //     }
+  //     return [];
+  //   }
+  // }, [tableData]);
+  // useEffect(() => {
+  //   if (selectionForm) {
+  //     selectionForm.setValue("allRows", allRowIds ?? []);
+  //   }
+  // }, [selectionForm, allRowIds]);
 
   const tableMetadata: TableMetadata | undefined = useMemo(() => {
     return tableData
