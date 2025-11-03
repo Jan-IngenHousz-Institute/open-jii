@@ -54,6 +54,7 @@ export function MeasurementPanel({
           onSearchChange={setProtocolSearch}
           onAddProtocol={handleAddProtocol}
           isAddingProtocol={false}
+          disabled={disabled}
         />
       </CardContent>
     </Card>
