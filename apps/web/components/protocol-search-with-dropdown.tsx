@@ -19,6 +19,7 @@ export interface ProtocolSearchWithDropdownProps {
   onSearchChange: (value: string) => void;
   onAddProtocol: (protocolId: string) => void | Promise<void>;
   isAddingProtocol: boolean;
+  disabled?: boolean;
 }
 
 export function ProtocolSearchWithDropdown({
@@ -30,6 +31,7 @@ export function ProtocolSearchWithDropdown({
   onSearchChange,
   onAddProtocol,
   isAddingProtocol,
+  disabled = false,
 }: ProtocolSearchWithDropdownProps) {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation("common");
@@ -62,6 +64,7 @@ export function ProtocolSearchWithDropdown({
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between p-0"
+          disabled={disabled}
         >
           <div className="flex w-full items-center gap-3 px-3 py-2.5">
             {selectedProtocol ? (
