@@ -76,8 +76,6 @@ export function ScatterChartRenderer({ visualization, data }: ScatterChartRender
       const colorPalette = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
       const defaultColor = colorPalette[index % colorPalette.length];
 
-      console.log(chartConfig);
-
       return {
         x: xValues,
         y: yValues,
