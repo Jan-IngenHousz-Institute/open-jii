@@ -162,6 +162,9 @@ export function setTestFeatureFlag(flagKey: string, value: boolean): void {
 }
 
 export function getPostHogClient(): PostHog {
+  if (!env.NEXT_PUBLIC_POSTHOG_KEY) {
+    throw new Error("NEXT_PUBLIC_POSTHOG_KEY is not configured");
+  }
   posthogClient ??= new PostHog(env.NEXT_PUBLIC_POSTHOG_KEY, POSTHOG_SERVER_CONFIG);
   return posthogClient;
 }

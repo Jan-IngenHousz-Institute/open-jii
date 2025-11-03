@@ -53,28 +53,32 @@ describe("posthog-server", () => {
     it("should initialize PostHog with correct config", () => {
       getPostHogClient();
 
-      expect(PostHog).toHaveBeenCalledWith("test-key", {
-        host: "https://test.posthog.com",
-      });
+      expect(PostHog).toHaveBeenCalledWith(
+        "test-key",
+        expect.objectContaining({
+          host: "https://test.posthog.com",
+        }),
+      );
     });
   });
 
   describe("isFeatureFlagEnabled", () => {
     it("should return true when feature flag is enabled", async () => {
       const client = getPostHogClient();
-      const mockIsFeatureEnabled = vi.mocked(client.isFeatureEnabled);
-      mockIsFeatureEnabled.mockResolvedValue(true);
+      const isFeatureFlagEnabledSpy = vi.spyOn(client, "isFeatureEnabled").mockResolvedValue(true);
 
       const result = await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
 
       expect(result).toBe(true);
-      expect(mockIsFeatureEnabled).toHaveBeenCalledWith(FEATURE_FLAGS.MULTI_LANGUAGE, "anonymous");
+      expect(isFeatureFlagEnabledSpy).toHaveBeenCalledWith(
+        FEATURE_FLAGS.MULTI_LANGUAGE,
+        "anonymous",
+      );
     });
 
     it("should return false when feature flag is disabled", async () => {
       const client = getPostHogClient();
-      const mockIsFeatureEnabled = vi.mocked(client.isFeatureEnabled);
-      mockIsFeatureEnabled.mockResolvedValue(false);
+      vi.spyOn(client, "isFeatureEnabled").mockResolvedValue(false);
 
       const result = await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
 
@@ -83,8 +87,7 @@ describe("posthog-server", () => {
 
     it("should return false when feature flag returns undefined", async () => {
       const client = getPostHogClient();
-      const mockIsFeatureEnabled = vi.mocked(client.isFeatureEnabled);
-      mockIsFeatureEnabled.mockResolvedValue(undefined);
+      vi.spyOn(client, "isFeatureEnabled").mockResolvedValue(undefined);
 
       const result = await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
 
@@ -93,25 +96,26 @@ describe("posthog-server", () => {
 
     it("should use custom distinctId when provided", async () => {
       const client = getPostHogClient();
-      const mockIsFeatureEnabled = vi.mocked(client.isFeatureEnabled);
-      mockIsFeatureEnabled.mockResolvedValue(true);
+      const isFeatureFlagEnabledSpy = vi.spyOn(client, "isFeatureEnabled").mockResolvedValue(true);
 
       await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE, "user-123");
 
-      expect(mockIsFeatureEnabled).toHaveBeenCalledWith(FEATURE_FLAGS.MULTI_LANGUAGE, "user-123");
+      expect(isFeatureFlagEnabledSpy).toHaveBeenCalledWith(
+        FEATURE_FLAGS.MULTI_LANGUAGE,
+        "user-123",
+      );
     });
 
     it("should return false and log error when PostHog fails", async () => {
       const client = getPostHogClient();
-      const mockIsFeatureEnabled = vi.mocked(client.isFeatureEnabled);
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-      mockIsFeatureEnabled.mockRejectedValue(new Error("PostHog error"));
+      vi.spyOn(client, "isFeatureEnabled").mockRejectedValue(new Error("PostHog error"));
 
       const result = await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
 
       expect(result).toBe(false);
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "[PostHog Server] Error checking feature flag test-flag:",
+        "[PostHog Server] Error checking feature flag multi-language:",
         expect.any(Error),
       );
 
@@ -122,21 +126,21 @@ describe("posthog-server", () => {
   describe("shutdownPostHog", () => {
     it("should shutdown the PostHog client", async () => {
       const client = getPostHogClient();
-      const mockShutdown = vi.mocked(client.shutdown);
+      const shutdownSpy = vi.spyOn(client, "shutdown");
 
       await shutdownPostHog();
 
-      expect(mockShutdown).toHaveBeenCalled();
+      expect(shutdownSpy).toHaveBeenCalled();
     });
 
     it("should handle multiple shutdown calls gracefully", async () => {
       const client = getPostHogClient();
-      const mockShutdown = vi.mocked(client.shutdown);
+      const shutdownSpy = vi.spyOn(client, "shutdown");
 
       await shutdownPostHog();
       await shutdownPostHog();
 
-      expect(mockShutdown).toHaveBeenCalledTimes(1);
+      expect(shutdownSpy).toHaveBeenCalledTimes(1);
     });
   });
 });

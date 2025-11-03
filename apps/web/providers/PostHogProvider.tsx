@@ -6,20 +6,6 @@ import { useEffect, useRef } from "react";
 import { env } from "../env";
 import { POSTHOG_CLIENT_CONFIG } from "../lib/posthog-config";
 
-interface PostHogLib {
-  init: (apiKey: string, config: Record<string, unknown>) => void;
-}
-
-declare global {
-  interface Window {
-    posthog?: PostHogLib & {
-      __loaded?: boolean;
-      isFeatureEnabled: (flagKey: string) => boolean | undefined;
-      onFeatureFlags: (callback: () => void) => () => void;
-    };
-  }
-}
-
 /**
  * PostHog provider component that initializes the PostHog client
  * Should be placed at the root of the application to ensure tracking works
