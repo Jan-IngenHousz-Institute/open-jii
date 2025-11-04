@@ -79,6 +79,11 @@ resource "databricks_pipeline" "this" {
     }
   }
 
+  lifecycle {
+    ignore_changes = [ 
+      run_as
+     ]
+  }
 }
 
 # Grant pipeline permissions to principals if provided
