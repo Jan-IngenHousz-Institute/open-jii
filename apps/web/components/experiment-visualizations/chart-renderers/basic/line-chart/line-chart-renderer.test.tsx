@@ -331,7 +331,7 @@ describe("LineChartRenderer", () => {
       expect(chartData.textContent).toContain('"name": ""');
     });
 
-    it("should handle object x-values as fallback 0", () => {
+    it("should convert object x-values to strings", () => {
       const dataWithObjectX = [
         { time: { nested: "value" }, value: 10 },
         { time: ["array"], value: 20 },
@@ -345,10 +345,14 @@ describe("LineChartRenderer", () => {
         />,
       );
 
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+      const chartData = screen.getByTestId("chart-data");
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const parsed = JSON.parse(chartData.textContent ?? "{}");
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(parsed[0].x).toEqual(["[object Object]", "array"]);
     });
 
-    it("should handle non-parseable y-values as 0", () => {
+    it("should convert non-string/number values to strings", () => {
       const dataWithBadY = [
         { time: 0, value: {} },
         { time: 1, value: [] },
@@ -363,10 +367,14 @@ describe("LineChartRenderer", () => {
         />,
       );
 
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+      const chartData = screen.getByTestId("chart-data");
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const parsed = JSON.parse(chartData.textContent ?? "{}");
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(parsed[0].y).toEqual(["[object Object]", "", "true"]);
     });
 
-    it("should parse string y-values as numbers", () => {
+    it("should preserve string y-values for Plotly to handle", () => {
       const dataWithStringNumbers = [
         { time: 0, value: "10" },
         { time: 1, value: "20.5" },
@@ -385,7 +393,7 @@ describe("LineChartRenderer", () => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const parsed = JSON.parse(chartData.textContent ?? "{}");
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(parsed[0].y).toEqual([10, 20.5, 30]);
+      expect(parsed[0].y).toEqual(["10", "20.5", "30"]);
     });
 
     it("should use array colors when provided in config", () => {

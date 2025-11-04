@@ -54,7 +54,7 @@ export function ScatterChartRenderer({ visualization, data }: ScatterChartRender
     const chartConfig = visualization.config as PlotlyChartConfig &
       Omit<ScatterSeriesData, "x" | "y">;
 
-    const scatterData: ScatterSeriesData[] = yDataSources.map((yDataSource, index) => {
+    const scatterData: ScatterSeriesData[] = yDataSources.map((yDataSource) => {
       const xValues = data.map((row) => {
         const value = row[xColumn];
         return typeof value === "string" || typeof value === "number" ? value : String(value);
@@ -73,9 +73,6 @@ export function ScatterChartRenderer({ visualization, data }: ScatterChartRender
         });
       }
 
-      const colorPalette = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
-      const defaultColor = colorPalette[index % colorPalette.length];
-
       return {
         x: xValues,
         y: yValues,
@@ -84,7 +81,7 @@ export function ScatterChartRenderer({ visualization, data }: ScatterChartRender
         marker: {
           size: chartConfig.marker?.size,
           symbol: chartConfig.marker?.symbol,
-          color: colorValues ?? chartConfig.color ?? defaultColor,
+          color: colorValues ?? chartConfig.color,
           colorscale: colorValues ? chartConfig.marker?.colorscale : undefined,
           showscale: colorValues ? chartConfig.marker?.showscale : undefined,
           ...(colorValues &&
@@ -117,7 +114,7 @@ export function ScatterChartRenderer({ visualization, data }: ScatterChartRender
     });
 
     return (
-      <div style={{ height: `400px`, width: "100%" }}>
+      <div className="flex h-full w-full flex-col">
         <ScatterChart data={scatterData} config={{ ...chartConfig, autosizable: true }} />
       </div>
     );

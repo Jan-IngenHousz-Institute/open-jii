@@ -90,42 +90,21 @@ export function LineChartRenderer({
 
     // Prepare chart data arrays using role-based approach
     const chartSeries: LineSeriesData[] = yDataSources.map((yDataSource, index) => {
-      const xColumnName = xColumn;
-      const yColumnName = yDataSource.columnName;
-
-      // Extract data for this series with type conversion
       const xData = chartData.map((row) => {
-        const value = row[xColumnName];
-        // Convert to number or string or date
-        if (typeof value === "number" || typeof value === "string") {
-          return value;
-        }
-        return 0; // fallback
+        const value = row[xColumn];
+        return typeof value === "string" || typeof value === "number" ? value : String(value);
       });
 
       const yData = chartData.map((row) => {
-        const value = row[yColumnName];
-        // Convert to number
-        if (typeof value === "number") {
-          return value;
-        }
-        if (typeof value === "string") {
-          const num = Number(value);
-          return isNaN(num) ? 0 : num;
-        }
-        return 0; // fallback
+        const value = row[yDataSource.columnName];
+        return typeof value === "string" || typeof value === "number" ? value : String(value);
       });
-
-      const colorPalette = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
-      const defaultColor = colorPalette[index % colorPalette.length];
 
       return {
         x: xData,
         y: yData,
-        name: yDataSource.alias ?? yColumnName,
-        color: Array.isArray(chartConfig.color)
-          ? chartConfig.color[index]
-          : (chartConfig.color ?? defaultColor),
+        name: yDataSource.alias ?? yDataSource.columnName,
+        color: Array.isArray(chartConfig.color) ? chartConfig.color[index] : chartConfig.color,
         mode: chartConfig.mode,
         line: chartConfig.line,
         marker: chartConfig.marker,
@@ -141,7 +120,7 @@ export function LineChartRenderer({
     });
 
     return (
-      <div style={{ height: `400px`, width: "100%" }}>
+      <div className="flex h-full w-full flex-col">
         <LineChart data={chartSeries} config={chartConfig} />{" "}
       </div>
     );

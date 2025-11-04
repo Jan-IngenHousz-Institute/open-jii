@@ -108,9 +108,9 @@ export default function ExperimentVisualizationsDisplay({
         </div>
 
         {selectedVisualization && (
-          <div className="mt-6">
+          <div className="mt-6 flex flex-col">
             {isDataLoading ? (
-              <div className="flex h-[400px] items-center justify-center">
+              <div className="flex h-full items-center justify-center">
                 <div className="text-muted-foreground">Loading visualization data...</div>
               </div>
             ) : (
@@ -118,7 +118,6 @@ export default function ExperimentVisualizationsDisplay({
                 visualization={selectedVisualization}
                 experimentId={experimentId}
                 data={visualizationData?.rows ?? null}
-                height={450}
                 showTitle={false}
                 showDescription={false}
               />

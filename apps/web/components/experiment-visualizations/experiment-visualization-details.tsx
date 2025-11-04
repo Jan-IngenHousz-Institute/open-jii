@@ -219,7 +219,7 @@ export default function ExperimentVisualizationDetails({
       <div className="container mx-auto px-4 py-8 pb-16">
         {/* Full-width Chart */}
         <div className="mb-12">
-          <div className="min-h-[500px] w-full">
+          <div className="flex w-full flex-col">
             <ExperimentVisualizationRenderer
               experimentId={experimentId}
               visualization={visualization}

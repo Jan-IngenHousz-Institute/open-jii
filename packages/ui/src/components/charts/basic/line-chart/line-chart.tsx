@@ -3,6 +3,7 @@
 import type { PlotData } from "plotly.js";
 import React from "react";
 
+import { cn } from "../../../../lib/utils";
 import type {
   BaseChartProps,
   BaseSeries,
@@ -131,7 +132,7 @@ export function LineChart({
   }
 
   return (
-    <div className={className}>
+    <div className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}

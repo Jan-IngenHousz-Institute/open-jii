@@ -29,14 +29,12 @@ vi.mock("../experiment-visualization-renderer", () => ({
     visualization,
     experimentId,
     data,
-    height,
     showTitle,
     showDescription,
   }: {
     visualization: { name: string; chartType: string };
     experimentId: string;
     data?: unknown[];
-    height: number;
     showTitle: boolean;
     showDescription: boolean;
   }) => (
@@ -44,7 +42,6 @@ vi.mock("../experiment-visualization-renderer", () => ({
       <div data-testid="viz-name">{visualization.name}</div>
       <div data-testid="viz-type">{visualization.chartType}</div>
       <div data-testid="viz-experiment">{experimentId}</div>
-      <div data-testid="viz-height">{height}</div>
       <div data-testid="viz-show-title">{showTitle ? "true" : "false"}</div>
       <div data-testid="viz-show-description">{showDescription ? "true" : "false"}</div>
       <div data-testid="viz-data">{data ? JSON.stringify(data) : "no-data"}</div>
@@ -190,22 +187,6 @@ describe("ChartPreview", () => {
       expect(screen.getByTestId("viz-name")).toHaveTextContent("Test Chart");
       expect(screen.getByTestId("viz-type")).toHaveTextContent("line");
       expect(screen.getByTestId("viz-experiment")).toHaveTextContent("test-experiment-id");
-    });
-
-    it("should pass correct height to renderer", async () => {
-      const mockData = { rows: [{ time: 1, temperature: 20 }] };
-
-      const { useExperimentVisualizationData } = await import(
-        "../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData"
-      );
-      vi.mocked(useExperimentVisualizationData).mockReturnValue({
-        data: mockData,
-        isLoading: false,
-      } as never);
-
-      render(<TestWrapper formValues={{}} />);
-
-      expect(screen.getByTestId("viz-height")).toHaveTextContent("500");
     });
 
     it("should hide title and description in preview", async () => {

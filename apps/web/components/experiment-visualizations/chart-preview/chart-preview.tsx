@@ -51,7 +51,7 @@ export function ChartPreview({ form, experimentId }: ChartPreviewProps) {
 
   if (!formValues.dataConfig.tableName) {
     return (
-      <div className="bg-muted/50 flex h-full min-h-[300px] items-center justify-center rounded-lg border border-dashed">
+      <div className="bg-muted/50 flex h-full items-center justify-center rounded-lg border border-dashed">
         <div className="text-muted-foreground text-center">
           <div className="mb-2 text-lg font-medium">{t("preview.noDataSource")}</div>
           <div className="text-sm">{t("preview.selectTable")}</div>
@@ -63,7 +63,7 @@ export function ChartPreview({ form, experimentId }: ChartPreviewProps) {
   const configuredDataSources = formValues.dataConfig.dataSources.filter((ds) => ds.columnName);
   if (configuredDataSources.length === 0) {
     return (
-      <div className="bg-muted/50 flex h-full min-h-[300px] items-center justify-center rounded-lg border border-dashed">
+      <div className="bg-muted/50 flex h-full items-center justify-center rounded-lg border border-dashed">
         <div className="text-muted-foreground text-center">
           <div className="mb-2 text-lg font-medium">{t("preview.noColumns")}</div>
           <div className="text-sm">{t("preview.configureColumns")}</div>
@@ -74,19 +74,18 @@ export function ChartPreview({ form, experimentId }: ChartPreviewProps) {
 
   if (isDataLoading) {
     return (
-      <div className="flex h-full min-h-[400px] items-center justify-center">
+      <div className="flex h-full items-center justify-center">
         <div className="text-muted-foreground">{t("ui.messages.loadingData")}</div>
       </div>
     );
   }
 
   return (
-    <div className="h-full min-h-[500px] w-full">
+    <div className="h-full w-full">
       <ExperimentVisualizationRenderer
         visualization={previewVisualization}
         experimentId={experimentId}
         data={visualizationData?.rows}
-        height={500}
         showTitle={false}
         showDescription={false}
       />

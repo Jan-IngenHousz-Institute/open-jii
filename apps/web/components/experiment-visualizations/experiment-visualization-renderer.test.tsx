@@ -178,31 +178,6 @@ describe("ExperimentVisualizationRenderer", () => {
     expect(screen.queryByText("A test visualization")).not.toBeInTheDocument();
   });
 
-  it("should apply custom height", () => {
-    const { container } = render(
-      <ExperimentVisualizationRenderer
-        visualization={baseVisualization}
-        experimentId={mockExperimentId}
-        height={600}
-      />,
-    );
-
-    const chartContainer = container.querySelector('div[style*="height: 600px"]');
-    expect(chartContainer).toBeInTheDocument();
-  });
-
-  it("should use default height when not specified", () => {
-    const { container } = render(
-      <ExperimentVisualizationRenderer
-        visualization={baseVisualization}
-        experimentId={mockExperimentId}
-      />,
-    );
-
-    const chartContainer = container.querySelector('div[style*="height: 450px"]');
-    expect(chartContainer).toBeInTheDocument();
-  });
-
   it("should render both title and description by default", () => {
     render(
       <ExperimentVisualizationRenderer

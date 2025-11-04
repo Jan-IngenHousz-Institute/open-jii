@@ -32,7 +32,7 @@ export function ChartPreviewModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[65vh] min-h-[500px] w-[95vw] max-w-7xl">
+      <DialogContent className="max-w-6xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Eye className="text-primary h-5 w-5" />
@@ -40,8 +40,10 @@ export function ChartPreviewModal({
           </DialogTitle>
           <DialogDescription>{t("preview.description")}</DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-hidden p-6">
-          <ChartPreview form={form} experimentId={experimentId} />
+        <div className="mt-6">
+          <div className="h-[500px]">
+            <ChartPreview form={form} experimentId={experimentId} />
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -15,7 +15,7 @@ const LazyChartWrapper = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[400px] items-center justify-center">
+      <div className="flex h-full min-h-[300px] items-center justify-center">
         <div className="text-muted-foreground">Loading visualization...</div>
       </div>
     ),
@@ -26,7 +26,6 @@ interface ExperimentVisualizationRendererProps {
   visualization: ExperimentVisualization;
   experimentId: string;
   data?: Record<string, unknown>[] | null;
-  height?: number;
   showTitle?: boolean;
   showDescription?: boolean;
 }
@@ -35,7 +34,6 @@ export default function ExperimentVisualizationRenderer({
   visualization,
   experimentId,
   data,
-  height = 450,
   showTitle = true,
   showDescription = true,
 }: ExperimentVisualizationRendererProps) {
@@ -47,7 +45,6 @@ export default function ExperimentVisualizationRenderer({
       visualization,
       experimentId,
       data: data ?? undefined,
-      height,
     };
 
     switch (visualization.chartType) {
@@ -71,7 +68,7 @@ export default function ExperimentVisualizationRenderer({
   };
 
   return (
-    <div className="w-full">
+    <div className="flex h-full w-full flex-col">
       {(showTitle || showDescription) && (
         <div className="mb-6">
           {showTitle && <h2 className="text-2xl font-bold">{visualization.name}</h2>}
@@ -80,7 +77,7 @@ export default function ExperimentVisualizationRenderer({
           )}
         </div>
       )}
-      <div className="w-full" style={{ height: `${height}px` }}>
+      <div className="flex min-h-0 w-full flex-1 flex-col">
         <LazyChartWrapper>{renderChart()}</LazyChartWrapper>
       </div>
     </div>

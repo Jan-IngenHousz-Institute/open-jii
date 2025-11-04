@@ -146,21 +146,23 @@ describe("ChartPreviewModal", () => {
       render(<TestWrapper isOpen={true} onOpenChange={onOpenChange} />);
 
       const dialogContent = screen.getByRole("dialog");
-      expect(dialogContent).toHaveClass("h-[65vh]");
-      expect(dialogContent).toHaveClass("min-h-[500px]");
-      expect(dialogContent).toHaveClass("w-[95vw]");
-      expect(dialogContent).toHaveClass("max-w-7xl");
+      expect(dialogContent).toHaveClass("max-w-6xl");
+
+      // Check that chart preview is rendered within the modal
+      const chartPreview = screen.getByTestId("chart-preview");
+      expect(chartPreview).toBeInTheDocument();
+
+      // Verify the chart preview is inside the dialog
+      expect(dialogContent).toContainElement(chartPreview);
     });
 
-    it("should have correct preview container styling", () => {
+    it("should render chart preview container", () => {
       const onOpenChange = vi.fn();
 
       render(<TestWrapper isOpen={true} onOpenChange={onOpenChange} />);
 
-      const previewContainer = screen.getByTestId("chart-preview").parentElement;
-      expect(previewContainer).toHaveClass("flex-1");
-      expect(previewContainer).toHaveClass("overflow-hidden");
-      expect(previewContainer).toHaveClass("p-6");
+      const chartPreview = screen.getByTestId("chart-preview");
+      expect(chartPreview).toBeInTheDocument();
     });
   });
 
