@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowLeft, Edit, Trash2, ChevronDown, Settings } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import { useLocale } from "~/hooks/useLocale";
 
 import { useTranslation } from "@repo/i18n";
@@ -19,6 +19,7 @@ import {
 } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
+import { useExperimentAccess } from "../../hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentVisualization } from "../../hooks/experiment/useExperimentVisualization/useExperimentVisualization";
 import { useExperimentVisualizationData } from "../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { useExperimentVisualizationDelete } from "../../hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete";
@@ -27,15 +28,27 @@ import ExperimentVisualizationRenderer from "./experiment-visualization-renderer
 interface ExperimentVisualizationDetailsProps {
   visualizationId: string;
   experimentId: string;
+  isArchiveContext?: boolean;
 }
 
 export default function ExperimentVisualizationDetails({
   visualizationId,
   experimentId,
+  isArchiveContext = false,
 }: ExperimentVisualizationDetailsProps) {
   const { t } = useTranslation("experimentVisualizations");
   const router = useRouter();
   const locale = useLocale();
+
+  // Check experiment access and status
+  const { data: accessData } = useExperimentAccess(experimentId);
+  const experiment = accessData?.body;
+  const isArchived = experiment?.experiment.status === "archived";
+
+  // Redirect archived experiments to 404 when accessed via non-archive routes
+  if (isArchived && !isArchiveContext) {
+    notFound();
+  }
 
   // Fetch visualization data
   const {
@@ -125,7 +138,7 @@ export default function ExperimentVisualizationDetails({
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button variant="outline" size="sm" className="gap-2" disabled={isArchived}>
                     <Settings className="h-4 w-4" />
                     Actions
                   </Button>
@@ -183,14 +196,14 @@ export default function ExperimentVisualizationDetails({
                     <ChevronDown className="h-3 w-3" />
                   </div>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-64">
+                <DropdownMenuContent align="start" className="min-w-64 max-w-96">
                   {visualization.dataConfig.dataSources.map((ds, index) => (
                     <DropdownMenuItem
                       key={index}
                       className="flex cursor-default items-center justify-between hover:bg-transparent focus:bg-transparent"
                     >
-                      <code className="font-mono text-sm">{ds.columnName}</code>
-                      <Badge variant="outline" className="ml-2 text-xs">
+                      <code className="break-all font-mono text-sm">{ds.columnName}</code>
+                      <Badge variant="outline" className="ml-2 flex-shrink-0 text-xs">
                         {ds.role}
                       </Badge>
                     </DropdownMenuItem>

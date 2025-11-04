@@ -157,25 +157,29 @@
     },
     "colorscales": {
       "viridis": "Viridis",
-      "plasma": "Plasma",
-      "inferno": "Inferno",
-      "magma": "Magma",
       "cividis": "Cividis",
       "blues": "Blauw",
-      "greens": "Groen",
       "reds": "Rood",
-      "oranges": "Oranje",
-      "purples": "Paars",
+      "greens": "Groen",
       "greys": "Grijs",
-      "hot": "Heet",
-      "cool": "Koel",
+      "ylgnbu": "Geel-Groen-Blauw",
+      "ylord": "Geel-Oranje-Rood",
+      "rdbu": "Rood-Blauw",
+      "picnic": "Picknick",
       "rainbow": "Regenboog",
-      "jet": "Jet"
+      "portland": "Portland",
+      "jet": "Jet",
+      "hot": "Heet",
+      "blackbody": "Zwarte lichaam",
+      "earth": "Aarde",
+      "electric": "Elektrisch",
+      "bluered": "Blauw-Rood"
     }
   },
 
   "preview": {
     "title": "Voorvertoning",
+    "description": "Live voorvertoning van uw grafiekconfiguratie",
     "noDataSource": "Geen gegevensbron geselecteerd",
     "selectTable": "Selecteer een gegevenstabel om de voorvertoning te zien",
     "noColumns": "Geen kolommen geconfigureerd",

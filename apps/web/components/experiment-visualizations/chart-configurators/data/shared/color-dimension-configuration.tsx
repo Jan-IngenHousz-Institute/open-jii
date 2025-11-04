@@ -51,89 +51,107 @@ export default function ColorDimensionConfiguration({
       value: "Viridis",
       translationKey: "viridis",
       gradient:
-        "linear-gradient(to right, #440154, #482878, #3e4989, #31688e, #26828e, #1f9e89, #35b779, #6ece58, #b5de2b, #fde725)",
-    },
-    {
-      value: "Plasma",
-      translationKey: "plasma",
-      gradient:
-        "linear-gradient(to right, #0d0887, #46039f, #7201a8, #9c179e, #bd3786, #d8576b, #ed7953, #fb9f3a, #fdca26, #f0f921)",
-    },
-    {
-      value: "Inferno",
-      translationKey: "inferno",
-      gradient:
-        "linear-gradient(to right, #000004, #1b0c41, #4a0c6b, #781c6d, #a52c60, #cf4446, #ed6925, #fb9b06, #f7d13d, #fcffa4)",
-    },
-    {
-      value: "Magma",
-      translationKey: "magma",
-      gradient:
-        "linear-gradient(to right, #000004, #180f3d, #440f76, #721f81, #9e2f7f, #cd4071, #f1605d, #fd9567, #feca57, #fcfdbf)",
+        "linear-gradient(to right, #440154, #48186a, #472d7b, #424086, #3b528b, #33638d, #2c728e, #26828e, #21918c, #1fa088, #28ae80, #3fbc73, #5ec962, #84d44b, #addc30, #d8e219, #fde725)",
     },
     {
       value: "Cividis",
       translationKey: "cividis",
       gradient:
-        "linear-gradient(to right, #00224e, #123570, #3b496c, #575d6d, #707173, #8a8678, #a59c74, #c3b369, #e1cc55, #fde725)",
+        "linear-gradient(to right, rgb(0,32,76), rgb(0,42,102), rgb(0,52,110), rgb(39,63,108), rgb(60,74,107), rgb(76,85,107), rgb(91,95,109), rgb(104,106,112), rgb(117,117,117), rgb(131,129,120), rgb(146,140,120), rgb(161,152,118), rgb(176,165,114), rgb(192,177,109), rgb(209,191,102), rgb(225,204,92), rgb(243,219,79), rgb(255,233,69))",
     },
     {
       value: "Blues",
       translationKey: "blues",
       gradient:
-        "linear-gradient(to right, #f7fbff, #deebf7, #c6dbef, #9ecae1, #6baed6, #4292c6, #2171b5, #08519c, #08306b)",
-    },
-    {
-      value: "Greens",
-      translationKey: "greens",
-      gradient:
-        "linear-gradient(to right, #f7fcf5, #e5f5e0, #c7e9c0, #a1d99b, #74c476, #41ab5d, #238b45, #006d2c, #00441b)",
+        "linear-gradient(to right, rgb(5,10,172), rgb(40,60,190), rgb(70,100,245), rgb(90,120,245), rgb(106,137,247), rgb(220,220,220))",
     },
     {
       value: "Reds",
       translationKey: "reds",
       gradient:
-        "linear-gradient(to right, #fff5f0, #fee0d2, #fcbba1, #fc9272, #fb6a4a, #ef3b2c, #cb181d, #a50f15, #67000d)",
+        "linear-gradient(to right, rgb(220,220,220), rgb(245,195,157), rgb(245,160,105), rgb(178,10,28))",
     },
     {
-      value: "Oranges",
-      translationKey: "oranges",
+      value: "Greens",
+      translationKey: "greens",
       gradient:
-        "linear-gradient(to right, #fff5eb, #fee6ce, #fdd0a2, #fdae6b, #fd8d3c, #f16913, #d94801, #a63603, #7f2704)",
-    },
-    {
-      value: "Purples",
-      translationKey: "purples",
-      gradient:
-        "linear-gradient(to right, #fcfbfd, #efedf5, #dadaeb, #bcbddc, #9e9ac8, #807dba, #6a51a3, #54278f, #3f007d)",
+        "linear-gradient(to right, rgb(0,68,27), rgb(0,109,44), rgb(35,139,69), rgb(65,171,93), rgb(116,196,118), rgb(161,217,155), rgb(199,233,192), rgb(229,245,224), rgb(247,252,245))",
     },
     {
       value: "Greys",
       translationKey: "greys",
+      gradient: "linear-gradient(to right, rgb(0,0,0), rgb(255,255,255))",
+    },
+    {
+      value: "YlGnBu",
+      translationKey: "ylgnbu",
       gradient:
-        "linear-gradient(to right, #ffffff, #f0f0f0, #d9d9d9, #bdbdbd, #969696, #737373, #525252, #252525, #000000)",
+        "linear-gradient(to right, rgb(8,29,88), rgb(37,52,148), rgb(34,94,168), rgb(29,145,192), rgb(65,182,196), rgb(127,205,187), rgb(199,233,180), rgb(237,248,217), rgb(255,255,217))",
     },
     {
-      value: "Hot",
-      translationKey: "hot",
-      gradient: "linear-gradient(to right, #000000, #ff0000, #ffff00, #ffffff)",
+      value: "YlOrRd",
+      translationKey: "ylord",
+      gradient:
+        "linear-gradient(to right, rgb(128,0,38), rgb(189,0,38), rgb(227,26,28), rgb(252,78,42), rgb(253,141,60), rgb(254,178,76), rgb(254,217,118), rgb(255,237,160), rgb(255,255,204))",
     },
     {
-      value: "Cool",
-      translationKey: "cool",
-      gradient: "linear-gradient(to right, #00ffff, #0080ff, #0000ff, #8000ff, #ff00ff)",
+      value: "RdBu",
+      translationKey: "rdbu",
+      gradient:
+        "linear-gradient(to right, rgb(5,10,172), rgb(106,137,247), rgb(190,190,190), rgb(220,170,132), rgb(230,145,90), rgb(178,10,28))",
+    },
+    {
+      value: "Picnic",
+      translationKey: "picnic",
+      gradient:
+        "linear-gradient(to right, rgb(0,0,255), rgb(51,153,255), rgb(102,204,255), rgb(153,204,255), rgb(204,204,255), rgb(255,255,255), rgb(255,204,255), rgb(255,153,255), rgb(255,102,204), rgb(255,102,102), rgb(255,0,0))",
     },
     {
       value: "Rainbow",
       translationKey: "rainbow",
       gradient:
-        "linear-gradient(to right, #ff0000, #ff8000, #ffff00, #80ff00, #00ff00, #00ff80, #00ffff, #0080ff, #0000ff, #8000ff, #ff00ff)",
+        "linear-gradient(to right, rgb(150,0,90), rgb(0,0,200), rgb(0,25,255), rgb(0,152,255), rgb(44,255,150), rgb(151,255,0), rgb(255,234,0), rgb(255,111,0), rgb(255,0,0))",
+    },
+    {
+      value: "Portland",
+      translationKey: "portland",
+      gradient:
+        "linear-gradient(to right, rgb(12,51,131), rgb(10,136,186), rgb(242,211,56), rgb(242,143,56), rgb(217,30,30))",
     },
     {
       value: "Jet",
       translationKey: "jet",
       gradient:
-        "linear-gradient(to right, #000080, #0000ff, #0080ff, #00ffff, #80ff00, #ffff00, #ff8000, #ff0000, #800000)",
+        "linear-gradient(to right, rgb(0,0,131), rgb(0,60,170), rgb(5,255,255), rgb(255,255,0), rgb(250,0,0), rgb(128,0,0))",
+    },
+    {
+      value: "Hot",
+      translationKey: "hot",
+      gradient:
+        "linear-gradient(to right, rgb(0,0,0), rgb(230,0,0), rgb(255,210,0), rgb(255,255,255))",
+    },
+    {
+      value: "Blackbody",
+      translationKey: "blackbody",
+      gradient:
+        "linear-gradient(to right, rgb(0,0,0), rgb(230,0,0), rgb(230,210,0), rgb(255,255,255), rgb(160,200,255))",
+    },
+    {
+      value: "Earth",
+      translationKey: "earth",
+      gradient:
+        "linear-gradient(to right, rgb(0,0,130), rgb(0,180,180), rgb(40,210,40), rgb(230,230,50), rgb(120,70,20), rgb(255,255,255))",
+    },
+    {
+      value: "Electric",
+      translationKey: "electric",
+      gradient:
+        "linear-gradient(to right, rgb(0,0,0), rgb(30,0,100), rgb(120,0,100), rgb(160,90,0), rgb(230,200,0), rgb(255,250,220))",
+    },
+    {
+      value: "Bluered",
+      translationKey: "bluered",
+      gradient: "linear-gradient(to right, rgb(0,0,255), rgb(255,0,0))",
     },
   ];
 
@@ -161,9 +179,9 @@ export default function ColorDimensionConfiguration({
       });
 
       // Auto-fill color axis title with the selected column name
-      const currentColorAxisTitle = form.getValues("config.colorAxisTitle");
-      if (!currentColorAxisTitle || currentColorAxisTitle === "") {
-        form.setValue("config.colorAxisTitle", value);
+      const currentColorAxisTitle = form.getValues("config.marker.colorbar.title.text");
+      if (!currentColorAxisTitle) {
+        form.setValue("config.marker.colorbar.title.text", value);
       }
     }
   };
@@ -257,7 +275,7 @@ export default function ColorDimensionConfiguration({
                                 background: colorscale.gradient,
                               }}
                             />
-                            {t(`colorscales.${colorscale.translationKey}`)}
+                            {t(`configuration.colorscales.${colorscale.translationKey}`)}
                           </div>
                         </SelectItem>
                       ))}
@@ -270,7 +288,7 @@ export default function ColorDimensionConfiguration({
 
             <FormField
               control={form.control}
-              name="config.colorAxisTitle"
+              name="config.marker.colorbar.title.text"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium">
@@ -280,7 +298,7 @@ export default function ColorDimensionConfiguration({
                     <Input
                       placeholder={t("configuration.chart.enterColorAxisTitle")}
                       className="h-10 bg-white"
-                      value={field.value as string}
+                      value={field.value}
                       onChange={field.onChange}
                       onBlur={field.onBlur}
                       name={field.name}

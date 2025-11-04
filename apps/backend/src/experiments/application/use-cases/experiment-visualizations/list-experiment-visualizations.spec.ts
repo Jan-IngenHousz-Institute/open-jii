@@ -2,6 +2,7 @@ import { faker } from "@faker-js/faker";
 
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import type { ExperimentVisualizationDto } from "../../../core/models/experiment-visualizations.model";
 import { ExperimentVisualizationRepository } from "../../../core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { ListExperimentVisualizationsUseCase } from "./list-experiment-visualizations";
@@ -36,29 +37,48 @@ describe("ListExperimentVisualizationsUseCase", () => {
   });
 
   describe("execute", () => {
-    const experimentId = faker.string.uuid();
-
     it("should successfully list visualizations", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
       // Arrange
-      const mockVisualizations = [
+      const mockVisualizations: ExperimentVisualizationDto[] = [
         {
           id: faker.string.uuid(),
-          experimentId,
+          experimentId: experiment.id,
           name: "Visualization 1",
-          type: "bar",
-          dataConfig: { table: "test_table", columns: ["col1", "col2"] },
-          visualConfig: { title: "Visualization 1" },
+          chartFamily: "basic",
+          chartType: "bar",
+          description: null,
+          dataConfig: {
+            tableName: "test_table",
+            dataSources: [
+              { tableName: "test_table", role: "x", columnName: "col1" },
+              { tableName: "test_table", role: "y", columnName: "col2" },
+            ],
+          },
+          config: { title: "Visualization 1" },
           createdBy: testUserId,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
         {
           id: faker.string.uuid(),
-          experimentId,
+          experimentId: experiment.id,
           name: "Visualization 2",
-          type: "line",
-          dataConfig: { table: "test_table", columns: ["col1", "col3"] },
-          visualConfig: { title: "Visualization 2" },
+          chartFamily: "basic",
+          chartType: "line",
+          description: null,
+          dataConfig: {
+            tableName: "test_table",
+            dataSources: [
+              { tableName: "test_table", role: "x", columnName: "col1" },
+              { tableName: "test_table", role: "y", columnName: "col3" },
+            ],
+          },
+          config: { title: "Visualization 2" },
           createdBy: testUserId,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -67,18 +87,10 @@ describe("ListExperimentVisualizationsUseCase", () => {
 
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
-          experiment: {
-            id: experimentId,
-            name: "Test Experiment",
-            description: "Test Description",
-            status: "active",
-            visibility: "private",
-            createdBy: testUserId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
+          experiment,
           hasAccess: true,
           isAdmin: true,
+          hasArchiveAccess: true,
         }),
       );
 
@@ -87,7 +99,7 @@ describe("ListExperimentVisualizationsUseCase", () => {
       );
 
       // Act
-      const result = await useCase.execute(experimentId, testUserId);
+      const result = await useCase.execute(experiment.id, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -95,33 +107,30 @@ describe("ListExperimentVisualizationsUseCase", () => {
       expect(result.value).toHaveLength(2);
       expect(result.value[0]).toMatchObject({
         id: mockVisualizations[0].id,
-        experimentId,
+        experimentId: experiment.id,
         name: mockVisualizations[0].name,
-        type: mockVisualizations[0].type,
+        chartType: mockVisualizations[0].chartType,
       });
       expect(result.value[1]).toMatchObject({
         id: mockVisualizations[1].id,
-        experimentId,
+        experimentId: experiment.id,
         name: mockVisualizations[1].name,
-        type: mockVisualizations[1].type,
+        chartType: mockVisualizations[1].chartType,
       });
     });
 
     it("should return empty array when there are no visualizations", async () => {
       // Arrange
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
-          experiment: {
-            id: experimentId,
-            name: "Test Experiment",
-            description: "Test Description",
-            status: "active",
-            visibility: "private",
-            createdBy: testUserId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
+          experiment,
           hasAccess: true,
+          hasArchiveAccess: true,
           isAdmin: true,
         }),
       );
@@ -131,7 +140,7 @@ describe("ListExperimentVisualizationsUseCase", () => {
       );
 
       // Act
-      const result = await useCase.execute(experimentId, testUserId);
+      const result = await useCase.execute(experiment.id, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -142,44 +151,44 @@ describe("ListExperimentVisualizationsUseCase", () => {
 
     it("should fail when experiment does not exist", async () => {
       // Arrange
+      const nonExistentExperimentId = faker.string.uuid();
+
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
           experiment: null,
           hasAccess: false,
+          hasArchiveAccess: false,
           isAdmin: false,
         }),
       );
 
       // Act
-      const result = await useCase.execute(experimentId, testUserId);
+      const result = await useCase.execute(nonExistentExperimentId, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toBe(`Experiment with ID ${experimentId} not found`);
+      expect(result.error.message).toBe(`Experiment with ID ${nonExistentExperimentId} not found`);
     });
 
     it("should fail when user does not have access to the experiment", async () => {
       // Arrange
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
-          experiment: {
-            id: experimentId,
-            name: "Test Experiment",
-            description: "Test Description",
-            status: "active",
-            visibility: "private",
-            createdBy: faker.string.uuid(), // Different user
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
+          experiment,
           hasAccess: false,
+          hasArchiveAccess: false,
           isAdmin: false,
         }),
       );
 
       // Act
-      const result = await useCase.execute(experimentId, testUserId);
+      const result = await useCase.execute(experiment.id, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -189,19 +198,16 @@ describe("ListExperimentVisualizationsUseCase", () => {
 
     it("should fail when repository throws an error", async () => {
       // Arrange
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
-          experiment: {
-            id: experimentId,
-            name: "Test Experiment",
-            description: "Test Description",
-            status: "active",
-            visibility: "private",
-            createdBy: testUserId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
+          experiment,
           hasAccess: true,
+          hasArchiveAccess: true,
           isAdmin: true,
         }),
       );
@@ -216,7 +222,7 @@ describe("ListExperimentVisualizationsUseCase", () => {
       );
 
       // Act
-      const result = await useCase.execute(experimentId, testUserId);
+      const result = await useCase.execute(experiment.id, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);

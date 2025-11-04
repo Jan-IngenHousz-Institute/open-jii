@@ -94,12 +94,13 @@ describe("ChartPreviewModal", () => {
   });
 
   describe("Modal Content", () => {
-    it("should display the preview title", () => {
+    it("should display the preview title and description", () => {
       const onOpenChange = vi.fn();
 
       render(<TestWrapper isOpen={true} onOpenChange={onOpenChange} />);
 
       expect(screen.getByText("preview.title")).toBeInTheDocument();
+      expect(screen.getByText("preview.description")).toBeInTheDocument();
     });
 
     it("should render the Eye icon in the title", () => {

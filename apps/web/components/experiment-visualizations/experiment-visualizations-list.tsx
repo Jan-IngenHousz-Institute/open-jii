@@ -13,6 +13,7 @@ interface ExperimentVisualizationsListProps {
   visualizations: ExperimentVisualization[];
   experimentId: string;
   isLoading?: boolean;
+  isArchived?: boolean;
 }
 
 const getChartTypeDisplay = (chartType: string, t: (key: string) => string) => {
@@ -45,9 +46,13 @@ export default function ExperimentVisualizationsList({
   visualizations,
   experimentId,
   isLoading,
+  isArchived = false,
 }: ExperimentVisualizationsListProps) {
   const { t } = useTranslation("experimentVisualizations");
   const { t: tCommon } = useTranslation("common");
+
+  // Generate the correct base path based on archive status
+  const basePath = isArchived ? "experiments-archive" : "experiments";
 
   if (isLoading) {
     return <div className="py-8 text-center">{tCommon("loading")}</div>;
@@ -64,7 +69,7 @@ export default function ExperimentVisualizationsList({
         {visualizations.map((visualization) => (
           <Link
             key={visualization.id}
-            href={`/platform/experiments/${experimentId}/analysis/visualizations/${visualization.id}`}
+            href={`/platform/${basePath}/${experimentId}/analysis/visualizations/${visualization.id}`}
           >
             <Card className="flex h-full flex-col bg-white transition-shadow hover:shadow-md">
               <CardHeader className="pb-3">

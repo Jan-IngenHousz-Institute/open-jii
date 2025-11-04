@@ -118,7 +118,7 @@ export function ScatterChartRenderer({ visualization, data }: ScatterChartRender
 
     return (
       <div style={{ height: `400px`, width: "100%" }}>
-        <ScatterChart data={scatterData} config={chartConfig} />
+        <ScatterChart data={scatterData} config={{ ...chartConfig, autosizable: true }} />
       </div>
     );
   } catch (error) {

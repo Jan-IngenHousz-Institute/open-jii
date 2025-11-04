@@ -81,13 +81,13 @@ function TestWrapper({
         gridlines: { x: true, y: true },
         xaxis: { title: { text: "" }, type: "linear" },
         yaxis: { title: { text: "" }, type: "linear" },
-        colorAxisTitle: defaultValues?.config?.colorAxisTitle ?? "",
         marker: {
           colorscale: (defaultValues?.config?.marker?.colorscale as string) || "Viridis",
           showscale: defaultValues?.config?.marker?.showscale ?? true,
           colorbar: {
             title: {
               side: defaultValues?.config?.marker?.colorbar?.title?.side ?? "right",
+              text: defaultValues?.config?.marker?.colorbar?.title?.text ?? "",
             },
           },
         },
@@ -254,7 +254,7 @@ describe("ColorDimensionConfiguration", () => {
       expect(screen.getByText("configuration.color.scale")).toBeInTheDocument();
     });
 
-    it("should show all 15 colorscale options when opened", async () => {
+    it("should show all 18 colorscale options when opened", async () => {
       const user = userEvent.setup();
       render(
         <TestWrapper
@@ -266,22 +266,27 @@ describe("ColorDimensionConfiguration", () => {
       const colorscaleSelect = colorscaleSelects[1]; // Second combobox is colorscale
       await user.click(colorscaleSelect);
 
-      // Check all 15 colorscales are present (use getAllByText since they appear in trigger + options)
-      expect(screen.getAllByText("colorscales.viridis").length).toBeGreaterThanOrEqual(1);
-      expect(screen.getByText("colorscales.plasma")).toBeInTheDocument();
-      expect(screen.getByText("colorscales.inferno")).toBeInTheDocument();
-      expect(screen.getByText("colorscales.magma")).toBeInTheDocument();
-      expect(screen.getByText("colorscales.cividis")).toBeInTheDocument();
-      expect(screen.getByText("colorscales.blues")).toBeInTheDocument();
-      expect(screen.getByText("colorscales.greens")).toBeInTheDocument();
-      expect(screen.getByText("colorscales.reds")).toBeInTheDocument();
-      expect(screen.getByText("colorscales.oranges")).toBeInTheDocument();
-      expect(screen.getByText("colorscales.purples")).toBeInTheDocument();
-      expect(screen.getByText("colorscales.greys")).toBeInTheDocument();
-      expect(screen.getByText("colorscales.hot")).toBeInTheDocument();
-      expect(screen.getByText("colorscales.cool")).toBeInTheDocument();
-      expect(screen.getByText("colorscales.rainbow")).toBeInTheDocument();
-      expect(screen.getByText("colorscales.jet")).toBeInTheDocument();
+      // Check all 18 colorscales are present (use getAllByText since they appear in trigger + options)
+      expect(
+        screen.getAllByText("configuration.colorscales.viridis").length,
+      ).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("configuration.colorscales.cividis")).toBeInTheDocument();
+      expect(screen.getByText("configuration.colorscales.blues")).toBeInTheDocument();
+      expect(screen.getByText("configuration.colorscales.reds")).toBeInTheDocument();
+      expect(screen.getByText("configuration.colorscales.greens")).toBeInTheDocument();
+      expect(screen.getByText("configuration.colorscales.greys")).toBeInTheDocument();
+      expect(screen.getByText("configuration.colorscales.ylgnbu")).toBeInTheDocument();
+      expect(screen.getByText("configuration.colorscales.ylord")).toBeInTheDocument();
+      expect(screen.getByText("configuration.colorscales.rdbu")).toBeInTheDocument();
+      expect(screen.getByText("configuration.colorscales.picnic")).toBeInTheDocument();
+      expect(screen.getByText("configuration.colorscales.rainbow")).toBeInTheDocument();
+      expect(screen.getByText("configuration.colorscales.portland")).toBeInTheDocument();
+      expect(screen.getByText("configuration.colorscales.jet")).toBeInTheDocument();
+      expect(screen.getByText("configuration.colorscales.hot")).toBeInTheDocument();
+      expect(screen.getByText("configuration.colorscales.blackbody")).toBeInTheDocument();
+      expect(screen.getByText("configuration.colorscales.earth")).toBeInTheDocument();
+      expect(screen.getByText("configuration.colorscales.electric")).toBeInTheDocument();
+      expect(screen.getByText("configuration.colorscales.bluered")).toBeInTheDocument();
     });
 
     it("should display gradient preview for each colorscale option", async () => {
@@ -300,8 +305,8 @@ describe("ColorDimensionConfiguration", () => {
       const listbox = screen.getByRole("listbox");
       const gradientDivs = within(listbox).getAllByRole("option");
 
-      // Should have 15 options
-      expect(gradientDivs.length).toBeGreaterThanOrEqual(15);
+      // Should have 18 options
+      expect(gradientDivs.length).toBeGreaterThanOrEqual(18);
     });
   });
 

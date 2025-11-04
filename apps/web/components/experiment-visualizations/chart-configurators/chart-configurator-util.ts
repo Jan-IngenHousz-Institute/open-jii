@@ -46,7 +46,6 @@ export const getDefaultChartConfig = (chartType: string): ChartConfig => {
     case "scatter":
       return {
         ...baseDefaults,
-        colorAxisTitle: "",
         mode: "markers",
         color: [DEFAULT_PRIMARY_COLOR],
         marker: {
@@ -57,6 +56,7 @@ export const getDefaultChartConfig = (chartType: string): ChartConfig => {
           colorbar: {
             title: {
               side: "right",
+              text: "",
             },
           },
         },

@@ -1,10 +1,11 @@
 "use client";
 
 import NewVisualizationForm from "@/components/experiment-visualizations/new-visualization-form";
+import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentSampleData } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useLocale } from "@/hooks/useLocale";
 import { Eye } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { notFound, useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
@@ -16,6 +17,14 @@ export default function NewVisualizationPage() {
   const router = useRouter();
   const locale = useLocale();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  // Check if experiment is archived - redirect to 404 if so
+  const { data: accessData } = useExperimentAccess(experimentId);
+  const experimentData = accessData?.body.experiment;
+
+  if (experimentData?.status === "archived") {
+    notFound();
+  }
 
   // Fetch sample data to get tables and columns
   const { sampleTables, isLoading: isLoadingTables } = useExperimentSampleData(experimentId, 5);

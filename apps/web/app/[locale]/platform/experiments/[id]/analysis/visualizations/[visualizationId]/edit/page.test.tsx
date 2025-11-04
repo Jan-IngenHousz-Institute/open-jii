@@ -17,6 +17,13 @@ vi.mock("next/navigation", () => ({
   notFound: () => mockNotFound(),
 }));
 
+// Mock useExperimentAccess hook
+const mockUseExperimentAccess = vi.fn();
+vi.mock("@/hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
+  useExperimentAccess: (experimentId: string) =>
+    mockUseExperimentAccess(experimentId) as { data: unknown },
+}));
+
 // Mock hooks
 const mockUseExperimentVisualization = vi.fn();
 const mockUseExperimentSampleData = vi.fn();
@@ -123,6 +130,17 @@ vi.mock("lucide-react", () => ({
 describe("EditVisualizationPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Default mock for useExperimentAccess
+    mockUseExperimentAccess.mockReturnValue({
+      data: {
+        body: {
+          experiment: {
+            status: "active",
+          },
+        },
+      },
+    });
   });
 
   describe("Loading state", () => {
@@ -494,6 +512,35 @@ describe("EditVisualizationPage", () => {
       const previewButton = screen.getByText("Preview").closest("button");
       expect(previewButton?.getAttribute("data-variant")).toBe("outline");
       expect(previewButton?.getAttribute("data-size")).toBe("sm");
+    });
+  });
+
+  describe("Archived experiment handling", () => {
+    it("should call notFound when experiment is archived", () => {
+      // Mock archived experiment
+      mockUseExperimentAccess.mockReturnValue({
+        data: {
+          body: {
+            experiment: {
+              status: "archived",
+            },
+          },
+        },
+      });
+
+      mockUseExperimentVisualization.mockReturnValue({
+        data: { body: { id: "viz-456", name: "Test Chart" } },
+        isLoading: false,
+        error: null,
+      });
+
+      mockUseExperimentSampleData.mockReturnValue({
+        sampleTables: [],
+        isLoading: false,
+      });
+
+      expect(() => render(<EditVisualizationPage />)).toThrow("Not Found");
+      expect(mockNotFound).toHaveBeenCalled();
     });
   });
 });

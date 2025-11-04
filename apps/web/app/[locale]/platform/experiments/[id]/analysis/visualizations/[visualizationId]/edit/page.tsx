@@ -1,6 +1,7 @@
 "use client";
 
 import EditVisualizationForm from "@/components/experiment-visualizations/edit-visualization-form";
+import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentSampleData } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentVisualization } from "@/hooks/experiment/useExperimentVisualization/useExperimentVisualization";
 import { useLocale } from "@/hooks/useLocale";
@@ -20,6 +21,14 @@ export default function EditVisualizationPage() {
   const router = useRouter();
   const locale = useLocale();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  // Check if experiment is archived - redirect to 404 if so
+  const { data: accessData } = useExperimentAccess(experimentId);
+  const experimentData = accessData?.body.experiment;
+
+  if (experimentData?.status === "archived") {
+    notFound();
+  }
 
   // Fetch the visualization data
   const {

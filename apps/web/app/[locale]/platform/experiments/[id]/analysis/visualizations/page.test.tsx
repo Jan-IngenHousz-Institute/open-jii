@@ -8,9 +8,20 @@ import VisualizationsPage from "./page";
 
 // Mock next/navigation
 const mockPush = vi.fn();
+const mockNotFound = vi.fn(() => {
+  throw new Error("Not Found");
+});
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "exp-123" }),
   useRouter: () => ({ push: mockPush }),
+  notFound: () => mockNotFound(),
+}));
+
+//Mock useExperimentAccess hook
+const mockUseExperimentAccess = vi.fn();
+vi.mock("@/hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
+  useExperimentAccess: (experimentId: string) =>
+    mockUseExperimentAccess(experimentId) as { data: unknown },
 }));
 
 // Mock hooks
@@ -76,6 +87,17 @@ vi.mock("lucide-react", () => ({
 describe("VisualizationsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Default mock for useExperimentAccess
+    mockUseExperimentAccess.mockReturnValue({
+      data: {
+        body: {
+          experiment: {
+            status: "active",
+          },
+        },
+      },
+    });
   });
 
   describe("Successful loading state", () => {
@@ -316,6 +338,29 @@ describe("VisualizationsPage", () => {
 
       expect(screen.getByTestId("viz-viz-1")).toBeInTheDocument();
       expect(screen.getByTestId("viz-viz-2")).toBeInTheDocument();
+    });
+  });
+
+  describe("Archived experiment handling", () => {
+    it("should call notFound when experiment is archived", () => {
+      // Mock archived experiment
+      mockUseExperimentAccess.mockReturnValue({
+        data: {
+          body: {
+            experiment: {
+              status: "archived",
+            },
+          },
+        },
+      });
+
+      mockUseExperimentVisualizations.mockReturnValue({
+        data: { body: [] },
+        isLoading: false,
+      });
+
+      expect(() => render(<VisualizationsPage />)).toThrow("Not Found");
+      expect(mockNotFound).toHaveBeenCalled();
     });
   });
 });

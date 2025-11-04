@@ -157,25 +157,29 @@
     },
     "colorscales": {
       "viridis": "Viridis",
-      "plasma": "Plasma",
-      "inferno": "Inferno",
-      "magma": "Magma",
       "cividis": "Cividis",
       "blues": "Blau",
-      "greens": "Grün",
       "reds": "Rot",
-      "oranges": "Orange",
-      "purples": "Lila",
+      "greens": "Grün",
       "greys": "Grau",
-      "hot": "Heiß",
-      "cool": "Kühl",
+      "ylgnbu": "Gelb-Grün-Blau",
+      "ylord": "Gelb-Orange-Rot",
+      "rdbu": "Rot-Blau",
+      "picnic": "Picknick",
       "rainbow": "Regenbogen",
-      "jet": "Jet"
+      "portland": "Portland",
+      "jet": "Jet",
+      "hot": "Heiß",
+      "blackbody": "Schwarzkörper",
+      "earth": "Erde",
+      "electric": "Elektrisch",
+      "bluered": "Blau-Rot"
     }
   },
 
   "preview": {
     "title": "Vorschau",
+    "description": "Live-Vorschau Ihrer Diagrammkonfiguration",
     "noDataSource": "Keine Datenquelle ausgewählt",
     "selectTable": "Wählen Sie eine Datentabelle aus, um die Vorschau zu sehen",
     "noColumns": "Keine Spalten konfiguriert",

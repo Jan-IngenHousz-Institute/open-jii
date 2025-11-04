@@ -2,10 +2,10 @@
   "ui": {
     "title": "Visualizations",
     "actions": {
-      "edit": "Edit",
+      "edit": "Edit Visualization",
       "delete": "Delete",
       "deleting": "Deleting...",
-      "create": "Create New",
+      "create": "New Visualization",
       "back": "Back"
     },
     "messages": {
@@ -157,25 +157,29 @@
     },
     "colorscales": {
       "viridis": "Viridis",
-      "plasma": "Plasma",
-      "inferno": "Inferno",
-      "magma": "Magma",
       "cividis": "Cividis",
       "blues": "Blues",
-      "greens": "Greens",
       "reds": "Reds",
-      "oranges": "Oranges",
-      "purples": "Purples",
+      "greens": "Greens",
       "greys": "Greys",
-      "hot": "Hot",
-      "cool": "Cool",
+      "ylgnbu": "Yellow-Green-Blue",
+      "ylord": "Yellow-Orange-Red",
+      "rdbu": "Red-Blue",
+      "picnic": "Picnic",
       "rainbow": "Rainbow",
-      "jet": "Jet"
+      "portland": "Portland",
+      "jet": "Jet",
+      "hot": "Hot",
+      "blackbody": "Blackbody",
+      "earth": "Earth",
+      "electric": "Electric",
+      "bluered": "Blue-Red"
     }
   },
 
   "preview": {
     "title": "Preview",
+    "description": "Live preview of your chart configuration",
     "noDataSource": "No data source selected",
     "selectTable": "Select a data table to see the preview",
     "noColumns": "No columns configured",

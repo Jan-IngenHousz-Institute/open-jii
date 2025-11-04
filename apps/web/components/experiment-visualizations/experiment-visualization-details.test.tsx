@@ -1,11 +1,12 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useRouter } from "next/navigation";
+import { useRouter, notFound } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { ExperimentVisualization } from "@repo/api";
 import { toast } from "@repo/ui/hooks";
 
+import { useExperimentAccess } from "../../hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentVisualization } from "../../hooks/experiment/useExperimentVisualization/useExperimentVisualization";
 import { useExperimentVisualizationData } from "../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { useExperimentVisualizationDelete } from "../../hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete";
@@ -14,6 +15,7 @@ import ExperimentVisualizationDetails from "./experiment-visualization-details";
 // Mock the dependencies
 vi.mock("next/navigation", () => ({
   useRouter: vi.fn(),
+  notFound: vi.fn(),
 }));
 
 vi.mock("~/hooks/useLocale", () => ({
@@ -32,6 +34,10 @@ vi.mock("@repo/ui/hooks", () => ({
 
 vi.mock("../../hooks/experiment/useExperimentVisualization/useExperimentVisualization", () => ({
   useExperimentVisualization: vi.fn(),
+}));
+
+vi.mock("../../hooks/experiment/useExperimentAccess/useExperimentAccess", () => ({
+  useExperimentAccess: vi.fn(),
 }));
 
 vi.mock(
@@ -92,6 +98,21 @@ describe("ExperimentVisualizationDetails", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (useRouter as ReturnType<typeof vi.fn>).mockReturnValue(mockRouter);
+
+    // Default mock for useExperimentAccess - active experiment
+    (useExperimentAccess as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: {
+        body: {
+          experiment: {
+            status: "active",
+          },
+          hasAccess: true,
+          isAdmin: false,
+        },
+      },
+      isLoading: false,
+      error: null,
+    });
   });
 
   it("should render loading state", () => {
@@ -542,5 +563,141 @@ describe("ExperimentVisualizationDetails", () => {
     );
 
     expect(screen.queryByText("A test visualization")).not.toBeInTheDocument();
+  });
+
+  describe("Archived Experiment", () => {
+    beforeEach(() => {
+      // Mock archived experiment
+      (useExperimentAccess as ReturnType<typeof vi.fn>).mockReturnValue({
+        data: {
+          body: {
+            experiment: {
+              status: "archived",
+            },
+            hasAccess: true,
+            isAdmin: false,
+          },
+        },
+        isLoading: false,
+        error: null,
+      });
+    });
+
+    it("should call notFound() when archived experiment is accessed without archive context", () => {
+      (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
+        data: { body: mockVisualization },
+        isLoading: false,
+        error: null,
+      });
+
+      (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
+        data: mockVisualizationData,
+      });
+
+      (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
+        mutate: vi.fn(),
+        isPending: false,
+      });
+
+      render(
+        <ExperimentVisualizationDetails
+          visualizationId={mockVisualizationId}
+          experimentId={mockExperimentId}
+          // isArchiveContext is false by default
+        />,
+      );
+
+      expect(notFound).toHaveBeenCalled();
+    });
+
+    it("should NOT call notFound() when archived experiment is accessed with archive context", () => {
+      (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
+        data: { body: mockVisualization },
+        isLoading: false,
+        error: null,
+      });
+
+      (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
+        data: mockVisualizationData,
+      });
+
+      (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
+        mutate: vi.fn(),
+        isPending: false,
+      });
+
+      render(
+        <ExperimentVisualizationDetails
+          visualizationId={mockVisualizationId}
+          experimentId={mockExperimentId}
+          isArchiveContext={true}
+        />,
+      );
+
+      expect(notFound).not.toHaveBeenCalled();
+    });
+
+    it("should disable actions button when experiment is archived (in archive context)", () => {
+      (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
+        data: { body: mockVisualization },
+        isLoading: false,
+        error: null,
+      });
+
+      (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
+        data: mockVisualizationData,
+      });
+
+      (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
+        mutate: vi.fn(),
+        isPending: false,
+      });
+
+      render(
+        <ExperimentVisualizationDetails
+          visualizationId={mockVisualizationId}
+          experimentId={mockExperimentId}
+          isArchiveContext={true}
+        />,
+      );
+
+      const actionsButton = screen.getByText("Actions");
+      expect(actionsButton).toBeDisabled();
+    });
+
+    it("should not open dropdown menu when actions button is disabled for archived experiment (in archive context)", () => {
+      (useExperimentVisualization as ReturnType<typeof vi.fn>).mockReturnValue({
+        data: { body: mockVisualization },
+        isLoading: false,
+        error: null,
+      });
+
+      (useExperimentVisualizationData as ReturnType<typeof vi.fn>).mockReturnValue({
+        data: mockVisualizationData,
+      });
+
+      (useExperimentVisualizationDelete as ReturnType<typeof vi.fn>).mockReturnValue({
+        mutate: vi.fn(),
+        isPending: false,
+      });
+
+      render(
+        <ExperimentVisualizationDetails
+          visualizationId={mockVisualizationId}
+          experimentId={mockExperimentId}
+          isArchiveContext={true}
+        />,
+      );
+
+      const actionsButton = screen.getByText("Actions");
+
+      // Button should be disabled for archived experiments
+      expect(actionsButton).toBeDisabled();
+
+      // Since button is disabled, dropdown menu items should not be accessible
+      // We don't click the disabled button as that's not user behavior
+      expect(screen.queryByText("ui.actions.edit")).not.toBeInTheDocument();
+      expect(screen.queryByText("ui.actions.delete")).not.toBeInTheDocument();
+    });
   });
 });
