@@ -8,6 +8,7 @@ import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useE
 import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
 import { useExperimentFlowCreate } from "@/hooks/experiment/useExperimentFlowCreate/useExperimentFlowCreate";
 import { useExperimentFlowUpdate } from "@/hooks/experiment/useExperimentFlowUpdate/useExperimentFlowUpdate";
+import { notFound } from "next/navigation";
 import { use, useState, useRef, useCallback } from "react";
 
 // UpsertFlowBody type no longer needed directly (constructed on-demand by editor)
@@ -91,6 +92,11 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
 
   if (!experimentData || !accessData?.body.experiment) {
     return <div>{t("notFound")}</div>;
+  }
+
+  // Check if experiment is archived - if so, redirect to not found (should use archive route)
+  if (experimentData.status === "archived") {
+    notFound();
   }
 
   const isSaving = createFlowMutation.isPending || updateFlowMutation.isPending;

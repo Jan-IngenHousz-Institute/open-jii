@@ -5,6 +5,8 @@ fragment PagePoliciesFields on PagePolicies {
     publishedAt
     environmentId
   }
+  pageTitle
+  pageDescription
   internalName
   title
   content {

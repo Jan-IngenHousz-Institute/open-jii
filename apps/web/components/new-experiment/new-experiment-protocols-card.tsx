@@ -1,7 +1,7 @@
 "use client";
 
 import { useDebounce } from "@/hooks/useDebounce";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useProtocolSearch } from "~/hooks/protocol/useProtocolSearch/useProtocolSearch";
 
@@ -30,7 +30,15 @@ export function NewExperimentProtocolsCard({ form }: NewExperimentProtocolsCardP
   const watchedProtocols = form.watch("protocols");
   const protocols = useMemo(() => watchedProtocols ?? [], [watchedProtocols]);
 
-  // Exclude protocols already in the current protocols list
+  // Rehydrate UI from form state whenever protocols change
+  useEffect(() => {
+    if (!protocolList) return;
+    const hydrated = protocols
+      .map((p) => protocolList.find((proto) => proto.id === p.protocolId))
+      .filter((p): p is Protocol => Boolean(p)); // remove undefined
+    setAddedProtocols(hydrated);
+  }, [protocols, protocolList]);
+
   const availableProtocols = useMemo<Protocol[]>(() => {
     if (!protocolList) return [];
     const addedIds = new Set(protocols.map((p) => p.protocolId));
@@ -41,7 +49,7 @@ export function NewExperimentProtocolsCard({ form }: NewExperimentProtocolsCardP
   function handleAddProtocol(protocolId: string) {
     const protocol = availableProtocols.find((p) => p.id === protocolId);
     if (!protocol) return;
-    form.setValue("protocols", [...protocols, { protocolId: protocol.id }]);
+    form.setValue("protocols", [...protocols, { protocolId: protocol.id, name: protocol.name }]);
     setAddedProtocols((prev) =>
       prev.some((p) => p.id === protocol.id) ? prev : [...prev, protocol],
     );

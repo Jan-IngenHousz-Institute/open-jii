@@ -59,6 +59,17 @@
                         "role": {
                           "type": "string",
                           "enum": ["admin", "member"]
+                        },
+                        "firstName": {
+                          "type": "string"
+                        },
+                        "lastName": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email",
+                          "nullable": true
                         }
                       },
                       "required": ["userId"]
@@ -76,6 +87,9 @@
                         },
                         "order": {
                           "type": "integer"
+                        },
+                        "name": {
+                          "type": "string"
                         }
                       },
                       "required": ["protocolId"]
@@ -177,7 +191,7 @@
               "application/json": {
                 "schema": {
                   "type": "string",
-                  "enum": ["my", "member", "related"]
+                  "enum": ["member"]
                 }
               }
             }
@@ -294,7 +308,6 @@
                             "items": {
                               "type": "object",
                               "additionalProperties": {
-                                "type": "string",
                                 "nullable": true
                               }
                             }
@@ -496,7 +509,6 @@
                           "items": {
                             "type": "object",
                             "additionalProperties": {
-                              "type": "string",
                               "nullable": true
                             }
                           }
@@ -779,7 +791,6 @@
                           "items": {
                             "type": "object",
                             "additionalProperties": {
-                              "type": "string",
                               "nullable": true
                             }
                           }
@@ -1022,7 +1033,6 @@
                               "items": {
                                 "type": "object",
                                 "additionalProperties": {
-                                  "type": "string",
                                   "nullable": true
                                 }
                               }
@@ -1569,7 +1579,6 @@
                             "items": {
                               "type": "object",
                               "additionalProperties": {
-                                "type": "string",
                                 "nullable": true
                               }
                             }
@@ -2257,7 +2266,7 @@
                               },
                               "type": {
                                 "type": "string",
-                                "enum": ["question", "instruction", "measurement"]
+                                "enum": ["question", "instruction", "measurement", "analysis"]
                               },
                               "name": {
                                 "type": "string",
@@ -2385,6 +2394,20 @@
                                       }
                                     },
                                     "required": ["protocolId"]
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "macroId": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      "params": {
+                                        "type": "object",
+                                        "additionalProperties": {}
+                                      }
+                                    },
+                                    "required": ["macroId"]
                                   }
                                 ]
                               },
@@ -2521,7 +2544,7 @@
                         },
                         "type": {
                           "type": "string",
-                          "enum": ["question", "instruction", "measurement"]
+                          "enum": ["question", "instruction", "measurement", "analysis"]
                         },
                         "name": {
                           "type": "string",
@@ -2649,6 +2672,20 @@
                                 }
                               },
                               "required": ["protocolId"]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "macroId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "params": {
+                                  "type": "object",
+                                  "additionalProperties": {}
+                                }
+                              },
+                              "required": ["macroId"]
                             }
                           ]
                         },
@@ -2735,7 +2772,7 @@
                               },
                               "type": {
                                 "type": "string",
-                                "enum": ["question", "instruction", "measurement"]
+                                "enum": ["question", "instruction", "measurement", "analysis"]
                               },
                               "name": {
                                 "type": "string",
@@ -2863,6 +2900,20 @@
                                       }
                                     },
                                     "required": ["protocolId"]
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "macroId": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      "params": {
+                                        "type": "object",
+                                        "additionalProperties": {}
+                                      }
+                                    },
+                                    "required": ["macroId"]
                                   }
                                 ]
                               },
@@ -3015,7 +3066,7 @@
                         },
                         "type": {
                           "type": "string",
-                          "enum": ["question", "instruction", "measurement"]
+                          "enum": ["question", "instruction", "measurement", "analysis"]
                         },
                         "name": {
                           "type": "string",
@@ -3143,6 +3194,20 @@
                                 }
                               },
                               "required": ["protocolId"]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "macroId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "params": {
+                                  "type": "object",
+                                  "additionalProperties": {}
+                                }
+                              },
+                              "required": ["macroId"]
                             }
                           ]
                         },
@@ -3229,7 +3294,7 @@
                               },
                               "type": {
                                 "type": "string",
-                                "enum": ["question", "instruction", "measurement"]
+                                "enum": ["question", "instruction", "measurement", "analysis"]
                               },
                               "name": {
                                 "type": "string",
@@ -3357,6 +3422,20 @@
                                       }
                                     },
                                     "required": ["protocolId"]
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "macroId": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      "params": {
+                                        "type": "object",
+                                        "additionalProperties": {}
+                                      }
+                                    },
+                                    "required": ["macroId"]
                                   }
                                 ]
                               },

@@ -39,6 +39,13 @@ export class AddExperimentProtocolsUseCase {
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
+        if (experiment.status === "archived") {
+          this.logger.warn(
+            `Attempt to add protocols to archived experiment ${experimentId} by user ${currentUserId}`,
+          );
+          return failure(AppError.forbidden("Cannot add protocols to archived experiments"));
+        }
+
         if (!isAdmin) {
           this.logger.warn(`User ${currentUserId} is not admin for experiment ${experimentId}`);
           return failure(AppError.forbidden("Only admins can add experiment protocols"));

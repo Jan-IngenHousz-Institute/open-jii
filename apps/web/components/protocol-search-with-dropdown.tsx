@@ -19,6 +19,7 @@ export interface ProtocolSearchWithDropdownProps {
   onSearchChange: (value: string) => void;
   onAddProtocol: (protocolId: string) => void | Promise<void>;
   isAddingProtocol: boolean;
+  disabled?: boolean;
 }
 
 export function ProtocolSearchWithDropdown({
@@ -30,6 +31,7 @@ export function ProtocolSearchWithDropdown({
   onSearchChange,
   onAddProtocol,
   isAddingProtocol,
+  disabled = false,
 }: ProtocolSearchWithDropdownProps) {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation("common");
@@ -61,13 +63,14 @@ export function ProtocolSearchWithDropdown({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full max-w-60 justify-between p-0"
+          className="w-full justify-between p-0"
+          disabled={disabled}
         >
-          <div className="flex w-full items-center gap-3 px-3 py-2">
+          <div className="flex w-full items-center gap-3 px-3 py-2.5">
             {selectedProtocol ? (
               <>
                 {selectedProtocol.createdByName && (
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-6 w-6">
                     <AvatarImage src="" alt={selectedProtocol.createdByName} />
                     <AvatarFallback className="text-xs">
                       {selectedProtocol.createdByName.substring(0, 2).toUpperCase()}
@@ -75,7 +78,7 @@ export function ProtocolSearchWithDropdown({
                   </Avatar>
                 )}
                 <div className="flex flex-1 flex-col">
-                  <span className="overflow-hidden text-ellipsis whitespace-nowrap font-medium">
+                  <span className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium">
                     {t("common.protocolLabel")}: {selectedProtocol.name}
                   </span>
                   <span className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">

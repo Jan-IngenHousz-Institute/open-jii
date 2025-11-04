@@ -346,19 +346,6 @@ resource "aws_cloudfront_distribution" "distribution" {
     minimum_protocol_version       = var.acm_certificate_arn != null ? "TLSv1.2_2021" : null
   }
 
-  # Error pages
-  custom_error_response {
-    error_code         = 404
-    response_code      = 404
-    response_page_path = "/404.html"
-  }
-
-  custom_error_response {
-    error_code         = 500
-    response_code      = 500
-    response_page_path = "/500.html"
-  }
-
   restrictions {
     geo_restriction {
       restriction_type = "none"

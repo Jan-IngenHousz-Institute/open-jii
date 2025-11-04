@@ -4,11 +4,11 @@ import {
   useContentfulInspectorMode,
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
-import { documentToReactComponents } from "@contentful/rich-text-react-renderer";
 import type { Document } from "@contentful/rich-text-types";
 import React from "react";
 
 import type { PageFaqFieldsFragment, FaqQuestionFieldsFragment } from "../lib/__generated/sdk";
+import { CtfRichText } from "./contentful/ctf-rich-text";
 
 interface FaqContentProps {
   faq: PageFaqFieldsFragment;
@@ -63,11 +63,8 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
               {q.question}
             </h3>
             {q.answer?.json && (
-              <div
-                className="leading-relaxed text-gray-700"
-                {...questionInspectorProps({ fieldId: "answer" })}
-              >
-                {documentToReactComponents(q.answer.json as Document)}
+              <div {...questionInspectorProps({ fieldId: "answer" })}>
+                <CtfRichText json={q.answer.json as Document} />
               </div>
             )}
           </div>
@@ -83,15 +80,16 @@ export const FaqContent: React.FC<Omit<FaqContentProps, "translations">> = ({
         >
           {currentFaq.title}
         </h1>
-        {typeof currentFaq.intro === "string" ? (
+        {typeof currentFaq.intro === "string" && (
           <p
             className="mx-auto max-w-2xl text-center text-lg text-gray-600"
             {...inspectorProps({ fieldId: "intro" })}
           >
             {currentFaq.intro}
           </p>
-        ) : null}
+        )}
       </div>
+
       <div className="mx-auto max-w-4xl space-y-6" {...inspectorProps({ fieldId: `questions` })}>
         {renderQuestionsList(questions)}
       </div>

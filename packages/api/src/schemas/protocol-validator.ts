@@ -50,6 +50,7 @@ const EnvironmentalSensorSchema = z
           (s) => KNOWN_SENSORS.includes(s as (typeof KNOWN_SENSORS)[number]),
           "Unknown sensor type",
         ),
+      z.string(),
       z.number().int(),
     ]),
   )
@@ -92,10 +93,10 @@ export const ProtocolSetSchema = z
     cal_intensities: z.array(LightIntensitySchema).optional(),
     meas_intensities: z.array(LightIntensitySchema).optional(),
     pulsed_lights_brightness: z
-      .array(z.array(z.union([z.number().int().nonnegative(), VariableReferenceSchema])))
+      .array(z.array(z.union([z.number().int(), VariableReferenceSchema])))
       .optional(), // Allow 0
     nonpulsed_lights_brightness: z
-      .array(z.array(z.union([z.number().int().nonnegative(), VariableReferenceSchema])))
+      .array(z.array(z.union([z.number().int(), VariableReferenceSchema])))
       .optional(),
 
     // Detector configuration
@@ -130,6 +131,7 @@ export const ProtocolSetSchema = z
           z.string().regex(/^@s[0-9]+$/), // Variable reference like "@s2",
           z.array(z.number().int()),
           z.array(z.string().regex(/^@s[0-9]+$/)),
+          VariableReferenceSchema,
         ]),
       )
       .optional(),
@@ -166,6 +168,8 @@ export const ProtocolSetSchema = z
     message: z.array(z.array(z.string())).optional(), // User messages/prompts
     e_time: z.number().int().optional(),
     hello: z.array(z.number().int()).optional(),
+    inc_ri: z.number().int().optional(),
+    mlx: z.number().int().optional(),
   })
   .strict();
 

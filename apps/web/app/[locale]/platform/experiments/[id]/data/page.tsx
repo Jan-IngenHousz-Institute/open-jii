@@ -3,6 +3,7 @@
 import { ErrorDisplay } from "@/components/error-display";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { Upload } from "lucide-react";
+import { notFound } from "next/navigation";
 import { use } from "react";
 import * as React from "react";
 import { DataUploadModal } from "~/components/experiment-data/data-upload-modal/data-upload-modal";
@@ -34,6 +35,13 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
 
   if (!data) {
     return <div>{t("notFound")}</div>;
+  }
+
+  const experiment = data.body;
+
+  // Check if experiment is archived - if so, redirect to not found (should use archive route)
+  if (experiment.status === "archived") {
+    notFound();
   }
 
   return (

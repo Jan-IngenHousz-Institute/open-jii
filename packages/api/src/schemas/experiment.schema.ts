@@ -137,10 +137,35 @@ export const zDataColumn = z.object({
   type_text: z.string(),
 });
 
+// Experiment data annotations
+export const zAnnotationType = z.enum(["comment", "flag"]);
+
+export const zAnnotationCommentContent = z.object({
+  text: z.string().min(1).max(255),
+});
+
+export const zAnnotationFlagType = z.enum(["outlier", "needs_review"]);
+export const zAnnotationFlagContent = z.object({
+  flagType: zAnnotationFlagType,
+  reason: z.string().min(1).max(255),
+});
+
+export const zAnnotationContent = z.union([zAnnotationCommentContent, zAnnotationFlagContent]);
+
+export const zAnnotation = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  userName: z.string().optional(),
+  type: zAnnotationType,
+  content: zAnnotationContent,
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
 // Experiment data schema
 export const zExperimentData = z.object({
   columns: z.array(zDataColumn),
-  rows: z.array(z.record(z.string(), z.string().nullable())),
+  rows: z.array(z.record(z.string(), z.unknown().nullable())),
   totalRows: z.number().int(),
   truncated: z.boolean(),
 });
@@ -185,7 +210,7 @@ export const zErrorResponse = z.object({
 });
 
 // --- Flow Schemas ---
-export const zFlowNodeType = z.enum(["question", "instruction", "measurement"]);
+export const zFlowNodeType = z.enum(["question", "instruction", "measurement", "analysis"]);
 
 export const zQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice", "number"]);
 
@@ -258,6 +283,11 @@ export const zMeasurementContent = z.object({
   params: z.record(z.string(), z.unknown()).optional(),
 });
 
+export const zAnalysisContent = z.object({
+  macroId: z.string().uuid("A valid macro must be selected for analysis nodes"),
+  params: z.record(z.string(), z.unknown()).optional(),
+});
+
 export const zFlowNode = z.object({
   id: z.string().min(1),
   type: zFlowNodeType,
@@ -265,7 +295,7 @@ export const zFlowNode = z.object({
     .string()
     .min(1, "Node label is required")
     .max(64, "Node label must be 64 characters or less"),
-  content: z.union([zQuestionContent, zInstructionContent, zMeasurementContent]),
+  content: z.union([zQuestionContent, zInstructionContent, zMeasurementContent, zAnalysisContent]),
   // A node can be marked as a start node. Exactly one node must be the start node for any flow.
   isStart: z.boolean().optional().default(false),
   // Optional persisted layout position (added later for backwards compatibility)
@@ -504,7 +534,7 @@ export type GeocodeResponse = z.infer<typeof zGeocodeResponse>;
 
 // Define request and response types
 // Shared embargo date validation function
-const validateEmbargoDate = (
+export const validateEmbargoDate = (
   embargoUntil: string | undefined,
   ctx: z.RefinementCtx,
   path: string[],
@@ -542,52 +572,54 @@ const validateEmbargoDate = (
   }
 };
 
-export const zCreateExperimentBody = z
-  .object({
-    name: z
-      .string()
-      .trim()
-      .min(1, "The name of the experiment is required")
-      .max(255, "The name must be at most 255 characters")
-      .describe("The name of the experiment"),
-    description: z.string().optional().describe("Optional description of the experiment"),
-    status: zExperimentStatus.optional().describe("Initial status of the experiment"),
-    visibility: zExperimentVisibility.optional().describe("Experiment visibility setting"),
-    embargoUntil: z
-      .string()
-      .datetime()
-      .optional()
-      .describe(
-        "Embargo end date and time (ISO datetime string, will be stored as UTC in database)",
-      ),
-    members: z
-      .array(
-        z.object({
-          userId: z.string().uuid(),
-          role: zExperimentMemberRole.optional(),
-        }),
-      )
-      .optional()
-      .describe("Optional array of member objects with userId and role"),
-    protocols: z
-      .array(
-        z.object({
-          protocolId: z.string().uuid(),
-          order: z.number().int().optional(),
-        }),
-      )
-      .optional()
-      .describe(
-        "Optional array of protocol objects with protocolId and order to associate with the experiment",
-      ),
-    locations: z
-      .array(zLocationInput)
-      .optional()
-      .describe("Optional array of locations associated with the experiment"),
-  })
-  .superRefine((val, ctx) => {
-    validateEmbargoDate(val.embargoUntil, ctx, ["embargoUntil"]);
-  });
+export const zCreateExperimentBodyBase = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "The name of the experiment is required")
+    .max(255, "The name must be at most 255 characters")
+    .describe("The name of the experiment"),
+  description: z.string().optional().describe("Optional description of the experiment"),
+  status: zExperimentStatus.optional().describe("Initial status of the experiment"),
+  visibility: zExperimentVisibility.optional().describe("Experiment visibility setting"),
+  embargoUntil: z
+    .string()
+    .datetime()
+    .optional()
+    .describe("Embargo end date and time (ISO datetime string, will be stored as UTC in database)"),
+  members: z
+    .array(
+      z.object({
+        userId: z.string().uuid(),
+        role: zExperimentMemberRole.optional(),
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+        email: z.string().email().nullable().optional(),
+      }),
+    )
+    .optional()
+    .describe("Optional array of member objects with userId and role"),
+  protocols: z
+    .array(
+      z.object({
+        protocolId: z.string().uuid(),
+        order: z.number().int().optional(),
+        name: z.string().optional(),
+      }),
+    )
+    .optional()
+    .describe(
+      "Optional array of protocol objects with protocolId and order to associate with the experiment",
+    ),
+  locations: z
+    .array(zLocationInput)
+    .optional()
+    .describe("Optional array of locations associated with the experiment"),
+});
+
+export const zCreateExperimentBody = zCreateExperimentBodyBase.superRefine((val, ctx) => {
+  validateEmbargoDate(val.embargoUntil, ctx, ["embargoUntil"]);
+});
 
 export const zUpdateExperimentBody = z.object({
   name: z
@@ -635,10 +667,7 @@ export const zAddExperimentMembersBody = z.object({
 });
 
 export const zExperimentFilterQuery = z.object({
-  filter: z
-    .enum(["my", "member", "related"])
-    .optional()
-    .describe("Filter experiments by relationship to the user"),
+  filter: z.enum(["member"]).optional().describe("Filter experiments by relationship to the user"),
   status: zExperimentStatus.optional().describe("Filter experiments by their status"),
   search: z.string().optional().describe("Search term for experiment name"),
 });
@@ -808,3 +837,10 @@ export type ExperimentVisualizationList = z.infer<typeof zExperimentVisualizatio
 export type CreateExperimentVisualizationBody = z.infer<typeof zCreateExperimentVisualizationBody>;
 export type UpdateExperimentVisualizationBody = z.infer<typeof zUpdateExperimentVisualizationBody>;
 export type ListExperimentVisualizationsQuery = z.infer<typeof zListExperimentVisualizationsQuery>;
+
+// Annotation types
+export type AnnotationType = z.infer<typeof zAnnotationType>;
+export type AnnotationFlagType = z.infer<typeof zAnnotationFlagType>;
+export type AnnotationCommentContent = z.infer<typeof zAnnotationCommentContent>;
+export type AnnotationFlagContent = z.infer<typeof zAnnotationFlagContent>;
+export type Annotation = z.infer<typeof zAnnotation>;

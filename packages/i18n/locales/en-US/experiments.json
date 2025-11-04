@@ -43,11 +43,11 @@
     "noMeasurements": "No measurements recorded yet"
   },
   "flow": {
-    "title": "Experiment Flow",
+    "title": "Measurement Flow",
     "legend": "Legend",
-    "description": "Design and visualize your experiment workflow by connecting different steps and operations.",
-    "editDescription": "Design and visualize your experiment workflow by connecting different steps and operations.",
-    "staticDescription": "Visual overview of the experiment workflow",
+    "description": "Design and visualize your measurement workflow by connecting different steps and operations.",
+    "editDescription": "Design and visualize your measurement workflow by connecting different steps and operations. Please make sure every block has a uniquely named 'label' and the flow has 1 Measurement block and 1 Analysis block.",
+    "staticDescription": "Visual overview of the measurement workflow",
     "tabLabel": "Flow",
     "saving": "Saving...",
     "saveFlow": "Save Flow",
@@ -62,7 +62,7 @@
   "data": "Data",
   "experimentData": {
     "title": "Experiment Data",
-    "description": "View and manage data associated with this experiment.",
+    "description": "View and manage data associated with this experiment. New data is processed every 15 minutes. Timestamps are in UTC (Coordinated Universal Time)",
     "uploadData": "Upload Data",
     "provisioning": {
       "title": "Experiment is Being Prepared",
@@ -113,6 +113,7 @@
   "errorLoadingExperiment": "An error occurred while loading the experiment",
   "experimentNotFound": "The experiment you're looking for could not be found",
   "needMemberAccess": "You need member access to perform this action",
+  "needAdminAccess": "You need admin access to perform this action",
   "previewMode": "Preview Mode",
   "editingMode": "Editing Mode",
   "validation": {
@@ -162,10 +163,10 @@
     "requiredDescription": "Participants must answer this question to continue",
     "answerTypeLabel": "Answer Type",
     "answerTypes": {
-      "TEXT": "Text",
+      "TEXT": "Text (under construction)",
       "SELECT": "Multiple Choice",
-      "NUMBER": "Number",
-      "BOOLEAN": "Yes/No"
+      "NUMBER": "Number (under construction)",
+      "BOOLEAN": "Yes/No (under construction)"
     },
     "answerOptionsLabel": "Answer Options",
     "answerOptionPlaceholder": "Enter an answer option",

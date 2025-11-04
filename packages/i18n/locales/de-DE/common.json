@@ -58,10 +58,12 @@
     "filterStatusAll": "Alle Status",
     "clearSearch": "Suche löschen",
     "title": "Experimente",
+    "archiveTitle": "Experiment-Archiv",
     "newExperiment": "Neues Experiment",
     "overview": "Übersicht",
     "data": "Daten",
     "create": "Experiment erstellen",
+    "viewArchived": "Archivierte anzeigen Experimente",
     "edit": "Experiment bearbeiten",
     "delete": "Experiment löschen",
     "status": "Status",
@@ -74,6 +76,7 @@
     "experimentUpdated": "Experiment erfolgreich aktualisiert",
     "experimentDeleted": "Experiment erfolgreich gelöscht",
     "listDescription": "Diese Seite zeigt eine Liste der vorhandenen Experimente.",
+    "archiveDescription": "Diese Seite zeigt eine Liste der archivierten Experimente.",
     "experiment": "Experiment",
     "settings": "Experimenteinstellungen",
     "settingsDescription": "Verwalten Sie Einstellungen und Mitglieder für dieses Experiment.",
@@ -92,7 +95,39 @@
     "seeProtocolDetails": "Protokolldetails anzeigen",
     "family": "Familie:",
     "createdBy": "Erstellt von:",
-    "measurementPanelTitle": "Messprotokoll"
+    "needAdminAccessArchived": "Zugriff auf Einstellungen für archivierte Experimente verweigert",
+    "needMemberAccess": "Sie müssen Mitglied sein, um auf die Experiment-Einstellungen zuzugreifen",
+    "measurementPanelTitle": "Messprotokoll",
+    "detailsTitle": "Details",
+    "detailsDescription": "Geben Sie die grundlegenden Informationen zu Ihrem Experiment ein",
+    "membersVisibilityTitle": "Mitglieder & Sichtbarkeit",
+    "membersVisibilityDescription": "Mitglieder hinzufügen und Sichtbarkeitseinstellungen festlegen",
+    "protocolsTitle": "Protokolle",
+    "protocolsDescription": "Protokolle zu Ihrem Experiment hinzufügen",
+    "locationsTitle": "Standorte",
+    "locationsDescription": "Fügen Sie Standorte für Ihr Experiment hinzu",
+    "reviewTitle": "Überprüfen",
+    "reviewDescription": "Überprüfen Sie Ihr Experiment vor dem Erstellen",
+    "unsavedChangesMessage": "Sie haben mit dem Erstellen eines neuen Experiments begonnen. Möchten Sie die Seite wirklich verlassen? Alle Fortschritte gehen verloren.",
+    "unsavedChangesTitle": "Nicht gespeicherte Änderungen",
+    "unsavedStay": "Auf der Seite bleiben",
+    "unsavedLeave": "Seite verlassen",
+    "next": "Weiter",
+    "back": "Zurück",
+    "createExperiment": "Experiment erstellen",
+    "reviewYourExperiment": "Überprüfen Sie Ihr Experiment",
+    "reviewAllDetails": "Bitte überprüfen Sie alle Details, bevor Sie Ihr Experiment erstellen. Sie können zurückgehen, um Änderungen vorzunehmen.",
+    "experimentName": "Experimentname",
+    "membersAndVisibility": "Mitglieder & Sichtbarkeit",
+    "embargo": "Embargo",
+    "teamMembers": "Teammitglieder",
+    "noMembersAdded": "Keine Mitglieder hinzugefügt",
+    "unnamedMember": "Unbenanntes Mitglied",
+    "selectedProtocols": "Ausgewählte Protokolle",
+    "noProtocolsAdded": "Keine Protokolle hinzugefügt",
+    "unnamedProtocol": "Unbenanntes Protokoll",
+    "researchLocations": "Forschungsstandorte",
+    "noLocationsAdded": "Keine Standorte hinzugefügt"
   },
   "experimentSettings": {
     "loading": "Experimenteinstellungen werden geladen...",
@@ -189,7 +224,7 @@
   "auth": {
     "login": "Anmelden",
     "logout": "Abmelden",
-    "email": "E-Mail",
+    "email": "E-Mail Adresse",
     "password": "Passwort",
     "forgotPassword": "Passwort vergessen?",
     "rememberMe": "Angemeldet bleiben",
@@ -202,13 +237,16 @@
     "logoutSuccess": "Erfolgreich abgemeldet",
     "invalidCredentials": "Ungültige Anmeldedaten",
     "loggedInAs": "Angemeldet als {{name}}",
-    "loginToAccount": "In Konto anmelden",
+    "loginToAccount": "Anmelden oder registrieren",
     "continueWith": "Fortfahren mit",
     "orContinueWith": "Oder weiter mit",
     "loginWith": "Anmelden mit {{provider}}",
     "loginWith-github": "Mit GitHub anmelden",
     "loginWith-nodemailer": "Mit E-Mail anmelden",
     "loginWith-orcid": "Mit ORCID anmelden",
+    "emailRequired": "E-Mail ist erforderlich",
+    "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+    "sendingEmail": "Wir senden Ihnen eine E-Mail...",
     "verifyRequest": "Wir haben Ihnen per E-Mail einen Anmeldelink gesendet",
     "verifyRequestDetails": "Wir haben Ihnen eine E-Mail an Ihre E-Mail-Adresse gesendet. Tippen Sie auf die Schaltfläche in der E-Mail, um fortzufahren.",
     "verifyRequestDetailsJunk": "Wenn Sie die E-Mail nicht sehen, überprüfen Sie Ihren Spam- oder Junk-Ordner.",
@@ -217,11 +255,22 @@
     "loginEmailNotClickable": "Wenn die Schaltfläche oben nicht angeklickt werden kann, kopieren Sie die folgende URL und fügen Sie sie in Ihren Webbrowser ein:",
     "loginEmailNotRequested": "Wenn Sie diese E-Mail nicht angefordert haben, besteht kein Grund zur Sorge – Sie können sie getrost ignorieren.",
     "noAccount": "Kein Konto?",
+    "emailPlaceholder": "Geben Sie Ihre E-Mail ein...",
     "createAccount": "Konto erstellen",
     "errorMessage": "Beim Anmelden ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
     "account": "Konto",
     "userMenu": "Benutzermenü",
-    "signingOut": "Abmelden..."
+    "signingOut": "Abmelden...",
+    "heroTitle": "Offene Wissenschaft für Photosynthese",
+    "heroDescription": "Ermächtigung globaler Zusammenarbeit in der Pflanzenwissenschaft und Photosynthese-Forschung.",
+    "brandName": "OpenJII",
+    "poweredBy": "betrieben von",
+    "instituteAlt": "Jan IngenHousz Institut",
+    "continueWithEmail": "Mit E-Mail fortfahren",
+    "or": "oder fortfahren mit",
+    "termsPrefix": "Ich akzeptiere die ",
+    "continueTermsPrefix": "Indem Sie fortfahren, akzeptieren Sie die ",
+    "terms": "Allgemeinen Geschäftsbedingungen"
   },
   "registration": {
     "title": "Registrierung",
@@ -280,7 +329,9 @@
     "learnAboutUs": "Über uns erfahren",
     "needHelp": "Brauchen Sie Hilfe? Versuchen Sie, zur vorherigen Seite zurückzugehen oder kontaktieren Sie den Support.",
     "goBack": "Zurück",
-    "brandTagline": "Jan IngenHousz Institut - Photosynthese für eine nachhaltige Zukunft verbessern"
+    "brandTagline": "Jan IngenHousz Institut - Photosynthese für eine nachhaltige Zukunft verbessern",
+    "termsUnavailable": "Die Allgemeinen Geschäftsbedingungen können derzeit nicht geladen werden.",
+    "termsContentUnavailable": "Der Inhalt der Allgemeinen Geschäftsbedingungen ist nicht verfügbar."
   },
   "footer": {
     "aboutUs": "Über uns",
@@ -329,7 +380,78 @@
     "next": "Weiter",
     "table": "Tabelle",
     "details": "Tabellendetails anzeigen",
-    "download": "Tabelle herunterladen"
+    "download": "Tabelle herunterladen",
+    "row": "Zeile",
+    "rows": "Zeilen"
+  },
+  "experimentDataAnnotations": {
+    "title": "Kommentare & Markierungen",
+    "columnHeader": "Kommentare & Markierungen",
+    "titleComments": "Kommentare",
+    "titleFlags": "Markierungen",
+    "flagType": {
+      "needs_review": "Überprüfung erforderlich",
+      "outlier": "Ausreißer"
+    },
+    "commentDialog": {
+      "title": "Kommentar hinzufügen",
+      "description": "Fügen Sie einen Kommentar zur Messung hinzu",
+      "textLabel": "Kommentar",
+      "textPlaceholder": "Geben Sie hier Ihren Kommentar ein...",
+      "add": "Kommentar hinzufügen"
+    },
+    "commentDialogBulk": {
+      "title": "Kommentar für mehrere hinzufügen",
+      "description": "Fügen Sie denselben Kommentar zu {{count}} ausgewählten Messungen hinzu",
+      "textLabel": "Kommentar",
+      "textPlaceholder": "Geben Sie hier Ihren Kommentar ein...",
+      "add": "Zu {{count}} Zeile(n) hinzufügen"
+    },
+    "flagDialog": {
+      "title": "Markierung hinzufügen",
+      "description": "Markieren Sie die Messung",
+      "flagLabel": "Markierungstyp",
+      "flagPlaceholder": "Markierungstyp auswählen",
+      "textLabel": "Grund",
+      "textPlaceholder": "Erklären Sie, warum diese Messung markiert wird...",
+      "add": "Markierung hinzufügen"
+    },
+    "flagDialogBulk": {
+      "title": "Markierung für mehrere hinzufügen",
+      "description": "{{count}} ausgewählte Messungen markieren",
+      "flagLabel": "Markierungstyp",
+      "flagPlaceholder": "Markierungstyp auswählen",
+      "textLabel": "Grund",
+      "textPlaceholder": "Erklären Sie, warum diese Messungen markiert werden...",
+      "add": "{{count}} Zeile(n) markieren"
+    },
+    "commentDeleteDialog": {
+      "title": "Sind Sie absolut sicher?",
+      "description": "Diese Aktion kann nicht rückgängig gemacht werden. Dadurch werden alle Kommentare aus den ausgewählten {{count}} Zeile(n) dauerhaft gelöscht.",
+      "delete": "Löschen"
+    },
+    "flagDeleteDialog": {
+      "title": "Sind Sie absolut sicher?",
+      "description": "Diese Aktion kann nicht rückgängig gemacht werden. Dadurch werden alle Markierungen aus den ausgewählten {{count}} Zeile(n) dauerhaft gelöscht.",
+      "delete": "Löschen"
+    },
+    "noAnnotations": "Noch keine Kommentare oder Markierungen.",
+    "noAnnotationsDescription": "Verwenden Sie die obigen Schaltflächen, um einen hinzuzufügen.",
+    "updated": "Kommentare und Markierungen aktualisiert",
+    "deleted": {
+      "comment": "Kommentar gelöscht",
+      "comments": "Kommentare gelöscht",
+      "flag": "Markierung gelöscht",
+      "flags": "Markierungen gelöscht"
+    },
+    "bulkActions": {
+      "actions": "Aktionen",
+      "selected": "ausgewählt",
+      "addComment": "Kommentar hinzufügen",
+      "addFlag": "Markierung hinzufügen",
+      "removeAllComments": "Alle Kommentare entfernen",
+      "removeAllFlags": "Alle Markierungen entfernen"
+    }
   },
   "landingPage": {
     "latestArticles": "Neueste artikel"

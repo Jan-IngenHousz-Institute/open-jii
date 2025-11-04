@@ -31,6 +31,7 @@ import {
   zQuestionContent,
   zInstructionContent,
   zMeasurementContent,
+  zAnalysisContent,
   zFlowNode,
   zFlowEdge,
   zFlowGraph,
@@ -107,16 +108,6 @@ describe("Experiment Schema", () => {
         truncated: false,
       };
       expect(zExperimentData.parse(data)).toEqual(data);
-    });
-
-    it("zExperimentData rejects non-string row values", () => {
-      const bad = {
-        columns: [{ name: "a", type_name: "text", type_text: "VARCHAR" }],
-        rows: [{ a: 123 }], // not string or null
-        totalRows: 1,
-        truncated: false,
-      } as unknown;
-      expect(() => zExperimentData.parse(bad)).toThrow();
     });
   });
 
@@ -257,6 +248,7 @@ describe("Experiment Schema", () => {
   describe("Flow graph & nodes", () => {
     it("zFlowNodeType and zQuestionKind enums", () => {
       expect(zFlowNodeType.parse("question")).toBe("question");
+      expect(zFlowNodeType.parse("analysis")).toBe("analysis");
       expect(zQuestionKind.parse("open_ended")).toBe("open_ended");
       expect(() => zFlowNodeType.parse("calc")).toThrow();
     });
@@ -281,6 +273,20 @@ describe("Experiment Schema", () => {
       expect(zInstructionContent.parse({ text: "Do X" })).toEqual({ text: "Do X" });
       const m = { protocolId: uuidA, params: { exposure: 1, comment: "ok" } };
       expect(zMeasurementContent.parse(m)).toEqual(m);
+    });
+
+    it("Analysis content requires valid macroId", () => {
+      const valid = { macroId: uuidA, params: { threshold: 10 } };
+      expect(zAnalysisContent.parse(valid)).toEqual(valid);
+
+      const validMinimal = { macroId: uuidB };
+      expect(zAnalysisContent.parse(validMinimal)).toEqual({ macroId: uuidB });
+
+      const invalidMacroId = { macroId: "not-a-uuid", params: {} };
+      expect(() => zAnalysisContent.parse(invalidMacroId)).toThrow();
+
+      const missingMacroId = { params: {} };
+      expect(() => zAnalysisContent.parse(missingMacroId)).toThrow();
     });
 
     it("zFlowNode valid (defaults isStart=false)", () => {
@@ -401,9 +407,7 @@ describe("Experiment Schema", () => {
       expect(zExperimentFilterQuery.parse({})).toEqual({});
 
       // Test filter field
-      expect(zExperimentFilterQuery.parse({ filter: "my" })).toEqual({ filter: "my" });
       expect(zExperimentFilterQuery.parse({ filter: "member" })).toEqual({ filter: "member" });
-      expect(zExperimentFilterQuery.parse({ filter: "related" })).toEqual({ filter: "related" });
       expect(() => zExperimentFilterQuery.parse({ filter: "unknown" })).toThrow();
 
       // Test status field
@@ -423,12 +427,12 @@ describe("Experiment Schema", () => {
       // Test combinations
       expect(
         zExperimentFilterQuery.parse({
-          filter: "my",
+          filter: "member",
           status: "active",
           search: "my experiment",
         }),
       ).toEqual({
-        filter: "my",
+        filter: "member",
         status: "active",
         search: "my experiment",
       });

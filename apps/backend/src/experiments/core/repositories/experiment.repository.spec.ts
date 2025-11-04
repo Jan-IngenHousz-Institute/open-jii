@@ -101,6 +101,36 @@ describe("ExperimentRepository", () => {
       );
     });
 
+    it("should exclude archived experiments by default when no status is provided", async () => {
+      // Arrange
+      const userId = await testApp.createTestUser({ email: "exclude-archived@example.com" });
+      const { experiment: active } = await testApp.createExperiment({
+        name: "Active Experiment Default",
+        userId,
+        status: "active",
+      });
+
+      // Create an archived experiment for the same user
+      await testApp.createExperiment({
+        name: "Archived Experiment Default",
+        userId,
+        status: "archived",
+      });
+
+      // Act: call findAll without passing a status
+      const result = await repository.findAll(userId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+
+      // Archived experiment should be excluded by default
+      expect(experiments.some((e) => e.status === "archived")).toBe(false);
+      // Active experiment should be present
+      expect(experiments.some((e) => e.id === active.id)).toBe(true);
+    });
+
     it("should return experiments in the correct order", async () => {
       // Arrange
       const { experiment: experiment1 } = await testApp.createExperiment({
@@ -138,7 +168,7 @@ describe("ExperimentRepository", () => {
       );
     });
 
-    it("should filter experiments by 'my' filter", async () => {
+    it("should filter experiments by 'member' filter", async () => {
       // Arrange
       const mainUserId = await testApp.createTestUser({
         email: "main-user@example.com",
@@ -160,7 +190,7 @@ describe("ExperimentRepository", () => {
       });
 
       // Act
-      const result = await repository.findAll(mainUserId, "my");
+      const result = await repository.findAll(mainUserId, "member");
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -172,88 +202,276 @@ describe("ExperimentRepository", () => {
       expect(experiments[0].name).toBe("My Experiment");
     });
 
-    it("should filter experiments by 'member' filter", async () => {
-      // Arrange
+    it("should not return duplicate experiments when user has access to multiple experiments", async () => {
+      // Arrange - Test case where a user is a member of multiple experiments
+      // Ensures the CTE-based code doesn't cause duplicates
       const mainUserId = await testApp.createTestUser({
-        email: "main-user@example.com",
+        email: "multi-member-test@example.com",
       });
       const otherUserId = await testApp.createTestUser({
-        email: "other-user@example.com",
+        email: "other-owner@example.com",
       });
 
-      // Create experiment owned by other user
-      const { experiment } = await testApp.createExperiment({
-        name: "Member Experiment",
-        userId: otherUserId,
-      });
-
-      // Add main user as a member
-      await testApp.addExperimentMember(experiment.id, mainUserId, "member");
-
-      // Act
-      const result = await repository.findAll(mainUserId, "member");
-
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-
-      assertSuccess(result);
-      const experiments = result.value;
-      expect(experiments.length).toBe(1);
-      expect(experiments[0].id).toBe(experiment.id);
-      expect(experiments[0].name).toBe("Member Experiment");
-    });
-
-    it("should filter experiments by 'related' filter", async () => {
-      // Arrange
-      const mainUserId = await testApp.createTestUser({
-        email: "main-user@example.com",
-      });
-      const otherUserId = await testApp.createTestUser({
-        email: "other-user@example.com",
-      });
-
-      // Create experiment owned by main user
-      const { experiment: ownedExperiment } = await testApp.createExperiment({
+      // Create user's own experiment
+      const { experiment: ownedExp } = await testApp.createExperiment({
         name: "My Experiment",
         userId: mainUserId,
       });
 
-      // Create experiment owned by other user
-      const { experiment: memberExperiment } = await testApp.createExperiment({
-        name: "Member Experiment",
+      // Create multiple experiments owned by other user
+      const { experiment: exp1 } = await testApp.createExperiment({
+        name: "Member Experiment 1",
         userId: otherUserId,
       });
 
-      // Add main user as a member of the other experiment
-      await testApp.addExperimentMember(memberExperiment.id, mainUserId, "member");
-
-      // Create an unrelated experiment
-      await testApp.createExperiment({
-        name: "Unrelated Experiment",
+      const { experiment: exp2 } = await testApp.createExperiment({
+        name: "Member Experiment 2",
         userId: otherUserId,
       });
 
-      // Act
-      const result = await repository.findAll(mainUserId, "related");
+      const { experiment: exp3 } = await testApp.createExperiment({
+        name: "Member Experiment 3",
+        userId: otherUserId,
+      });
+
+      // Add main user as a member to all other experiments
+      await testApp.addExperimentMember(exp1.id, mainUserId, "member");
+      await testApp.addExperimentMember(exp2.id, mainUserId, "member");
+      await testApp.addExperimentMember(exp3.id, mainUserId, "member");
+
+      // Act - with no filter (should return all experiments user is a member of)
+      const result = await repository.findAll(mainUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
-
       assertSuccess(result);
       const experiments = result.value;
-      expect(experiments.length).toBe(2);
+
+      // Should return exactly 4 experiments (1 owned + 3 as member), no duplicates
+      expect(experiments.length).toBe(4);
+
+      // Verify no duplicate IDs
+      const experimentIds = experiments.map((e) => e.id);
+      const uniqueIds = new Set(experimentIds);
+      expect(uniqueIds.size).toBe(4);
+
+      // Verify all expected experiments are present
       expect(experiments).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({
-            id: ownedExperiment.id,
-            name: "My Experiment",
-          }),
-          expect.objectContaining({
-            id: memberExperiment.id,
-            name: "Member Experiment",
-          }),
+          expect.objectContaining({ id: ownedExp.id }),
+          expect.objectContaining({ id: exp1.id }),
+          expect.objectContaining({ id: exp2.id }),
+          expect.objectContaining({ id: exp3.id }),
         ]),
       );
+    });
+
+    it("should not return private experiments where user is not a member (no filter)", async () => {
+      // Arrange
+      const mainUserId = await testApp.createTestUser({
+        email: "privacy-test@example.com",
+      });
+      const otherUserId = await testApp.createTestUser({
+        email: "other-privacy-test@example.com",
+      });
+
+      // Create private experiment owned by other user
+      await testApp.createExperiment({
+        name: "Private Experiment",
+        userId: otherUserId,
+        visibility: "private",
+      });
+
+      // Create public experiment owned by other user
+      const { experiment: publicExp } = await testApp.createExperiment({
+        name: "Public Experiment",
+        userId: otherUserId,
+        visibility: "public",
+      });
+
+      // Act - query without filter as mainUser
+      const result = await repository.findAll(mainUserId);
+
+      // Assert - should only see public experiment
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+
+      expect(experiments.length).toBe(1);
+      expect(experiments[0].id).toBe(publicExp.id);
+      expect(experiments[0].visibility).toBe("public");
+    });
+
+    it("should return private experiments where user is a member (no filter)", async () => {
+      // Arrange
+      const mainUserId = await testApp.createTestUser({
+        email: "privacy-member-test@example.com",
+      });
+      const otherUserId = await testApp.createTestUser({
+        email: "other-privacy-member-test@example.com",
+      });
+
+      // Create private experiment owned by other user
+      const { experiment: privateExp } = await testApp.createExperiment({
+        name: "Private Member Experiment",
+        userId: otherUserId,
+        visibility: "private",
+      });
+
+      // Add mainUser as member
+      await testApp.addExperimentMember(privateExp.id, mainUserId, "member");
+
+      // Act - query without filter as mainUser
+      const result = await repository.findAll(mainUserId);
+
+      // Assert - should see private experiment because user is a member
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+
+      expect(experiments.length).toBe(1);
+      expect(experiments[0].id).toBe(privateExp.id);
+      expect(experiments[0].visibility).toBe("private");
+    });
+
+    it("should not return private experiments where user is not a member (with member filter)", async () => {
+      // Arrange
+      const mainUserId = await testApp.createTestUser({
+        email: "privacy-filter-test@example.com",
+      });
+      const otherUserId = await testApp.createTestUser({
+        email: "other-privacy-filter-test@example.com",
+      });
+
+      // Create private experiment owned by other user
+      await testApp.createExperiment({
+        name: "Private Experiment",
+        userId: otherUserId,
+        visibility: "private",
+      });
+
+      // Create public experiment owned by other user
+      await testApp.createExperiment({
+        name: "Public Experiment",
+        userId: otherUserId,
+        visibility: "public",
+      });
+
+      // Act - query with member filter as mainUser
+      const result = await repository.findAll(mainUserId, "member");
+
+      // Assert - should see nothing (not a member of any experiments)
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+
+      expect(experiments.length).toBe(0);
+    });
+
+    it("should exclude archived experiments by default", async () => {
+      // Arrange
+      const mainUserId = await testApp.createTestUser({
+        email: "archived-default-test@example.com",
+      });
+
+      // Create active experiment
+      const { experiment: activeExp } = await testApp.createExperiment({
+        name: "Active Experiment",
+        userId: mainUserId,
+        status: "active",
+      });
+
+      // Create archived experiment
+      await testApp.createExperiment({
+        name: "Archived Experiment",
+        userId: mainUserId,
+        status: "archived",
+      });
+
+      // Act - query without status filter
+      const result = await repository.findAll(mainUserId);
+
+      // Assert - should only see active experiment
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+
+      expect(experiments.length).toBe(1);
+      expect(experiments[0].id).toBe(activeExp.id);
+      expect(experiments[0].status).toBe("active");
+    });
+
+    it("should exclude archived experiments even when filtering by other status", async () => {
+      // Arrange
+      const mainUserId = await testApp.createTestUser({
+        email: "archived-status-test@example.com",
+      });
+
+      // Create active experiment
+      const { experiment: activeExp } = await testApp.createExperiment({
+        name: "Active Experiment",
+        userId: mainUserId,
+        status: "active",
+      });
+
+      // Create draft experiment
+      await testApp.createExperiment({
+        name: "Draft Experiment",
+        userId: mainUserId,
+        status: "provisioning",
+      });
+
+      // Create archived experiment
+      await testApp.createExperiment({
+        name: "Archived Experiment",
+        userId: mainUserId,
+        status: "archived",
+      });
+
+      // Act - query with active status filter
+      const result = await repository.findAll(mainUserId, undefined, "active");
+
+      // Assert - should only see active experiment
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+
+      expect(experiments.length).toBe(1);
+      expect(experiments[0].id).toBe(activeExp.id);
+      expect(experiments[0].status).toBe("active");
+    });
+
+    it("should include archived experiments only when explicitly requested", async () => {
+      // Arrange
+      const mainUserId = await testApp.createTestUser({
+        email: "archived-explicit-test@example.com",
+      });
+
+      // Create active experiment
+      await testApp.createExperiment({
+        name: "Active Experiment",
+        userId: mainUserId,
+        status: "active",
+      });
+
+      // Create archived experiment
+      const { experiment: archivedExp } = await testApp.createExperiment({
+        name: "Archived Experiment",
+        userId: mainUserId,
+        status: "archived",
+      });
+
+      // Act - query with archived status filter
+      const result = await repository.findAll(mainUserId, undefined, "archived");
+
+      // Assert - should only see archived experiment
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      const experiments = result.value;
+
+      expect(experiments.length).toBe(1);
+      expect(experiments[0].id).toBe(archivedExp.id);
+      expect(experiments[0].status).toBe("archived");
     });
 
     it("should filter experiments by status", async () => {
@@ -320,8 +538,8 @@ describe("ExperimentRepository", () => {
         status: "active",
       });
 
-      // Act - filter by "my" relationship and "active" status
-      const result = await repository.findAll(mainUserId, "my", "active");
+      // Act - filter by "member" relationship and "active" status
+      const result = await repository.findAll(mainUserId, "member", "active");
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -404,7 +622,7 @@ describe("ExperimentRepository", () => {
       });
 
       // Act
-      const result = await repository.findAll(mainUserId, "related", "active", "Searchable");
+      const result = await repository.findAll(mainUserId, undefined, "active", "Searchable");
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -731,6 +949,52 @@ describe("ExperimentRepository", () => {
           ),
         );
       expect(membership.length).toBe(0);
+    });
+
+    it("should set hasArchiveAccess=false for all users when experiment is archived", async () => {
+      // Arrange: create an archived experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Archive Access Test",
+        userId: testUserId,
+        status: "archived",
+      });
+
+      // Create a member user and add them as a regular member
+      const memberId = await testApp.createTestUser({ email: "archive-member@example.com" });
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      // Act: check access for non-admin member
+      const memberResult = await repository.checkAccess(experiment.id, memberId);
+      expect(memberResult.isSuccess()).toBe(true);
+      assertSuccess(memberResult);
+
+      const memberAccess = memberResult.value;
+      expect(memberAccess.experiment).toBeTruthy();
+      expect(memberAccess.hasAccess).toBe(true);
+      expect(memberAccess.isAdmin).toBe(false);
+      expect(memberAccess.hasArchiveAccess).toBe(false);
+
+      // Promote to admin directly
+      await testApp.database
+        .update(experimentMembers)
+        .set({ role: "admin" })
+        .where(
+          and(
+            eq(experimentMembers.experimentId, experiment.id),
+            eq(experimentMembers.userId, memberId),
+          ),
+        );
+
+      // Act again: check access for admin
+      const adminResult = await repository.checkAccess(experiment.id, memberId);
+      expect(adminResult.isSuccess()).toBe(true);
+      assertSuccess(adminResult);
+
+      const adminAccess = adminResult.value;
+      expect(adminAccess.experiment).toBeTruthy();
+      expect(adminAccess.hasAccess).toBe(true);
+      expect(adminAccess.isAdmin).toBe(true);
+      expect(adminAccess.hasArchiveAccess).toBe(false);
     });
 
     it("should return null experiment and no access when experiment does not exist", async () => {

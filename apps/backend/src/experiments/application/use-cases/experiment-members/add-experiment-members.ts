@@ -42,6 +42,13 @@ export class AddExperimentMembersUseCase {
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
+        if (experiment.status === "archived") {
+          this.logger.warn(
+            `Attempt to add members to archived experiment ${experimentId} by user ${currentUserId}`,
+          );
+          return failure(AppError.forbidden("Cannot add members to archived experiments"));
+        }
+
         if (!isAdmin) {
           this.logger.warn(`User ${currentUserId} is not admin for experiment ${experimentId}`);
           return failure(AppError.forbidden("Only admins can add experiment members"));

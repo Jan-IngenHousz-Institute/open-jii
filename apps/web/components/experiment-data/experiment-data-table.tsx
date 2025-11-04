@@ -5,10 +5,15 @@ import type {
   TableMetadata,
 } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
+import { zodResolver } from "@hookform/resolvers/zod";
 import type { PaginationState, Updater } from "@tanstack/react-table";
 import { getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
 import { Download } from "lucide-react";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import z from "zod";
+import { BulkActionsBar } from "~/components/experiment-data/annotations/bulk-actions-bar";
+import { getTotalSelectedCounts } from "~/components/experiment-data/annotations/utils";
 import {
   ExperimentDataRows,
   ExperimentTableHeader,
@@ -19,6 +24,7 @@ import {
 import { useTranslation } from "@repo/i18n";
 import {
   Button,
+  Form,
   Label,
   Pagination,
   PaginationContent,
@@ -38,6 +44,13 @@ import { cn } from "@repo/ui/lib/utils";
 import { DataDownloadModal } from "./data-download-modal/data-download-modal";
 import { ExperimentDataTableChart } from "./experiment-data-table-chart";
 
+const bulkSelectionFormSchema = z.object({
+  allRows: z.array(z.string()),
+  selectedRowId: z.array(z.string()),
+  selectAll: z.boolean().optional(),
+});
+export type BulkSelectionFormType = z.infer<typeof bulkSelectionFormSchema>;
+
 export function ExperimentDataTable({
   experimentId,
   tableName,
@@ -50,6 +63,12 @@ export function ExperimentDataTable({
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
   const [persistedMetaData, setPersistedMetaData] = useState<TableMetadata>();
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+
+  // Row selection state - for bulk actions
+  const selectionForm = useForm<BulkSelectionFormType>({
+    resolver: zodResolver(bulkSelectionFormSchema),
+    defaultValues: { selectedRowId: [], allRows: [] },
+  });
 
   // Chart state - much simpler
   const [chartDisplay, setChartDisplay] = useState<{
@@ -103,6 +122,7 @@ export function ExperimentDataTable({
     showChartOnHover,
     hideChartOnLeave,
     toggleChartPin,
+    selectionForm,
   );
 
   const onPaginationChange = useCallback(
@@ -110,11 +130,13 @@ export function ExperimentDataTable({
       if (typeof updaterOrValue === "function") {
         const newPagination = updaterOrValue(pagination);
         setPagination(newPagination);
+        selectionForm.setValue("selectedRowId", []); // Clear selection on page change
       } else {
         setPagination(updaterOrValue);
+        selectionForm.setValue("selectedRowId", []); // Clear selection on page change
       }
     },
-    [pagination],
+    [pagination, selectionForm],
   );
 
   function changePageSize(pageSize: number) {
@@ -164,6 +186,12 @@ export function ExperimentDataTable({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [table]);
 
+  const selectedRowIds = useWatch({ control: selectionForm.control, name: "selectedRowId" });
+
+  const { totalSelectedComments, totalSelectedFlags } = useMemo(() => {
+    return getTotalSelectedCounts(tableRows, selectedRowIds);
+  }, [selectedRowIds, tableRows]);
+
   if (isLoading && !persistedMetaData) {
     return <div>{t("experimentDataTable.loading")}</div>;
   }
@@ -180,111 +208,138 @@ export function ExperimentDataTable({
   const loadingRowCount =
     pagination.pageIndex + 1 == totalPages ? totalRows % pagination.pageSize : pagination.pageSize;
 
+  const isBulkActionsEnabled = selectionForm.getValues("allRows").length > 0;
+
+  // Prevent form submission to avoid URL navigation
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+  };
+
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h5 className="text-base font-medium">
-          {t("experimentDataTable.table")} {tableName}
-        </h5>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setDownloadModalOpen(true)}
-          className="flex items-center gap-2"
-        >
-          <Download className="h-4 w-4" />
-          {t("experimentDataTable.download")}
-        </Button>
-      </div>
-      <div className="text-muted-foreground relative overflow-visible rounded-md border">
-        <Table>
-          <ExperimentTableHeader headerGroups={table.getHeaderGroups()} />
-          <TableBody>
-            {isLoading && persistedMetaData && (
-              <LoadingRows columnCount={columnCount} rowCount={loadingRowCount} />
-            )}
-            {!isLoading && (
-              <ExperimentDataRows rows={table.getRowModel().rows} columnCount={columnCount} />
-            )}
-          </TableBody>
-        </Table>
-      </div>
+    <Form {...selectionForm}>
+      <form onSubmit={handleSubmit}>
+        {/* <input type="hidden" name="allRows" /> */}
+        {/*TODO: The option with bulk actions will be removed as soon as the backend code is ready.*/}
+        {!isBulkActionsEnabled && (
+          <div className="mb-4 flex items-center justify-between">
+            <h5 className="text-base font-medium">
+              {t("experimentDataTable.table")} {tableName}
+            </h5>
 
-      {/* Traditional pagination controls */}
-      <div className="mt-4 flex w-full flex-col items-center justify-between gap-4 overflow-auto p-1 text-sm sm:flex-row sm:gap-8">
-        <div className="flex-1 whitespace-nowrap">
-          {t("experimentDataTable.totalRows")}: {totalRows}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDownloadModalOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              {t("experimentDataTable.download")}
+            </Button>
+          </div>
+        )}
+        {isBulkActionsEnabled && (
+          <>
+            <h5 className="text-base font-medium">
+              {t("experimentDataTable.table")} {tableName}
+            </h5>
+            <BulkActionsBar
+              experimentId={experimentId}
+              tableName={tableName}
+              rowIds={selectedRowIds}
+              totalComments={totalSelectedComments}
+              totalFlags={totalSelectedFlags}
+              clearSelection={() => selectionForm.setValue("selectedRowId", [])}
+              downloadTable={() => setDownloadModalOpen(true)}
+            />
+          </>
+        )}
+        <div className="text-muted-foreground relative overflow-visible rounded-md border">
+          <Table>
+            <ExperimentTableHeader headerGroups={table.getHeaderGroups()} />
+            <TableBody>
+              {isLoading && persistedMetaData && (
+                <LoadingRows columnCount={columnCount} rowCount={loadingRowCount} />
+              )}
+              {!isLoading && (
+                <ExperimentDataRows rows={table.getRowModel().rows} columnCount={columnCount} />
+              )}
+            </TableBody>
+          </Table>
         </div>
-        <div className="flex items-center space-x-2">
-          <Label className="whitespace-nowrap">{t("experimentDataTable.rowsPerPage")}:</Label>
-          <Select
-            value={pagination.pageSize.toString()}
-            onValueChange={(rowsPerPage) => changePageSize(+rowsPerPage)}
-          >
-            <SelectTrigger className="w-[65px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-              <SelectItem value="100">100</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Traditional pagination controls */}
+        <div className="mt-4 flex w-full flex-col items-center justify-between gap-4 overflow-auto p-1 text-sm sm:flex-row sm:gap-8">
+          <div className="flex-1 whitespace-nowrap">
+            {t("experimentDataTable.totalRows")}: {totalRows}
+          </div>
+          <div className="flex items-center space-x-2">
+            <Label className="whitespace-nowrap">{t("experimentDataTable.rowsPerPage")}:</Label>
+            <Select
+              value={pagination.pageSize.toString()}
+              onValueChange={(rowsPerPage) => changePageSize(+rowsPerPage)}
+            >
+              <SelectTrigger className="w-[65px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Pagination className="max-w-72">
+            <PaginationContent className="w-full justify-between">
+              <PaginationItem>
+                <PaginationPrevious
+                  className={cn(
+                    "border",
+                    !table.getCanPreviousPage() &&
+                      "pointer-events-none cursor-not-allowed opacity-50",
+                  )}
+                  onClick={() => table.previousPage()}
+                  aria-disabled={!table.getCanPreviousPage()}
+                  title={t("experimentDataTable.previous")}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <span className="">
+                  {t("experimentDataTable.page")} {pagination.pageIndex + 1}{" "}
+                  {t("experimentDataTable.pageOf")} {totalPages}
+                </span>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  className={cn(
+                    "border",
+                    !table.getCanNextPage() && "pointer-events-none cursor-not-allowed opacity-50",
+                  )}
+                  onClick={() => table.nextPage()}
+                  aria-disabled={!table.getCanNextPage()}
+                  title={t("experimentDataTable.next")}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
-        <Pagination className="max-w-72">
-          <PaginationContent className="w-full justify-between">
-            <PaginationItem>
-              <PaginationPrevious
-                className={cn(
-                  "border",
-                  !table.getCanPreviousPage() &&
-                    "pointer-events-none cursor-not-allowed opacity-50",
-                )}
-                onClick={() => table.previousPage()}
-                aria-disabled={!table.getCanPreviousPage()}
-                title={t("experimentDataTable.previous")}
-              />
-            </PaginationItem>
-            <PaginationItem>
-              <span className="">
-                {t("experimentDataTable.page")} {pagination.pageIndex + 1}{" "}
-                {t("experimentDataTable.pageOf")} {totalPages}
-              </span>
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationNext
-                className={cn(
-                  "border",
-                  !table.getCanNextPage() && "pointer-events-none cursor-not-allowed opacity-50",
-                )}
-                onClick={() => table.nextPage()}
-                aria-disabled={!table.getCanNextPage()}
-                title={t("experimentDataTable.next")}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      </div>
-
-      <DataDownloadModal
-        experimentId={experimentId}
-        tableName={tableName}
-        open={downloadModalOpen}
-        onOpenChange={setDownloadModalOpen}
-      />
-
-      {chartDisplay && (
-        <div className="mt-6">
-          <ExperimentDataTableChart
-            data={chartDisplay.data}
-            columnName={chartDisplay.columnName}
-            visible={true}
-            isClicked={chartDisplay.isPinned}
-            onClose={closePinnedChart}
-          />
-        </div>
-      )}
-    </div>
+        <DataDownloadModal
+          experimentId={experimentId}
+          tableName={tableName}
+          open={downloadModalOpen}
+          onOpenChange={setDownloadModalOpen}
+        />
+        {chartDisplay && (
+          <div className="mt-6">
+            <ExperimentDataTableChart
+              data={chartDisplay.data}
+              columnName={chartDisplay.columnName}
+              visible={true}
+              isClicked={chartDisplay.isPinned}
+              onClose={closePinnedChart}
+            />
+          </div>
+        )}
+      </form>
+    </Form>
   );
 }

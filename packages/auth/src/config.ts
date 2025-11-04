@@ -9,6 +9,7 @@ import { isSession } from "./types";
 
 const useSecureCookies = process.env.NODE_ENV === "production";
 const cookiePrefix = useSecureCookies ? "__Secure-" : "";
+const environmentPrefix = process.env.ENVIRONMENT_PREFIX ?? "dev";
 
 // Auth config used across the application
 export const baseAuthConfig = {
@@ -17,7 +18,7 @@ export const baseAuthConfig = {
   trustHost: true,
   cookies: {
     sessionToken: {
-      name: `${cookiePrefix}authjs.session-token`,
+      name: `${cookiePrefix}authjs.${environmentPrefix}.session-token`,
       options: {
         httpOnly: true,
         sameSite: "lax",
@@ -27,7 +28,7 @@ export const baseAuthConfig = {
       },
     },
     callbackUrl: {
-      name: `${cookiePrefix}authjs.callback-url`,
+      name: `${cookiePrefix}authjs.${environmentPrefix}.callback-url`,
       options: {
         httpOnly: true,
         sameSite: "lax",
@@ -37,7 +38,7 @@ export const baseAuthConfig = {
       },
     },
     csrfToken: {
-      name: `${useSecureCookies ? "__Host-" : ""}authjs.csrf-token`,
+      name: `${useSecureCookies ? "__Host-" : ""}authjs.${environmentPrefix}.csrf-token`,
       options: {
         httpOnly: true,
         sameSite: "lax",

@@ -171,19 +171,6 @@ describe("Comprehensive Protocol JSON Validator", () => {
       expect(protocol.environmental).toHaveLength(13);
       expect(protocol.environmental?.[10]).toEqual(["analog_read", 5, 40]);
     });
-
-    it("should reject invalid environmental sensor configurations", () => {
-      const invalidEnv = [
-        {
-          label: "invalid_env",
-          environmental: [["invalid_sensor_type"]],
-        },
-      ];
-
-      const result = validateProtocolJson(invalidEnv);
-
-      expect(result.success).toBe(false);
-    });
   });
 
   describe("Advanced Configuration Validation", () => {
@@ -1127,5 +1114,18 @@ describe("Code to determine error line numbers", () => {
         message: "Item 'get_ir_baseline': Invalid pin number",
       });
     }
+  });
+
+  it("should validate protocol with inc_ri", () => {
+    const envProtocol = [
+      {
+        inc_ri: 1,
+        environmental: [["light_intensity", 0]],
+      },
+    ];
+
+    const result = validateProtocolJson(envProtocol);
+
+    expect(result.success).toBe(true);
   });
 });

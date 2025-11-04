@@ -1,7 +1,18 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import { ExperimentFilter, ExperimentStatus } from "@repo/api";
-import { desc, eq, or, and, ilike, experiments, experimentMembers, sql } from "@repo/database";
+import {
+  desc,
+  eq,
+  and,
+  or,
+  ilike,
+  ne,
+  experiments,
+  experimentMembers,
+  exists,
+  sql,
+} from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -51,29 +62,46 @@ export class ExperimentRepository {
       updatedAt: experiments.updatedAt,
     };
 
-    return tryCatch(() => {
-      let query = this.database
-        .select(experimentFields)
-        .from(experiments)
-        .orderBy(desc(experiments.updatedAt));
-
+    return tryCatch(async () => {
       const conditions: (SQL | undefined)[] = [];
 
-      if (filter === "my") {
-        conditions.push(eq(experiments.createdBy, userId));
-      } else if (filter === "member") {
-        query = query.innerJoin(
-          experimentMembers,
-          eq(experiments.id, experimentMembers.experimentId),
-        );
-        conditions.push(eq(experimentMembers.userId, userId));
-      } else if (filter === "related") {
-        query = query.leftJoin(
-          experimentMembers,
-          eq(experiments.id, experimentMembers.experimentId),
-        );
+      // Always exclude archived experiments unless explicitly requested
+      if (status !== "archived") {
+        conditions.push(ne(experiments.status, "archived"));
+      }
+
+      // Only apply membership filter if explicitly requested
+      if (filter === "member") {
         conditions.push(
-          or(eq(experiments.createdBy, userId), eq(experimentMembers.userId, userId)),
+          exists(
+            this.database
+              .select()
+              .from(experimentMembers)
+              .where(
+                and(
+                  eq(experimentMembers.experimentId, experiments.id),
+                  eq(experimentMembers.userId, userId),
+                ),
+              ),
+          ),
+        );
+      } else {
+        // If no filter, only show public experiments OR experiments where user is a member
+        conditions.push(
+          or(
+            eq(experiments.visibility, "public"),
+            exists(
+              this.database
+                .select()
+                .from(experimentMembers)
+                .where(
+                  and(
+                    eq(experimentMembers.experimentId, experiments.id),
+                    eq(experimentMembers.userId, userId),
+                  ),
+                ),
+            ),
+          ),
         );
       }
 
@@ -86,6 +114,12 @@ export class ExperimentRepository {
       }
 
       const where = and(...conditions);
+
+      const query = this.database
+        .select(experimentFields)
+        .from(experiments)
+        .orderBy(desc(experiments.updatedAt));
+
       return where ? query.where(where) : query;
     });
   }
@@ -152,6 +186,7 @@ export class ExperimentRepository {
     Result<{
       experiment: ExperimentDto | null;
       hasAccess: boolean;
+      hasArchiveAccess: boolean;
       isAdmin: boolean;
     }>
   > {
@@ -185,14 +220,18 @@ export class ExperimentRepository {
         .limit(1);
 
       if (result.length === 0) {
-        return { experiment: null, hasAccess: false, isAdmin: false };
+        return { experiment: null, hasAccess: false, isAdmin: false, hasArchiveAccess: false };
       }
 
       const { experiment, memberRole } = result[0];
       const isMember = memberRole !== null;
       const isAdmin = memberRole === "admin";
 
-      return { experiment, hasAccess: isMember, isAdmin };
+      // If experiment is archived, no one has access
+      // Otherwise, any member has access
+      const hasArchiveAccess = experiment.status === "archived" ? false : isMember;
+
+      return { experiment, hasAccess: isMember, isAdmin, hasArchiveAccess };
     });
   }
 

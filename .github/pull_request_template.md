@@ -15,6 +15,7 @@ Before submitting a Pull Request, please ensure you've done the following:
 - [ ] Documentation Update
 - [ ] Performance Improvement
 - [ ] Test Update
+- [ ] Chore
 - [ ] Other (please describe)
 
 ## Description

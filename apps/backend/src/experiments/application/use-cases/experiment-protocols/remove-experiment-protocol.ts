@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
+import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentProtocolRepository } from "../../../core/repositories/experiment-protocol.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
@@ -26,12 +27,19 @@ export class RemoveExperimentProtocolUseCase {
     const accessResult = await this.experimentRepository.checkAccess(experimentId, currentUserId);
 
     return accessResult.chain(
-      async ({ experiment, isAdmin }: { experiment: any; isAdmin: boolean }) => {
+      async ({ experiment, isAdmin }: { experiment: ExperimentDto | null; isAdmin: boolean }) => {
         if (!experiment) {
           this.logger.warn(
             `Attempt to remove protocol from non-existent experiment with ID ${experimentId}`,
           );
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+        }
+
+        if (experiment.status === "archived") {
+          this.logger.warn(
+            `Attempt to remove protocol from archived experiment ${experimentId} by user ${currentUserId}`,
+          );
+          return failure(AppError.forbidden("Cannot remove protocols from archived experiments"));
         }
 
         if (!isAdmin) {

@@ -76,15 +76,15 @@ describe("ListExperimentsUseCase", () => {
       userId: otherUserId,
     });
 
-    // Act - filter by "my" to only get experiments owned by mainUserId
-    const result = await useCase.execute(mainUserId, "my");
+    // Act - filter by "member" to only get experiments where mainUserId is a member
+    const result = await useCase.execute(mainUserId, "member");
 
     expect(result.isSuccess()).toBe(true);
 
     assertSuccess(result);
     const experiments = result.value;
 
-    // Assert - should only find experiments owned by mainUserId
+    // Assert - should only find experiments where mainUserId is a member
     expect(experiments.length).toBeGreaterThanOrEqual(1);
     expect(experiments).toEqual(
       expect.arrayContaining([
@@ -162,15 +162,15 @@ describe("ListExperimentsUseCase", () => {
       status: "active",
     });
 
-    // Act - filter by "my" and "active" status
-    const result = await useCase.execute(mainUserId, "my", "active");
+    // Act - filter by "member" and "active" status
+    const result = await useCase.execute(mainUserId, "member", "active");
 
     expect(result.isSuccess()).toBe(true);
 
     assertSuccess(result);
     const experiments = result.value;
 
-    // Assert - should only find active experiments owned by mainUserId
+    // Assert - should only find active experiments where mainUserId is a member
     expect(experiments.length).toBe(1);
     expect(experiments[0].id).toBe(myActive.id);
     expect(experiments[0].name).toBe("My Active Experiment");
@@ -258,7 +258,7 @@ describe("ListExperimentsUseCase", () => {
     });
 
     // Act
-    const result = await useCase.execute(mainUserId, "related", "active", "Searchable");
+    const result = await useCase.execute(mainUserId, "member", "active", "Searchable");
 
     // Assert
     expect(result.isSuccess()).toBe(true);

@@ -4,11 +4,11 @@ import {
   useContentfulInspectorMode,
   useContentfulLiveUpdates,
 } from "@contentful/live-preview/react";
-import { documentToReactComponents } from "@contentful/rich-text-react-renderer";
 import type { Document } from "@contentful/rich-text-types";
 import React from "react";
 
 import type { PagePoliciesFieldsFragment } from "../lib/__generated/sdk";
+import { CtfRichText } from "./contentful/ctf-rich-text";
 
 interface PoliciesContentProps {
   policies: PagePoliciesFieldsFragment;
@@ -42,12 +42,11 @@ export const PoliciesContent: React.FC<PoliciesContentProps> = ({ policies, loca
       >
         {currentPolicies.title}
       </h1>
+
+      {/* Content */}
       {currentPolicies.content?.json ? (
-        <div
-          className="prose prose-lg w-full text-gray-700"
-          {...inspectorProps({ fieldId: "content" })}
-        >
-          {documentToReactComponents(currentPolicies.content.json as Document)}
+        <div className="w-full" {...inspectorProps({ fieldId: "content" })}>
+          <CtfRichText json={currentPolicies.content.json as Document} />
         </div>
       ) : null}
     </div>

@@ -1,0 +1,19 @@
+fragment LandingMetadataFields on LandingMetadata {
+  __typename
+  sys {
+    id
+    publishedAt
+    environmentId
+  }
+  internalName
+  title
+  description
+}
+
+query landingMetadata($locale: String, $preview: Boolean) {
+  landingMetadataCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      ...LandingMetadataFields
+    }
+  }
+}
