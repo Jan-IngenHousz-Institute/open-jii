@@ -312,7 +312,9 @@ module "pipeline_scheduler" {
       notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipelines_orchestrator_task"
       
       parameters = {
-        "catalog_name" = module.databricks_catalog.catalog_name
+        "catalog_name"            = module.databricks_catalog.catalog_name,
+        "central_schema"          = "centrum",
+        "experiment_status_table" = "experiment_status"
       }
       
       depends_on = "trigger_centrum_pipeline"
