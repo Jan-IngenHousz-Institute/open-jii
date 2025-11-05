@@ -155,7 +155,7 @@ module "storage_credential" {
   role_name       = "open-jii-${var.environment}-uc-access"
   environment     = var.environment
   bucket_name     = var.centralized_metastore_bucket_name
-  isolation_mode  = "ISOLATION_MODE_ISOLATED"
+  isolation_mode  = "ISOLATION_MODE_OPEN"
 
   providers = {
     databricks.workspace = databricks.workspace
