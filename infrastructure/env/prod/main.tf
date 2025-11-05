@@ -155,6 +155,7 @@ module "storage_credential" {
   role_name       = "open-jii-${var.environment}-uc-access"
   environment     = var.environment
   bucket_name     = var.centralized_metastore_bucket_name
+  isolation_mode  = "ISOLATED"
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -173,6 +174,7 @@ module "external_location" {
   storage_credential_name = module.storage_credential.storage_credential_name
   environment             = var.environment
   comment                 = "External location for ${var.environment} environment data"
+  isolation_mode          = "ISOLATED"
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -204,6 +206,7 @@ module "databricks_catalog" {
 
   external_bucket_id     = var.centralized_metastore_bucket_name
   external_location_path = "external/${var.environment}"
+  isolation_mode         = "ISOLATED"
 
   grants = {
     node_service_principal = {

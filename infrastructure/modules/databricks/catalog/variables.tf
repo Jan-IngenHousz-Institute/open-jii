@@ -30,3 +30,9 @@ variable "grants" {
   }))
   default = {}
 }
+
+variable "isolation_mode" {
+  description = "Isolation mode for the catalog (ISOLATED or OPEN)"
+  type        = string
+  default     = "ISOLATED"
+}

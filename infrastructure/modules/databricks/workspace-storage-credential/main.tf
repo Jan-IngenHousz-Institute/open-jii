@@ -18,7 +18,8 @@ data "aws_caller_identity" "current" {}
 resource "databricks_storage_credential" "this" {
   provider = databricks.workspace
 
-  name = var.credential_name
+  name           = var.credential_name
+  isolation_mode = var.isolation_mode
 
   aws_iam_role {
     role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.role_name}"

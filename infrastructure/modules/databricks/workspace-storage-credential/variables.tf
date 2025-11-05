@@ -18,3 +18,8 @@ variable "bucket_name" {
   type        = string
 }
 
+variable "isolation_mode" {
+  description = "Isolation mode for the storage credential (ISOLATED or OPEN)"
+  type        = string
+  default     = "ISOLATED"
+}

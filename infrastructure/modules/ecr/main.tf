@@ -86,10 +86,10 @@ resource "aws_ecr_repository_policy" "this" {
       ] : [],
       [
         {
-          Sid    = "AllowTFTesterPush",
+          Sid    = "AllowSSORoleAccess",
           Effect = "Allow",
           Principal = {
-            AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/terraform-tester-${var.environment}"
+            AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_InfrastructureDevOpsAccess_*"
           },
           # CI/CD pipeline permissions for building and pushing images
           Action = [

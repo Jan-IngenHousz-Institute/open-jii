@@ -29,3 +29,9 @@ variable "comment" {
   type        = string
   default     = ""
 }
+
+variable "isolation_mode" {
+  description = "Isolation mode for the external location (ISOLATED or OPEN)"
+  type        = string
+  default     = "ISOLATED"
+}
