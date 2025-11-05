@@ -62,7 +62,7 @@
   "data": "Data",
   "experimentData": {
     "title": "Experiment Data",
-    "description": "View and manage data associated with this experiment. New data is processed every 15 minutes. Timestamps are in UTC (Coordinated Universal Time)",
+    "description": "View, download and manage data associated with this experiment. New data is processed every 15 minutes. Timestamps are in UTC (Coordinated Universal Time)",
     "uploadData": "Upload Data",
     "provisioning": {
       "title": "Experiment is Being Prepared",
@@ -194,7 +194,7 @@
         "comingSoon": "Coming Soon"
       },
       "ambyte": {
-        "label": "Ambyte",
+        "label": "Ambyte (Coming soon)",
         "description": "Upload Ambyte sensor folders containing measurement data"
       }
     },
