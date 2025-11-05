@@ -52,7 +52,7 @@ output "migration_runner_ecs_cluster_name" {
 
 output "migration_runner_task_definition_family" {
   description = "Task definition family for database migrations"
-  value       = module.migration_runner_ecs.ecs_task_deifiniton_family
+  value       = module.migration_runner_ecs.ecs_task_definition_family
 }
 
 output "migration_runner_container_name" {
