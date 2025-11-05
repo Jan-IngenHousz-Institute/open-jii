@@ -24,7 +24,7 @@ module "metastore_s3" {
 
   # Cross-account role ARNs that should have access to this bucket
   cross_account_role_arns = [
-    for env, account in var.accounts : 
+    for env, account in var.accounts :
     "arn:aws:iam::${account.account_id}:role/open-jii-${env}-uc-access"
   ]
 

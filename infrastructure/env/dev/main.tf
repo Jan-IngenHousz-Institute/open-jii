@@ -300,23 +300,23 @@ module "pipeline_scheduler" {
 
   tasks = [
     {
-      key           = "trigger_centrum_pipeline"
-      task_type     = "pipeline"
-      compute_type  = "serverless"
-      pipeline_id   = module.centrum_pipeline.pipeline_id
+      key          = "trigger_centrum_pipeline"
+      task_type    = "pipeline"
+      compute_type = "serverless"
+      pipeline_id  = module.centrum_pipeline.pipeline_id
     },
     {
       key           = "trigger_experiment_pipelines"
       task_type     = "notebook"
       compute_type  = "serverless"
       notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipelines_orchestrator_task"
-      
+
       parameters = {
         "catalog_name"            = module.databricks_catalog.catalog_name,
         "central_schema"          = "centrum",
         "experiment_status_table" = "experiment_status"
       }
-      
+
       depends_on = "trigger_centrum_pipeline"
     },
   ]
@@ -1046,9 +1046,9 @@ module "docs_cloudfront" {
 module "route53" {
   source = "../../modules/route53"
 
-  domain_name           = var.domain_name
-  environment           = var.environment
-  use_environment_prefix = true  # Creates dev.domain_name hosted zone
+  domain_name            = var.domain_name
+  environment            = var.environment
+  use_environment_prefix = true # Creates dev.domain_name hosted zone
 
   # Input for CloudFront domains that need us-east-1 certificates
   cloudfront_domain_configs = {

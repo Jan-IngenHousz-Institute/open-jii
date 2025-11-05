@@ -235,8 +235,8 @@ resource "aws_s3_bucket_policy" "dmarc_reports" {
           StringEquals = {
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id
           },
-          "ArnLike": {
-            "aws:SourceArn": "arn:aws:ses:${local.region}:${data.aws_caller_identity.current.account_id}:receipt-rule-set/${aws_ses_receipt_rule_set.dmarc_reports[0].rule_set_name}:*"
+          "ArnLike" : {
+            "aws:SourceArn" : "arn:aws:ses:${local.region}:${data.aws_caller_identity.current.account_id}:receipt-rule-set/${aws_ses_receipt_rule_set.dmarc_reports[0].rule_set_name}:*"
           }
         }
       },

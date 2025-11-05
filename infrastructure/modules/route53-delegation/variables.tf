@@ -17,10 +17,10 @@ variable "name_servers" {
 variable "ssm_parameter_config" {
   description = "Configuration for reading nameservers from SSM Parameter Store in another account. Either this or name_servers must be provided."
   type = object({
-    parameter_name     = string # SSM parameter name (e.g., '/open-jii/route53/dev-nameservers')
-    source_account_id  = string # AWS account ID where the parameter is stored
-    assume_role_name   = string # IAM role name to assume in the source account
-    aws_region         = string # AWS region where the parameter is stored
+    parameter_name    = string # SSM parameter name (e.g., '/open-jii/route53/dev-nameservers')
+    source_account_id = string # AWS account ID where the parameter is stored
+    assume_role_name  = string # IAM role name to assume in the source account
+    aws_region        = string # AWS region where the parameter is stored
   })
   default = null
 }

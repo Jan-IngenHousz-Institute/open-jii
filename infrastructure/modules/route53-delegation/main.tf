@@ -1,9 +1,9 @@
 # Validation: Ensure exactly one method is provided
 locals {
-  has_name_servers      = var.name_servers != null
-  has_ssm_config        = var.ssm_parameter_config != null
-  exactly_one_provided  = (local.has_name_servers && !local.has_ssm_config) || (!local.has_name_servers && local.has_ssm_config)
-  
+  has_name_servers     = var.name_servers != null
+  has_ssm_config       = var.ssm_parameter_config != null
+  exactly_one_provided = (local.has_name_servers && !local.has_ssm_config) || (!local.has_name_servers && local.has_ssm_config)
+
   # Will cause an error if validation fails
   validate_inputs = local.exactly_one_provided ? true : tobool("ERROR: Either name_servers or ssm_parameter_config must be provided (but not both)")
 }

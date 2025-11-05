@@ -35,8 +35,8 @@ variable "workspaces" {
 variable "accounts" {
   description = "Map of AWS account configurations for Unity Catalog setup"
   type = map(object({
-    account_id   = string
-    environment  = string
+    account_id  = string
+    environment = string
   }))
   default = {}
 }

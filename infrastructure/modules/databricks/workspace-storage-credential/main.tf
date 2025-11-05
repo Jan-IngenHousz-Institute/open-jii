@@ -17,7 +17,7 @@ data "aws_caller_identity" "current" {}
 # Create storage credential using workspace provider
 resource "databricks_storage_credential" "this" {
   provider = databricks.workspace
-  
+
   name = var.credential_name
 
   aws_iam_role {
@@ -30,7 +30,7 @@ resource "databricks_storage_credential" "this" {
 # Create IAM role for workspace's storage access
 resource "aws_iam_role" "storage_access" {
   name = var.role_name
-  
+
   assume_role_policy = data.databricks_aws_unity_catalog_assume_role_policy.this.json
 
   tags = {
@@ -58,7 +58,7 @@ data "databricks_aws_unity_catalog_policy" "this" {
 resource "aws_iam_policy" "storage_access" {
   name   = "${var.role_name}-policy"
   policy = data.databricks_aws_unity_catalog_policy.this.json
-  
+
   tags = {
     Name        = "${var.environment} Unity Catalog storage access IAM policy"
     Environment = var.environment

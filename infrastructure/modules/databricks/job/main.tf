@@ -109,7 +109,7 @@ resource "databricks_job" "this" {
   dynamic "schedule" {
     for_each = var.schedule != null ? [1] : []
     content {
-      pause_status = "UNPAUSED"
+      pause_status           = "UNPAUSED"
       quartz_cron_expression = var.schedule
       timezone_id            = "UTC"
     }
