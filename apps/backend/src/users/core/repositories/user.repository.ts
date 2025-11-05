@@ -12,12 +12,7 @@ import {
   sessions,
   authenticators,
   experimentMembers,
-  experiments,
-  protocols,
-  macros,
-  experimentVisualizations,
   sql,
-  SYSTEM_OWNER_ID,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
@@ -83,6 +78,7 @@ export class UserRepository {
           bio: getAnonymizedBio(),
           avatarUrl: getAnonymizedAvatarUrl(),
           activated: profiles.activated,
+          deletedAt: profiles.deletedAt,
           organizationId: profiles.organizationId,
           updatedAt: profiles.updatedAt,
         })
@@ -126,117 +122,73 @@ export class UserRepository {
     );
   }
 
-  /**
-   * Delete all PII (Personally Identifiable Information) for a user.
-   * This includes OAuth accounts, sessions, authenticators, experiment memberships, and profile.
-   * Must be called within a transaction.
-   */
-  private async deletePII(
-    tx: Parameters<Parameters<typeof this.database.transaction>[0]>[0],
-    userId: string,
-  ): Promise<void> {
-    // 1. Delete OAuth accounts, sessions, and authenticators
-    // This ensures the user can sign up fresh with the same OAuth provider
-    await tx.delete(accounts).where(eq(accounts.userId, userId));
-    await tx.delete(sessions).where(eq(sessions.userId, userId));
-    await tx.delete(authenticators).where(eq(authenticators.userId, userId));
-
-    // 2. Handle experiment memberships:
-    // - If user is the only admin of an experiment -> transfer admin to system owner
-    // - Otherwise skip (other admins remain)
-    // - Finally delete all memberships belonging to this user
-
-    // Find all admin memberships for this user
-    const adminMemberships = await tx
-      .select({ experimentId: experimentMembers.experimentId })
-      .from(experimentMembers)
-      .where(and(eq(experimentMembers.userId, userId), eq(experimentMembers.role, "admin")));
-
-    for (const membership of adminMemberships) {
-      // Count how many admins exist for this experiment
-      const adminCountResult = await tx
-        .select({ count: sql<number>`count(*)` })
+  async isOnlyAdminOfAnyExperiments(userId: string): Promise<Result<boolean>> {
+    return tryCatch(async () => {
+      // Find all experiments where this user is an admin
+      const adminRows = await this.database
+        .select({ experimentId: experimentMembers.experimentId })
         .from(experimentMembers)
-        .where(
-          and(
-            eq(experimentMembers.experimentId, membership.experimentId),
-            eq(experimentMembers.role, "admin"),
-          ),
-        );
+        .where(and(eq(experimentMembers.userId, userId), eq(experimentMembers.role, "admin")));
 
-      const count = Number(adminCountResult[0]?.count ?? 0);
-
-      // If the user is the only admin, add the system owner as a new admin
-      if (count === 1) {
-        await tx.insert(experimentMembers).values({
-          experimentId: membership.experimentId,
-          userId: SYSTEM_OWNER_ID,
-          role: "admin",
-        });
+      if (adminRows.length === 0) {
+        return false;
       }
-    }
 
-    // Now delete all memberships for the user (member + admin roles)
-    await tx.delete(experimentMembers).where(eq(experimentMembers.userId, userId));
+      // For each experiment, check how many admins exist. If any has exactly 1 admin, return true.
+      for (const row of adminRows) {
+        const admins = await this.database
+          .select()
+          .from(experimentMembers)
+          .where(
+            and(
+              eq(experimentMembers.experimentId, row.experimentId),
+              eq(experimentMembers.role, "admin"),
+            ),
+          );
 
-    // 3. Delete profile row
-    await tx.delete(profiles).where(eq(profiles.userId, userId));
-  }
+        if (admins.length === 1) {
+          return true;
+        }
+      }
 
-  /**
-   * Transfer ownership of all user-created content to system owner and scrub user record.
-   * This includes experiments, protocols, macros, visualizations, and the user record itself.
-   * Must be called within a transaction.
-   */
-  private async transferOwnership(
-    tx: Parameters<Parameters<typeof this.database.transaction>[0]>[0],
-    userId: string,
-  ): Promise<void> {
-    // 1. Reassign ownership of all experiments to system owner
-    await tx
-      .update(experiments)
-      .set({ createdBy: SYSTEM_OWNER_ID })
-      .where(eq(experiments.createdBy, userId));
-
-    // 2. Reassign ownership of protocols to system owner
-    await tx
-      .update(protocols)
-      .set({ createdBy: SYSTEM_OWNER_ID })
-      .where(eq(protocols.createdBy, userId));
-
-    // 3. Reassign ownership of macros to system owner
-    await tx.update(macros).set({ createdBy: SYSTEM_OWNER_ID }).where(eq(macros.createdBy, userId));
-
-    // 4. Reassign ownership of experiment visualizations to system owner
-    await tx
-      .update(experimentVisualizations)
-      .set({ createdBy: SYSTEM_OWNER_ID })
-      .where(eq(experimentVisualizations.createdBy, userId));
-
-    // 5. Soft-delete the user: scrub PII and set deletion timestamps
-    const userIdPrefix = userId.slice(0, 8);
-    await tx
-      .update(users)
-      .set({
-        email: null,
-        name: `deleted-user-${userIdPrefix}`,
-        image: null,
-        emailVerified: null,
-        deletedAt: sql`now() AT TIME ZONE 'UTC'`,
-      })
-      .where(eq(users.id, userId));
+      return false;
+    });
   }
 
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
-      // Perform soft-delete with PII scrubbing and ownership transfer
-      // Both operations must succeed or fail together (transaction atomicity)
       await this.database.transaction(async (tx) => {
-        // First, delete all PII
-        await this.deletePII(tx, id);
+        // 1. Delete OAuth accounts, sessions, and authenticators
+        await tx.delete(accounts).where(eq(accounts.userId, id));
+        await tx.delete(sessions).where(eq(sessions.userId, id));
+        await tx.delete(authenticators).where(eq(authenticators.userId, id));
 
-        // Then, transfer ownership to system owner
-        await this.transferOwnership(tx, id);
+        // 2. Delete experiment memberships
+        await tx.delete(experimentMembers).where(eq(experimentMembers.userId, id));
+
+        // 3. Anonymize profile: scrub PII and mark deleted
+        await tx
+          .update(profiles)
+          .set({
+            firstName: "Deleted",
+            lastName: "User",
+            bio: null,
+            avatarUrl: null,
+            organizationId: null,
+            deletedAt: sql`now() AT TIME ZONE 'UTC'`,
+          })
+          .where(eq(profiles.userId, id));
+
+        // 4. Soft-delete user: scrub PII
+        await tx
+          .update(users)
+          .set({
+            email: null,
+            name: `Deleted User`,
+            image: null,
+            emailVerified: null,
+          })
+          .where(eq(users.id, id));
       });
     });
   }

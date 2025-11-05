@@ -1,7 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { seedSystemOwner } from "@repo/database";
-
 import { success, Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { UserDto } from "../../../core/models/user.model";
 import { UserRepository } from "../../../core/repositories/user.repository";
@@ -13,8 +11,6 @@ export class DeleteUserUseCase {
   constructor(private readonly userRepository: UserRepository) {}
 
   async execute(id: string): Promise<Result<void>> {
-    this.logger.log(`Deleting user with ID ${id}`);
-
     // Check if user exists
     const userResult = await this.userRepository.findOne(id);
 
@@ -24,28 +20,29 @@ export class DeleteUserUseCase {
         return failure(AppError.notFound(`User with ID ${id} not found`));
       }
 
-      // Ensure system owner exists before deleting
-      this.logger.log(`Ensuring system owner exists before deleting user ${id}`);
+      // Check if user is the only admin of any experiments
+      const adminCheckResult = await this.userRepository.isOnlyAdminOfAnyExperiments(id);
 
-      try {
-        await seedSystemOwner();
-        this.logger.log("System owner verified/created");
-      } catch (err) {
-        this.logger.error("Failed to seed system owner", err as Error);
-        return failure(
-          AppError.internal(
-            "Failed to ensure system owner exists",
-            "SYSTEM_OWNER_SEED_FAILED",
-            err,
-          ),
-        );
-      }
+      return adminCheckResult.chain(async (isOnlyAdmin: boolean) => {
+        if (isOnlyAdmin) {
+          this.logger.warn(
+            `Cannot delete user ${id} - user is the only admin of one or more experiments`,
+          );
+          return failure(
+            AppError.forbidden(
+              `Cannot delete account - you are the only admin of one or more experiments. Please assign other admins before deleting.`,
+            ),
+          );
+        }
 
-      // Perform the soft delete
-      this.logger.log(`Soft-deleting user with ID ${id}`);
-      const deleteResult = await this.userRepository.delete(id);
+        // Soft delete
+        this.logger.log(`Soft-deleting user with ID ${id}`);
+        const deleteResult = await this.userRepository.delete(id);
 
-      return deleteResult.chain(() => {
+        if (deleteResult.isFailure()) {
+          return deleteResult;
+        }
+
         this.logger.log(`Successfully soft-deleted user ${id}`);
         return success(undefined);
       });

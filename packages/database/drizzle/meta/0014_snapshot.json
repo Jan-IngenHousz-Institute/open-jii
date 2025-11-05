@@ -1,5 +1,5 @@
 {
-  "id": "bd8e552e-bd1a-46bf-a586-997eb29442f0",
+  "id": "8336e887-8a14-46de-b407-71ab5ef2951b",
   "prevId": "34532659-751b-4a75-bbda-7543205e8f50",
   "version": "7",
   "dialect": "postgresql",
@@ -973,6 +973,12 @@
           "notNull": true,
           "default": true
         },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
         "user_id": {
           "name": "user_id",
           "type": "uuid",
@@ -1290,12 +1296,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
-        },
-        "deleted_at": {
-          "name": "deleted_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
         },
         "created_at": {
           "name": "created_at",

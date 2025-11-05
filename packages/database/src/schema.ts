@@ -32,7 +32,6 @@ export const users = pgTable("users", {
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
   registered: boolean("registered").notNull().default(false),
-  deletedAt: timestamp("deleted_at"),
   ...timestamps,
 });
 
@@ -129,6 +128,7 @@ export const profiles = pgTable("profiles", {
   bio: text("bio"),
   avatarUrl: varchar("avatar_url", { length: 500 }),
   activated: boolean("activated").default(true).notNull(),
+  deletedAt: timestamp("deleted_at"),
   userId: uuid("user_id")
     .references(() => users.id)
     .unique()

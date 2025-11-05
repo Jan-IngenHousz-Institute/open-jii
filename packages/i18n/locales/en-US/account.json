@@ -82,7 +82,7 @@
       },
       "warningPreserveTitle": "Your content will be preserved:",
       "warningPreserveList": {
-        "content": "Experiments, macros, and protocols will remain intact and have ownership transferred to a system account"
+        "content": "Experiments, macros, and protocols will remain intact"
       },
       "confirmPrompt": "Type",
       "confirmWord": "delete",

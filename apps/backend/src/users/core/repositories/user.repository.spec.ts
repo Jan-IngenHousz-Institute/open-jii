@@ -341,8 +341,7 @@ describe("UserRepository", () => {
       expect(userRow.email).toBeNull();
       expect(userRow.image).toBeNull();
       expect(userRow.emailVerified).toBeNull();
-      expect(userRow.name).toMatch(/^deleted-user-/);
-      expect(userRow.deletedAt).not.toBeNull();
+      expect(userRow.name).toBe("Deleted User");
 
       // Verify related PII rows are removed
       const accountRows = await testApp.database
@@ -363,12 +362,19 @@ describe("UserRepository", () => {
         .where(eq(authenticators.userId, userToDeleteId));
       expect(authRows.length).toBe(0);
 
-      // Profile should be deleted
+      // Profile should be anonymized, not deleted
       const profs = await testApp.database
         .select()
         .from(profiles)
         .where(eq(profiles.userId, userToDeleteId));
-      expect(profs.length).toBe(0);
+      expect(profs.length).toBe(1);
+      const profile = profs[0];
+      expect(profile.firstName).toBe("Deleted");
+      expect(profile.lastName).toBe("User");
+      expect(profile.bio).toBeNull();
+      expect(profile.avatarUrl).toBeNull();
+      expect(profile.organizationId).toBeNull();
+      expect(profile.deletedAt).not.toBeNull();
 
       // Experiment memberships for this user should be deleted
       const memberships = await testApp.database

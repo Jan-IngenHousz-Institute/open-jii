@@ -1,4 +1,4 @@
-import { eq, SYSTEM_OWNER_ID, users } from "@repo/database";
+import { eq, users } from "@repo/database";
 
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
@@ -47,9 +47,8 @@ describe("DeleteUserUseCase", () => {
       .where(eq(users.id, userToDeleteId));
 
     expect(deletedUser).toBeDefined();
-    expect(deletedUser.deletedAt).not.toBeNull();
     expect(deletedUser.email).toBeNull();
-    expect(deletedUser.name).toMatch(/^deleted-user-/);
+    expect(deletedUser.name).toBe("Deleted User");
   });
 
   it("should return NOT_FOUND error when user does not exist", async () => {
@@ -65,29 +64,5 @@ describe("DeleteUserUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
     expect(result.error.message).toContain(`User with ID ${nonExistentId} not found`);
-  });
-
-  it("should ensure system owner exists before deleting user", async () => {
-    // Arrange
-    const userToDeleteId = await testApp.createTestUser({
-      email: "another-delete@example.com",
-      name: "Another User",
-    });
-
-    // Act
-    const result = await useCase.execute(userToDeleteId);
-
-    // Assert - should succeed, meaning system owner was verified/created
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-
-    // Verify system owner exists in the database
-    const [systemOwner] = await testApp.database
-      .select()
-      .from(users)
-      .where(eq(users.id, SYSTEM_OWNER_ID));
-
-    expect(systemOwner).toBeDefined();
-    expect(systemOwner.name).toBe("System Owner");
   });
 });

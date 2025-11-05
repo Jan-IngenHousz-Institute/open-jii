@@ -399,9 +399,8 @@ describe("UserController", () => {
       expect(response.body).toMatchObject({
         id: userToDeleteId,
         email: null,
-        deletedAt: expect.any(String) as unknown,
       });
-      expect(response.body.name).toMatch(/^deleted-user-/);
+      expect(response.body.name).toBe("Deleted User");
     });
 
     it("should return 404 when deleting a non-existent user", async () => {
