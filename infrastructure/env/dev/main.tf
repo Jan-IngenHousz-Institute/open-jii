@@ -339,6 +339,62 @@ module "pipeline_scheduler" {
   depends_on = [module.centrum_pipeline]
 }
 
+module "ambyte_processing_job" {
+  source = "../../modules/databricks/job"
+
+  name        = "Ambyte-Processing-Job-DEV"
+  description = "Processes raw ambyte trace files and saves them in the respective volume in parquet format"
+
+  max_concurrent_runs           = 1   # Limit concurrent runs when queueing is enabled
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  # Enable job queueing
+  queue = {
+    enabled = true
+  }
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key           = "process_ambyte_data"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/ambyte_processing_task"
+
+      parameters = {
+        EXPERIMENT_ID     = "{{job.parameters.EXPERIMENT_ID}}"
+        EXPERIMENT_SCHEMA = "{{job.parameters.EXPERIMENT_SCHEMA}}"
+        CATALOG_NAME      = "{{job.parameters.CATALOG_NAME}}"
+        UPLOAD_DIRECTORY  = "{{job.parameters.UPLOAD_DIRECTORY}}"
+        YEAR_PREFIX       = "{{job.parameters.YEAR_PREFIX}}"
+      }
+    }
+  ]
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
 module "experiment_provisioning_job" {
   source = "../../modules/databricks/job"
 
