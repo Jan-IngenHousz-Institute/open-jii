@@ -1,10 +1,14 @@
 name: "Setup Node.js and pnpm"
-description: "Sets up Node.js and pnpm with caching"
+description: "Sets up Node.js and pnpm with caching and optional hoisted installation"
 inputs:
   node-version:
     description: "Node.js version"
     required: true
     default: "22"
+  hoisted:
+    description: "Use hoisted node linker (required for AWS Lambda deployments)"
+    required: false
+    default: "false"
 
 runs:
   using: "composite"
@@ -22,10 +26,24 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.pnpm-store
-        key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+        key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}-${{ inputs.hoisted }}
         restore-keys: |
+          ${{ runner.os }}-pnpm-${{ inputs.hoisted }}-
           ${{ runner.os }}-pnpm-
 
-    - name: Install Dependencies
+    - name: Install Dependencies (Standard)
+      if: inputs.hoisted == 'false'
       shell: bash
-      run: pnpm install --frozen-lockfile
+      run: |
+        echo "Installing dependencies with standard pnpm (symlinks)..."
+        pnpm install --frozen-lockfile
+
+    - name: Install Dependencies (Hoisted)
+      if: inputs.hoisted == 'true'
+      shell: bash
+      run: |
+        echo "Installing dependencies with hoisted node linker (AWS Lambda compatible)..."
+        # Install dependencies using pnpm with hoisted node linker
+        # This is because AWS lambdas do not support symlinks
+        # Read more at https://pnpm.io/settings#nodelinker
+        pnpm install --node-linker=hoisted --frozen-lockfile

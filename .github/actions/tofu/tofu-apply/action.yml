@@ -1,0 +1,9 @@
+name: "OpenTofu Apply"
+description: "Runs OpenTofu apply"
+runs:
+  using: "composite"
+  steps:
+    - name: OpenTofu Apply
+      shell: bash
+      working-directory: infrastructure/env/${{ env.environment }}
+      run: tofu apply -auto-approve -no-color

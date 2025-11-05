@@ -1,0 +1,162 @@
+# Deployment Workflow
+# Main orchestrator for infrastructure and application deployments
+
+name: Deployment Workflow
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Target environment (dev, staging, prod)"
+        required: true
+        type: string
+      deploy_infrastructure:
+        description: "Whether to deploy infrastructure"
+        required: false
+        type: boolean
+        default: true
+      slack_notification:
+        description: "Whether to send Slack notifications"
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  detect-changes:
+    name: Detect Changed Packages
+    runs-on: ubuntu-latest
+    outputs:
+      affected_apps: ${{ steps.detect.outputs.affected_apps }}
+      has_affected_apps: ${{ steps.detect.outputs.has_affected_apps }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "22"
+
+      - name: Detect Affected Packages
+        id: detect
+        uses: ./.github/actions/detect-affected-packages
+
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    if: inputs.deploy_infrastructure
+    uses: ./.github/workflows/tofu.yml
+    with:
+      environment: ${{ inputs.environment }}
+      apply: true
+      tofu_version: "1.9.0"
+    secrets: inherit
+
+  database-migrations:
+    name: Database Migrations
+    needs: [detect-changes, deploy-infrastructure]
+    if: contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'database')
+    uses: ./.github/workflows/database-migrations.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  deploy-backend:
+    name: Deploy Backend
+    needs: [detect-changes, deploy-infrastructure, database-migrations]
+    if: contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'backend')
+    uses: ./.github/workflows/deploy-backend.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  deploy-frontend:
+    name: Deploy Frontend
+    needs: [detect-changes, deploy-infrastructure, deploy-backend]
+    if: contains(fromJSON(needs.detect-changes.outputs.affected_apps), 'web')
+    uses: ./.github/workflows/deploy-nextjs-opennext.yml
+    with:
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  notify-slack:
+    name: Slack Notification
+    needs:
+      [
+        detect-changes,
+        deploy-infrastructure,
+        database-migrations,
+        deploy-backend,
+        deploy-frontend,
+      ]
+    if: always() && inputs.slack_notification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine notification details
+        id: notification
+        run: |
+          INFRA_STATUS="${{ needs.deploy-infrastructure.result }}"
+          DB_STATUS="${{ needs.database-migrations.result }}"
+          BACKEND_STATUS="${{ needs.deploy-backend.result }}"
+          FRONTEND_STATUS="${{ needs.deploy-frontend.result }}"
+
+          if [[ "$INFRA_STATUS" == "failure" || "$DB_STATUS" == "failure" || "$BACKEND_STATUS" == "failure" || "$FRONTEND_STATUS" == "failure" ]]; then
+            OVERALL_STATUS="failure"
+          elif [[ "$INFRA_STATUS" == "cancelled" || "$DB_STATUS" == "cancelled" || "$BACKEND_STATUS" == "cancelled" || "$FRONTEND_STATUS" == "cancelled" ]]; then
+            OVERALL_STATUS="cancelled"
+          else
+            OVERALL_STATUS="success"
+          fi
+
+          echo "overall_status=$OVERALL_STATUS" >> $GITHUB_OUTPUT
+
+      - name: Send Slack notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              text: "Deployment to ${{ inputs.environment }}: ${{ steps.notification.outputs.overall_status }}",
+              attachments: [{
+                color: "${{ steps.notification.outputs.overall_status == 'success' && 'good' || steps.notification.outputs.overall_status == 'failure' && 'danger' || 'warning' }}",
+                fields: [
+                  {
+                    title: "Environment",
+                    value: "${{ inputs.environment }}",
+                    short: true
+                  },
+                  {
+                    title: "Affected",
+                    value: "${{ needs.detect-changes.outputs.affected_apps }}",
+                    short: true
+                  },
+                  {
+                    title: "Infrastructure",
+                    value: "${{ needs.deploy-infrastructure.result || 'skipped' }}",
+                    short: true
+                  },
+                  {
+                    title: "Database",
+                    value: "${{ needs.database-migrations.result || 'skipped' }}",
+                    short: true
+                  },
+                  {
+                    title: "Backend",
+                    value: "${{ needs.deploy-backend.result || 'skipped' }}",
+                    short: true
+                  },
+                  {
+                    title: "Frontend",
+                    value: "${{ needs.deploy-frontend.result || 'skipped' }}",
+                    short: true
+                  }
+                ]
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

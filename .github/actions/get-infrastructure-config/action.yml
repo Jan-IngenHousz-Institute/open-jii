@@ -1,0 +1,48 @@
+name: "Get Infrastructure Config"
+description: "Load infrastructure configuration from SSM Parameter Store"
+inputs:
+  environment:
+    description: "Environment name (dev, staging, prod)"
+    required: true
+  prefix:
+    description: "SSM parameter prefix"
+    default: ""
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Load SSM Parameters
+      shell: bash
+      run: |
+        echo "Loading infrastructure configuration from SSM Parameter Store..."
+        echo "Environment: ${{ inputs.environment }}"
+        echo "Prefix: ${{ inputs.prefix }}"
+
+        PARAMETER_PATH="${{ inputs.prefix }}/${{ inputs.environment }}/"
+        echo "Fetching parameters from: $PARAMETER_PATH"
+
+        aws ssm get-parameters-by-path \
+          --path "$PARAMETER_PATH" \
+          --recursive \
+          --output json > ssm_params.json
+
+        PARAM_COUNT=$(jq '.Parameters | length' ssm_params.json)
+        if [[ "$PARAM_COUNT" -eq 0 ]]; then
+          echo "::error::No parameters found at path: $PARAMETER_PATH"
+          exit 1
+        fi
+
+        echo "Found $PARAM_COUNT parameters"
+
+        echo "::group::Setting Environment Variables"
+        jq -r '.Parameters[] | [.Name, .Value] | @tsv' ssm_params.json | while IFS=$'\t' read -r name value; do
+          param_name=$(basename "$name")
+          env_name=$(echo "$param_name" | tr '[:lower:]' '[:upper:]' | tr '-.' '__')
+          echo "✓ $env_name"
+          echo "$env_name=$value" >> $GITHUB_ENV
+        done
+        echo "::endgroup::"
+
+        rm -f ssm_params.json
+        echo "Infrastructure configuration loaded successfully"

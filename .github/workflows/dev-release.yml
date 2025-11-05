@@ -1,0 +1,25 @@
+name: DEV Release Workflow
+
+on:
+    push:
+        branches: [main]
+
+concurrency:
+    group: main-deploy-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+    actions: read
+    id-token: write
+
+jobs:
+    # Deploy to Dev Environment
+    deploy-dev:
+        name: Deploy to Dev
+        uses: ./.github/workflows/deploy.yml
+        with:
+            environment: dev
+            deploy_infrastructure: true
+            slack_notification: true
+        secrets: inherit
