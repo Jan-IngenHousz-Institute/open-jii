@@ -1,11 +1,13 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { UserProfileDto } from "src/users/core/models/user.model";
-
 import { eq, experimentVisualizations, desc, profiles } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import {
+  getAnonymizedFirstName,
+  getAnonymizedLastName,
+} from "../../../common/utils/profile-anonymization";
 import type {
   ExperimentVisualizationDto,
   CreateExperimentVisualizationDto,
@@ -22,7 +24,11 @@ export class ExperimentVisualizationRepository {
   async listVisualizations(experimentId: string): Promise<Result<ExperimentVisualizationDto[]>> {
     return tryCatch(async () => {
       const results = await this.database
-        .select()
+        .select({
+          experiment_visualizations: experimentVisualizations,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+        })
         .from(experimentVisualizations)
         .innerJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
         .where(eq(experimentVisualizations.experimentId, experimentId))
@@ -30,10 +36,9 @@ export class ExperimentVisualizationRepository {
 
       return results.map((result) => {
         const augmentedResult = result.experiment_visualizations as ExperimentVisualizationDto;
-        const profile = result.profiles as Partial<UserProfileDto>;
         augmentedResult.createdByName =
-          profile.firstName && profile.lastName
-            ? `${profile.firstName} ${profile.lastName}`
+          result.firstName && result.lastName
+            ? `${result.firstName} ${result.lastName}`
             : undefined;
         return augmentedResult;
       });
@@ -62,17 +67,20 @@ export class ExperimentVisualizationRepository {
 
       // Fetch the created record with profile information
       const results = await this.database
-        .select()
+        .select({
+          experiment_visualizations: experimentVisualizations,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+        })
         .from(experimentVisualizations)
         .innerJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
         .where(eq(experimentVisualizations.id, insertResults[0].id));
 
       return results.map((result) => {
         const augmentedResult = result.experiment_visualizations as ExperimentVisualizationDto;
-        const profile = result.profiles as Partial<UserProfileDto>;
         augmentedResult.createdByName =
-          profile.firstName && profile.lastName
-            ? `${profile.firstName} ${profile.lastName}`
+          result.firstName && result.lastName
+            ? `${result.firstName} ${result.lastName}`
             : undefined;
         return augmentedResult;
       });
@@ -82,7 +90,11 @@ export class ExperimentVisualizationRepository {
   async findById(id: string): Promise<Result<ExperimentVisualizationDto | null>> {
     return tryCatch(async () => {
       const result = await this.database
-        .select()
+        .select({
+          experiment_visualizations: experimentVisualizations,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+        })
         .from(experimentVisualizations)
         .innerJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
         .where(eq(experimentVisualizations.id, id))
@@ -93,10 +105,9 @@ export class ExperimentVisualizationRepository {
       }
 
       const augmentedResult = result[0].experiment_visualizations as ExperimentVisualizationDto;
-      const profile = result[0].profiles as Partial<UserProfileDto>;
       augmentedResult.createdByName =
-        profile.firstName && profile.lastName
-          ? `${profile.firstName} ${profile.lastName}`
+        result[0].firstName && result[0].lastName
+          ? `${result[0].firstName} ${result[0].lastName}`
           : undefined;
       return augmentedResult;
     });
@@ -114,17 +125,20 @@ export class ExperimentVisualizationRepository {
 
       // Fetch the updated record with profile information
       const results = await this.database
-        .select()
+        .select({
+          experiment_visualizations: experimentVisualizations,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+        })
         .from(experimentVisualizations)
         .innerJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
         .where(eq(experimentVisualizations.id, id));
 
       return results.map((result) => {
         const augmentedResult = result.experiment_visualizations as ExperimentVisualizationDto;
-        const profile = result.profiles as Partial<UserProfileDto>;
         augmentedResult.createdByName =
-          profile.firstName && profile.lastName
-            ? `${profile.firstName} ${profile.lastName}`
+          result.firstName && result.lastName
+            ? `${result.firstName} ${result.lastName}`
             : undefined;
         return augmentedResult;
       });
