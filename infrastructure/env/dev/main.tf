@@ -1086,7 +1086,7 @@ module "route53" {
 
 # Share Route53 nameservers with prod account via SSM Parameter Store
 module "nameservers_ssm" {
-  source = "../../modules/ssm-parameter-cross-account"
+  source = "../../modules/ssm-parameter"
 
   parameter_name        = "/open-jii/route53/${var.environment}-nameservers"
   parameter_name_prefix = "open-jii-${var.environment}-nameservers"
@@ -1094,10 +1094,8 @@ module "nameservers_ssm" {
   parameter_type        = "StringList"
   parameter_value       = join(",", module.route53.name_servers)
 
-  # Allow specific IAM user from prod account to read this parameter
-  trusted_principals = [
-    "arn:aws:iam::${var.prod_account_id}:user/terraform-tester-prod"
-  ]
+  # Allow prod account to read this parameter
+  cross_account_allowlist = [var.prod_account_id]
 
   tags = {
     Environment = var.environment

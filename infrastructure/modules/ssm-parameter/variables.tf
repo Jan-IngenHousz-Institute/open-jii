@@ -41,15 +41,10 @@ variable "tier" {
   }
 }
 
-variable "trusted_principals" {
-  description = "List of AWS principal ARNs (accounts, roles, or users) that can assume the role to read this parameter"
+variable "cross_account_allowlist" {
+  description = "List of AWS account IDs that should be allowed to read this parameter cross-account"
   type        = list(string)
-}
-
-variable "external_id" {
-  description = "Optional external ID for additional security when assuming the role"
-  type        = string
-  default     = ""
+  default     = []
 }
 
 variable "tags" {
