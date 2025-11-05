@@ -1,13 +1,15 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { UserProfileDto } from "src/users/core/models/user.model";
-
 import { ProtocolFilter } from "@repo/api";
 import { desc, eq, ilike, protocols, experimentProtocols, users } from "@repo/database";
 import { profiles } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import {
+  getAnonymizedFirstName,
+  getAnonymizedLastName,
+} from "../../../common/utils/profile-anonymization";
 import { CreateProtocolDto, UpdateProtocolDto, ProtocolDto } from "../models/protocol.model";
 
 @Injectable()
@@ -36,7 +38,11 @@ export class ProtocolRepository {
   async findAll(search?: ProtocolFilter): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
       const query = this.database
-        .select()
+        .select({
+          protocols,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+        })
         .from(protocols)
         .innerJoin(profiles, eq(protocols.createdBy, profiles.userId))
         .orderBy(desc(protocols.updatedAt));
@@ -48,11 +54,10 @@ export class ProtocolRepository {
       const results = await query;
       return results.map((result) => {
         const augmentedResult = result.protocols as ProtocolDto;
-        const profile = result.profiles as Partial<UserProfileDto>;
+        const firstName = result.firstName;
+        const lastName = result.lastName;
         augmentedResult.createdByName =
-          profile.firstName && profile.lastName
-            ? `${profile.firstName} ${profile.lastName}`
-            : undefined;
+          firstName && lastName ? `${firstName} ${lastName}` : undefined;
         return augmentedResult;
       });
     });
@@ -61,7 +66,11 @@ export class ProtocolRepository {
   async findOne(id: string): Promise<Result<ProtocolDto | null>> {
     return tryCatch(async () => {
       const result = await this.database
-        .select()
+        .select({
+          protocols,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+        })
         .from(protocols)
         .innerJoin(profiles, eq(protocols.createdBy, profiles.userId))
         .where(eq(protocols.id, id))
@@ -72,11 +81,10 @@ export class ProtocolRepository {
       }
 
       const augmentedResult = result[0].protocols as ProtocolDto;
-      const profile = result[0].profiles as Partial<UserProfileDto>;
+      const firstName = result[0].firstName;
+      const lastName = result[0].lastName;
       augmentedResult.createdByName =
-        profile.firstName && profile.lastName
-          ? `${profile.firstName} ${profile.lastName}`
-          : undefined;
+        firstName && lastName ? `${firstName} ${lastName}` : undefined;
       return augmentedResult;
     });
   }

@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { CreateUserProfileBody } from "@repo/api";
 import type { Session } from "@repo/auth/types";
 
-import { AccountSettings } from "../account-settings";
+import { AccountSettings } from "./account-settings";
 
 globalThis.React = React;
 
@@ -41,29 +41,19 @@ const { mutateSpy, routerBackSpy, toastSpy, createCfgRef } = vi.hoisted(() => {
   };
 });
 
-const DICT: Record<string, string> = {
-  // gates
-  "settings.loading": "Loading account settings",
-  "settings.errorTitle": "Error loading account settings",
-
-  // footer buttons
-  "settings.cancel": "Cancel",
-  "settings.save": "Save Changes",
-  "settings.saving": "Saving...",
-
-  // toast after save
-  "settings.saved": "Account settings saved",
-};
-
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
-    t: (key: string) => DICT[key] ?? key,
+    t: (key: string) => key,
     i18n: { language: "en" },
   }),
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ back: routerBackSpy }),
+}));
+
+vi.mock("./danger-zone-card", () => ({
+  DangerZoneCard: () => <div data-testid="danger-zone-card" />,
 }));
 
 vi.mock("@repo/ui/hooks", () => ({
@@ -89,7 +79,7 @@ vi.mock("@repo/ui/components", () => {
             organization: "Analytical Engines Inc.",
           },
         });
-        toastSpy({ description: "Account settings saved" });
+        toastSpy({ description: "settings.saved" });
         onSubmit?.(e);
       }}
     >
@@ -107,122 +97,22 @@ vi.mock("@repo/ui/components", () => {
     </button>
   );
 
-  const Card = ({ children, className }: React.PropsWithChildren & { className?: string }) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  );
-  const CardHeader = ({ children }: React.PropsWithChildren) => (
-    <div data-testid="card-header">{children}</div>
-  );
-  const CardTitle = ({ children }: React.PropsWithChildren) => (
-    <h2 data-testid="card-title">{children}</h2>
-  );
-  const CardContent = ({
-    children,
-    className,
-  }: React.PropsWithChildren & { className?: string }) => (
-    <div data-testid="card-content" className={className}>
-      {children}
-    </div>
-  );
-
-  const FormField = ({
-    render,
-  }: {
-    render: (props: {
-      field: { value: string; onChange: () => void; onBlur: () => void };
-    }) => React.ReactNode;
-  }) =>
-    render({
-      field: {
-        value: "Dummy",
-        onChange: () => {
-          /* no-op */
-        },
-        onBlur: () => {
-          /* no-op */
-        },
-      },
-    });
-
-  const FormItem = ({ children }: React.PropsWithChildren) => (
-    <div data-testid="form-item">{children}</div>
-  );
-
-  const FormLabel = ({ children, className }: React.PropsWithChildren & { className?: string }) => (
-    <label data-testid="form-label" className={className}>
-      {children}
-    </label>
-  );
-
-  const FormControl = ({ children }: React.PropsWithChildren) => (
-    <div data-testid="form-control">{children}</div>
-  );
-
-  const FormMessage = () => <div data-testid="form-message" />;
-
-  const Input = ({ placeholder, ...props }: React.InputHTMLAttributes<HTMLInputElement>) => (
-    <input data-testid="input" placeholder={placeholder} {...props} />
-  );
-
-  const Textarea = ({
-    placeholder,
-    rows,
-    ...props
-  }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
-    <textarea data-testid="textarea" placeholder={placeholder} rows={rows} {...props} />
-  );
-
-  const CardDescription = ({
-    children,
-    className,
-  }: React.PropsWithChildren & { className?: string }) => (
-    <p data-testid="card-description" className={className}>
-      {children}
-    </p>
-  );
-
-  const Alert = ({
-    children,
-  }: React.PropsWithChildren & { variant?: "default" | "destructive" }) => (
-    <div role="alert">{children}</div>
-  );
-  const AlertTitle = ({ children }: React.PropsWithChildren) => <strong>{children}</strong>;
-  const AlertDescription = ({ children }: React.PropsWithChildren) => <p>{children}</p>;
-
   return {
     Form,
     Button,
-    Card,
-    CardHeader,
-    CardTitle,
-    CardContent,
-    CardDescription,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormControl,
-    FormMessage,
-    Alert,
-    AlertTitle,
-    AlertDescription,
-    Textarea,
-    Input,
   };
 });
 
 // Mock ErrorDisplay to avoid depending on inner layout
-vi.mock("../../error-display", () => ({
+vi.mock("../error-display", () => ({
   ErrorDisplay: ({ title }: { title: string }) => <div data-testid="error-display">{title}</div>,
 }));
 
-// Mock children used by AccountSettingsInner
-vi.mock("../profile-picture-card", () => ({
+vi.mock("./profile-picture-card", () => ({
   ProfilePictureCard: () => <div data-testid="profile-picture-card" />,
 }));
 
-vi.mock("../profile-card", () => ({
+vi.mock("./profile-card", () => ({
   ProfileCard: ({ form }: { form: MinimalForm }) => {
     const values = form.getValues();
     return (
@@ -283,7 +173,7 @@ describe("<AccountSettings />", () => {
     });
 
     renderSut();
-    expect(screen.getByText(/Loading account settings/i)).toBeInTheDocument();
+    expect(screen.getByText(/settings.loading/i)).toBeInTheDocument();
   });
 
   it("shows error gate when hook returns an error", () => {
@@ -294,7 +184,7 @@ describe("<AccountSettings />", () => {
     });
 
     renderSut();
-    expect(screen.getByTestId("error-display")).toHaveTextContent("Error loading account settings");
+    expect(screen.getByTestId("error-display")).toHaveTextContent("settings.errorTitle");
   });
 
   it("renders with empty defaults if user profile does not exist", () => {
@@ -347,7 +237,7 @@ describe("<AccountSettings />", () => {
 
     renderSut();
 
-    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    fireEvent.click(screen.getByRole("button", { name: /settings.cancel/i }));
     expect(routerBackSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -368,13 +258,12 @@ describe("<AccountSettings />", () => {
 
     renderSut();
 
-    // make mutate call onSuccess
     mutateSpy.mockImplementation((arg: MutateArg) => {
       createCfgRef.current?.onSuccess?.();
       return arg;
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    fireEvent.click(screen.getByRole("button", { name: /settings.save/i }));
 
     expect(mutateSpy).toHaveBeenCalledWith({
       body: {
@@ -384,10 +273,10 @@ describe("<AccountSettings />", () => {
         organization: "Analytical Engines Inc.",
       },
     });
-    expect(toastSpy).toHaveBeenCalledWith({ description: "Account settings saved" });
+    expect(toastSpy).toHaveBeenCalledWith({ description: "settings.saved" });
   });
 
-  it('shows "Saving..." and disables the submit button when pending', () => {
+  it('shows "settings.saving" and disables the submit button when pending', () => {
     isPendingFlag = true;
     useGetUserProfileMock.mockReturnValue({
       data: undefined,
@@ -397,7 +286,7 @@ describe("<AccountSettings />", () => {
 
     renderSut();
 
-    const btn = screen.getByRole("button", { name: /saving/i });
+    const btn = screen.getByRole("button", { name: /settings.saving/i });
     expect(btn).toBeDisabled();
     expect(btn).toHaveAttribute("aria-busy", "true");
   });

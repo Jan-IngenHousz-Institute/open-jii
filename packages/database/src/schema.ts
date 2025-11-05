@@ -127,6 +127,8 @@ export const profiles = pgTable("profiles", {
   lastName: varchar("last_name", { length: 100 }).notNull(),
   bio: text("bio"),
   avatarUrl: varchar("avatar_url", { length: 500 }),
+  activated: boolean("activated").default(true).notNull(),
+  deletedAt: timestamp("deleted_at"),
   userId: uuid("user_id")
     .references(() => users.id)
     .unique()

@@ -112,6 +112,7 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
         lastName: m.lastName ?? "",
         email: m.email ?? null,
         bio: null,
+        activated: null,
         organization: undefined,
       }));
 

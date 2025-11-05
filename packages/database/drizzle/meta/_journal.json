@@ -99,6 +99,13 @@
       "when": 1759230789708,
       "tag": "0013_breezy_strong_guy",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1762337745760,
+      "tag": "0014_right_meltdown",
+      "breakpoints": true
     }
   ]
 }
