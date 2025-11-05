@@ -39,8 +39,8 @@ variable "kinesis_credential_id" {
   type        = string
 }
 
-variable "dev_account_id" {
-  description = "The AWS account ID for the dev environment."
+variable "dev_nameservers" {
+  description = "Comma-separated list of nameservers for dev subdomain delegation"
   type        = string
 }
 

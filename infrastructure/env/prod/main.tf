@@ -206,7 +206,7 @@ module "databricks_catalog" {
 
   external_bucket_id     = var.centralized_metastore_bucket_name
   external_location_path = "external/${var.environment}"
-  isolation_mode         = "ISOLATION_MODE_ISOLATED"
+  isolation_mode         = "ISOLATED"
 
   grants = {
     node_service_principal = {
@@ -1096,13 +1096,8 @@ module "dev_subdomain_delegation" {
   parent_zone_id = module.route53.route53_zone_id
   subdomain      = "dev.${var.domain_name}"
 
-  # Read nameservers from dev account's SSM Parameter Store
-  ssm_parameter_config = {
-    parameter_name    = "/open-jii/route53/dev-nameservers"
-    source_account_id = var.dev_account_id
-    assume_role_name  = "open-jii-dev-nameservers-CrossAccountReader"
-    aws_region        = var.aws_region
-  }
+  # Use hardcoded nameservers from tfvars
+  name_servers = split(",", var.dev_nameservers)
 }
 
 # AWS Location Service for search and geocoding

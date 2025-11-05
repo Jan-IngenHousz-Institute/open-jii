@@ -1084,23 +1084,6 @@ module "route53" {
   }
 }
 
-# Share Route53 nameservers with prod account via SSM Parameter Store
-module "nameservers_ssm" {
-  source = "../../modules/ssm-parameter"
-
-  parameter_name        = "/open-jii/route53/${var.environment}-nameservers"
-  parameter_name_prefix = "open-jii-${var.environment}-nameservers"
-  description           = "Route53 nameservers for ${var.environment}.${var.domain_name} hosted zone"
-  parameter_type        = "StringList"
-  parameter_value       = join(",", module.route53.name_servers)
-
-  tags = {
-    Environment = var.environment
-    ManagedBy   = "Terraform"
-    Purpose     = "Cross-account DNS delegation"
-  }
-}
-
 # AWS Location Service for search and geocoding
 module "location_service" {
   source = "../../modules/location-service"
