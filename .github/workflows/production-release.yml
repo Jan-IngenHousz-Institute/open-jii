@@ -27,5 +27,4 @@ jobs:
         with:
             environment: ${{ inputs.environment }}
             deploy_infrastructure: true
-            slack_notification: true
         secrets: inherit

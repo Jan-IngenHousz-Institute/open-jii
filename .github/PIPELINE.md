@@ -12,7 +12,6 @@ sequenceDiagram
     participant 🗄️ as database-migrations.yml<br/>(Database)
     participant ⚙️ as deploy-backend.yml<br/>(Backend Service)
     participant 🌐 as deploy-nextjs-opennext.yml<br/>(Frontend App)
-    participant 💬 as notify-slack<br/>(Notifications)
     participant ☁️ as AWS Cloud
 
     Note over 👤, 🚀: WORKFLOW INITIATION
@@ -76,21 +75,10 @@ sequenceDiagram
         Note over 🌐: ⏭️ Skip frontend deployment
     end
 
-    Note over 🎯, 💬: NOTIFICATION & COMPLETION
-    alt slack_notification = true
-        🎯->>💬: ▶️ Send deployment summary
-        💬->>💬: Aggregate all job results
-        💬->>💬: Format status message
-        💬->>💬: Send to Slack webhook
-        💬-->>🎯: ✅ Notification sent
-    else notifications disabled
-        Note over 💬: 🔇 Skip Slack notification
-    end
-
-    Note over 🎯, 👤: WORKFLOW COMPLETION
+    Note over 🎯, : WORKFLOW COMPLETION
     🎯-->>👤: ✅ Deployment workflow complete
 
-    Note left of 🎯: Execution Model:<br/>• Sequential: Infrastructure → DB → Backend → Frontend<br/>• Fresh Runners: Each workflow_call gets clean environment<br/>• OIDC: All AWS access uses temporary credentials<br/>• Conditional: Based on change detection
+    Note left of 🎯: Execution Model:<br/>• Sequential: Infrastructure → DB → Backend → Frontend<br/>• Fresh Runners: Each workflow_call gets clean environment<br/>• OIDC: All AWS access uses temporary credentials<br/>• Conditional: Based on change detection<br/>• Notifications: Native GitHub-Slack integration
 
     Note right of ☁️: AWS Services Used:<br/>• SSM Parameter Store (config)<br/>• ECR (container images)<br/>• ECS (container orchestration)<br/>• S3 (static assets & cache)<br/>• Lambda (serverless functions)<br/>• CloudFront (CDN)
 ```
@@ -117,23 +105,24 @@ Uses Turbo to detect affected packages since last successful deployment:
 
 **SSM Parameter Store Structure:**
 
-```
+```text
 /opennext/{environment}/
-├── assets-bucket
-├── cache-bucket
-├── server-function
-├── image-function
-├── revalidation-function
-├── warmer-function
-└── cloudfront-distribution-id
+├── assets_bucket_name
+├── cache_bucket_name
+├── server_function_name
+├── image_function_name
+├── revalidation_function_name
+├── warmer_function_name
+├── dynamodb_table_name
+└── cloudfront_distribution_id
 
 /migration/{environment}/
-├── migration-runner-ecs-cluster-name
-├── migration-runner-task-definition-family
-├── migration-runner-ecr-repository-name
-├── migration-runner-container-name
-├── migration-runner-subnets
-└── migration-runner-security-group-id
+├── migration_runner_ecs_cluster_name
+├── migration_runner_task_definition_family
+├── migration_runner_ecr_repository_name
+├── migration_runner_container_name
+├── migration_runner_subnets
+└── migration_runner_security_group_id
 ```
 
 ### Authentication
@@ -151,3 +140,12 @@ Uses Turbo to detect affected packages since last successful deployment:
 4. **Frontend** - Web app deployed after backend is ready
 
 This sequence prevents API compatibility issues during deployments.
+
+### Notifications
+
+Pipeline uses GitHub's native Slack integration for notifications:
+
+- **Workflow Status** - Success/failure notifications sent automatically
+- **No Custom Webhooks** - Leverages existing GitHub-Slack app connection
+- **Consistent Experience** - Same notification system as PR/issue updates
+- **Configuration** - Managed through Slack's `/github subscribe` commands
