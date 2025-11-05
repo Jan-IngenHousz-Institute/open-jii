@@ -3,6 +3,7 @@
 import type { PlotData } from "plotly.js";
 import React from "react";
 
+import { cn } from "../../../../lib/utils";
 import type {
   BaseChartProps,
   BaseSeries,
@@ -123,8 +124,20 @@ export function ScatterChart({ data, config = {}, className, loading, error }: S
   const layout = createBaseLayout(config);
   const plotConfig = createPlotlyConfig(config);
 
+  // Check if we have categorical x data (non-numeric strings)
+  const hasCategoricalX = data.some(
+    (series) => series.x && series.x.some((val) => typeof val === "string" && isNaN(Number(val))),
+  );
+  if (hasCategoricalX) {
+    layout.xaxis = {
+      ...layout.xaxis,
+      type: "category",
+      categoryorder: "category ascending",
+    };
+  }
+
   return (
-    <div className={className}>
+    <div className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={plotData}
         layout={layout}

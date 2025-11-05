@@ -60,6 +60,12 @@
   },
   "overview": "Overview",
   "data": "Data",
+  "analysis": {
+    "title": "Analysis",
+    "description": "Analyze your experiment data with visualizations and notebooks",
+    "visualizations": "Visualizations",
+    "notebooks": "Notebooks"
+  },
   "experimentData": {
     "title": "Experiment Data",
     "description": "View, download and manage data associated with this experiment. New data is processed every 15 minutes. Timestamps are in UTC (Coordinated Universal Time)",
@@ -80,6 +86,11 @@
   "updated": "Updated",
   "descriptionTitle": "Description",
   "details": {
+    "location": {
+      "locationsTitle": "Experiment Locations",
+      "noLocations": "No locations",
+      "noLocationsDescription": "This experiment doesn't have any locations configured."
+    },
     "locations": {
       "locationsTitle": "Experiment Locations",
       "locationsCount": "{{count}} location",

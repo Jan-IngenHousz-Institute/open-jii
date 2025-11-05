@@ -70,8 +70,8 @@ describe("ExperimentVisualizationRepository", () => {
         dataConfig: {
           tableName: "test_table",
           dataSources: [
-            { tableName: "test_table", columnName: "column1" },
-            { tableName: "test_table", columnName: "column2" },
+            { tableName: "test_table", columnName: "column1", role: "x", alias: "" },
+            { tableName: "test_table", columnName: "column2", role: "y", alias: "" },
           ],
         },
       };
@@ -95,6 +95,7 @@ describe("ExperimentVisualizationRepository", () => {
         config: createDto.config,
         dataConfig: createDto.dataConfig,
         createdBy: testUserId,
+        createdByName: "Test User",
         createdAt: expect.any(Date) as Date,
         updatedAt: expect.any(Date) as Date,
       });
@@ -109,6 +110,7 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: createDto.chartFamily,
         chartType: createDto.chartType,
         createdBy: testUserId,
+        createdByName: "Test User",
       });
     });
 
@@ -131,8 +133,8 @@ describe("ExperimentVisualizationRepository", () => {
         dataConfig: {
           tableName: "test_table",
           dataSources: [
-            { tableName: "test_table", columnName: "x_column" },
-            { tableName: "test_table", columnName: "y_column" },
+            { tableName: "test_table", columnName: "x_column", role: "x", alias: "" },
+            { tableName: "test_table", columnName: "y_column", role: "y", alias: "" },
           ],
         },
       };
@@ -152,6 +154,7 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: createDto.chartFamily,
         chartType: createDto.chartType,
         createdBy: testUserId,
+        createdByName: "Test User",
       });
     });
 
@@ -330,6 +333,7 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: createDto.chartFamily,
         chartType: createDto.chartType,
         createdBy: testUserId,
+        createdByName: "Test User",
       });
     });
 
@@ -391,6 +395,7 @@ describe("ExperimentVisualizationRepository", () => {
         dataConfig: updateDto.dataConfig,
         experimentId: testExperimentId,
         createdBy: testUserId,
+        createdByName: "Test User",
         createdAt: visualization.createdAt,
         updatedAt: expect.any(Date) as Date,
       });
@@ -444,7 +449,7 @@ describe("ExperimentVisualizationRepository", () => {
 
       const partialUpdateDto = {
         name: "Updated Name Only",
-      };
+      } as UpdateExperimentVisualizationDto;
 
       // Act
       const result = await repository.update(visualization.id, partialUpdateDto);
@@ -645,7 +650,7 @@ describe("ExperimentVisualizationRepository", () => {
       // Update middle one
       const updateResult = await repository.update(visualizations[1].id, {
         name: "Updated Middle Visualization",
-      });
+      } as UpdateExperimentVisualizationDto);
       assertSuccess(updateResult);
 
       // Delete first one
@@ -659,6 +664,82 @@ describe("ExperimentVisualizationRepository", () => {
 
       const remainingNames = finalListResult.value.map((v) => v.name).sort();
       expect(remainingNames).toEqual(["Updated Middle Visualization", "Visualization 3"]);
+    });
+  });
+
+  describe("anonymization", () => {
+    it("should return real name for activated users", async () => {
+      // Create an activated user
+      const activeUserId = await testApp.createTestUser({
+        name: "Active Creator",
+        activated: true,
+      });
+
+      // Create visualization with activated user
+      const createDto: CreateExperimentVisualizationDto = {
+        name: "Test Visualization by Active User",
+        description: "Test Description",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+      };
+
+      const createResult = await repository.create(testExperimentId, createDto, activeUserId);
+      assertSuccess(createResult);
+      const visualization = createResult.value[0];
+
+      // Test listVisualizations
+      const listResult = await repository.listVisualizations(testExperimentId);
+      assertSuccess(listResult);
+      const listedViz = listResult.value.find((v) => v.id === visualization.id);
+      expect(listedViz?.createdByName).toBe("Active Creator");
+
+      // Test findById
+      const findResult = await repository.findById(visualization.id);
+      assertSuccess(findResult);
+      expect(findResult.value?.createdByName).toBe("Active Creator");
+    });
+
+    it("should anonymize name for deactivated users", async () => {
+      // Create a deactivated user
+      const inactiveUserId = await testApp.createTestUser({
+        name: "Hidden Creator",
+        activated: false,
+      });
+
+      // Create visualization with deactivated user
+      const createDto: CreateExperimentVisualizationDto = {
+        name: "Test Visualization by Inactive User",
+        description: "Test Description",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+      };
+
+      const createResult = await repository.create(testExperimentId, createDto, inactiveUserId);
+      assertSuccess(createResult);
+      const visualization = createResult.value[0];
+
+      // Test listVisualizations
+      const listResult = await repository.listVisualizations(testExperimentId);
+      assertSuccess(listResult);
+      const listedViz = listResult.value.find((v) => v.id === visualization.id);
+      expect(listedViz?.createdByName).toBe("Unknown User");
+
+      // Test findById
+      const findResult = await repository.findById(visualization.id);
+      assertSuccess(findResult);
+      expect(findResult.value?.createdByName).toBe("Unknown User");
+
+      // Test update (should still show anonymized name)
+      const updateResult = await repository.update(visualization.id, {
+        name: "Updated Visualization Name",
+      } as UpdateExperimentVisualizationDto);
+      assertSuccess(updateResult);
+      const updatedViz = updateResult.value[0];
+      expect(updatedViz.createdByName).toBe("Unknown User");
     });
   });
 });

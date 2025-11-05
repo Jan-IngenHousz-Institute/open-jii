@@ -37,10 +37,11 @@ export class DeleteExperimentVisualizationUseCase {
       return accessResult.chain(
         async ({
           experiment,
-          hasAccess,
+          hasArchiveAccess,
         }: {
           experiment: ExperimentDto | null;
           hasAccess: boolean;
+          hasArchiveAccess: boolean;
         }) => {
           if (!experiment) {
             this.logger.warn(
@@ -51,7 +52,7 @@ export class DeleteExperimentVisualizationUseCase {
             );
           }
 
-          if (!hasAccess) {
+          if (!hasArchiveAccess) {
             this.logger.warn(
               `User ${userId} does not have access to experiment ${visualization.experimentId}`,
             );

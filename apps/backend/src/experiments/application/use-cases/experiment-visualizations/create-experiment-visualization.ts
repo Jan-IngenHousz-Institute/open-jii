@@ -42,10 +42,11 @@ export class CreateExperimentVisualizationUseCase {
     return accessResult.chain(
       async ({
         experiment,
-        hasAccess,
+        hasArchiveAccess,
       }: {
         experiment: ExperimentDto | null;
         hasAccess: boolean;
+        hasArchiveAccess: boolean;
         isAdmin: boolean;
       }) => {
         if (!experiment) {
@@ -55,7 +56,7 @@ export class CreateExperimentVisualizationUseCase {
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
-        if (!hasAccess) {
+        if (!hasArchiveAccess) {
           this.logger.warn(
             `User ${userId} does not have access to create visualization in experiment ${experimentId}`,
           );

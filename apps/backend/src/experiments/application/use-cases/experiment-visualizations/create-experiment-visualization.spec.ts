@@ -98,15 +98,19 @@ describe("CreateExperimentVisualizationUseCase", () => {
       },
     };
 
-    const experimentId = faker.string.uuid();
     const visualizationId = faker.string.uuid();
 
     it("should successfully create a visualization", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
       // Arrange
       const checkAccessSpy = vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
           experiment: {
-            id: experimentId,
+            id: experiment.id,
             name: "Test Experiment",
             description: "Test Description",
             status: "active",
@@ -117,6 +121,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             updatedAt: new Date(),
           },
           hasAccess: true,
+          hasArchiveAccess: true,
           isAdmin: true,
         }),
       );
@@ -131,7 +136,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
           success([
             {
               id: visualizationId,
-              experimentId,
+              experimentId: experiment.id,
               name: mockRequest.name,
               description: null,
               chartFamily: mockRequest.chartFamily,
@@ -146,14 +151,14 @@ describe("CreateExperimentVisualizationUseCase", () => {
         );
 
       // Act
-      const result = await useCase.execute(experimentId, mockRequest, testUserId);
+      const result = await useCase.execute(experiment.id, mockRequest, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toMatchObject({
         id: visualizationId,
-        experimentId,
+        experimentId: experiment.id,
         name: mockRequest.name,
         chartFamily: mockRequest.chartFamily,
         chartType: mockRequest.chartType,
@@ -162,21 +167,26 @@ describe("CreateExperimentVisualizationUseCase", () => {
         createdBy: testUserId,
       });
 
-      expect(checkAccessSpy).toHaveBeenCalledWith(experimentId, testUserId);
+      expect(checkAccessSpy).toHaveBeenCalledWith(experiment.id, testUserId);
       expect(validateDataSourcesSpy).toHaveBeenCalledWith(
         mockRequest.dataConfig,
         "Test Experiment",
-        experimentId,
+        experiment.id,
       );
-      expect(createVisualizationSpy).toHaveBeenCalledWith(experimentId, mockRequest, testUserId);
+      expect(createVisualizationSpy).toHaveBeenCalledWith(experiment.id, mockRequest, testUserId);
     });
 
     it("should fail when visualization name is not provided", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
       // Arrange
       const invalidRequest = { ...mockRequest, name: "" };
 
       // Act
-      const result = await useCase.execute(experimentId, invalidRequest, testUserId);
+      const result = await useCase.execute(experiment.id, invalidRequest, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -185,30 +195,41 @@ describe("CreateExperimentVisualizationUseCase", () => {
     });
 
     it("should fail when experiment does not exist", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
       // Arrange
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
           experiment: null,
           hasAccess: false,
+          hasArchiveAccess: false,
           isAdmin: false,
         }),
       );
 
       // Act
-      const result = await useCase.execute(experimentId, mockRequest, testUserId);
+      const result = await useCase.execute(experiment.id, mockRequest, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toBe(`Experiment with ID ${experimentId} not found`);
+      expect(result.error.message).toBe(`Experiment with ID ${experiment.id} not found`);
     });
 
     it("should fail when user does not have access to the experiment", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
       // Arrange
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
           experiment: {
-            id: experimentId,
+            id: experiment.id,
             name: "Test Experiment",
             description: "Test Description",
             status: "active",
@@ -219,12 +240,48 @@ describe("CreateExperimentVisualizationUseCase", () => {
             updatedAt: new Date(),
           },
           hasAccess: false,
+          hasArchiveAccess: false,
           isAdmin: false,
         }),
       );
 
       // Act
-      const result = await useCase.execute(experimentId, mockRequest, testUserId);
+      const result = await useCase.execute(experiment.id, mockRequest, testUserId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toBe("You do not have access to this experiment");
+    });
+
+    it("should fail when experiment is archived", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      // Arrange
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: {
+            id: experiment.id,
+            name: "Test Experiment",
+            description: "Test Description",
+            status: "archived",
+            visibility: "private",
+            embargoUntil: new Date(),
+            createdBy: testUserId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          hasAccess: true,
+          hasArchiveAccess: false,
+          isAdmin: true,
+        }),
+      );
+
+      // Act
+      const result = await useCase.execute(experiment.id, mockRequest, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -233,11 +290,16 @@ describe("CreateExperimentVisualizationUseCase", () => {
     });
 
     it("should fail when data source validation fails", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
       // Arrange
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
           experiment: {
-            id: experimentId,
+            id: experiment.id,
             name: "Test Experiment",
             description: "Test Description",
             status: "active",
@@ -248,6 +310,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             updatedAt: new Date(),
           },
           hasAccess: true,
+          hasArchiveAccess: true,
           isAdmin: true,
         }),
       );
@@ -262,7 +325,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
       );
 
       // Act
-      const result = await useCase.execute(experimentId, mockRequest, testUserId);
+      const result = await useCase.execute(experiment.id, mockRequest, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -271,11 +334,16 @@ describe("CreateExperimentVisualizationUseCase", () => {
     });
 
     it("should fail when repository create operation fails", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
       // Arrange
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
           experiment: {
-            id: experimentId,
+            id: experiment.id,
             name: "Test Experiment",
             description: "Test Description",
             status: "active",
@@ -286,6 +354,7 @@ describe("CreateExperimentVisualizationUseCase", () => {
             updatedAt: new Date(),
           },
           hasAccess: true,
+          hasArchiveAccess: true,
           isAdmin: true,
         }),
       );
@@ -297,12 +366,42 @@ describe("CreateExperimentVisualizationUseCase", () => {
       );
 
       // Act
-      const result = await useCase.execute(experimentId, mockRequest, testUserId);
+      const result = await useCase.execute(experiment.id, mockRequest, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
       expect(result.error.message).toBe("Failed to create visualization");
+    });
+
+    it("should forbid any user from creating visualizations for archived experiments", async () => {
+      // Create an archived experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Archived Experiment",
+        userId: testUserId,
+      });
+
+      // Mock experimentRepository.checkAccess to return archived experiment
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: { ...experiment, status: "archived" },
+          hasAccess: true,
+          hasArchiveAccess: false,
+          isAdmin: true,
+        }),
+      );
+
+      try {
+        // Act
+        const result = await useCase.execute(experiment.id, mockRequest, testUserId);
+
+        // Assert
+        expect(result.isFailure()).toBe(true);
+        assertFailure(result);
+        expect(result.error.message).toContain("You do not have access to this experiment");
+      } finally {
+        vi.restoreAllMocks();
+      }
     });
   });
 });

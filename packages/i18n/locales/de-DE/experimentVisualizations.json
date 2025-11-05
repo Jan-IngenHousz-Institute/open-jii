@@ -1,0 +1,206 @@
+{
+  "ui": {
+    "title": "Visualisierungen",
+    "actions": {
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "deleting": "Löschen...",
+      "create": "Neue erstellen",
+      "back": "Zurück"
+    },
+    "messages": {
+      "noVisualizations": "Noch keine Visualisierungen",
+      "deleteSuccess": "Visualisierung erfolgreich gelöscht",
+      "createSuccess": "Visualisierung erfolgreich erstellt",
+      "updateSuccess": "Visualisierung erfolgreich aktualisiert",
+      "loading": "Visualisierung wird geladen...",
+      "loadingData": "Visualisierungsdaten werden geladen...",
+      "failedToLoad": "Fehler beim Laden der Visualisierung"
+    },
+    "labels": {
+      "createdAt": "Erstellt",
+      "createdBy": "Erstellt von",
+      "updatedAt": "Zuletzt aktualisiert"
+    }
+  },
+
+  "form": {
+    "details": {
+      "title": "Visualisierungsdetails",
+      "subtitle": "Geben Sie grundlegende Informationen zu Ihrer Visualisierung an",
+      "name": "Name",
+      "namePlaceholder": "Visualisierungsname eingeben",
+      "description": "Beschreibung",
+      "descriptionPlaceholder": "Visualisierungsbeschreibung eingeben",
+      "descriptionHelp": "Optionale Beschreibung zur Identifizierung dieser Visualisierung"
+    },
+    "dataSource": {
+      "title": "Datenquelle",
+      "help": "Wählen Sie aus, welche Tabelle visualisiert werden soll",
+      "selectTable": "Tabelle auswählen",
+      "tableInfo": "{{name}} ({{totalRows}} Zeilen)"
+    }
+  },
+
+  "wizard": {
+    "steps": {
+      "basicInfo": {
+        "title": "Grundinformationen",
+        "description": "Name und Beschreibung für Ihre Visualisierung eingeben"
+      },
+      "chartType": {
+        "title": "Diagrammtyp",
+        "description": "Wählen Sie den Diagrammtyp, der Ihre Daten am besten darstellt"
+      },
+      "dataSource": {
+        "title": "Datenkonfiguration",
+        "description": "Datentabelle auswählen und Spalten-Zuordnungen konfigurieren"
+      },
+      "appearance": {
+        "title": "Erscheinungsbild & Stil",
+        "description": "Das Aussehen Ihres Diagramms anpassen"
+      }
+    }
+  },
+
+  "charts": {
+    "types": {
+      "line": "Liniendiagramm",
+      "scatter": "Streudiagramm",
+      "lineDescription": "Zeigt Datenpunkte verbunden durch gerade Liniensegmente an",
+      "scatterDescription": "Zeigt Daten als Punkte auf x- und y-Koordinaten an"
+    },
+    "families": {
+      "basic": "Grunddiagramme"
+    },
+    "title": "Diagrammtitel",
+    "preview": "Diagramm-Vorschau",
+    "showLegend": "Legende anzeigen"
+  },
+
+  "configuration": {
+    "columns": {
+      "select": "Spalte auswählen",
+      "xAxis": "X-Achse",
+      "yAxis": "Y-Achsen-Konfiguration",
+      "color": "Farbspalte",
+      "selectColor": "Farbspalte auswählen",
+      "noColorMapping": "Keine Farbzuordnung",
+      "dataColumn": "Datenspalte"
+    },
+    "axes": {
+      "title": "Achsentitel",
+      "titlePosition": "Farb-Achsentitel Position",
+      "type": "Achsentyp"
+    },
+    "series": {
+      "add": "Serie hinzufügen",
+      "name": "Serienname",
+      "color": "Serienfarbe",
+      "title": "Serie"
+    },
+    "color": {
+      "scale": "Farbskala",
+      "dimensionConfig": "Farbdimensions-Konfiguration"
+    },
+    "chart": {
+      "showColorbar": "Farbbalken anzeigen",
+      "enterColorAxisTitle": "Titel für Farbachse eingeben",
+      "selectPosition": "Position auswählen"
+    },
+    "positions": {
+      "top": "Oben",
+      "right": "Rechts",
+      "bottom": "Unten"
+    },
+    "chartOptions": {
+      "lineChartOptions": "Liniendiagramm-Optionen",
+      "scatterChartOptions": "Streudiagramm-Optionen",
+      "displayOptions": "Anzeigeoptionen",
+      "mode": "Zeichnungsmodus",
+      "connectGaps": "Lücken verbinden",
+      "smoothing": "Linienglättung",
+      "markerSize": "Markergröße",
+      "markerShape": "Markerform",
+      "title": "Diagrammtitel",
+      "showLegend": "Legende anzeigen",
+      "gridLines": "Gitterlinien"
+    },
+    "modes": {
+      "lines": "Nur Linien",
+      "markers": "Nur Markierungen",
+      "linesMarkers": "Linien + Markierungen"
+    },
+    "placeholders": {
+      "selectLineMode": "Linienmodus auswählen",
+      "selectScatterMode": "Streudiagramm-Modus auswählen",
+      "selectMode": "Modus auswählen",
+      "enterChartTitle": "Diagrammtitel eingeben",
+      "enterAxisTitle": "Achsentitel eingeben",
+      "enterSeriesName": "Serienname eingeben"
+    },
+    "labels": {
+      "chartTitle": "Diagrammtitel",
+      "showLegend": "Legende anzeigen"
+    },
+    "markerSymbols": {
+      "circle": "Kreis",
+      "square": "Quadrat",
+      "diamond": "Rhombus",
+      "cross": "Kreuz",
+      "x": "X"
+    },
+    "axisTypes": {
+      "linear": "Linear",
+      "log": "Logarithmisch",
+      "date": "Datum"
+    },
+    "colorscales": {
+      "viridis": "Viridis",
+      "cividis": "Cividis",
+      "blues": "Blau",
+      "reds": "Rot",
+      "greens": "Grün",
+      "greys": "Grau",
+      "ylgnbu": "Gelb-Grün-Blau",
+      "ylord": "Gelb-Orange-Rot",
+      "rdbu": "Rot-Blau",
+      "picnic": "Picknick",
+      "rainbow": "Regenbogen",
+      "portland": "Portland",
+      "jet": "Jet",
+      "hot": "Heiß",
+      "blackbody": "Schwarzkörper",
+      "earth": "Erde",
+      "electric": "Elektrisch",
+      "bluered": "Blau-Rot"
+    }
+  },
+
+  "preview": {
+    "title": "Vorschau",
+    "description": "Live-Vorschau Ihrer Diagrammkonfiguration",
+    "noDataSource": "Keine Datenquelle ausgewählt",
+    "selectTable": "Wählen Sie eine Datentabelle aus, um die Vorschau zu sehen",
+    "noColumns": "Keine Spalten konfiguriert",
+    "configureColumns": "Konfigurieren Sie mindestens eine Datenspalte, um die Vorschau zu sehen"
+  },
+
+  "errors": {
+    "noData": "Keine Daten verfügbar",
+    "configuration": "Konfigurationsfehler",
+    "invalidConfiguration": "Ungültige Diagrammkonfiguration",
+    "xAxisNotConfigured": "X-Achsen-Spalte nicht konfiguriert",
+    "yAxisNotConfigured": "Y-Achsen-Spalte nicht konfiguriert",
+    "loadingData": "Diagrammdaten werden geladen...",
+    "failedToLoadData": "Daten konnten nicht geladen werden",
+    "failedToLoadDataDescription": "Experimentdaten für diese Visualisierung konnten nicht abgerufen werden",
+    "noDataFound": "Keine Daten für diese Visualisierung gefunden",
+    "unsupportedChartType": "Nicht unterstützter Diagrammtyp",
+    "chartTypeNotSupported": "wird nicht unterstützt"
+  },
+
+  "selector": {
+    "noVisualizations": "Keine Visualisierungen für dieses Experiment verfügbar"
+  }
+}
