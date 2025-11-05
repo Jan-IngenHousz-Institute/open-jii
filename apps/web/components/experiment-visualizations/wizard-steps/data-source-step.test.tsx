@@ -91,7 +91,6 @@ const createMockSampleTable = (
   totalRows: number,
 ): SampleTable => ({
   name,
-  totalRows,
   columns,
   tableMetadata: {
     // For tests, we can provide a minimal column structure that satisfies the type

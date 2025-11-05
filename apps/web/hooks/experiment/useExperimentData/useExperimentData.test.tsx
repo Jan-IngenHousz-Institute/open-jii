@@ -834,7 +834,6 @@ describe("useExperimentData", () => {
           totalRows: 2,
         },
         tableRows: mockExperimentData.rows,
-        totalRows: 2,
       });
       expect(result.current.sampleTables[1]).toEqual({
         name: "table2",
@@ -857,7 +856,6 @@ describe("useExperimentData", () => {
           totalRows: 1,
         },
         tableRows: [{ count: "42" }],
-        totalRows: 1,
       });
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();

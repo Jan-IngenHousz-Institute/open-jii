@@ -272,7 +272,6 @@ export interface SampleTable {
   tableMetadata: TableMetadata;
   tableRows: DataRow[];
   columns: DataColumn[]; // Add raw columns for easy access
-  totalRows: number; // Add totalRows for display
 }
 
 /**
@@ -312,7 +311,6 @@ export const useExperimentSampleData = (
         } as TableMetadata,
         tableRows: tableData.data?.rows ?? [],
         columns: tableData.data?.columns ?? [], // Add raw columns
-        totalRows: tableData.totalRows, // Add totalRows for display
       });
     });
     return tables;

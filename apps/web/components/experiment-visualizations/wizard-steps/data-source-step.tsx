@@ -153,7 +153,6 @@ export function DataSourceStep({
                           <SelectItem key={table.name} value={table.name}>
                             {t("form.dataSource.tableInfo", {
                               name: table.name,
-                              totalRows: table.totalRows,
                             })}
                           </SelectItem>
                         ))}

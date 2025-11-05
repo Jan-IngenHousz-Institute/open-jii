@@ -47,7 +47,6 @@ const mockTable: SampleTable = {
     { name: "pressure", type_name: "DOUBLE", type_text: "double" },
     { name: "location", type_name: "VARCHAR", type_text: "varchar" },
   ],
-  totalRows: 0,
 };
 
 // Test wrapper component

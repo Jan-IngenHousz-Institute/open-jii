@@ -38,7 +38,6 @@ const mockTable: SampleTable = {
     { name: "humidity", type_name: "double", type_text: "double" },
     { name: "pressure", type_name: "integer", type_text: "integer" },
   ],
-  totalRows: 0,
 };
 
 // Test wrapper component with form context

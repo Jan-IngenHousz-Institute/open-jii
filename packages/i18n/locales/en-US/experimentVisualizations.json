@@ -38,7 +38,7 @@
       "title": "Data Source",
       "help": "Choose which table to visualize",
       "selectTable": "Select table",
-      "tableInfo": "{{name}} ({{totalRows}} rows)"
+      "tableInfo": "{{name}}"
     }
   },
 

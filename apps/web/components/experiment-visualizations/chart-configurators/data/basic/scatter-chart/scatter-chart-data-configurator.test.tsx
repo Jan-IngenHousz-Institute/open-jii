@@ -89,7 +89,6 @@ function TestWrapper({ initialValues }: { initialValues: Partial<ChartFormValues
       { name: "humidity", type_name: "float", type_text: "float" },
       { name: "sensor_id", type_name: "string", type_text: "string" },
     ],
-    totalRows: 0,
   };
 
   return <ScatterChartDataConfigurator form={form} table={mockTable} />;
@@ -302,7 +301,6 @@ describe("ScatterChartDataConfigurator", () => {
             { name: "temperature", type_name: "float", type_text: "float" },
             { name: "humidity", type_name: "float", type_text: "float" },
           ],
-          totalRows: 0,
         };
 
         return (
@@ -358,7 +356,6 @@ describe("ScatterChartDataConfigurator", () => {
           },
           tableRows: [],
           columns: [{ name: "timestamp", type_name: "timestamp", type_text: "timestamp" }],
-          totalRows: 0,
         };
 
         return (
