@@ -155,7 +155,7 @@ module "storage_credential" {
   role_name       = "open-jii-${var.environment}-uc-access"
   environment     = var.environment
   bucket_name     = var.centralized_metastore_bucket_name
-  isolation_mode  = "ISOLATED"
+  isolation_mode  = "ISOLATION_MODE_ISOLATED"
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -174,7 +174,7 @@ module "external_location" {
   storage_credential_name = module.storage_credential.storage_credential_name
   environment             = var.environment
   comment                 = "External location for ${var.environment} environment data"
-  isolation_mode          = "ISOLATED"
+  isolation_mode          = "ISOLATION_MODE_ISOLATED"
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -1094,9 +1094,9 @@ module "nameservers_ssm" {
   parameter_type        = "StringList"
   parameter_value       = join(",", module.route53.name_servers)
 
-  # Allow specific SSO role from prod account to read this parameter
+  # Allow specific IAM user from prod account to read this parameter
   trusted_principals = [
-    "arn:aws:iam::${var.prod_account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_InfrastructureDevOpsAccess_*"
+    "arn:aws:iam::${var.prod_account_id}:user/terraform-tester-prod"
   ]
 
   tags = {

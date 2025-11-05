@@ -31,7 +31,7 @@ variable "comment" {
 }
 
 variable "isolation_mode" {
-  description = "Isolation mode for the external location (ISOLATED or OPEN)"
+  description = "Isolation mode for the external location (ISOLATION_MODE_ISOLATED or ISOLATION_MODE_OPEN)"
   type        = string
-  default     = "ISOLATED"
+  default     = "ISOLATION_MODE_ISOLATED"
 }

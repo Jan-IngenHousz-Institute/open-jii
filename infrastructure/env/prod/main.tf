@@ -174,7 +174,7 @@ module "external_location" {
   storage_credential_name = module.storage_credential.storage_credential_name
   environment             = var.environment
   comment                 = "External location for ${var.environment} environment data"
-  isolation_mode          = "ISOLATED"
+  isolation_mode          = "ISOLATION_MODE_ISOLATED"
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -206,7 +206,7 @@ module "databricks_catalog" {
 
   external_bucket_id     = var.centralized_metastore_bucket_name
   external_location_path = "external/${var.environment}"
-  isolation_mode         = "ISOLATED"
+  isolation_mode         = "ISOLATION_MODE_ISOLATED"
 
   grants = {
     node_service_principal = {
