@@ -41,12 +41,6 @@ variable "tier" {
   }
 }
 
-variable "cross_account_allowlist" {
-  description = "List of AWS account IDs that should be allowed to read this parameter cross-account"
-  type        = list(string)
-  default     = []
-}
-
 variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)

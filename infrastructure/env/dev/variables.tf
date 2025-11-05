@@ -51,12 +51,6 @@ variable "backend_container_port" {
   default     = 3020
 }
 
-variable "prod_account_id" {
-  description = "The AWS account ID for the production environment."
-  type        = string
-  sensitive   = true
-}
-
 # Authentication secrets
 variable "auth_secret" {
   description = "Authentication secret token"

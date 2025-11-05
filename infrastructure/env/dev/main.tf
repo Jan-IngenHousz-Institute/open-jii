@@ -1094,9 +1094,6 @@ module "nameservers_ssm" {
   parameter_type        = "StringList"
   parameter_value       = join(",", module.route53.name_servers)
 
-  # Allow prod account to read this parameter
-  cross_account_allowlist = [var.prod_account_id]
-
   tags = {
     Environment = var.environment
     ManagedBy   = "Terraform"
