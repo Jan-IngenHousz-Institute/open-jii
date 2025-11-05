@@ -317,6 +317,132 @@ describe("UserRepository", () => {
     });
   });
 
+  describe("isOnlyAdminOfAnyExperiments", () => {
+    it("should return false when user is not an admin of any experiments", async () => {
+      // Arrange
+      const userId = await testApp.createTestUser({
+        email: "nonadmin@example.com",
+      });
+
+      // Act
+      const result = await repository.isOnlyAdminOfAnyExperiments(userId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(false);
+    });
+
+    it("should return false when user is admin but other admins exist", async () => {
+      // Arrange
+      const admin1Id = await testApp.createTestUser({
+        email: "admin1@example.com",
+      });
+      const admin2Id = await testApp.createTestUser({
+        email: "admin2@example.com",
+      });
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Shared Admin Experiment",
+        userId: admin1Id,
+      });
+
+      // Add second admin (first admin is added automatically by createExperiment)
+      await testApp.addExperimentMember(experiment.id, admin2Id, "admin");
+
+      // Act
+      const result = await repository.isOnlyAdminOfAnyExperiments(admin1Id);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(false);
+    });
+
+    it("should return true when user is the only admin of an experiment", async () => {
+      // Arrange
+      const soloAdminId = await testApp.createTestUser({
+        email: "soloadmin@example.com",
+      });
+      const memberId = await testApp.createTestUser({
+        email: "member@example.com",
+      });
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Solo Admin Experiment",
+        userId: soloAdminId,
+      });
+
+      // Add a regular member (solo admin is already added by createExperiment)
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      // Act
+      const result = await repository.isOnlyAdminOfAnyExperiments(soloAdminId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(true);
+    });
+
+    it("should return true when user is sole admin of at least one experiment among many", async () => {
+      // Arrange
+      const userId = await testApp.createTestUser({
+        email: "multiadmin@example.com",
+      });
+      const otherAdminId = await testApp.createTestUser({
+        email: "otheradmin@example.com",
+      });
+
+      // Experiment 1: user is sole admin
+      await testApp.createExperiment({
+        name: "Sole Admin Experiment",
+        userId: userId,
+      });
+
+      // Experiment 2: user shares admin role
+      const { experiment: experiment2 } = await testApp.createExperiment({
+        name: "Shared Admin Experiment",
+        userId: userId,
+      });
+      await testApp.addExperimentMember(experiment2.id, otherAdminId, "admin");
+
+      // Act
+      const result = await repository.isOnlyAdminOfAnyExperiments(userId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(true);
+    });
+
+    it("should return false when user is only a member, not an admin", async () => {
+      // Arrange
+      const adminId = await testApp.createTestUser({
+        email: "admin@example.com",
+      });
+      const memberId = await testApp.createTestUser({
+        email: "justmember@example.com",
+      });
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: adminId,
+      });
+
+      // Add member (admin is already added by createExperiment)
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      // Act
+      const result = await repository.isOnlyAdminOfAnyExperiments(memberId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(false);
+    });
+  });
+
   describe("delete", () => {
     it("should soft-delete a user and scrub PII", async () => {
       // Arrange
