@@ -90,7 +90,7 @@
       "confirmPlaceholder": "Type 'delete' here",
       "buttonDeleting": "Deleting...",
       "buttonConfirm": "Delete Account",
-      "successMessage": "Account deleted. Your personal data has been erased, but your published contributions remain attributed to a system account."
+      "successMessage": "Account deleted. Your personal data has been erased."
     },
     "cancel": "Cancel"
   }
