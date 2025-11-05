@@ -15,11 +15,6 @@ on:
         required: false
         type: boolean
         default: true
-      slack_notification:
-        description: "Whether to send Slack notifications"
-        required: false
-        type: boolean
-        default: true
 
 concurrency:
   group: deploy-${{ inputs.environment }}
@@ -83,80 +78,3 @@ jobs:
     with:
       environment: ${{ inputs.environment }}
     secrets: inherit
-
-  notify-slack:
-    name: Slack Notification
-    needs:
-      [
-        detect-changes,
-        deploy-infrastructure,
-        database-migrations,
-        deploy-backend,
-        deploy-frontend,
-      ]
-    if: always() && inputs.slack_notification
-    runs-on: ubuntu-latest
-    steps:
-      - name: Determine notification details
-        id: notification
-        run: |
-          INFRA_STATUS="${{ needs.deploy-infrastructure.result }}"
-          DB_STATUS="${{ needs.database-migrations.result }}"
-          BACKEND_STATUS="${{ needs.deploy-backend.result }}"
-          FRONTEND_STATUS="${{ needs.deploy-frontend.result }}"
-
-          if [[ "$INFRA_STATUS" == "failure" || "$DB_STATUS" == "failure" || "$BACKEND_STATUS" == "failure" || "$FRONTEND_STATUS" == "failure" ]]; then
-            OVERALL_STATUS="failure"
-          elif [[ "$INFRA_STATUS" == "cancelled" || "$DB_STATUS" == "cancelled" || "$BACKEND_STATUS" == "cancelled" || "$FRONTEND_STATUS" == "cancelled" ]]; then
-            OVERALL_STATUS="cancelled"
-          else
-            OVERALL_STATUS="success"
-          fi
-
-          echo "overall_status=$OVERALL_STATUS" >> $GITHUB_OUTPUT
-
-      - name: Send Slack notification
-        uses: 8398a7/action-slack@v3
-        with:
-          status: custom
-          custom_payload: |
-            {
-              text: "Deployment to ${{ inputs.environment }}: ${{ steps.notification.outputs.overall_status }}",
-              attachments: [{
-                color: "${{ steps.notification.outputs.overall_status == 'success' && 'good' || steps.notification.outputs.overall_status == 'failure' && 'danger' || 'warning' }}",
-                fields: [
-                  {
-                    title: "Environment",
-                    value: "${{ inputs.environment }}",
-                    short: true
-                  },
-                  {
-                    title: "Affected",
-                    value: "${{ needs.detect-changes.outputs.affected_apps }}",
-                    short: true
-                  },
-                  {
-                    title: "Infrastructure",
-                    value: "${{ needs.deploy-infrastructure.result || 'skipped' }}",
-                    short: true
-                  },
-                  {
-                    title: "Database",
-                    value: "${{ needs.database-migrations.result || 'skipped' }}",
-                    short: true
-                  },
-                  {
-                    title: "Backend",
-                    value: "${{ needs.deploy-backend.result || 'skipped' }}",
-                    short: true
-                  },
-                  {
-                    title: "Frontend",
-                    value: "${{ needs.deploy-frontend.result || 'skipped' }}",
-                    short: true
-                  }
-                ]
-              }]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -21,5 +21,4 @@ jobs:
         with:
             environment: dev
             deploy_infrastructure: true
-            slack_notification: true
         secrets: inherit
