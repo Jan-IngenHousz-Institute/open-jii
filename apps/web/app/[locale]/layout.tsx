@@ -7,7 +7,7 @@ import React from "react";
 import type { ReactNode } from "react";
 import { getContentfulClients } from "~/lib/contentful";
 import { FEATURE_FLAGS } from "~/lib/posthog-config";
-import { getPostHogClient, isFeatureFlagEnabled } from "~/lib/posthog-server";
+import { isFeatureFlagEnabled } from "~/lib/posthog-server";
 
 import { SessionProvider } from "@repo/auth/client";
 import { ContentfulPreviewProvider } from "@repo/cms/contentful";
@@ -89,10 +89,12 @@ const allowedOriginList = ["https://app.contentful.com", "https://app.eu.content
 export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
   const { locale } = await params;
   const { isEnabled: preview } = await draftMode();
-  const postHogClient = getPostHogClient();
-  const f = await postHogClient.getFeatureFlag(FEATURE_FLAGS.MULTI_LANGUAGE, "anonymous");
-  console.log("LocaleLayout - multi-language flag:", f);
-  if (!f && locale !== defaultLocale) {
+
+  // Check multi-language feature flag
+  const isMultiLanguageEnabled = await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
+
+  // If multi-language is disabled, only allow default locale
+  if (!isMultiLanguageEnabled && locale !== defaultLocale) {
     notFound();
   }
 

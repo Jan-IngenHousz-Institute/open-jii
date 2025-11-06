@@ -36,28 +36,10 @@ export const POSTHOG_CLIENT_CONFIG = {
 } satisfies Partial<PostHogConfig>;
 
 /**
- * Server-side PostHog configuration
+ * PostHog server configuration for Node.js
  */
 export const POSTHOG_SERVER_CONFIG = {
   host: env.NEXT_PUBLIC_POSTHOG_HOST,
-  flushAt: 20, // Batch events
+  flushAt: 20, // Batch events before sending
   flushInterval: 10000, // Flush every 10 seconds
-};
-
-/**
- * Cache configuration for server-side feature flags
- */
-export const CACHE_CONFIG = {
-  TTL_MS: 60_000, // 1 minute
-  MAX_SIZE: 1000, // Maximum number of cached entries
-  CLEANUP_INTERVAL_MS: 300_000, // Clean up stale entries every 5 minutes
-} as const;
-
-/**
- * Circuit breaker configuration for PostHog API calls
- */
-export const CIRCUIT_BREAKER_CONFIG = {
-  FAILURE_THRESHOLD: 5, // Number of failures before opening circuit
-  SUCCESS_THRESHOLD: 2, // Number of successes to close circuit
-  TIMEOUT_MS: 30_000, // 30 seconds before trying again
 } as const;
