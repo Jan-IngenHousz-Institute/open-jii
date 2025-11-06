@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "environment" {
   description = "Environment of the deployment (e.g., 'dev')"
   type        = string
-  default     = "dev"
+  default     = "prod"
 }
 
 variable "databricks_account_id" {
@@ -36,6 +36,11 @@ variable "databricks_host" {
 
 variable "kinesis_credential_id" {
   description = "Databricks storage credential ID for Kinesis"
+  type        = string
+}
+
+variable "dev_nameservers" {
+  description = "Comma-separated list of nameservers for dev subdomain delegation"
   type        = string
 }
 

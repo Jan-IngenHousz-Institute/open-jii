@@ -444,11 +444,4 @@ resource "aws_service_discovery_service" "this" {
     # Alternative: WEIGHTED for server-side load balancing with weights
     routing_policy = "MULTIVALUE"
   }
-
-  # Custom health check configuration
-  # failure_threshold = 1 means mark unhealthy after 1 failed health check
-  # Integrates with ECS task health checks for automatic DNS record updates
-  health_check_custom_config {
-    failure_threshold = 1
-  }
 }

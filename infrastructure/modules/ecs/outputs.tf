@@ -33,7 +33,7 @@ output "ecs_service_name" {
   value       = var.create_ecs_service ? aws_ecs_service.app_service[0].name : null
 }
 
-output "ecs_task_deifiniton_family" {
+output "ecs_task_definition_family" {
   description = "The family name of the ECS task definition"
   value       = aws_ecs_task_definition.app_task.family
 }

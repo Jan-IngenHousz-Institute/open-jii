@@ -8,13 +8,13 @@ module "terraform_state_lock" {
   table_name = "terraform-state-lock"
 }
 
-module "iam_oidc" {
-  source     = "../../modules/iam-oidc"
-  role_name  = "GithubActionsDeployAccess"
-  repository = "Jan-IngenHousz-Institute/open-jii"
-  branch     = "main"
-  aws_region = var.aws_region
-}
+# module "iam_oidc" {
+#   source     = "../../modules/iam-oidc"
+#   role_name  = "GithubActionsDeployAccess"
+#   repository = "Jan-IngenHousz-Institute/open-jii"
+#   branch     = "main"
+#   aws_region = var.aws_region
+# }
 
 module "cloudwatch" {
   source                 = "../../modules/cloudwatch"
@@ -27,13 +27,13 @@ module "cloudwatch" {
 # Access logs bucket
 module "logs_bucket" {
   source      = "../../modules/s3"
-  bucket_name = "open-jii-${var.aws_region}-access-logs"
+  bucket_name = "open-jii-${var.environment}-access-logs"
 
   # Configure for logging purposes
   enable_versioning = false
 
   tags = {
-    Environment = var.environment
+    Environment = "prod"
     Project     = "open-jii"
     ManagedBy   = "Terraform"
     Component   = "logging"
@@ -238,7 +238,7 @@ module "databricks_catalog" {
 module "centrum_pipeline" {
   source = "../../modules/databricks/pipeline"
 
-  name         = "Centrum-DLT-Pipeline-DEV"
+  name         = "Centrum-DLT-Pipeline-PROD"
   schema_name  = "centrum"
   catalog_name = module.databricks_catalog.catalog_name
 
@@ -278,12 +278,12 @@ module "centrum_pipeline" {
 module "pipeline_scheduler" {
   source = "../../modules/databricks/job"
 
-  name        = "Pipeline-Scheduler-DEV"
-  description = "Orchestrates central pipeline execution followed by all experiment pipelines every 15 minutes between 6am and 6pm"
+  name        = "Pipeline-Scheduler-PROD"
+  description = "Orchestrates central pipeline execution followed by all experiment pipelines every 15 minutes between 9am and 9pm"
 
-  # Schedule: Every 15 minutes after the hour (0, 15, 30, 45) between 6am and 6pm (UTC)
+  # Schedule: Every 30 minutes (0, 30) between 9am and 9pm (UTC)
   # Format: "seconds minutes hours day-of-month month day-of-week"
-  schedule = "0 0,15,30,45 6-18 * * ?"
+  schedule = "0 0,30 6-18 * * ?"
 
   max_concurrent_runs           = 1
   use_serverless                = true
@@ -341,7 +341,7 @@ module "pipeline_scheduler" {
 module "experiment_provisioning_job" {
   source = "../../modules/databricks/job"
 
-  name        = "Experiment-Provisioning-Job-DEV"
+  name        = "Experiment-Provisioning-Job-PROD"
   description = "Creates Delta Live Tables pipelines for experiments and reports status to backend webhook"
 
   max_concurrent_runs           = 1
@@ -415,11 +415,11 @@ module "aurora_db" {
   vpc_security_group_ids = [module.vpc.aurora_security_group_id]
 
   environment              = var.environment
-  max_capacity             = 1.0  # Conservative max for dev
-  min_capacity             = 0    # Minimum cost-effective setting (at 0, auto-pause feature is enabled)
-  seconds_until_auto_pause = 1800 # Auto-pause after 30 minutes of inactivity
-  backup_retention_period  = 3    # Reduced retention for dev
-  skip_final_snapshot      = true # Skip snapshot on deletion in dev
+  max_capacity             = 1.0
+  min_capacity             = 0
+  seconds_until_auto_pause = 1800
+  backup_retention_period  = 6
+  skip_final_snapshot      = false
 }
 
 # Authentication secrets
@@ -503,14 +503,15 @@ module "contentful_secrets" {
 module "ses" {
   source = "../../modules/ses"
 
-  region          = var.aws_region
-  domain_name     = var.domain_name
-  subdomain       = "mail"
-  environment     = var.environment
-  route53_zone_id = module.route53.route53_zone_id
+  region                 = var.aws_region
+  domain_name            = var.domain_name
+  subdomain              = "mail"
+  environment            = var.environment
+  use_environment_prefix = false
+  route53_zone_id        = module.route53.route53_zone_id
 
   allowed_from_addresses = [
-    "auth@mail.${var.environment}.${var.domain_name}",
+    "auth@mail.${var.domain_name}",
   ]
 
   create_smtp_user            = true
@@ -524,7 +525,6 @@ module "ses" {
     ManagedBy   = "terraform"
     Component   = "email"
   }
-
 }
 
 # SES SMTP secrets for application use
@@ -537,7 +537,7 @@ module "ses_secrets" {
   # Store SES SMTP credentials as JSON
   secret_string = jsonencode({
     AUTH_EMAIL_SERVER = module.ses.auth_email_server
-    AUTH_EMAIL_FROM   = "auth@mail.${var.environment}.${var.domain_name}"
+    AUTH_EMAIL_FROM   = "auth@mail.${var.domain_name}"
   })
 
   tags = {
@@ -609,11 +609,12 @@ module "opennext" {
   ses_secret_arn            = module.ses_secrets.secret_arn
 
   server_environment_variables = {
-    COOKIE_DOMAIN = ".${var.environment}.${var.domain_name}"
-    DB_HOST       = module.aurora_db.cluster_endpoint
-    DB_PORT       = module.aurora_db.cluster_port
-    DB_NAME       = module.aurora_db.database_name
-    NODE_ENV      = "production"
+    COOKIE_DOMAIN      = ".${var.domain_name}"
+    DB_HOST            = module.aurora_db.cluster_endpoint
+    DB_PORT            = module.aurora_db.cluster_port
+    DB_NAME            = module.aurora_db.database_name
+    NODE_ENV           = "production"
+    ENVIRONMENT_PREFIX = var.environment
   }
 
   # Performance configuration
@@ -659,7 +660,7 @@ module "migration_runner_ecr" {
   encryption_type               = "KMS"
   image_tag_mutability          = "MUTABLE"
 
-  ci_cd_role_arn = module.iam_oidc.role_arn
+  #ci_cd_role_arn = module.iam_oidc.role_arn
 
   tags = {
     Environment = var.environment
@@ -746,7 +747,7 @@ module "backend_ecr" {
   encryption_type               = "KMS"
   image_tag_mutability          = "MUTABLE"
 
-  ci_cd_role_arn = module.iam_oidc.role_arn
+  #ci_cd_role_arn = module.iam_oidc.role_arn
 
   tags = {
     Environment = var.environment
@@ -929,7 +930,11 @@ module "backend_ecs" {
     },
     {
       name  = "COOKIE_DOMAIN"
-      value = ".${var.environment}.${var.domain_name}"
+      value = ".${var.domain_name}"
+    },
+    {
+      name  = "ENVIRONMENT_PREFIX"
+      value = var.environment
     },
     {
       name  = "AWS_LOCATION_PLACE_INDEX_NAME"
@@ -983,7 +988,7 @@ module "backend_waf" {
   }
 }
 
-# CloudFront distribution in front of the backend API
+# # CloudFront distribution in front of the backend API
 module "backend_cloudfront" {
   source = "../../modules/backend-cloudfront"
 
@@ -995,7 +1000,7 @@ module "backend_cloudfront" {
   custom_header_value = var.api_cloudfront_header_value
 
   # CloudFront settings
-  price_class = "PriceClass_100" # Use only North America and Europe for dev
+  price_class = "PriceClass_100" # Use only North America and Europe
   default_ttl = 0                # API shouldn't cache by default
   max_ttl     = 0                # API shouldn't cache by default
 
@@ -1033,7 +1038,7 @@ module "docs_waf" {
   }
 }
 
-# CloudFront distribution for documentation site
+# # CloudFront distribution for documentation site
 module "docs_cloudfront" {
   source          = "../../modules/cloudfront"
   aws_region      = var.aws_region
@@ -1051,13 +1056,13 @@ module "route53" {
 
   domain_name            = var.domain_name
   environment            = var.environment
-  use_environment_prefix = true # Creates dev.domain_name hosted zone
+  use_environment_prefix = false # Prod owns the root domain (openjii.org)
 
   # Input for CloudFront domains that need us-east-1 certificates
   cloudfront_domain_configs = {
-    "api"  = "api.${var.environment}.${var.domain_name}"  # For the backend API
-    "docs" = "docs.${var.environment}.${var.domain_name}" # For the Docusaurus static site
-    "web"  = "${var.environment}.${var.domain_name}"      # For the OpenNext frontend
+    "api"  = "api.${var.domain_name}"
+    "docs" = "docs.${var.domain_name}"
+    "web"  = var.domain_name
   }
 
   cloudfront_records = {
@@ -1082,6 +1087,17 @@ module "route53" {
     Environment = var.environment
     ManagedBy   = "Terraform"
   }
+}
+
+# Create NS delegation record for dev.domain_name in prod's hosted zone
+module "dev_subdomain_delegation" {
+  source = "../../modules/route53-delegation"
+
+  parent_zone_id = module.route53.route53_zone_id
+  subdomain      = "dev.${var.domain_name}"
+
+  # Use hardcoded nameservers from tfvars
+  name_servers = split(",", var.dev_nameservers)
 }
 
 # AWS Location Service for search and geocoding

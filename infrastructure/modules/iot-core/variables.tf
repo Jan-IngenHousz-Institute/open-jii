@@ -4,6 +4,11 @@ variable "aws_region" {
   default     = "eu-central-1"
 }
 
+variable "environment" {
+  description = "Deployment environment (e.g., dev, staging, production)"
+  type        = string
+}
+
 variable "timestream_table" {
   description = "Name of the Timestream table"
   type        = string
@@ -54,4 +59,3 @@ variable "cloudwatch_role_arn" {
   description = "ARN of the IAM role for IoT Core logging created by the cloudwatch module"
   type        = string
 }
-

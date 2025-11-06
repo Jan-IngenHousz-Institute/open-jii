@@ -1,14 +1,17 @@
 locals {
   zone_id = aws_route53_zone.main.zone_id
+
+  # Construct the base domain for certificates and records
+  base_domain = var.use_environment_prefix ? "${var.environment}.${var.domain_name}" : var.domain_name
 }
 
 # Route53 Hosted Zone - DNS management for the domain
 resource "aws_route53_zone" "main" {
-  name = var.domain_name
+  name = local.base_domain
 
   tags = merge(
     {
-      Name        = var.domain_name
+      Name        = local.base_domain
       Environment = var.environment
     },
     var.tags
@@ -22,7 +25,7 @@ provider "aws" {
 
 # ACM Certificate for SSL/TLS encryption (Regional - for ALB and other regional services)
 resource "aws_acm_certificate" "regional_services_cert" {
-  domain_name       = "api.${var.environment}.${var.domain_name}" # Primary domain for this cert
+  domain_name       = "api.${local.base_domain}" # Primary domain for this cert
   validation_method = "DNS"
 
   # Only include SANs that regional services (like ALB) would directly serve.
@@ -138,7 +141,7 @@ resource "aws_route53_record" "cloudfront_record" {
   zone_id = local.zone_id
   # If the key is empty (""), we're setting up the root domain for the environment
   # Otherwise, we're setting up a subdomain
-  name = each.key == "" ? "${var.environment}.${var.domain_name}" : "${each.key}.${var.environment}.${var.domain_name}"
+  name = each.key == "" ? local.base_domain : "${each.key}.${local.base_domain}"
   type = "A"
 
   alias {

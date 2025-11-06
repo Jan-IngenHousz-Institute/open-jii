@@ -6,7 +6,7 @@ resource "aws_kms_key" "aurora_key" {
 
   tags = {
     Name        = "${var.cluster_identifier}-aurora-key"
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
   }
 }
@@ -24,7 +24,7 @@ resource "aws_kms_key" "performance_insights_key" {
 
   tags = {
     Name        = "${var.cluster_identifier}-pi-key"
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
   }
 }
@@ -131,7 +131,7 @@ resource "aws_rds_cluster_parameter_group" "aurora_security" {
 
   tags = {
     Name        = "Aurora Security Parameters"
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
   }
 }
@@ -178,7 +178,7 @@ resource "aws_rds_cluster" "rds_cluster_aurora" {
 
   tags = {
     "Name"        = "Aurora DB Cluster"
-    "Environment" = "dev"
+    "Environment" = var.environment
     "Project"     = "open-jii"
   }
 }
@@ -203,7 +203,7 @@ resource "aws_rds_cluster_instance" "rds_cluster_instance_aurora" {
 
   tags = {
     "Name"        = "Aurora DB Instance"
-    "Environment" = "dev"
+    "Environment" = var.environment
     "Project"     = "open-jii"
   }
 }
@@ -228,7 +228,7 @@ resource "aws_iam_role" "rds_enhanced_monitoring" {
 
   tags = {
     "Name"        = "RDS Enhanced Monitoring Role"
-    "Environment" = "dev"
+    "Environment" = var.environment
     "Project"     = "open-jii"
   }
 }
