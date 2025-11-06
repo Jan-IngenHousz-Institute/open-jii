@@ -1,10 +1,10 @@
 "use client";
 
-import { usePostHogFeatureFlag } from "@/hooks/use-posthog-feature-flags";
 import { FEATURE_FLAGS } from "@/lib/posthog-config";
 import { Globe } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useFeatureFlagEnabled } from "posthog-js/react";
 
 import type { Locale } from "@repo/i18n";
 import {
@@ -27,8 +27,8 @@ interface LanguageSwitcherProps {
 
 export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
   const pathname = usePathname();
-  const isMultiLanguageEnabled = usePostHogFeatureFlag(FEATURE_FLAGS.MULTI_LANGUAGE);
-
+  const isMultiLanguageEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
+  console.log("LanguageSwitcher - isMultiLanguageEnabled:", isMultiLanguageEnabled);
   // If feature flag is disabled, only show English
   const locales = isMultiLanguageEnabled
     ? allLocales

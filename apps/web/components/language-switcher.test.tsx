@@ -5,9 +5,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { LanguageSwitcher } from "./language-switcher";
 
 // Mock the hook
-let mockFeatureFlagValue: boolean | null = null;
-vi.mock("@/hooks/use-posthog-feature-flags", () => ({
-  usePostHogFeatureFlag: vi.fn(() => mockFeatureFlagValue),
+let mockFeatureFlagValue: boolean | undefined = undefined;
+vi.mock("posthog-js/react", () => ({
+  useFeatureFlagEnabled: vi.fn(() => mockFeatureFlagValue),
 }));
 
 // Mock next/navigation
@@ -62,11 +62,11 @@ vi.mock("@repo/ui/components", () => ({
 describe("LanguageSwitcher", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFeatureFlagValue = null;
+    mockFeatureFlagValue = undefined;
   });
 
-  it("should return null when feature flag is loading (null)", () => {
-    mockFeatureFlagValue = null;
+  it("should return null when feature flag is loading (undefined)", () => {
+    mockFeatureFlagValue = undefined;
 
     const { container } = render(<LanguageSwitcher locale="en-US" />);
 

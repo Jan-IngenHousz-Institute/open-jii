@@ -1,3 +1,5 @@
+import type { PostHogConfig } from "posthog-js";
+
 import { env } from "../env";
 
 /**
@@ -31,10 +33,7 @@ export const POSTHOG_CLIENT_CONFIG = {
   capture_exceptions: true,
   debug: false, // Set to true for debugging PostHog issues
   // Performance optimization
-  loaded: (posthog: { __loaded?: boolean }) => {
-    posthog.__loaded = true;
-  },
-} as const;
+} satisfies Partial<PostHogConfig>;
 
 /**
  * Server-side PostHog configuration
