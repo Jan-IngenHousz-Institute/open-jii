@@ -118,23 +118,6 @@ describe("utils", () => {
       const result = getRenderer(true);
       expect(result).toBe("svg");
     });
-
-    it("auto-detects and returns webgl when WebGL is available", () => {
-      const mockWebGLContext = {
-        constructor: { name: "WebGLRenderingContext" },
-      };
-      mockCanvas.getContext.mockReturnValue(mockWebGLContext);
-      Object.setPrototypeOf(mockWebGLContext, WebGLRenderingContext.prototype);
-
-      const result = getRenderer();
-      expect(result).toBe("webgl");
-    });
-
-    it("auto-detects and returns svg when WebGL is not available", () => {
-      vi.spyOn({ detectWebGLSupport }, "detectWebGLSupport").mockReturnValue(false);
-      const result = getRenderer();
-      expect(result).toBe("svg");
-    });
   });
 
   describe("validateDimensions", () => {

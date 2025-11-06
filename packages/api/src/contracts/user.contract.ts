@@ -62,4 +62,17 @@ export const userContract = c.router({
     description:
       "Returns the user's profile information including firstName, lastName, bio, and organization",
   },
+
+  deleteUser: {
+    method: "DELETE",
+    path: "/api/v1/users/:id",
+    pathParams: zUserIdPathParam,
+    responses: {
+      204: null,
+      403: zErrorResponse,
+      404: zErrorResponse,
+    },
+    summary: "Delete a user",
+    description: "Deletes a user by their ID if allowed",
+  },
 });

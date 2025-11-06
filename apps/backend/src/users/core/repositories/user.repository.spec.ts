@@ -1,6 +1,15 @@
 import { faker } from "@faker-js/faker";
 
-import { users, organizations, profiles, eq } from "@repo/database";
+import {
+  users,
+  organizations,
+  profiles,
+  accounts,
+  sessions,
+  authenticators,
+  experimentMembers,
+  eq,
+} from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -308,8 +317,134 @@ describe("UserRepository", () => {
     });
   });
 
+  describe("isOnlyAdminOfAnyExperiments", () => {
+    it("should return false when user is not an admin of any experiments", async () => {
+      // Arrange
+      const userId = await testApp.createTestUser({
+        email: "nonadmin@example.com",
+      });
+
+      // Act
+      const result = await repository.isOnlyAdminOfAnyExperiments(userId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(false);
+    });
+
+    it("should return false when user is admin but other admins exist", async () => {
+      // Arrange
+      const admin1Id = await testApp.createTestUser({
+        email: "admin1@example.com",
+      });
+      const admin2Id = await testApp.createTestUser({
+        email: "admin2@example.com",
+      });
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Shared Admin Experiment",
+        userId: admin1Id,
+      });
+
+      // Add second admin (first admin is added automatically by createExperiment)
+      await testApp.addExperimentMember(experiment.id, admin2Id, "admin");
+
+      // Act
+      const result = await repository.isOnlyAdminOfAnyExperiments(admin1Id);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(false);
+    });
+
+    it("should return true when user is the only admin of an experiment", async () => {
+      // Arrange
+      const soloAdminId = await testApp.createTestUser({
+        email: "soloadmin@example.com",
+      });
+      const memberId = await testApp.createTestUser({
+        email: "member@example.com",
+      });
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Solo Admin Experiment",
+        userId: soloAdminId,
+      });
+
+      // Add a regular member (solo admin is already added by createExperiment)
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      // Act
+      const result = await repository.isOnlyAdminOfAnyExperiments(soloAdminId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(true);
+    });
+
+    it("should return true when user is sole admin of at least one experiment among many", async () => {
+      // Arrange
+      const userId = await testApp.createTestUser({
+        email: "multiadmin@example.com",
+      });
+      const otherAdminId = await testApp.createTestUser({
+        email: "otheradmin@example.com",
+      });
+
+      // Experiment 1: user is sole admin
+      await testApp.createExperiment({
+        name: "Sole Admin Experiment",
+        userId: userId,
+      });
+
+      // Experiment 2: user shares admin role
+      const { experiment: experiment2 } = await testApp.createExperiment({
+        name: "Shared Admin Experiment",
+        userId: userId,
+      });
+      await testApp.addExperimentMember(experiment2.id, otherAdminId, "admin");
+
+      // Act
+      const result = await repository.isOnlyAdminOfAnyExperiments(userId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(true);
+    });
+
+    it("should return false when user is only a member, not an admin", async () => {
+      // Arrange
+      const adminId = await testApp.createTestUser({
+        email: "admin@example.com",
+      });
+      const memberId = await testApp.createTestUser({
+        email: "justmember@example.com",
+      });
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: adminId,
+      });
+
+      // Add member (admin is already added by createExperiment)
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      // Act
+      const result = await repository.isOnlyAdminOfAnyExperiments(memberId);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(false);
+    });
+  });
+
   describe("delete", () => {
-    it("should delete a user", async () => {
+    it("should soft-delete a user and scrub PII", async () => {
       // Arrange
       const userToDeleteId = await testApp.createTestUser({
         name: "User to Delete",
@@ -319,16 +454,60 @@ describe("UserRepository", () => {
       // Act
       const result = await repository.delete(userToDeleteId);
 
-      // Assert
+      // Assert result
       expect(result.isSuccess()).toBe(true);
 
-      // Verify user is deleted
-      const dbResult = await testApp.database
+      // Verify user row still exists but PII is scrubbed and deletedAt is set
+      const userRows = await testApp.database
         .select()
         .from(users)
         .where(eq(users.id, userToDeleteId));
+      expect(userRows.length).toBe(1);
+      const userRow = userRows[0];
+      expect(userRow.email).toBeNull();
+      expect(userRow.image).toBeNull();
+      expect(userRow.emailVerified).toBeNull();
+      expect(userRow.name).toBe("Deleted User");
 
-      expect(dbResult.length).toBe(0);
+      // Verify related PII rows are removed
+      const accountRows = await testApp.database
+        .select()
+        .from(accounts)
+        .where(eq(accounts.userId, userToDeleteId));
+      expect(accountRows.length).toBe(0);
+
+      const sessionRows = await testApp.database
+        .select()
+        .from(sessions)
+        .where(eq(sessions.userId, userToDeleteId));
+      expect(sessionRows.length).toBe(0);
+
+      const authRows = await testApp.database
+        .select()
+        .from(authenticators)
+        .where(eq(authenticators.userId, userToDeleteId));
+      expect(authRows.length).toBe(0);
+
+      // Profile should be anonymized, not deleted
+      const profs = await testApp.database
+        .select()
+        .from(profiles)
+        .where(eq(profiles.userId, userToDeleteId));
+      expect(profs.length).toBe(1);
+      const profile = profs[0];
+      expect(profile.firstName).toBe("Deleted");
+      expect(profile.lastName).toBe("User");
+      expect(profile.bio).toBeNull();
+      expect(profile.avatarUrl).toBeNull();
+      expect(profile.organizationId).toBeNull();
+      expect(profile.deletedAt).not.toBeNull();
+
+      // Experiment memberships for this user should be deleted
+      const memberships = await testApp.database
+        .select()
+        .from(experimentMembers)
+        .where(eq(experimentMembers.userId, userToDeleteId));
+      expect(memberships.length).toBe(0);
     });
   });
 

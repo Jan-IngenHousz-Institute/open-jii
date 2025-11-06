@@ -371,4 +371,71 @@ describe("UserController", () => {
       await testApp.get(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
     });
   });
+
+  describe("deleteUser", () => {
+    it("should successfully soft-delete a user and scrub PII", async () => {
+      const userToDeleteId = await testApp.createTestUser({
+        email: "delete-me@example.com",
+        name: "User ToDelete",
+      });
+
+      const path = testApp.resolvePath(contract.users.deleteUser.path, {
+        id: userToDeleteId,
+      });
+
+      // Act
+      await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NO_CONTENT);
+
+      // Assert: verify user was soft-deleted (row still exists but PII scrubbed)
+      const getUserPath = testApp.resolvePath(contract.users.getUser.path, {
+        id: userToDeleteId,
+      });
+
+      const response: SuperTestResponse<User> = await testApp
+        .get(getUserPath)
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toMatchObject({
+        id: userToDeleteId,
+        email: null,
+      });
+      expect(response.body.name).toBe("Deleted User");
+    });
+
+    it("should return 404 when deleting a non-existent user", async () => {
+      const nonExistentId = faker.string.uuid();
+      const path = testApp.resolvePath(contract.users.deleteUser.path, {
+        id: nonExistentId,
+      });
+
+      await testApp
+        .delete(path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.NOT_FOUND)
+        .expect(({ body }: { body: ErrorResponse }) => {
+          expect(body.message.toLowerCase()).toContain("not found");
+        });
+    });
+
+    it("should return 400 for invalid UUID", async () => {
+      const path = testApp.resolvePath(contract.users.deleteUser.path, {
+        id: "invalid-uuid",
+      });
+
+      await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 401 if not authenticated", async () => {
+      const userToDeleteId = await testApp.createTestUser({
+        email: "delete-without-auth@example.com",
+      });
+
+      const path = testApp.resolvePath(contract.users.deleteUser.path, {
+        id: userToDeleteId,
+      });
+
+      await testApp.delete(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
 });

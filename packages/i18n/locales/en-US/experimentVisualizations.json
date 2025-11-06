@@ -1,0 +1,206 @@
+{
+  "ui": {
+    "title": "Visualizations",
+    "actions": {
+      "edit": "Edit Visualization",
+      "delete": "Delete",
+      "deleting": "Deleting...",
+      "create": "New Visualization",
+      "back": "Back"
+    },
+    "messages": {
+      "noVisualizations": "No visualizations yet",
+      "deleteSuccess": "Visualization deleted successfully",
+      "createSuccess": "Visualization created successfully",
+      "updateSuccess": "Visualization updated successfully",
+      "loading": "Loading visualization...",
+      "loadingData": "Loading visualization data...",
+      "failedToLoad": "Failed to load visualization"
+    },
+    "labels": {
+      "createdAt": "Created",
+      "createdBy": "Created By",
+      "updatedAt": "Last updated"
+    }
+  },
+
+  "form": {
+    "details": {
+      "title": "Visualization Details",
+      "subtitle": "Provide basic information about your visualization",
+      "name": "Name",
+      "namePlaceholder": "Enter visualization name",
+      "description": "Description",
+      "descriptionPlaceholder": "Enter visualization description",
+      "descriptionHelp": "Optional description to help identify this visualization"
+    },
+    "dataSource": {
+      "title": "Data Source",
+      "help": "Choose which table to visualize",
+      "selectTable": "Select table",
+      "tableInfo": "{{name}}"
+    }
+  },
+
+  "wizard": {
+    "steps": {
+      "basicInfo": {
+        "title": "Basic Information",
+        "description": "Enter name and description for your visualization"
+      },
+      "chartType": {
+        "title": "Chart Type",
+        "description": "Choose the type of chart that best represents your data"
+      },
+      "dataSource": {
+        "title": "Data Configuration",
+        "description": "Select data table and configure column mappings"
+      },
+      "appearance": {
+        "title": "Appearance & Styling",
+        "description": "Customize the look and feel of your chart"
+      }
+    }
+  },
+
+  "charts": {
+    "types": {
+      "line": "Line Chart",
+      "scatter": "Scatter Plot",
+      "lineDescription": "Display data points connected by straight line segments",
+      "scatterDescription": "Display data as points plotted on x and y coordinates"
+    },
+    "families": {
+      "basic": "Basic Charts"
+    },
+    "title": "Chart Title",
+    "preview": "Chart Preview",
+    "showLegend": "Show Legend"
+  },
+
+  "configuration": {
+    "columns": {
+      "select": "Select Column",
+      "xAxis": "X-Axis",
+      "yAxis": "Y-Axis Configuration",
+      "color": "Color Column",
+      "selectColor": "Select color column",
+      "noColorMapping": "No color mapping",
+      "dataColumn": "Data Column"
+    },
+    "axes": {
+      "title": "Axis Title",
+      "titlePosition": "Color Axis Title Position",
+      "type": "Axis Type"
+    },
+    "series": {
+      "add": "Add Series",
+      "name": "Series Name",
+      "color": "Series Color",
+      "title": "Series"
+    },
+    "color": {
+      "scale": "Color Scale",
+      "dimensionConfig": "Color Dimension Configuration"
+    },
+    "chart": {
+      "showColorbar": "Show Colorbar",
+      "enterColorAxisTitle": "Enter color axis title",
+      "selectPosition": "Select position"
+    },
+    "positions": {
+      "top": "Top",
+      "right": "Right",
+      "bottom": "Bottom"
+    },
+    "chartOptions": {
+      "lineChartOptions": "Line Chart Options",
+      "scatterChartOptions": "Scatter Chart Options",
+      "displayOptions": "Display Options",
+      "mode": "Drawing Mode",
+      "connectGaps": "Connect Gaps",
+      "smoothing": "Line Smoothing",
+      "markerSize": "Marker Size",
+      "markerShape": "Marker Shape",
+      "title": "Chart Title",
+      "showLegend": "Show Legend",
+      "gridLines": "Grid Lines"
+    },
+    "modes": {
+      "lines": "Lines Only",
+      "markers": "Markers Only",
+      "linesMarkers": "Lines + Markers"
+    },
+    "placeholders": {
+      "selectLineMode": "Select line mode",
+      "selectScatterMode": "Select scatter mode",
+      "selectMode": "Select mode",
+      "enterChartTitle": "Enter chart title",
+      "enterAxisTitle": "Enter axis title",
+      "enterSeriesName": "Enter series name"
+    },
+    "labels": {
+      "chartTitle": "Chart Title",
+      "showLegend": "Show Legend"
+    },
+    "markerSymbols": {
+      "circle": "Circle",
+      "square": "Square",
+      "diamond": "Diamond",
+      "cross": "Cross",
+      "x": "X"
+    },
+    "axisTypes": {
+      "linear": "Linear",
+      "log": "Logarithmic",
+      "date": "Date"
+    },
+    "colorscales": {
+      "viridis": "Viridis",
+      "cividis": "Cividis",
+      "blues": "Blues",
+      "reds": "Reds",
+      "greens": "Greens",
+      "greys": "Greys",
+      "ylgnbu": "Yellow-Green-Blue",
+      "ylord": "Yellow-Orange-Red",
+      "rdbu": "Red-Blue",
+      "picnic": "Picnic",
+      "rainbow": "Rainbow",
+      "portland": "Portland",
+      "jet": "Jet",
+      "hot": "Hot",
+      "blackbody": "Blackbody",
+      "earth": "Earth",
+      "electric": "Electric",
+      "bluered": "Blue-Red"
+    }
+  },
+
+  "preview": {
+    "title": "Preview",
+    "description": "Live preview of your chart configuration",
+    "noDataSource": "No data source selected",
+    "selectTable": "Select a data table to see the preview",
+    "noColumns": "No columns configured",
+    "configureColumns": "Configure at least one data column to see the preview"
+  },
+
+  "errors": {
+    "noData": "No Data Available",
+    "configuration": "Configuration Error",
+    "invalidConfiguration": "Invalid chart configuration",
+    "xAxisNotConfigured": "X-axis column not configured",
+    "yAxisNotConfigured": "Y-axis column not configured",
+    "loadingData": "Loading chart data...",
+    "failedToLoadData": "Failed to load data",
+    "failedToLoadDataDescription": "Unable to fetch experiment data for this visualization",
+    "noDataFound": "No data found for this visualization",
+    "unsupportedChartType": "Unsupported Chart Type",
+    "chartTypeNotSupported": "is not supported"
+  },
+
+  "selector": {
+    "noVisualizations": "No visualizations available for this experiment"
+  }
+}

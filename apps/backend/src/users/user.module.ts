@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 
 // Use Cases
 import { CreateUserProfileUseCase } from "./application/use-cases/create-user-profile/create-user-profile";
+import { DeleteUserUseCase } from "./application/use-cases/delete-user/delete-user";
 import { GetUserProfileUseCase } from "./application/use-cases/get-user-profile/get-user-profile";
 import { GetUserUseCase } from "./application/use-cases/get-user/get-user";
 import { SearchUsersUseCase } from "./application/use-cases/search-users/search-users";
@@ -17,6 +18,7 @@ import { UserController } from "./presentation/user.controller";
     UserRepository,
 
     // Use case providers
+    DeleteUserUseCase,
     GetUserUseCase,
     SearchUsersUseCase,
     CreateUserProfileUseCase,

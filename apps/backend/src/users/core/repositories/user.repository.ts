@@ -1,9 +1,30 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { eq, ilike, or, organizations, profiles, users } from "@repo/database";
+import {
+  eq,
+  ilike,
+  or,
+  and,
+  organizations,
+  profiles,
+  users,
+  accounts,
+  sessions,
+  authenticators,
+  experimentMembers,
+  sql,
+} from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import {
+  getAnonymizedFirstName,
+  getAnonymizedLastName,
+  getAnonymizedBio,
+  getAnonymizedAvatarUrl,
+  getAnonymizedEmail,
+  getAnonymizedOrganizationName,
+} from "../../../common/utils/profile-anonymization";
 import {
   CreateUserDto,
   UpdateUserDto,
@@ -50,12 +71,14 @@ export class UserRepository {
       let query = this.database
         .select({
           userId: profiles.userId,
-          firstName: profiles.firstName,
-          lastName: profiles.lastName,
-          email: users.email,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+          email: getAnonymizedEmail(),
           createdAt: profiles.createdAt,
-          bio: profiles.bio,
-          avatarUrl: profiles.avatarUrl,
+          bio: getAnonymizedBio(),
+          avatarUrl: getAnonymizedAvatarUrl(),
+          activated: profiles.activated,
+          deletedAt: profiles.deletedAt,
           organizationId: profiles.organizationId,
           updatedAt: profiles.updatedAt,
         })
@@ -63,13 +86,16 @@ export class UserRepository {
         .innerJoin(users, eq(profiles.userId, users.id))
         .$dynamic();
 
-      // If search query is provided, search in firstName, lastName, email fields
+      // If search query is provided, search in firstName, lastName, email fields profiles that are activated
       if (params.query) {
         query = query.where(
-          or(
-            ilike(profiles.firstName, `%${params.query}%`),
-            ilike(profiles.lastName, `%${params.query}%`),
-            ilike(users.email, `%${params.query}%`),
+          and(
+            eq(profiles.activated, true),
+            or(
+              ilike(profiles.firstName, `%${params.query}%`),
+              ilike(profiles.lastName, `%${params.query}%`),
+              ilike(users.email, `%${params.query}%`),
+            ),
           ),
         );
       }
@@ -96,10 +122,74 @@ export class UserRepository {
     );
   }
 
+  async isOnlyAdminOfAnyExperiments(userId: string): Promise<Result<boolean>> {
+    return tryCatch(async () => {
+      // Find all experiments where this user is an admin
+      const adminRows = await this.database
+        .select({ experimentId: experimentMembers.experimentId })
+        .from(experimentMembers)
+        .where(and(eq(experimentMembers.userId, userId), eq(experimentMembers.role, "admin")));
+
+      if (adminRows.length === 0) {
+        return false;
+      }
+
+      // For each experiment, check how many admins exist. If any has exactly 1 admin, return true.
+      for (const row of adminRows) {
+        const admins = await this.database
+          .select()
+          .from(experimentMembers)
+          .where(
+            and(
+              eq(experimentMembers.experimentId, row.experimentId),
+              eq(experimentMembers.role, "admin"),
+            ),
+          );
+
+        if (admins.length === 1) {
+          return true;
+        }
+      }
+
+      return false;
+    });
+  }
+
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
-      await this.database.delete(profiles).where(eq(profiles.userId, id));
-      await this.database.delete(users).where(eq(users.id, id));
+      await this.database.transaction(async (tx) => {
+        // 1. Delete OAuth accounts, sessions, and authenticators
+        await tx.delete(accounts).where(eq(accounts.userId, id));
+        await tx.delete(sessions).where(eq(sessions.userId, id));
+        await tx.delete(authenticators).where(eq(authenticators.userId, id));
+
+        // 2. Delete experiment memberships
+        await tx.delete(experimentMembers).where(eq(experimentMembers.userId, id));
+
+        // 3. Anonymize profile: scrub PII and mark deleted
+        await tx
+          .update(profiles)
+          .set({
+            firstName: "Deleted",
+            lastName: "User",
+            bio: null,
+            avatarUrl: null,
+            organizationId: null,
+            deletedAt: sql`now() AT TIME ZONE 'UTC'`,
+          })
+          .where(eq(profiles.userId, id));
+
+        // 4. Soft-delete user: scrub PII
+        await tx
+          .update(users)
+          .set({
+            email: null,
+            name: `Deleted User`,
+            image: null,
+            emailVerified: null,
+          })
+          .where(eq(users.id, id));
+      });
     });
   }
 
@@ -163,6 +253,7 @@ export class UserRepository {
         lastName: createUserProfileDto.lastName,
         bio: createUserProfileDto.bio,
         organization: createUserProfileDto.organization,
+        activated: createUserProfileDto.activated,
       } as UserProfileDto;
     });
   }
@@ -171,10 +262,11 @@ export class UserRepository {
     return tryCatch(async () => {
       const result = await this.database
         .select({
-          firstName: profiles.firstName,
-          lastName: profiles.lastName,
-          bio: profiles.bio,
-          organization: organizations.name,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+          bio: getAnonymizedBio(),
+          organization: getAnonymizedOrganizationName(),
+          activated: profiles.activated,
         })
         .from(profiles)
         .leftJoin(organizations, eq(profiles.organizationId, organizations.id))
@@ -190,6 +282,7 @@ export class UserRepository {
         lastName: result[0].lastName,
         bio: result[0].bio,
         organization: result[0].organization,
+        activated: result[0].activated,
       } as UserProfileDto;
     });
   }

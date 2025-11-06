@@ -1,6 +1,7 @@
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentFlow } from "@/hooks/experiment/useExperimentFlow/useExperimentFlow";
 import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
+import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import { notFound } from "next/navigation";
@@ -31,6 +32,10 @@ vi.mock("@/hooks/experiment/useExperimentFlow/useExperimentFlow", () => ({
 
 vi.mock("@/hooks/experiment/useExperimentLocations/useExperimentLocations", () => ({
   useExperimentLocations: vi.fn(),
+}));
+
+vi.mock("@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations", () => ({
+  useExperimentVisualizations: vi.fn(),
 }));
 
 // Mock translation hook
@@ -71,6 +76,25 @@ vi.mock("@/components/flow-editor", () => ({
   }),
 }));
 
+// Mock ExperimentVisualizationsDisplay
+vi.mock("@/components/experiment-visualizations/experiment-visualizations-display", () => ({
+  default: ({
+    experimentId,
+    visualizations,
+    isLoading,
+  }: {
+    experimentId: string;
+    visualizations: unknown[];
+    isLoading: boolean;
+  }) => (
+    <div data-testid="visualizations-display">
+      <div data-testid="visualizations-experiment-id">{experimentId}</div>
+      <div data-testid="visualizations-loading">{String(isLoading)}</div>
+      <div data-testid="visualizations-count">{visualizations.length}</div>
+    </div>
+  ),
+}));
+
 // Mock ExperimentLocationsDisplay
 vi.mock("@/components/experiment/experiment-locations-display", () => ({
   ExperimentLocationsDisplay: ({
@@ -104,6 +128,10 @@ beforeEach(() => {
     data: undefined,
     isLoading: false,
   } as unknown as ReturnType<typeof useExperimentLocations>);
+  vi.mocked(useExperimentVisualizations).mockReturnValue({
+    data: undefined,
+    isLoading: false,
+  } as unknown as ReturnType<typeof useExperimentVisualizations>);
 });
 
 describe("<ExperimentOverviewPage />", () => {
@@ -194,6 +222,16 @@ describe("<ExperimentOverviewPage />", () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useExperimentLocations>);
 
+    vi.mocked(useExperimentVisualizations).mockReturnValue({
+      data: {
+        body: [
+          { id: "viz-1", name: "Visualization 1" },
+          { id: "viz-2", name: "Visualization 2" },
+        ],
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useExperimentVisualizations>);
+
     render(<ExperimentOverviewPage params={Promise.resolve({ id: "test-experiment-id" })} />);
 
     // Check experiment name
@@ -215,6 +253,14 @@ describe("<ExperimentOverviewPage />", () => {
     // Check description section
     expect(screen.getByText("descriptionTitle")).toBeInTheDocument();
     expect(screen.getByText("Test description")).toBeInTheDocument();
+
+    // Check visualizations display
+    expect(screen.getByTestId("visualizations-display")).toBeInTheDocument();
+    expect(screen.getByTestId("visualizations-experiment-id")).toHaveTextContent(
+      "test-experiment-id",
+    );
+    expect(screen.getByTestId("visualizations-count")).toHaveTextContent("2");
+    expect(screen.getByTestId("visualizations-loading")).toHaveTextContent("false");
 
     // Check locations display
     expect(screen.getByTestId("locations-display")).toBeInTheDocument();

@@ -4,6 +4,11 @@ import { and, eq, experimentMembers, inArray, users, profiles } from "@repo/data
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import {
+  getAnonymizedFirstName,
+  getAnonymizedLastName,
+  getAnonymizedEmail,
+} from "../../../common/utils/profile-anonymization";
 import { ExperimentMemberRole, ExperimentMemberDto } from "../models/experiment-members.model";
 
 @Injectable()
@@ -22,9 +27,9 @@ export class ExperimentMemberRepository {
           joinedAt: experimentMembers.joinedAt,
           user: {
             id: users.id,
-            firstName: profiles.firstName,
-            lastName: profiles.lastName,
-            email: users.email,
+            firstName: getAnonymizedFirstName(),
+            lastName: getAnonymizedLastName(),
+            email: getAnonymizedEmail(),
           },
         })
         .from(experimentMembers)
@@ -58,9 +63,9 @@ export class ExperimentMemberRepository {
           joinedAt: experimentMembers.joinedAt,
           user: {
             id: users.id,
-            firstName: profiles.firstName,
-            lastName: profiles.lastName,
-            email: users.email,
+            firstName: getAnonymizedFirstName(),
+            lastName: getAnonymizedLastName(),
+            email: getAnonymizedEmail(),
           },
         })
         .from(experimentMembers)

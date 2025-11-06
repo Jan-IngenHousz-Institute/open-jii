@@ -60,6 +60,12 @@
   },
   "overview": "Übersicht",
   "data": "Daten",
+  "analysis": {
+    "title": "Analyse",
+    "description": "Analysieren Sie Ihre Experimentdaten mit Visualisierungen und Notebooks",
+    "visualizations": "Visualisierungen",
+    "notebooks": "Notebooks"
+  },
   "experimentData": {
     "title": "Experimentdaten",
     "description": "Anzeigen und Verwalten von Daten, die mit diesem Experiment verbunden sind.",
@@ -80,6 +86,11 @@
   "updated": "Aktualisiert",
   "descriptionTitle": "Beschreibung",
   "details": {
+    "location": {
+      "locationsTitle": "Experiment-Standorte",
+      "noLocations": "Keine Standorte",
+      "noLocationsDescription": "Dieses Experiment hat keine konfigurierten Standorte."
+    },
     "locations": {
       "locationsTitle": "Experiment-Standorte",
       "locationsCount": "{{count}} Standort",

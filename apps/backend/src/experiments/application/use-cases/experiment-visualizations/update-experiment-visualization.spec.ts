@@ -3,7 +3,10 @@ import { faker } from "@faker-js/faker";
 import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import type { UpdateExperimentVisualizationDto } from "../../../core/models/experiment-visualizations.model";
+import type {
+  ExperimentVisualizationDto,
+  UpdateExperimentVisualizationDto,
+} from "../../../core/models/experiment-visualizations.model";
 import { ExperimentVisualizationRepository } from "../../../core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { UpdateExperimentVisualizationUseCase } from "./update-experiment-visualization";
@@ -40,36 +43,29 @@ describe("UpdateExperimentVisualizationUseCase", () => {
   });
 
   describe("execute", () => {
-    const experimentId = faker.string.uuid();
     const visualizationId = faker.string.uuid();
 
-    const mockVisualization = {
-      id: visualizationId,
-      experimentId,
-      name: "Original Visualization",
-      chartFamily: "plotly",
-      chartType: "bar",
-      dataConfig: { table: "test_table", columns: ["col1", "col2"] },
-      config: { title: "Original Visualization" },
-      createdBy: testUserId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const mockUpdateRequest: UpdateExperimentVisualizationDto = {
+    const mockUpdateRequest: Required<UpdateExperimentVisualizationDto> = {
       name: "Updated Visualization",
-      chartFamily: "plotly",
+      description: "Updated Description",
+      chartFamily: "basic",
       chartType: "line",
-      dataConfig: { table: "test_table", columns: ["col1", "col3"] },
+      dataConfig: { tableName: "test_table", dataSources: [] },
       config: { title: "Updated Visualization" },
     };
 
     it("should successfully update a visualization", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
       // Arrange
-      const mockVisualization = {
+      const mockVisualization: ExperimentVisualizationDto = {
         id: visualizationId,
-        experimentId,
+        experimentId: experiment.id,
         name: "Original Visualization",
+        description: "Original Description",
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
@@ -85,17 +81,19 @@ describe("UpdateExperimentVisualizationUseCase", () => {
 
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
-          experiment: { id: experimentId, name: "Test Experiment" },
+          experiment,
           hasAccess: true,
+          hasArchiveAccess: true,
           isAdmin: false,
         }),
       );
 
       vi.spyOn(databricksAdapter, "validateDataSources").mockResolvedValue(success(true));
 
-      const updatedVisualization = {
+      const updatedVisualization: ExperimentVisualizationDto = {
         ...mockVisualization,
         name: mockUpdateRequest.name,
+        description: mockUpdateRequest.description,
         chartFamily: mockUpdateRequest.chartFamily,
         chartType: mockUpdateRequest.chartType,
         dataConfig: mockUpdateRequest.dataConfig,
@@ -115,7 +113,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       assertSuccess(result);
       expect(result.value).toMatchObject({
         id: visualizationId,
-        experimentId,
+        experimentId: experiment.id,
         name: mockUpdateRequest.name,
         chartFamily: mockUpdateRequest.chartFamily,
         chartType: mockUpdateRequest.chartType,
@@ -143,6 +141,25 @@ describe("UpdateExperimentVisualizationUseCase", () => {
     });
 
     it("should fail when user is not the creator of the visualization", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
+      const mockVisualization: ExperimentVisualizationDto = {
+        id: visualizationId,
+        experimentId: experiment.id,
+        name: "Original Visualization",
+        description: "Original Description",
+        chartFamily: "basic",
+        chartType: "bar",
+        dataConfig: { tableName: "test_table", dataSources: [] },
+        config: { title: "Original Visualization" },
+        createdBy: testUserId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
       // Arrange
       const differentUserVisualization = {
         ...mockVisualization,
@@ -155,8 +172,9 @@ describe("UpdateExperimentVisualizationUseCase", () => {
 
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
-          experiment: { id: experimentId, name: "Test Experiment" },
+          experiment,
           hasAccess: true,
+          hasArchiveAccess: true,
           isAdmin: false,
         }),
       );
@@ -171,11 +189,17 @@ describe("UpdateExperimentVisualizationUseCase", () => {
     });
 
     it("should fail when data source validation fails", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
       // Arrange
-      const mockVisualization = {
+      const mockVisualization: ExperimentVisualizationDto = {
         id: visualizationId,
-        experimentId,
+        experimentId: experiment.id,
         name: "Original Visualization",
+        description: "Original Description",
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
@@ -191,8 +215,9 @@ describe("UpdateExperimentVisualizationUseCase", () => {
 
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
-          experiment: { id: experimentId, name: "Test Experiment" },
+          experiment,
           hasAccess: true,
+          hasArchiveAccess: true,
           isAdmin: false,
         }),
       );
@@ -216,11 +241,17 @@ describe("UpdateExperimentVisualizationUseCase", () => {
     });
 
     it("should fail when repository update operation fails", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
       // Arrange
-      const mockVisualization = {
+      const mockVisualization: ExperimentVisualizationDto = {
         id: visualizationId,
-        experimentId,
+        experimentId: experiment.id,
         name: "Original Visualization",
+        description: "Original Description",
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
@@ -236,8 +267,9 @@ describe("UpdateExperimentVisualizationUseCase", () => {
 
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
-          experiment: { id: experimentId, name: "Test Experiment" },
+          experiment,
           hasAccess: true,
+          hasArchiveAccess: true,
           isAdmin: false,
         }),
       );
@@ -263,12 +295,18 @@ describe("UpdateExperimentVisualizationUseCase", () => {
     });
 
     it("should handle empty update successfully", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
       // Arrange
       const emptyUpdate = {};
-      const mockVisualization = {
+      const mockVisualization: ExperimentVisualizationDto = {
         id: visualizationId,
-        experimentId,
+        experimentId: experiment.id,
         name: "Original Visualization",
+        description: "Original Description",
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
@@ -284,8 +322,9 @@ describe("UpdateExperimentVisualizationUseCase", () => {
 
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
-          experiment: { id: experimentId, name: "Test Experiment" },
+          experiment,
           hasAccess: true,
+          hasArchiveAccess: true,
           isAdmin: false,
         }),
       );
@@ -308,16 +347,19 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       assertSuccess(result);
       expect(result.value).toMatchObject({
         id: visualizationId,
-        experimentId,
+        experimentId: experiment.id,
       });
     });
 
     it("should fail when visualization belongs to non-existent experiment", async () => {
+      const fakeExperimentId = faker.string.uuid();
+
       // Arrange
-      const mockVisualization = {
+      const mockVisualization: ExperimentVisualizationDto = {
         id: visualizationId,
-        experimentId,
+        experimentId: fakeExperimentId,
         name: "Test Visualization",
+        description: "Test Description",
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
@@ -344,6 +386,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
         success({
           experiment: null,
           hasAccess: false,
+          hasArchiveAccess: false,
           isAdmin: false,
         }),
       );
@@ -354,32 +397,26 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       // Assert
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toBe(`Experiment with ID ${experimentId} not found`);
+      expect(result.error.message).toBe(`Experiment with ID ${fakeExperimentId} not found`);
     });
 
     it("should fail when user does not have access to experiment", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
       // Arrange
-      const mockVisualization = {
+      const mockVisualization: ExperimentVisualizationDto = {
         id: visualizationId,
-        experimentId,
+        experimentId: experiment.id,
         name: "Test Visualization",
+        description: "Test Description",
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
         dataConfig: { tableName: "test_table", dataSources: [] },
         createdBy: testUserId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const mockExperiment = {
-        id: experimentId,
-        name: "Test Experiment",
-        description: "Test Description",
-        status: "active",
-        visibility: "private",
-        embargoUntil: new Date(),
-        createdBy: "other-user-id",
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -399,8 +436,9 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       // Mock experiment access to return experiment but no access
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
-          experiment: mockExperiment,
+          experiment,
           hasAccess: false,
+          hasArchiveAccess: false,
           isAdmin: false,
         }),
       );
@@ -415,29 +453,23 @@ describe("UpdateExperimentVisualizationUseCase", () => {
     });
 
     it("should allow admin to update visualization even if not creator", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
       // Arrange
       const otherUserId = faker.string.uuid();
-      const mockVisualization = {
+      const mockVisualization: ExperimentVisualizationDto = {
         id: visualizationId,
-        experimentId,
+        experimentId: experiment.id,
         name: "Test Visualization",
+        description: "Test Description",
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
         dataConfig: { tableName: "test_table", dataSources: [] },
         createdBy: otherUserId, // Different user created it
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const mockExperiment = {
-        id: experimentId,
-        name: "Test Experiment",
-        description: "Test Description",
-        status: "active",
-        visibility: "private",
-        embargoUntil: new Date(),
-        createdBy: testUserId,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -463,9 +495,10 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       // Mock experiment access with admin privileges
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
-          experiment: mockExperiment,
+          experiment,
           hasAccess: true,
-          isAdmin: true, // User is admin
+          hasArchiveAccess: true,
+          isAdmin: true,
         }),
       );
 
@@ -489,11 +522,17 @@ describe("UpdateExperimentVisualizationUseCase", () => {
     });
 
     it("should fail when repository update returns empty array", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment",
+        userId: testUserId,
+      });
+
       // Arrange
-      const mockVisualization = {
+      const mockVisualization: ExperimentVisualizationDto = {
         id: visualizationId,
-        experimentId,
+        experimentId: experiment.id,
         name: "Test Visualization",
+        description: "Test Description",
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
@@ -517,8 +556,9 @@ describe("UpdateExperimentVisualizationUseCase", () => {
 
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
         success({
-          experiment: { id: experimentId, name: "Test Experiment" },
+          experiment,
           hasAccess: true,
+          hasArchiveAccess: true,
           isAdmin: false,
         }),
       );
@@ -555,6 +595,62 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
       expect(result.error.message).toBe(`Visualization with ID ${visualizationId} not found`);
+    });
+
+    it("should forbid any user from updating visualizations of archived experiments", async () => {
+      // Create an archived experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Archived Experiment",
+        userId: testUserId,
+      });
+
+      const mockVisualization: ExperimentVisualizationDto = {
+        id: visualizationId,
+        experimentId: experiment.id,
+        name: "Test Visualization",
+        description: "Test Description",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+        createdBy: testUserId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const updateData: UpdateExperimentVisualizationDto = {
+        name: "Attempted Update on Archived",
+        chartFamily: "basic",
+        chartType: "line",
+        config: { chartType: "line", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+      };
+
+      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
+        success(mockVisualization),
+      );
+
+      // Mock experimentRepository.checkAccess to return archived experiment
+      vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
+        success({
+          experiment: { ...experiment, status: "archived" },
+          hasAccess: true,
+          hasArchiveAccess: false,
+          isAdmin: true,
+        }),
+      );
+
+      try {
+        // Act
+        const result = await useCase.execute(visualizationId, updateData, testUserId);
+
+        // Assert
+        expect(result.isFailure()).toBe(true);
+        assertFailure(result);
+        expect(result.error.message).toContain("You do not have access to this experiment");
+      } finally {
+        vi.restoreAllMocks();
+      }
     });
   });
 });

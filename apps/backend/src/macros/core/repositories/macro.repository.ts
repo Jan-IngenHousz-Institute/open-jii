@@ -1,11 +1,13 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { UserProfileDto } from "src/users/core/models/user.model";
-
 import { and, desc, eq, ilike, macros, profiles } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import {
+  getAnonymizedFirstName,
+  getAnonymizedLastName,
+} from "../../../common/utils/profile-anonymization";
 import {
   CreateMacroDto,
   UpdateMacroDto,
@@ -42,7 +44,11 @@ export class MacroRepository {
   async findAll(filter?: MacroFilter): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
       let query = this.database
-        .select()
+        .select({
+          macros,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+        })
         .from(macros)
         .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
         .orderBy(desc(macros.updatedAt));
@@ -68,11 +74,10 @@ export class MacroRepository {
       const results = await query;
       return results.map((result) => {
         const augmentedResult = result.macros as MacroDto;
-        const profile = result.profiles as Partial<UserProfileDto>;
+        const firstName = result.firstName;
+        const lastName = result.lastName;
         augmentedResult.createdByName =
-          profile.firstName && profile.lastName
-            ? `${profile.firstName} ${profile.lastName}`
-            : undefined;
+          firstName && lastName ? `${firstName} ${lastName}` : undefined;
         return augmentedResult;
       });
     });
@@ -81,7 +86,11 @@ export class MacroRepository {
   async findById(id: string): Promise<Result<MacroDto | null>> {
     return tryCatch(async () => {
       const result = await this.database
-        .select()
+        .select({
+          macros,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+        })
         .from(macros)
         .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
         .where(eq(macros.id, id))
@@ -92,11 +101,10 @@ export class MacroRepository {
       }
 
       const augmentedResult = result[0].macros as MacroDto;
-      const profile = result[0].profiles as Partial<UserProfileDto>;
+      const firstName = result[0].firstName;
+      const lastName = result[0].lastName;
       augmentedResult.createdByName =
-        profile.firstName && profile.lastName
-          ? `${profile.firstName} ${profile.lastName}`
-          : undefined;
+        firstName && lastName ? `${firstName} ${lastName}` : undefined;
       return augmentedResult;
     });
   }

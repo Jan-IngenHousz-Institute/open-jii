@@ -199,13 +199,17 @@ describe("<ExperimentLayout />", () => {
       renderExperimentLayout({ isAdmin: true, locale: "en", experimentId: "test-id" });
 
       const links = screen.getAllByTestId("next-link");
-      expect(links).toHaveLength(4); // All 4 tabs should be links when admin
+      expect(links).toHaveLength(5); // All 5 tabs should be links when admin
 
       // Check href attributes
       expect(links[0]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id");
       expect(links[1]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id/data");
-      expect(links[2]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id/settings");
-      expect(links[3]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id/flow");
+      expect(links[2]).toHaveAttribute(
+        "href",
+        "/en/platform/experiments-archive/test-id/analysis/visualizations",
+      );
+      expect(links[3]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id/settings");
+      expect(links[4]).toHaveAttribute("href", "/en/platform/experiments-archive/test-id/flow");
     });
 
     it("marks overview tab as active when on root experiment path", () => {
@@ -237,6 +241,27 @@ describe("<ExperimentLayout />", () => {
 
       // Tab component should exist and render children
       expect(screen.getByText("data")).toBeInTheDocument();
+    });
+
+    it("marks analysis tab as active when on analysis path", () => {
+      renderExperimentLayout({
+        pathname: "/en/platform/experiments-archive/test-id/analysis/visualizations",
+        experimentId: "test-id",
+      });
+
+      // Tab component should exist and render children
+      expect(screen.getByText("analysis.title")).toBeInTheDocument();
+    });
+
+    it("marks analysis tab as active when on nested analysis path", () => {
+      renderExperimentLayout({
+        pathname: "/en/platform/experiments-archive/test-id/analysis/visualizations/123",
+        experimentId: "test-id",
+        locale: "en",
+      });
+
+      // Tab component should exist and render children
+      expect(screen.getByText("analysis.title")).toBeInTheDocument();
     });
 
     it("marks settings tab as active when on settings path", () => {
@@ -329,8 +354,12 @@ describe("<ExperimentLayout />", () => {
       const links = screen.getAllByTestId("next-link");
       expect(links[0]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id");
       expect(links[1]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id/data");
-      expect(links[2]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id/settings");
-      expect(links[3]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id/flow");
+      expect(links[2]).toHaveAttribute(
+        "href",
+        "/de/platform/experiments-archive/test-id/analysis/visualizations",
+      );
+      expect(links[3]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id/settings");
+      expect(links[4]).toHaveAttribute("href", "/de/platform/experiments-archive/test-id/flow");
     });
 
     it("correctly identifies active tab for different locale", () => {

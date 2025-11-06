@@ -83,6 +83,8 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
     if (pathname.endsWith("/settings")) return "settings";
     if (pathname.endsWith("/flow")) return "flow";
     if (pathname.startsWith(`/${locale}/platform/experiments-archive/${id}/data`)) return "data";
+    if (pathname.startsWith(`/${locale}/platform/experiments-archive/${id}/analysis`))
+      return "analysis";
     if (pathname.endsWith(`/experiments-archive/${id}`)) return "overview";
     return "overview";
   };
@@ -104,12 +106,17 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
       </div>
 
       <Tabs value={activeTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview" asChild>
             <Link href={`/${locale}/platform/experiments-archive/${id}`}>{t("overview")}</Link>
           </TabsTrigger>
           <TabsTrigger value="data" asChild>
             <Link href={`/${locale}/platform/experiments-archive/${id}/data`}>{t("data")}</Link>
+          </TabsTrigger>
+          <TabsTrigger value="analysis" asChild>
+            <Link href={`/${locale}/platform/experiments-archive/${id}/analysis/visualizations`}>
+              {t("analysis.title")}
+            </Link>
           </TabsTrigger>
           <TabsTrigger
             value="settings"

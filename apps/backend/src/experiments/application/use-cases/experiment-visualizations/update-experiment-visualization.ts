@@ -47,11 +47,12 @@ export class UpdateExperimentVisualizationUseCase {
       return accessResult.chain(
         async ({
           experiment,
-          hasAccess,
+          hasArchiveAccess,
           isAdmin,
         }: {
           experiment: ExperimentDto | null;
           hasAccess: boolean;
+          hasArchiveAccess: boolean;
           isAdmin: boolean;
         }) => {
           if (!experiment) {
@@ -63,7 +64,7 @@ export class UpdateExperimentVisualizationUseCase {
             );
           }
 
-          if (!hasAccess) {
+          if (!hasArchiveAccess) {
             this.logger.warn(
               `User ${userId} does not have access to experiment ${visualization.experimentId}`,
             );
