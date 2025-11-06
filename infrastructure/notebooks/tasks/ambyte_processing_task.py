@@ -28,11 +28,11 @@ EXPERIMENT_ID = dbutils.widgets.get("EXPERIMENT_ID")
 EXPERIMENT_SCHEMA = dbutils.widgets.get("EXPERIMENT_SCHEMA")
 CATALOG_NAME = dbutils.widgets.get("CATALOG_NAME")
 UPLOAD_DIRECTORY = dbutils.widgets.get("UPLOAD_DIRECTORY")
-YEAR_PREFIX = dbutils.widgets.get("YEAR_PREFIX", "2025")
+YEAR_PREFIX = dbutils.widgets.get("YEAR_PREFIX")
 
 # Paths
-AMBYTE_BASE_PATH = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/{UPLOAD_DIRECTORY}/ambyte"
-PROCESSED_OUTPUT_PATH = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/processed-ambyte"
+AMBYTE_BASE_PATH = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/ambyte/{UPLOAD_DIRECTORY}"
+PROCESSED_OUTPUT_PATH = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/processed-ambyte"
 
 spark = SparkSession.builder.getOrCreate()
 dbutils = DBUtils(spark)
@@ -158,10 +158,10 @@ def process_and_save_ambyte_data():
         # Generate filename with current timestamp
         current_time = datetime.now()
         timestamp = current_time.strftime("%Y%m%d_%H%M%S")
-        filename = f"ambyte_processed_{timestamp}.parquet"
+        object_name = f"ambyte_processed_{timestamp}"
         
         # Save combined data as a single parquet file
-        output_path = f"{PROCESSED_OUTPUT_PATH}/{filename}"
+        output_path = f"{PROCESSED_OUTPUT_PATH}/{object_name}"
         
         # Ensure directory exists
         try:
