@@ -5,6 +5,15 @@ import { vi, describe, it, expect } from "vitest";
 
 import LocaleLayout, { generateMetadata } from "../[locale]/layout";
 
+// Mock PostHog server feature flag utility
+vi.mock("~/lib/posthog-server", () => ({
+  isFeatureFlagEnabled: vi.fn((flagKey: string) => {
+    // Default: enable multi-language for tests
+    if (flagKey === "multi-language") return true;
+    return false;
+  }),
+}));
+
 // Mock env variables first - must be before imports
 vi.mock("~/env", () => ({
   env: {

@@ -18,6 +18,11 @@ const aliasConfig = defineConfig({
 // Web-specific configuration
 const webConfig = defineConfig({
   test: {
+    env: {
+      NODE_ENV: "test",
+      NEXT_PUBLIC_POSTHOG_KEY: "test-posthog-key",
+      NEXT_PUBLIC_POSTHOG_HOST: "https://test.posthog.com",
+    },
     coverage: {
       exclude: [
         // Web-specific exclusions (extends base config)
