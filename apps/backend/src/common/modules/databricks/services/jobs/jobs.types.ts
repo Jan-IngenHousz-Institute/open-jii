@@ -9,18 +9,9 @@ export interface DatabricksHealthCheck {
   service: string;
 }
 
-export interface DatabricksJobTriggerParams {
-  experimentId: string;
-  experimentName: string;
-  userId: string;
-}
-
 export interface DatabricksRunNowRequest {
   job_id: number;
-  job_parameters: {
-    experiment_id: string;
-    experiment_name: string;
-  };
+  job_parameters: Record<string, string>;
   queue: {
     enabled: boolean;
   };

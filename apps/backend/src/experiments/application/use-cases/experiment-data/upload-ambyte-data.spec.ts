@@ -514,7 +514,7 @@ describe("UploadAmbyteDataUseCase", () => {
   });
 
   describe("postexecute", () => {
-    it("should return success with successful uploads and trigger pipeline", async () => {
+    it("should return success with successful uploads and trigger ambyte processing job", async () => {
       const successfulUploads = [
         { fileName: "Ambyte_1/data1.txt", filePath: "/path/to/data1.txt" },
         { fileName: "Ambyte_2/data2.txt", filePath: "/path/to/data2.txt" },
@@ -526,18 +526,19 @@ describe("UploadAmbyteDataUseCase", () => {
         description: "Test experiment description",
         status: "active" as const,
         visibility: "private" as const,
+        embargoUntil: new Date(),
         createdBy: faker.string.uuid(),
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      const mockPipelineResponse = {
-        update_id: faker.string.uuid(),
-        status: "RUNNING" as const,
+      const mockJobResponse = {
+        run_id: faker.number.int(),
+        number_in_job: 1,
       };
 
-      vi.spyOn(databricksPort, "triggerExperimentPipeline").mockResolvedValue(
-        success(mockPipelineResponse),
+      vi.spyOn(databricksPort, "triggerAmbyteProcessingJob").mockResolvedValue(
+        success(mockJobResponse),
       );
 
       const result = await useCase.postexecute(successfulUploads, errors, experiment);
@@ -549,13 +550,13 @@ describe("UploadAmbyteDataUseCase", () => {
         files: successfulUploads,
       });
 
-      expect(databricksPort.triggerExperimentPipeline).toHaveBeenCalledWith(
-        experiment.name,
-        experiment.id,
-      );
+      expect(databricksPort.triggerAmbyteProcessingJob).toHaveBeenCalledWith(experiment.id, {
+        EXPERIMENT_SCHEMA: experiment.name,
+        YEAR_PREFIX: "2025",
+      });
     });
 
-    it("should return success even when pipeline trigger fails", async () => {
+    it("should return success even when ambyte processing job trigger fails", async () => {
       const successfulUploads = [
         { fileName: "Ambyte_1/data1.txt", filePath: "/path/to/data1.txt" },
       ];
@@ -566,13 +567,14 @@ describe("UploadAmbyteDataUseCase", () => {
         description: "Test experiment description",
         status: "active" as const,
         visibility: "private" as const,
+        embargoUntil: new Date(),
         createdBy: faker.string.uuid(),
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      vi.spyOn(databricksPort, "triggerExperimentPipeline").mockResolvedValue(
-        failure(AppError.internal("Pipeline trigger failed")),
+      vi.spyOn(databricksPort, "triggerAmbyteProcessingJob").mockResolvedValue(
+        failure(AppError.internal("Job trigger failed")),
       );
 
       const result = await useCase.postexecute(successfulUploads, errors, experiment);
@@ -597,13 +599,14 @@ describe("UploadAmbyteDataUseCase", () => {
         description: "Test experiment description",
         status: "active" as const,
         visibility: "private" as const,
+        embargoUntil: new Date(),
         createdBy: faker.string.uuid(),
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
       // Add spy to ensure it's not called
-      const pipelineSpy = vi.spyOn(databricksPort, "triggerExperimentPipeline");
+      const pipelineSpy = vi.spyOn(databricksPort, "triggerAmbyteProcessingJob");
 
       const result = await useCase.postexecute(successfulUploads, errors, experiment);
 
@@ -628,18 +631,19 @@ describe("UploadAmbyteDataUseCase", () => {
         description: "Test experiment description",
         status: "active" as const,
         visibility: "private" as const,
+        embargoUntil: new Date(),
         createdBy: faker.string.uuid(),
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      const mockPipelineResponse = {
-        update_id: faker.string.uuid(),
-        status: "RUNNING" as const,
+      const mockJobResponse = {
+        run_id: faker.number.int(),
+        number_in_job: 1,
       };
 
-      vi.spyOn(databricksPort, "triggerExperimentPipeline").mockResolvedValue(
-        success(mockPipelineResponse),
+      vi.spyOn(databricksPort, "triggerAmbyteProcessingJob").mockResolvedValue(
+        success(mockJobResponse),
       );
 
       const result = await useCase.postexecute(successfulUploads, errors, experiment);
@@ -651,10 +655,10 @@ describe("UploadAmbyteDataUseCase", () => {
         files: successfulUploads,
       });
 
-      expect(databricksPort.triggerExperimentPipeline).toHaveBeenCalledWith(
-        experiment.name,
-        experiment.id,
-      );
+      expect(databricksPort.triggerAmbyteProcessingJob).toHaveBeenCalledWith(experiment.id, {
+        EXPERIMENT_SCHEMA: experiment.name,
+        YEAR_PREFIX: "2025",
+      });
     });
   });
 

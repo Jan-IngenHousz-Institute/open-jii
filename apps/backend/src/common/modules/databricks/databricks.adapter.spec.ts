@@ -72,12 +72,13 @@ describe("DatabricksAdapter", () => {
     });
   });
 
-  describe("triggerJob", () => {
-    it("should successfully trigger a job", async () => {
+  describe("triggerExperimentProvisioningJob", () => {
+    it("should successfully trigger experiment provisioning job", async () => {
+      const experimentId = "exp-123";
       const mockParams = {
-        experimentId: "exp-123",
-        experimentName: "Test Experiment",
-        userId: "user-456",
+        EXPERIMENT_ID: "exp-123",
+        EXPERIMENT_SCHEMA: "Test Experiment",
+        USER_ID: "user-456",
       };
 
       const mockResponse = {
@@ -97,8 +98,47 @@ describe("DatabricksAdapter", () => {
         .post(`${DatabricksJobsService.JOBS_ENDPOINT}/run-now`)
         .reply(200, mockResponse);
 
-      // Execute trigger job
-      const result = await databricksAdapter.triggerJob(mockParams);
+      // Execute trigger experiment provisioning job
+      const result = await databricksAdapter.triggerExperimentProvisioningJob(
+        experimentId,
+        mockParams,
+      );
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual(mockResponse);
+    });
+  });
+
+  describe("triggerAmbyteProcessingJob", () => {
+    it("should successfully trigger ambyte processing job", async () => {
+      const experimentId = "exp-123";
+      const mockParams = {
+        EXPERIMENT_ID: "exp-123",
+        EXPERIMENT_SCHEMA: "Test Experiment",
+        YEAR_PREFIX: "2025",
+      };
+
+      const mockResponse = {
+        run_id: 54321,
+        number_in_job: 1,
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock job run-now request
+      nock(databricksHost)
+        .post(`${DatabricksJobsService.JOBS_ENDPOINT}/run-now`)
+        .reply(200, mockResponse);
+
+      // Execute trigger ambyte processing job
+      const result = await databricksAdapter.triggerAmbyteProcessingJob(experimentId, mockParams);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
