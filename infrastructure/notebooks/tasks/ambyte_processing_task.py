@@ -27,7 +27,6 @@ from ambyte import find_byte_folders, load_files_per_byte, process_trace_files, 
 EXPERIMENT_ID = dbutils.widgets.get("EXPERIMENT_ID")
 EXPERIMENT_SCHEMA = dbutils.widgets.get("EXPERIMENT_SCHEMA")
 CATALOG_NAME = dbutils.widgets.get("CATALOG_NAME")
-UPLOAD_DIRECTORY = dbutils.widgets.get("UPLOAD_DIRECTORY")  # e.g., "upload_20250131_01"
 YEAR_PREFIX = dbutils.widgets.get("YEAR_PREFIX", "2025")
 
 # Paths
@@ -38,39 +37,36 @@ spark = SparkSession.builder.getOrCreate()
 dbutils = DBUtils(spark)
 
 print(f"Processing ambyte data for experiment: {EXPERIMENT_ID}")
-print(f"Upload directory: {UPLOAD_DIRECTORY}")
-print(f"Input path: {AMBYTE_BASE_PATH}/{UPLOAD_DIRECTORY}")
-print(f"Output path: {PROCESSED_OUTPUT_PATH}/{UPLOAD_DIRECTORY}")
+print(f"Input path: {AMBYTE_BASE_PATH}")
+print(f"Output path: {PROCESSED_OUTPUT_PATH}")
 
 # COMMAND ----------
 
 # DBTITLE 1,Process Ambyte Data
 def process_and_save_ambyte_data():
     """
-    Process raw ambyte trace files for a specific upload directory and save as parquet files.
-    Preserves all data including dataframe attributes as columns.
+    Process raw ambyte trace files and save as a single parquet file.
+    Combines data from all Ambyte folders and includes Ambyte information as columns.
     """
-    # Construct full path to the specific upload directory
-    upload_dir = f"{AMBYTE_BASE_PATH}/{UPLOAD_DIRECTORY}"
+    # Process all ambyte data in the base path
+    upload_dir = AMBYTE_BASE_PATH
     
-    # Verify the upload directory exists
+    # Verify the ambyte directory exists
     try:
         dbutils.fs.ls(upload_dir)
     except Exception as e:
-        raise Exception(f"Upload directory not found: {upload_dir}. Error: {e}")
+        raise Exception(f"Ambyte directory not found: {upload_dir}. Error: {e}")
     
     print(f"\n{'='*80}")
-    print(f"Processing upload directory: {UPLOAD_DIRECTORY}")
+    print(f"Processing ambyte data directory")
     print(f"Full path: {upload_dir}")
     print(f"{'='*80}")
     
     processed_count = 0
     error_count = 0
+    combined_dataframes = []
     
-    # Parse upload time from directory name
-    upload_time = parse_upload_time(UPLOAD_DIRECTORY)
-    
-    # Find all Ambyte_N and unknown_ambyte folders within this upload directory
+    # Find all Ambyte_N and unknown_ambyte folders within the ambyte directory
     try:
         byte_parent_folders = find_byte_folders(upload_dir)
         
@@ -78,14 +74,14 @@ def process_and_save_ambyte_data():
             print(f"Found {len(byte_parent_folders)} valid byte parent folders")
             print(f"Folders: {[os.path.basename(x.rstrip('/')) for x in byte_parent_folders]}")
         else:
-            print(f"No valid byte parent folders found in {UPLOAD_DIRECTORY}")
+            print(f"No valid byte parent folders found in ambyte directory")
             raise Exception(f"No valid byte parent folders found in {upload_dir}")
             
     except Exception as e:
-        print(f"Error finding byte folders in {UPLOAD_DIRECTORY}: {e}")
+        print(f"Error finding byte folders in ambyte directory: {e}")
         raise
     
-    # Process each byte folder within this upload directory
+    # Process each byte folder within the ambyte directory
     for ambyte_folder in byte_parent_folders:
         ambyte_folder_name = os.path.basename(ambyte_folder.rstrip('/'))
         
@@ -103,6 +99,9 @@ def process_and_save_ambyte_data():
                 # Reset index to make Time a regular column
                 df = df.reset_index()
                 
+                # Add Ambyte folder information as a column
+                df['ambyte_folder'] = ambyte_folder_name
+                
                 # Extract attributes and add as columns
                 # The attrs dict contains metadata like 'Actinic' and 'Dark'
                 if hasattr(df, 'attrs') and df.attrs:
@@ -112,15 +111,6 @@ def process_and_save_ambyte_data():
                         if col_name not in df.columns:
                             df[col_name] = attr_value
                             print(f"Added attribute as column: {col_name} = {attr_value}")
-                
-                # Add upload directory info
-                df['upload_directory'] = UPLOAD_DIRECTORY
-                
-                # Add upload time
-                if upload_time is not None:
-                    df['upload_time'] = upload_time
-                else:
-                    df['upload_time'] = None
                 
                 # Add processing timestamp
                 df['processed_at'] = pd.Timestamp.now()
@@ -144,26 +134,10 @@ def process_and_save_ambyte_data():
                         elif df[col].dtype.name == 'category':
                             df[col] = df[col].astype(str)
                 
-                # Create output directory structure
-                output_dir = f"{PROCESSED_OUTPUT_PATH}/{UPLOAD_DIRECTORY}/{ambyte_folder_name}"
-                
-                # Ensure directory exists
-                try:
-                    dbutils.fs.mkdirs(output_dir)
-                except Exception:
-                    pass  # Directory might already exist
-                
-                # Save as parquet
-                output_path = f"{output_dir}/data.parquet"
-                
-                # Convert to Spark DataFrame and write as parquet
-                spark_df = spark.createDataFrame(df)
-                spark_df.write.mode("overwrite").parquet(output_path)
-                
-                print(f"✓ Saved: {output_path}")
-                print(f"  Rows: {len(df):,}")
-                print(f"  Columns: {len(df.columns)}")
+                combined_dataframes.append(df)
                 processed_count += 1
+                
+                print(f"✓ Processed {ambyte_folder_name}: {len(df):,} rows, {len(df.columns)} columns")
                 
             else:
                 print(f"✗ No data returned from process_trace_files for {ambyte_folder_name}")
@@ -175,15 +149,45 @@ def process_and_save_ambyte_data():
             traceback.print_exc()
             error_count += 1
     
+    # Combine all dataframes if we have any
+    if combined_dataframes:
+        print(f"\nCombining {len(combined_dataframes)} dataframes...")
+        combined_df = pd.concat(combined_dataframes, ignore_index=True)
+        
+        # Generate filename with current timestamp
+        current_time = datetime.now()
+        timestamp = current_time.strftime("%Y%m%d_%H%M%S")
+        filename = f"ambyte_processed_{timestamp}.parquet"
+        
+        # Save combined data as a single parquet file
+        output_path = f"{PROCESSED_OUTPUT_PATH}/{filename}"
+        
+        # Ensure directory exists
+        try:
+            dbutils.fs.mkdirs(PROCESSED_OUTPUT_PATH)
+        except Exception:
+            pass  # Directory might already exist
+        
+        # Convert to Spark DataFrame and write as parquet
+        spark_df = spark.createDataFrame(combined_df)
+        spark_df.write.mode("overwrite").parquet(output_path)
+        
+        print(f"✓ Saved combined data: {output_path}")
+        print(f"  Total rows: {len(combined_df):,}")
+        print(f"  Total columns: {len(combined_df.columns)}")
+        print(f"  Ambyte folders included: {combined_df['ambyte_folder'].unique().tolist()}")
+    
     # Summary
     print(f"\n{'='*80}")
-    print(f"Processing Summary for {UPLOAD_DIRECTORY}:")
+    print(f"Processing Summary:")
     print(f"  Processed: {processed_count} ambyte folder(s)")
     print(f"  Errors: {error_count}")
+    if combined_dataframes:
+        print(f"  Output file: ambyte_processed_{timestamp}.parquet")
     print(f"{'='*80}")
     
     if error_count > 0 and processed_count == 0:
-        raise Exception(f"All ambyte processing failed for {UPLOAD_DIRECTORY} ({error_count} errors)")
+        raise Exception(f"All ambyte processing failed ({error_count} errors)")
     
     return processed_count, error_count
 

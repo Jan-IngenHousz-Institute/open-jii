@@ -376,7 +376,6 @@ module "ambyte_processing_job" {
       parameters = {
         EXPERIMENT_ID     = "{{EXPERIMENT_ID}}"
         EXPERIMENT_SCHEMA = "{{EXPERIMENT_SCHEMA}}"
-        UPLOAD_DIRECTORY  = "{{UPLOAD_DIRECTORY}}"
         YEAR_PREFIX       = "{{YEAR_PREFIX}}"
         CATALOG_NAME      = module.databricks_catalog.catalog_name
       }
