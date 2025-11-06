@@ -35,6 +35,7 @@ vi.mock("@repo/i18n", () => ({
         "experimentDataTable.table": "Table",
         "experimentDataTable.details": "View Details",
         "experimentDataTable.noResults": "No results found",
+        "experimentDataTable.download": "Download",
       };
       return translations[key] || key;
     },
@@ -72,6 +73,7 @@ vi.mock("@repo/ui/components", () => ({
 
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({
+  Download: () => <svg data-testid="download-icon">DownloadIcon</svg>,
   TableIcon: () => <svg data-testid="table-icon">TableIcon</svg>,
 }));
 
@@ -97,6 +99,29 @@ vi.mock("~/components/experiment-data/experiment-data-utils", () => ({
     }
     return String(value);
   },
+}));
+
+// Mock DataDownloadModal
+vi.mock("./data-download-modal/data-download-modal", () => ({
+  DataDownloadModal: ({
+    open,
+    onOpenChange,
+    experimentId,
+    tableName,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    experimentId: string;
+    tableName: string;
+  }) =>
+    open ? (
+      <div data-testid="data-download-modal">
+        <div>
+          Download Modal for {tableName} - {experimentId}
+        </div>
+        <button onClick={() => onOpenChange(false)}>Close</button>
+      </div>
+    ) : null,
 }));
 
 const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
@@ -218,6 +243,10 @@ describe("ExperimentDataSampleTables", () => {
     // Should render detail buttons for each table
     const detailButtons = screen.getAllByText("View Details");
     expect(detailButtons).toHaveLength(2);
+
+    // Should render detail buttons for each table
+    const downloadButtons = screen.getAllByText("Download");
+    expect(downloadButtons).toHaveLength(2);
 
     // Should render table icons
     expect(screen.getAllByTestId("table-icon")).toHaveLength(2);
