@@ -374,11 +374,11 @@ module "ambyte_processing_job" {
       notebook_path = "/Workspace/Shared/notebooks/tasks/ambyte_processing_task"
 
       parameters = {
-        EXPERIMENT_ID     = "{{job.parameters.EXPERIMENT_ID}}"
-        EXPERIMENT_SCHEMA = "{{job.parameters.EXPERIMENT_SCHEMA}}"
-        CATALOG_NAME      = "{{job.parameters.CATALOG_NAME}}"
-        UPLOAD_DIRECTORY  = "{{job.parameters.UPLOAD_DIRECTORY}}"
-        YEAR_PREFIX       = "{{job.parameters.YEAR_PREFIX}}"
+        EXPERIMENT_ID     = "{{EXPERIMENT_ID}}"
+        EXPERIMENT_SCHEMA = "{{EXPERIMENT_SCHEMA}}"
+        UPLOAD_DIRECTORY  = "{{UPLOAD_DIRECTORY}}"
+        YEAR_PREFIX       = "{{YEAR_PREFIX}}"
+        CATALOG_NAME      = module.databricks_catalog.catalog_name
       }
     }
   ]
@@ -405,6 +405,11 @@ module "experiment_provisioning_job" {
   use_serverless                = true
   continuous                    = false
   serverless_performance_target = "STANDARD"
+
+  # Enable job queueing
+  queue = {
+    enabled = true
+  }
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id

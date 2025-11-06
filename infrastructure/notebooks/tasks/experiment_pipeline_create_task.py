@@ -73,7 +73,6 @@ class PipelineCreationResult:
 # COMMAND ----------
 
 # DBTITLE 1,Parameter Extraction and Validation
-
 def extract_parameters() -> PipelineConfig:
     """Extract and validate parameters from Databricks widgets."""
     try:
@@ -237,7 +236,6 @@ class ExperimentPipelineManager:
 # COMMAND ----------
 
 # DBTITLE 1,Pipeline Orchestration
-
 def create_or_update_experiment_pipeline(config: PipelineConfig) -> PipelineCreationResult:
     """
     Main orchestration function to create or update experiment pipeline.
@@ -294,7 +292,6 @@ def print_execution_summary(result: PipelineCreationResult) -> None:
 # COMMAND ----------
 
 # DBTITLE 1,Main Execution
-
 def main() -> None:
     """Main execution function with comprehensive error handling."""
     try:
