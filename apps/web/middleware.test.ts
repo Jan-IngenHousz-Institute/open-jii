@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// eslint-disable-next-line import/first
 import { setTestMode, setTestFeatureFlag, clearFeatureFlagCache } from "./lib/posthog-server";
-// eslint-disable-next-line import/first
 import { middleware } from "./middleware";
 
 // Mock the env module BEFORE importing posthog-server
