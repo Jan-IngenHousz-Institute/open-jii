@@ -10,8 +10,14 @@ import { isFeatureFlagEnabled } from "./lib/posthog-server";
 async function handleI18nRouting(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  // Check if multi-language feature is enabled
+  const multiLanguageEnabled = await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
+
+  // If multi-language is disabled, only use default locale
+  const availableLocales = multiLanguageEnabled ? locales : [defaultLocale];
+
   // Check if pathname already starts with a locale
-  const pathnameHasLocale = locales.some(
+  const pathnameHasLocale = availableLocales.some(
     (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`,
   );
 
@@ -23,23 +29,6 @@ async function handleI18nRouting(request: NextRequest) {
       request.nextUrl.origin,
     );
     return NextResponse.redirect(redirectUrl);
-  }
-
-  // Check if user is trying to access a non-English locale
-  const currentLocale = locales.find(
-    (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`,
-  );
-
-  if (currentLocale && currentLocale !== defaultLocale) {
-    // Check if multi-language feature flag is enabled
-    const isMultiLanguageEnabled = await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
-
-    if (!isMultiLanguageEnabled) {
-      // Rewrite to 404 page for non-English locales when feature is disabled
-      // This prevents search engines from indexing these pages while showing custom 404
-      const notFoundUrl = new URL(`/${defaultLocale}/404`, request.nextUrl.origin);
-      return NextResponse.rewrite(notFoundUrl, { status: 404 });
-    }
   }
 
   return null;
