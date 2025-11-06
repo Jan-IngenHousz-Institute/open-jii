@@ -28,7 +28,6 @@ interface LanguageSwitcherProps {
 export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
   const pathname = usePathname();
   const isMultiLanguageEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
-  console.log("LanguageSwitcher - isMultiLanguageEnabled:", isMultiLanguageEnabled);
   // If feature flag is disabled, only show English
   const locales = isMultiLanguageEnabled
     ? allLocales
