@@ -80,3 +80,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "use_environment_prefix" {
+  description = "If true, prefixes resource names with the environment name (e.g., 'dev.domain.com'). If false, uses the base domain name (e.g., 'domain.com')."
+  type        = bool
+  default     = true
+}

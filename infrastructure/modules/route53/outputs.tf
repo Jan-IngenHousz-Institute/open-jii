@@ -22,17 +22,17 @@ output "name_servers" {
 
 output "environment_domain" {
   description = "Environment domain name"
-  value       = "${var.environment}.${var.domain_name}"
+  value       = local.base_domain
 }
 
 output "api_domain" {
   description = "API domain name for environment"
-  value       = "api.${var.environment}.${var.domain_name}"
+  value       = "api.${local.base_domain}"
 }
 
 output "docs_domain" {
   description = "Docs domain name for environment"
-  value       = "docs.${var.environment}.${var.domain_name}"
+  value       = "docs.${local.base_domain}"
 }
 
 output "cloudfront_certificate_arns" {

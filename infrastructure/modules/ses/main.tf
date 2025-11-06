@@ -5,7 +5,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = ">= 5.0"
     }
   }
 }
@@ -17,8 +17,11 @@ locals {
   # Region from variable for cleaner references
   region = var.region
 
-  # Construct the from domain based on subdomain, environment, and domain
-  from_domain = var.subdomain != "" ? "${var.subdomain}.${var.environment}.${var.domain_name}" : "${var.environment}.${var.domain_name}"
+  # Construct the base domain for SES
+  base_domain = var.use_environment_prefix ? "${var.environment}.${var.domain_name}" : var.domain_name
+
+  # Construct the from domain based on subdomain and the new base_domain
+  from_domain = var.subdomain != "" ? "${var.subdomain}.${local.base_domain}" : local.base_domain
 
   # Generate DMARC policy with dynamic domain
   dmarc_policy = var.dmarc_policy != "" ? var.dmarc_policy : "v=DMARC1; p=quarantine; adkim=s; aspf=s; pct=100; rua=mailto:dmarc@${local.from_domain}"
@@ -232,8 +235,8 @@ resource "aws_s3_bucket_policy" "dmarc_reports" {
           StringEquals = {
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id
           },
-          "ArnLike": {
-            "aws:SourceArn": "arn:aws:ses:${local.region}:${data.aws_caller_identity.current.account_id}:receipt-rule-set/${aws_ses_receipt_rule_set.dmarc_reports[0].rule_set_name}:*"
+          "ArnLike" : {
+            "aws:SourceArn" : "arn:aws:ses:${local.region}:${data.aws_caller_identity.current.account_id}:receipt-rule-set/${aws_ses_receipt_rule_set.dmarc_reports[0].rule_set_name}:*"
           }
         }
       },

@@ -92,10 +92,10 @@ variable "run_as" {
   description = "Configuration for the user or service principal to run the pipeline as"
   type = object({
     service_principal_name = optional(string)
-    user_name             = optional(string)
+    user_name              = optional(string)
   })
   default = null
-  
+
   validation {
     condition = var.run_as == null || (
       (var.run_as.service_principal_name != null && var.run_as.user_name == null) ||
@@ -112,7 +112,7 @@ variable "permissions" {
     permission_level         = string
   }))
   default = []
-  
+
   validation {
     condition = alltrue([
       for p in var.permissions : contains(["CAN_VIEW", "CAN_RUN", "CAN_MANAGE", "IS_OWNER"], p.permission_level)

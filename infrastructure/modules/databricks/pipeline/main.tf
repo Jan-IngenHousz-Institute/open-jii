@@ -75,10 +75,15 @@ resource "databricks_pipeline" "this" {
     for_each = var.run_as != null ? [var.run_as] : []
     content {
       service_principal_name = run_as.value.service_principal_name
-      user_name             = run_as.value.user_name
+      user_name              = run_as.value.user_name
     }
   }
 
+  lifecycle {
+    ignore_changes = [
+      run_as
+    ]
+  }
 }
 
 # Grant pipeline permissions to principals if provided
