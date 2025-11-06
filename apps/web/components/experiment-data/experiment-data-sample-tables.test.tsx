@@ -244,7 +244,7 @@ describe("ExperimentDataSampleTables", () => {
     const detailButtons = screen.getAllByText("View Details");
     expect(detailButtons).toHaveLength(2);
 
-    // Should render detail buttons for each table
+    // Should render download buttons for each table
     const downloadButtons = screen.getAllByText("Download");
     expect(downloadButtons).toHaveLength(2);
 
