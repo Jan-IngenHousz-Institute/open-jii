@@ -256,6 +256,7 @@ export class ExperimentDataController {
         successfulUploads,
         errors,
         experiment,
+        directoryName,
       );
 
       if (result.isSuccess()) {

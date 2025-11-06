@@ -30,7 +30,7 @@ export class DatabricksJobsService {
   async triggerJob(
     jobId: number,
     params: Record<string, string>,
-    experimentId: string,
+    idempotencyToken?: string,
   ): Promise<Result<DatabricksJobRunResponse>> {
     return await tryCatch(
       async () => {
@@ -40,7 +40,7 @@ export class DatabricksJobsService {
         }
 
         const token = tokenResult.value;
-        const result = await this.executeJobTrigger(token, jobId, params, experimentId);
+        const result = await this.executeJobTrigger(token, jobId, params, idempotencyToken);
         if (result.isFailure()) {
           throw result.error;
         }
@@ -58,7 +58,7 @@ export class DatabricksJobsService {
     token: string,
     jobId: number,
     params: Record<string, string>,
-    experimentId: string,
+    idempotencyToken?: string,
   ): Promise<Result<DatabricksJobRunResponse>> {
     const host = this.configService.getHost();
     const jobUrl = `${host}${DatabricksJobsService.JOBS_ENDPOINT}/run-now`;
@@ -67,7 +67,7 @@ export class DatabricksJobsService {
       `Triggering Databricks job ${jobId} for experiment ${params.experiment_id || params.EXPERIMENT_ID || "unknown"}`,
     );
 
-    const requestBody = this.buildJobTriggerRequest(jobId, params, experimentId);
+    const requestBody = this.buildJobTriggerRequest(jobId, params, idempotencyToken);
 
     return await tryCatch(
       async () => {
@@ -99,17 +99,22 @@ export class DatabricksJobsService {
   private buildJobTriggerRequest(
     jobId: number,
     params: Record<string, string>,
-    experimentId: string,
+    idempotencyToken?: string,
   ): DatabricksRunNowRequest {
-    return {
+    const request: DatabricksRunNowRequest = {
       job_id: jobId,
       job_parameters: params,
       queue: {
         enabled: true,
       },
       performance_target: PerformanceTarget.STANDARD,
-      idempotency_token: experimentId,
     };
+
+    if (idempotencyToken) {
+      request.idempotency_token = idempotencyToken;
+    }
+
+    return request;
   }
 
   private validateJobRunResponse(response: DatabricksJobRunResponse): void {

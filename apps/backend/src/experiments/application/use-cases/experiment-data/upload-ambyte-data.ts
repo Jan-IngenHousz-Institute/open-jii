@@ -200,6 +200,7 @@ export class UploadAmbyteDataUseCase {
     successfulUploads: { fileName: string; filePath: string }[],
     errors: { fileName: string; error: string }[],
     experiment: ExperimentDto,
+    directoryName: string,
   ): Promise<Result<UploadAmbyteFilesResponse>> {
     this.logger.log(
       `Completing upload. ${successfulUploads.length} successful, ${errors.length} errors.`,
@@ -220,10 +221,15 @@ export class UploadAmbyteDataUseCase {
       `Triggering ambyte processing job for experiment ${experiment.name} (${experiment.id})`,
     );
 
-    const jobResult = await this.databricksPort.triggerAmbyteProcessingJob(experiment.id, {
-      EXPERIMENT_SCHEMA: experiment.name,
-      YEAR_PREFIX: "2025",
-    });
+    const jobResult = await this.databricksPort.triggerAmbyteProcessingJob(
+      experiment.id,
+      experiment.name,
+      {
+        EXPERIMENT_ID: experiment.id,
+        YEAR_PREFIX: "2025",
+        UPLOAD_DIRECTORY: directoryName,
+      },
+    );
 
     if (jobResult.isSuccess()) {
       this.logger.log(

@@ -574,10 +574,10 @@ describe("ExperimentDataController", () => {
         filePath: `/Volumes/${experiment.name}/ambyte/${directoryName}/${fileName}`,
       };
 
-      // Mock successful response from triggerExperimentPipeline
-      const mockPipelineResponse = {
-        update_id: faker.string.uuid(),
-        status: "RUNNING",
+      // Mock successful response from triggerAmbyteProcessingJob
+      const mockJobResponse = {
+        run_id: faker.number.int(),
+        number_in_job: 1,
       };
 
       // Mock volume operations for preexecute
@@ -605,8 +605,8 @@ describe("ExperimentDataController", () => {
         vi.spyOn(databricksAdapter, "uploadExperimentData").mockResolvedValue(
           success(mockUploadResponse),
         );
-        vi.spyOn(databricksAdapter, "triggerExperimentPipeline").mockResolvedValue(
-          success(mockPipelineResponse),
+        vi.spyOn(databricksAdapter, "triggerAmbyteProcessingJob").mockResolvedValue(
+          success(mockJobResponse),
         );
       } else {
         // Mock volume exists but upload fails
@@ -875,10 +875,10 @@ describe("ExperimentDataController", () => {
         filePath: `/Volumes/${experiment.name}/ambyte/${directoryName}/${fileName}`,
       }));
 
-      // Mock successful response from triggerExperimentPipeline
-      const mockPipelineResponse = {
-        update_id: faker.string.uuid(),
-        status: "RUNNING",
+      // Mock successful response from triggerAmbyteProcessingJob
+      const mockJobResponse = {
+        run_id: faker.number.int(),
+        number_in_job: 1,
       };
 
       // Setup upload mocks for each file
@@ -889,8 +889,8 @@ describe("ExperimentDataController", () => {
         return Promise.resolve(response);
       });
 
-      vi.spyOn(databricksAdapter, "triggerExperimentPipeline").mockResolvedValue(
-        success(mockPipelineResponse),
+      vi.spyOn(databricksAdapter, "triggerAmbyteProcessingJob").mockResolvedValue(
+        success(mockJobResponse),
       );
 
       // Get the path

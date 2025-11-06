@@ -64,10 +64,21 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
    */
   async triggerAmbyteProcessingJob(
     experimentId: string,
+    experimentName: string,
     params: Record<string, string>,
   ): Promise<Result<DatabricksJobRunResponse>> {
+    // Construct experiment schema like other methods in this adapter
+    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+    const experimentSchema = `exp_${cleanName}_${experimentId}`;
+
+    // Add experiment schema to params
+    const jobParams = {
+      ...params,
+      EXPERIMENT_SCHEMA: experimentSchema,
+    };
+
     const jobId = this.configService.getAmbyteProcessingJobIdAsNumber();
-    return this.jobsService.triggerJob(jobId, params, experimentId);
+    return this.jobsService.triggerJob(jobId, jobParams);
   }
 
   /**

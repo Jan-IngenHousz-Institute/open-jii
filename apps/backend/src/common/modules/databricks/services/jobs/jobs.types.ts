@@ -16,7 +16,7 @@ export interface DatabricksRunNowRequest {
     enabled: boolean;
   };
   performance_target: PerformanceTarget;
-  idempotency_token: string;
+  idempotency_token?: string;
 }
 
 export interface DatabricksJobRunResponse {

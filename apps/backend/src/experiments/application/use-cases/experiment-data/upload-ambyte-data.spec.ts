@@ -514,6 +514,8 @@ describe("UploadAmbyteDataUseCase", () => {
   });
 
   describe("postexecute", () => {
+    const directoryName = "upload_20250910_143000";
+
     it("should return success with successful uploads and trigger ambyte processing job", async () => {
       const successfulUploads = [
         { fileName: "Ambyte_1/data1.txt", filePath: "/path/to/data1.txt" },
@@ -541,7 +543,12 @@ describe("UploadAmbyteDataUseCase", () => {
         success(mockJobResponse),
       );
 
-      const result = await useCase.postexecute(successfulUploads, errors, experiment);
+      const result = await useCase.postexecute(
+        successfulUploads,
+        errors,
+        experiment,
+        directoryName,
+      );
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -550,10 +557,15 @@ describe("UploadAmbyteDataUseCase", () => {
         files: successfulUploads,
       });
 
-      expect(databricksPort.triggerAmbyteProcessingJob).toHaveBeenCalledWith(experiment.id, {
-        EXPERIMENT_SCHEMA: experiment.name,
-        YEAR_PREFIX: "2025",
-      });
+      expect(databricksPort.triggerAmbyteProcessingJob).toHaveBeenCalledWith(
+        experiment.id,
+        experiment.name,
+        {
+          EXPERIMENT_ID: experiment.id,
+          YEAR_PREFIX: "2025",
+          UPLOAD_DIRECTORY: directoryName,
+        },
+      );
     });
 
     it("should return success even when ambyte processing job trigger fails", async () => {
@@ -577,7 +589,12 @@ describe("UploadAmbyteDataUseCase", () => {
         failure(AppError.internal("Job trigger failed")),
       );
 
-      const result = await useCase.postexecute(successfulUploads, errors, experiment);
+      const result = await useCase.postexecute(
+        successfulUploads,
+        errors,
+        experiment,
+        directoryName,
+      );
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -608,7 +625,12 @@ describe("UploadAmbyteDataUseCase", () => {
       // Add spy to ensure it's not called
       const pipelineSpy = vi.spyOn(databricksPort, "triggerAmbyteProcessingJob");
 
-      const result = await useCase.postexecute(successfulUploads, errors, experiment);
+      const result = await useCase.postexecute(
+        successfulUploads,
+        errors,
+        experiment,
+        directoryName,
+      );
 
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
@@ -646,7 +668,12 @@ describe("UploadAmbyteDataUseCase", () => {
         success(mockJobResponse),
       );
 
-      const result = await useCase.postexecute(successfulUploads, errors, experiment);
+      const result = await useCase.postexecute(
+        successfulUploads,
+        errors,
+        experiment,
+        directoryName,
+      );
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -655,10 +682,15 @@ describe("UploadAmbyteDataUseCase", () => {
         files: successfulUploads,
       });
 
-      expect(databricksPort.triggerAmbyteProcessingJob).toHaveBeenCalledWith(experiment.id, {
-        EXPERIMENT_SCHEMA: experiment.name,
-        YEAR_PREFIX: "2025",
-      });
+      expect(databricksPort.triggerAmbyteProcessingJob).toHaveBeenCalledWith(
+        experiment.id,
+        experiment.name,
+        {
+          EXPERIMENT_ID: experiment.id,
+          YEAR_PREFIX: "2025",
+          UPLOAD_DIRECTORY: directoryName,
+        },
+      );
     });
   });
 

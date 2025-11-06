@@ -114,9 +114,9 @@ describe("DatabricksAdapter", () => {
   describe("triggerAmbyteProcessingJob", () => {
     it("should successfully trigger ambyte processing job", async () => {
       const experimentId = "exp-123";
+      const experimentName = "Test Experiment";
       const mockParams = {
         EXPERIMENT_ID: "exp-123",
-        EXPERIMENT_SCHEMA: "Test Experiment",
         YEAR_PREFIX: "2025",
       };
 
@@ -132,13 +132,20 @@ describe("DatabricksAdapter", () => {
         token_type: "Bearer",
       });
 
-      // Mock job run-now request
+      // Mock job run-now request - expect the constructed schema in the params
       nock(databricksHost)
-        .post(`${DatabricksJobsService.JOBS_ENDPOINT}/run-now`)
+        .post(`${DatabricksJobsService.JOBS_ENDPOINT}/run-now`, (body: any) => {
+          const expectedSchema = "exp_test_experiment_exp-123";
+          return body.job_parameters?.EXPERIMENT_SCHEMA === expectedSchema;
+        })
         .reply(200, mockResponse);
 
       // Execute trigger ambyte processing job
-      const result = await databricksAdapter.triggerAmbyteProcessingJob(experimentId, mockParams);
+      const result = await databricksAdapter.triggerAmbyteProcessingJob(
+        experimentId,
+        experimentName,
+        mockParams,
+      );
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);

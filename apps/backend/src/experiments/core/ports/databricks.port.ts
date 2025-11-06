@@ -44,6 +44,7 @@ export interface DatabricksPort {
    */
   triggerAmbyteProcessingJob(
     experimentId: string,
+    experimentName: string,
     params: Record<string, string>,
   ): Promise<Result<DatabricksJobRunResponse>>;
 
