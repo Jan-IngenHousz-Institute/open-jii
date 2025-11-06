@@ -134,10 +134,13 @@ describe("DatabricksAdapter", () => {
 
       // Mock job run-now request - expect the constructed schema in the params
       nock(databricksHost)
-        .post(`${DatabricksJobsService.JOBS_ENDPOINT}/run-now`, (body: any) => {
-          const expectedSchema = "exp_test_experiment_exp-123";
-          return body.job_parameters?.EXPERIMENT_SCHEMA === expectedSchema;
-        })
+        .post(
+          `${DatabricksJobsService.JOBS_ENDPOINT}/run-now`,
+          (body: { job_parameters?: Record<string, string> }) => {
+            const expectedSchema = "exp_test_experiment_exp-123";
+            return body.job_parameters?.EXPERIMENT_SCHEMA === expectedSchema;
+          },
+        )
         .reply(200, mockResponse);
 
       // Execute trigger ambyte processing job
@@ -397,8 +400,8 @@ describe("DatabricksAdapter", () => {
       const dataConfig = {
         tableName: "sensor_data",
         dataSources: [
-          { tableName: "sensor_data", columnName: "timestamp" },
-          { tableName: "sensor_data", columnName: "temperature" },
+          { tableName: "sensor_data", columnName: "timestamp", role: "x" },
+          { tableName: "sensor_data", columnName: "temperature", role: "y" },
         ],
       };
 
@@ -432,8 +435,8 @@ describe("DatabricksAdapter", () => {
       const dataConfig = {
         tableName: "non_existent_table",
         dataSources: [
-          { tableName: "non_existent_table", columnName: "timestamp" },
-          { tableName: "non_existent_table", columnName: "temperature" },
+          { tableName: "non_existent_table", columnName: "timestamp", role: "x" },
+          { tableName: "non_existent_table", columnName: "temperature", role: "y" },
         ],
       };
 
@@ -508,8 +511,8 @@ describe("DatabricksAdapter", () => {
       const dataConfig = {
         tableName: "sensor_data",
         dataSources: [
-          { tableName: "sensor_data", columnName: "timestamp" },
-          { tableName: "sensor_data", columnName: "pressure" }, // Non-existent column
+          { tableName: "sensor_data", columnName: "timestamp", role: "x" },
+          { tableName: "sensor_data", columnName: "pressure", role: "y" }, // Non-existent column
         ],
       };
 
@@ -544,8 +547,8 @@ describe("DatabricksAdapter", () => {
       const dataConfig = {
         tableName: "sensor_data",
         dataSources: [
-          { tableName: "sensor_data", columnName: "timestamp" },
-          { tableName: "sensor_data", columnName: "temperature" },
+          { tableName: "sensor_data", columnName: "timestamp", role: "x" },
+          { tableName: "sensor_data", columnName: "temperature", role: "y" },
         ],
       };
 
@@ -595,8 +598,8 @@ describe("DatabricksAdapter", () => {
       const dataConfig = {
         tableName: "sensor_data",
         dataSources: [
-          { tableName: "sensor_data", columnName: "timestamp" },
-          { tableName: "sensor_data", columnName: "temperature" },
+          { tableName: "sensor_data", columnName: "timestamp", role: "x" },
+          { tableName: "sensor_data", columnName: "temperature", role: "y" },
         ],
       };
 
@@ -666,10 +669,10 @@ describe("DatabricksAdapter", () => {
       const dataConfig = {
         tableName: "sensor_data",
         dataSources: [
-          { tableName: "sensor_data", columnName: "timestamp" }, // Exists
-          { tableName: "sensor_data", columnName: "pressure" }, // Missing
-          { tableName: "sensor_data", columnName: "humidity" }, // Missing
-          { tableName: "sensor_data", columnName: "pressure" }, // Duplicate missing
+          { tableName: "sensor_data", columnName: "timestamp", role: "x" }, // Exists
+          { tableName: "sensor_data", columnName: "pressure", role: "y" }, // Missing
+          { tableName: "sensor_data", columnName: "humidity", role: "z" }, // Missing
+          { tableName: "sensor_data", columnName: "pressure", role: "y" }, // Duplicate missing
         ],
       };
 
