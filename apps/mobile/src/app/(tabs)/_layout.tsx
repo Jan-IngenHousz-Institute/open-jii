@@ -1,7 +1,9 @@
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import { User, FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native";
+import { useEffect } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSessionStore } from "~/hooks/use-session-store";
 import { useTheme } from "~/hooks/use-theme";
 import { DeviceConnectionWidget } from "~/widgets/device-connection-widget";
 
@@ -9,6 +11,14 @@ export default function TabLayout() {
   const theme = useTheme();
   const { colors } = theme;
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { session, isLoaded } = useSessionStore();
+
+  useEffect(() => {
+    if (isLoaded && !session?.token) {
+      router.replace("/callback");
+    }
+  }, [isLoaded, session?.token, router]);
 
   return (
     <View style={{ flex: 1, paddingBottom: Math.min(insets.bottom, 10) }}>

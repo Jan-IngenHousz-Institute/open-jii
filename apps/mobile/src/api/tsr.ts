@@ -28,11 +28,17 @@ const customApiFetcher = async (args: ApiFetcherArgs) => {
   const path = removeLeadingSlashes(args.path);
   const fullPath = `${base}/${path}`;
 
-  return tsRestFetchApi({
+  const result = await tsRestFetchApi({
     ...args,
     path: fullPath,
     headers: enhancedHeaders,
   });
+
+  if (result?.status === 401) {
+    useSessionStore.getState().clearSession();
+  }
+
+  return result;
 };
 
 export const tsr = initTsrReactQuery(contract, {
