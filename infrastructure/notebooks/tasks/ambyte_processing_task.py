@@ -27,10 +27,11 @@ from ambyte import find_byte_folders, load_files_per_byte, process_trace_files, 
 EXPERIMENT_ID = dbutils.widgets.get("EXPERIMENT_ID")
 EXPERIMENT_SCHEMA = dbutils.widgets.get("EXPERIMENT_SCHEMA")
 CATALOG_NAME = dbutils.widgets.get("CATALOG_NAME")
+UPLOAD_DIRECTORY = dbutils.widgets.get("UPLOAD_DIRECTORY")
 YEAR_PREFIX = dbutils.widgets.get("YEAR_PREFIX", "2025")
 
 # Paths
-AMBYTE_BASE_PATH = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/ambyte"
+AMBYTE_BASE_PATH = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/{UPLOAD_DIRECTORY}/ambyte"
 PROCESSED_OUTPUT_PATH = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/processed-ambyte"
 
 spark = SparkSession.builder.getOrCreate()

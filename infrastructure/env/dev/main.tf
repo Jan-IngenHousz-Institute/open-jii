@@ -376,6 +376,7 @@ module "ambyte_processing_job" {
       parameters = {
         EXPERIMENT_ID     = "{{EXPERIMENT_ID}}"
         EXPERIMENT_SCHEMA = "{{EXPERIMENT_SCHEMA}}"
+        UPLOAD_DIRECTORY  = "{{UPLOAD_DIRECTORY}}"
         YEAR_PREFIX       = "{{YEAR_PREFIX}}"
         CATALOG_NAME      = module.databricks_catalog.catalog_name
       }
@@ -518,14 +519,15 @@ module "databricks_secrets" {
 
   # Store secrets as JSON using variables
   secret_string = jsonencode({
-    DATABRICKS_HOST               = module.databricks_workspace.workspace_url
-    DATABRICKS_CLIENT_ID          = module.node_service_principal.service_principal_application_id
-    DATABRICKS_CLIENT_SECRET      = module.node_service_principal.service_principal_secret_value
-    DATABRICKS_JOB_ID             = module.experiment_provisioning_job.job_id
-    DATABRICKS_WAREHOUSE_ID       = var.backend_databricks_warehouse_id
-    DATABRICKS_WEBHOOK_API_KEY_ID = var.backend_webhook_api_key_id
-    DATABRICKS_WEBHOOK_SECRET     = var.backend_webhook_secret
-    DATABRICKS_WEBHOOK_API_KEY    = var.backend_webhook_api_key
+    DATABRICKS_HOST                           = module.databricks_workspace.workspace_url
+    DATABRICKS_CLIENT_ID                      = module.node_service_principal.service_principal_application_id
+    DATABRICKS_CLIENT_SECRET                  = module.node_service_principal.service_principal_secret_value
+    DATABRICKS_EXPERIMENT_PROVISIONING_JOB_ID = module.experiment_provisioning_job.job_id
+    DATABRICKS_AMBYTE_PROCESSING_JOB_ID       = module.ambyte_processing_job.job_id
+    DATABRICKS_WAREHOUSE_ID                   = var.backend_databricks_warehouse_id
+    DATABRICKS_WEBHOOK_API_KEY_ID             = var.backend_webhook_api_key_id
+    DATABRICKS_WEBHOOK_SECRET                 = var.backend_webhook_secret
+    DATABRICKS_WEBHOOK_API_KEY                = var.backend_webhook_api_key
   })
 
   tags = {
@@ -934,8 +936,12 @@ module "backend_ecs" {
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_HOST::"
     },
     {
-      name      = "DATABRICKS_JOB_ID"
-      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_JOB_ID::"
+      name      = "DATABRICKS_EXPERIMENT_PROVISIONING_JOB_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_EXPERIMENT_PROVISIONING_JOB_ID::"
+    },
+    {
+      name      = "DATABRICKS_AMBYTE_PROCESSING_JOB_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_AMBYTE_PROCESSING_JOB_ID::"
     },
     {
       name      = "DATABRICKS_WAREHOUSE_ID"
