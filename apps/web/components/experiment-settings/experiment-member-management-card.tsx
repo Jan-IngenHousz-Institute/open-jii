@@ -180,7 +180,7 @@ export function ExperimentMemberManagement({ experimentId }: ExperimentMemberMan
             size="default"
             className="flex-1 md:flex-none"
           >
-            Add
+            {t("common.add")}
           </Button>
         </div>
 

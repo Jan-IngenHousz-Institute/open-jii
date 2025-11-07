@@ -177,7 +177,7 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
             size="default"
             className="flex-1 md:flex-none"
           >
-            Add
+            {t("common.add")}
           </Button>
         </div>
         <MemberList
