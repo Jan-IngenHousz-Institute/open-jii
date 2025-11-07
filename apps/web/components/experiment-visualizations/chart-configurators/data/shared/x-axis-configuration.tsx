@@ -41,11 +41,8 @@ export default function XAxisConfiguration({
     const xAxisDataSourceIndex = xAxisDataSources?.[0]?.index ?? 0;
     form.setValue(`dataConfig.dataSources.${xAxisDataSourceIndex}.tableName`, tableName);
 
-    // Auto-fill X-axis title if it's empty
-    const currentXAxisTitle = form.getValues("config.xAxisTitle");
-    if (!currentXAxisTitle || currentXAxisTitle.trim() === "") {
-      form.setValue("config.xAxisTitle", value);
-    }
+    // Always set X-axis title to the selected column name
+    form.setValue("config.xAxisTitle", value);
   };
 
   return (

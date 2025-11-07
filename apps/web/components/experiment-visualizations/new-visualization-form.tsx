@@ -10,7 +10,10 @@ import { WizardForm } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 import type { ChartFormValues } from "./chart-configurators/chart-configurator-util";
-import { getDefaultChartConfig } from "./chart-configurators/chart-configurator-util";
+import {
+  getDefaultChartConfig,
+  getDefaultDataConfig,
+} from "./chart-configurators/chart-configurator-util";
 import { AppearanceStep, appearanceSchema } from "./wizard-steps/appearance-step";
 import { BasicInfoStep, basicInfoSchema } from "./wizard-steps/basic-info-step";
 import { ChartTypeStep, chartTypeSchema } from "./wizard-steps/chart-type-step";
@@ -51,23 +54,7 @@ export default function NewVisualizationForm({
     chartFamily: "basic",
     chartType: "line",
     config: getDefaultChartConfig("line"),
-    dataConfig: {
-      tableName: sampleTables.length > 0 ? sampleTables[0].name : "",
-      dataSources: [
-        {
-          tableName: sampleTables.length > 0 ? sampleTables[0].name : "",
-          columnName: "",
-          role: "x",
-          alias: "",
-        },
-        {
-          tableName: sampleTables.length > 0 ? sampleTables[0].name : "",
-          columnName: "",
-          role: "y",
-          alias: "",
-        },
-      ],
-    },
+    dataConfig: getDefaultDataConfig(sampleTables.length > 0 ? sampleTables[0].name : undefined),
   };
 
   // Wizard steps configuration

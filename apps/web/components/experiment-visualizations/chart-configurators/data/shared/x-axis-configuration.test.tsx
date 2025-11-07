@@ -160,6 +160,34 @@ describe("XAxisConfiguration", () => {
 
       expect(screen.getByText("time")).toBeInTheDocument();
     });
+
+    it("should auto-fill axis title when column is selected", async () => {
+      const user = userEvent.setup();
+      render(<TestWrapper />);
+
+      const trigger = screen.getByRole("combobox", { name: /xAxis/i });
+      await user.click(trigger);
+
+      const option = screen.getByRole("option", { name: /temperature/ });
+      await user.click(option);
+
+      const titleInput = screen.getByPlaceholderText(/enterAxisTitle/i);
+      expect(titleInput).toHaveValue("temperature");
+    });
+
+    it("should always update axis title when column changes, even if title exists", async () => {
+      const user = userEvent.setup();
+      render(<TestWrapper defaultValues={{ config: { xAxisTitle: "Existing Title" } }} />);
+
+      const trigger = screen.getByRole("combobox", { name: /xAxis/i });
+      await user.click(trigger);
+
+      const option = screen.getByRole("option", { name: /humidity/ });
+      await user.click(option);
+
+      const titleInput = screen.getByPlaceholderText(/enterAxisTitle/i);
+      expect(titleInput).toHaveValue("humidity");
+    });
   });
 
   describe("Axis Title Input", () => {

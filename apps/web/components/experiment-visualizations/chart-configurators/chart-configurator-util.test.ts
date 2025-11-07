@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { getDefaultChartConfig, getDefaultSeriesColor } from "./chart-configurator-util";
+import {
+  getDefaultChartConfig,
+  getDefaultDataConfig,
+  getDefaultSeriesColor,
+} from "./chart-configurator-util";
 
 describe("chart-configurator-util", () => {
   describe("getDefaultChartConfig", () => {
@@ -309,5 +313,97 @@ describe("edge cases", () => {
     // Should return base defaults for non-matching cases
     expect(config1.mode).toBeUndefined();
     expect(config2.mode).toBeUndefined();
+  });
+});
+
+describe("getDefaultDataConfig", () => {
+  it("should return default data config with provided table name", () => {
+    const tableName = "measurements";
+    const config = getDefaultDataConfig(tableName);
+
+    expect(config).toEqual({
+      tableName: "measurements",
+      dataSources: [
+        {
+          tableName: "measurements",
+          columnName: "",
+          role: "x",
+          alias: "",
+        },
+        {
+          tableName: "measurements",
+          columnName: "",
+          role: "y",
+          alias: "",
+        },
+      ],
+    });
+  });
+
+  it("should return default data config with empty table name when undefined", () => {
+    const config = getDefaultDataConfig();
+
+    expect(config).toEqual({
+      tableName: "",
+      dataSources: [
+        {
+          tableName: "",
+          columnName: "",
+          role: "x",
+          alias: "",
+        },
+        {
+          tableName: "",
+          columnName: "",
+          role: "y",
+          alias: "",
+        },
+      ],
+    });
+  });
+
+  it("should return default data config with empty table name when null", () => {
+    const config = getDefaultDataConfig(undefined);
+
+    expect(config).toEqual({
+      tableName: "",
+      dataSources: [
+        {
+          tableName: "",
+          columnName: "",
+          role: "x",
+          alias: "",
+        },
+        {
+          tableName: "",
+          columnName: "",
+          role: "y",
+          alias: "",
+        },
+      ],
+    });
+  });
+
+  it("should always create exactly 2 data sources", () => {
+    const config = getDefaultDataConfig("test");
+
+    expect(config.dataSources).toHaveLength(2);
+  });
+
+  it("should set correct roles for data sources", () => {
+    const config = getDefaultDataConfig("test");
+
+    expect(config.dataSources[0].role).toBe("x");
+    expect(config.dataSources[1].role).toBe("y");
+  });
+
+  it("should initialize all fields with correct default values", () => {
+    const config = getDefaultDataConfig("example");
+
+    config.dataSources.forEach((dataSource) => {
+      expect(dataSource.columnName).toBe("");
+      expect(dataSource.alias).toBe("");
+      expect(dataSource.tableName).toBe("example");
+    });
   });
 });

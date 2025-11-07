@@ -29,6 +29,24 @@ const generateRandomColor = (): string => {
   );
 };
 
+export const getDefaultDataConfig = (tableName?: string): ChartFormValues["dataConfig"] => ({
+  tableName: tableName ?? "",
+  dataSources: [
+    {
+      tableName: tableName ?? "",
+      columnName: "",
+      role: "x",
+      alias: "",
+    },
+    {
+      tableName: tableName ?? "",
+      columnName: "",
+      role: "y",
+      alias: "",
+    },
+  ],
+});
+
 // Helper function to get default config for chart type
 export const getDefaultChartConfig = (chartType: string): ChartConfig => {
   const baseDefaults: Partial<ChartConfig> = {
