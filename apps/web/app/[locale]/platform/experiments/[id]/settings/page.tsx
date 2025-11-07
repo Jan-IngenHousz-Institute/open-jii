@@ -1,10 +1,9 @@
 import { ExperimentSettings } from "@/components/experiment-settings";
 
-import type { Locale } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";
 
 interface ExperimentSettingsPageProps {
-  params: Promise<{ id: string; locale: Locale }>;
+  params: Promise<{ id: string; locale: string }>;
 }
 
 export default async function ExperimentSettingsPage({ params }: ExperimentSettingsPageProps) {

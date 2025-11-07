@@ -3,11 +3,10 @@ import { getContentfulClients } from "~/lib/contentful";
 
 import { TermsAndConditionsContent, TermsAndConditionsTitle } from "@repo/cms";
 import type { PageTermsAndConditionsFieldsFragment } from "@repo/cms/lib/__generated/sdk";
-import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
 interface TermsAndConditionsDialogProps {
-  locale: Locale;
+  locale: string;
 }
 
 export async function TermsAndConditionsDialog({ locale }: TermsAndConditionsDialogProps) {

@@ -3,8 +3,6 @@ import { render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { Locale } from "@repo/i18n";
-
 import LoginPage from "./page";
 
 globalThis.React = React;
@@ -40,7 +38,7 @@ vi.mock("~/components/auth/login-form", () => ({
 
 // --- Tests ---
 describe("LoginPage", () => {
-  const locale = "en-US" as Locale;
+  const locale = "en-US";
   const defaultProps = {
     params: Promise.resolve({ locale }),
     searchParams: Promise.resolve({}),

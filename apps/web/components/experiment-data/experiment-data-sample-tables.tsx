@@ -13,7 +13,6 @@ import {
 import type { DataRow, SampleTable } from "~/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentSampleData } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
-import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n";
 import { Button, Table, TableBody } from "@repo/ui/components";
 
@@ -25,7 +24,7 @@ export function ExperimentDataSampleTables({
 }: {
   experimentId: string;
   sampleSize: number;
-  locale: Locale;
+  locale: string;
   archived?: boolean;
 }) {
   const { sampleTables, isLoading } = useExperimentSampleData(

@@ -6,11 +6,10 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { AuthHeroSection } from "~/components/auth/auth-hero-section";
 
-import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
 export default async function VerifyRequestPage(props: {
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
   searchParams: SearchParamsType;
 }) {
   const session = await auth();

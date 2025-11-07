@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import React from "react";
 
-import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { Button } from "@repo/ui/components";
 
@@ -12,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 interface MacroPageProps {
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }
 
 export default async function MacroPage({ params }: MacroPageProps) {

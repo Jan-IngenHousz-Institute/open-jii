@@ -1,7 +1,6 @@
 import { NewExperimentForm } from "@/components/new-experiment";
 import type { Metadata } from "next";
 
-import type { Locale } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";
 
 export const metadata: Metadata = {
@@ -9,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 interface NewExperimentPageProps {
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }
 
 export default async function NewExperimentPage({ params }: NewExperimentPageProps) {

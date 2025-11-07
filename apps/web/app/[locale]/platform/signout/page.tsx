@@ -1,10 +1,9 @@
 import { SignOutDialog } from "@/components/signout-dialog";
 
 import { initTranslations } from "@repo/i18n";
-import type { Locale } from "@repo/i18n";
 
 interface SignOutPageProps {
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
   searchParams: Promise<{ hideBackground?: string }>;
 }
 

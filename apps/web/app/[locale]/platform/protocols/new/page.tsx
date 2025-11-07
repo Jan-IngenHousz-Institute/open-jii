@@ -1,7 +1,6 @@
 import { NewProtocolForm } from "@/components/new-protocol";
 import type { Metadata } from "next";
 
-import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
 export const metadata: Metadata = {
@@ -9,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 interface NewProtocolPageProps {
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }
 
 export default async function NewProtocolPage({ params }: NewProtocolPageProps) {

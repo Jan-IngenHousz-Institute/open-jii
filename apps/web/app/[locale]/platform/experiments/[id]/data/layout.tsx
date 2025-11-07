@@ -6,7 +6,6 @@ import { AlertTriangle, Info, Loader2 } from "lucide-react";
 import { use, useMemo } from "react";
 import * as React from "react";
 
-import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n/client";
 import {
   Alert,
@@ -20,7 +19,7 @@ import {
 
 interface DataLayoutProps {
   children: React.ReactNode;
-  params: Promise<{ id: string; locale: Locale }>;
+  params: Promise<{ id: string; locale: string }>;
 }
 
 export default function DataLayout({ children, params }: DataLayoutProps) {

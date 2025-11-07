@@ -8,7 +8,6 @@ import { getContentfulClients } from "~/lib/contentful";
 import { ArticleHero, ArticleTileGrid } from "@repo/cms/article";
 import { Container } from "@repo/cms/container";
 import { PageBlogPostOrder } from "@repo/cms/lib/__generated/sdk";
-import type { Locale } from "@repo/i18n/config";
 import { defaultLocale, locales } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";
 
@@ -53,7 +52,7 @@ export async function generateMetadata({ params }: LandingPageProps): Promise<Me
 export default async function Page({ params }: LandingPageProps) {
   const { locale } = await params;
   const { isEnabled: preview } = await draftMode();
-  const { t, resources } = await initTranslations({ locale: locale as Locale });
+  const { t, resources } = await initTranslations({ locale });
   const { previewClient, client } = await getContentfulClients();
   const gqlClient = preview ? previewClient : client;
 
@@ -80,7 +79,7 @@ export default async function Page({ params }: LandingPageProps) {
   }
 
   return (
-    <TranslationsProvider locale={locale as Locale} resources={resources}>
+    <TranslationsProvider locale={locale} resources={resources}>
       <Container>
         <Link href={`/${locale}/blog/${page.featuredBlogPost.slug}`}>
           <ArticleHero article={page.featuredBlogPost} />

@@ -4,13 +4,12 @@ import { getContentfulClients } from "~/lib/contentful";
 
 import { FaqContent } from "@repo/cms";
 import type { PageFaqFieldsFragment } from "@repo/cms/lib/__generated/sdk";
-import type { Locale } from "@repo/i18n";
 
 interface FaqPageProps {
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }
 
-async function getFaqData(locale: Locale, preview: boolean) {
+async function getFaqData(locale: string, preview: boolean) {
   const { previewClient, client } = await getContentfulClients();
   const gqlClient = preview ? previewClient : client;
   const faqQuery = await gqlClient.pageFaq({ locale, preview });

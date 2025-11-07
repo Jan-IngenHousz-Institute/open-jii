@@ -5,7 +5,6 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { Locale } from "@repo/i18n";
 import { SidebarProvider } from "@repo/ui/components";
 
 import { NavUser } from "./nav-user";
@@ -57,7 +56,7 @@ const baseUser = {
 function renderNav(
   over: {
     profile?: ProfileBody;
-    locale?: Locale;
+    locale?: string;
   } = {},
 ) {
   useGetUserProfileMock.mockReturnValue({
@@ -70,7 +69,7 @@ function renderNav(
   return render(
     <QueryClientProvider client={queryClient}>
       <SidebarProvider>
-        <NavUser user={baseUser} locale={over.locale ?? ("en-US" as Locale)} />
+        <NavUser user={baseUser} locale={over.locale ?? "en-US"} />
       </SidebarProvider>
     </QueryClientProvider>,
   );
@@ -86,7 +85,7 @@ describe("<NavUser />", () => {
   it("renders display name (from profile), email, avatar and basic functionality", () => {
     renderNav({
       profile: { firstName: "Ada", lastName: "Lovelace" },
-      locale: "en-US" as Locale,
+      locale: "en-US",
     });
 
     // Find the trigger button
@@ -125,7 +124,7 @@ describe("<NavUser />", () => {
     const user = userEvent.setup();
     renderNav({
       profile: { firstName: "Ada", lastName: "Lovelace" },
-      locale: "en-US" as Locale,
+      locale: "en-US",
     });
 
     // open the menu

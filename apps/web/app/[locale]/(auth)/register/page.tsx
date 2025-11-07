@@ -8,11 +8,10 @@ import { AuthHeroSection } from "~/components/auth/auth-hero-section";
 import { RegistrationForm } from "~/components/auth/registration-form";
 import { TermsAndConditionsDialog } from "~/components/auth/terms-and-conditions-dialog";
 
-import type { Locale } from "@repo/i18n";
 import { Toaster } from "@repo/ui/components";
 
 export default async function UserRegistrationPage(props: {
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
   searchParams: SearchParamsType;
 }) {
   const session = await auth();

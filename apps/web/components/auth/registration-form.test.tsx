@@ -4,8 +4,6 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 
-import type { Locale } from "@repo/i18n";
-
 import { RegistrationForm } from "../auth/registration-form";
 
 // --- Mocks ---
@@ -171,7 +169,7 @@ describe("RegistrationForm", () => {
   });
 
   it("renders with different locale", () => {
-    const props = { ...defaultProps, locale: "de-DE" as Locale };
+    const props = { ...defaultProps, locale: "de-DE" };
     render(<RegistrationForm {...props} />);
 
     expect(screen.getByText("registration.title")).toBeInTheDocument();

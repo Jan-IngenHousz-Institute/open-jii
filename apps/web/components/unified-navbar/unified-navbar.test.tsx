@@ -6,7 +6,6 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { Session } from "@repo/auth/types";
-import type { Locale } from "@repo/i18n";
 
 // ---- SUT ----
 import { UnifiedNavbar } from "./unified-navbar";
@@ -166,7 +165,7 @@ function renderNavbar({
   pathname = "/en-US",
   session = null,
 }: {
-  locale?: Locale;
+  locale?: string;
   pathname?: string;
   session?: Session | null;
 } = {}) {

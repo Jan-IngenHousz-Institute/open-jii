@@ -4,8 +4,6 @@ import { render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { Locale } from "@repo/i18n";
-
 import DataLayout from "../layout";
 
 // Global React for JSX in mocks
@@ -114,7 +112,7 @@ vi.mock("lucide-react", () => ({
 // -------------------
 // Test Data
 // -------------------
-const mockParams = { id: "test-experiment-id", locale: "en-US" as Locale };
+const mockParams = { id: "test-experiment-id", locale: "en-US" };
 
 const createMockExperiment = (status: string) => ({
   data: {

@@ -9,7 +9,6 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Session } from "@repo/auth/types";
-import type { Locale } from "@repo/i18n";
 import {
   Avatar,
   AvatarFallback,
@@ -25,7 +24,7 @@ import {
 import { useGetUserProfile } from "../../hooks/profile/useGetUserProfile/useGetUserProfile";
 
 interface UnifiedNavbarProps {
-  locale: Locale;
+  locale: string;
   session: Session | null;
 }
 
@@ -35,7 +34,7 @@ function UserMenu({
   session,
   displayName,
 }: {
-  locale: Locale;
+  locale: string;
   session: Session | null;
   displayName: string;
 }) {

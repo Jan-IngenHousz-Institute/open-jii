@@ -3,8 +3,6 @@ import { render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { Locale } from "@repo/i18n";
-
 import { TermsAndConditionsDialog } from "./terms-and-conditions-dialog";
 
 globalThis.React = React;
@@ -53,7 +51,7 @@ vi.mock("@repo/cms", () => ({
 }));
 
 describe("TermsAndConditionsDialog", () => {
-  const locale = "en-US" as Locale;
+  const locale = "en-US";
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -150,7 +148,7 @@ describe("TermsAndConditionsDialog", () => {
   });
 
   it("handles different locales correctly", async () => {
-    const germanLocale = "de-DE" as Locale;
+    const germanLocale = "de-DE";
     const mockTermsData = { title: "Nutzungsbedingungen", content: "Deutsche Inhalte" };
 
     mockClient.pageTermsAndConditions.mockResolvedValue({
