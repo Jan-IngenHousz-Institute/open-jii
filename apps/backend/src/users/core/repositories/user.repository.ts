@@ -176,6 +176,7 @@ export class UserRepository {
             avatarUrl: null,
             organizationId: null,
             deletedAt: sql`now() AT TIME ZONE 'UTC'`,
+            activated: false,
           })
           .where(eq(profiles.userId, id));
 
