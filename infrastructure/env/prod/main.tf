@@ -414,7 +414,7 @@ module "experiment_provisioning_job" {
 module "ambyte_processing_job" {
   source = "../../modules/databricks/job"
 
-  name        = "Ambyte-Processing-Job-DEV"
+  name        = "Ambyte-Processing-Job-PRPD"
   description = "Processes raw ambyte trace files and saves them in the respective volume in parquet format"
 
   max_concurrent_runs           = 1   # Limit concurrent runs when queueing is enabled
