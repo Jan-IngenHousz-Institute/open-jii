@@ -145,9 +145,46 @@ describe("useExperimentData", () => {
       expect(mockUseQuery).toHaveBeenCalledWith({
         queryData: {
           params: { id: "experiment-123" },
-          query: { tableName: "test_table", page: 1, pageSize: 20 },
+          query: {
+            tableName: "test_table",
+            page: 1,
+            pageSize: 20,
+            orderBy: undefined,
+            orderDirection: undefined,
+          },
         },
-        queryKey: ["experiment", "experiment-123", 1, 20, "test_table"],
+        queryKey: ["experiment", "experiment-123", 1, 20, "test_table", undefined, undefined],
+        staleTime: 120000, // 2 minutes
+      });
+    });
+
+    it("should call useQuery with orderBy and orderDirection parameters when provided", () => {
+      const mockUseQuery = vi.fn().mockReturnValue({
+        data: mockResponse,
+        isLoading: false,
+        error: null,
+      });
+      mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
+
+      renderHook(
+        () => useExperimentData("experiment-123", 1, 20, "test_table", "timestamp", "DESC"),
+        {
+          wrapper: createWrapper(),
+        },
+      );
+
+      expect(mockUseQuery).toHaveBeenCalledWith({
+        queryData: {
+          params: { id: "experiment-123" },
+          query: {
+            tableName: "test_table",
+            page: 1,
+            pageSize: 20,
+            orderBy: "timestamp",
+            orderDirection: "DESC",
+          },
+        },
+        queryKey: ["experiment", "experiment-123", 1, 20, "test_table", "timestamp", "DESC"],
         staleTime: 120000, // 2 minutes
       });
     });
@@ -252,7 +289,16 @@ describe("useExperimentData", () => {
       const formatFunction = vi.fn().mockReturnValue("formatted");
 
       const { result } = renderHook(
-        () => useExperimentData("experiment-123", 1, 20, "test_table", formatFunction),
+        () =>
+          useExperimentData(
+            "experiment-123",
+            1,
+            20,
+            "test_table",
+            undefined,
+            undefined,
+            formatFunction,
+          ),
         {
           wrapper: createWrapper(),
         },
@@ -282,6 +328,8 @@ describe("useExperimentData", () => {
             1,
             20,
             "test_table",
+            undefined,
+            undefined,
             undefined,
             onChartHover,
             onChartLeave,
@@ -445,7 +493,8 @@ describe("useExperimentData", () => {
       const formatFunction2 = vi.fn().mockReturnValue("formatted2");
 
       const { result, rerender } = renderHook(
-        ({ formatFn }) => useExperimentData("experiment-123", 1, 20, "test_table", formatFn),
+        ({ formatFn }) =>
+          useExperimentData("experiment-123", 1, 20, "test_table", undefined, undefined, formatFn),
         {
           wrapper: createWrapper(),
           initialProps: { formatFn: formatFunction1 },
@@ -712,9 +761,15 @@ describe("useExperimentData", () => {
       expect(mockUseQuery).toHaveBeenCalledWith({
         queryData: {
           params: { id: "experiment-123" },
-          query: { tableName: "test_table", page: 1, pageSize: 20 },
+          query: {
+            tableName: "test_table",
+            page: 1,
+            pageSize: 20,
+            orderBy: undefined,
+            orderDirection: undefined,
+          },
         },
-        queryKey: ["experiment", "experiment-123", 1, 20, "test_table"],
+        queryKey: ["experiment", "experiment-123", 1, 20, "test_table", undefined, undefined],
         staleTime: 120000,
       });
 
@@ -724,9 +779,15 @@ describe("useExperimentData", () => {
       expect(mockUseQuery).toHaveBeenCalledWith({
         queryData: {
           params: { id: "experiment-123" },
-          query: { tableName: "test_table", page: 2, pageSize: 10 },
+          query: {
+            tableName: "test_table",
+            page: 2,
+            pageSize: 10,
+            orderBy: undefined,
+            orderDirection: undefined,
+          },
         },
-        queryKey: ["experiment", "experiment-123", 2, 10, "test_table"],
+        queryKey: ["experiment", "experiment-123", 2, 10, "test_table", undefined, undefined],
         staleTime: 120000,
       });
     });

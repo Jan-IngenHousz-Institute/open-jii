@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { ExperimentVisualization } from "@repo/api";
 
+import { useExperimentVisualizationData } from "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { ScatterChartRenderer } from "./scatter-chart-renderer";
 
 // Mock the hooks and components
@@ -17,6 +18,14 @@ vi.mock("@repo/ui/components", () => ({
     </div>
   )),
 }));
+
+// Mock the useExperimentVisualizationData hook
+vi.mock(
+  "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData",
+  () => ({
+    useExperimentVisualizationData: vi.fn(),
+  }),
+);
 
 describe("ScatterChartRenderer", () => {
   const mockVisualization: ExperimentVisualization = {
@@ -47,6 +56,12 @@ describe("ScatterChartRenderer", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useExperimentVisualizationData).mockReturnValue({
+      data: undefined,
+      tableInfo: undefined,
+      isLoading: false,
+      error: null,
+    });
   });
 
   describe("Rendering with provided data", () => {

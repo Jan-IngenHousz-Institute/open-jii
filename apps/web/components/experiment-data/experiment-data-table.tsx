@@ -118,6 +118,8 @@ export function ExperimentDataTable({
     pagination.pageIndex + 1,
     pagination.pageSize,
     tableName,
+    undefined,
+    undefined,
     formatValue,
     showChartOnHover,
     hideChartOnLeave,

@@ -59,6 +59,10 @@ export default function ExperimentVisualizationDetails({
 
   const visualization = visualizationResponse?.body;
 
+  // Get X-axis column for ordering
+  const xDataSources = visualization?.dataConfig.dataSources.filter((ds) => ds.role === "x");
+  const xColumn = xDataSources?.[0]?.columnName;
+
   // Fetch the actual data for this visualization (only if visualization is loaded)
   const { data: visualizationData } = useExperimentVisualizationData(
     experimentId,
@@ -66,6 +70,8 @@ export default function ExperimentVisualizationDetails({
       ? {
           tableName: visualization.dataConfig.tableName,
           columns: visualization.dataConfig.dataSources.map((ds) => ds.columnName),
+          orderBy: xColumn,
+          orderDirection: "ASC",
         }
       : { tableName: "", columns: [] }, // Fallback when visualization not loaded
   );

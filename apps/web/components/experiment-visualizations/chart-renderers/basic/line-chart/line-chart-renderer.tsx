@@ -19,7 +19,12 @@ export function LineChartRenderer({
   data: providedData,
 }: LineChartRendererProps) {
   const { t } = useTranslation("experimentVisualizations");
-  // Fetch data if not provided
+
+  // Get X-axis column for ordering
+  const xDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "x");
+  const xColumn = xDataSources[0]?.columnName;
+
+  // Fetch data if not provided - always order by X-axis column
   const {
     data: fetchedData,
     isLoading,
@@ -29,6 +34,8 @@ export function LineChartRenderer({
     {
       tableName: visualization.dataConfig.tableName,
       columns: visualization.dataConfig.dataSources.map((ds) => ds.columnName),
+      orderBy: xColumn,
+      orderDirection: "ASC",
     },
     !providedData, // Only fetch if data not provided
   );
@@ -84,10 +91,9 @@ export function LineChartRenderer({
       throw new Error(t("errors.yAxisNotConfigured"));
     }
 
-    const xColumn = xDataSources[0].columnName;
-
     const chartConfig = visualization.config as PlotlyChartConfig & Omit<LineSeriesData, "x" | "y">;
 
+    // Data is already sorted by backend, so use directly
     // Prepare chart data arrays using role-based approach
     const chartSeries: LineSeriesData[] = yDataSources.map((yDataSource, index) => {
       const xData = chartData.map((row) => {

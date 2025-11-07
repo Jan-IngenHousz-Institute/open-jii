@@ -36,6 +36,10 @@ export function ChartPreview({ form, experimentId }: ChartPreviewProps) {
     updatedAt: new Date().toISOString(),
   };
 
+  // Get X-axis column for ordering
+  const xDataSources = previewVisualization.dataConfig.dataSources.filter((ds) => ds.role === "x");
+  const xColumn = xDataSources[0]?.columnName;
+
   // Fetch data for the preview visualization
   const { data: visualizationData, isLoading: isDataLoading } = useExperimentVisualizationData(
     experimentId,
@@ -43,6 +47,8 @@ export function ChartPreview({ form, experimentId }: ChartPreviewProps) {
       ? {
           tableName: previewVisualization.dataConfig.tableName,
           columns: previewVisualization.dataConfig.dataSources.map((ds) => ds.columnName),
+          orderBy: xColumn,
+          orderDirection: "ASC",
         }
       : { tableName: "", columns: [] },
     !!previewVisualization.dataConfig.tableName &&

@@ -181,6 +181,8 @@ export interface TableMetadata {
  * @param tableName Name of the table to fetch
  * @param page Page to fetch; pages start with 1
  * @param pageSize Page size to fetch
+ * @param orderBy Optional column name to order results by
+ * @param orderDirection Optional sort direction for ordering (ASC or DESC)
  * @param formatFunction Function used to render the column value
  * @param onChartHover Event handler for when a chart is hovered
  * @param onChartLeave Event handler for when a chart is no longer hovered
@@ -193,6 +195,8 @@ export const useExperimentData = (
   page: number,
   pageSize: number,
   tableName: string,
+  orderBy?: string,
+  orderDirection?: "ASC" | "DESC",
   formatFunction?: DataRenderFunction,
   onChartHover?: (data: number[], columnName: string) => void,
   onChartLeave?: () => void,
@@ -202,9 +206,9 @@ export const useExperimentData = (
   const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
     queryData: {
       params: { id: experimentId },
-      query: { tableName, page, pageSize },
+      query: { tableName, page, pageSize, orderBy, orderDirection },
     },
-    queryKey: ["experiment", experimentId, page, pageSize, tableName],
+    queryKey: ["experiment", experimentId, page, pageSize, tableName, orderBy, orderDirection],
     staleTime: STALE_TIME,
   });
 

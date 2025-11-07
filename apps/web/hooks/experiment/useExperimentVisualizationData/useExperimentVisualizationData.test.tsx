@@ -68,6 +68,8 @@ describe("useExperimentVisualizationData", () => {
         query: {
           tableName: "measurements",
           columns: "timestamp,value",
+          orderBy: undefined,
+          orderDirection: undefined,
         },
       },
       queryKey: [
@@ -75,6 +77,52 @@ describe("useExperimentVisualizationData", () => {
         "exp-123",
         "measurements",
         ["timestamp", "value"],
+        undefined,
+        undefined,
+      ],
+      staleTime: 120000,
+      enabled: true,
+    });
+  });
+
+  it("should call useQuery with orderBy and orderDirection parameters", () => {
+    const mockUseQuery = vi.fn().mockReturnValue({
+      data: undefined,
+      error: null,
+      isLoading: true,
+    });
+    mockTsr.experiments.getExperimentData.useQuery = mockUseQuery;
+
+    renderHook(
+      () =>
+        useExperimentVisualizationData("exp-123", {
+          tableName: "measurements",
+          columns: ["timestamp", "value"],
+          orderBy: "timestamp",
+          orderDirection: "DESC",
+        }),
+      {
+        wrapper: createWrapper(),
+      },
+    );
+
+    expect(mockUseQuery).toHaveBeenCalledWith({
+      queryData: {
+        params: { id: "exp-123" },
+        query: {
+          tableName: "measurements",
+          columns: "timestamp,value",
+          orderBy: "timestamp",
+          orderDirection: "DESC",
+        },
+      },
+      queryKey: [
+        "experiment-visualization-data",
+        "exp-123",
+        "measurements",
+        ["timestamp", "value"],
+        "timestamp",
+        "DESC",
       ],
       staleTime: 120000,
       enabled: true,
@@ -105,9 +153,18 @@ describe("useExperimentVisualizationData", () => {
         query: {
           tableName: "measurements",
           columns: undefined,
+          orderBy: undefined,
+          orderDirection: undefined,
         },
       },
-      queryKey: ["experiment-visualization-data", "exp-123", "measurements", undefined],
+      queryKey: [
+        "experiment-visualization-data",
+        "exp-123",
+        "measurements",
+        undefined,
+        undefined,
+        undefined,
+      ],
       staleTime: 120000,
       enabled: true,
     });

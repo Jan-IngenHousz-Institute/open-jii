@@ -86,7 +86,14 @@ export class GetExperimentDataUseCase {
         }
 
         // Determine the data fetching approach based on the query parameters
-        const { page = 1, pageSize = 5, tableName, columns } = query;
+        const {
+          page = 1,
+          pageSize = 5,
+          tableName,
+          columns,
+          orderBy,
+          orderDirection = "ASC",
+        } = query;
 
         // Form the schema name based on experiment ID and name
         const cleanName = experiment.name.toLowerCase().trim().replace(/ /g, "_");
@@ -104,6 +111,8 @@ export class GetExperimentDataUseCase {
             schemaName,
             experiment,
             experimentId,
+            orderBy,
+            orderDirection,
           );
         } else if (tableName) {
           // Single table with pagination
@@ -117,6 +126,8 @@ export class GetExperimentDataUseCase {
             page,
             pageSize,
             experimentId,
+            orderBy,
+            orderDirection,
           );
         } else {
           // Multiple tables with sample data
@@ -141,6 +152,8 @@ export class GetExperimentDataUseCase {
     schemaName: string,
     experiment: ExperimentDto,
     experimentId: string,
+    orderBy?: string,
+    orderDirection?: "ASC" | "DESC",
   ): Promise<Result<ExperimentDataDto>> {
     // Validate table exists
     const tableExists = await this.validateTableExists(tableName, experiment.name, experimentId);
@@ -153,7 +166,13 @@ export class GetExperimentDataUseCase {
       .split(",")
       .map((col) => `\`${col.trim()}\``)
       .join(", ");
-    const sqlQuery = `SELECT ${columnList} FROM ${tableName}`;
+
+    let sqlQuery = `SELECT ${columnList} FROM ${tableName}`;
+
+    // Add ORDER BY clause if specified
+    if (orderBy?.trim()) {
+      sqlQuery += ` ORDER BY \`${orderBy.trim()}\` ${orderDirection ?? "ASC"}`;
+    }
 
     this.logger.debug(`Executing SQL query: ${sqlQuery}`);
 
@@ -193,6 +212,8 @@ export class GetExperimentDataUseCase {
     page: number,
     pageSize: number,
     experimentId: string,
+    orderBy?: string,
+    orderDirection?: "ASC" | "DESC",
   ): Promise<Result<ExperimentDataDto>> {
     // Validate table exists
     const tableExists = await this.validateTableExists(tableName, experiment.name, experimentId);
@@ -215,7 +236,14 @@ export class GetExperimentDataUseCase {
 
     // Build paginated query
     const offset = (page - 1) * pageSize;
-    const sqlQuery = `SELECT * FROM ${tableName} LIMIT ${pageSize} OFFSET ${offset}`;
+    let sqlQuery = `SELECT * FROM ${tableName}`;
+
+    // Add ORDER BY clause if specified
+    if (orderBy?.trim()) {
+      sqlQuery += ` ORDER BY \`${orderBy.trim()}\` ${orderDirection ?? "ASC"}`;
+    }
+
+    sqlQuery += ` LIMIT ${pageSize} OFFSET ${offset}`;
 
     // Execute the query
     const dataResult = await this.databricksPort.executeSqlQuery(schemaName, sqlQuery);
