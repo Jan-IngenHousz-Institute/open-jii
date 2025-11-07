@@ -420,7 +420,7 @@ module "ambyte_processing_job" {
   name        = "Ambyte-Processing-Job-PRPD"
   description = "Processes raw ambyte trace files and saves them in the respective volume in parquet format"
 
-  max_concurrent_runs           = 1   # Limit concurrent runs when queueing is enabled
+  max_concurrent_runs           = 1 # Limit concurrent runs when queueing is enabled
   use_serverless                = true
   continuous                    = false
   serverless_performance_target = "STANDARD"

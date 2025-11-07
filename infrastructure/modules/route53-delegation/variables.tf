@@ -11,5 +11,5 @@ variable "subdomain" {
 variable "name_servers" {
   description = "A list of name servers for the subdomain's hosted zone."
   type        = list(string)
-  sensitive = true
+  sensitive   = true
 }

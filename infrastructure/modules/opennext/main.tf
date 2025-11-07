@@ -189,7 +189,7 @@ module "server_function" {
     CACHE_BUCKET_NAME   = aws_s3_bucket.cache.bucket
 
     # DynamoDB configuration
-    CACHE_DYNAMO_TABLE  = module.dynamodb.table_name
+    CACHE_DYNAMO_TABLE = module.dynamodb.table_name
 
     # Revalidation queue configuration
     REVALIDATION_QUEUE_REGION = data.aws_region.current.id
