@@ -1528,6 +1528,31 @@
                 }
               }
             }
+          },
+          {
+            "name": "orderBy",
+            "in": "query",
+            "description": "Column name to order results by",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "name": "orderDirection",
+            "in": "query",
+            "description": "Sort direction for ordering",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["ASC", "DESC"]
+                }
+              }
+            }
           }
         ],
         "operationId": "experiments.getExperimentData",
@@ -4666,6 +4691,9 @@
                         "type": "string",
                         "format": "uuid"
                       },
+                      "createdByName": {
+                        "type": "string"
+                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time"
@@ -5127,6 +5155,9 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "createdByName": {
+                      "type": "string"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -5426,6 +5457,9 @@
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
+                    },
+                    "createdByName": {
+                      "type": "string"
                     },
                     "createdAt": {
                       "type": "string",
@@ -5880,6 +5914,9 @@
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
+                    },
+                    "createdByName": {
+                      "type": "string"
                     },
                     "createdAt": {
                       "type": "string",
@@ -7161,13 +7198,17 @@
                       "organization": {
                         "type": "string"
                       },
+                      "activated": {
+                        "type": "boolean",
+                        "nullable": true
+                      },
                       "email": {
                         "type": "string",
                         "format": "email",
                         "nullable": true
                       }
                     },
-                    "required": ["userId", "firstName", "lastName", "bio", "email"]
+                    "required": ["userId", "firstName", "lastName", "bio", "activated", "email"]
                   }
                 }
               }
@@ -7278,6 +7319,61 @@
             }
           }
         }
+      },
+      "delete": {
+        "description": "Deletes a user by their ID if allowed",
+        "summary": "Delete a user",
+        "tags": ["users"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the user"
+          }
+        ],
+        "operationId": "users.deleteUser",
+        "responses": {
+          "204": {
+            "description": "204"
+          },
+          "403": {
+            "description": "403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"]
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/users/profile": {
@@ -7311,6 +7407,10 @@
                   "organization": {
                     "type": "string",
                     "description": "Organization"
+                  },
+                  "activated": {
+                    "type": "boolean",
+                    "description": "Whether the profile is active or deactivated"
                   }
                 },
                 "required": ["firstName", "lastName"]
@@ -7392,13 +7492,17 @@
                     "organization": {
                       "type": "string"
                     },
+                    "activated": {
+                      "type": "boolean",
+                      "nullable": true
+                    },
                     "email": {
                       "type": "string",
                       "format": "email",
                       "nullable": true
                     }
                   },
-                  "required": ["userId", "firstName", "lastName", "bio", "email"]
+                  "required": ["userId", "firstName", "lastName", "bio", "activated", "email"]
                 }
               }
             }
