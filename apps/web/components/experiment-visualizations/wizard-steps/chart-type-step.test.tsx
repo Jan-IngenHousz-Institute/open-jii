@@ -59,6 +59,11 @@ describe("ChartTypeStep", () => {
         description: "",
         chartFamily: "basic",
         chartType: "line",
+        dataConfig: {
+          tableName: "",
+          dataSources: [],
+        },
+        config: {},
         ...defaultValues,
       } as ChartFormValues,
     });
@@ -153,8 +158,15 @@ describe("ChartTypeStep", () => {
       const TestWrapperWithSpy = () => {
         const form = useForm<ChartFormValues>({
           defaultValues: {
+            name: "",
+            description: "",
             chartFamily: "basic",
             chartType: "line",
+            dataConfig: {
+              tableName: "",
+              dataSources: [],
+            },
+            config: {},
           } as ChartFormValues,
         });
 
