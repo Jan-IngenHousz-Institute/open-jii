@@ -8,13 +8,87 @@ module "terraform_state_lock" {
   table_name = "terraform-state-lock"
 }
 
-# module "iam_oidc" {
-#   source     = "../../modules/iam-oidc"
-#   role_name  = "GithubActionsDeployAccess"
-#   repository = "Jan-IngenHousz-Institute/open-jii"
-#   branch     = "main"
-#   aws_region = var.aws_region
-# }
+# OIDC role for Next.js frontend deployment
+module "gha_opennext_deploy_oidc_role" {
+  source = "../../modules/iam-oidc"
+  
+  role_name           = "GithubActions-Nextjs-Deploy-Prod-Role"
+  repository          = "Jan-IngenHousz-Institute/open-jii"
+  github_environment  = "prod"  # Use GitHub environment for deployment protection
+  aws_region          = var.aws_region
+  environment         = var.environment
+  services            = ["s3-deploy", "lambda-deploy", "cloudfront-deploy", "ssm"]
+}
+
+# OIDC role for backend deployment
+module "gha_backend_deploy_oidc_role" {
+  source              = "../../modules/iam-oidc"
+  role_name           = "GithubActions-Backend-Deploy-Prod-Role"
+  repository          = "Jan-IngenHousz-Institute/open-jii"
+  github_environment  = "prod"  # Use GitHub environment for deployment protection
+  aws_region          = var.aws_region
+  environment         = var.environment
+  services = [
+    "ecr-deploy",
+    "ecs-deploy",
+    "alb",
+    "logs",
+    "ssm"
+  ]
+}
+
+# OIDC role for database migrations
+module "gha_db_migration_oidc_role" {
+  source              = "../../modules/iam-oidc"
+  role_name           = "GithubActions-DBMigration-Prod-Role"
+  repository          = "Jan-IngenHousz-Institute/open-jii"
+  github_environment  = "prod"  # Use GitHub environment for deployment protection
+  aws_region          = var.aws_region
+  environment         = var.environment
+  services = [
+    "ecr-deploy",
+    "ecs-deploy",
+    "rds",
+    "secretsmanager",
+    "logs",
+    "vpc",
+    "ssm"
+  ]
+}
+
+# OIDC role for Terraform deployments
+module "gha_terraform_oidc_role" {
+  source      = "../../modules/iam-oidc"
+  role_name   = "GithubActions-Terraform-Prod-Role"
+  repository  = "Jan-IngenHousz-Institute/open-jii"
+  branch      = "main"
+  aws_region  = var.aws_region
+  environment = var.environment
+  services = [
+    "terraform-backend",
+    "s3",
+    "dynamodb",
+    "iam",
+    "logs",
+    "timestream",
+    "kinesis",
+    "iot",
+    "cognito",
+    "vpc",
+    "rds",
+    "secretsmanager",
+    "ses",
+    "waf",
+    "ecs",
+    "ecr",
+    "lambda",
+    "sqs",
+    "route53",
+    "location-service",
+    "cloudfront",
+    "alb"
+  ]
+}
 
 module "cloudwatch" {
   source                 = "../../modules/cloudwatch"
@@ -1248,5 +1322,245 @@ module "location_service" {
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "location-service"
+  }
+}
+
+# OpenNext Infrastructure Parameters
+module "ssm_opennext_assets_bucket" {
+  source = "../../modules/ssm-parameter"
+  
+  parameter_name        = "/open-jii/${var.environment}/opennext/assets-bucket-name"
+  parameter_name_prefix = "open-jii-${var.environment}-opennext-assets-bucket"
+  description          = "Name of the S3 bucket storing static assets"
+  parameter_type       = "String"
+  parameter_value      = module.opennext.assets_bucket_name
+  
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "deployment-config"
+  }
+}
+
+module "ssm_opennext_cache_bucket" {
+  source = "../../modules/ssm-parameter"
+  
+  parameter_name        = "/open-jii/${var.environment}/opennext/cache-bucket-name"
+  parameter_name_prefix = "open-jii-${var.environment}-opennext-cache-bucket"
+  description          = "Name of the S3 bucket storing cache data"
+  parameter_type       = "String"
+  parameter_value      = module.opennext.cache_bucket_name
+  
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "deployment-config"
+  }
+}
+
+module "ssm_opennext_server_function" {
+  source = "../../modules/ssm-parameter"
+  
+  parameter_name        = "/open-jii/${var.environment}/opennext/server-function-name"
+  parameter_name_prefix = "open-jii-${var.environment}-opennext-server-function"
+  description          = "Name of the server Lambda function"
+  parameter_type       = "String"
+  parameter_value      = module.opennext.server_function_name
+  
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "deployment-config"
+  }
+}
+
+module "ssm_opennext_image_function" {
+  source = "../../modules/ssm-parameter"
+  
+  parameter_name        = "/open-jii/${var.environment}/opennext/image-function-name"
+  parameter_name_prefix = "open-jii-${var.environment}-opennext-image-function"
+  description          = "Name of the image optimization Lambda function"
+  parameter_type       = "String"
+  parameter_value      = module.opennext.image_function_name
+  
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "deployment-config"
+  }
+}
+
+module "ssm_opennext_revalidation_function" {
+  source = "../../modules/ssm-parameter"
+  
+  parameter_name        = "/open-jii/${var.environment}/opennext/revalidation-function-name"
+  parameter_name_prefix = "open-jii-${var.environment}-opennext-revalidation-function"
+  description          = "Name of the revalidation Lambda function"
+  parameter_type       = "String"
+  parameter_value      = module.opennext.revalidation_function_name
+  
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "deployment-config"
+  }
+}
+
+module "ssm_opennext_warmer_function" {
+  source = "../../modules/ssm-parameter"
+  
+  parameter_name        = "/open-jii/${var.environment}/opennext/warmer-function-name"
+  parameter_name_prefix = "open-jii-${var.environment}-opennext-warmer-function"
+  description          = "Name of the warmer Lambda function (if enabled)"
+  parameter_type       = "String"
+  parameter_value      = module.opennext.warmer_function_name
+  
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "deployment-config"
+  }
+}
+
+module "ssm_opennext_cloudfront_distribution" {
+  source = "../../modules/ssm-parameter"
+  
+  parameter_name        = "/open-jii/${var.environment}/opennext/cloudfront-distribution-id"
+  parameter_name_prefix = "open-jii-${var.environment}-opennext-cloudfront-distribution"
+  description          = "ID of the CloudFront distribution for the Next.js app"
+  parameter_type       = "String"
+  parameter_value      = module.opennext.cloudfront_distribution_id
+  
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "deployment-config"
+  }
+}
+
+module "ssm_opennext_dynamodb_table" {
+  source = "../../modules/ssm-parameter"
+  
+  parameter_name        = "/open-jii/${var.environment}/opennext/dynamodb-table-name"
+  parameter_name_prefix = "open-jii-${var.environment}-opennext-dynamodb-table"
+  description          = "Name of the DynamoDB table for Next.js cache/revalidation"
+  parameter_type       = "String"
+  parameter_value      = module.opennext.dynamodb_table_name
+  
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "deployment-config"
+  }
+}
+
+# Database Migration Infrastructure Parameters
+module "ssm_migration_ecr_repository" {
+  source = "../../modules/ssm-parameter"
+  
+  parameter_name        = "/open-jii/${var.environment}/migration/ecr-repository-name"
+  parameter_name_prefix = "open-jii-${var.environment}-migration-ecr-repository"
+  description          = "ECR repository name for database migrations Docker images"
+  parameter_type       = "String"
+  parameter_value      = module.migration_runner_ecr.repository_name
+  
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "deployment-config"
+  }
+}
+
+module "ssm_migration_ecs_cluster" {
+  source = "../../modules/ssm-parameter"
+  
+  parameter_name        = "/open-jii/${var.environment}/migration/ecs-cluster-name"
+  parameter_name_prefix = "open-jii-${var.environment}-migration-ecs-cluster"
+  description          = "ECS cluster name for running database migrations"
+  parameter_type       = "String"
+  parameter_value      = module.migration_runner_ecs.ecs_cluster_name
+  
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "deployment-config"
+  }
+}
+
+module "ssm_migration_task_definition" {
+  source = "../../modules/ssm-parameter"
+  
+  parameter_name        = "/open-jii/${var.environment}/migration/task-definition-family"
+  parameter_name_prefix = "open-jii-${var.environment}-migration-task-definition"
+  description          = "Task definition family for database migrations"
+  parameter_type       = "String"
+  parameter_value      = module.migration_runner_ecs.ecs_task_definition_family
+  
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "deployment-config"
+  }
+}
+
+module "ssm_migration_container_name" {
+  source = "../../modules/ssm-parameter"
+  
+  parameter_name        = "/open-jii/${var.environment}/migration/container-name"
+  parameter_name_prefix = "open-jii-${var.environment}-migration-container"
+  description          = "Name of the primary container in the ECS task definition for migrations"
+  parameter_type       = "String"
+  parameter_value      = module.migration_runner_ecs.container_name
+  
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "deployment-config"
+  }
+}
+
+module "ssm_migration_subnets" {
+  source = "../../modules/ssm-parameter"
+  
+  parameter_name        = "/open-jii/${var.environment}/migration/subnet-ids"
+  parameter_name_prefix = "open-jii-${var.environment}-migration-subnets"
+  description          = "Subnet IDs for the database migration task"
+  parameter_type       = "StringList"
+  parameter_value      = join(",", module.vpc.private_subnets)
+  
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "deployment-config"
+  }
+}
+
+module "ssm_migration_security_group" {
+  source = "../../modules/ssm-parameter"
+  
+  parameter_name        = "/open-jii/${var.environment}/migration/security-group-id"
+  parameter_name_prefix = "open-jii-${var.environment}-migration-security-group"
+  description          = "Security group ID for the database migration task"
+  parameter_type       = "String"
+  parameter_value      = module.vpc.migration_task_security_group_id
+  
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "deployment-config"
   }
 }
