@@ -27,6 +27,7 @@ vi.mock("../chart-configurators/chart-configurator-util", () => ({
   getDefaultChartConfig: vi.fn((chartType: string) => ({
     title: `Default ${chartType} config`,
   })),
+  getDefaultDataConfig: vi.fn(),
 }));
 
 describe("ChartTypeStep", () => {
@@ -58,6 +59,11 @@ describe("ChartTypeStep", () => {
         description: "",
         chartFamily: "basic",
         chartType: "line",
+        dataConfig: {
+          tableName: "",
+          dataSources: [],
+        },
+        config: {},
         ...defaultValues,
       } as ChartFormValues,
     });
@@ -152,8 +158,15 @@ describe("ChartTypeStep", () => {
       const TestWrapperWithSpy = () => {
         const form = useForm<ChartFormValues>({
           defaultValues: {
+            name: "",
+            description: "",
             chartFamily: "basic",
             chartType: "line",
+            dataConfig: {
+              tableName: "",
+              dataSources: [],
+            },
+            config: {},
           } as ChartFormValues,
         });
 

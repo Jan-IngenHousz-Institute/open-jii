@@ -15,9 +15,18 @@ catalogs:
     eslint:
       specifier: ^9.25.1
       version: 9.26.0
+    next:
+      specifier: ^15.3.3
+      version: 15.3.4
     nodemailer:
       specifier: ^7.0.7
       version: 7.0.10
+    posthog-js:
+      specifier: ^1.279.1
+      version: 1.288.0
+    posthog-node:
+      specifier: ^5.10.2
+      version: 5.11.1
     prettier:
       specifier: ^3.5.3
       version: 3.5.3
@@ -588,8 +597,14 @@ importers:
         specifier: ^0.507.0
         version: 0.507.0(react@19.1.0)
       next:
-        specifier: ^15.3.3
+        specifier: 'catalog:'
         version: 15.3.4(@babel/core@7.28.3)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      posthog-js:
+        specifier: 'catalog:'
+        version: 1.288.0
+      posthog-node:
+        specifier: 'catalog:'
+        version: 5.11.1
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -728,7 +743,7 @@ importers:
         specifier: workspace:*
         version: link:../transactional
       next:
-        specifier: ^15.3.3
+        specifier: 'catalog:'
         version: 15.3.4(@babel/core@7.12.9)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       next-auth:
         specifier: 5.0.0-beta.30
@@ -804,7 +819,7 @@ importers:
         specifier: ^0.507.0
         version: 0.507.0(react@19.1.0)
       next:
-        specifier: ^15.3.3
+        specifier: 'catalog:'
         version: 15.3.4(@babel/core@7.28.3)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       react:
         specifier: 19.1.0
@@ -5548,6 +5563,9 @@ packages:
 
   '@popperjs/core@2.11.8':
     resolution: {integrity: sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A==}
+
+  '@posthog/core@1.5.1':
+    resolution: {integrity: sha512-8fdEzfvdStr45iIncTD+gnqp45UBTUpRK/bwB4shP5usCKytnPIeilU8rIpNBOVjJPwfW+2N8yWhQ0l14x191Q==}
 
   '@protobufjs/aspromise@1.1.2':
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
@@ -11872,6 +11890,9 @@ packages:
   fetch-retry@4.1.1:
     resolution: {integrity: sha512-e6eB7zN6UBSwGVwrbWVH+gdLnkW9WwHhmq2YDK1Sh30pzx1onRVGBvogTlUeWxwTa+L86NYdo4hFkh7O8ZjSnA==}
 
+  fflate@0.4.8:
+    resolution: {integrity: sha512-FJqqoDBR00Mdj9ppamLa/Y7vxm+PRmNWA67N846RvsoYVMKB4q3y/de5PA7gUmRMYK/8CMz2GDZQmCRN1wBcWA==}
+
   fflate@0.8.2:
     resolution: {integrity: sha512-cPJU47OaAoCbg0pBvzsgpTPhmhqI5eJjh/JIu8tPj5q+T7iLvW/JAYUqmE7KOB4R1ZyEhzBaIQpQpardBF5z8A==}
 
@@ -16153,6 +16174,13 @@ packages:
     resolution: {integrity: sha512-cDWgoah1Gez9rN3H4165peY9qfpEo+SA61oQv65O3cRUE1pOEoJWwddwcqKE8XZYjbblOJlYDlLV4h67HrEVDg==}
     engines: {node: '>=12'}
 
+  posthog-js@1.288.0:
+    resolution: {integrity: sha512-KOeF8PK/zxBuFB4b3FVkj5JxSWAfSOrfDVvWj5VrJNBGYqr8igDbAl10huFv9NB4/K9XeIWQ7AzPPGV4D3lbEA==}
+
+  posthog-node@5.11.1:
+    resolution: {integrity: sha512-P6rtzdCVvS718r011x0W0cwmJo7gfP5YWXiWh0/S3OL+pnHtcqbWHDjrtRxN/IrMkjZWzMU4xDze5vRK/cZ23w==}
+    engines: {node: '>=20'}
+
   postman2openapi@1.2.1:
     resolution: {integrity: sha512-+TaKfRhln6/TDPT8c0C5qMkJq+DqyybQlHL9RZx2INBNd0jNj3ufhk3VGUmXnX8rPabbKdvt6ojtxVQGMdg9zQ==}
 
@@ -19033,6 +19061,9 @@ packages:
 
   web-tree-sitter@0.24.5:
     resolution: {integrity: sha512-+J/2VSHN8J47gQUAvF8KDadrfz6uFYVjxoxbKWDoXVsH2u7yLdarCnIURnrMA6uSRkgX3SdmqM5BOoQjPdSh5w==}
+
+  web-vitals@4.2.4:
+    resolution: {integrity: sha512-r4DIlprAGwJ7YM11VZp4R884m0Vmgr6EAKe3P+kO0PPj3Unqyvv59rczf6UiGcb9Z8QxZVcqKNwv/g0WNdWwsw==}
 
   webapi-parser@0.5.0:
     resolution: {integrity: sha512-fPt6XuMqLSvBz8exwX4QE1UT+pROLHa00EMDCdO0ybICduwQ1V4f7AWX4pNOpCp+x+0FjczEsOxtQU0d8L3QKw==}
@@ -27989,6 +28020,10 @@ snapshots:
 
   '@popperjs/core@2.11.8': {}
 
+  '@posthog/core@1.5.1':
+    dependencies:
+      cross-spawn: 7.0.6
+
   '@protobufjs/aspromise@1.1.2': {}
 
   '@protobufjs/base64@1.1.2': {}
@@ -32754,7 +32789,7 @@ snapshots:
   autoprefixer@10.4.14(postcss@8.4.31):
     dependencies:
       browserslist: 4.24.5
-      caniuse-lite: 1.0.30001718
+      caniuse-lite: 1.0.30001735
       fraction.js: 4.3.7
       normalize-range: 0.1.2
       picocolors: 1.1.1
@@ -33297,7 +33332,7 @@ snapshots:
 
   browserslist@4.25.1:
     dependencies:
-      caniuse-lite: 1.0.30001727
+      caniuse-lite: 1.0.30001735
       electron-to-chromium: 1.5.183
       node-releases: 2.0.19
       update-browserslist-db: 1.1.3(browserslist@4.25.1)
@@ -33445,7 +33480,7 @@ snapshots:
   caniuse-api@3.0.0:
     dependencies:
       browserslist: 4.25.1
-      caniuse-lite: 1.0.30001727
+      caniuse-lite: 1.0.30001735
       lodash.memoize: 4.1.2
       lodash.uniq: 4.5.0
 
@@ -36220,6 +36255,8 @@ snapshots:
       web-streams-polyfill: 3.3.3
 
   fetch-retry@4.1.1: {}
+
+  fflate@0.4.8: {}
 
   fflate@0.8.2: {}
 
@@ -39815,7 +39852,7 @@ snapshots:
       '@next/env': 14.2.26
       '@swc/helpers': 0.5.5
       busboy: 1.6.0
-      caniuse-lite: 1.0.30001718
+      caniuse-lite: 1.0.30001735
       graceful-fs: 4.2.11
       postcss: 8.4.31
       react: 19.1.0
@@ -39866,7 +39903,7 @@ snapshots:
       '@swc/counter': 0.1.3
       '@swc/helpers': 0.5.15
       busboy: 1.6.0
-      caniuse-lite: 1.0.30001718
+      caniuse-lite: 1.0.30001735
       postcss: 8.4.31
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
@@ -39891,7 +39928,7 @@ snapshots:
       '@swc/counter': 0.1.3
       '@swc/helpers': 0.5.15
       busboy: 1.6.0
-      caniuse-lite: 1.0.30001718
+      caniuse-lite: 1.0.30001735
       postcss: 8.4.31
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
@@ -39916,7 +39953,7 @@ snapshots:
       '@swc/counter': 0.1.3
       '@swc/helpers': 0.5.15
       busboy: 1.6.0
-      caniuse-lite: 1.0.30001718
+      caniuse-lite: 1.0.30001735
       postcss: 8.4.31
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
@@ -41621,6 +41658,18 @@ snapshots:
       source-map-js: 1.2.1
 
   postgres@3.4.5: {}
+
+  posthog-js@1.288.0:
+    dependencies:
+      '@posthog/core': 1.5.1
+      core-js: 3.42.0
+      fflate: 0.4.8
+      preact: 10.24.3
+      web-vitals: 4.2.4
+
+  posthog-node@5.11.1:
+    dependencies:
+      '@posthog/core': 1.5.1
 
   postman2openapi@1.2.1: {}
 
@@ -45271,6 +45320,8 @@ snapshots:
 
   web-tree-sitter@0.24.5:
     optional: true
+
+  web-vitals@4.2.4: {}
 
   webapi-parser@0.5.0:
     dependencies:

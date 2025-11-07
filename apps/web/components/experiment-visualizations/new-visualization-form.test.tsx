@@ -10,7 +10,10 @@ import type { WizardFormProps } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 import type { ChartFormValues } from "./chart-configurators/chart-configurator-util";
-import { getDefaultChartConfig } from "./chart-configurators/chart-configurator-util";
+import {
+  getDefaultChartConfig,
+  getDefaultDataConfig,
+} from "./chart-configurators/chart-configurator-util";
 import NewVisualizationForm from "./new-visualization-form";
 
 // Mock external dependencies
@@ -19,6 +22,7 @@ vi.mock("@repo/i18n");
 vi.mock("@repo/ui/hooks");
 vi.mock("./chart-configurators/chart-configurator-util", () => ({
   getDefaultChartConfig: vi.fn(),
+  getDefaultDataConfig: vi.fn(),
 }));
 
 // Mock WizardForm and Card components
@@ -55,7 +59,6 @@ describe("NewVisualizationForm", () => {
   const mockSampleTables: SampleTable[] = [
     {
       name: "measurements",
-      totalRows: 100,
       tableMetadata: {} as never,
       tableRows: [],
       columns: [
@@ -65,7 +68,6 @@ describe("NewVisualizationForm", () => {
     },
     {
       name: "observations",
-      totalRows: 50,
       tableMetadata: {} as never,
       tableRows: [],
       columns: [
@@ -90,6 +92,25 @@ describe("NewVisualizationForm", () => {
     (getDefaultChartConfig as ReturnType<typeof vi.fn>).mockReturnValue({
       title: "Default Chart",
     });
+
+    (getDefaultDataConfig as ReturnType<typeof vi.fn>).mockImplementation((tableName?: string) => ({
+      tableName: tableName ?? "",
+      dataSources: [
+        {
+          tableName: tableName ?? "",
+          columnName: "",
+          role: "x",
+          alias: "",
+        },
+        {
+          tableName: tableName ?? "",
+          columnName: "",
+          role: "y",
+          alias: "",
+        },
+      ],
+    }));
+
     (useExperimentVisualizationCreate as ReturnType<typeof vi.fn>).mockReturnValue({
       mutate: mockCreateVisualization,
       isPending: false,

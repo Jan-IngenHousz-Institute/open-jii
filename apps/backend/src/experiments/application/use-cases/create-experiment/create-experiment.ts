@@ -117,11 +117,13 @@ export class CreateExperimentUseCase {
 
           this.logger.debug(`Triggering Databricks job for experiment ${experiment.id}`);
           // Trigger Databricks job for the new experiment
-          const databricksResult = await this.databricksPort.triggerJob({
-            experimentId: experiment.id,
-            experimentName: experiment.name,
-            userId: userId,
-          });
+          const databricksResult = await this.databricksPort.triggerExperimentProvisioningJob(
+            experiment.id,
+            {
+              experiment_id: experiment.id,
+              experiment_name: experiment.name,
+            },
+          );
 
           // Log Databricks job trigger result but don't fail experiment creation
           if (databricksResult.isFailure()) {

@@ -13,6 +13,7 @@ import {
   authenticators,
   experimentMembers,
   sql,
+  isNull,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
@@ -91,6 +92,7 @@ export class UserRepository {
         query = query.where(
           and(
             eq(profiles.activated, true),
+            isNull(profiles.deletedAt),
             or(
               ilike(profiles.firstName, `%${params.query}%`),
               ilike(profiles.lastName, `%${params.query}%`),

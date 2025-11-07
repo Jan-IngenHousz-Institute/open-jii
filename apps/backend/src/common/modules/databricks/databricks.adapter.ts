@@ -10,10 +10,7 @@ import { DatabricksFilesService } from "./services/files/files.service";
 import type { UploadFileResponse } from "./services/files/files.types";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
 import type { DatabricksHealthCheck } from "./services/jobs/jobs.types";
-import type {
-  DatabricksJobTriggerParams,
-  DatabricksJobRunResponse,
-} from "./services/jobs/jobs.types";
+import type { DatabricksJobRunResponse } from "./services/jobs/jobs.types";
 import { DatabricksPipelinesService } from "./services/pipelines/pipelines.service";
 import type { DatabricksPipelineStartUpdateResponse } from "./services/pipelines/pipelines.types";
 import { DatabricksSqlService } from "./services/sql/sql.service";
@@ -52,10 +49,36 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   }
 
   /**
-   * Trigger a Databricks job with the specified parameters
+   * Trigger the experiment provisioning Databricks job with the specified parameters
    */
-  async triggerJob(params: DatabricksJobTriggerParams): Promise<Result<DatabricksJobRunResponse>> {
-    return this.jobsService.triggerJob(params);
+  async triggerExperimentProvisioningJob(
+    experimentId: string,
+    params: Record<string, string>,
+  ): Promise<Result<DatabricksJobRunResponse>> {
+    const jobId = this.configService.getExperimentProvisioningJobIdAsNumber();
+    return this.jobsService.triggerJob(jobId, params, experimentId);
+  }
+
+  /**
+   * Trigger the ambyte processing Databricks job with the specified parameters
+   */
+  async triggerAmbyteProcessingJob(
+    experimentId: string,
+    experimentName: string,
+    params: Record<string, string>,
+  ): Promise<Result<DatabricksJobRunResponse>> {
+    // Construct experiment schema like other methods in this adapter
+    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+    const experimentSchema = `exp_${cleanName}_${experimentId}`;
+
+    // Add experiment schema to params
+    const jobParams = {
+      ...params,
+      EXPERIMENT_SCHEMA: experimentSchema,
+    };
+
+    const jobId = this.configService.getAmbyteProcessingJobIdAsNumber();
+    return this.jobsService.triggerJob(jobId, jobParams);
   }
 
   /**

@@ -112,8 +112,8 @@ export function DataSourceStep({
         alias: "",
       }),
     );
-    form.setValue("dataConfig.dataSources", resetDataSources);
 
+    form.setValue("dataConfig.dataSources", resetDataSources);
     form.setValue("config.xAxisTitle", "");
     form.setValue("config.yAxisTitle", "");
   };

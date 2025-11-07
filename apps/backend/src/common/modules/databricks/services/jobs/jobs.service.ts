@@ -9,7 +9,6 @@ import { DatabricksConfigService } from "../config/config.service";
 import {
   DatabricksHealthCheck,
   DatabricksJobRunResponse,
-  DatabricksJobTriggerParams,
   DatabricksJobsListRequest,
   DatabricksJobsListResponse,
   DatabricksRunNowRequest,
@@ -28,7 +27,11 @@ export class DatabricksJobsService {
     private readonly configService: DatabricksConfigService,
   ) {}
 
-  async triggerJob(params: DatabricksJobTriggerParams): Promise<Result<DatabricksJobRunResponse>> {
+  async triggerJob(
+    jobId: number,
+    params: Record<string, string>,
+    idempotencyToken?: string,
+  ): Promise<Result<DatabricksJobRunResponse>> {
     return await tryCatch(
       async () => {
         const tokenResult = await this.authService.getAccessToken();
@@ -37,7 +40,7 @@ export class DatabricksJobsService {
         }
 
         const token = tokenResult.value;
-        const result = await this.executeJobTrigger(token, params);
+        const result = await this.executeJobTrigger(token, jobId, params, idempotencyToken);
         if (result.isFailure()) {
           throw result.error;
         }
@@ -53,15 +56,18 @@ export class DatabricksJobsService {
 
   private async executeJobTrigger(
     token: string,
-    params: DatabricksJobTriggerParams,
+    jobId: number,
+    params: Record<string, string>,
+    idempotencyToken?: string,
   ): Promise<Result<DatabricksJobRunResponse>> {
     const host = this.configService.getHost();
-    const jobId = this.configService.getJobId();
     const jobUrl = `${host}${DatabricksJobsService.JOBS_ENDPOINT}/run-now`;
 
-    this.logger.debug(`Triggering Databricks job ${jobId} for experiment ${params.experimentId}`);
+    this.logger.debug(
+      `Triggering Databricks job ${jobId} for experiment ${params.experiment_id || params.EXPERIMENT_ID || "unknown"}`,
+    );
 
-    const requestBody = this.buildJobTriggerRequest(params);
+    const requestBody = this.buildJobTriggerRequest(jobId, params, idempotencyToken);
 
     return await tryCatch(
       async () => {
@@ -78,7 +84,7 @@ export class DatabricksJobsService {
         this.validateJobRunResponse(jobRunResponse);
 
         this.logger.log(
-          `Successfully triggered Databricks job ${this.configService.getJobId()}, run ID: ${jobRunResponse.run_id}`,
+          `Successfully triggered Databricks job ${jobId}, run ID: ${jobRunResponse.run_id}`,
         );
 
         return jobRunResponse;
@@ -90,19 +96,25 @@ export class DatabricksJobsService {
     );
   }
 
-  private buildJobTriggerRequest(params: DatabricksJobTriggerParams): DatabricksRunNowRequest {
-    return {
-      job_id: this.configService.getJobIdAsNumber(),
-      job_parameters: {
-        experiment_id: params.experimentId,
-        experiment_name: params.experimentName,
-      },
+  private buildJobTriggerRequest(
+    jobId: number,
+    params: Record<string, string>,
+    idempotencyToken?: string,
+  ): DatabricksRunNowRequest {
+    const request: DatabricksRunNowRequest = {
+      job_id: jobId,
+      job_parameters: params,
       queue: {
         enabled: true,
       },
       performance_target: PerformanceTarget.STANDARD,
-      idempotency_token: params.experimentId,
     };
+
+    if (idempotencyToken) {
+      request.idempotency_token = idempotencyToken;
+    }
+
+    return request;
   }
 
   private validateJobRunResponse(response: DatabricksJobRunResponse): void {

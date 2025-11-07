@@ -194,12 +194,13 @@ export class UploadAmbyteDataUseCase {
   }
 
   /**
-   * Complete the upload process by triggering the pipeline and returning results
+   * Complete the upload process by triggering the ambyte processing job and returning results
    */
   async postexecute(
     successfulUploads: { fileName: string; filePath: string }[],
     errors: { fileName: string; error: string }[],
     experiment: ExperimentDto,
+    directoryName: string,
   ): Promise<Result<UploadAmbyteFilesResponse>> {
     this.logger.log(
       `Completing upload. ${successfulUploads.length} successful, ${errors.length} errors.`,
@@ -215,23 +216,28 @@ export class UploadAmbyteDataUseCase {
       );
     }
 
-    // Trigger pipeline update after successful file upload
+    // Trigger ambyte processing job after successful file upload
     this.logger.log(
-      `Triggering pipeline update for experiment ${experiment.name} (${experiment.id})`,
+      `Triggering ambyte processing job for experiment ${experiment.name} (${experiment.id})`,
     );
 
-    const pipelineResult = await this.databricksPort.triggerExperimentPipeline(
-      experiment.name,
+    const jobResult = await this.databricksPort.triggerAmbyteProcessingJob(
       experiment.id,
+      experiment.name,
+      {
+        EXPERIMENT_ID: experiment.id,
+        YEAR_PREFIX: "2025",
+        UPLOAD_DIRECTORY: directoryName,
+      },
     );
 
-    if (pipelineResult.isSuccess()) {
+    if (jobResult.isSuccess()) {
       this.logger.log(
-        `Successfully triggered pipeline update for experiment ${experiment.name} (${experiment.id}). Update ID: ${pipelineResult.value.update_id}`,
+        `Successfully triggered ambyte processing job for experiment ${experiment.name} (${experiment.id}). Run ID: ${jobResult.value.run_id}`,
       );
     } else {
       this.logger.warn(
-        `Failed to trigger pipeline update for experiment ${experiment.id}: ${pipelineResult.error.message}`,
+        `Failed to trigger ambyte processing job for experiment ${experiment.id}: ${jobResult.error.message}`,
       );
     }
 

@@ -15,6 +15,12 @@ from delta.tables import DeltaTable
 
 # DBTITLE 1,Schema Definition
 # Define schema for sensor data to parse JSON payloads
+question_schema = StructType([
+    StructField("question_label", StringType(), True),
+    StructField("question_text", StringType(), True),
+    StructField("question_answer", StringType(), True)
+])
+
 sensor_schema = StructType([
     StructField("topic", StringType(), False),
     StructField("device_name", StringType(), True),
@@ -24,7 +30,8 @@ sensor_schema = StructType([
     StructField("device_firmware", StringType(), True),
     StructField("sample", StringType(), True),
     StructField("timestamp", TimestampType(), False),
-    StructField("output", StringType(), True)
+    StructField("output", StringType(), True),
+    StructField("questions", ArrayType(question_schema), True)
 ])
 
 # COMMAND ----------
@@ -37,6 +44,7 @@ SILVER_TABLE = spark.conf.get("SILVER_TABLE", "clean_data")
 KINESIS_STREAM_NAME = spark.conf.get("KINESIS_STREAM_NAME")
 CHECKPOINT_PATH = spark.conf.get("CHECKPOINT_PATH")
 SERVICE_CREDENTIAL_NAME = spark.conf.get("SERVICE_CREDENTIAL_NAME")
+
 
 # COMMAND ----------
 
@@ -111,8 +119,8 @@ def raw_data():
         "delta.enableChangeDataFeed": "true"
     }
 )
-@dlt.expect_or_fail("valid_timestamp", "timestamp IS NOT NULL")
-@dlt.expect_or_fail("valid_device_id", "device_id IS NOT NULL")
+@dlt.expect_or_drop("valid_timestamp", "timestamp IS NOT NULL")
+@dlt.expect_or_drop("valid_device_id", "device_id IS NOT NULL")
 def clean_data():
     """
     Transforms Bronze data into a cleaned Silver table with standardized values,
@@ -121,7 +129,7 @@ def clean_data():
     This Silver layer serves as the handoff point for experiment-specific schemas.
     """
     # Read from bronze and extract/transform the data
-    bronze_df = dlt.read(BRONZE_TABLE)
+    bronze_df = dlt.read_stream(BRONZE_TABLE)
     
     # Extract and transform the data
     df = (
@@ -138,10 +146,6 @@ def clean_data():
         .withColumn("date", F.to_date("timestamp"))
         .withColumn("hour", F.hour("timestamp"))
     )
-
-    # Apply watermarking and deduplication
-    df = df.withWatermark("timestamp", "1 hour") \
-        .dropDuplicates(["device_id", "timestamp", "kinesis_sequence_number"])
         
     # Calculate data latency (time between reading and ingestion)
     df = df.withColumn(
@@ -164,8 +168,31 @@ def clean_data():
         ).otherwise(F.array())
     )
     
+    # Extract questions from the parsed_data and keep in original array structure
+    df = df.withColumn(
+        "questions",
+        F.col("parsed_data.questions")
+    )
+    
+    # Create a unique id for each row
+    # Hash based on experiment_id, device_id, timestamp, sample, and ingestion_timestamp
+    # This ensures each ingestion gets a unique ID, even for duplicate measurements
+    df = df.withColumn(
+        "id",
+        F.abs(
+            F.hash(
+                F.col("experiment_id"),
+                F.col("device_id"),
+                F.col("timestamp"),
+                F.col("sample"),
+                F.col("ingestion_timestamp")
+            )
+        )
+    )
+    
     # Select final columns for silver layer
     return df.select(
+        "id",
         "device_id",
         "device_name",
         "device_version",
@@ -174,10 +201,79 @@ def clean_data():
         "sample",
         "output",
         "macros",
+        "questions",
         "experiment_id",
         "timestamp",
         "date",
         "hour",
         "ingest_latency_ms",
         "processed_timestamp"
+    )
+
+# COMMAND ----------
+
+# DBTITLE 1,Gold Layer - Experiment Status
+@dlt.table(
+    name="experiment_status",
+    comment="Gold layer: Materialized view tracking experiment freshness status",
+    table_properties={
+        "quality": "gold",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.enableChangeDataFeed": "true"
+    }
+)
+def experiment_status():
+    """
+    Gold layer materialized view that tracks experiment freshness status.
+    
+    This function:
+    - Queries the clean data (silver) table
+    - Gets the latest timestamp for each experiment ID
+    - Determines the status (fresh/stale) based on configurable freshness criteria
+    - Structured for efficient incremental refreshes
+    """
+    
+    # Configuration for freshness threshold (in minutes)
+    # Data older than this threshold will be marked as "stale"
+    FRESHNESS_THRESHOLD_MINUTES = 60  # Can be parameterized via spark.conf
+    
+    # Read from silver table
+    silver_df = dlt.read(SILVER_TABLE)
+    
+    # Get the current timestamp for comparison
+    current_timestamp = F.current_timestamp()
+    
+    # Calculate the latest timestamp for each experiment_id
+    experiment_status_df = (
+        silver_df
+        .groupBy("experiment_id")
+        .agg(
+            F.max("timestamp").alias("latest_timestamp"),
+            F.max("processed_timestamp").alias("latest_processed_timestamp")
+        )
+        .filter("experiment_id IS NOT NULL")  # Filter out records with null experiment_id
+    )
+    
+    # Calculate freshness status
+    # Compare timestamp difference in seconds against threshold converted to seconds
+    freshness_threshold_seconds = FRESHNESS_THRESHOLD_MINUTES * 60
+    status_df = (
+        experiment_status_df
+        .withColumn(
+            "status",
+            F.when(
+                (current_timestamp.cast("long") - F.col("latest_processed_timestamp").cast("long")) <= freshness_threshold_seconds,
+                F.lit("fresh")
+            ).otherwise(F.lit("stale"))
+        )
+        .withColumn("status_updated_at", current_timestamp)
+    )
+    
+    # Select final columns for the gold layer
+    return status_df.select(
+        "experiment_id",
+        "latest_timestamp",
+        "latest_processed_timestamp",
+        "status",
+        "status_updated_at"
     )
