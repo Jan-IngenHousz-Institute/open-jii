@@ -31,7 +31,7 @@ describe("ExperimentController", () => {
     vi.restoreAllMocks();
 
     // Set up default mocks for databricks service (only needed for create experiment)
-    vi.spyOn(databricksAdapter, "triggerJob").mockResolvedValue(
+    vi.spyOn(databricksAdapter, "triggerExperimentProvisioningJob").mockResolvedValue(
       success({
         run_id: 12345,
         number_in_job: 1,
@@ -69,16 +69,18 @@ describe("ExperimentController", () => {
 
       // Verify that Databricks job was triggered
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.triggerJob).toHaveBeenCalledWith({
-        experimentId: responseBody.id,
-        experimentName: experimentData.name,
-        userId: testUserId,
-      });
+      expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
+        responseBody.id,
+        {
+          experiment_id: responseBody.id,
+          experiment_name: experimentData.name,
+        },
+      );
     });
 
     it("should successfully create an experiment even if Databricks fails", async () => {
       // Mock Databricks to fail
-      vi.spyOn(databricksAdapter, "triggerJob").mockResolvedValue(
+      vi.spyOn(databricksAdapter, "triggerExperimentProvisioningJob").mockResolvedValue(
         failure({
           name: "DatabricksError",
           code: "INTERNAL_ERROR",
@@ -107,11 +109,13 @@ describe("ExperimentController", () => {
 
       // Verify that Databricks job was attempted
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.triggerJob).toHaveBeenCalledWith({
-        experimentId: responseBody.id,
-        experimentName: experimentData.name,
-        userId: testUserId,
-      });
+      expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
+        responseBody.id,
+        {
+          experiment_id: responseBody.id,
+          experiment_name: experimentData.name,
+        },
+      );
     });
 
     it("should return 400 if name is missing", async () => {
@@ -127,7 +131,7 @@ describe("ExperimentController", () => {
 
       // Verify that Databricks was not called for invalid requests
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.triggerJob).not.toHaveBeenCalled();
+      expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
     });
 
     it("should return 401 if not authenticated", async () => {
@@ -144,7 +148,7 @@ describe("ExperimentController", () => {
 
       // Verify that Databricks was not called for unauthenticated requests
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.triggerJob).not.toHaveBeenCalled();
+      expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
     });
 
     it("should return 400 if name is too long", async () => {
@@ -163,7 +167,7 @@ describe("ExperimentController", () => {
 
       // Verify that Databricks was not called for invalid requests
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.triggerJob).not.toHaveBeenCalled();
+      expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
     });
 
     it("should successfully create an experiment with embargoUntil as ISO string", async () => {
@@ -196,11 +200,13 @@ describe("ExperimentController", () => {
 
       // Verify that Databricks job was triggered
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.triggerJob).toHaveBeenCalledWith({
-        experimentId: responseBody.id,
-        experimentName: experimentData.name,
-        userId: testUserId,
-      });
+      expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
+        responseBody.id,
+        {
+          experiment_id: responseBody.id,
+          experiment_name: experimentData.name,
+        },
+      );
     });
 
     it("should return 400 if embargoUntil is not a valid ISO date string", async () => {
@@ -218,7 +224,7 @@ describe("ExperimentController", () => {
 
       // Verify that Databricks was not called for invalid requests
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(databricksAdapter.triggerJob).not.toHaveBeenCalled();
+      expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
     });
   });
 

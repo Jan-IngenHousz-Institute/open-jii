@@ -109,10 +109,12 @@ describe("DatabricksJobsService", () => {
 
   describe("triggerJob", () => {
     it("should successfully trigger a job", async () => {
+      const jobId = 12345;
+      const experimentId = "exp-123";
       const mockParams = {
-        experimentId: "exp-123",
-        experimentName: "Test Experiment",
-        userId: "user-456",
+        EXPERIMENT_ID: "exp-123",
+        EXPERIMENT_SCHEMA: "Test Experiment",
+        USER_ID: "user-456",
       };
 
       const mockResponse = {
@@ -133,7 +135,7 @@ describe("DatabricksJobsService", () => {
         .reply(200, mockResponse);
 
       // Execute trigger job
-      const result = await jobsService.triggerJob(mockParams);
+      const result = await jobsService.triggerJob(jobId, mockParams, experimentId);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -142,10 +144,12 @@ describe("DatabricksJobsService", () => {
     });
 
     it("should handle API errors when triggering a job", async () => {
+      const jobId = 12345;
+      const experimentId = "exp-123";
       const mockParams = {
-        experimentId: "exp-123",
-        experimentName: "Test Experiment",
-        userId: "user-456",
+        EXPERIMENT_ID: "exp-123",
+        EXPERIMENT_SCHEMA: "Test Experiment",
+        USER_ID: "user-456",
       };
 
       // Mock token request
@@ -161,7 +165,7 @@ describe("DatabricksJobsService", () => {
         .reply(400, { message: "Invalid job parameters" });
 
       // Execute trigger job
-      const result = await jobsService.triggerJob(mockParams);
+      const result = await jobsService.triggerJob(jobId, mockParams, experimentId);
 
       // Assert result is failure
       expect(result.isSuccess()).toBe(false);
@@ -170,10 +174,12 @@ describe("DatabricksJobsService", () => {
     });
 
     it("should handle token fetch failure when triggering a job", async () => {
+      const jobId = 12345;
+      const experimentId = "exp-123";
       const mockParams = {
-        experimentId: "exp-123",
-        experimentName: "Test Experiment",
-        userId: "user-456",
+        EXPERIMENT_ID: "exp-123",
+        EXPERIMENT_SCHEMA: "Test Experiment",
+        USER_ID: "user-456",
       };
 
       // Mock token request with error
@@ -182,7 +188,7 @@ describe("DatabricksJobsService", () => {
         .reply(401, { error_description: "Invalid client credentials" });
 
       // Execute trigger job
-      const result = await jobsService.triggerJob(mockParams);
+      const result = await jobsService.triggerJob(jobId, mockParams, experimentId);
 
       // Assert result is failure
       expect(result.isSuccess()).toBe(false);

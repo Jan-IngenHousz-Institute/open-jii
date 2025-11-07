@@ -162,18 +162,46 @@ def sample():
 
 # COMMAND ----------
 
-# DBTITLE 1,Raw Ambyte Data Table Schema (Optional - Auto-inferred from parquet)
-# Schema is inferred automatically from the parquet files written by ambyte_processing_task
-# The processed files contain all columns including:
-# - Time, SigF, RefF, Sun, Leaf, Sig7, Ref7, Actinic, Temp, Res
-# - Full, Type, Count, PTS, PAR, raw, spec, BoardT
-# - ambyte_folder, ambit_index
-# - meta_Actinic, meta_Dark (from df.attrs)
-# - upload_directory, upload_time, processed_at
+# DBTITLE 1,Raw Ambyte Data Table (Dynamic Creation)
+def check_ambyte_volume_exists():
+    """
+    Check if the ambyte volume directory exists by trying to read from it.
+    Returns True if the volume and processed-ambyte directory exist and contain data.
+    """
+    processed_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/processed-ambyte"
+    
+    try:
+        # Try to create a streaming read on the path - this will fail if path doesn't exist
+        # Use cloudFiles format which is what we'll use in the actual table
+        test_stream = (
+            spark.readStream
+            .format("cloudFiles")
+            .option("cloudFiles.format", "parquet")
+            .option("cloudFiles.maxFilesPerTrigger", "1")
+            .load(processed_path)
+        )
+        
+        # If we can create the stream definition without error, the path exists
+        # We don't need to actually start the stream, just validate the path
+        print(f"Ambyte volume found: {processed_path}")
+        return True
+        
+    except Exception as e:
+        print(f"Ambyte volume not available: {processed_path} - {str(e)}")
+        return False
 
-# COMMAND ----------
-
-# DBTITLE 1,Raw Ambyte Data Table
+def create_ambyte_table():
+    """
+    Dynamically create the raw ambyte data table if the volume exists.
+    """
+    if not check_ambyte_volume_exists():
+        print("Ambyte volume does not exist - skipping raw ambyte data table creation")
+        return False
+    
+    print("Ambyte volume found - creating raw ambyte data table")
+    
+    # Generate the table function code
+    table_code = '''
 @dlt.table(
     name=RAW_AMBYTE_TABLE,
     comment="ambyte trace data from processed parquet files (streaming table)"
@@ -200,6 +228,21 @@ def raw_ambyte_data():
         .option("recursiveFileLookup", "true")
         .load(processed_path)
     )
+'''
+    
+    # Execute the table creation code
+    exec(table_code, globals())
+    return True
+
+# Initialize ambyte table creation
+try:
+    ambyte_table_created = create_ambyte_table()
+    if ambyte_table_created:
+        print("Raw ambyte data table created successfully")
+    else:
+        print("Raw ambyte data table skipped - volume not available")
+except Exception as e:
+    print(f"Error during ambyte table creation: {str(e)}")
     
 # COMMAND ----------
 
