@@ -114,3 +114,11 @@ variable "run_as" {
   })
   default = null
 }
+
+variable "queue" {
+  description = "Queue configuration for the job. Allows configuring job queueing behavior."
+  type = object({
+    enabled = bool
+  })
+  default = null
+}

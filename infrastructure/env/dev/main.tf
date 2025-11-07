@@ -317,7 +317,8 @@ module "pipeline_scheduler" {
       parameters = {
         "catalog_name"            = module.databricks_catalog.catalog_name,
         "central_schema"          = "centrum",
-        "experiment_status_table" = "experiment_status"
+        "experiment_status_table" = "experiment_status",
+        "environment"             = upper(var.environment)
       }
 
       depends_on = "trigger_centrum_pipeline"
@@ -338,6 +339,62 @@ module "pipeline_scheduler" {
   depends_on = [module.centrum_pipeline]
 }
 
+module "ambyte_processing_job" {
+  source = "../../modules/databricks/job"
+
+  name        = "Ambyte-Processing-Job-DEV"
+  description = "Processes raw ambyte trace files and saves them in the respective volume in parquet format"
+
+  max_concurrent_runs           = 1 # Limit concurrent runs when queueing is enabled
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  # Enable job queueing
+  queue = {
+    enabled = true
+  }
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key           = "process_ambyte_data"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/ambyte_processing_task"
+
+      parameters = {
+        EXPERIMENT_ID     = "{{EXPERIMENT_ID}}"
+        EXPERIMENT_SCHEMA = "{{EXPERIMENT_SCHEMA}}"
+        UPLOAD_DIRECTORY  = "{{UPLOAD_DIRECTORY}}"
+        YEAR_PREFIX       = "{{YEAR_PREFIX}}"
+        CATALOG_NAME      = module.databricks_catalog.catalog_name
+      }
+    }
+  ]
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
 module "experiment_provisioning_job" {
   source = "../../modules/databricks/job"
 
@@ -348,6 +405,11 @@ module "experiment_provisioning_job" {
   use_serverless                = true
   continuous                    = false
   serverless_performance_target = "STANDARD"
+
+  # Enable job queueing
+  queue = {
+    enabled = true
+  }
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
@@ -373,6 +435,7 @@ module "experiment_provisioning_job" {
         "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
         "catalog_name"             = module.databricks_catalog.catalog_name
         "central_schema"           = "centrum"
+        "environment"              = upper(var.environment)
       }
     },
     {

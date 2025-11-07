@@ -34,6 +34,7 @@ class PipelineConfig:
     catalog_name: str
     central_schema: str
     experiment_pipeline_path: str
+    environment: str = "DEV"
     
     @property
     def experiment_schema(self) -> str:
@@ -45,7 +46,7 @@ class PipelineConfig:
     def pipeline_name(self) -> str:
         """Standardized pipeline name."""
         clean_name = self.experiment_name.lower().strip().replace(' ', '_')
-        return f"exp-{clean_name}-DLT-Pipeline-DEV"
+        return f"exp-{clean_name}-DLT-Pipeline-{self.environment.upper()}"
     
     def validate(self) -> None:
         """Validate required configuration parameters."""
@@ -72,7 +73,6 @@ class PipelineCreationResult:
 # COMMAND ----------
 
 # DBTITLE 1,Parameter Extraction and Validation
-
 def extract_parameters() -> PipelineConfig:
     """Extract and validate parameters from Databricks widgets."""
     try:
@@ -81,7 +81,8 @@ def extract_parameters() -> PipelineConfig:
             experiment_name=dbutils.widgets.get("experiment_name"),
             catalog_name=dbutils.widgets.get("catalog_name"),
             central_schema=dbutils.widgets.get("central_schema"),
-            experiment_pipeline_path=dbutils.widgets.get("experiment_pipeline_path")
+            experiment_pipeline_path=dbutils.widgets.get("experiment_pipeline_path"),
+            environment=dbutils.widgets.get("environment") if dbutils.widgets.get("environment") else "DEV"
         )
         
         config.validate()
@@ -146,6 +147,7 @@ class ExperimentPipelineManager:
                 "EXPERIMENT_ID": config.experiment_id,
                 "EXPERIMENT_NAME": config.experiment_name,
                 "EXPERIMENT_SCHEMA": config.experiment_schema,
+                "CATALOG_NAME": config.catalog_name,
                 "CENTRAL_SCHEMA": config.central_schema,
                 "CENTRAL_SILVER_TABLE": "clean_data",
                 "pipeline.name": config.pipeline_name
@@ -234,7 +236,6 @@ class ExperimentPipelineManager:
 # COMMAND ----------
 
 # DBTITLE 1,Pipeline Orchestration
-
 def create_or_update_experiment_pipeline(config: PipelineConfig) -> PipelineCreationResult:
     """
     Main orchestration function to create or update experiment pipeline.
@@ -291,7 +292,6 @@ def print_execution_summary(result: PipelineCreationResult) -> None:
 # COMMAND ----------
 
 # DBTITLE 1,Main Execution
-
 def main() -> None:
     """Main execution function with comprehensive error handling."""
     try:

@@ -47,6 +47,14 @@ resource "databricks_job" "this" {
     }
   }
 
+  # Queue configuration
+  dynamic "queue" {
+    for_each = var.queue != null ? [1] : []
+    content {
+      enabled = var.queue.enabled
+    }
+  }
+
   dynamic "task" {
     for_each = var.tasks
     content {
