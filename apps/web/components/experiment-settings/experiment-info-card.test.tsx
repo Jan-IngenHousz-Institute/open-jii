@@ -170,7 +170,7 @@ describe("<ExperimentInfoCard />", () => {
       expect(formatDateMock).toHaveBeenCalledWith(mockExperiment.updatedAt);
     });
 
-    it("displays 'Unknown' when no admin member is found", () => {
+    it("displays 'Unknown User' when no admin member is found", () => {
       useExperimentMembersMock.mockReturnValue({
         data: {
           body: [
@@ -193,7 +193,7 @@ describe("<ExperimentInfoCard />", () => {
         <ExperimentInfoCard experimentId={experimentId} experiment={mockExperiment} />,
       );
 
-      expect(screen.getByText("Unknown")).toBeInTheDocument();
+      expect(screen.getByText("Unknown User")).toBeInTheDocument();
     });
 
     it("renders danger zone section", () => {
@@ -527,7 +527,7 @@ describe("<ExperimentInfoCard />", () => {
         <ExperimentInfoCard experimentId={experimentId} experiment={mockExperiment} />,
       );
 
-      expect(screen.getByText("Unknown")).toBeInTheDocument();
+      expect(screen.getByText("Unknown User")).toBeInTheDocument();
     });
 
     it("handles undefined members data body gracefully", () => {
@@ -541,7 +541,7 @@ describe("<ExperimentInfoCard />", () => {
         <ExperimentInfoCard experimentId={experimentId} experiment={mockExperiment} />,
       );
 
-      expect(screen.getByText("Unknown")).toBeInTheDocument();
+      expect(screen.getByText("Unknown User")).toBeInTheDocument();
     });
 
     it("handles member with null email", () => {

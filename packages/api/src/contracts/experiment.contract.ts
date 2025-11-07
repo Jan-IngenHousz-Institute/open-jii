@@ -3,10 +3,12 @@ import { initContract } from "@ts-rest/core";
 import {
   zExperiment,
   zExperimentList,
+  zExperimentMember,
   zExperimentMemberList,
   zErrorResponse,
   zCreateExperimentBody,
   zAddExperimentMembersBody,
+  zUpdateExperimentMemberRoleBody,
   zUpdateExperimentBody,
   zExperimentFilterQuery,
   zCreateExperimentResponse,
@@ -166,6 +168,21 @@ export const experimentContract = c.router({
     },
     summary: "Remove experiment member",
     description: "Removes a member from the experiment",
+  },
+
+  updateExperimentMemberRole: {
+    method: "PATCH",
+    path: "/api/v1/experiments/:id/members/:memberId",
+    pathParams: zExperimentMemberPathParam,
+    body: zUpdateExperimentMemberRoleBody,
+    responses: {
+      200: zExperimentMember,
+      404: zErrorResponse,
+      403: zErrorResponse,
+      400: zErrorResponse,
+    },
+    summary: "Update experiment member role",
+    description: "Updates the role of an existing experiment member",
   },
 
   getExperimentData: {

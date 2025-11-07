@@ -121,4 +121,63 @@ export class ExperimentMemberRepository {
       return membership[0].role;
     });
   }
+
+  async getAdminCount(experimentId: string): Promise<Result<number>> {
+    return tryCatch(async () => {
+      const admins = await this.database
+        .select()
+        .from(experimentMembers)
+        .where(
+          and(
+            eq(experimentMembers.experimentId, experimentId),
+            eq(experimentMembers.role, "admin"),
+          ),
+        );
+
+      return admins.length;
+    });
+  }
+
+  async updateMemberRole(
+    experimentId: string,
+    userId: string,
+    role: ExperimentMemberRole,
+  ): Promise<Result<ExperimentMemberDto>> {
+    return tryCatch(async () => {
+      await this.database
+        .update(experimentMembers)
+        .set({ role })
+        .where(
+          and(
+            eq(experimentMembers.experimentId, experimentId),
+            eq(experimentMembers.userId, userId),
+          ),
+        );
+
+      const result = await this.database
+        .select({
+          experimentId: experimentMembers.experimentId,
+          role: experimentMembers.role,
+          joinedAt: experimentMembers.joinedAt,
+          user: {
+            id: users.id,
+            firstName: profiles.firstName,
+            lastName: profiles.lastName,
+            email: users.email,
+          },
+        })
+        .from(experimentMembers)
+        .innerJoin(users, eq(experimentMembers.userId, users.id))
+        .innerJoin(profiles, eq(users.id, profiles.userId))
+        .where(
+          and(
+            eq(experimentMembers.experimentId, experimentId),
+            eq(experimentMembers.userId, userId),
+          ),
+        )
+        .limit(1);
+
+      return result[0];
+    });
+  }
 }

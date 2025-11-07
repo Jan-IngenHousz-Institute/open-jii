@@ -42,15 +42,16 @@ export function ExperimentInfoCard({ experimentId, experiment }: ExperimentInfoC
     return membersData?.body ?? [];
   }, [membersData]);
 
-  // Find the admin member (creator)
+  // Find the member that corresponds to the experiment creator UUID
   const adminMember = useMemo(() => {
-    return members.find((m) => m.role === "admin");
-  }, [members]);
+    return members.find((m) => m.user.id === experiment.createdBy);
+  }, [members, experiment.createdBy]);
 
-  // Helper to get name/email from admin member
+  // Helper to get name/email from the resolved member
   const adminName = adminMember
     ? `${adminMember.user.firstName} ${adminMember.user.lastName}`
-    : "Unknown";
+    : "Unknown User";
+
   const adminEmail = adminMember?.user.email;
 
   const { mutateAsync: deleteExperiment, isPending: isDeleting } = useExperimentDelete();

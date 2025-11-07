@@ -1,10 +1,21 @@
 import { formatDate } from "@/util/date";
 import { Trash2, Mail, Calendar } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { parseApiError } from "~/util/apiError";
 
-import type { UserProfile } from "@repo/api";
+import type { UserProfile, ExperimentMemberRole } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Button, Badge } from "@repo/ui/components";
+import {
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components";
+import { toast } from "@repo/ui/hooks";
+
+import { useExperimentMemberRoleUpdate } from "../../hooks/experiment/useExperimentMemberRoleUpdate/useExperimentMemberRoleUpdate";
 
 interface MemberWithUserInfo {
   role: string;
@@ -26,6 +37,11 @@ interface MemberListProps {
   isRemovingMember: boolean;
   removingMemberId: string | null;
   adminCount?: number;
+  experimentId?: string;
+  currentUserRole?: ExperimentMemberRole;
+  currentUserId?: string;
+  newExperiment?: boolean;
+  onUpdateMemberRole?: (userId: string, role: ExperimentMemberRole) => Promise<void> | void;
 }
 
 export function MemberList({
@@ -36,8 +52,43 @@ export function MemberList({
   isRemovingMember,
   removingMemberId,
   adminCount = 0,
+  experimentId,
+  currentUserRole = "member",
+  currentUserId,
+  newExperiment = false,
+  onUpdateMemberRole,
 }: MemberListProps) {
   const { t } = useTranslation();
+  const [updatingMemberId, setUpdatingMemberId] = useState<string | null>(null);
+  const { mutateAsync: updateMemberRole } = useExperimentMemberRoleUpdate();
+  const isCurrentUserAdmin = currentUserRole === "admin";
+
+  // Handle role change
+  const handleRoleChange = async (userId: string, newRole: ExperimentMemberRole) => {
+    if (newExperiment && typeof onUpdateMemberRole === "function") {
+      setUpdatingMemberId(userId);
+      await onUpdateMemberRole(userId, newRole);
+      setUpdatingMemberId(null);
+
+      return;
+    }
+
+    if (!experimentId) return;
+
+    setUpdatingMemberId(userId);
+    try {
+      await updateMemberRole({
+        params: { id: experimentId, memberId: userId },
+        body: { role: newRole },
+      });
+
+      toast({ description: t("experimentSettings.roleUpdated") });
+    } catch (err) {
+      toast({ description: parseApiError(err)?.message, variant: "destructive" });
+    } finally {
+      setUpdatingMemberId(null);
+    }
+  };
 
   // Convert members and users to membersWithUserInfo if needed
   const membersWithUserInfo = useMemo(() => {
@@ -111,16 +162,37 @@ export function MemberList({
               </div>
             </div>
 
-            <div className="flex flex-shrink-0 items-center space-x-3 pl-4">
-              <Badge variant="default" className="whitespace-nowrap">
-                {member.role}
-              </Badge>
+            <div className="flex flex-shrink-0 flex-col-reverse items-end space-x-3 pl-4 md:flex-row md:items-center">
+              <Select
+                value={member.role}
+                onValueChange={(value) =>
+                  handleRoleChange(member.user.userId, value as ExperimentMemberRole)
+                }
+                disabled={
+                  !newExperiment &&
+                  (!experimentId ||
+                    updatingMemberId === member.user.userId ||
+                    isLastAdmin ||
+                    !isCurrentUserAdmin)
+                }
+              >
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="member">{t("experimentSettings.roleMember")}</SelectItem>
+                  <SelectItem value="admin">{t("experimentSettings.roleAdmin")}</SelectItem>
+                </SelectContent>
+              </Select>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => onRemoveMember(member.user.userId)}
                 disabled={
-                  (isRemovingMember && removingMemberId === member.user.userId) || isLastAdmin
+                  !newExperiment &&
+                  ((isRemovingMember && removingMemberId === member.user.userId) ||
+                    isLastAdmin ||
+                    (!isCurrentUserAdmin && member.user.userId !== currentUserId))
                 }
                 title={
                   isLastAdmin

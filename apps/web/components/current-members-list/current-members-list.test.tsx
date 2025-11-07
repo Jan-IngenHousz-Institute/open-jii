@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
@@ -28,6 +29,18 @@ interface StrictMember {
 
 /* ------------------------------------ Mocks ------------------------------------ */
 
+// Mock useExperimentMemberRoleUpdate to avoid ts-rest dependency
+vi.mock(
+  "../../hooks/experiment/useExperimentMemberRoleUpdate/useExperimentMemberRoleUpdate",
+  () => ({
+    useExperimentMemberRoleUpdate: () => ({
+      mutateAsync: vi.fn(),
+      mutate: vi.fn(),
+      isPending: false,
+    }),
+  }),
+);
+
 // i18n – returns the key (intentionally dumb)
 vi.mock("@repo/i18n", () => ({
   useTranslation: () => ({
@@ -52,6 +65,7 @@ const mkUser = (over: Partial<StrictUserProfile> = {}): StrictUserProfile => {
     email: "ada@example.com",
     bio: null,
     organization: undefined,
+    activated: null,
     ...over,
   };
 };
@@ -61,6 +75,13 @@ const mkMember = (over: Partial<StrictMember> = {}): StrictMember => ({
   role: over.role,
 });
 
+/* --------------------------------- Helpers ---------------------------------- */
+
+const renderWithProvider = (ui: React.ReactElement) => {
+  const queryClient = new QueryClient();
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+};
+
 /* ----------------------------------- Tests ------------------------------------ */
 
 describe("<MemberList />", () => {
@@ -69,7 +90,7 @@ describe("<MemberList />", () => {
   });
 
   it("renders empty state when no membersWithUserInfo and no members", () => {
-    render(
+    renderWithProvider(
       <MemberList
         onRemoveMember={() => {
           /* No op */
@@ -92,9 +113,9 @@ describe("<MemberList />", () => {
       lastName: "Hopper",
       email: "grace@example.com",
     });
-    const member: StrictMember = mkMember({ userId: "user-2" });
+    const member: StrictMember = mkMember({ userId: "user-2", role: "member" });
 
-    render(
+    renderWithProvider(
       <MemberList
         members={[member]}
         users={[user]}
@@ -102,13 +123,14 @@ describe("<MemberList />", () => {
         isRemovingMember={false}
         removingMemberId={null}
         adminCount={0}
+        newExperiment={true}
       />,
     );
 
     // Name + email present
     expect(screen.getByText("Grace Hopper")).toBeInTheDocument();
     expect(screen.getByText("grace@example.com")).toBeInTheDocument();
-    expect(screen.getByText("experimentSettings.defaultRole")).toBeInTheDocument();
+    expect(screen.getByText("experimentSettings.roleMember")).toBeInTheDocument();
     expect(screen.getByText(/experimentSettings\.joined/)).toBeInTheDocument();
 
     const removeBtn = screen.getByRole("button", { name: "experimentSettings.removeMember" });
@@ -119,7 +141,7 @@ describe("<MemberList />", () => {
   it("uses provided membersWithUserInfo as-is, shows key for no email, and disables last admin removal", () => {
     const onRemove = vi.fn();
 
-    render(
+    renderWithProvider(
       <MemberList
         membersWithUserInfo={[
           {
@@ -138,6 +160,9 @@ describe("<MemberList />", () => {
         isRemovingMember={false}
         removingMemberId={null}
         adminCount={1}
+        experimentId="exp-1"
+        currentUserRole="admin"
+        currentUserId="current-user"
       />,
     );
 
@@ -149,7 +174,8 @@ describe("<MemberList />", () => {
     // Joined label (key) and formatted date both present (could be split by nodes)
     expect(screen.getByText(/experimentSettings\.joined/)).toBeInTheDocument();
     expect(screen.getByText(/FMT\(2023-01-02\)/, { exact: false })).toBeInTheDocument();
-    expect(screen.getByText("admin")).toBeInTheDocument();
+
+    expect(screen.getByText("experimentSettings.roleAdmin")).toBeInTheDocument();
 
     const btn = screen.getByRole("button", { name: "experimentSettings.cannotRemoveLastAdmin" });
     expect(btn).toBeDisabled();
@@ -162,7 +188,7 @@ describe("<MemberList />", () => {
     const u1 = mkUser({ userId: "u1", id: "u1", firstName: "First", lastName: "User" });
     const u2 = mkUser({ userId: "u2", id: "u2", firstName: "Second", lastName: "User" });
 
-    render(
+    renderWithProvider(
       <MemberList
         membersWithUserInfo={[
           { role: "member", joinedAt: "2024-01-01T00:00:00.000Z", user: u1 },
@@ -172,10 +198,15 @@ describe("<MemberList />", () => {
         isRemovingMember={true}
         removingMemberId="u2"
         adminCount={0}
+        experimentId="exp-1"
+        currentUserRole="admin"
+        currentUserId="current-user"
       />,
     );
 
-    const buttons = screen.getAllByRole("button");
+    const buttons = screen.getAllByRole("button", { name: "experimentSettings.removeMember" });
+    expect(buttons).toHaveLength(2);
+
     expect(buttons[0]).not.toBeDisabled();
     expect(buttons[1]).toBeDisabled();
 

@@ -443,4 +443,281 @@ describe("ExperimentMembersController", () => {
       await testApp.delete(removePath).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
     });
   });
+
+  describe("updateExperimentMemberRole", () => {
+    it("should update a member's role from member to admin", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Role Update",
+        userId: testUserId,
+      });
+
+      // Add a regular member
+      const memberId = await testApp.createTestUser({
+        email: "member@example.com",
+      });
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      // Update the member's role to admin
+      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+        id: experiment.id,
+        memberId: memberId,
+      });
+
+      const response = await testApp
+        .patch(path)
+        .withAuth(testUserId)
+        .send({ role: "admin" })
+        .expect(StatusCodes.OK);
+
+      // Assert the response
+      expect(response.body).toMatchObject({
+        role: "admin",
+        experimentId: experiment.id,
+        user: expect.objectContaining({
+          id: memberId,
+        }) as Partial<UserDto>,
+      });
+
+      // Verify with a list request
+      const listPath = testApp.resolvePath(contract.experiments.listExperimentMembers.path, {
+        id: experiment.id,
+      });
+
+      const listResponse: SuperTestResponse<ExperimentMemberList> = await testApp
+        .get(listPath)
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      const updatedMember = listResponse.body.find((m) => m.user.id === memberId);
+      expect(updatedMember?.role).toBe("admin");
+    });
+
+    it("should update a member's role from admin to member", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Admin Demotion",
+        userId: testUserId,
+      });
+
+      // Add another admin (so we have 2 admins)
+      const adminId = await testApp.createTestUser({
+        email: "admin@example.com",
+      });
+      await testApp.addExperimentMember(experiment.id, adminId, "admin");
+
+      // Demote the admin to member
+      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+        id: experiment.id,
+        memberId: adminId,
+      });
+
+      const response = await testApp
+        .patch(path)
+        .withAuth(testUserId)
+        .send({ role: "member" })
+        .expect(StatusCodes.OK);
+
+      // Assert the response
+      expect(response.body).toMatchObject({
+        role: "member",
+        experimentId: experiment.id,
+        user: expect.objectContaining({
+          id: adminId,
+        }) as Partial<UserDto>,
+      });
+    });
+
+    it("should return 404 when updating role in non-existent experiment", async () => {
+      const nonExistentId = faker.string.uuid();
+      const memberId = await testApp.createTestUser({
+        email: "member@example.com",
+      });
+
+      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+        id: nonExistentId,
+        memberId: memberId,
+      });
+
+      await testApp
+        .patch(path)
+        .withAuth(testUserId)
+        .send({ role: "admin" })
+        .expect(StatusCodes.NOT_FOUND)
+        .expect(({ body }: { body: ErrorResponse }) => {
+          expect(body.message).toContain("not found");
+        });
+    });
+
+    it("should return 400 for invalid role value", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Invalid Role",
+        userId: testUserId,
+      });
+
+      // Add a member
+      const memberId = await testApp.createTestUser({
+        email: "member@example.com",
+      });
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+        id: experiment.id,
+        memberId: memberId,
+      });
+
+      // Invalid role
+      await testApp
+        .patch(path)
+        .withAuth(testUserId)
+        .send({ role: "invalid-role" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 400 for invalid UUIDs", async () => {
+      const invalidId = "not-a-uuid";
+      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+        id: invalidId,
+        memberId: "also-not-a-uuid",
+      });
+
+      await testApp
+        .patch(path)
+        .withAuth(testUserId)
+        .send({ role: "admin" })
+        .expect(StatusCodes.BAD_REQUEST);
+
+      // Invalid member ID
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Invalid Member ID",
+        userId: testUserId,
+      });
+
+      const pathWithInvalidMember = testApp.resolvePath(
+        contract.experiments.updateExperimentMemberRole.path,
+        {
+          id: experiment.id,
+          memberId: "not-a-valid-uuid",
+        },
+      );
+
+      await testApp
+        .patch(pathWithInvalidMember)
+        .withAuth(testUserId)
+        .send({ role: "admin" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 400 when demoting the last admin", async () => {
+      // Create an experiment - creator is the only admin
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Last Admin Demotion",
+        userId: testUserId,
+      });
+
+      // Attempt to demote self (the only admin)
+      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+        id: experiment.id,
+        memberId: testUserId,
+      });
+
+      await testApp
+        .patch(path)
+        .withAuth(testUserId)
+        .send({ role: "member" })
+        .expect(StatusCodes.BAD_REQUEST)
+        .expect(({ body }: { body: ErrorResponse }) => {
+          expect(body.message).toContain("cannot demote the last admin");
+        });
+    });
+
+    it("should return 403 when non-admin tries to update role", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Non-Admin Update",
+        userId: testUserId,
+      });
+
+      // Add a regular member who will try to update roles
+      const nonAdminId = await testApp.createTestUser({
+        email: "nonadmin@example.com",
+      });
+      await testApp.addExperimentMember(experiment.id, nonAdminId, "member");
+
+      // Add another member to update
+      const memberId = await testApp.createTestUser({
+        email: "member@example.com",
+      });
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      // Try to update role as non-admin
+      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+        id: experiment.id,
+        memberId: memberId,
+      });
+
+      await testApp
+        .patch(path)
+        .withAuth(nonAdminId)
+        .send({ role: "admin" })
+        .expect(StatusCodes.FORBIDDEN)
+        .expect(({ body }: { body: ErrorResponse }) => {
+          expect(body.message).toContain("Only admins can update member roles");
+        });
+    });
+
+    it("should return 403 when updating role in archived experiment", async () => {
+      // Create an archived experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Archived Experiment",
+        userId: testUserId,
+        status: "archived",
+      });
+
+      // Add a member
+      const memberId = await testApp.createTestUser({
+        email: "member@example.com",
+      });
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      // Try to update role
+      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+        id: experiment.id,
+        memberId: memberId,
+      });
+
+      await testApp
+        .patch(path)
+        .withAuth(testUserId)
+        .send({ role: "admin" })
+        .expect(StatusCodes.FORBIDDEN)
+        .expect(({ body }: { body: ErrorResponse }) => {
+          expect(body.message).toContain("Cannot update member roles in archived experiments");
+        });
+    });
+
+    it("should return 401 if not authenticated", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Role Update",
+        userId: testUserId,
+      });
+
+      const memberId = await testApp.createTestUser({
+        email: "member@example.com",
+      });
+      await testApp.addExperimentMember(experiment.id, memberId, "member");
+
+      const path = testApp.resolvePath(contract.experiments.updateExperimentMemberRole.path, {
+        id: experiment.id,
+        memberId: memberId,
+      });
+
+      await testApp
+        .patch(path)
+        .withoutAuth()
+        .send({ role: "admin" })
+        .expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
 });

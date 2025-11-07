@@ -667,6 +667,10 @@ export const zAddExperimentMembersBody = z.object({
   ),
 });
 
+export const zUpdateExperimentMemberRoleBody = z.object({
+  role: zExperimentMemberRole.describe("New role to assign to the member"),
+});
+
 export const zExperimentFilterQuery = z.object({
   filter: z.enum(["member"]).optional().describe("Filter experiments by relationship to the user"),
   status: zExperimentStatus.optional().describe("Filter experiments by their status"),
@@ -804,6 +808,7 @@ export const zDownloadExperimentDataResponse = z.object({
 export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;
 export type UpdateExperimentBody = z.infer<typeof zUpdateExperimentBody>;
 export type AddExperimentMembersBody = z.infer<typeof zAddExperimentMembersBody>;
+export type UpdateExperimentMemberRoleBody = z.infer<typeof zUpdateExperimentMemberRoleBody>;
 export type AddExperimentLocationsBody = z.infer<typeof zAddExperimentLocationsBody>;
 export type UpdateExperimentLocationsBody = z.infer<typeof zUpdateExperimentLocationsBody>;
 export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;
