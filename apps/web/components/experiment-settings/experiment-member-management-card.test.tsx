@@ -214,7 +214,7 @@ describe("<ExperimentMemberManagement />", () => {
     const katherineButton = await screen.findByRole("button", { name: /Katherine Johnson/i });
     fireEvent.click(katherineButton);
 
-    const addBtn = screen.getByRole("button", { name: "Add" });
+    const addBtn = screen.getByRole("button", { name: "common.add" });
     expect(addBtn).not.toBeDisabled();
 
     fireEvent.click(addBtn);
@@ -251,7 +251,7 @@ describe("<ExperimentMemberManagement />", () => {
     useDebounceMock.mockImplementationOnce((v: string) => [v, false]);
     renderWithClient();
 
-    const addBtn = screen.getByRole("button", { name: "Add" });
+    const addBtn = screen.getByRole("button", { name: "common.add" });
     expect(addBtn).toBeDisabled();
 
     useDebounceMock.mockImplementationOnce((v: string) => [v, true]);
@@ -261,7 +261,7 @@ describe("<ExperimentMemberManagement />", () => {
     });
 
     renderWithClient();
-    const addBtns = screen.getAllByRole("button", { name: "Add" });
+    const addBtns = screen.getAllByRole("button", { name: "common.add" });
     expect(addBtns[addBtns.length - 1]).toBeDisabled();
   });
 });

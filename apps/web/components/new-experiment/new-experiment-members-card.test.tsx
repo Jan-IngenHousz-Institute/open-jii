@@ -152,11 +152,11 @@ describe("<NewExperimentMembersCard />", () => {
 
     // Click Add button
     await waitFor(() => {
-      const addBtn = screen.getByRole("button", { name: "Add" });
+      const addBtn = screen.getByRole("button", { name: "common.add" });
       expect(addBtn).not.toBeDisabled();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.click(screen.getByRole("button", { name: "common.add" }));
 
     // Verify member was added to the list
     await waitFor(() => {

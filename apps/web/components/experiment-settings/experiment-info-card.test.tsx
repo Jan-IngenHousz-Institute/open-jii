@@ -193,7 +193,7 @@ describe("<ExperimentInfoCard />", () => {
         <ExperimentInfoCard experimentId={experimentId} experiment={mockExperiment} />,
       );
 
-      expect(screen.getByText("Unknown User")).toBeInTheDocument();
+      expect(screen.getByText("experimentSettings.unknownUser")).toBeInTheDocument();
     });
 
     it("renders danger zone section", () => {
@@ -527,7 +527,7 @@ describe("<ExperimentInfoCard />", () => {
         <ExperimentInfoCard experimentId={experimentId} experiment={mockExperiment} />,
       );
 
-      expect(screen.getByText("Unknown User")).toBeInTheDocument();
+      expect(screen.getByText("experimentSettings.unknownUser")).toBeInTheDocument();
     });
 
     it("handles undefined members data body gracefully", () => {
@@ -541,7 +541,7 @@ describe("<ExperimentInfoCard />", () => {
         <ExperimentInfoCard experimentId={experimentId} experiment={mockExperiment} />,
       );
 
-      expect(screen.getByText("Unknown User")).toBeInTheDocument();
+      expect(screen.getByText("experimentSettings.unknownUser")).toBeInTheDocument();
     });
 
     it("handles member with null email", () => {

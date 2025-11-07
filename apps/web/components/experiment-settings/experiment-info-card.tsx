@@ -35,6 +35,9 @@ interface ExperimentInfoCardProps {
 }
 
 export function ExperimentInfoCard({ experimentId, experiment }: ExperimentInfoCardProps) {
+  const { t } = useTranslation();
+  const locale = useLocale();
+
   // Fetch experiment members to get admin info
   const { data: membersData } = useExperimentMembers(experimentId);
 
@@ -50,7 +53,7 @@ export function ExperimentInfoCard({ experimentId, experiment }: ExperimentInfoC
   // Helper to get name/email from the resolved member
   const adminName = adminMember
     ? `${adminMember.user.firstName} ${adminMember.user.lastName}`
-    : "Unknown User";
+    : t("experimentSettings.unknownUser");
 
   const adminEmail = adminMember?.user.email;
 
@@ -61,9 +64,6 @@ export function ExperimentInfoCard({ experimentId, experiment }: ExperimentInfoC
   const router = useRouter();
 
   const isArchived = experiment.status === "archived";
-
-  const { t } = useTranslation();
-  const locale = useLocale();
 
   const handleDeleteExperiment = async () => {
     await deleteExperiment({ params: { id: experimentId } });
