@@ -412,6 +412,132 @@ describe("YAxisConfiguration", () => {
       expect(screen.getAllByText("double").length).toBeGreaterThanOrEqual(2);
       expect(screen.getByText("integer")).toBeInTheDocument();
     });
+
+    it("should auto-fill Y-axis title when first series column is selected", async () => {
+      const user = userEvent.setup();
+
+      const yAxisDataSources = [
+        {
+          field: { id: "y1", columnName: "", role: "y" },
+          index: 1,
+        },
+      ];
+
+      render(
+        <TestWrapper
+          yAxisDataSources={yAxisDataSources}
+          defaultValues={{
+            dataConfig: {
+              tableName: "test-table",
+              dataSources: [
+                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+                { tableName: "test-table", columnName: "", role: "y", alias: "" },
+              ],
+            },
+          }}
+        />,
+      );
+
+      const selects = screen.getAllByRole("combobox");
+      const columnSelect = selects[0];
+
+      await user.click(columnSelect);
+
+      const option = screen.getByRole("option", { name: /temperature/ });
+      await user.click(option);
+
+      // Check if Y-axis title input shows in the first series styling section
+      const titleInputs = screen.getAllByPlaceholderText(/enterAxisTitle/i);
+      expect(titleInputs[0]).toHaveValue("temperature");
+    });
+
+    it("should always update Y-axis title when first series column changes, even if title exists", async () => {
+      const user = userEvent.setup();
+
+      const yAxisDataSources = [
+        {
+          field: { id: "y1", columnName: "temperature", role: "y" },
+          index: 1,
+        },
+      ];
+
+      render(
+        <TestWrapper
+          yAxisDataSources={yAxisDataSources}
+          defaultValues={{
+            config: {
+              yAxisTitle: "Existing Title",
+            },
+            dataConfig: {
+              tableName: "test-table",
+              dataSources: [
+                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+              ],
+            },
+          }}
+        />,
+      );
+
+      const selects = screen.getAllByRole("combobox");
+      const columnSelect = selects[0];
+
+      await user.click(columnSelect);
+
+      const option = screen.getByRole("option", { name: /humidity/ });
+      await user.click(option);
+
+      // Check if Y-axis title input shows in the first series styling section
+      const titleInputs = screen.getAllByPlaceholderText(/enterAxisTitle/i);
+      expect(titleInputs[0]).toHaveValue("humidity");
+    });
+
+    it("should not update Y-axis title when non-first series column is selected", async () => {
+      const user = userEvent.setup();
+
+      const yAxisDataSources = [
+        {
+          field: { id: "y1", columnName: "temperature", role: "y" },
+          index: 1,
+        },
+        {
+          field: { id: "y2", columnName: "humidity", role: "y" },
+          index: 2,
+        },
+      ];
+
+      render(
+        <TestWrapper
+          yAxisDataSources={yAxisDataSources}
+          defaultValues={{
+            config: {
+              yAxisTitle: "Initial Title",
+            },
+            dataConfig: {
+              tableName: "test-table",
+              dataSources: [
+                { tableName: "test-table", columnName: "time", role: "x", alias: "" },
+                { tableName: "test-table", columnName: "temperature", role: "y", alias: "" },
+                { tableName: "test-table", columnName: "humidity", role: "y", alias: "" },
+              ],
+            },
+          }}
+        />,
+      );
+
+      // Find the second series column select (should be index 2 in comboboxes)
+      const selects = screen.getAllByRole("combobox");
+      const secondSeriesColumnSelect = selects[2]; // First is first series column, second is first series type, third is second series column
+
+      await user.click(secondSeriesColumnSelect);
+
+      const option = screen.getByRole("option", { name: /pressure/ });
+      await user.click(option);
+
+      // Y-axis title should remain unchanged
+      const titleInputs = screen.getAllByPlaceholderText(/enterAxisTitle/i);
+      expect(titleInputs[0]).toHaveValue("Initial Title");
+    });
   });
 
   describe("Series Name Input", () => {

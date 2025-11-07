@@ -50,12 +50,9 @@ export default function YAxisConfiguration({
   const { t } = useTranslation("experimentVisualizations");
 
   const handleYAxisColumnChange = (value: string, seriesIndex: number) => {
-    // Auto-fill Y-axis title if it's empty and this is the first series
+    // Auto-fill Y-axis title for the first series
     if (seriesIndex === 0) {
-      const currentYAxisTitle = form.getValues("config.yAxisTitle");
-      if (!currentYAxisTitle || currentYAxisTitle === "") {
-        form.setValue("config.yAxisTitle", value);
-      }
+      form.setValue("config.yAxisTitle", value);
     }
 
     // Handle alias assignment for the data source
@@ -67,12 +64,6 @@ export default function YAxisConfiguration({
         `dataConfig.dataSources.${yAxisDataSources[seriesIndex]?.index}.alias` as const,
         value,
       );
-    }
-
-    // Auto-fill Y-axis title with the selected column name
-    const currentYAxisTitle = form.getValues("config.yAxisTitle");
-    if (!currentYAxisTitle || currentYAxisTitle === "") {
-      form.setValue("config.yAxisTitle", value);
     }
   };
 
