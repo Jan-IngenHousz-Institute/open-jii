@@ -10,6 +10,8 @@ from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType, MapType, ArrayType, IntegerType
 from delta.tables import DeltaTable
+from pyspark import pipelines as dp
+import requests
 
 # COMMAND ----------
 
@@ -37,6 +39,8 @@ sensor_schema = StructType([
 # COMMAND ----------
 
 # DBTITLE 1,Configuration
+ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
+
 BRONZE_TABLE = spark.conf.get("BRONZE_TABLE", "raw_data")
 SILVER_TABLE = spark.conf.get("SILVER_TABLE", "clean_data")
 
@@ -45,6 +49,8 @@ KINESIS_STREAM_NAME = spark.conf.get("KINESIS_STREAM_NAME")
 CHECKPOINT_PATH = spark.conf.get("CHECKPOINT_PATH")
 SERVICE_CREDENTIAL_NAME = spark.conf.get("SERVICE_CREDENTIAL_NAME")
 
+# Slack notification configuration
+MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
 
 # COMMAND ----------
 
@@ -277,3 +283,40 @@ def experiment_status():
         "status",
         "status_updated_at"
     )
+
+# COMMAND ----------
+
+# DBTITLE 1,Event Hook - Slack Notifications
+@dp.on_event_hook(max_allowable_consecutive_failures=3)
+def send_slack_notifications(event):
+    """Send Slack notifications for pipeline failures and stops."""
+
+    # Get the webhook URL from the secret scope
+    SLACK_WEBHOOK_URL = dbutils.secrets.get(scope=f"event-hooks-{ENVIRONMENT}", key="slack-webhook-url")
+    SLACK_HEADERS = {
+        'Content-Type': 'application/json'
+    }
+
+    # Check for failure/stop events in progress updates
+    if (
+        event['event_type'] in ['update_progress', 'flow_progress', 'operation_progress']
+        and event['details'].get(event['event_type'], {}).get('state') in ['FAILED', 'STOPPED']
+    ):
+        # Send simple Slack notification
+        event_type = event['event_type']
+        state = event['details'].get(event['event_type'], {}).get('state')
+        
+        payload = {
+            "channel": MONITORING_SLACK_CHANNEL,
+            "text": f"🚨 Central Pipeline {state}: {event_type} in {ENVIRONMENT.upper()} environment"
+        }
+        
+        try:
+            response = requests.post(
+                url=SLACK_WEBHOOK_URL,
+                headers=SLACK_HEADERS,
+                json=payload
+            )
+            print(f"Slack notification sent: {event_type} - {state}")
+        except Exception as e:
+            print(f"Failed to send Slack notification: {e}")

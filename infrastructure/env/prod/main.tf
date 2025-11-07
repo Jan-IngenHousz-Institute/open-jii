@@ -147,6 +147,41 @@ module "node_service_principal" {
   }
 }
 
+# Create Slack notification destination
+module "slack_notification_destination" {
+  source = "../../modules/databricks/notification-destination"
+
+  display_name      = "slack-notifications-${var.environment}"
+  slack_webhook_url = var.slack_webhook_url
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_workspace]
+}
+
+# Create secret scope for Event Hooks
+module "event_hooks_secret_scope" {
+  source = "../../modules/databricks/secret_scope"
+
+  scope_name = "event-hooks-${var.environment}"
+
+  secrets = {
+    "slack-webhook-url" = var.slack_webhook_url
+  }
+
+  # Grant access to service principal for Event Hooks
+  acl_principals  = [module.node_service_principal.service_principal_application_id]
+  acl_permissions = ["READ"]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_workspace]
+}
+
 # Create storage credential for accessing centralized metastore
 module "storage_credential" {
   source = "../../modules/databricks/workspace-storage-credential"
@@ -253,6 +288,8 @@ module "centrum_pipeline" {
     "KINESIS_STREAM_NAME"     = module.kinesis.kinesis_stream_name
     "SERVICE_CREDENTIAL_NAME" = "unity-catalog-kinesis-role-${var.environment}"
     "CHECKPOINT_PATH"         = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
+    "ENVIRONMENT"             = upper(var.environment)
+    "MONITORING_SLACK_CHANNEL" = var.slack_channel
   }
 
   continuous_mode  = false
@@ -379,7 +416,7 @@ module "experiment_provisioning_job" {
         "catalog_name"             = module.databricks_catalog.catalog_name
         "central_schema"           = "centrum"
         "environment"              = upper(var.environment)
-
+        "slack_channel"            = var.slack_channel
       }
     },
     {
@@ -400,6 +437,13 @@ module "experiment_provisioning_job" {
       depends_on = "experiment_pipeline_create"
     },
   ]
+
+  # Configure Slack notifications
+  webhook_notifications = {
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
 
   permissions = [
     {
@@ -457,6 +501,13 @@ module "ambyte_processing_job" {
       }
     }
   ]
+
+  # Configure Slack notifications
+  webhook_notifications = {
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
 
   permissions = [
     {

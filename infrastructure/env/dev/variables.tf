@@ -34,6 +34,18 @@ variable "databricks_host" {
   sensitive   = true
 }
 
+variable "slack_webhook_url" {
+  description = "Slack webhook URL for Databricks job notifications"
+  type        = string
+  sensitive   = true
+}
+
+variable "slack_channel" {
+  description = "Slack channel for monitoring notifications"
+  type        = string
+  default     = "#jii-monitoring"
+}
+
 variable "kinesis_credential_id" {
   description = "Databricks storage credential ID for Kinesis"
   type        = string

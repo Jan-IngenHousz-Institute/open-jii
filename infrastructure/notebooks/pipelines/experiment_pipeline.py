@@ -15,10 +15,12 @@ from pyspark.sql.types import StringType, TimestampType, DoubleType, StructType,
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import pandas_udf
 from delta.tables import DeltaTable
+from pyspark import pipelines as dp
 import pandas as pd
 import os
 import json
 import sys
+import requests
 from typing import Dict, Any, List
 
 # Import our macro processing library
@@ -44,6 +46,10 @@ ENABLE_MACRO_PROCESSING = spark.conf.get("ENABLE_MACRO_PROCESSING", "true").lowe
 DEVICE_TABLE = "device"
 SAMPLE_TABLE = "sample"
 RAW_AMBYTE_TABLE = "raw_ambyte_data"
+
+# Slack notification configuration
+ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
+MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
 
 spark = SparkSession.builder.getOrCreate()
 
@@ -458,3 +464,40 @@ if ENABLE_MACRO_PROCESSING:
         print("Continuing without macro processing...")
 else:
     print("Macro processing disabled")
+
+# COMMAND ----------
+
+# DBTITLE 1,Event Hook - Slack Notifications
+@dp.on_event_hook(max_allowable_consecutive_failures=3)
+def send_slack_notifications(event):
+    """Send Slack notifications for pipeline failures and stops."""
+
+    # Get the webhook URL from the secret scope (not the API token)
+    SLACK_WEBHOOK_URL = dbutils.secrets.get(scope=f"event-hooks-{ENVIRONMENT}", key="slack-webhook-url")
+    SLACK_HEADERS = {
+        'Content-Type': 'application/json'
+    }
+
+    # Check for failure/stop events in progress updates
+    if (
+        event['event_type'] in ['update_progress', 'flow_progress', 'operation_progress']
+        and event['details'].get(event['event_type'], {}).get('state') in ['FAILED', 'STOPPED']
+    ):
+        # Send simple Slack notification
+        event_type = event['event_type']
+        state = event['details'].get(event['event_type'], {}).get('state')
+        
+        payload = {
+            "channel": MONITORING_SLACK_CHANNEL,
+            "text": f"🚨 Experiment Pipeline {state}: {event_type} for experiment {EXPERIMENT_ID} in {ENVIRONMENT.upper()} environment"
+        }
+        
+        try:
+            requests.post(
+                url=SLACK_WEBHOOK_URL,
+                headers=SLACK_HEADERS,
+                json=payload
+            )
+            print(f"Slack notification sent: {event_type} - {state}")
+        except Exception as e:
+            print(f"Failed to send Slack notification: {e}")

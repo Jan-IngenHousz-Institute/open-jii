@@ -34,6 +34,7 @@ class PipelineConfig:
     catalog_name: str
     central_schema: str
     experiment_pipeline_path: str
+    slack_channel: str
     environment: str = "DEV"
     
     @property
@@ -55,7 +56,8 @@ class PipelineConfig:
             (self.experiment_name, "experiment_name"),
             (self.catalog_name, "catalog_name"),
             (self.central_schema, "central_schema"),
-            (self.experiment_pipeline_path, "experiment_pipeline_path")
+            (self.experiment_pipeline_path, "experiment_pipeline_path"),
+            (self.slack_channel, "slack_channel")
         ]
         
         missing_fields = [field_name for value, field_name in required_fields if not value]
@@ -82,6 +84,7 @@ def extract_parameters() -> PipelineConfig:
             catalog_name=dbutils.widgets.get("catalog_name"),
             central_schema=dbutils.widgets.get("central_schema"),
             experiment_pipeline_path=dbutils.widgets.get("experiment_pipeline_path"),
+            slack_channel=dbutils.widgets.get("slack_channel"),
             environment=dbutils.widgets.get("environment") if dbutils.widgets.get("environment") else "DEV"
         )
         
@@ -150,6 +153,8 @@ class ExperimentPipelineManager:
                 "CATALOG_NAME": config.catalog_name,
                 "CENTRAL_SCHEMA": config.central_schema,
                 "CENTRAL_SILVER_TABLE": "clean_data",
+                "ENVIRONMENT": config.environment,
+                "MONITORING_SLACK_CHANNEL": config.slack_channel,
                 "pipeline.name": config.pipeline_name
             }
             
