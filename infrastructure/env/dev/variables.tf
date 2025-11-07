@@ -150,3 +150,14 @@ variable "centralized_metastore_bucket_name" {
   type        = string
   default     = "open-jii-databricks-uc-eu-central-1-metastore"
 }
+
+variable "posthog_key" {
+  description = "PostHog project API key"
+  type        = string
+}
+
+variable "posthog_host" {
+  description = "PostHog instance host URL"
+  type        = string
+  default     = "https://eu.i.posthog.com"
+}
