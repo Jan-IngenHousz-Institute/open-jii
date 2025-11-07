@@ -27,6 +27,7 @@ vi.mock("../chart-configurators/chart-configurator-util", () => ({
   getDefaultChartConfig: vi.fn((chartType: string) => ({
     title: `Default ${chartType} config`,
   })),
+  getDefaultDataConfig: vi.fn(),
 }));
 
 describe("ChartTypeStep", () => {

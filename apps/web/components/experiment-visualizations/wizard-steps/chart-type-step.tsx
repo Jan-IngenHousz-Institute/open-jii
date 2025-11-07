@@ -24,7 +24,10 @@ import {
 import type { WizardStepProps } from "@repo/ui/components";
 
 import type { ChartFormValues } from "../chart-configurators/chart-configurator-util";
-import { getDefaultChartConfig } from "../chart-configurators/chart-configurator-util";
+import {
+  getDefaultChartConfig,
+  getDefaultDataConfig,
+} from "../chart-configurators/chart-configurator-util";
 import { ChartPreviewModal } from "../chart-preview/chart-preview-modal";
 
 // Step 2: Chart Type Selection
@@ -91,14 +94,27 @@ export function ChartTypeStep({
   // Handle chart type selection
   const handleChartTypeSelect = (chartType: "line" | "scatter") => {
     setSelectedChartType(chartType);
-    form.setValue("chartType", chartType);
-    form.setValue("chartFamily", "basic");
 
-    // Update config with default values for the selected chart type
+    // Get current form values to preserve some state
+    const currentValues = form.getValues();
     const defaultConfig = getDefaultChartConfig(chartType);
 
-    // Set the entire config to the new defaults for the selected chart type
-    form.setValue("config", defaultConfig);
+    // Reset form with new values, keeping some form state
+    form.reset(
+      {
+        ...currentValues,
+        chartType,
+        chartFamily: "basic",
+        config: defaultConfig,
+        dataConfig: getDefaultDataConfig(currentValues.dataConfig.tableName),
+      },
+      {
+        keepDefaultValues: true,
+        keepErrors: false,
+        keepDirty: false,
+        keepTouched: false,
+      },
+    );
   };
 
   return (

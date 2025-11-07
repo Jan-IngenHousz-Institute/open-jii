@@ -168,9 +168,10 @@ export default function ColorDimensionConfiguration({
       removeDataSource(colorAxisDataSources[0].index);
     }
 
-    // If a column is selected (not "none"), add new color data source
-    if (value !== "none") {
+    // If a column is selected (not "none" and not empty), add new color data source
+    if (value !== "none" && value !== "") {
       const tableName = form.watch("dataConfig.tableName");
+
       appendDataSource({
         tableName: tableName || "",
         columnName: value,
@@ -183,6 +184,9 @@ export default function ColorDimensionConfiguration({
       if (!currentColorAxisTitle) {
         form.setValue("config.marker.colorbar.title.text", value);
       }
+    } else {
+      // Clear color axis title when no color is selected
+      form.setValue("config.marker.colorbar.title.text", "");
     }
   };
 
