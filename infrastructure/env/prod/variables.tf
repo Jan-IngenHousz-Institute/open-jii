@@ -159,6 +159,7 @@ variable "centralized_metastore_bucket_name" {
 variable "posthog_key" {
   description = "PostHog project API key"
   type        = string
+  sensitive   = true
 }
 
 variable "posthog_host" {
