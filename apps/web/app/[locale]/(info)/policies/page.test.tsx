@@ -144,7 +144,7 @@ describe("Policies Page - Component", () => {
       pageTitle: "Privacy Policy",
       pageDescription: "Read our privacy policy and terms of service",
     };
-    
+
     mockPagePolicies.mockResolvedValueOnce({
       pagePoliciesCollection: {
         items: [mockPoliciesData],
@@ -164,7 +164,7 @@ describe("Policies Page - Component", () => {
       pageTitle: "Datenschutzrichtlinie",
       pageDescription: "Lesen Sie unsere Datenschutzrichtlinie und Nutzungsbedingungen",
     };
-    
+
     mockPagePolicies.mockResolvedValueOnce({
       pagePoliciesCollection: {
         items: [mockPoliciesData],
@@ -180,7 +180,7 @@ describe("Policies Page - Component", () => {
 
   it("passes correct parameters to getPoliciesData", async () => {
     const mockPoliciesData = { pageTitle: "Privacy Policy" };
-    
+
     mockPagePolicies.mockResolvedValueOnce({
       pagePoliciesCollection: {
         items: [mockPoliciesData],

@@ -136,7 +136,7 @@ describe("FAQ Page - Component", () => {
       pageTitle: "FAQ",
       pageDescription: "Frequently Asked Questions",
     };
-    
+
     mockPageFaq.mockResolvedValueOnce({
       pageFaqCollection: {
         items: [mockFaqData],
@@ -156,7 +156,7 @@ describe("FAQ Page - Component", () => {
       pageTitle: "FAQ",
       pageDescription: "Häufig gestellte Fragen",
     };
-    
+
     mockPageFaq.mockResolvedValueOnce({
       pageFaqCollection: {
         items: [mockFaqData],
@@ -172,7 +172,7 @@ describe("FAQ Page - Component", () => {
 
   it("passes correct parameters to getFaqData", async () => {
     const mockFaqData = { pageTitle: "FAQ" };
-    
+
     mockPageFaq.mockResolvedValueOnce({
       pageFaqCollection: {
         items: [mockFaqData],

@@ -146,7 +146,7 @@ describe("About Page - Component", () => {
       pageTitle: "About Us",
       pageDescription: "Learn more about our organization",
     };
-    
+
     mockPageAbout.mockResolvedValueOnce({
       pageAboutCollection: {
         items: [mockAboutData],
@@ -166,7 +166,7 @@ describe("About Page - Component", () => {
       pageTitle: "About Us",
       pageDescription: "Learn more about our organization",
     };
-    
+
     mockPageAbout.mockResolvedValueOnce({
       pageAboutCollection: {
         items: [mockAboutData],
@@ -188,7 +188,7 @@ describe("About Page - Component", () => {
       pageTitle: "Über uns",
       pageDescription: "Erfahren Sie mehr über unsere Organisation",
     };
-    
+
     mockPageAbout.mockResolvedValueOnce({
       pageAboutCollection: {
         items: [mockAboutData],
@@ -204,7 +204,7 @@ describe("About Page - Component", () => {
 
   it("passes correct parameters to getAboutData", async () => {
     const mockAboutData = { pageTitle: "About Us" };
-    
+
     mockPageAbout.mockResolvedValueOnce({
       pageAboutCollection: {
         items: [mockAboutData],
