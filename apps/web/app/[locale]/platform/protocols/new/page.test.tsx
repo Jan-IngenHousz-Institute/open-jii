@@ -1,0 +1,74 @@
+import "@testing-library/jest-dom/vitest";
+import { render, screen } from "@testing-library/react";
+import React from "react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+import NewProtocolPage from "./page";
+
+globalThis.React = React;
+
+// --- Mocks ---
+vi.mock("@repo/i18n/server", () => ({
+  __esModule: true,
+  default: vi.fn(() => Promise.resolve({ t: (key: string) => key })),
+}));
+
+vi.mock("@/components/new-protocol", () => ({
+  NewProtocolForm: () => <div data-testid="new-protocol-form">New Protocol Form</div>,
+}));
+
+// --- Tests ---
+describe("NewProtocolPage", () => {
+  const locale = "en-US";
+  const defaultProps = {
+    params: Promise.resolve({ locale }),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renders the new protocol page with all components", async () => {
+    render(await NewProtocolPage(defaultProps));
+
+    expect(screen.getByText("protocols.newProtocol")).toBeInTheDocument();
+    expect(screen.getByText("newProtocol.description")).toBeInTheDocument();
+    expect(screen.getByTestId("new-protocol-form")).toBeInTheDocument();
+  });
+
+  it("renders heading with correct styling", async () => {
+    const { container } = render(await NewProtocolPage(defaultProps));
+
+    const heading = container.querySelector("h3");
+    expect(heading).toBeInTheDocument();
+    expect(heading).toHaveClass("text-lg", "font-medium");
+    expect(heading).toHaveTextContent("protocols.newProtocol");
+  });
+
+  it("renders description with correct styling", async () => {
+    const { container } = render(await NewProtocolPage(defaultProps));
+
+    const description = container.querySelector("p");
+    expect(description).toBeInTheDocument();
+    expect(description).toHaveClass("text-muted-foreground", "text-sm");
+    expect(description).toHaveTextContent("newProtocol.description");
+  });
+
+  it("renders with correct structure and spacing", async () => {
+    const { container } = render(await NewProtocolPage(defaultProps));
+
+    const mainDiv = container.querySelector(".space-y-6");
+    expect(mainDiv).toBeInTheDocument();
+
+    const headerDiv = container.querySelector("div > div");
+    expect(headerDiv).toBeInTheDocument();
+  });
+
+  it("renders form component", async () => {
+    render(await NewProtocolPage(defaultProps));
+
+    const form = screen.getByTestId("new-protocol-form");
+    expect(form).toBeInTheDocument();
+    expect(form).toHaveTextContent("New Protocol Form");
+  });
+});
