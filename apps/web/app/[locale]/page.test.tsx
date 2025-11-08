@@ -30,34 +30,6 @@ vi.mock("@/components/unified-navbar/unified-navbar", () => ({
   ),
 }));
 
-const mockCmsComponents = {
-  HomeHero: ({ heroData, locale }: { heroData: unknown; locale: string }) => (
-    <div data-testid="home-hero" data-locale={locale}>
-      {heroData ? "Hero Content" : "No hero"}
-    </div>
-  ),
-  HomeAboutMission: ({ missionData, locale }: { missionData: unknown; locale: string }) => (
-    <div data-testid="home-about-mission" data-locale={locale}>
-      {missionData ? "Mission Content" : "No mission"}
-    </div>
-  ),
-  HomeKeyFeatures: ({ featuresData, locale }: { featuresData: unknown; locale: string }) => (
-    <div data-testid="home-key-features" data-locale={locale}>
-      {featuresData ? "Features Content" : "No features"}
-    </div>
-  ),
-  HomePartners: ({ partnersData, locale }: { partnersData: unknown; locale: string }) => (
-    <div data-testid="home-partners" data-locale={locale}>
-      {partnersData ? "Partners Content" : "No partners"}
-    </div>
-  ),
-  HomeFooter: ({ footerData, locale }: { footerData: unknown; locale: string }) => (
-    <div data-testid="home-footer" data-locale={locale}>
-      {footerData ? "Footer Content" : "No footer"}
-    </div>
-  ),
-};
-
 vi.mock("@repo/cms", () => ({
   HomeHero: ({ heroData, locale }: { heroData: unknown; locale: string }) => (
     <div data-testid="home-hero" data-locale={locale}>

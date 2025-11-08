@@ -22,9 +22,7 @@ vi.mock("next/headers", () => ({
   ),
 }));
 
-vi.mock("next/navigation", () => ({
-  redirect: vi.fn(),
-}));
+vi.mock("next/navigation");
 
 vi.mock("@/components/app-breadcrumbs", () => ({
   Breadcrumbs: () => <div data-testid="breadcrumbs">Breadcrumbs</div>,
@@ -67,6 +65,9 @@ describe("AppLayout", () => {
     params: Promise.resolve({ locale }),
   };
 
+  // Get the mocked redirect function
+  const mockRedirect = vi.mocked(redirect);
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuth.mockResolvedValue({ user: { id: "123", name: "Test User", registered: true } });
@@ -96,12 +97,14 @@ describe("AppLayout", () => {
   it("redirects to login when not authenticated", async () => {
     mockAuth.mockResolvedValueOnce(null);
     // Make redirect throw to simulate actual behavior
-    (redirect as any).mockImplementation(() => {
+    mockRedirect.mockImplementation(() => {
       throw new Error("NEXT_REDIRECT");
     });
 
     await expect(AppLayout(defaultProps)).rejects.toThrow("NEXT_REDIRECT");
-    expect(redirect).toHaveBeenCalledWith("/api/auth/signin?callbackUrl=%2Fplatform%2Fexperiments");
+    expect(mockRedirect).toHaveBeenCalledWith(
+      "/api/auth/signin?callbackUrl=%2Fplatform%2Fexperiments",
+    );
   });
 
   it("handles different locale in redirect URL", async () => {
@@ -111,12 +114,14 @@ describe("AppLayout", () => {
       params: Promise.resolve({ locale: "de" }),
     };
     // Make redirect throw to simulate actual behavior
-    (redirect as any).mockImplementation(() => {
+    mockRedirect.mockImplementation(() => {
       throw new Error("NEXT_REDIRECT");
     });
 
     await expect(AppLayout(germanProps)).rejects.toThrow("NEXT_REDIRECT");
-    expect(redirect).toHaveBeenCalledWith("/api/auth/signin?callbackUrl=%2Fplatform%2Fexperiments");
+    expect(mockRedirect).toHaveBeenCalledWith(
+      "/api/auth/signin?callbackUrl=%2Fplatform%2Fexperiments",
+    );
   });
 
   it("redirects to registration when user is not registered", async () => {
@@ -124,13 +129,14 @@ describe("AppLayout", () => {
       user: { id: "123", name: "Test User", registered: false },
     });
     // Make redirect throw to simulate actual behavior
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (redirect as any).mockImplementation(() => {
+    mockRedirect.mockImplementation(() => {
       throw new Error("NEXT_REDIRECT");
     });
 
     await expect(AppLayout(defaultProps)).rejects.toThrow("NEXT_REDIRECT");
-    expect(redirect).toHaveBeenCalledWith("/en-US/register?callbackUrl=%2Fplatform%2Fexperiments");
+    expect(mockRedirect).toHaveBeenCalledWith(
+      "/en-US/register?callbackUrl=%2Fplatform%2Fexperiments",
+    );
   });
 
   it("redirects to registration with different locale when user is not registered", async () => {
@@ -142,13 +148,12 @@ describe("AppLayout", () => {
       params: Promise.resolve({ locale: "de" }),
     };
     // Make redirect throw to simulate actual behavior
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (redirect as any).mockImplementation(() => {
+    mockRedirect.mockImplementation(() => {
       throw new Error("NEXT_REDIRECT");
     });
 
     await expect(AppLayout(germanProps)).rejects.toThrow("NEXT_REDIRECT");
-    expect(redirect).toHaveBeenCalledWith("/de/register?callbackUrl=%2Fplatform%2Fexperiments");
+    expect(mockRedirect).toHaveBeenCalledWith("/de/register?callbackUrl=%2Fplatform%2Fexperiments");
   });
 
   it("renders with correct header structure", async () => {
