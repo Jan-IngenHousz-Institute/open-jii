@@ -30,7 +30,7 @@
     "axios": "^1.9.0",
     "babel-plugin-inline-dotenv": "^1.7.0",
     "class-variance-authority": "^0.7.1",
-    "clsx": "^2.0.0",
+    "clsx": "^2.1.1",
     "crypto-js": "^4.2.0",
     "expo": "~53.0.9",
     "expo-font": "~13.3.1",

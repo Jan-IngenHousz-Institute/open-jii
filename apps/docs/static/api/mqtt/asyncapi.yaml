@@ -1,0 +1,88 @@
+asyncapi: "2.0.0"
+info:
+  title: OpenJII MQTT API (AWS IoT Core)
+  version: "1.0.0"
+  description: >
+    This AsyncAPI specification defines the MQTT topics and message schemas for AWS IoT Core.
+    It details channels for device status updates and sensor data, allowing devices to publish
+    their state and sensor readings securely.
+  contact:
+    name: OpenJII
+    email: ji-institute@info.nl
+  license:
+    name: GNU General Public License
+    url: https://www.gnu.org/licenses/gpl-3.0.html
+
+servers:
+  production:
+    url: a123456789.iot.us-east-1.amazonaws.com
+    protocol: mqtt
+    description: AWS IoT Core production endpoint
+
+channels:
+  experiment/data_ingest/v1/{experimentId}/{sensorType}/{sensorVersion}/{sensorId}/{protocolId}:
+    description: |
+      Channel for ingesting experiment sensor data.
+      The path parameters represent:
+      <ul>
+        <li><strong>experimentId:</strong> Unique identifier of the experiment (e.g., exp123).</li>
+        <li><strong>sensorType:</strong> The type or family of sensor (e.g., MutlispeQ, Ambit...).</li>
+        <li><strong>sensorVersion:</strong> Sensor firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).</li>
+        <li><strong>sensorId:</strong> Unique sensor identifier (UUID format recommended).</li>
+        <li><strong>protocolId:</strong> Unique identifier for the sampling or measurement protocol (e.g., protoA).</li>
+      </ul>
+    parameters:
+      experimentId:
+        description: Unique identifier of the experiment (e.g., exp123).
+        schema:
+          type: string
+      sensorType:
+        description: The type or family of sensor (e.g., MutlispeQ, Ambit...).
+        schema:
+          type: string
+      sensorVersion:
+        description: Sensor firmware/hardware revision (e.g., v1, v2.1).
+        schema:
+          type: string
+      sensorId:
+        description: Unique sensor identifier (UUID format recommended).
+        schema:
+          type: string
+      protocolId:
+        description: Unique identifier for the sampling or measurement protocol (e.g., protoA).
+        schema:
+          type: string
+    subscribe:
+      operationId: ingestExperimentData
+      summary: Ingest experiment sensor data.
+      message:
+        $ref: "#/components/messages/ExperimentDataMessage"
+
+components:
+  messages:
+    ExperimentDataMessage:
+      contentType: application/json
+      name: ExperimentDataMessage
+      title: Experiment Data Ingestion Message
+      summary: A message containing sensor data for an experiment.
+      payload:
+        type: object
+        properties:
+          data:
+            type: object
+            description: Sensor data payload.
+            additionalProperties: true
+        required:
+          - data
+      examples:
+        - payload:
+            data:
+              moisture: 30.5
+              temperature: 22.1
+
+  securitySchemes:
+    sigv4:
+      type: apiKey
+      in: user
+      description: >
+        AWS Signature Version 4 is used to sign the MQTT connection requests to AWS IoT Core.
