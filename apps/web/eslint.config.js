@@ -5,7 +5,7 @@ import reactConfig from "@repo/eslint-config/react";
 /** @type {import('typescript-eslint').Config} */
 export default [
   {
-    ignores: [".next/**"],
+    ignores: [".next/**", "next-env.d.ts"],
   },
   ...baseConfig,
   ...reactConfig,
