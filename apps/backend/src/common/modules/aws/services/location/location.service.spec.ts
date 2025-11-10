@@ -1,16 +1,15 @@
 import { TestHarness } from "../../../../../test/test-harness";
 import { AwsLocationService } from "./location.service";
 
-// Mock the AWS SDK with vi.hoisted to avoid hoisting issues
 const mockSend = vi.hoisted(() => vi.fn());
 
 vi.mock("@aws-sdk/client-location", () => {
-  const mockLocationClient = {
-    send: mockSend,
-  };
+  class MockLocationClient {
+    send = mockSend;
+  }
 
   return {
-    LocationClient: vi.fn(() => mockLocationClient),
+    LocationClient: MockLocationClient,
     SearchPlaceIndexForSuggestionsCommand: vi.fn(),
     GetPlaceCommand: vi.fn(),
     SearchPlaceIndexForPositionCommand: vi.fn(),
