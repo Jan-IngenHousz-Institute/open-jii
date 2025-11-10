@@ -26,14 +26,6 @@ import {
 import { MemberList } from "../current-members-list/current-members-list";
 import { UserSearchPopover } from "../user-search-popover";
 
-interface Member {
-  userId: string;
-  role?: ExperimentMemberRole;
-  firstName?: string;
-  lastName?: string;
-  email?: string | null;
-}
-
 interface NewExperimentMembersCardProps {
   form: UseFormReturn<CreateExperimentBody>;
 }
@@ -45,7 +37,7 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
 
   // Use useFieldArray to manage the members array
   const {
-    fields: memberFields,
+    fields: members,
     append,
     remove,
     update,
@@ -60,8 +52,6 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
   const [selectedRole, setSelectedRole] = useState<ExperimentMemberRole>("member");
   const [debouncedSearch, isDebounced] = useDebounce(userSearch, 300);
   const { data: userSearchData, isLoading: isFetchingUsers } = useUserSearch(debouncedSearch);
-
-  const members: Member[] = useMemo(() => memberFields as Member[], [memberFields]);
 
   // Filter available users (exclude already added and current user)
   const availableProfiles = useMemo(
