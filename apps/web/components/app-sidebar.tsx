@@ -15,7 +15,6 @@ import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
 
-import type { Locale } from "@repo/i18n";
 import {
   Sidebar,
   SidebarContent,
@@ -83,7 +82,7 @@ export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   user?: UserData | null;
-  locale: Locale;
+  locale: string;
   navigationData: NavigationData;
   translations: Translations;
 }) {

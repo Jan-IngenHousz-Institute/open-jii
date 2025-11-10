@@ -10,12 +10,11 @@ import { DataUploadModal } from "~/components/experiment-data/data-upload-modal/
 import { ExperimentDataSampleTables } from "~/components/experiment-data/experiment-data-sample-tables";
 import { useLocale } from "~/hooks/useLocale";
 
-import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components";
 
 interface ExperimentDataPageProps {
-  params: Promise<{ id: string; locale: Locale }>;
+  params: Promise<{ id: string; locale: string }>;
 }
 
 export default function ExperimentDataPage({ params }: ExperimentDataPageProps) {

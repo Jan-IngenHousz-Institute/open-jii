@@ -6,7 +6,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 
-import type { Locale } from "@repo/i18n";
 import {
   Button,
   DropdownMenu,
@@ -22,7 +21,7 @@ const allLocales = [
 ];
 
 interface LanguageSwitcherProps {
-  locale: Locale;
+  locale: string;
 }
 
 export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
@@ -39,7 +38,7 @@ export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
   }
 
   // Generate language switch URL
-  const getLanguageSwitchUrl = (newLocale: Locale) => {
+  const getLanguageSwitchUrl = (newLocale: string) => {
     // Remove current locale from pathname if present
     const pathWithoutLocale = pathname.replace(`/${locale}`, "") || "/";
 

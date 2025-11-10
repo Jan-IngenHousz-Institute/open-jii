@@ -4,13 +4,12 @@ import { getContentfulClients } from "~/lib/contentful";
 
 import { AboutContent } from "@repo/cms";
 import type { PageAboutFieldsFragment } from "@repo/cms/lib/__generated/sdk";
-import type { Locale } from "@repo/i18n";
 
 interface AboutPageProps {
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }
 
-async function getAboutData(locale: Locale, preview: boolean) {
+async function getAboutData(locale: string, preview: boolean) {
   const { previewClient, client } = await getContentfulClients();
   const gqlClient = preview ? previewClient : client;
   const aboutQuery = await gqlClient.pageAbout({ locale, preview });

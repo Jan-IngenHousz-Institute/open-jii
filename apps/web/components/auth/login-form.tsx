@@ -1,6 +1,5 @@
 import { providerMap } from "@/lib/auth";
 
-import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import {
   Dialog,
@@ -15,7 +14,7 @@ import { cva } from "@repo/ui/lib/utils";
 import { LoginProviderForm } from "../login-provider-form";
 import { TermsAndConditionsDialog } from "./terms-and-conditions-dialog";
 
-export async function LoginForm({ callbackUrl, locale }: { callbackUrl?: string; locale: Locale }) {
+export async function LoginForm({ callbackUrl, locale }: { callbackUrl?: string; locale: string }) {
   const { t } = await initTranslations({ locale, namespaces: ["common"] });
   const emailProvider = providerMap.find((p) => p.id === "nodemailer");
   const oauthProviders = providerMap.filter((p) => p.id !== "nodemailer");
@@ -86,7 +85,7 @@ function ProviderGrid({
 }: {
   providers: { id: string; name: string }[];
   callbackUrl: string | undefined;
-  locale: Locale;
+  locale: string;
 }) {
   const count = providers.length;
   const variant = count === 2 ? 2 : count === 3 ? 3 : count > 3 ? "many" : 1;

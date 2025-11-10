@@ -18,10 +18,9 @@ import type {
   PageHomePartnersFieldsFragment,
   FooterFieldsFragment,
 } from "@repo/cms/lib/__generated/sdk";
-import type { Locale } from "@repo/i18n";
 
 interface HomePageProps {
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }
 
 export default async function Home({ params }: HomePageProps) {

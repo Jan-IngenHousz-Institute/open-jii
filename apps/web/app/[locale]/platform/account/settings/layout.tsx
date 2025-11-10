@@ -2,7 +2,6 @@ import { User, Settings as SettingsIcon, Shield, Bell, Users, Activity, Menu } f
 import { headers } from "next/headers";
 import Link from "next/link";
 
-import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import {
   Button,
@@ -17,7 +16,7 @@ export default async function AccountSettingsLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }) {
   const pathname = (await headers()).get("x-current-path") ?? "/";
   const { locale } = await params;

@@ -12,7 +12,6 @@ import { isFeatureFlagEnabled } from "~/lib/posthog-server";
 import { SessionProvider } from "@repo/auth/client";
 import { ContentfulPreviewProvider } from "@repo/cms/contentful";
 import type { LandingMetadataFieldsFragment } from "@repo/cms/lib/__generated/sdk";
-import type { Locale } from "@repo/i18n";
 import { defaultLocale, namespaces } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { cn } from "@repo/ui/lib/utils";
@@ -46,13 +45,13 @@ const notoSans = Noto_Sans({
 
 interface LocaleLayoutProps {
   children: ReactNode;
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
   const { isEnabled: preview } = await draftMode();

@@ -1,7 +1,8 @@
-import "@testing-library/jest-dom";
+import "@testing-library/jest-dom/vitest";
+import { render, screen } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-import { generateMetadata } from "./page";
+import PoliciesPage, { generateMetadata } from "./page";
 
 vi.mock("next/headers", () => ({
   draftMode: vi.fn(() => Promise.resolve({ isEnabled: false })),
@@ -109,5 +110,85 @@ describe("Policies Page - generateMetadata", () => {
       title: undefined,
       description: undefined,
     });
+  });
+});
+
+vi.mock("@repo/cms", () => ({
+  PoliciesContent: ({
+    policies,
+    locale,
+    preview,
+  }: {
+    policies: unknown;
+    locale: string;
+    preview: boolean;
+  }) => (
+    <div data-testid="policies-content">
+      {"Policies Content - "}
+      {locale}
+      {" - "}
+      {preview ? "preview" : "published"}
+      {" - "}
+      {policies ? "with data" : "no data"}
+    </div>
+  ),
+}));
+
+describe("Policies Page - Component", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renders Policies page with data", async () => {
+    const mockPoliciesData = {
+      pageTitle: "Privacy Policy",
+      pageDescription: "Read our privacy policy and terms of service",
+    };
+
+    mockPagePolicies.mockResolvedValueOnce({
+      pagePoliciesCollection: {
+        items: [mockPoliciesData],
+      },
+    });
+
+    render(await PoliciesPage({ params: Promise.resolve({ locale: "en-US" as const }) }));
+
+    expect(screen.getByTestId("policies-content")).toBeInTheDocument();
+    expect(screen.getByTestId("policies-content")).toHaveTextContent(
+      "Policies Content - en-US - published - with data",
+    );
+  });
+
+  it("renders Policies page with different locale", async () => {
+    const mockPoliciesData = {
+      pageTitle: "Datenschutzrichtlinie",
+      pageDescription: "Lesen Sie unsere Datenschutzrichtlinie und Nutzungsbedingungen",
+    };
+
+    mockPagePolicies.mockResolvedValueOnce({
+      pagePoliciesCollection: {
+        items: [mockPoliciesData],
+      },
+    });
+
+    render(await PoliciesPage({ params: Promise.resolve({ locale: "de" as const }) }));
+
+    expect(screen.getByTestId("policies-content")).toHaveTextContent(
+      "Policies Content - de - published - with data",
+    );
+  });
+
+  it("passes correct parameters to getPoliciesData", async () => {
+    const mockPoliciesData = { pageTitle: "Privacy Policy" };
+
+    mockPagePolicies.mockResolvedValueOnce({
+      pagePoliciesCollection: {
+        items: [mockPoliciesData],
+      },
+    });
+
+    await PoliciesPage({ params: Promise.resolve({ locale: "en-US" as const }) });
+
+    expect(mockPagePolicies).toHaveBeenCalledWith({ locale: "en-US", preview: false });
   });
 });

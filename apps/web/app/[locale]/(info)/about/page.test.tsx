@@ -1,10 +1,12 @@
-import "@testing-library/jest-dom";
+import "@testing-library/jest-dom/vitest";
+import { render, screen } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-import { generateMetadata } from "./page";
+import AboutPage, { generateMetadata } from "./page";
 
+const mockDraftMode = vi.fn(() => Promise.resolve({ isEnabled: false }));
 vi.mock("next/headers", () => ({
-  draftMode: vi.fn(() => Promise.resolve({ isEnabled: false })),
+  draftMode: () => mockDraftMode(),
 }));
 
 const mockPageAbout = vi.fn();
@@ -109,5 +111,108 @@ describe("About Page - generateMetadata", () => {
       title: undefined,
       description: undefined,
     });
+  });
+});
+
+vi.mock("@repo/cms", () => ({
+  AboutContent: ({
+    about,
+    locale,
+    preview,
+  }: {
+    about: unknown;
+    locale: string;
+    preview: boolean;
+  }) => (
+    <div data-testid="about-content">
+      {"About Content - "}
+      {locale}
+      {" - "}
+      {preview ? "preview" : "published"}
+      {" - "}
+      {about ? "with data" : "no data"}
+    </div>
+  ),
+}));
+
+describe("About Page - Component", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockDraftMode.mockResolvedValue({ isEnabled: false });
+  });
+
+  it("renders about page with data", async () => {
+    const mockAboutData = {
+      pageTitle: "About Us",
+      pageDescription: "Learn more about our organization",
+    };
+
+    mockPageAbout.mockResolvedValueOnce({
+      pageAboutCollection: {
+        items: [mockAboutData],
+      },
+    });
+
+    render(await AboutPage({ params: Promise.resolve({ locale: "en-US" as const }) }));
+
+    expect(screen.getByTestId("about-content")).toBeInTheDocument();
+    expect(screen.getByTestId("about-content")).toHaveTextContent(
+      "About Content - en-US - published - with data",
+    );
+  });
+
+  it("renders about page in preview mode", async () => {
+    const mockAboutData = {
+      pageTitle: "About Us",
+      pageDescription: "Learn more about our organization",
+    };
+
+    mockPageAbout.mockResolvedValueOnce({
+      pageAboutCollection: {
+        items: [mockAboutData],
+      },
+    });
+
+    // Mock draftMode to return enabled for this test
+    mockDraftMode.mockResolvedValueOnce({ isEnabled: true });
+
+    render(await AboutPage({ params: Promise.resolve({ locale: "en-US" as const }) }));
+
+    expect(screen.getByTestId("about-content")).toHaveTextContent(
+      "About Content - en-US - preview - with data",
+    );
+  });
+
+  it("renders about page with different locale", async () => {
+    const mockAboutData = {
+      pageTitle: "Über uns",
+      pageDescription: "Erfahren Sie mehr über unsere Organisation",
+    };
+
+    mockPageAbout.mockResolvedValueOnce({
+      pageAboutCollection: {
+        items: [mockAboutData],
+      },
+    });
+
+    render(await AboutPage({ params: Promise.resolve({ locale: "de" as const }) }));
+
+    expect(screen.getByTestId("about-content")).toHaveTextContent(
+      "About Content - de - published - with data",
+    );
+  });
+
+  it("passes correct parameters to getAboutData", async () => {
+    const mockAboutData = { pageTitle: "About Us" };
+
+    mockPageAbout.mockResolvedValueOnce({
+      pageAboutCollection: {
+        items: [mockAboutData],
+      },
+    });
+
+    await AboutPage({ params: Promise.resolve({ locale: "en-US" as const }) });
+
+    expect(mockPageAbout).toHaveBeenCalledWith({ locale: "en-US", preview: false });
   });
 });

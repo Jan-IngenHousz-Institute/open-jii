@@ -4,8 +4,6 @@ import { render, screen, within } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { Locale } from "@repo/i18n";
-
 import MacroLayout from "../layout";
 
 // Global React for JSX in mocks
@@ -106,7 +104,7 @@ function renderLayout({
   macroId = "test-macro-id",
   children = <div>Child Content</div>,
 }: {
-  locale?: Locale;
+  locale?: string;
   pathname?: string;
   macroId?: string;
   children?: React.ReactNode;

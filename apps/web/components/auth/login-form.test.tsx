@@ -3,8 +3,6 @@ import { render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { Locale } from "@repo/i18n";
-
 import { LoginForm } from "./login-form";
 
 globalThis.React = React;
@@ -185,7 +183,7 @@ vi.mock("@repo/ui/components", () => ({
 describe("LoginForm", () => {
   const defaultProps = {
     callbackUrl: "/dashboard",
-    locale: "en-US" as Locale,
+    locale: "en-US",
   };
 
   beforeEach(() => {
@@ -333,7 +331,7 @@ describe("LoginForm", () => {
   it("handles different locale", async () => {
     const propsWithDifferentLocale = {
       ...defaultProps,
-      locale: "de-DE" as Locale,
+      locale: "de-DE",
     };
 
     render(await LoginForm(propsWithDifferentLocale));

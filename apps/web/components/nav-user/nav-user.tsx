@@ -4,7 +4,6 @@ import { ChevronsUpDown, LogOut } from "lucide-react";
 import { User as UserIcon } from "lucide-react";
 import Link from "next/link";
 
-import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n";
 import {
   Avatar,
@@ -33,7 +32,7 @@ export function NavUser({
     email: string;
     avatar: string;
   };
-  locale: Locale;
+  locale: string;
 }) {
   const { isMobile } = useSidebar();
   const { t } = useTranslation();

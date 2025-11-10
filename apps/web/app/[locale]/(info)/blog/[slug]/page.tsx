@@ -5,7 +5,6 @@ import { getContentfulClients } from "~/lib/contentful";
 
 import { ArticleContent, ArticleHero, ArticleTileGrid } from "@repo/cms/article";
 import { Container } from "@repo/cms/container";
-import type { Locale } from "@repo/i18n/config";
 import { defaultLocale, locales } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";
 
@@ -56,7 +55,7 @@ export default async function Page({ params }: BlogPageProps) {
   const { isEnabled: preview } = await draftMode();
   const { previewClient, client } = await getContentfulClients();
   const gqlClient = preview ? previewClient : client;
-  const { t } = await initTranslations({ locale: locale as Locale });
+  const { t } = await initTranslations({ locale });
   const { pageBlogPostCollection } = await gqlClient.pageBlogPost({
     locale,
     slug,

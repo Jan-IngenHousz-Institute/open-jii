@@ -1,10 +1,9 @@
 import Image from "next/image";
 
-import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
 interface AuthHeroSectionProps {
-  locale: Locale;
+  locale: string;
 }
 
 export async function AuthHeroSection({ locale }: AuthHeroSectionProps) {

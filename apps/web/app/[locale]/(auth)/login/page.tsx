@@ -6,10 +6,8 @@ import Image from "next/image";
 import { AuthHeroSection } from "~/components/auth/auth-hero-section";
 import { LoginForm } from "~/components/auth/login-form";
 
-import type { Locale } from "@repo/i18n";
-
 export default async function LoginPage(props: {
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
   searchParams: SearchParamsType;
 }) {
   const { locale } = await props.params;
