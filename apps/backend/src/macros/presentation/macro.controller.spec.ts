@@ -141,6 +141,7 @@ describe("MacroController", () => {
       // Act & Assert
       await testApp
         .post(contract.macros.createMacro.path)
+        .withoutAuth()
         .send(macroData)
         .expect(StatusCodes.UNAUTHORIZED);
     });
@@ -202,6 +203,7 @@ describe("MacroController", () => {
       // Act & Assert
       await testApp
         .get(contract.macros.getMacro.path.replace(":id", faker.string.uuid()))
+        .withoutAuth()
         .expect(StatusCodes.UNAUTHORIZED);
     });
   });
@@ -279,7 +281,10 @@ describe("MacroController", () => {
 
     it("should require authentication", async () => {
       // Act & Assert
-      await testApp.get(contract.macros.listMacros.path).expect(StatusCodes.UNAUTHORIZED);
+      await testApp
+        .get(contract.macros.listMacros.path)
+        .withoutAuth()
+        .expect(StatusCodes.UNAUTHORIZED);
     });
   });
 
@@ -394,6 +399,7 @@ describe("MacroController", () => {
       // Act & Assert
       await testApp
         .put(contract.macros.updateMacro.path.replace(":id", faker.string.uuid()))
+        .withoutAuth()
         .send({ name: "Updated Name" })
         .expect(StatusCodes.UNAUTHORIZED);
     });
@@ -467,6 +473,7 @@ describe("MacroController", () => {
       // Act & Assert
       await testApp
         .delete(contract.macros.deleteMacro.path.replace(":id", faker.string.uuid()))
+        .withoutAuth()
         .expect(StatusCodes.UNAUTHORIZED);
     });
 
@@ -492,22 +499,29 @@ describe("MacroController", () => {
       // Test all endpoints without auth
       await testApp
         .post(contract.macros.createMacro.path)
+        .withoutAuth()
         .send({})
         .expect(StatusCodes.UNAUTHORIZED);
 
       await testApp
         .get(contract.macros.getMacro.path.replace(":id", macroId))
+        .withoutAuth()
         .expect(StatusCodes.UNAUTHORIZED);
 
-      await testApp.get(contract.macros.listMacros.path).expect(StatusCodes.UNAUTHORIZED);
+      await testApp
+        .get(contract.macros.listMacros.path)
+        .withoutAuth()
+        .expect(StatusCodes.UNAUTHORIZED);
 
       await testApp
         .put(contract.macros.updateMacro.path.replace(":id", macroId))
+        .withoutAuth()
         .send({})
         .expect(StatusCodes.UNAUTHORIZED);
 
       await testApp
         .delete(contract.macros.deleteMacro.path.replace(":id", macroId))
+        .withoutAuth()
         .expect(StatusCodes.UNAUTHORIZED);
     });
   });
