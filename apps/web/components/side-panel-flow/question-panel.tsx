@@ -65,7 +65,7 @@ export function QuestionPanel({
     if (stepSpecification.answerType === "SELECT" && stepSpecification.options) {
       onChange({
         ...stepSpecification,
-        options: stepSpecification.options.filter((_, i) => i !== optionIndex),
+        options: stepSpecification.options.filter((_: string, i: number) => i !== optionIndex),
       });
     }
   };
