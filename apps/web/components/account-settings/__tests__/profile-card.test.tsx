@@ -106,7 +106,7 @@ describe("<ProfileCard />", () => {
     render(<ProfileCard form={mockForm} />);
     expect(screen.getByTestId("card")).toBeInTheDocument();
     expect(screen.getByTestId("card-header")).toBeInTheDocument();
-    expect(screen.getByTestId("card-title")).toHaveTextContent("Profile Information");
+    expect(screen.getByTestId("card-title")).toHaveTextContent("settings.profileCard.title");
     expect(screen.getByTestId("card-content")).toBeInTheDocument();
   });
 
@@ -115,7 +115,7 @@ describe("<ProfileCard />", () => {
 
     // Assert labels exist
     expect(screen.getAllByTestId("form-label").map((l) => l.textContent)).toEqual(
-      expect.arrayContaining(["First Name", "Last Name"]),
+      expect.arrayContaining(["registration.firstName", "registration.lastName"]),
     );
 
     const inputs = screen.getAllByTestId("input");
@@ -124,14 +124,20 @@ describe("<ProfileCard />", () => {
 
   it("renders bio textarea", () => {
     render(<ProfileCard form={mockForm} />);
-    expect(screen.getByTestId("textarea")).toHaveAttribute("placeholder", "Tell us about yourself");
+    expect(screen.getByTestId("textarea")).toHaveAttribute(
+      "placeholder",
+      "settings.profileCard.bioPlaceholder",
+    );
   });
 
   it("renders organization field", () => {
     render(<ProfileCard form={mockForm} />);
     const inputs = screen.getAllByTestId("input");
     expect(
-      inputs.find((i) => (i as HTMLInputElement).placeholder === "Search or create organization"),
+      inputs.find(
+        (i) =>
+          (i as HTMLInputElement).placeholder === "settings.profileCard.institutionPlaceholder",
+      ),
     ).toBeTruthy();
   });
 
@@ -140,7 +146,10 @@ describe("<ProfileCard />", () => {
 
     // Check labels exist
     expect(screen.getAllByTestId("form-label").map((l) => l.textContent)).toEqual(
-      expect.arrayContaining(["Professional Title", "Department"]),
+      expect.arrayContaining([
+        "settings.profileCard.professionalTitle",
+        "settings.profileCard.department",
+      ]),
     );
 
     // Find inputs and assert at least two are disabled (title + department)
@@ -148,19 +157,19 @@ describe("<ProfileCard />", () => {
     const disabledInputs = inputs.filter((i) => (i as HTMLInputElement).disabled);
     expect(disabledInputs.length).toBeGreaterThanOrEqual(2);
 
-    expect(screen.getAllByText("Disabled").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("settings.disabled").length).toBeGreaterThanOrEqual(2);
   });
 
   it("renders all form labels", () => {
     render(<ProfileCard form={mockForm} />);
     expect(screen.getAllByTestId("form-label").map((l) => l.textContent)).toEqual(
       expect.arrayContaining([
-        "First Name",
-        "Last Name",
-        "Professional Title",
-        "Bio",
-        "Institution/Organization",
-        "Department",
+        "registration.firstName",
+        "registration.lastName",
+        "settings.profileCard.professionalTitle",
+        "settings.profileCard.bio",
+        "settings.profileCard.institution",
+        "settings.profileCard.department",
       ]),
     );
   });

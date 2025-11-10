@@ -70,6 +70,26 @@ export function QuestionPanel({
     }
   };
 
+  const bulkAddOptions = (newOptions: string[]) => {
+    if (disabled) return;
+    if (stepSpecification.answerType === "SELECT") {
+      onChange({
+        ...stepSpecification,
+        options: [...(stepSpecification.options ?? []), ...newOptions],
+      });
+    }
+  };
+
+  const deleteAllOptions = () => {
+    if (disabled) return;
+    if (stepSpecification.answerType === "SELECT") {
+      onChange({
+        ...stepSpecification,
+        options: [],
+      });
+    }
+  };
+
   const { t } = useTranslation("experiments");
   return (
     <Card className="mt-6">
@@ -88,6 +108,8 @@ export function QuestionPanel({
             onAddOption={addOption}
             onUpdateOption={updateOption}
             onDeleteOption={deleteOption}
+            onBulkAddOptions={bulkAddOptions}
+            onDeleteAllOptions={deleteAllOptions}
             disabled={disabled}
           />
         </div>
