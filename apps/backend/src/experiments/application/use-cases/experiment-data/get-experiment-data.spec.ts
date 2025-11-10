@@ -328,6 +328,168 @@ describe("GetExperimentDataUseCase", () => {
     });
   });
 
+  it("should return table data with ORDER BY when orderBy and orderDirection are specified", async () => {
+    // Create an experiment in the database
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      description: "Test Description",
+      status: "active",
+      visibility: "private",
+      userId: testUserId,
+    });
+
+    // Mock the Databricks methods
+    const mockCountData = {
+      columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
+      rows: [["100"]],
+      totalRows: 1,
+      truncated: false,
+    };
+
+    const mockTableData = {
+      columns: [
+        { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+        { name: "temperature", type_name: "DOUBLE", type_text: "DOUBLE" },
+      ],
+      rows: [
+        ["2023-01-01T12:02:00Z", "25.8"],
+        ["2023-01-01T12:01:00Z", "26.0"],
+        ["2023-01-01T12:00:00Z", "25.5"],
+      ],
+      totalRows: 3,
+      truncated: false,
+    };
+
+    // Expected data after transformation
+    const expectedTableData = {
+      columns: mockTableData.columns,
+      rows: [
+        { timestamp: "2023-01-01T12:02:00Z", temperature: "25.8" },
+        { timestamp: "2023-01-01T12:01:00Z", temperature: "26.0" },
+        { timestamp: "2023-01-01T12:00:00Z", temperature: "25.5" },
+      ],
+      totalRows: mockTableData.totalRows,
+      truncated: mockTableData.truncated,
+    };
+
+    // Generate clean schema name to match the implementation
+    const cleanName = experiment.name.toLowerCase().trim().replace(/ /g, "_");
+
+    // Mock token request
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+      access_token: "mock-token",
+      expires_in: 3600,
+      token_type: "Bearer",
+    });
+
+    // Mock listTables API call to validate table exists
+    nock(DATABRICKS_HOST)
+      .get(DatabricksTablesService.TABLES_ENDPOINT)
+      .query(true)
+      .reply(200, {
+        tables: [
+          {
+            name: "sensor_data",
+            catalog_name: MOCK_CATALOG_NAME,
+            schema_name: `exp_${cleanName}_${experiment.id}`,
+          },
+        ],
+      });
+
+    // Mock count query for pagination
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "SELECT COUNT(*) as count FROM sensor_data",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_${cleanName}_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-count-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockCountData.columns.length,
+            columns: mockCountData.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockCountData.totalRows,
+          truncated: mockCountData.truncated,
+        },
+        result: {
+          data_array: mockCountData.rows,
+          chunk_index: 0,
+          row_count: mockCountData.rows.length,
+          row_offset: 0,
+        },
+      });
+
+    // Mock SQL query with ORDER BY clause
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "SELECT * FROM sensor_data ORDER BY `timestamp` DESC LIMIT 20 OFFSET 0",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_${cleanName}_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-data-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockTableData.columns.length,
+            columns: mockTableData.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockTableData.totalRows,
+          truncated: mockTableData.truncated,
+        },
+        result: {
+          data_array: mockTableData.rows,
+          chunk_index: 0,
+          row_count: mockTableData.rows.length,
+          row_offset: 0,
+        },
+      });
+
+    // Act
+    const result = await useCase.execute(experiment.id, testUserId, {
+      tableName: "sensor_data",
+      page: 1,
+      pageSize: 20,
+      orderBy: "timestamp",
+      orderDirection: "DESC",
+    });
+
+    // Assert result is success
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+
+    // Verify response structure
+    expect(Array.isArray(result.value)).toBe(true);
+    expect(result.value).toHaveLength(1);
+    expect(result.value[0]).toMatchObject({
+      name: "sensor_data",
+      catalog_name: experiment.name,
+      schema_name: `exp_${cleanName}_${experiment.id}`,
+      data: expectedTableData,
+      page: 1,
+      pageSize: 20,
+      totalRows: 100,
+      totalPages: 5, // 100 rows / 20 per page = 5 pages
+    });
+  });
+
   it("should return table list and sample data when no table name is specified", async () => {
     // Create an experiment in the database
     const { experiment } = await testApp.createExperiment({

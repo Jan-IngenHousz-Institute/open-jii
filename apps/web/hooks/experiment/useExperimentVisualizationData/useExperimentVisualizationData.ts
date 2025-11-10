@@ -9,6 +9,8 @@ const STALE_TIME = 2 * 60 * 1000;
 export interface VisualizationDataConfig {
   tableName: string;
   columns?: string[]; // Optional: specific columns to fetch
+  orderBy?: string; // Optional: column to order by
+  orderDirection?: "ASC" | "DESC"; // Optional: sort direction
 }
 
 /**
@@ -28,7 +30,9 @@ export const useExperimentVisualizationData = (
       params: { id: experimentId },
       query: {
         tableName: dataConfig.tableName,
-        columns: dataConfig.columns?.join(","), // Use server-side column filtering for efficiency
+        columns: dataConfig.columns?.join(","),
+        orderBy: dataConfig.orderBy,
+        orderDirection: dataConfig.orderDirection,
       },
     },
     queryKey: [
@@ -36,6 +40,8 @@ export const useExperimentVisualizationData = (
       experimentId,
       dataConfig.tableName,
       dataConfig.columns,
+      dataConfig.orderBy,
+      dataConfig.orderDirection,
     ],
     staleTime: STALE_TIME,
     enabled: enabled && !!dataConfig.tableName,

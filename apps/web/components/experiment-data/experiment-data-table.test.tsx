@@ -568,9 +568,15 @@ describe("ExperimentDataTable", () => {
     expect(mockUseQuery).toHaveBeenCalledWith({
       queryData: {
         params: { id: "experiment-123" },
-        query: { tableName: "test_table", page: 1, pageSize: 20 },
+        query: {
+          tableName: "test_table",
+          page: 1,
+          pageSize: 20,
+          orderBy: undefined,
+          orderDirection: undefined,
+        },
       },
-      queryKey: ["experiment", "experiment-123", 1, 20, "test_table"],
+      queryKey: ["experiment", "experiment-123", 1, 20, "test_table", undefined, undefined],
       staleTime: 120000,
     });
   });
