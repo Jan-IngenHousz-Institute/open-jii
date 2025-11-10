@@ -674,12 +674,14 @@ module "opennext" {
   ses_secret_arn            = module.ses_secrets.secret_arn
 
   server_environment_variables = {
-    COOKIE_DOMAIN      = ".${var.domain_name}"
-    DB_HOST            = module.aurora_db.cluster_endpoint
-    DB_PORT            = module.aurora_db.cluster_port
-    DB_NAME            = module.aurora_db.database_name
-    NODE_ENV           = "production"
-    ENVIRONMENT_PREFIX = var.environment
+    COOKIE_DOMAIN             = ".${var.domain_name}"
+    DB_HOST                   = module.aurora_db.cluster_endpoint
+    DB_PORT                   = module.aurora_db.cluster_port
+    DB_NAME                   = module.aurora_db.database_name
+    NODE_ENV                  = "production"
+    ENVIRONMENT_PREFIX        = var.environment
+    NEXT_PUBLIC_POSTHOG_KEY   = var.posthog_key
+    NEXT_PUBLIC_POSTHOG_HOST  = var.posthog_host
   }
 
   # Performance configuration
