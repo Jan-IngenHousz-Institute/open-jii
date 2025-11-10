@@ -64,7 +64,7 @@ export class UpdateExperimentMemberRoleUseCase {
             this.logger.warn(
               `User ${currentUserId} attempted to demote last admin in experiment ${experimentId}`,
             );
-            return failure(AppError.badRequest("You cannot demote the last admin."));
+            return failure(AppError.badRequest("Cannot demote the last admin of the experiment"));
           }
         }
 
