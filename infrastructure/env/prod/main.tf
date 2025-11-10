@@ -362,6 +362,15 @@ module "pipeline_scheduler" {
     },
   ]
 
+  webhook_notifications = {
+    on_start = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
+
   permissions = [
     {
       principal_application_id = module.node_service_principal.service_principal_application_id

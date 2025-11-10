@@ -288,7 +288,7 @@ module "centrum_pipeline" {
     "KINESIS_STREAM_NAME"      = module.kinesis.kinesis_stream_name
     "SERVICE_CREDENTIAL_NAME"  = "unity-catalog-kinesis-role-${var.environment}"
     "CHECKPOINT_PATH"          = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
-    "ENVIRONMENT"              = upper(var.environment)
+    "ENVIRONMENT"              = var.environment
     "MONITORING_SLACK_CHANNEL" = var.slack_channel
   }
 
