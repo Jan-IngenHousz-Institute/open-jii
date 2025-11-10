@@ -12,11 +12,6 @@ export default mergeConfig(
       globals: true,
       setupFiles: ["./src/test/setup.ts"],
       pool: "forks",
-      poolOptions: {
-        forks: {
-          singleFork: true,
-        },
-      },
       sequence: {
         concurrent: false,
       },
