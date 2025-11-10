@@ -22,11 +22,6 @@
     "tf": "pnpm run tf:dev",
     "tf:fmt": "cd infrastructure && tofu fmt --recursive",
     "tf:dev": "cd infrastructure/env/dev && tofu init && tofu plan && tofu apply",
-    "asyncapi:html": "asyncapi generate fromTemplate asyncapi.yaml @asyncapi/html-template@3.3.0 --use-new-generator -o ./apps/docs/static/.asyncapi",
-    "asyncapi:md": "asyncapi generate fromTemplate asyncapi.yaml @asyncapi/markdown-template@1.6.6 -o ./apps/docs/static/.asyncapi",
-    "openapi:generate": "cd packages/api && pnpm tsc && node dist/openapi.js",
-    "openapi:docs": "pnpm run openapi:generate && cd apps/docs && pnpm run openapi",
-    "api:docs": "pnpm run openapi:docs && pnpm run asyncapi:html",
     "db:migrate": "turbo db:migrate",
     "db:generate": "turbo --filter database db:generate",
     "db:studio": "turbo --filter database db:studio",
@@ -37,9 +32,6 @@
     "dev:fb": "turbo run dev --filter=backend --filter=web"
   },
   "devDependencies": {
-    "@asyncapi/cli": "^3.2.0",
-    "@asyncapi/html-template": "^3.3.0",
-    "@asyncapi/markdown-template": "^1.6.6",
     "@repo/vitest-config": "workspace:*",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "prettier": "3.5.3",
@@ -56,7 +48,8 @@
     "overrides": {
       "react": "catalog:react19",
       "react-dom": "catalog:react19",
-      "@auth/core": "0.41.1"
+      "@auth/core": "0.41.1",
+      "mermaid": "^11.10.0"
     }
   }
 }
