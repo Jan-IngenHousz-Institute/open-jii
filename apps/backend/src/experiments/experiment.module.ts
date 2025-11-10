@@ -21,6 +21,7 @@ import { UpdateExperimentLocationsUseCase } from "./application/use-cases/experi
 import { AddExperimentMembersUseCase } from "./application/use-cases/experiment-members/add-experiment-members";
 import { ListExperimentMembersUseCase } from "./application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "./application/use-cases/experiment-members/remove-experiment-member";
+import { UpdateExperimentMemberRoleUseCase } from "./application/use-cases/experiment-members/update-experiment-member-role";
 import { AddExperimentProtocolsUseCase } from "./application/use-cases/experiment-protocols/add-experiment-protocols";
 import { ListExperimentProtocolsUseCase } from "./application/use-cases/experiment-protocols/list-experiment-protocols";
 import { RemoveExperimentProtocolUseCase } from "./application/use-cases/experiment-protocols/remove-experiment-protocol";
@@ -109,6 +110,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
     ListExperimentMembersUseCase,
     AddExperimentMembersUseCase,
     RemoveExperimentMemberUseCase,
+    UpdateExperimentMemberRoleUseCase,
 
     // Experiment location use cases
     GetExperimentLocationsUseCase,

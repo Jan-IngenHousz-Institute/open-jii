@@ -12,6 +12,7 @@ import { handleFailure } from "../../common/utils/fp-utils";
 import { AddExperimentMembersUseCase } from "../application/use-cases/experiment-members/add-experiment-members";
 import { ListExperimentMembersUseCase } from "../application/use-cases/experiment-members/list-experiment-members";
 import { RemoveExperimentMemberUseCase } from "../application/use-cases/experiment-members/remove-experiment-member";
+import { UpdateExperimentMemberRoleUseCase } from "../application/use-cases/experiment-members/update-experiment-member-role";
 
 @Controller()
 @UseGuards(AuthGuard)
@@ -22,6 +23,7 @@ export class ExperimentMembersController {
     private readonly listExperimentMembersUseCase: ListExperimentMembersUseCase,
     private readonly addExperimentMembersUseCase: AddExperimentMembersUseCase,
     private readonly removeExperimentMemberUseCase: RemoveExperimentMemberUseCase,
+    private readonly updateExperimentMemberRoleUseCase: UpdateExperimentMemberRoleUseCase,
   ) {}
 
   @TsRestHandler(contract.experiments.listExperimentMembers)
@@ -93,5 +95,36 @@ export class ExperimentMembersController {
 
       return handleFailure(result, this.logger);
     });
+  }
+
+  @TsRestHandler(contract.experiments.updateExperimentMemberRole)
+  updateMemberRole(@CurrentUser() user: User) {
+    return tsRestHandler(
+      contract.experiments.updateExperimentMemberRole,
+      async ({ params, body }) => {
+        const result = await this.updateExperimentMemberRoleUseCase.execute(
+          params.id,
+          params.memberId,
+          body.role,
+          user.id,
+        );
+
+        if (result.isSuccess()) {
+          const member = result.value;
+          const formattedMember = formatDatesList([member])[0];
+
+          this.logger.log(
+            `Member ${params.memberId} role updated to ${body.role} in experiment ${params.id} by user ${user.id}`,
+          );
+
+          return {
+            status: StatusCodes.OK,
+            body: formattedMember,
+          };
+        }
+
+        return handleFailure(result, this.logger);
+      },
+    );
   }
 }

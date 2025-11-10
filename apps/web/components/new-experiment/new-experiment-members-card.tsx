@@ -2,24 +2,29 @@
 
 import { useDebounce } from "@/hooks/useDebounce";
 import { useUserSearch } from "@/hooks/useUserSearch";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useFieldArray } from "react-hook-form";
 import type { UseFormReturn } from "react-hook-form";
 
-import type { UserProfile, CreateExperimentBody } from "@repo/api";
+import type { UserProfile, CreateExperimentBody, ExperimentMemberRole } from "@repo/api";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components";
 
 import { MemberList } from "../current-members-list/current-members-list";
-import { UserSearchWithDropdown } from "../user-search-with-dropdown";
-
-interface Member {
-  userId: string;
-  role?: "admin" | "member";
-  firstName?: string;
-  lastName?: string;
-  email?: string | null;
-}
+import { UserSearchPopover } from "../user-search-popover";
 
 interface NewExperimentMembersCardProps {
   form: UseFormReturn<CreateExperimentBody>;
@@ -30,17 +35,23 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
   const { data: session } = useSession();
   const currentUserId = session?.user.id ?? "";
 
+  // Use useFieldArray to manage the members array
+  const {
+    fields: members,
+    append,
+    remove,
+    update,
+  } = useFieldArray({
+    control: form.control,
+    name: "members",
+  });
+
   // Member management state
   const [userSearch, setUserSearch] = useState("");
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [selectedRole, setSelectedRole] = useState<ExperimentMemberRole>("member");
   const [debouncedSearch, isDebounced] = useDebounce(userSearch, 300);
   const { data: userSearchData, isLoading: isFetchingUsers } = useUserSearch(debouncedSearch);
-  const [selectedUserId, setSelectedUserId] = useState("");
-  // Track added users for display - we collect users as we add them
-  const [addedProfiles, setAddedProfiles] = useState<UserProfile[]>([]);
-
-  // Use form for members instead of useState
-  const watchedMembers = form.watch("members");
-  const members: Member[] = useMemo(() => watchedMembers ?? [], [watchedMembers]);
 
   // Filter available users (exclude already added and current user)
   const availableProfiles = useMemo(
@@ -53,32 +64,36 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
   );
 
   // Add member handler
-  const handleAddMember = (profileId: string) => {
-    const profile = availableProfiles.find((p) => p.userId === profileId);
-    if (!profile) return;
-    form.setValue("members", [
-      ...members,
-      {
-        userId: profile.userId,
-        role: "member",
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        email: profile.email,
-      },
-    ]);
-    setAddedProfiles((prev) =>
-      prev.some((p) => p.userId === profile.userId) ? prev : [...prev, profile],
-    );
-    setSelectedUserId("");
+  const handleAddMember = () => {
+    if (!selectedUser) return;
+
+    append({
+      userId: selectedUser.userId,
+      role: selectedRole,
+      firstName: selectedUser.firstName,
+      lastName: selectedUser.lastName,
+      email: selectedUser.email,
+    });
+
+    setSelectedUser(null);
     setUserSearch("");
+    setSelectedRole("member");
   };
 
   // Remove member handler
   const handleRemoveMember = (userId: string) => {
-    form.setValue(
-      "members",
-      members.filter((m) => m.userId !== userId),
-    );
+    const index = members.findIndex((m) => m.userId === userId);
+    if (index !== -1) {
+      remove(index);
+    }
+  };
+
+  // Update member role
+  const handleUpdateMemberRole = (userId: string, role: ExperimentMemberRole) => {
+    const index = members.findIndex((m) => m.userId === userId);
+    if (index !== -1) {
+      update(index, { ...members[index], role });
+    }
   };
 
   // Calculate admin count
@@ -86,10 +101,24 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
     return members.filter((m) => m.role === "admin").length;
   }, [members]);
 
-  // Combine added users with users from search results to pass to MemberList
+  // Build combined profiles from members for display
   const combinedProfiles = useMemo(() => {
-    // Start with profiles we've added
-    const allProfiles = [...addedProfiles];
+    const allProfiles: UserProfile[] = [];
+
+    // Add profiles from members that have user data
+    members.forEach((member) => {
+      if (member.firstName || member.lastName || member.email) {
+        allProfiles.push({
+          userId: member.userId,
+          firstName: member.firstName ?? "",
+          lastName: member.lastName ?? "",
+          email: member.email ?? null,
+          bio: null,
+          activated: null,
+          organization: undefined,
+        });
+      }
+    });
 
     // Add any profiles from search results that aren't already in the list
     if (userSearchData?.body) {
@@ -101,23 +130,7 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
     }
 
     return allProfiles;
-  }, [addedProfiles, userSearchData]);
-
-  useEffect(() => {
-    const hydratedProfiles = members
-      .filter((m) => m.firstName ?? m.lastName ?? m.email)
-      .map((m) => ({
-        userId: m.userId,
-        firstName: m.firstName ?? "",
-        lastName: m.lastName ?? "",
-        email: m.email ?? null,
-        bio: null,
-        activated: null,
-        organization: undefined,
-      }));
-
-    setAddedProfiles(hydratedProfiles);
-  }, [members]);
+  }, [members, userSearchData]);
 
   return (
     <Card className="min-w-0 flex-1">
@@ -126,18 +139,38 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
         <CardDescription>{t("newExperiment.addMembersDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="mb-2">
-          <UserSearchWithDropdown
+        <div className="flex flex-wrap gap-2">
+          <UserSearchPopover
             availableUsers={availableProfiles}
-            value={selectedUserId}
-            onValueChange={setSelectedUserId}
-            placeholder={t("newExperiment.addMemberPlaceholder")}
-            loading={!isDebounced || isFetchingUsers}
             searchValue={userSearch}
             onSearchChange={setUserSearch}
-            onAddUser={handleAddMember}
             isAddingUser={false}
+            loading={!isDebounced || isFetchingUsers}
+            onSelectUser={setSelectedUser}
+            placeholder={t("newExperiment.addMemberPlaceholder")}
+            selectedUser={selectedUser}
+            onClearSelection={() => setSelectedUser(null)}
           />
+          <Select
+            value={selectedRole}
+            onValueChange={(val) => setSelectedRole(val as ExperimentMemberRole)}
+          >
+            <SelectTrigger className="w-[100px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="member">{t("experimentSettings.roleMember")}</SelectItem>
+              <SelectItem value="admin">{t("experimentSettings.roleAdmin")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={handleAddMember}
+            disabled={!selectedUser}
+            size="default"
+            className="flex-1 md:flex-none"
+          >
+            {t("common.add")}
+          </Button>
         </div>
         <MemberList
           members={members}
@@ -146,6 +179,8 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
           isRemovingMember={false}
           removingMemberId={null}
           adminCount={adminCount}
+          newExperiment={true}
+          onUpdateMemberRole={handleUpdateMemberRole}
         />
       </CardContent>
     </Card>

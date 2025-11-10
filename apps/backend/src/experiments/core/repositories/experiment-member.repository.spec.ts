@@ -675,4 +675,153 @@ describe("ExperimentMemberRepository", () => {
       expect(result.value).toEqual([]);
     });
   });
+
+  describe("getAdminCount", () => {
+    it("should return the correct count of admins", async () => {
+      // Create experiment (creator is admin)
+      const { experiment } = await testApp.createExperiment({
+        name: "Admin Count Test",
+        userId: testUserId,
+      });
+
+      // Initially should have 1 admin (the creator)
+      let result = await repository.getAdminCount(experiment.id);
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(1);
+
+      // Add a regular member
+      const memberId = await testApp.createTestUser({
+        email: "member@example.com",
+      });
+      await repository.addMembers(experiment.id, [{ userId: memberId, role: "member" }]);
+
+      // Should still have 1 admin
+      result = await repository.getAdminCount(experiment.id);
+      assertSuccess(result);
+      expect(result.value).toBe(1);
+
+      // Add another admin
+      const adminId = await testApp.createTestUser({
+        email: "admin@example.com",
+      });
+      await repository.addMembers(experiment.id, [{ userId: adminId, role: "admin" }]);
+
+      // Should now have 2 admins
+      result = await repository.getAdminCount(experiment.id);
+      assertSuccess(result);
+      expect(result.value).toBe(2);
+    });
+
+    it("should return 0 when experiment has no admins", async () => {
+      // Create a fresh experiment without members
+      const [experiment] = await testApp.database
+        .insert(experiments)
+        .values({
+          name: "No Admins Experiment",
+          description: "No members",
+          status: "provisioning",
+          visibility: "private",
+          createdBy: testUserId,
+        })
+        .returning();
+
+      // Act
+      const result = await repository.getAdminCount(experiment.id);
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toBe(0);
+    });
+  });
+
+  describe("updateMemberRole", () => {
+    it("should update a member's role from member to admin", async () => {
+      // Create experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Update Role Test",
+        userId: testUserId,
+      });
+
+      // Add a regular member
+      const memberId = await testApp.createTestUser({
+        email: "member@example.com",
+        name: "Test Member",
+      });
+      await repository.addMembers(experiment.id, [{ userId: memberId, role: "member" }]);
+
+      // Update to admin
+      const result = await repository.updateMemberRole(experiment.id, memberId, "admin");
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+
+      const updatedMember = result.value;
+      expect(updatedMember.role).toBe("admin");
+      expect(updatedMember.user.id).toBe(memberId);
+      expect(updatedMember.experimentId).toBe(experiment.id);
+      expect(updatedMember.user.firstName).toBe("Test");
+      expect(updatedMember.user.lastName).toBe("Member");
+      expect(updatedMember.user.email).toBe("member@example.com");
+
+      // Verify the role was actually updated
+      const roleResult = await repository.getMemberRole(experiment.id, memberId);
+      assertSuccess(roleResult);
+      expect(roleResult.value).toBe("admin");
+    });
+
+    it("should update a member's role from admin to member", async () => {
+      // Create experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Demote Admin Test",
+        userId: testUserId,
+      });
+
+      // Add an admin
+      const adminId = await testApp.createTestUser({
+        email: "admin@example.com",
+        name: "Test Admin",
+      });
+      await repository.addMembers(experiment.id, [{ userId: adminId, role: "admin" }]);
+
+      // Update to member
+      const result = await repository.updateMemberRole(experiment.id, adminId, "member");
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+
+      const updatedMember = result.value;
+      expect(updatedMember.role).toBe("member");
+      expect(updatedMember.user.id).toBe(adminId);
+
+      // Verify the role was actually updated
+      const roleResult = await repository.getMemberRole(experiment.id, adminId);
+      assertSuccess(roleResult);
+      expect(roleResult.value).toBe("member");
+    });
+
+    it("should return member with complete user information", async () => {
+      // Create experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "User Info Test",
+        userId: testUserId,
+      });
+
+      // Add a member with complete info
+      const memberId = await testApp.createTestUser({
+        email: "complete@example.com",
+        name: "Complete User",
+      });
+      await repository.addMembers(experiment.id, [{ userId: memberId, role: "member" }]);
+
+      // Update role
+      const result = await repository.updateMemberRole(experiment.id, memberId, "admin");
+      assertSuccess(result);
+
+      const updatedMember = result.value;
+      expect(updatedMember.user).toEqual({
+        id: memberId,
+        firstName: "Complete",
+        lastName: "User",
+        email: "complete@example.com",
+      });
+    });
+  });
 });
