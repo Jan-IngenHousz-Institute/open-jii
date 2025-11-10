@@ -155,6 +155,122 @@ describe("ExperimentDataController", () => {
       );
     });
 
+    it("should return experiment data with ORDER BY when orderBy and orderDirection are provided", async () => {
+      // Create an experiment
+      const { experiment } = await testApp.createExperiment({
+        name: "Test Experiment for Ordering",
+        userId: testUserId,
+      });
+
+      // Mock the DatabricksAdapter methods
+      const mockCountData = {
+        columns: [{ name: "count", type_name: "LONG", type_text: "LONG" }],
+        rows: [["50"]],
+        totalRows: 1,
+        truncated: false,
+      };
+
+      const mockTableData = {
+        columns: [
+          { name: "timestamp", type_name: "timestamp", type_text: "timestamp" },
+          { name: "temperature", type_name: "number", type_text: "number" },
+        ],
+        rows: [
+          ["2023-01-01T12:02:00Z", "25.8"],
+          ["2023-01-01T12:01:00Z", "26.0"],
+          ["2023-01-01T12:00:00Z", "25.5"],
+        ],
+        totalRows: 3,
+        truncated: false,
+      };
+
+      const resultTableData = {
+        columns: [
+          { name: "timestamp", type_name: "timestamp", type_text: "timestamp" },
+          { name: "temperature", type_name: "number", type_text: "number" },
+        ],
+        rows: [
+          { timestamp: "2023-01-01T12:02:00Z", temperature: "25.8" },
+          { timestamp: "2023-01-01T12:01:00Z", temperature: "26.0" },
+          { timestamp: "2023-01-01T12:00:00Z", temperature: "25.5" },
+        ],
+        totalRows: 3,
+        truncated: false,
+      };
+
+      // Mock listTables to validate table exists
+      const mockTablesResponse = {
+        tables: [
+          {
+            name: "sensor_data",
+            catalog_name: experiment.name,
+            schema_name: `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+            table_type: "MANAGED" as const,
+            created_at: Date.now(),
+          },
+        ],
+      };
+
+      vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
+
+      vi.spyOn(databricksAdapter, "executeSqlQuery")
+        .mockResolvedValueOnce(success(mockCountData)) // First call for count
+        .mockResolvedValueOnce(success(mockTableData)); // Second call for actual data with ORDER BY
+
+      // Get the path
+      const path = testApp.resolvePath(contract.experiments.getExperimentData.path, {
+        id: experiment.id,
+      });
+
+      // Add query parameters including orderBy and orderDirection
+      const queryParams = {
+        tableName: "sensor_data",
+        page: 1,
+        pageSize: 10,
+        orderBy: "timestamp",
+        orderDirection: "DESC",
+      };
+
+      // Make the request
+      const response: SuperTestResponse<ExperimentDataResponse> = await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .query(queryParams)
+        .expect(StatusCodes.OK);
+
+      // Verify the response structure
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0]).toMatchObject({
+        name: "sensor_data",
+        catalog_name: experiment.name,
+        schema_name: `exp_test_experiment_for_ordering_${experiment.id}`,
+        data: resultTableData,
+        page: 1,
+        pageSize: 10,
+        totalPages: 5, // 50 / 10
+        totalRows: 50,
+      });
+
+      // Verify the DatabricksAdapter was called correctly
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksAdapter.listTables).toHaveBeenCalledWith(experiment.name, experiment.id);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksAdapter.executeSqlQuery).toHaveBeenCalledTimes(2);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
+        1,
+        `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+        "SELECT COUNT(*) as count FROM sensor_data",
+      );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(databricksAdapter.executeSqlQuery).toHaveBeenNthCalledWith(
+        2,
+        `exp_${experiment.name.toLowerCase().replace(/ /g, "_")}_${experiment.id}`,
+        "SELECT * FROM sensor_data ORDER BY `timestamp` DESC LIMIT 10 OFFSET 0",
+      );
+    });
+
     it("should return tables list with sample data when no table name is specified", async () => {
       // Create an experiment
       const { experiment } = await testApp.createExperiment({

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ExperimentVisualization } from "@repo/api";
 
-import * as useExperimentVisualizationDataModule from "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
+import { useExperimentVisualizationData } from "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { LineChartRenderer } from "./line-chart-renderer";
 
 // Mock the translation hook
@@ -25,6 +25,9 @@ vi.mock("@repo/ui/components", () => ({
 // Mock the useExperimentVisualizationData hook
 vi.mock(
   "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData",
+  () => ({
+    useExperimentVisualizationData: vi.fn(),
+  }),
 );
 
 describe("LineChartRenderer", () => {
@@ -61,7 +64,7 @@ describe("LineChartRenderer", () => {
   ];
 
   beforeEach(() => {
-    vi.mocked(useExperimentVisualizationDataModule.useExperimentVisualizationData).mockReturnValue({
+    vi.mocked(useExperimentVisualizationData).mockReturnValue({
       data: undefined,
       tableInfo: undefined,
       isLoading: false,
@@ -99,9 +102,7 @@ describe("LineChartRenderer", () => {
 
   describe("Loading and error states", () => {
     it("should show loading message when data is loading", () => {
-      vi.mocked(
-        useExperimentVisualizationDataModule.useExperimentVisualizationData,
-      ).mockReturnValue({
+      vi.mocked(useExperimentVisualizationData).mockReturnValue({
         data: undefined,
         tableInfo: undefined,
         isLoading: true,
@@ -114,9 +115,7 @@ describe("LineChartRenderer", () => {
     });
 
     it("should show error message when fetch fails", () => {
-      vi.mocked(
-        useExperimentVisualizationDataModule.useExperimentVisualizationData,
-      ).mockReturnValue({
+      vi.mocked(useExperimentVisualizationData).mockReturnValue({
         data: undefined,
         tableInfo: undefined,
         isLoading: false,
@@ -130,9 +129,7 @@ describe("LineChartRenderer", () => {
     });
 
     it("should not show loading when data is provided", () => {
-      vi.mocked(
-        useExperimentVisualizationDataModule.useExperimentVisualizationData,
-      ).mockReturnValue({
+      vi.mocked(useExperimentVisualizationData).mockReturnValue({
         data: undefined,
         tableInfo: undefined,
         isLoading: true,
@@ -152,9 +149,7 @@ describe("LineChartRenderer", () => {
     });
 
     it("should not show error when data is provided", () => {
-      vi.mocked(
-        useExperimentVisualizationDataModule.useExperimentVisualizationData,
-      ).mockReturnValue({
+      vi.mocked(useExperimentVisualizationData).mockReturnValue({
         data: undefined,
         tableInfo: undefined,
         isLoading: false,
@@ -185,9 +180,7 @@ describe("LineChartRenderer", () => {
     });
 
     it("should use fetched data when available", () => {
-      vi.mocked(
-        useExperimentVisualizationDataModule.useExperimentVisualizationData,
-      ).mockReturnValue({
+      vi.mocked(useExperimentVisualizationData).mockReturnValue({
         data: { rows: mockData, columns: [], totalRows: mockData.length, truncated: false },
         tableInfo: {
           name: "test_table",

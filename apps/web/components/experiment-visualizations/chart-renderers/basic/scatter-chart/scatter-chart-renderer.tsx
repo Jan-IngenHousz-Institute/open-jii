@@ -7,16 +7,64 @@ import { useTranslation } from "@repo/i18n";
 import type { PlotlyChartConfig, ScatterSeriesData } from "@repo/ui/components";
 import { ScatterChart } from "@repo/ui/components";
 
+import { useExperimentVisualizationData } from "../../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
+
 export interface ScatterChartRendererProps {
   visualization: ExperimentVisualization;
   experimentId: string;
   data?: Record<string, unknown>[];
 }
 
-export function ScatterChartRenderer({ visualization, data }: ScatterChartRendererProps) {
+export function ScatterChartRenderer({
+  visualization,
+  experimentId,
+  data: providedData,
+}: ScatterChartRendererProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  if (!data || data.length === 0) {
+  // Get X-axis column for ordering
+  const xDataSources = visualization.dataConfig.dataSources.filter((ds) => ds.role === "x");
+  const xColumn = xDataSources[0]?.columnName;
+
+  // Fetch data if not provided - always order by X-axis column
+  const {
+    data: fetchedData,
+    isLoading,
+    error,
+  } = useExperimentVisualizationData(
+    experimentId,
+    {
+      tableName: visualization.dataConfig.tableName,
+      columns: visualization.dataConfig.dataSources.map((ds) => ds.columnName),
+      orderBy: xColumn,
+      orderDirection: "ASC",
+    },
+    !providedData, // Only fetch if data not provided
+  );
+
+  // Use provided data or fetched data
+  const chartData = providedData ?? fetchedData?.rows ?? [];
+
+  if (isLoading && !providedData) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-muted-foreground">{t("errors.loadingData")}</div>
+      </div>
+    );
+  }
+
+  if (error && !providedData) {
+    return (
+      <div className="bg-destructive/10 text-destructive flex h-full items-center justify-center rounded-lg border">
+        <div className="text-center">
+          <div className="mb-2 font-medium">{t("errors.failedToLoadData")}</div>
+          <div className="text-sm">{t("errors.failedToLoadDataDescription")}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!Array.isArray(chartData) || chartData.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-muted-foreground text-center">
@@ -54,12 +102,12 @@ export function ScatterChartRenderer({ visualization, data }: ScatterChartRender
     const chartConfig = visualization.config as PlotlyChartConfig &
       Omit<ScatterSeriesData, "x" | "y">;
 
-    const scatterData: ScatterSeriesData[] = yDataSources.map((yDataSource) => {
-      const xValues = data.map((row) => {
+    const scatterData: ScatterSeriesData[] = yDataSources.map((yDataSource, index) => {
+      const xValues = chartData.map((row) => {
         const value = row[xColumn];
         return typeof value === "string" || typeof value === "number" ? value : String(value);
       });
-      const yValues = data.map((row) => {
+      const yValues = chartData.map((row) => {
         const value = row[yDataSource.columnName];
         return typeof value === "string" || typeof value === "number" ? value : String(value);
       });
@@ -67,39 +115,48 @@ export function ScatterChartRenderer({ visualization, data }: ScatterChartRender
       // Handle color mapping if color role is configured
       let colorValues: string[] | undefined;
       if (colorDataSources.length > 0 && colorDataSources[0]?.columnName) {
-        colorValues = data.map((row) => {
+        colorValues = chartData.map((row) => {
           const value = row[colorDataSources[0].columnName];
           return String(value);
         });
       }
 
+      const name = yDataSource.alias ?? yDataSource.columnName;
+      const color =
+        colorValues ??
+        (Array.isArray(chartConfig.color) ? chartConfig.color[index] : chartConfig.color);
+      const colorscale = colorValues ? chartConfig.marker?.colorscale : undefined;
+      const showscale = colorValues ? chartConfig.marker?.showscale : undefined;
+
+      const colorbar =
+        colorValues && chartConfig.marker?.showscale
+          ? {
+              title: {
+                text: chartConfig.marker.colorbar?.title?.text,
+                font: {
+                  color: chartConfig.marker.colorbar?.title?.font?.color,
+                  size: chartConfig.marker.colorbar?.title?.font?.size,
+                  family: chartConfig.marker.colorbar?.title?.font?.family,
+                },
+                side: chartConfig.marker.colorbar?.title?.side,
+              },
+              thickness: 15,
+              len: 0.9,
+            }
+          : undefined;
+
       return {
         x: xValues,
         y: yValues,
-        name: yDataSource.alias ?? yDataSource.columnName,
+        name,
         mode: chartConfig.mode,
         marker: {
           size: chartConfig.marker?.size,
           symbol: chartConfig.marker?.symbol,
-          color: colorValues ?? chartConfig.color,
-          colorscale: colorValues ? chartConfig.marker?.colorscale : undefined,
-          showscale: colorValues ? chartConfig.marker?.showscale : undefined,
-          ...(colorValues &&
-            chartConfig.marker?.showscale && {
-              colorbar: {
-                title: {
-                  text: chartConfig.marker.colorbar?.title?.text,
-                  font: {
-                    color: chartConfig.marker.colorbar?.title?.font?.color,
-                    size: chartConfig.marker.colorbar?.title?.font?.size,
-                    family: chartConfig.marker.colorbar?.title?.font?.family,
-                  },
-                  side: chartConfig.marker.colorbar?.title?.side,
-                },
-                thickness: 15,
-                len: 0.9,
-              },
-            }),
+          color,
+          colorscale,
+          showscale,
+          colorbar,
         },
         line: chartConfig.line,
         text: chartConfig.text,

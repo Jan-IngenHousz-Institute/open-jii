@@ -445,10 +445,21 @@ describe("Experiment Schema", () => {
       const d1 = zExperimentDataQuery.parse({});
       expect(d1.page).toBeUndefined();
       expect(d1.pageSize).toBeUndefined();
+      expect(d1.orderBy).toBeUndefined();
+      expect(d1.orderDirection).toBeUndefined();
 
       const d2 = zExperimentDataQuery.parse({ page: "3", pageSize: "10" });
       expect(d2.page).toBe(3);
       expect(d2.pageSize).toBe(10);
+      expect(d2.orderBy).toBeUndefined();
+      expect(d2.orderDirection).toBeUndefined();
+
+      const d3 = zExperimentDataQuery.parse({
+        orderBy: "timestamp",
+        orderDirection: "DESC",
+      });
+      expect(d3.orderBy).toBe("timestamp");
+      expect(d3.orderDirection).toBe("DESC");
     });
 
     it("zExperimentDataTableInfo valid", () => {

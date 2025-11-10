@@ -690,6 +690,8 @@ export const zExperimentDataQuery = z.object({
     .describe(
       "Specific columns to fetch. If provided with tableName, fetches full data for these columns only",
     ),
+  orderBy: z.string().optional().describe("Column name to order results by"),
+  orderDirection: z.enum(["ASC", "DESC"]).optional().describe("Sort direction for ordering"),
 });
 
 export const zExperimentDataTableInfo = z.object({
