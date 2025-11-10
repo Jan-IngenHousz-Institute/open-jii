@@ -35,10 +35,10 @@ describe("<QuestionPanel />", () => {
     render(<QuestionPanel stepSpecification={makeSpec()} onChange={onChange} disabled={false} />);
     // Find the validation message input and update it
     const input = screen.getByPlaceholderText("questionCard.placeholder");
-    
+
     // Type some text - this will append to "Init"
     await userEvent.type(input, "X");
-    
+
     // Should have been called with updated text
     expect(onChange).toHaveBeenCalled();
     const lastCall = onChange.mock.calls.at(-1)?.[0];
