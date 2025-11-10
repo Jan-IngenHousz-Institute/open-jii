@@ -65,7 +65,7 @@ export function MemberList({
 
   // Handle role change
   const handleRoleChange = async (userId: string, newRole: ExperimentMemberRole) => {
-    if (newExperiment && typeof onUpdateMemberRole === "function") {
+    if (newExperiment && onUpdateMemberRole) {
       setUpdatingMemberId(userId);
       await onUpdateMemberRole(userId, newRole);
       setUpdatingMemberId(null);
