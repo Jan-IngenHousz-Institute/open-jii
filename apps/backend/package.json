@@ -35,7 +35,7 @@
     "@ts-rest/core": "^3.52.1",
     "@ts-rest/nest": "^3.52.1",
     "@types/busboy": "^1.5.4",
-    "axios": "^1.9.0",
+    "axios": "catalog:",
     "busboy": "^1.6.0",
     "cookie-parser": "^1.4.7",
     "drizzle-zod": "^0.5.1",

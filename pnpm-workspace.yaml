@@ -8,6 +8,7 @@ patchedDependencies:
   react-native-usb-serialport-for-android: patches/react-native-usb-serialport-for-android.patch
 
 catalog:
+  axios: ^1.13.2
   typescript: ^5.8.3
   zod: ^3.24.3
   eslint: ^9.25.1
