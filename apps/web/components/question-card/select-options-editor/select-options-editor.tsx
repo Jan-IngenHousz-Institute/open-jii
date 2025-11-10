@@ -2,8 +2,8 @@ import React, { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
 
-import { BulkAddOptionsDialog } from "../bulk-add-options-dialog";
-import { DeleteAllOptionsDialog } from "../delete-all-options-dialog";
+import { BulkAddOptionsDialog } from "../bulk-add-options-dialog/bulk-add-options-dialog";
+import { DeleteAllOptionsDialog } from "../delete-all-options-dialog/delete-all-options-dialog";
 
 interface SelectOptionsEditorProps {
   options?: string[];

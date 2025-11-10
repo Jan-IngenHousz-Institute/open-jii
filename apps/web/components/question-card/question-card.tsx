@@ -3,10 +3,10 @@ import React from "react";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardContent } from "@repo/ui/components";
 
-import { BooleanAnswerDisplay } from "../boolean-answer-display";
-import { NumberAnswerDisplay } from "../number-answer-display";
-import { SelectOptionsEditor } from "../select-options-editor";
-import { TextAnswerDisplay } from "../text-answer-display";
+import { BooleanAnswerDisplay } from "./boolean-answer-display/boolean-answer-display";
+import { NumberAnswerDisplay } from "./number-answer-display/number-answer-display";
+import { SelectOptionsEditor } from "./select-options-editor/select-options-editor";
+import { TextAnswerDisplay } from "./text-answer-display/text-answer-display";
 
 // Local UI-focused question spec (legacy bridge). Replace with backend question content mapping later.
 export interface QuestionUI {
