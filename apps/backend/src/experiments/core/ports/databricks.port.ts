@@ -81,6 +81,19 @@ export interface DatabricksPort {
   ): Promise<Result<boolean>>;
 
   /**
+   * Returns table metadata for a specific table in an experiment
+   *
+   * @param experimentName - Name of the experiment
+   * @param experimentId - ID of the experiment
+   * @param tableName - Name of the table
+   */
+  getTableMetadata(
+    experimentName: string,
+    experimentId: string,
+    tableName: string,
+  ): Promise<Result<Map<string, string>>>;
+
+  /**
    * Upload data to Databricks for a specific experiment.
    * Constructs the path: /Volumes/{catalogName}/{schemaName}/data-uploads/{sourceType}/{directoryName}/{fileName}
    *

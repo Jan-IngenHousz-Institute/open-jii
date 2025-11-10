@@ -333,6 +333,45 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   }
 
   /**
+   * Returns table metadata for a specific table in an experiment
+   *
+   * @param experimentName - Name of the experiment
+   * @param experimentId - ID of the experiment
+   * @param tableName - Name of the table
+   */
+  async getTableMetadata(
+    experimentName: string,
+    experimentId: string,
+    tableName: string,
+  ): Promise<Result<Map<string, string>>> {
+    this.logger.log(
+      `Checking meta data for experiment ${experimentName} (${experimentId}) table ${tableName}`,
+    );
+
+    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+    const schemaName = `exp_${cleanName}_${experimentId}`;
+    const schemaQuery = `DESCRIBE ${tableName}`;
+
+    this.logger.debug(`Executing schema query: ${schemaQuery} in schema: ${schemaName}`);
+    const schemaResult = await this.executeSqlQuery(schemaName, schemaQuery);
+
+    if (schemaResult.isFailure()) {
+      this.logger.error(`Failed to get table schema: ${schemaResult.error.message}`);
+      return failure(
+        AppError.internal(`Failed to get table schema: ${schemaResult.error.message}`),
+      );
+    }
+
+    const availableColumns = new Map(
+      schemaResult.value.rows
+        .filter((row) => row[0] != null && row[1] != null)
+        .map((row) => [row[0] as unknown as string, row[1] as unknown as string] as const),
+    );
+
+    return success(availableColumns);
+  }
+
+  /**
    * Upload macro code file to Databricks workspace
    * Uses the pre-computed filename and adds appropriate file extension based on the language
    * @param params - The macro filename, code, and language to upload
