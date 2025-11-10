@@ -628,7 +628,7 @@ describe("ExperimentMembersController", () => {
         .send({ role: "member" })
         .expect(StatusCodes.BAD_REQUEST)
         .expect(({ body }: { body: ErrorResponse }) => {
-          expect(body.message).toContain("cannot demote the last admin");
+          expect(body.message).toContain("Cannot demote the last admin of the experiment");
         });
     });
 

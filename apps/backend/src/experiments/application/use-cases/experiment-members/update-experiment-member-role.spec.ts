@@ -123,7 +123,7 @@ describe("UpdateExperimentMemberRoleUseCase", () => {
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
     expect(result.error.code).toBe("BAD_REQUEST");
-    expect(result.error.message).toContain("cannot demote the last admin");
+    expect(result.error.message).toContain("Cannot demote the last admin of the experiment");
   });
 
   it("should allow demoting an admin when there are multiple admins", async () => {
