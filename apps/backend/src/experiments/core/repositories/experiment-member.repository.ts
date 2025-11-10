@@ -161,9 +161,9 @@ export class ExperimentMemberRepository {
           joinedAt: experimentMembers.joinedAt,
           user: {
             id: users.id,
-            firstName: profiles.firstName,
-            lastName: profiles.lastName,
-            email: users.email,
+            firstName: getAnonymizedFirstName(),
+            lastName: getAnonymizedLastName(),
+            email: getAnonymizedEmail(),
           },
         })
         .from(experimentMembers)

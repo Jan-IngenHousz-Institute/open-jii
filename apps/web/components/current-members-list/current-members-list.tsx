@@ -60,7 +60,7 @@ export function MemberList({
 }: MemberListProps) {
   const { t } = useTranslation();
   const [updatingMemberId, setUpdatingMemberId] = useState<string | null>(null);
-  const { mutateAsync: updateMemberRole } = useExperimentMemberRoleUpdate();
+  const { mutate: updateMemberRole } = useExperimentMemberRoleUpdate();
   const isCurrentUserAdmin = currentUserRole === "admin";
 
   // Handle role change
@@ -76,18 +76,23 @@ export function MemberList({
     if (!experimentId) return;
 
     setUpdatingMemberId(userId);
-    try {
-      await updateMemberRole({
+    updateMemberRole(
+      {
         params: { id: experimentId, memberId: userId },
         body: { role: newRole },
-      });
-
-      toast({ description: t("experimentSettings.roleUpdated") });
-    } catch (err) {
-      toast({ description: parseApiError(err)?.message, variant: "destructive" });
-    } finally {
-      setUpdatingMemberId(null);
-    }
+      },
+      {
+        onSuccess: () => {
+          toast({ description: t("experimentSettings.roleUpdated") });
+        },
+        onError: (err) => {
+          toast({ description: parseApiError(err)?.message, variant: "destructive" });
+        },
+        onSettled: () => {
+          setUpdatingMemberId(null);
+        },
+      },
+    );
   };
 
   // Convert members and users to membersWithUserInfo if needed

@@ -2,7 +2,8 @@
 
 import { useDebounce } from "@/hooks/useDebounce";
 import { useUserSearch } from "@/hooks/useUserSearch";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useFieldArray } from "react-hook-form";
 import type { UseFormReturn } from "react-hook-form";
 
 import type { UserProfile, CreateExperimentBody, ExperimentMemberRole } from "@repo/api";
@@ -42,18 +43,25 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
   const { data: session } = useSession();
   const currentUserId = session?.user.id ?? "";
 
+  // Use useFieldArray to manage the members array
+  const {
+    fields: memberFields,
+    append,
+    remove,
+    update,
+  } = useFieldArray({
+    control: form.control,
+    name: "members",
+  });
+
   // Member management state
   const [userSearch, setUserSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [selectedRole, setSelectedRole] = useState<ExperimentMemberRole>("member");
   const [debouncedSearch, isDebounced] = useDebounce(userSearch, 300);
   const { data: userSearchData, isLoading: isFetchingUsers } = useUserSearch(debouncedSearch);
-  // Track added users for display - we collect users as we add them
-  const [addedProfiles, setAddedProfiles] = useState<UserProfile[]>([]);
 
-  // Use form for members instead of useState
-  const watchedMembers = form.watch("members");
-  const members: Member[] = useMemo(() => watchedMembers ?? [], [watchedMembers]);
+  const members: Member[] = useMemo(() => memberFields as Member[], [memberFields]);
 
   // Filter available users (exclude already added and current user)
   const availableProfiles = useMemo(
@@ -69,19 +77,14 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
   const handleAddMember = () => {
     if (!selectedUser) return;
 
-    form.setValue("members", [
-      ...members,
-      {
-        userId: selectedUser.userId,
-        role: selectedRole,
-        firstName: selectedUser.firstName,
-        lastName: selectedUser.lastName,
-        email: selectedUser.email,
-      },
-    ]);
-    setAddedProfiles((prev) =>
-      prev.some((p) => p.userId === selectedUser.userId) ? prev : [...prev, selectedUser],
-    );
+    append({
+      userId: selectedUser.userId,
+      role: selectedRole,
+      firstName: selectedUser.firstName,
+      lastName: selectedUser.lastName,
+      email: selectedUser.email,
+    });
+
     setSelectedUser(null);
     setUserSearch("");
     setSelectedRole("member");
@@ -89,17 +92,18 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
 
   // Remove member handler
   const handleRemoveMember = (userId: string) => {
-    form.setValue(
-      "members",
-      members.filter((m) => m.userId !== userId),
-    );
+    const index = members.findIndex((m) => m.userId === userId);
+    if (index !== -1) {
+      remove(index);
+    }
   };
 
+  // Update member role
   const handleUpdateMemberRole = (userId: string, role: ExperimentMemberRole) => {
-    form.setValue(
-      "members",
-      members.map((m) => (m.userId === userId ? { ...m, role } : m)),
-    );
+    const index = members.findIndex((m) => m.userId === userId);
+    if (index !== -1) {
+      update(index, { ...members[index], role });
+    }
   };
 
   // Calculate admin count
@@ -107,10 +111,24 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
     return members.filter((m) => m.role === "admin").length;
   }, [members]);
 
-  // Combine added users with users from search results to pass to MemberList
+  // Build combined profiles from members for display
   const combinedProfiles = useMemo(() => {
-    // Start with profiles we've added
-    const allProfiles = [...addedProfiles];
+    const allProfiles: UserProfile[] = [];
+
+    // Add profiles from members that have user data
+    members.forEach((member) => {
+      if (member.firstName || member.lastName || member.email) {
+        allProfiles.push({
+          userId: member.userId,
+          firstName: member.firstName ?? "",
+          lastName: member.lastName ?? "",
+          email: member.email ?? null,
+          bio: null,
+          activated: null,
+          organization: undefined,
+        });
+      }
+    });
 
     // Add any profiles from search results that aren't already in the list
     if (userSearchData?.body) {
@@ -122,23 +140,7 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
     }
 
     return allProfiles;
-  }, [addedProfiles, userSearchData]);
-
-  useEffect(() => {
-    const hydratedProfiles = members
-      .filter((m) => m.firstName ?? m.lastName ?? m.email)
-      .map((m) => ({
-        userId: m.userId,
-        firstName: m.firstName ?? "",
-        lastName: m.lastName ?? "",
-        email: m.email ?? null,
-        bio: null,
-        activated: null,
-        organization: undefined,
-      }));
-
-    setAddedProfiles(hydratedProfiles);
-  }, [members]);
+  }, [members, userSearchData]);
 
   return (
     <Card className="min-w-0 flex-1">
