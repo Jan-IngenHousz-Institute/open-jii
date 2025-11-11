@@ -8,6 +8,7 @@ import { useTheme } from "~/hooks/use-theme";
 import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-manager";
 import { useScanner } from "~/services/scan-manager/scan-manager";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
+import { playSound } from "~/utils/play-sound";
 
 import { ErrorState } from "./components/error-state";
 import { NoDeviceState } from "./components/no-device-state";
@@ -54,6 +55,8 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
       // For measurement node, we only execute the protocol scan, no macro
       const result = await executeScan(content.protocolId);
       setScanResult(result);
+      // Play system notification sound when measurement completes
+      await playSound();
       nextStep();
     } catch (error) {
       console.log("scan error", error);

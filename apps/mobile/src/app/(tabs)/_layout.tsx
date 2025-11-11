@@ -21,7 +21,7 @@ export default function TabLayout() {
   }, [isLoaded, session?.token, router]);
 
   return (
-    <View style={{ flex: 1, paddingBottom: Math.min(insets.bottom, 10) }}>
+    <View style={{ flex: 1 }}>
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: colors.primary.dark,
@@ -29,7 +29,8 @@ export default function TabLayout() {
           tabBarStyle: {
             backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
             borderTopColor: theme.isDark ? colors.dark.border : colors.light.border,
-            height: 60,
+            height: 60 + insets.bottom,
+            paddingBottom: insets.bottom,
           },
           tabBarLabelStyle: {
             fontSize: 12,

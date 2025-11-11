@@ -27,14 +27,13 @@ export function MeasurementFlowScreen() {
   };
 
   const shouldShowNavigationButtons = currentStep > 0;
-  const shouldShowBackButton = process.env.SHOW_BACK_BUTTON === "true";
 
   return (
     <View className={clsx("flex-1", classes.background)}>
       <View className="flex-1 p-5">
         {shouldShowNavigationButtons && (
           <View className="mb-4 flex-row justify-between">
-            {shouldShowBackButton ? <BackButton onPress={handleBackPress} /> : <View />}
+            <BackButton onPress={handleBackPress} />
             <EndFlowButton onPress={handleEndFlow} />
           </View>
         )}

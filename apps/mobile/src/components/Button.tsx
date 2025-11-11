@@ -102,6 +102,7 @@ export function Button({
 
   return (
     <TouchableOpacity
+      key={`button-${isDisabled}-${variant}`}
       className={buttonVariants({ variant, size, disabled: isDisabled })}
       style={style}
       disabled={isDisabled || isLoading}
