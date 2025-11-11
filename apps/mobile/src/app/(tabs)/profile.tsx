@@ -11,7 +11,7 @@ import { colors } from "~/constants/colors";
 import { useSessionStore } from "~/hooks/use-session-store";
 import { useTheme } from "~/hooks/use-theme";
 import { getEnvVar } from "~/stores/environment-store";
-import { formatIsoDateString } from "~/utils/format-iso-date-string";
+import { formatRelativeTime } from "~/utils/format-relative-time";
 
 export default function ProfileScreen() {
   const { clearSession, session } = useSessionStore();
@@ -151,7 +151,7 @@ export default function ProfileScreen() {
               },
             ]}
           >
-            {formatIsoDateString(expires)}
+            {formatRelativeTime(expires)}
           </Text>
         </View>
       </Card>

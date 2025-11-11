@@ -53,13 +53,6 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="experiments"
-          options={{
-            title: "Data",
-            tabBarIcon: ({ color, size }) => <FlaskConical size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
           name="measurement-flow"
           options={{
             title: "Measure",
@@ -67,10 +60,18 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
+          name="experiments"
+          options={{
+            title: "Data",
+            tabBarIcon: ({ color, size }) => <FlaskConical size={size} color={color} />,
+          }}
+        />
+        <Tabs.Screen
           name="calibration"
           options={{
             title: "Calibration",
             tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
+            href: null,
           }}
         />
         <Tabs.Screen
