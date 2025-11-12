@@ -39,6 +39,12 @@ export default function ExperimentVisualizationsDisplay({
 
   const selectedVisualization = visualizations.find((viz) => viz.id === selectedVisualizationId);
 
+  // Get X-axis column for ordering
+  const xDataSources = selectedVisualization?.dataConfig.dataSources.filter(
+    (ds) => ds.role === "x",
+  );
+  const xColumn = xDataSources?.[0]?.columnName;
+
   // Fetch data for the selected visualization
   const { data: visualizationData, isLoading: isDataLoading } = useExperimentVisualizationData(
     experimentId,
@@ -46,6 +52,8 @@ export default function ExperimentVisualizationsDisplay({
       ? {
           tableName: selectedVisualization.dataConfig.tableName,
           columns: selectedVisualization.dataConfig.dataSources.map((ds) => ds.columnName),
+          orderBy: xColumn,
+          orderDirection: "ASC",
         }
       : { tableName: "", columns: [] }, // Fallback when visualization not loaded
     !!selectedVisualization, // Only fetch when a visualization is selected
