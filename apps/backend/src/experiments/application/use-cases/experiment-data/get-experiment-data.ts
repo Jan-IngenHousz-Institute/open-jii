@@ -342,7 +342,20 @@ export class GetExperimentDataUseCase {
 
     // Fetch sample data for each table
     for (const table of tables) {
-      const sqlQuery = `SELECT * FROM ${table.name} LIMIT ${pageSize}`;
+      let sqlQuery = `SELECT * FROM ${table.name}`;
+
+      // Add ORDER BY clause
+      const orderByClauseResult = await this.getOrderByClause(
+        experiment.name,
+        experimentId,
+        table.name,
+      );
+      if (orderByClauseResult.isFailure()) {
+        return orderByClauseResult;
+      }
+      sqlQuery += orderByClauseResult.value;
+      sqlQuery += ` LIMIT ${pageSize}`;
+
       const dataResult = await this.databricksPort.executeSqlQuery(schemaName, sqlQuery);
 
       const tableInfo: TableDataDto = {

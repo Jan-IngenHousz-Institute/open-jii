@@ -45,6 +45,8 @@ export const useExperimentVisualizationData = (
     ],
     staleTime: STALE_TIME,
     enabled: enabled && !!dataConfig.tableName,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   // Extract the table data from the response
