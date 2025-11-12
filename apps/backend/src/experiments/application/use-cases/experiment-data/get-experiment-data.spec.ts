@@ -896,7 +896,7 @@ describe("GetExperimentDataUseCase", () => {
       .query(true)
       .reply(200, mockTables);
 
-    // Mock SQL query for describing columns
+    // Mock SQL query for describing columns for both tables
     const mockMetadata = {
       columns: [
         { name: "col_name", type_name: "STRING", type_text: "STRING" },
@@ -976,7 +976,7 @@ describe("GetExperimentDataUseCase", () => {
     // Mock SQL query for sample data - first table ("device")
     nock(DATABRICKS_HOST)
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: `SELECT * FROM sample LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
+        statement: `SELECT * FROM device LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
@@ -1006,10 +1006,10 @@ describe("GetExperimentDataUseCase", () => {
         },
       });
 
-    // Mock SQL query for sample data - second table ("device")
+    // Mock SQL query for sample data - second table ("sample")
     nock(DATABRICKS_HOST)
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: `SELECT * FROM device LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
+        statement: `SELECT * FROM sample LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: `exp_test_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
