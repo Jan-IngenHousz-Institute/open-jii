@@ -1,5 +1,6 @@
 import React from "react";
 import { Modal, ScrollView, Text, View, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Chart } from "~/components/measurement-result/components/chart";
 import { KeyValue } from "~/components/measurement-result/components/key-value";
 import { MeasurementHeader } from "~/components/measurement-result/components/measurement-header";
@@ -15,6 +16,7 @@ interface TableDetailModalProps {
 export function TableDetailModal({ visible, table, onClose }: TableDetailModalProps) {
   const theme = useTheme();
   const { colors } = theme;
+  const insets = useSafeAreaInsets();
 
   if (!table) return null;
 
@@ -81,6 +83,8 @@ export function TableDetailModal({ visible, table, onClose }: TableDetailModalPr
           styles.container,
           {
             backgroundColor: theme.isDark ? colors.dark.background : colors.light.background,
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
           },
         ]}
       >
@@ -90,7 +94,11 @@ export function TableDetailModal({ visible, table, onClose }: TableDetailModalPr
           onClose={onClose}
         />
 
-        <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={true}>
+        <ScrollView
+          style={styles.scrollContainer}
+          showsVerticalScrollIndicator={true}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        >
           <View style={styles.content}>
             <Text
               style={[

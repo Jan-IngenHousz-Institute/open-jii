@@ -2,14 +2,19 @@ import { clsx } from "clsx";
 import { Calendar, FlaskConical, X } from "lucide-react-native";
 import React from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "~/hooks/use-theme";
 import { formatIsoDateString } from "~/utils/format-iso-date-string";
 
 export function RawMeasurementPreview({ data, timestamp, experimentName, onClose }) {
   const { classes, colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
-    <View className={clsx("flex-1", classes.background)}>
+    <View
+      className={clsx("flex-1", classes.background)}
+      style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
+    >
       <View
         className={clsx(
           "flex-row items-center justify-between border-b px-4 py-3",
@@ -55,6 +60,7 @@ export function RawMeasurementPreview({ data, timestamp, experimentName, onClose
         <ScrollView
           className={clsx("flex-1 rounded-lg p-3", classes.background)}
           showsVerticalScrollIndicator
+          contentContainerStyle={{ paddingBottom: 20 }}
         >
           <Text className={clsx("font-mono text-sm leading-5", classes.text)}>
             {JSON.stringify(data, null, 2)}

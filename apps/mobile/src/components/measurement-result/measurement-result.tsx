@@ -26,8 +26,8 @@ export function MeasurementResult({
   const [showRaw, setShowRaw] = useState(false);
   const [showProcessed, setShowProcessed] = useState(false);
 
-  const { result: processedMeasurement, error: processingError } = useAsync(() => {
-    return Promise.resolve(applyMacro(rawMeasurement, macro.code));
+  const { result: processedMeasurement, error: processingError } = useAsync(async () => {
+    return await applyMacro(rawMeasurement, macro.code);
   }, [rawMeasurement, macro.code]);
 
   return (

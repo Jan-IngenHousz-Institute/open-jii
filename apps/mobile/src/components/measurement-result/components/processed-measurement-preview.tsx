@@ -1,6 +1,7 @@
 import { clsx } from "clsx";
 import React from "react";
 import { ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "~/hooks/use-theme";
 
 import { Chart } from "./chart";
@@ -21,10 +22,14 @@ export function ProcessedMeasurementPreview({
   experimentName,
 }: ProcessedMeasurementPreviewProps) {
   const { classes } = useTheme();
+  const insets = useSafeAreaInsets();
 
   if (!outputs || outputs.length === 0) {
     return (
-      <View className={clsx("flex-1", classes.background)}>
+      <View
+        className={clsx("flex-1", classes.background)}
+        style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
+      >
         <MeasurementHeader
           timestamp={timestamp}
           experimentName={experimentName}
@@ -40,10 +45,17 @@ export function ProcessedMeasurementPreview({
   }
 
   return (
-    <View className={clsx("flex-1", classes.background)}>
+    <View
+      className={clsx("flex-1", classes.background)}
+      style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
+    >
       <MeasurementHeader timestamp={timestamp} experimentName={experimentName} onClose={onClose} />
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={true}>
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={true}
+        contentContainerStyle={{ paddingBottom: 20 }}
+      >
         <View className="p-4">
           {outputs.map((output, outputIndex) =>
             Object.keys(output).map((key) => {

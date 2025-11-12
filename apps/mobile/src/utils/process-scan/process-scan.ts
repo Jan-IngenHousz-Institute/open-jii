@@ -1,72 +1,32 @@
 import { Asset } from "expo-asset";
-import * as FileSystem from "expo-file-system";
+import { File } from "expo-file-system";
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-expect-error
 import mathLibResource from "./math.lib.js.txt";
 
 async function loadMathLib() {
   const asset = Asset.fromModule(mathLibResource);
   await asset.downloadAsync();
   const path = asset.localUri ?? asset.uri;
-  return await FileSystem.readAsStringAsync(path);
+  const file = new File(path);
+  return await file.text();
 }
 
-let mathLibSource = "";
+const mathLibSourcePromise = loadMathLib();
 
-loadMathLib().then((source) => {
-  mathLibSource = source;
-});
-
-export function processScan(
-  result: object,
-  userId?: string,
-  macroFilename?: string,
-  macroCodeBase64?: string,
-  onError?: (message: string) => void,
-) {
-  if (!("sample" in result)) {
-    return result;
-  }
-
-  const { sample } = result;
-
-  if (!sample) {
-    return result;
-  }
-
-  const samples = Array.isArray(sample) ? sample : [sample];
-  const timestamp = new Date().toISOString();
-
-  let output: object[] | undefined = undefined;
-  try {
-    if (macroCodeBase64) {
-      const code = atob(macroCodeBase64);
-      console.log("executing macro", macroFilename);
-      output = samples.map((sample) => executeMacro(code, sample));
-    }
-  } catch (e: any) {
-    console.log("error executing local macro", e);
-    onError?.(e.message);
-    throw e;
-  }
-
-  for (const sample of samples) {
-    sample.macros = [macroFilename];
-  }
-
-  return { ...result, timestamp, output, userId };
-}
-
-export function executeMacro(code: string, json: object) {
-  const macroSource = mathLibSource + "\n\n\n" + code;
+async function executeMacro(code: string, json: object) {
+  const mathLibSource = await mathLibSourcePromise;
+  // Wrap the macro code in an IIFE to isolate its scope from mathLibSource variables
+  // This prevents variable name conflicts while still allowing access to mathLib functions
+  // The IIFE returns the output, which we capture and return
+  const macroSource =
+    mathLibSource + "\n\n\n" + "return (function(json) {\n" + code + "\n})(json);";
 
   // eslint-disable-next-line @typescript-eslint/no-implied-eval
   const fn = new Function("json", macroSource);
   return fn(json);
 }
 
-export function applyMacro(result: object, macroCodeBase64: string): object[] {
+export async function applyMacro(result: object, macroCodeBase64: string): Promise<object[]> {
   if (!("sample" in result)) {
     throw new Error("Result does not contain sample data");
   }
@@ -81,7 +41,7 @@ export function applyMacro(result: object, macroCodeBase64: string): object[] {
 
   const code = atob(macroCodeBase64);
   console.log("executing macro");
-  const output: object[] = samples.map((sample) => executeMacro(code, sample));
+  const output: object[] = await Promise.all(samples.map((sample) => executeMacro(code, sample)));
 
   return output;
 }

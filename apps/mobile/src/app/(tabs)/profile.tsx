@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import { User, ExternalLink, LogOut } from "lucide-react-native";
 import React from "react";
 import { View, Text, StyleSheet, ScrollView, Alert, Linking } from "react-native";
-import { toast } from "sonner-native";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
 import { colors } from "~/constants/colors";
@@ -32,19 +31,6 @@ export default function ProfileScreen() {
       await Linking.openURL(url);
     } else {
       Alert.alert("Error", "Cannot open web profile. Please check your internet connection.");
-    }
-  };
-
-  const handleTestToast = (type: "success" | "error" | "info") => {
-    const message = `${type.charAt(0).toUpperCase() + type.slice(1)} Toast`;
-    const description = `This is a test ${type} message`;
-    
-    if (type === "success") {
-      toast.success(message, { description });
-    } else if (type === "error") {
-      toast.error(message, { description });
-    } else {
-      toast.info(message, { description });
     }
   };
 
@@ -163,42 +149,6 @@ export default function ProfileScreen() {
         </View>
       </Card>
 
-      <Card style={styles.testCard}>
-        <Text
-          style={[
-            styles.testTitle,
-            {
-              color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-            },
-          ]}
-        >
-          Test Toasts
-        </Text>
-        <View style={styles.testButtonsContainer}>
-          <Button
-            title="Success"
-            onPress={() => handleTestToast("success")}
-            variant="primary"
-            size="sm"
-            style={styles.testButton}
-          />
-          <Button
-            title="Error"
-            onPress={() => handleTestToast("error")}
-            variant="primary"
-            size="sm"
-            style={styles.testButton}
-          />
-          <Button
-            title="Info"
-            onPress={() => handleTestToast("info")}
-            variant="primary"
-            size="sm"
-            style={styles.testButton}
-          />
-        </View>
-      </Card>
-
       <View style={styles.actionsContainer}>
         <Button
           title="Open Web Profile"
@@ -261,21 +211,6 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     marginBottom: 24,
-  },
-  testCard: {
-    marginBottom: 24,
-  },
-  testTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 12,
-  },
-  testButtonsContainer: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  testButton: {
-    flex: 1,
   },
   infoTitle: {
     fontSize: 18,
