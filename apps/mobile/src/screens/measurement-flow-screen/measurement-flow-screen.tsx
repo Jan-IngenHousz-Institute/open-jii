@@ -14,7 +14,8 @@ import { MeasurementFlowContainer } from "./components/measurement-flow-containe
 export function MeasurementFlowScreen() {
   useKeepAwake();
   const { classes } = useTheme();
-  const { currentStep, previousStep, resetFlow } = useMeasurementFlowStore();
+  const { currentStep, previousStep, resetFlow, flowNodes, currentFlowStep, isFlowFinished } =
+    useMeasurementFlowStore();
   const { clearHistory } = useFlowAnswersStore();
 
   const handleBackPress = () => {
@@ -27,13 +28,19 @@ export function MeasurementFlowScreen() {
   };
 
   const shouldShowNavigationButtons = currentStep > 0;
+  const isFlowCompleted = currentFlowStep >= flowNodes.length;
+  const isInCompletedState = isFlowCompleted && isFlowFinished;
+  // Hide back button on first flow step (currentFlowStep === 0) and in completed state
+  const shouldShowBackButton =
+    shouldShowNavigationButtons && currentFlowStep > 0 && !isInCompletedState;
 
   return (
     <View className={clsx("flex-1", classes.background)}>
       <View className="flex-1 p-5">
         {shouldShowNavigationButtons && (
           <View className="mb-4 flex-row justify-between">
-            <BackButton onPress={handleBackPress} />
+            {shouldShowBackButton && <BackButton onPress={handleBackPress} />}
+            {!shouldShowBackButton && <View />}
             <EndFlowButton onPress={handleEndFlow} />
           </View>
         )}

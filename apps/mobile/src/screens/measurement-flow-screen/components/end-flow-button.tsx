@@ -27,7 +27,7 @@ export function EndFlowButton({ onPress }: EndFlowButtonProps) {
       activeOpacity={0.7}
     >
       <Text className="text-sm font-medium" style={{ color: "#ef4444" }}>
-        Finish Flow
+        Finish Data Collection
       </Text>
     </TouchableOpacity>
   );

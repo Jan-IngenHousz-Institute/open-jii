@@ -2,11 +2,10 @@ import "expo-application";
 import * as Application from "expo-application";
 import { useRouter } from "expo-router";
 import { User, ExternalLink, LogOut } from "lucide-react-native";
-import React, { useState } from "react";
+import React from "react";
 import { View, Text, StyleSheet, ScrollView, Alert, Linking } from "react-native";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
-import { Toast } from "~/components/Toast";
 import { colors } from "~/constants/colors";
 import { useSessionStore } from "~/hooks/use-session-store";
 import { useTheme } from "~/hooks/use-theme";
@@ -18,12 +17,6 @@ export default function ProfileScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { colors } = theme;
-
-  const [toast, setToast] = useState({
-    visible: false,
-    message: "",
-    type: "info" as "success" | "error" | "info" | "warning",
-  });
 
   const handleLogout = () => {
     clearSession();
@@ -183,15 +176,8 @@ export default function ProfileScreen() {
           },
         ]}
       >
-        OpenJII v{Application.nativeApplicationVersion}
+        openJII v{Application.nativeApplicationVersion}
       </Text>
-
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        type={toast.type}
-        onDismiss={() => setToast({ ...toast, visible: false })}
-      />
     </ScrollView>
   );
 }

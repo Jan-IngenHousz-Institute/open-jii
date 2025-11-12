@@ -12,7 +12,7 @@ export function FlowProgressIndicator() {
   return (
     <View className="mb-6">
       <Text className={clsx("mb-4 text-center text-2xl font-bold", classes.text)}>
-        Cycle {iterationCount + 1} — Step {currentFlowStep + 1}/{totalSteps}
+        Measurement {iterationCount + 1} — Step {currentFlowStep + 1}/{totalSteps}
       </Text>
       <View className="flex-row items-center justify-between">
         <View className={clsx("h-2 flex-1 rounded-full", classes.surface)}>

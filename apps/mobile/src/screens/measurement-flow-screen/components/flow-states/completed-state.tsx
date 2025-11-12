@@ -27,14 +27,14 @@ export function CompletedState() {
           You have finished the measurement flow cycle.
         </Text>
         <Text className={clsx("text-center text-sm", classes.textMuted)}>
-          Cycle {iterationCount + 1}
+          Measurement {iterationCount + 1}
         </Text>
       </View>
 
       <View className="border-t border-gray-200 p-4 dark:border-gray-700">
         <View className="flex-row gap-3">
           <Button
-            title="Finish Flow"
+            title="Finish Data Collection"
             onPress={handleFinishFlow}
             variant="outline"
             style={{ flex: 1 }}

@@ -1,6 +1,6 @@
 import { CommonActions, useNavigation } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React from "react";
 import { useAsync } from "react-async-hook";
 import {
   View,
@@ -15,7 +15,6 @@ import {
 } from "react-native";
 import { getSessionData } from "~/api/get-session-data";
 import { Button } from "~/components/Button";
-import { Toast } from "~/components/Toast";
 import { useLoginFlow } from "~/hooks/use-login";
 import { useMultiTapReveal } from "~/hooks/use-multi-tap-reveal";
 import { useSessionStore } from "~/hooks/use-session-store";
@@ -25,12 +24,6 @@ import { EnvironmentSelector } from "~/widgets/environment-selector";
 export default function LoginScreen() {
   const theme = useTheme();
   const { colors } = theme;
-
-  const [toast, setToast] = useState({
-    visible: false,
-    message: "",
-    type: "error" as "success" | "error" | "info" | "warning",
-  });
 
   const router = useRouter();
   const { startLoginFlow } = useLoginFlow();
@@ -102,7 +95,7 @@ export default function LoginScreen() {
                 },
               ]}
             >
-              OpenJII
+              openJII
             </Text>
             <Text
               style={[
@@ -120,7 +113,7 @@ export default function LoginScreen() {
             {showEnvSelector && <EnvironmentSelector />}
             <View style={styles.divider}></View>
             <Button
-              title="Sign in with SSO"
+              title="Sign in"
               variant="outline"
               onPress={handleLogin}
               style={styles.ssoButton}
@@ -128,13 +121,6 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        type={toast.type}
-        onDismiss={() => setToast({ ...toast, visible: false })}
-      />
     </SafeAreaView>
   );
 }

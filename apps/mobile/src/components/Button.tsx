@@ -22,7 +22,6 @@ interface ButtonProps extends TouchableOpacityProps {
   icon?: React.ReactNode;
 }
 
-// CVA variants for button styling
 const buttonVariants = cva("rounded-lg items-center justify-center", {
   variants: {
     variant: {
@@ -100,9 +99,13 @@ export function Button({
     return colors.primary.dark;
   };
 
+  // WORKAROUND: Key with timestamp to force remount on every render
+  // This bypasses React Native's native style caching bug in Expo SDK 54
+  // The timestamp ensures remount even when props stay the same (which was causing the issue)
+  const renderId = Date.now();
   return (
     <TouchableOpacity
-      key={`button-${isDisabled}-${variant}`}
+      key={renderId}
       className={buttonVariants({ variant, size, disabled: isDisabled })}
       style={style}
       disabled={isDisabled || isLoading}
