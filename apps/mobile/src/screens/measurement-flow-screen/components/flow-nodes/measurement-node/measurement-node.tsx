@@ -1,8 +1,8 @@
 import { clsx } from "clsx";
 import React, { useEffect } from "react";
 import { View, Text } from "react-native";
+import { toast } from "sonner-native";
 import { Button } from "~/components/Button";
-import { useToast } from "~/context/toast-context";
 import { useProtocol } from "~/hooks/use-protocol";
 import { useTheme } from "~/hooks/use-theme";
 import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-manager";
@@ -33,7 +33,6 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
     error: scanError,
   } = useScanner();
   const { data: device } = useConnectedDevice();
-  const { showToast } = useToast();
   const { nextStep, setScanResult, setProtocolId } = useMeasurementFlowStore();
 
   useEffect(() => {
@@ -42,11 +41,11 @@ export function MeasurementNode({ content }: MeasurementNodeProps) {
 
   const handleStartScan = async () => {
     if (!device) {
-      showToast("Not connected to sensor", "error");
+      toast.error("Not connected to sensor");
       return;
     }
     if (!content.protocolId) {
-      showToast("No protocol selected", "error");
+      toast.error("No protocol selected");
       return;
     }
 

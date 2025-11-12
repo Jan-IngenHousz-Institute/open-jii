@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { toast } from "sonner-native";
 import { Button } from "~/components/Button";
-import { useToast } from "~/context/toast-context";
 import { useTheme } from "~/hooks/use-theme";
 import {
   useAllDevices,
@@ -22,7 +22,6 @@ export function ConnectionSetup() {
   const { data: devices = [], refetch: refreshDevices, isFetching } = useAllDevices();
   const { connectToDevice, connectingDeviceId, disconnectFromDevice, unpairDevice } =
     useConnectToDevice();
-  const { showToast } = useToast();
   const { data: pairedDevices = [] } = usePairedDevices();
   const { data: serialDevices = [] } = useSerialDevices();
 
@@ -47,7 +46,7 @@ export function ConnectionSetup() {
               await disconnectFromDevice(device);
             } catch (e) {
               console.log("connection error", e);
-              showToast("Could not disconnect", "error");
+              toast.error("Could not disconnect");
             }
           }}
         />
@@ -76,7 +75,7 @@ export function ConnectionSetup() {
               await connectToDevice(device);
             } catch (e) {
               console.log("connection error", e);
-              showToast("Could not disconnect", "error");
+              toast.error("Could not disconnect");
             }
           }}
         />
@@ -91,7 +90,7 @@ export function ConnectionSetup() {
           try {
             await connectToDevice(device);
           } catch {
-            showToast("Could not connect", "error");
+            toast.error("Could not connect");
           }
         }}
       />

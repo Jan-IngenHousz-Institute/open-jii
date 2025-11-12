@@ -1,7 +1,7 @@
 import { parse } from "expo-linking";
 import * as Linking from "expo-linking";
 import { openAuthSessionAsync } from "expo-web-browser";
-import Toast from "react-native-toast-message";
+import { toast } from "sonner-native";
 import { getLoginArgs } from "~/api/get-login-args";
 import { delay } from "~/utils/delay";
 
@@ -15,10 +15,7 @@ async function getBrowserPackage(): Promise<string | undefined> {
     // ignored
   }
 
-  Toast.show({
-    text1: "Chrome browser is recommended for safer login flow",
-    type: "error",
-  });
+  toast.error("Chrome browser is recommended for safer login flow");
   await delay(3000);
   return undefined; // fallback to system default
 }

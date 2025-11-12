@@ -1,10 +1,10 @@
 import { UploadCloud } from "lucide-react-native";
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { toast } from "sonner-native";
 import { Button } from "~/components/Button";
 import { UnsyncedScanItem } from "~/components/UnsyncedScanItem";
 import { ConnectionSetup } from "~/components/connection-setup";
-import { useToast } from "~/context/toast-context";
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { useTheme } from "~/hooks/use-theme";
 
@@ -13,14 +13,12 @@ export default function HomeScreen() {
   const theme = useTheme();
   const { colors } = theme;
 
-  const { showToast } = useToast();
-
   const handleSyncAll = async () => {
     try {
       await uploadAll();
-      showToast("All measurements synced successfully", "success");
+      toast.success("All measurements synced successfully");
     } catch {
-      showToast("Sync failed. Please try again.", "error");
+      toast.error("Sync failed. Please try again.");
     }
   };
 

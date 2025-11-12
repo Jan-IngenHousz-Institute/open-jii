@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ScrollView, StyleSheet } from "react-native";
-import { useToast } from "~/context/toast-context";
+import { toast } from "sonner-native";
 import { useTheme } from "~/hooks/use-theme";
 
 import {
@@ -26,7 +26,6 @@ interface CalibrationFlowProps {
 export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
   const theme = useTheme();
   const { colors } = theme;
-  const { showToast } = useToast();
 
   const [currentStep, setCurrentStep] = useState<CalibrationStep>("setup");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -45,7 +44,7 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
     setMeasurements([]);
     setCurrentMeasurementIndex(0);
     setProcessedOutput(null);
-    showToast("Calibration started. Please follow the instructions.", "info");
+    toast.info("Calibration started. Please follow the instructions.");
   };
 
   const handleGainCalibration = async () => {
@@ -65,7 +64,7 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
 
     console.log("Gain calibration completed");
     setCurrentStep("measurements");
-    showToast("Gain calibration completed. Proceeding to measurements.", "success");
+    toast.success("Gain calibration completed. Proceeding to measurements.");
   };
 
   const handleMeasurement = async (panelNumber: number) => {
@@ -108,7 +107,7 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
       setCurrentMeasurementIndex((prev) => prev + 1);
       const nextPanelNumber =
         measurementSteps[currentMeasurementIndex + 1]?.prompt?.match(/#(\d+)/)?.[1];
-      showToast(`Panel #${panelNumber} measured. Next: Panel #${nextPanelNumber}`, "info");
+      toast.info(`Panel #${panelNumber} measured. Next: Panel #${nextPanelNumber}`);
     } else {
       setCurrentStep("processing");
       handleDataProcessing();
@@ -132,10 +131,10 @@ export function CalibrationFlow({ protocol }: CalibrationFlowProps) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       setCurrentStep("complete");
-      showToast("Calibration completed successfully!", "success");
+      toast.success("Calibration completed successfully!");
     } catch (error) {
       console.error("Error processing calibration data:", error);
-      showToast("Error processing calibration data. Please try again.", "error");
+      toast.error("Error processing calibration data. Please try again.");
     } finally {
       setIsProcessing(false);
     }

@@ -1,5 +1,5 @@
+import { toast } from "sonner-native";
 import { useAsyncCallback } from "react-async-hook";
-import { useToast } from "~/context/toast-context";
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
 import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
@@ -39,7 +39,6 @@ function prepareMeasurementForUpload({
 }
 
 export function useMeasurementUpload() {
-  const { showToast } = useToast();
   const { saveFailedUpload } = useFailedUploads();
 
   const { loading: isUploading, execute: uploadMeasurement } = useAsyncCallback(
@@ -78,10 +77,10 @@ export function useMeasurementUpload() {
 
       try {
         await sendMqttEvent(topic, measurementData);
-        showToast("Measurement uploaded!", "success");
+        toast.success("Measurement uploaded!");
       } catch (e: any) {
         console.log("Upload failed", e);
-        showToast("Upload not available, upload it later from Home screen", "error");
+        toast.error("Upload not available, upload it later from Home screen");
         await saveFailedUpload({
           topic,
           measurementResult: measurementData,

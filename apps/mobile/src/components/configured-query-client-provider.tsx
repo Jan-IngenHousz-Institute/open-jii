@@ -1,7 +1,7 @@
 import { QueryClient, QueryCache, QueryClientProvider, onlineManager } from "@tanstack/react-query";
 import axios from "axios";
 import React, { useEffect, useRef } from "react";
-import { useToast } from "~/context/toast-context";
+import { toast } from "sonner-native";
 
 const PING_URL = "https://clients3.google.com/generate_204";
 const CHECK_INTERVAL = 10 * 1000;
@@ -41,8 +41,6 @@ const defaultOptions = {
 };
 
 export function ConfiguredQueryClientProvider({ children }) {
-  const { showToast } = useToast();
-
   const queryClientRef = useRef<QueryClient>(undefined);
 
   useEffect(() => {
@@ -55,7 +53,7 @@ export function ConfiguredQueryClientProvider({ children }) {
       onError: (error: any) => {
         console.log("error", error);
         const message = error?.body?.message ?? error?.message ?? "Something went wrong";
-        showToast(message, "error");
+        toast.error(message);
       },
     });
 
