@@ -46,6 +46,8 @@ def execute_python_macro(script_path: str, input_data: str) -> Dict[str, Any]:
         'range': range,
         'any': any,
         'all': all,
+        'isinstance': isinstance,  # Required by helper functions for type checking
+        'print': print,  # Required by helper functions for logging warnings/errors
         
         # Safe math functions (from math module)
         'pow': pow,
@@ -134,8 +136,21 @@ def execute_python_macro(script_path: str, input_data: str) -> Dict[str, Any]:
         
         print(f"[PY_EXECUTOR] Read Python script, {len(script_code)} characters")
         
-        # Execute in restricted environment
-        exec(script_code, exec_globals)
+        # Add compatibility alias for JavaScript-style macros
+        exec_globals['json'] = parsed_input_data
+        
+        # Wrap the macro in a function and execute it
+        import textwrap
+        wrapped_code = f"""
+def execute_macro():
+{textwrap.indent(script_code, '    ')}
+
+result = execute_macro()
+if isinstance(result, dict):
+    output.update(result)
+"""
+        
+        exec(wrapped_code, exec_globals)
         
         # Get the output
         result = exec_globals.get('output', {})

@@ -12,7 +12,7 @@ import {
   CreateMacroDto,
   UpdateMacroDto,
   MacroDto,
-  deriveFilenameFromName,
+  generateHashedFilename,
 } from "../models/macro.model";
 
 export interface MacroFilter {
@@ -29,11 +29,15 @@ export class MacroRepository {
 
   async create(data: CreateMacroDto, userId: string): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
+      // Generate UUID for the macro to create a consistent hashed filename
+      const macroId = crypto.randomUUID();
+
       const results = await this.database
         .insert(macros)
         .values({
           ...data,
-          filename: deriveFilenameFromName(data.name),
+          id: macroId,
+          filename: generateHashedFilename(macroId),
           createdBy: userId,
         })
         .returning();
@@ -111,18 +115,11 @@ export class MacroRepository {
 
   async update(id: string, data: UpdateMacroDto): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
-      // Build the update object with potentially derived filename
-      const updateData: UpdateMacroDto & { filename?: string } = { ...data };
-
-      // If name is being updated, also update the filename
-      if (data.name) {
-        updateData.filename = deriveFilenameFromName(data.name);
-      }
-
+      // The filename is based on the macro ID hash and should not change during updates
       const results = await this.database
         .update(macros)
         .set({
-          ...updateData,
+          ...data,
           updatedAt: new Date(),
         })
         .where(eq(macros.id, id))

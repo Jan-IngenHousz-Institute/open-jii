@@ -1,13 +1,16 @@
+import { createHash } from "crypto";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
 import { macros } from "@repo/database";
 
 /**
- * Derive filename from name by converting to lowercase, trimming, and replacing spaces with underscores
+ * Generate a hashed filename based on the macro ID
  */
-export function deriveFilenameFromName(name: string): string {
-  return name.toLowerCase().trim().replace(/\s+/g, "_");
+export function generateHashedFilename(macroId: string): string {
+  const hash = createHash("sha256").update(macroId).digest("hex");
+  // Use first 12 characters for a reasonable length filename
+  return `macro_${hash.substring(0, 12)}`;
 }
 
 export const createMacroSchema = createInsertSchema(macros).omit({

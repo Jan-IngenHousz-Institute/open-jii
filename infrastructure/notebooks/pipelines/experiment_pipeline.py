@@ -134,6 +134,7 @@ def sample():
             F.col("timestamp"),
             F.col("questions"),
             F.col("user_id"),
+            F.col("macros"),
             F.explode(F.from_json(F.col("sample"), "array<string>")).alias("sample_data_str")
         )
         .select(
@@ -143,10 +144,10 @@ def sample():
             F.col("timestamp"),
             F.col("questions"),
             F.col("user_id"),
+            F.col("macros"),
             F.get_json_object(F.col("sample_data_str"), "$.v_arrays").alias("v_arrays"),
             F.get_json_object(F.col("sample_data_str"), "$.set_repeats").cast("int").alias("set_repeats"),
             F.get_json_object(F.col("sample_data_str"), "$.protocol_id").alias("protocol_id"),
-            F.get_json_object(F.col("sample_data_str"), "$.macros").alias("macros"),
             F.when(F.get_json_object(F.col("sample_data_str"), "$.set").isNotNull(), 
                    F.from_json(F.get_json_object(F.col("sample_data_str"), "$.set"), "array<string>"))
             .otherwise(
@@ -269,38 +270,48 @@ def create_macro_tables():
     
     try:
         # Get all macros used in the experiment
-        macros_df = (
+        # Now macros is array<struct<id:string, name:string, filename:string>>
+        macro_df = (
             spark.read.table(
                 f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}"
             )
             .filter(F.col("experiment_id") == EXPERIMENT_ID)
             .filter(F.col("macros").isNotNull())
             .filter(F.size(F.col("macros")) > 0)
-            .select(F.explode(F.col("macros")).alias("macro_name"))
+            .select(F.explode(F.col("macros")).alias("macro_struct"))
+            .select(
+                F.col("macro_struct.id").alias("macro_id"),
+                F.col("macro_struct.name").alias("macro_name"),
+                F.col("macro_struct.filename").alias("macro_filename")
+            )
             .distinct()
         )
         
         available_macros = get_available_macros(MACROS_PATH)
-        experiment_macros = [row.macro_name for row in macros_df.collect()]
+        experiment_macros = macro_df.collect()  # Now contains macro_id, macro_name, macro_filename
         
         print(f"Available macros: {available_macros}")
-        print(f"Macros used in experiment: {experiment_macros}")
+        print(f"Macros used in experiment: {[row.macro_name for row in experiment_macros]}")
         
         # Generate schemas for each macro using macro-specific sample data
         macro_schemas = {}
         print("Inferring schemas for macros using macro-specific sample data...")
         
-        for macro_name in experiment_macros:
-            if macro_name in available_macros:
-                print(f"Getting sample data for macro: {macro_name}")
+        for macro_row in experiment_macros:
+            macro_id = macro_row.macro_id
+            macro_name = macro_row.macro_name
+            macro_filename = macro_row.macro_filename
+            
+            if macro_filename in available_macros:
+                print(f"Getting sample data for macro: {macro_name} (filename: {macro_filename})")
                 
-                # Get a sample row that specifically contains this macro
+                # Get a sample row that specifically contains this macro (by ID)
                 macro_sample_row = (
                     spark.read.table(
                         f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}"
                     )
                     .filter(F.col("experiment_id") == EXPERIMENT_ID)
-                    .filter(F.array_contains(F.col("macros"), macro_name))
+                    .filter(F.exists(F.col("macros"), lambda x: x.id == macro_id))
                     .first()
                 )
                 
@@ -315,28 +326,35 @@ def create_macro_tables():
                     }
                     sample_data = {k: v for k, v in sample_data.items() if v is not None}
                     
-                    print(f"Inferring schema for macro: {macro_name}")
-                    schema = infer_macro_schema(macro_name, sample_data, MACROS_PATH)
+                    print(f"Inferring schema for macro: {macro_name} (filename: {macro_filename})")
+                    schema = infer_macro_schema(macro_filename, sample_data, MACROS_PATH)
                     if schema:
-                        macro_schemas[macro_name] = schema
+                        # Use macro_id as key for uniqueness, but store both name and filename
+                        macro_schemas[macro_id] = {
+                            'schema': schema,
+                            'name': macro_name,
+                            'filename': macro_filename
+                        }
                         print(f"Schema for {macro_name}: {len(schema.fields)} fields")
                     else:
                         print(f"Warning: Could not infer schema for macro {macro_name}")
                 else:
                     print(f"Warning: No sample data found for macro {macro_name}")
             else:
-                print(f"Warning: Macro {macro_name} referenced in data but script not found")
+                print(f"Warning: Macro {macro_name} referenced in data but script {macro_filename} not found")
         
         return experiment_macros, available_macros, macro_schemas
     except Exception as e:
         print(f"Error reading macros from central table: {str(e)}")
         return [], [], {}
 
-def create_macro_table_code(macro_name: str, macro_schema: StructType) -> str:
+def create_macro_table_code(macro_id: str, macro_name: str, macro_filename: str, macro_schema: StructType) -> str:
     """
     Generate Python code for macro streaming tables function.
     UDF returns JSON string, then we parse it using the inferred StructType schema.
     """
+    # Normalize macro name for table creation (same as backend logic)
+    normalized_name = macro_name.lower().strip().replace(" ", "_")
     # Base schema for the UDF output (just the essential fields + JSON)
     udf_schema = (
         "id long, device_id string, device_name string, timestamp timestamp, questions array<struct<question_label:string,question_text:string,question_answer:string>>, "
@@ -349,7 +367,7 @@ def create_macro_table_code(macro_name: str, macro_schema: StructType) -> str:
     return f'''
 # Base macro table
 @dlt.table(
-    name="macro_{macro_name}",
+    name="macro_{normalized_name}",
     comment="Output from macro: {macro_name}",
     table_properties={{
         "quality": "bronze",
@@ -358,11 +376,11 @@ def create_macro_table_code(macro_name: str, macro_schema: StructType) -> str:
         "downstream": "true"
     }}
 )
-def macro_{macro_name}_table():
+def macro_{normalized_name}_table():
     base_df = (
         spark.readStream.table(f"{{CATALOG_NAME}}.{{CENTRAL_SCHEMA}}.{{CENTRAL_SILVER_TABLE}}")
         .filter(F.col("experiment_id") == EXPERIMENT_ID)
-        .filter(F.array_contains(F.col("macros"), "{macro_name}"))
+        .filter(F.exists(F.col("macros"), lambda x: x.id == "{macro_id}"))
     )
 
     @pandas_udf("{udf_schema}")
@@ -382,7 +400,7 @@ def macro_{macro_name}_table():
             }}
             input_data = {{k: v for k, v in input_data.items() if v is not None}}
             try:
-                raw_macro_output = execute_macro_script("{macro_name}", input_data, MACROS_PATH)
+                raw_macro_output = execute_macro_script("{macro_filename}", input_data, MACROS_PATH)
                 if raw_macro_output is not None:
                     macro_output = process_macro_output_for_spark(raw_macro_output)
                     debug_str = json.dumps(macro_output)
@@ -485,18 +503,21 @@ def enriched_macro_{macro_name}_table():
 if ENABLE_MACRO_PROCESSING:
     try:
         experiment_macros, available_macros, macro_schemas = create_macro_tables()
-        for macro_name in experiment_macros:
-            if macro_name in available_macros and macro_name in macro_schemas:
-                print(f"Creating DLT table functions for macro: {macro_name}")
-                print(f"  - macro_{macro_name} (silver layer)")
-                print(f"  - enriched_macro_{macro_name} (gold layer with user metadata)")
-                schema = macro_schemas[macro_name]
-                table_code = create_macro_table_code(macro_name, schema)
+        for macro_row in experiment_macros:
+            macro_id = macro_row.macro_id
+            macro_name = macro_row.macro_name
+            macro_filename = macro_row.macro_filename
+            
+            if macro_filename in available_macros and macro_id in macro_schemas:
+                print(f"Creating DLT table function for macro: {macro_name} (ID: {macro_id})")
+                schema_info = macro_schemas[macro_id]
+                schema = schema_info['schema']
+                table_code = create_macro_table_code(macro_id, macro_name, macro_filename, schema)
                 exec(table_code, globals())
             else:
-                if macro_name not in available_macros:
-                    print(f"Warning: Macro {macro_name} referenced in data but script not found")
-                if macro_name not in macro_schemas:
+                if macro_filename not in available_macros:
+                    print(f"Warning: Macro {macro_name} referenced in data but script {macro_filename} not found")
+                if macro_id not in macro_schemas:
                     print(f"Warning: Could not infer schema for macro {macro_name}")
         print("Macro processing setup complete")
     except Exception as e:
