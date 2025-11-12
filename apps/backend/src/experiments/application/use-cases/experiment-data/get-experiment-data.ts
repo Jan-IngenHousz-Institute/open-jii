@@ -143,6 +143,35 @@ export class GetExperimentDataUseCase {
     );
   }
 
+  private async getOrderByClause(
+    experimentName: string,
+    experimentId: string,
+    tableName: string,
+    orderBy?: string,
+    orderDirection?: "ASC" | "DESC",
+  ) {
+    if (orderBy?.trim()) {
+      // Add ORDER BY clause if specified
+      return success(` ORDER BY \`${orderBy.trim()}\` ${orderDirection ?? "ASC"}`);
+    } else {
+      // Check if a 'timestamp' column exists for default ordering
+      const metadataResult = await this.databricksPort.getTableMetadata(
+        experimentName,
+        experimentId,
+        tableName,
+      );
+      if (metadataResult.isFailure()) {
+        return failure(
+          AppError.internal(`Failed to get metadata: ${metadataResult.error.message}`),
+        );
+      }
+      if (metadataResult.value.has("timestamp")) {
+        return success(" ORDER BY timestamp DESC");
+      }
+      return success("");
+    }
+  }
+
   /**
    * Fetch specific columns from a table with full data (no pagination)
    */
@@ -169,10 +198,18 @@ export class GetExperimentDataUseCase {
 
     let sqlQuery = `SELECT ${columnList} FROM ${tableName}`;
 
-    // Add ORDER BY clause if specified
-    if (orderBy?.trim()) {
-      sqlQuery += ` ORDER BY \`${orderBy.trim()}\` ${orderDirection ?? "ASC"}`;
+    // Add ORDER BY clause
+    const orderByClauseResult = await this.getOrderByClause(
+      experiment.name,
+      experimentId,
+      tableName,
+      orderBy,
+      orderDirection,
+    );
+    if (orderByClauseResult.isFailure()) {
+      return orderByClauseResult;
     }
+    sqlQuery += orderByClauseResult.value;
 
     this.logger.debug(`Executing SQL query: ${sqlQuery}`);
 
@@ -238,10 +275,18 @@ export class GetExperimentDataUseCase {
     const offset = (page - 1) * pageSize;
     let sqlQuery = `SELECT * FROM ${tableName}`;
 
-    // Add ORDER BY clause if specified
-    if (orderBy?.trim()) {
-      sqlQuery += ` ORDER BY \`${orderBy.trim()}\` ${orderDirection ?? "ASC"}`;
+    // Add ORDER BY clause
+    const orderByClauseResult = await this.getOrderByClause(
+      experiment.name,
+      experimentId,
+      tableName,
+      orderBy,
+      orderDirection,
+    );
+    if (orderByClauseResult.isFailure()) {
+      return orderByClauseResult;
     }
+    sqlQuery += orderByClauseResult.value;
 
     sqlQuery += ` LIMIT ${pageSize} OFFSET ${offset}`;
 
@@ -288,7 +333,20 @@ export class GetExperimentDataUseCase {
 
     // Fetch sample data for each table
     for (const table of tablesResult.value.tables) {
-      const sqlQuery = `SELECT * FROM ${table.name} LIMIT ${pageSize}`;
+      let sqlQuery = `SELECT * FROM ${table.name}`;
+
+      // Add ORDER BY clause
+      const orderByClauseResult = await this.getOrderByClause(
+        experiment.name,
+        experimentId,
+        table.name,
+      );
+      if (orderByClauseResult.isFailure()) {
+        return orderByClauseResult;
+      }
+      sqlQuery += orderByClauseResult.value;
+      sqlQuery += ` LIMIT ${pageSize}`;
+
       const dataResult = await this.databricksPort.executeSqlQuery(schemaName, sqlQuery);
 
       const tableInfo: TableDataDto = {

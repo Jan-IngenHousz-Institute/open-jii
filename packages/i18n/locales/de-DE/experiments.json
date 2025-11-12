@@ -184,12 +184,28 @@
     "noAnswerOptions": "Noch keine Antwortoptionen",
     "addOption": "Option hinzufügen",
     "removeOption": "Option entfernen",
+    "bulkAddOptions": "Massenhinzufügung",
+    "deleteAllOptions": "Alle löschen",
     "textResponseLabel": "Textantwort",
     "textResponseDescription": "Teilnehmer können ihre eigene Antwort schreiben",
     "numberResponseLabel": "Nummerantwort",
     "numberResponseDescription": "Teilnehmer geben einen numerischen Wert ein",
     "booleanResponseLabel": "Ja/Nein-Antwort",
-    "booleanResponseDescription": "Teilnehmer wählen Ja oder Nein"
+    "booleanResponseDescription": "Teilnehmer wählen Ja oder Nein",
+    "bulkAdd": {
+      "title": "Antwortoptionen massenweise hinzufügen",
+      "description": "Fügen Sie unten eine Liste von Optionen ein. Jede Option sollte in einer neuen Zeile stehen. Ideal zum Kopieren aus Excel oder CSV-Dateien!",
+      "placeholder": "Parzelle 1\nParzelle 2\nParzelle 3\n...",
+      "hint": "Tipp: Kopieren Sie die Spalte aus Ihrer Excel/CSV-Datei und fügen Sie sie hier ein",
+      "cancel": "Abbrechen",
+      "add": "Optionen hinzufügen"
+    },
+    "deleteAll": {
+      "title": "Alle Optionen löschen?",
+      "description": "Möchten Sie wirklich alle {{count}} Optionen löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "cancel": "Abbrechen",
+      "confirm": "Alle löschen"
+    }
   },
   "uploadModal": {
     "title": "Sensordaten hochladen",

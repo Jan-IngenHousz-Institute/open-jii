@@ -109,10 +109,56 @@ describe("GetExperimentDataUseCase", () => {
         ],
       });
 
+    // Mock SQL query for describing columns
+    const mockMetadata = {
+      columns: [
+        { name: "col_name", type_name: "STRING", type_text: "STRING" },
+        { name: "data_type", type_name: "STRING", type_text: "STRING" },
+        { name: "comment", type_name: "STRING", type_text: "STRING" },
+      ],
+      rows: [
+        ["timestamp", "TIMESTAMP", null],
+        ["temperature", "DOUBLE", null],
+      ],
+      totalRows: 2,
+      truncated: false,
+    };
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "DESCRIBE sensor_data",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_${cleanName}_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-meta-data-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockMetadata.columns.length,
+            columns: mockMetadata.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockMetadata.totalRows,
+          truncated: mockMetadata.truncated,
+        },
+        result: {
+          data_array: mockMetadata.rows,
+          chunk_index: 0,
+          row_count: mockMetadata.rows.length,
+          row_offset: 0,
+        },
+      });
+
     // Mock SQL query for specific columns (no pagination - full data)
     nock(DATABRICKS_HOST)
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: "SELECT `timestamp`, `temperature` FROM sensor_data",
+        statement: "SELECT `timestamp`, `temperature` FROM sensor_data ORDER BY timestamp DESC",
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: `exp_${cleanName}_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
@@ -233,6 +279,52 @@ describe("GetExperimentDataUseCase", () => {
             schema_name: `exp_test_experiment_${experiment.id}`,
           },
         ],
+      });
+
+    // Mock SQL query for describing columns
+    const mockMetadata = {
+      columns: [
+        { name: "col_name", type_name: "STRING", type_text: "STRING" },
+        { name: "data_type", type_name: "STRING", type_text: "STRING" },
+        { name: "comment", type_name: "STRING", type_text: "STRING" },
+      ],
+      rows: [
+        ["column1", "STRING", null],
+        ["column2", "NUMBER", null],
+      ],
+      totalRows: 2,
+      truncated: false,
+    };
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "DESCRIBE test_table",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_test_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-meta-data-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockMetadata.columns.length,
+            columns: mockMetadata.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockMetadata.totalRows,
+          truncated: mockMetadata.truncated,
+        },
+        result: {
+          data_array: mockMetadata.rows,
+          chunk_index: 0,
+          row_count: mockMetadata.rows.length,
+          row_offset: 0,
+        },
       });
 
     // Mock SQL query for row count
@@ -556,6 +648,83 @@ describe("GetExperimentDataUseCase", () => {
       .query(true)
       .reply(200, mockTables);
 
+    // Mock SQL query for describing columns
+    const mockMetadata = {
+      columns: [
+        { name: "col_name", type_name: "STRING", type_text: "STRING" },
+        { name: "data_type", type_name: "STRING", type_text: "STRING" },
+        { name: "comment", type_name: "STRING", type_text: "STRING" },
+      ],
+      rows: [
+        ["column1", "STRING", null],
+        ["column2", "NUMBER", null],
+      ],
+      totalRows: 2,
+      truncated: false,
+    };
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "DESCRIBE table1",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_test_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-meta-data-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockMetadata.columns.length,
+            columns: mockMetadata.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockMetadata.totalRows,
+          truncated: mockMetadata.truncated,
+        },
+        result: {
+          data_array: mockMetadata.rows,
+          chunk_index: 0,
+          row_count: mockMetadata.rows.length,
+          row_offset: 0,
+        },
+      });
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "DESCRIBE table2",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_test_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-meta-data-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockMetadata.columns.length,
+            columns: mockMetadata.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockMetadata.totalRows,
+          truncated: mockMetadata.truncated,
+        },
+        result: {
+          data_array: mockMetadata.rows,
+          chunk_index: 0,
+          row_count: mockMetadata.rows.length,
+          row_offset: 0,
+        },
+      });
+
     // Mock SQL query for sample data - first table ("table1")
     nock(DATABRICKS_HOST)
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
@@ -724,7 +893,7 @@ describe("GetExperimentDataUseCase", () => {
         {
           name: "public_table",
           catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
-          schema_name: `exp_test_experiment_${experiment.id}`,
+          schema_name: `exp_public_experiment_${experiment.id}`,
         },
       ],
     };
@@ -756,12 +925,58 @@ describe("GetExperimentDataUseCase", () => {
       .query(true)
       .reply(200, mockTables);
 
+    // Mock SQL query for describing columns
+    const mockMetadata = {
+      columns: [
+        { name: "col_name", type_name: "STRING", type_text: "STRING" },
+        { name: "data_type", type_name: "STRING", type_text: "STRING" },
+        { name: "comment", type_name: "STRING", type_text: "STRING" },
+      ],
+      rows: [
+        ["column1", "STRING", null],
+        ["column2", "NUMBER", null],
+      ],
+      totalRows: 2,
+      truncated: false,
+    };
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "DESCRIBE public_table",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_public_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-meta-data-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockMetadata.columns.length,
+            columns: mockMetadata.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockMetadata.totalRows,
+          truncated: mockMetadata.truncated,
+        },
+        result: {
+          data_array: mockMetadata.rows,
+          chunk_index: 0,
+          row_count: mockMetadata.rows.length,
+          row_offset: 0,
+        },
+      });
+
     // Mock SQL query for sample data ("public_table")
     nock(DATABRICKS_HOST)
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
         statement: `SELECT * FROM public_table LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
         warehouse_id: MOCK_WAREHOUSE_ID,
-        schema: `exp_test_experiment_${experiment.id}`,
+        schema: `exp_public_experiment_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,
         wait_timeout: MOCK_WAIT_TIMEOUT,
         disposition: MOCK_DISPOSITION,
@@ -874,6 +1089,52 @@ describe("GetExperimentDataUseCase", () => {
           data_array: mockCountData.rows,
           chunk_index: 0,
           row_count: mockCountData.rows.length,
+          row_offset: 0,
+        },
+      });
+
+    // Mock SQL query for describing columns
+    const mockMetadata = {
+      columns: [
+        { name: "col_name", type_name: "STRING", type_text: "STRING" },
+        { name: "data_type", type_name: "STRING", type_text: "STRING" },
+        { name: "comment", type_name: "STRING", type_text: "STRING" },
+      ],
+      rows: [
+        ["column1", "STRING", null],
+        ["column2", "NUMBER", null],
+      ],
+      totalRows: 2,
+      truncated: false,
+    };
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "DESCRIBE test_table",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_test_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-meta-data-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockMetadata.columns.length,
+            columns: mockMetadata.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockMetadata.totalRows,
+          truncated: mockMetadata.truncated,
+        },
+        result: {
+          data_array: mockMetadata.rows,
+          chunk_index: 0,
+          row_count: mockMetadata.rows.length,
           row_offset: 0,
         },
       });
@@ -1078,10 +1339,56 @@ describe("GetExperimentDataUseCase", () => {
         ],
       });
 
+    // Mock SQL query for describing columns
+    const mockMetadata = {
+      columns: [
+        { name: "col_name", type_name: "STRING", type_text: "STRING" },
+        { name: "data_type", type_name: "STRING", type_text: "STRING" },
+        { name: "comment", type_name: "STRING", type_text: "STRING" },
+      ],
+      rows: [
+        ["timestamp", "TIMESTAMP", null],
+        ["temperature", "DOUBLE", null],
+      ],
+      totalRows: 2,
+      truncated: false,
+    };
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "DESCRIBE sensor_data",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_${cleanName}_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-meta-data-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockMetadata.columns.length,
+            columns: mockMetadata.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockMetadata.totalRows,
+          truncated: mockMetadata.truncated,
+        },
+        result: {
+          data_array: mockMetadata.rows,
+          chunk_index: 0,
+          row_count: mockMetadata.rows.length,
+          row_offset: 0,
+        },
+      });
+
     // Mock SQL query for specific columns - failure
     nock(DATABRICKS_HOST)
       .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
-        statement: "SELECT `timestamp`, `temperature` FROM sensor_data",
+        statement: "SELECT `timestamp`, `temperature` FROM sensor_data ORDER BY timestamp DESC",
         warehouse_id: MOCK_WAREHOUSE_ID,
         schema: `exp_${cleanName}_${experiment.id}`,
         catalog: MOCK_CATALOG_NAME,

@@ -232,6 +232,8 @@ describe("ExperimentVisualizationsDisplay", () => {
       {
         tableName: "measurements",
         columns: ["timestamp", "value"],
+        orderBy: "timestamp",
+        orderDirection: "ASC",
       },
       true,
     );

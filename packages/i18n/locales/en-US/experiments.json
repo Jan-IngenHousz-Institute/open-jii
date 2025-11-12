@@ -174,22 +174,38 @@
     "requiredDescription": "Participants must answer this question to continue",
     "answerTypeLabel": "Answer Type",
     "answerTypes": {
-      "TEXT": "Text (under construction)",
+      "TEXT": "Text",
       "SELECT": "Multiple Choice",
-      "NUMBER": "Number (under construction)",
-      "BOOLEAN": "Yes/No (under construction)"
+      "NUMBER": "Number",
+      "BOOLEAN": "Yes/No"
     },
     "answerOptionsLabel": "Answer Options",
     "answerOptionPlaceholder": "Enter an answer option",
     "noAnswerOptions": "No answer options yet",
     "addOption": "Add Option",
     "removeOption": "Remove option",
+    "bulkAddOptions": "Bulk Add",
+    "deleteAllOptions": "Delete All",
     "textResponseLabel": "Text Response",
     "textResponseDescription": "Participants can write their own answer",
     "numberResponseLabel": "Number Response",
     "numberResponseDescription": "Participants will enter a numeric value",
     "booleanResponseLabel": "Yes/No Response",
-    "booleanResponseDescription": "Participants will choose Yes or No"
+    "booleanResponseDescription": "Participants will choose Yes or No",
+    "bulkAdd": {
+      "title": "Bulk Add Answer Options",
+      "description": "Paste a list of options below. Each option should be on a new line. Great for copying from Excel or CSV files!",
+      "placeholder": "Plot 1\nPlot 2\nPlot 3\n...",
+      "hint": "Tip: Copy the column from your Excel/CSV file and paste it here",
+      "cancel": "Cancel",
+      "add": "Add Options"
+    },
+    "deleteAll": {
+      "title": "Delete All Options?",
+      "description": "Are you sure you want to delete all {{count}} options? This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete All"
+    }
   },
   "uploadModal": {
     "title": "Upload Sensor Data",

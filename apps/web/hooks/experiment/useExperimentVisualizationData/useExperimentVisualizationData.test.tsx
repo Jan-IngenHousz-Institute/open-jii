@@ -82,6 +82,8 @@ describe("useExperimentVisualizationData", () => {
       ],
       staleTime: 120000,
       enabled: true,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
     });
   });
 
@@ -126,6 +128,8 @@ describe("useExperimentVisualizationData", () => {
       ],
       staleTime: 120000,
       enabled: true,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
     });
   });
 
@@ -167,6 +171,8 @@ describe("useExperimentVisualizationData", () => {
       ],
       staleTime: 120000,
       enabled: true,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
     });
   });
 
