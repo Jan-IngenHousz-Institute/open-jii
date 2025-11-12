@@ -99,6 +99,16 @@ describe("ExperimentDataController", () => {
 
       vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
 
+      // Mock getTableMetadata to return column metadata
+      const mockMetadataResponse = new Map<string, string>([
+        ["column1", "STRING"],
+        ["column2", "NUMBER"],
+      ]);
+
+      vi.spyOn(databricksAdapter, "getTableMetadata").mockResolvedValue(
+        success(mockMetadataResponse),
+      );
+
       vi.spyOn(databricksAdapter, "executeSqlQuery")
         .mockResolvedValueOnce(success(mockCountData)) // First call for count
         .mockResolvedValueOnce(success(mockTableData)); // Second call for actual data
@@ -566,6 +576,16 @@ describe("ExperimentDataController", () => {
       };
 
       vi.spyOn(databricksAdapter, "listTables").mockResolvedValue(success(mockTablesResponse));
+
+      // Mock getTableMetadata to return column metadata
+      const mockMetadataResponse = new Map<string, string>([
+        ["column1", "STRING"],
+        ["column2", "NUMBER"],
+      ]);
+
+      vi.spyOn(databricksAdapter, "getTableMetadata").mockResolvedValue(
+        success(mockMetadataResponse),
+      );
 
       vi.spyOn(databricksAdapter, "executeSqlQuery")
         .mockResolvedValueOnce(success(mockCountData)) // First call for count
