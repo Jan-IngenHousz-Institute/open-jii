@@ -1300,7 +1300,7 @@ describe("DatabricksAdapter", () => {
     const schemaName = `exp_${experimentName}_${experimentId}`;
     const tableName = "sensor_data";
 
-    it("should return meta data successfully", async () => {
+    it("should return metadata successfully", async () => {
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,
@@ -1353,7 +1353,7 @@ describe("DatabricksAdapter", () => {
           },
         });
 
-      // Expected meta data
+      // Expected metadata
       const expectedMetadata = new Map<string, string>([
         ["timestamp", "TIMESTAMP"],
         ["temperature", "DOUBLE"],
