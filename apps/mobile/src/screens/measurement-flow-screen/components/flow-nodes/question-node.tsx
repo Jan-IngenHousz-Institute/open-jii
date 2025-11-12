@@ -9,8 +9,10 @@ import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { FlowNode } from "../../types";
 import { MultipleChoiceQuestion } from "./question-types/multiple-choice-question";
 import { NumberQuestion } from "./question-types/number-question";
+import { OpenEndedQuestion } from "./question-types/open-ended-question";
 import { SingleChoiceQuestion } from "./question-types/single-choice-question";
 import { TextQuestion } from "./question-types/text-question";
+import { YesNoQuestion } from "./question-types/yes-no-question";
 
 interface QuestionNodeProps {
   node: FlowNode;
@@ -70,6 +72,18 @@ export function QuestionNode({ node }: QuestionNodeProps) {
             selectedValue={answerValue}
             onSelect={handleAnswerChange}
           />
+        );
+      case "yes_no":
+        return (
+          <YesNoQuestion
+            content={content}
+            selectedValue={answerValue}
+            onSelect={handleAnswerChange}
+          />
+        );
+      case "open_ended":
+        return (
+          <OpenEndedQuestion content={content} value={answerValue} onChange={handleAnswerChange} />
         );
       default:
         return (

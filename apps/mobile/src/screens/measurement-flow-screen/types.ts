@@ -1,6 +1,12 @@
 export type FlowNodeType = "instruction" | "question" | "measurement" | "analysis";
 
-export type QuestionKind = "text" | "number" | "single_choice" | "multi_choice";
+export type QuestionKind =
+  | "text"
+  | "number"
+  | "single_choice"
+  | "multi_choice"
+  | "yes_no"
+  | "open_ended";
 
 export interface FlowNode {
   id: string;
