@@ -46,7 +46,8 @@
     "bytes": "B",
     "kilobytes": "KB",
     "megabytes": "MB",
-    "comingSoon": "Coming Soon"
+    "comingSoon": "Coming Soon",
+    "ok": "OK"
   },
   "navigation": {
     "experiments": "Experiments",
@@ -248,7 +249,19 @@
     "confirmUnarchive": "Are you sure you want to unarchive experiment",
     "unarchiveActivate": "Unarchive (activate)",
     "experimentUnarchivedSuccess": "Experiment successfully unarchived",
-    "experimentUnarchivedError": "Failed to unarchive experiment. Please try again."
+    "experimentUnarchivedError": "Failed to unarchive experiment. Please try again.",
+    "cannotLeaveAsLastAdmin": "Cannot Leave Experiment",
+    "cannotDemoteAsLastAdmin": "Cannot Change Role to Member",
+    "lastAdminWarning": "You are the last administrator of this experiment. Please assign another member as an admin before leaving.",
+    "lastAdminDemoteWarning": "You are the last administrator of this experiment. Please assign another member as an admin before changing your role to member.",
+    "confirmLeaveTitle": "Leave Experiment?",
+    "confirmLeaveMessage": "Are you sure you want to leave this experiment? You will lose access to all experiment data and will need to be re-invited.",
+    "confirmLeave": "Leave",
+    "confirmDemoteTitle": "Change Role to Member?",
+    "confirmDemoteMessage": "Are you sure you want to change your role to member? You will lose administrator privileges and will not be able to manage experiment members.",
+    "confirmDemote": "Change to Member",
+    "leave": "Leave",
+    "remove": "Remove"
   },
 
   "dashboard": {
