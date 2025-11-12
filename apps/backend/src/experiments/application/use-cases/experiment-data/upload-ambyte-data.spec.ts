@@ -562,6 +562,7 @@ describe("UploadAmbyteDataUseCase", () => {
         experiment.name,
         {
           EXPERIMENT_ID: experiment.id,
+          EXPERIMENT_NAME: experiment.name,
           YEAR_PREFIX: "2025",
           UPLOAD_DIRECTORY: directoryName,
         },
@@ -687,6 +688,7 @@ describe("UploadAmbyteDataUseCase", () => {
         experiment.name,
         {
           EXPERIMENT_ID: experiment.id,
+          EXPERIMENT_NAME: experiment.name,
           YEAR_PREFIX: "2025",
           UPLOAD_DIRECTORY: directoryName,
         },

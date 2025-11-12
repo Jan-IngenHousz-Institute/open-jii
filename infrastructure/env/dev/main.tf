@@ -375,10 +375,12 @@ module "ambyte_processing_job" {
 
       parameters = {
         EXPERIMENT_ID     = "{{EXPERIMENT_ID}}"
+        EXPERIMENT_NAME   = "{{EXPERIMENT_NAME}}"
         EXPERIMENT_SCHEMA = "{{EXPERIMENT_SCHEMA}}"
         UPLOAD_DIRECTORY  = "{{UPLOAD_DIRECTORY}}"
         YEAR_PREFIX       = "{{YEAR_PREFIX}}"
         CATALOG_NAME      = module.databricks_catalog.catalog_name
+        ENVIRONMENT       = upper(var.environment)
       }
     }
   ]
