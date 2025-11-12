@@ -1373,7 +1373,7 @@ describe("DatabricksAdapter", () => {
       expect(result.value).toStrictEqual(expectedMetaData);
     });
 
-    it("should handle error when getting table meta data fails", async () => {
+    it("should handle error when getting table metadata fails", async () => {
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,
@@ -1399,7 +1399,7 @@ describe("DatabricksAdapter", () => {
       // Mock DESCRIBE table query with error
       nock(databricksHost).post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`).reply(500, {
         error_code: "INTERNAL_ERROR",
-        message: "FFailed to get table schema",
+        message: "Failed to get metadata",
       });
 
       // Execute the method
@@ -1412,7 +1412,7 @@ describe("DatabricksAdapter", () => {
       // Assert
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toContain("Failed to get table schema");
+      expect(result.error.message).toContain("Failed to get metadata");
     });
   });
 

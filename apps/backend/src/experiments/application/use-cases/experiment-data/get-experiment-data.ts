@@ -162,7 +162,7 @@ export class GetExperimentDataUseCase {
       );
       if (metadataResult.isFailure()) {
         return failure(
-          AppError.internal(`Failed to get meta data: ${metadataResult.error.message}`),
+          AppError.internal(`Failed to get metadata: ${metadataResult.error.message}`),
         );
       }
       if (metadataResult.value.has("timestamp")) {

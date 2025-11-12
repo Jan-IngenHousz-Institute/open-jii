@@ -345,7 +345,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     tableName: string,
   ): Promise<Result<Map<string, string>>> {
     this.logger.log(
-      `Checking meta data for experiment ${experimentName} (${experimentId}) table ${tableName}`,
+      `Checking metadata for experiment ${experimentName} (${experimentId}) table ${tableName}`,
     );
 
     const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
@@ -356,10 +356,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
     const schemaResult = await this.executeSqlQuery(schemaName, schemaQuery);
 
     if (schemaResult.isFailure()) {
-      this.logger.error(`Failed to get table schema: ${schemaResult.error.message}`);
-      return failure(
-        AppError.internal(`Failed to get table schema: ${schemaResult.error.message}`),
-      );
+      this.logger.error(`Failed to get metadata: ${schemaResult.error.message}`);
+      return failure(AppError.internal(`Failed to get metadata: ${schemaResult.error.message}`));
     }
 
     const availableColumns = new Map(
