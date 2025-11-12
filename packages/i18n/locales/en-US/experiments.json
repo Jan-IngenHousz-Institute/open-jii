@@ -174,10 +174,10 @@
     "requiredDescription": "Participants must answer this question to continue",
     "answerTypeLabel": "Answer Type",
     "answerTypes": {
-      "TEXT": "Text (under construction)",
+      "TEXT": "Text",
       "SELECT": "Multiple Choice",
-      "NUMBER": "Number (under construction)",
-      "BOOLEAN": "Yes/No (under construction)"
+      "NUMBER": "Number",
+      "BOOLEAN": "Yes/No"
     },
     "answerOptionsLabel": "Answer Options",
     "answerOptionPlaceholder": "Enter an answer option",
