@@ -110,7 +110,7 @@ describe("GetExperimentDataUseCase", () => {
       });
 
     // Mock SQL query for describing columns
-    const mockMetaData = {
+    const mockMetadata = {
       columns: [
         { name: "col_name", type_name: "STRING", type_text: "STRING" },
         { name: "data_type", type_name: "STRING", type_text: "STRING" },
@@ -138,19 +138,19 @@ describe("GetExperimentDataUseCase", () => {
         status: { state: "SUCCEEDED" },
         manifest: {
           schema: {
-            column_count: mockMetaData.columns.length,
-            columns: mockMetaData.columns.map((col, i) => ({
+            column_count: mockMetadata.columns.length,
+            columns: mockMetadata.columns.map((col, i) => ({
               ...col,
               position: i,
             })),
           },
-          total_row_count: mockMetaData.totalRows,
-          truncated: mockMetaData.truncated,
+          total_row_count: mockMetadata.totalRows,
+          truncated: mockMetadata.truncated,
         },
         result: {
-          data_array: mockMetaData.rows,
+          data_array: mockMetadata.rows,
           chunk_index: 0,
-          row_count: mockMetaData.rows.length,
+          row_count: mockMetadata.rows.length,
           row_offset: 0,
         },
       });
@@ -282,7 +282,7 @@ describe("GetExperimentDataUseCase", () => {
       });
 
     // Mock SQL query for describing columns
-    const mockMetaData = {
+    const mockMetadata = {
       columns: [
         { name: "col_name", type_name: "STRING", type_text: "STRING" },
         { name: "data_type", type_name: "STRING", type_text: "STRING" },
@@ -310,19 +310,19 @@ describe("GetExperimentDataUseCase", () => {
         status: { state: "SUCCEEDED" },
         manifest: {
           schema: {
-            column_count: mockMetaData.columns.length,
-            columns: mockMetaData.columns.map((col, i) => ({
+            column_count: mockMetadata.columns.length,
+            columns: mockMetadata.columns.map((col, i) => ({
               ...col,
               position: i,
             })),
           },
-          total_row_count: mockMetaData.totalRows,
-          truncated: mockMetaData.truncated,
+          total_row_count: mockMetadata.totalRows,
+          truncated: mockMetadata.truncated,
         },
         result: {
-          data_array: mockMetaData.rows,
+          data_array: mockMetadata.rows,
           chunk_index: 0,
-          row_count: mockMetaData.rows.length,
+          row_count: mockMetadata.rows.length,
           row_offset: 0,
         },
       });
@@ -971,7 +971,7 @@ describe("GetExperimentDataUseCase", () => {
       });
 
     // Mock SQL query for describing columns
-    const mockMetaData = {
+    const mockMetadata = {
       columns: [
         { name: "col_name", type_name: "STRING", type_text: "STRING" },
         { name: "data_type", type_name: "STRING", type_text: "STRING" },
@@ -999,19 +999,19 @@ describe("GetExperimentDataUseCase", () => {
         status: { state: "SUCCEEDED" },
         manifest: {
           schema: {
-            column_count: mockMetaData.columns.length,
-            columns: mockMetaData.columns.map((col, i) => ({
+            column_count: mockMetadata.columns.length,
+            columns: mockMetadata.columns.map((col, i) => ({
               ...col,
               position: i,
             })),
           },
-          total_row_count: mockMetaData.totalRows,
-          truncated: mockMetaData.truncated,
+          total_row_count: mockMetadata.totalRows,
+          truncated: mockMetadata.truncated,
         },
         result: {
-          data_array: mockMetaData.rows,
+          data_array: mockMetadata.rows,
           chunk_index: 0,
-          row_count: mockMetaData.rows.length,
+          row_count: mockMetadata.rows.length,
           row_offset: 0,
         },
       });
@@ -1217,7 +1217,7 @@ describe("GetExperimentDataUseCase", () => {
       });
 
     // Mock SQL query for describing columns
-    const mockMetaData = {
+    const mockMetadata = {
       columns: [
         { name: "col_name", type_name: "STRING", type_text: "STRING" },
         { name: "data_type", type_name: "STRING", type_text: "STRING" },
@@ -1245,19 +1245,19 @@ describe("GetExperimentDataUseCase", () => {
         status: { state: "SUCCEEDED" },
         manifest: {
           schema: {
-            column_count: mockMetaData.columns.length,
-            columns: mockMetaData.columns.map((col, i) => ({
+            column_count: mockMetadata.columns.length,
+            columns: mockMetadata.columns.map((col, i) => ({
               ...col,
               position: i,
             })),
           },
-          total_row_count: mockMetaData.totalRows,
-          truncated: mockMetaData.truncated,
+          total_row_count: mockMetadata.totalRows,
+          truncated: mockMetadata.truncated,
         },
         result: {
-          data_array: mockMetaData.rows,
+          data_array: mockMetadata.rows,
           chunk_index: 0,
-          row_count: mockMetaData.rows.length,
+          row_count: mockMetadata.rows.length,
           row_offset: 0,
         },
       });

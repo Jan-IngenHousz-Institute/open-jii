@@ -1354,7 +1354,7 @@ describe("DatabricksAdapter", () => {
         });
 
       // Expected meta data
-      const expectedMetaData = new Map<string, string>([
+      const expectedMetadata = new Map<string, string>([
         ["timestamp", "TIMESTAMP"],
         ["temperature", "DOUBLE"],
         ["humidity", "DOUBLE"],
@@ -1370,7 +1370,7 @@ describe("DatabricksAdapter", () => {
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toStrictEqual(expectedMetaData);
+      expect(result.value).toStrictEqual(expectedMetadata);
     });
 
     it("should handle error when getting table metadata fails", async () => {
