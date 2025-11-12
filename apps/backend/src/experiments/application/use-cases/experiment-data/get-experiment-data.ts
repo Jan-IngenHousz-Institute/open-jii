@@ -329,10 +329,19 @@ export class GetExperimentDataUseCase {
       return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
     }
 
+    // Make sure 'device' table is last
+    const tables: Table[] = [];
+    let deviceTable: Table | undefined;
+    for (const table of tablesResult.value.tables) {
+      if (table.name === "device") deviceTable = table;
+      else tables.push(table);
+    }
+    if (deviceTable) tables.push(deviceTable);
+
     const response: ExperimentDataDto = [];
 
     // Fetch sample data for each table
-    for (const table of tablesResult.value.tables) {
+    for (const table of tables) {
       const sqlQuery = `SELECT * FROM ${table.name} LIMIT ${pageSize}`;
       const dataResult = await this.databricksPort.executeSqlQuery(schemaName, sqlQuery);
 
