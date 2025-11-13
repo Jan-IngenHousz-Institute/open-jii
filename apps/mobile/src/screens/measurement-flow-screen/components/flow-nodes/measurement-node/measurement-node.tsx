@@ -1,6 +1,7 @@
 import { clsx } from "clsx";
 import React, { useEffect } from "react";
 import { View, Text } from "react-native";
+import { toast } from "sonner-native";
 import { Button } from "~/components/Button";
 import { useProtocol } from "~/hooks/use-protocol";
 import { useTheme } from "~/hooks/use-theme";
@@ -8,7 +9,6 @@ import { useConnectedDevice } from "~/services/device-connection-manager/device-
 import { useScanner } from "~/services/scan-manager/scan-manager";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { playSound } from "~/utils/play-sound";
-import { toast } from "sonner-native";
 
 import { ErrorState } from "./components/error-state";
 import { NoDeviceState } from "./components/no-device-state";
