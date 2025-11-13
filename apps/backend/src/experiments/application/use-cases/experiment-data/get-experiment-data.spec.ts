@@ -830,6 +830,254 @@ describe("GetExperimentDataUseCase", () => {
     expect(result.value[1].data).toBeDefined();
   });
 
+  it("should return table list when no table name is specified and place device table last", async () => {
+    // Create an experiment in the database
+    const { experiment } = await testApp.createExperiment({
+      name: "Test Experiment",
+      description: "Test Description",
+      status: "active",
+      visibility: "private",
+      userId: testUserId,
+    });
+
+    // Mock the Databricks methods
+    const mockTables = {
+      tables: [
+        {
+          name: "device",
+          catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
+          schema_name: `exp_test_experiment_${experiment.id}`,
+        },
+        {
+          name: "sample",
+          catalog_name: MOCK_CATALOG_NAME, // Corrected from "catalog1"
+          schema_name: `exp_test_experiment_${experiment.id}`,
+        },
+      ],
+    };
+
+    // Mock sample data for each table
+    const mockSampleData1 = {
+      columns: [
+        { name: "column1", type_name: "string", type_text: "string" },
+        { name: "column2", type_name: "number", type_text: "number" },
+      ],
+      rows: [
+        ["value1", "1"],
+        ["value2", "2"],
+      ],
+      totalRows: 2,
+      truncated: false,
+    };
+
+    const mockSampleData2 = {
+      columns: [
+        { name: "column1", type_name: "string", type_text: "string" },
+        { name: "column2", type_name: "number", type_text: "number" },
+      ],
+      rows: [
+        ["value3", "3"],
+        ["value4", "4"],
+      ],
+      totalRows: 2,
+      truncated: false,
+    };
+
+    // Mock token request
+    nock(DATABRICKS_HOST).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+      access_token: "mock-token",
+      expires_in: 3600,
+      token_type: "Bearer",
+    });
+
+    // Mock listTables API call
+    nock(DATABRICKS_HOST)
+      .get(DatabricksTablesService.TABLES_ENDPOINT)
+      .query(true)
+      .reply(200, mockTables);
+
+    // Mock SQL query for describing columns for both tables
+    const mockMetadata = {
+      columns: [
+        { name: "col_name", type_name: "STRING", type_text: "STRING" },
+        { name: "data_type", type_name: "STRING", type_text: "STRING" },
+        { name: "comment", type_name: "STRING", type_text: "STRING" },
+      ],
+      rows: [
+        ["column1", "STRING", null],
+        ["column2", "NUMBER", null],
+      ],
+      totalRows: 2,
+      truncated: false,
+    };
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "DESCRIBE device",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_test_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-meta-data-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockMetadata.columns.length,
+            columns: mockMetadata.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockMetadata.totalRows,
+          truncated: mockMetadata.truncated,
+        },
+        result: {
+          data_array: mockMetadata.rows,
+          chunk_index: 0,
+          row_count: mockMetadata.rows.length,
+          row_offset: 0,
+        },
+      });
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: "DESCRIBE sample",
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_test_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-meta-data-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockMetadata.columns.length,
+            columns: mockMetadata.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockMetadata.totalRows,
+          truncated: mockMetadata.truncated,
+        },
+        result: {
+          data_array: mockMetadata.rows,
+          chunk_index: 0,
+          row_count: mockMetadata.rows.length,
+          row_offset: 0,
+        },
+      });
+
+    // Mock SQL query for sample data - first table ("device")
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: `SELECT * FROM device LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_test_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-sample1-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockSampleData1.columns.length,
+            columns: mockSampleData1.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockSampleData1.totalRows,
+          truncated: mockSampleData1.truncated,
+        },
+        result: {
+          data_array: mockSampleData1.rows,
+          chunk_index: 0,
+          row_count: mockSampleData1.rows.length,
+          row_offset: 0,
+        },
+      });
+
+    // Mock SQL query for sample data - second table ("sample")
+    nock(DATABRICKS_HOST)
+      .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, {
+        statement: `SELECT * FROM sample LIMIT ${SAMPLE_DATA_LIMIT}`, // Removed OFFSET 0
+        warehouse_id: MOCK_WAREHOUSE_ID,
+        schema: `exp_test_experiment_${experiment.id}`,
+        catalog: MOCK_CATALOG_NAME,
+        wait_timeout: MOCK_WAIT_TIMEOUT,
+        disposition: MOCK_DISPOSITION,
+        format: MOCK_FORMAT,
+      })
+      .reply(200, {
+        statement_id: "mock-sample2-id",
+        status: { state: "SUCCEEDED" },
+        manifest: {
+          schema: {
+            column_count: mockSampleData2.columns.length,
+            columns: mockSampleData2.columns.map((col, i) => ({
+              ...col,
+              position: i,
+            })),
+          },
+          total_row_count: mockSampleData2.totalRows,
+          truncated: mockSampleData2.truncated,
+        },
+        result: {
+          data_array: mockSampleData2.rows,
+          chunk_index: 0,
+          row_count: mockSampleData2.rows.length,
+          row_offset: 0,
+        },
+      });
+
+    // Act
+    const result = await useCase.execute(experiment.id, testUserId, {
+      page: 1,
+      pageSize: 5,
+    });
+
+    // Assert result is success
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+
+    // Verify response structure with our new array-based format
+    expect(Array.isArray(result.value)).toBe(true);
+    expect(result.value).toHaveLength(2); // Should have 2 tables
+
+    // Check first table which should be "sample" (not "device")
+    expect(result.value[0]).toMatchObject({
+      name: mockTables.tables[1].name,
+      catalog_name: mockTables.tables[1].catalog_name,
+      schema_name: mockTables.tables[1].schema_name,
+      page: 1,
+      pageSize: 5,
+      totalPages: 1,
+    });
+
+    // Check second table which should be "device"
+    expect(result.value[1]).toMatchObject({
+      name: mockTables.tables[0].name,
+      catalog_name: mockTables.tables[0].catalog_name,
+      schema_name: mockTables.tables[0].schema_name,
+      page: 1,
+      pageSize: 5,
+      totalPages: 1,
+    });
+
+    // Check data exists for each table
+    expect(result.value[0].data).toBeDefined();
+    expect(result.value[1].data).toBeDefined();
+  });
+
   it("should return not found error when experiment does not exist", async () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
 
