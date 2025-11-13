@@ -266,7 +266,7 @@
 
   "dashboard": {
     "title": "Dashboard",
-    "welcome": "Welcome to OpenJII",
+    "welcome": "Welcome to openJII",
     "recentExperiments": "Recent Experiments",
     "recentArticles": "Recent blog posts",
     "yourExperiments": "Your recent experiments",
@@ -303,7 +303,7 @@
     "emailInvalid": "Please enter a valid email address",
     "sendingEmail": "Sending you an email...",
     "verifyRequest": "We emailed you a sign in link",
-    "verifyRequestDetails": "We sent you an email to your email address. Tap the button in the email to continue.",
+    "verifyRequestDetails": "We've sent you an email. Tap the button in the email to continue, or scan the QR code in the email if you are logging in from another device.",
     "verifyRequestDetailsJunk": "If you don't see the email, check your spam or junk folder.",
     "loginEmail": "Confirm your email address to sign in",
     "loginEmailConfirm": "Confirm and sign in",
