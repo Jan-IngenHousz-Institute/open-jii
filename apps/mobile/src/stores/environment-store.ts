@@ -1,7 +1,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { env } from "~/env";
+import { EnvVariablesMap } from "~/types/env-variables";
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const env: EnvVariablesMap = require("~/env")?.env
+if (!env) {
+  throw new Error('Missing env variables');
+}
 
 interface EnvironmentStoreState {
   environment?: string;
@@ -37,8 +43,8 @@ export const useEnvironmentStore = create<EnvironmentStoreState & EnvironmentSto
   ),
 );
 
-export function getEnvName() {
-  const current = useEnvironmentStore.getState().environment as keyof typeof env;
+export function getEnvName(): string {
+  const current = useEnvironmentStore.getState().environment;
   return current ?? "dev";
 }
 
@@ -47,10 +53,13 @@ export function getEnvVar<K extends keyof (typeof env)[keyof typeof env]>(
   isRequired = true,
 ) {
   const current = getEnvName();
+  console.log("current", current, env[current]);
   const value = env[current][key];
   if (value === undefined && isRequired) {
-    throw new Error(`Env variable ${String(key)} is required`);
+    throw new Error(`Env variable ${key} is required`);
   }
 
   return value;
 }
+
+export const supportedEnvsList: string[] = Object.keys(env);

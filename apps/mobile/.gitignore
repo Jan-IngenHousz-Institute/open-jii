@@ -40,4 +40,4 @@ android
 ios
 .cache
 *.aab
-src/env.ts
+src/env2.ts
