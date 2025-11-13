@@ -92,7 +92,7 @@
     "dotenv-cli": "^8.0.0",
     "eslint": "catalog:",
     "expo-dev-client": "~6.0.17",
-    "typescript": "catalog"
+    "typescript": "catalog:"
   },
   "private": true
 }

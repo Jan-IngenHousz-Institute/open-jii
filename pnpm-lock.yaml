@@ -540,7 +540,7 @@ importers:
         specifier: ^1.0.10
         version: 1.0.10
       '@types/react':
-        specifier: ^19.1.17
+        specifier: catalog:react19
         version: 19.1.17
       '@types/webpack-env':
         specifier: ^1.18.8
@@ -555,7 +555,7 @@ importers:
         specifier: ~6.0.17
         version: 6.0.17(expo@54.0.23)
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   apps/node-red:
@@ -7423,9 +7423,6 @@ packages:
 
   '@types/react@19.1.17':
     resolution: {integrity: sha512-Qec1E3mhALmaspIrhWt9jkQMNdw6bReVu64mjvhbhq2NFPftLPVr+l1SZgmw/66WwBNpDh7ao5AT6gF5v41PFA==}
-
-  '@types/react@19.1.4':
-    resolution: {integrity: sha512-EB1yiiYdvySuIITtD5lhW4yPyJ31RkJkkDw794LaQYrxCSaQV/47y5o1FMC4zF9ZyjUjzJMZwbovEnT5yHTW6g==}
 
   '@types/readable-stream@4.0.18':
     resolution: {integrity: sha512-21jK/1j+Wg+7jVw1xnSwy/2Q1VgVjWuFssbYGTREPUBeZ+rqVFl2udq0IkxzPC0ZhOzVceUbyIACFZKLqKEBlA==}
@@ -26290,10 +26287,6 @@ snapshots:
     dependencies:
       csstype: 3.1.3
 
-  '@types/react@19.1.4':
-    dependencies:
-      csstype: 3.1.3
-
   '@types/readable-stream@4.0.18':
     dependencies:
       '@types/node': 22.15.30
@@ -26344,7 +26337,7 @@ snapshots:
 
   '@types/swagger-ui-react@5.18.0':
     dependencies:
-      '@types/react': 19.1.4
+      '@types/react': 19.1.17
 
   '@types/trusted-types@2.0.7':
     optional: true
