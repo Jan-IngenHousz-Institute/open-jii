@@ -4,13 +4,17 @@ import { StatusCodes } from "http-status-codes";
 import type { ErrorResponse, ExperimentMemberList } from "@repo/api";
 import { contract } from "@repo/api";
 
+import { success } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import type { UserDto } from "../../users/core/models/user.model";
+import type { EmailPort } from "../core/ports/email.port";
+import { EMAIL_PORT } from "../core/ports/email.port";
 
 describe("ExperimentMembersController", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
+  let emailPort: EmailPort;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -22,6 +26,10 @@ describe("ExperimentMembersController", () => {
 
     // Reset any mocks before each test
     vi.restoreAllMocks();
+
+    // Mock email sending
+    emailPort = testApp.module.get(EMAIL_PORT);
+    vi.spyOn(emailPort, "sendAddedUserNotification").mockResolvedValue(success(undefined));
   });
 
   afterEach(() => {
