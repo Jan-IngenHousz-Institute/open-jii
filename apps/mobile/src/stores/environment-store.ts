@@ -4,9 +4,9 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { EnvVariablesMap } from "~/types/env-variables";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const env: EnvVariablesMap = require("~/env")?.env
+const env: EnvVariablesMap = require("~/env")?.env;
 if (!env) {
-  throw new Error('Missing env variables');
+  throw new Error("Missing env variables");
 }
 
 interface EnvironmentStoreState {
@@ -53,7 +53,6 @@ export function getEnvVar<K extends keyof (typeof env)[keyof typeof env]>(
   isRequired = true,
 ) {
   const current = getEnvName();
-  console.log("current", current, env[current]);
   const value = env[current][key];
   if (value === undefined && isRequired) {
     throw new Error(`Env variable ${key} is required`);
