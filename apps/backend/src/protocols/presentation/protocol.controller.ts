@@ -2,9 +2,11 @@ import { Controller, Logger, UseGuards } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { StatusCodes } from "http-status-codes";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract, validateProtocolJson } from "@repo/api";
 import type { User } from "@repo/auth/types";
 
+import { AnalyticsService } from "../../common/analytics/analytics.service";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
@@ -45,11 +47,55 @@ function parseProtocolCode(code: unknown, logger: Logger): Record<string, unknow
 }
 
 /**
- * Validates the protocol code fields
+ * Validates the protocol code JSON structure
+ * @param code The code field from the protocol
+ * @param logger Logger function
+ * @returns Success if valid JSON structure, failure otherwise
+ */
+function validateJsonStructure(code: unknown, logger: Logger) {
+  // Ensure code is present and is a valid array
+  if (!code) {
+    return failure(AppError.badRequest("Protocol code is required"));
+  }
+
+  if (!Array.isArray(code)) {
+    return failure(AppError.badRequest("Protocol code must be an array"));
+  }
+
+  try {
+    // Verify it can be stringified (valid JSON structure)
+    JSON.stringify(code);
+    return success(code);
+  } catch (error) {
+    logger.warn("Protocol JSON structure validation failed", error);
+    return failure(AppError.badRequest("Invalid JSON structure"));
+  }
+}
+
+/**
+ * Validates the protocol code fields with full schema validation
  * @param code The code field from the protocol, which could be a string, object, or null/undefined
  * @param logger Logger function
+ * @param analyticsService Analytics service to check feature flags
+ * @param useStrictValidation Whether to use strict protocol validation (default: false)
  */
-function validateProtocolCode(code: unknown, logger: Logger) {
+async function validateProtocolCode(
+  code: unknown,
+  logger: Logger,
+  analyticsService: AnalyticsService,
+  useStrictValidation = false,
+) {
+  // Check feature flag to determine validation strategy
+  const validationAsWarning = await analyticsService.isFeatureFlagEnabled(
+    FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+  );
+
+  // If feature flag is enabled and not using strict validation, only validate JSON structure
+  if (validationAsWarning && !useStrictValidation) {
+    return validateJsonStructure(code, logger);
+  }
+
+  // Otherwise, perform full protocol validation
   const validationResult = validateProtocolJson(code);
   if (!validationResult.success) {
     logger.warn("Protocol validation failed", validationResult.error);
@@ -64,6 +110,7 @@ export class ProtocolController {
   private readonly logger = new Logger(ProtocolController.name);
 
   constructor(
+    private readonly analyticsService: AnalyticsService,
     private readonly createProtocolUseCase: CreateProtocolUseCase,
     private readonly getProtocolUseCase: GetProtocolUseCase,
     private readonly listProtocolsUseCase: ListProtocolsUseCase,
@@ -118,7 +165,11 @@ export class ProtocolController {
   @TsRestHandler(contract.protocols.createProtocol)
   createProtocol(@CurrentUser() user: User) {
     return tsRestHandler(contract.protocols.createProtocol, async ({ body }) => {
-      const validationResult = validateProtocolCode(body.code, this.logger);
+      const validationResult = await validateProtocolCode(
+        body.code,
+        this.logger,
+        this.analyticsService,
+      );
       if (validationResult.isFailure()) {
         return handleFailure(validationResult, this.logger);
       }
@@ -171,7 +222,11 @@ export class ProtocolController {
       }
 
       if (body.code !== undefined) {
-        const validationResult = validateProtocolCode(body.code, this.logger);
+        const validationResult = await validateProtocolCode(
+          body.code,
+          this.logger,
+          this.analyticsService,
+        );
         if (validationResult.isFailure()) {
           return handleFailure(validationResult, this.logger);
         }

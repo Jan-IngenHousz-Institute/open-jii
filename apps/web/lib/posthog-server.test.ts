@@ -1,7 +1,8 @@
 import { PostHog } from "posthog-node";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "./posthog-config";
+import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
+
 import { isFeatureFlagEnabled, shutdownPostHog } from "./posthog-server";
 
 // Mock the env module

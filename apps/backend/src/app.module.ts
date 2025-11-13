@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ScheduleModule } from "@nestjs/schedule";
 
+import { AnalyticsModule } from "./common/analytics/analytics.module";
 import awsConfig from "./common/config/aws.config";
 import databaseConfig from "./common/config/database.config";
 import databricksConfig from "./common/config/databricks.config";
@@ -19,6 +20,7 @@ import { UserModule } from "./users/user.module";
       load: [databaseConfig, databricksConfig, awsConfig],
     }),
     ScheduleModule.forRoot(),
+    AnalyticsModule,
     DatabaseModule,
     ExperimentModule,
     MacroModule,

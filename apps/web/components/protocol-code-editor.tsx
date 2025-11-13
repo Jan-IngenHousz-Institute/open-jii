@@ -3,10 +3,12 @@
 import type { Monaco, OnMount } from "@monaco-editor/react";
 import Editor from "@monaco-editor/react";
 import { Copy, Check } from "lucide-react";
+import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useEffect, useRef, useState } from "react";
 import type { FC } from "react";
 import { useDebounce } from "~/hooks/useDebounce";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { findProtocolErrorLine, getErrorMessage, validateProtocolJson } from "@repo/api";
 import { Button, Label } from "@repo/ui/components";
 import { cn } from "@repo/ui/lib/utils";
@@ -14,6 +16,7 @@ import { cn } from "@repo/ui/lib/utils";
 interface ProtocolCodeEditorProps {
   value: Record<string, unknown>[] | string;
   onChange: (value: Record<string, unknown>[] | string | undefined) => void;
+  onValidationChange?: (isValid: boolean) => void;
   label: string;
   placeholder?: string;
   error?: string;
@@ -23,37 +26,62 @@ type IStandaloneCodeEditor = Parameters<OnMount>[0];
 const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   value,
   onChange,
+  onValidationChange,
   label,
   placeholder,
   error,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isValidJson, setIsValidJson] = useState(true);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const monacoRef = useRef<Monaco | null>(null);
   const editorRef = useRef<IStandaloneCodeEditor | null>(null);
   const [editorCode, setEditorCode] = useState<string | undefined>(undefined);
   const [debouncedEditorCode] = useDebounce(editorCode, 200);
+  const isUserEditingRef = useRef(false);
+
+  // Check feature flag for validation strategy
+  const validationAsWarning = useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING);
 
   // Convert array to JSON string for editor if needed
-  const editorValue = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+  const initialEditorValue = typeof value === "string" ? value : JSON.stringify(value, null, 2);
 
-  // Set Monaco error markers
-  const setMarkers = (errors: string[], errorDetails?: { line: number; message: string }[]) => {
+  // Initialize editor code from props only once
+  useEffect(() => {
+    if (editorCode === undefined && !isUserEditingRef.current) {
+      setEditorCode(initialEditorValue);
+    }
+  }, [initialEditorValue, editorCode]);
+
+  // Use editor code for display, or fall back to prop value
+  const editorValue = editorCode ?? initialEditorValue;
+
+  // Set Monaco markers (errors or warnings based on validation mode)
+  const setMarkers = (
+    messages: string[],
+    messageDetails?: { line: number; message: string }[],
+    asError = false,
+  ) => {
     if (monacoRef.current && editorRef.current) {
+      const markerSeverityWarning = monacoRef.current.MarkerSeverity.Warning;
       const markerSeverityError = monacoRef.current.MarkerSeverity.Error;
       const model = editorRef.current.getModel();
       if (model) {
         monacoRef.current.editor.setModelMarkers(
           model,
           "owner",
-          (errorDetails ?? []).map((e) => ({
+          (messageDetails ?? []).map((e) => ({
             startLineNumber: e.line,
             endLineNumber: e.line,
             startColumn: 1,
             endColumn: 1,
             message: e.message,
-            severity: markerSeverityError,
+            // Use Error severity for JSON syntax errors or when in strict mode
+            // Use Warning severity when in warning mode
+            severity:
+              e.message === "Invalid JSON syntax" || asError
+                ? markerSeverityError
+                : markerSeverityWarning,
           })),
         );
       }
@@ -87,6 +115,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
     if (!debouncedEditorCode) {
       onChange(debouncedEditorCode);
       setIsValidJson(true);
+      onValidationChange?.(true);
       return;
     }
 
@@ -94,20 +123,48 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
       const parsedValue = JSON.parse(debouncedEditorCode) as unknown;
       setIsValidJson(true);
 
-      // Validate with Zod
-      const result = validateProtocolJson(parsedValue);
-      if (!result.success && result.error) {
-        setValidationErrors(result.error.map((e) => getErrorMessage(e)));
-        const errorDetails = result.error.map((e) => {
-          return findProtocolErrorLine(debouncedEditorCode, e);
-        });
-        setMarkers(
-          result.error.map((e) => e.message),
-          errorDetails,
-        );
+      // If feature flag is enabled (validation as warning), skip protocol validation
+      // If feature flag is disabled (strict mode), do full protocol validation
+      if (!validationAsWarning) {
+        // Strict mode: validate protocol and show as errors (block save)
+        const result = validateProtocolJson(parsedValue);
+        if (!result.success && result.error) {
+          setValidationWarnings(result.error.map((e) => getErrorMessage(e)));
+          const warningDetails = result.error.map((e) => {
+            return findProtocolErrorLine(debouncedEditorCode, e);
+          });
+          setMarkers(
+            result.error.map((e) => e.message),
+            warningDetails,
+            true, // Show as errors (red) in strict mode
+          );
+          // Block save in strict mode
+          onChange(undefined);
+          onValidationChange?.(false);
+          return;
+        } else {
+          setValidationWarnings([]);
+          setMarkers([]);
+          onValidationChange?.(true);
+        }
       } else {
-        setValidationErrors([]);
-        setMarkers([]);
+        // Warning mode: show protocol validation as warnings but allow save
+        const result = validateProtocolJson(parsedValue);
+        if (!result.success && result.error) {
+          setValidationWarnings(result.error.map((e) => getErrorMessage(e)));
+          const warningDetails = result.error.map((e) => {
+            return findProtocolErrorLine(debouncedEditorCode, e);
+          });
+          setMarkers(
+            result.error.map((e) => e.message),
+            warningDetails,
+            false, // Show as warnings (yellow) in warning mode
+          );
+        } else {
+          setValidationWarnings([]);
+          setMarkers([]);
+        }
+        onValidationChange?.(true);
       }
 
       if (Array.isArray(parsedValue)) {
@@ -117,14 +174,16 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
       }
     } catch {
       setIsValidJson(false);
-      setValidationErrors(["Invalid JSON syntax"]);
+      setValidationWarnings(["Invalid JSON syntax"]);
       setMarkers(["Invalid JSON syntax"], [{ line: 1, message: "Invalid JSON syntax" }]);
-      onChange(debouncedEditorCode); // Keep the invalid JSON for editing
+      onChange(undefined); // Don't save invalid JSON
+      onValidationChange?.(false);
     }
-  }, [debouncedEditorCode, onChange]);
+  }, [debouncedEditorCode, onChange, onValidationChange, validationAsWarning]);
 
   // Handle editor changes and always try to convert to array for validation
   const handleEditorChange = (newValue: string | undefined) => {
+    isUserEditingRef.current = true;
     setEditorCode(newValue);
   };
 
@@ -157,10 +216,12 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
               {stats.lines} lines • {stats.size}
             </span>
             {!isValidJson && <span className="text-xs text-red-600">Invalid JSON</span>}
-            {validationErrors.length > 0 && (
-              <span className="text-xs text-red-600">
-                {validationErrors[0]}
-                {validationErrors.length > 1 && ` (+${validationErrors.length - 1} more)`}
+            {validationWarnings.length > 0 && isValidJson && (
+              <span
+                className={cn("text-xs", validationAsWarning ? "text-yellow-600" : "text-red-600")}
+              >
+                {validationWarnings[0]}
+                {validationWarnings.length > 1 && ` (+${validationWarnings.length - 1} more)`}
               </span>
             )}
           </div>
