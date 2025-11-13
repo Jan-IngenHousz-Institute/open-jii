@@ -17,7 +17,7 @@ function removeLeadingSlashes(value: string) {
 const customApiFetcher = async (args: ApiFetcherArgs) => {
   const token = useSessionStore.getState().session?.token;
 
-  const envName = getEnvName();
+  const envName = String(getEnvName());
 
   const enhancedHeaders = {
     ...args.headers,

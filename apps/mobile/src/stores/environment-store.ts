@@ -49,7 +49,7 @@ export function getEnvVar<K extends keyof (typeof env)[keyof typeof env]>(
   const current = getEnvName();
   const value = env[current][key];
   if (value === undefined && isRequired) {
-    throw new Error("Env variable " + key + " is required");
+    throw new Error(`Env variable ${String(key)} is required`);
   }
 
   return value;

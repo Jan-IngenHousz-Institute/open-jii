@@ -20,7 +20,7 @@ export async function getSessionData(sessionToken: string) {
     },
   });
 
-  const envName = getEnvName();
+  const envName = String(getEnvName());
 
   const { data } = await axiosInstance.get<UserSessionData>("/api/auth/session", {
     headers: {
