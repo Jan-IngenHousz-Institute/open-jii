@@ -1,0 +1,28 @@
+import type { Result } from "../../../common/utils/fp-utils";
+
+/**
+ * Injection token for the Email port
+ */
+export const EMAIL_PORT = Symbol("EMAIL_PORT");
+
+/**
+ * Port interface for Email operations in the experiments domain
+ */
+export interface EmailPort {
+  /**
+   * Sends a notification email when a user is added to an experiment
+   *
+   * @param experimentId - The ID of the experiment
+   * @param experimentName - The name of the experiment
+   * @param actor - The user who added the new member
+   * @param role - The role assigned to the new member
+   * @param email - The email address of the new member
+   */
+  sendAddedUserNotification(
+    experimentId: string,
+    experimentName: string,
+    actor: string,
+    role: string,
+    email: string,
+  ): Promise<Result<void>>;
+}

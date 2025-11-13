@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "exports": {
+    "./emails/added-user-notification": {
+      "types": "./dist/emails/added-user-notification.d.ts",
+      "default": "./dist/emails/added-user-notification.js"
+    },
     "./emails/verification-request": {
       "types": "./dist/emails/verification-request.d.ts",
       "default": "./dist/emails/verification-request.js"

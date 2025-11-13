@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import {
@@ -6,6 +6,8 @@ import {
   ExperimentMemberRole,
 } from "../../../core/models/experiment-members.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
+import { EMAIL_PORT } from "../../../core/ports/email.port";
+import type { EmailPort } from "../../../core/ports/email.port";
 import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
@@ -16,6 +18,7 @@ export class AddExperimentMembersUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentMemberRepository: ExperimentMemberRepository,
+    @Inject(EMAIL_PORT) private readonly emailPort: EmailPort,
   ) {}
 
   async execute(
@@ -70,6 +73,32 @@ export class AddExperimentMembersUseCase {
             .map((m) => m.userId)
             .join(", ")}] to experiment "${experiment.name}" (ID: ${experimentId})`,
         );
+
+        // Send notifications to the added members
+        const actorProfileResult =
+          await this.experimentMemberRepository.findUserFullNameFromProfile(currentUserId);
+
+        if (actorProfileResult.isFailure()) {
+          this.logger.error(`Failed to retrieve profile for user ${currentUserId}`);
+          return failure(AppError.internal("Failed to retrieve actor profile"));
+        }
+
+        this.logger.log("Current user id", currentUserId);
+        const actor = actorProfileResult.value
+          ? `${actorProfileResult.value.firstName} ${actorProfileResult.value.lastName}`
+          : "Anonymous User";
+        for (const addedMember of addMembersResult.value) {
+          if (addedMember.user.email) {
+            await this.emailPort.sendAddedUserNotification(
+              experimentId,
+              experiment.name,
+              actor,
+              addedMember.role,
+              addedMember.user.email,
+            );
+          }
+        }
+
         return success(addMembersResult.value);
       },
     );

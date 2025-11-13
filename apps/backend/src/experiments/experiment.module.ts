@@ -5,6 +5,8 @@ import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
 import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
+import { EmailAdapter } from "../common/modules/email/services/email.adapter";
+import { EmailModule } from "../common/modules/email/services/email.module";
 // Services
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
 // Use Cases
@@ -41,6 +43,7 @@ import { UpdateProvisioningStatusUseCase } from "./application/use-cases/update-
 // Ports
 import { AWS_PORT } from "./core/ports/aws.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
+import { EMAIL_PORT } from "./core/ports/email.port";
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
 // Repositories
 import { ExperimentMemberRepository } from "./core/repositories/experiment-member.repository";
@@ -59,7 +62,7 @@ import { ExperimentWebhookController } from "./presentation/experiment-webhook.c
 import { ExperimentController } from "./presentation/experiment.controller";
 
 @Module({
-  imports: [DatabricksModule, AwsModule],
+  imports: [DatabricksModule, AwsModule, EmailModule],
   controllers: [
     ExperimentController,
     ExperimentDataController,
@@ -79,6 +82,10 @@ import { ExperimentController } from "./presentation/experiment.controller";
     {
       provide: AWS_PORT,
       useExisting: AwsAdapter,
+    },
+    {
+      provide: EMAIL_PORT,
+      useExisting: EmailAdapter,
     },
 
     // Repositories
