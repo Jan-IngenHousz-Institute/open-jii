@@ -4,6 +4,7 @@ import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtoco
 import { useLocale } from "@/hooks/useLocale";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import type { CreateProtocolRequestBody } from "@repo/api";
@@ -19,6 +20,7 @@ export function NewProtocolForm() {
   const router = useRouter();
   const { t } = useTranslation();
   const locale = useLocale();
+  const [isCodeValid, setIsCodeValid] = useState(true);
 
   const { mutate: createProtocol, isPending } = useProtocolCreate({
     onSuccess: (id: string) => router.push(`/${locale}/platform/protocols/${id}`),
@@ -66,6 +68,7 @@ export function NewProtocolForm() {
                 <ProtocolCodeEditor
                   value={field.value}
                   onChange={field.onChange}
+                  onValidationChange={setIsCodeValid}
                   label={t("newProtocol.code")}
                   placeholder={t("newProtocol.codePlaceholder")}
                   error={form.formState.errors.code?.message?.toString()}
@@ -79,7 +82,23 @@ export function NewProtocolForm() {
           <Button type="button" onClick={cancel}>
             {t("newProtocol.cancel")}
           </Button>
-          <Button type="submit" disabled={isPending}>
+          <Button
+            type="submit"
+            disabled={
+              isPending || !form.formState.isDirty || !form.formState.isValid || !isCodeValid
+            }
+            aria-label={
+              isPending
+                ? t("newProtocol.creating")
+                : !form.formState.isDirty
+                  ? "No changes to save"
+                  : !isCodeValid
+                    ? "Cannot save: Invalid JSON or protocol code"
+                    : !form.formState.isValid
+                      ? "Cannot save: Form has validation errors"
+                      : t("newProtocol.finalizeSetup")
+            }
+          >
             {isPending ? t("newProtocol.creating") : t("newProtocol.finalizeSetup")}
           </Button>
         </div>

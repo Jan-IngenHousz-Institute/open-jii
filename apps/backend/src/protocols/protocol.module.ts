@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { AnalyticsModule } from "../common/analytics/analytics.module";
 // Use Cases
 import { CreateProtocolUseCase } from "./application/use-cases/create-protocol/create-protocol";
 import { DeleteProtocolUseCase } from "./application/use-cases/delete-protocol/delete-protocol";
@@ -12,6 +13,7 @@ import { ProtocolRepository } from "./core/repositories/protocol.repository";
 import { ProtocolController } from "./presentation/protocol.controller";
 
 @Module({
+  imports: [AnalyticsModule],
   controllers: [ProtocolController],
   providers: [
     // Repositories
