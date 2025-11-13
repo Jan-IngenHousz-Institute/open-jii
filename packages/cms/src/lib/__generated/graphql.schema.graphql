@@ -1,5 +1,7 @@
 directive @contentSourceMaps on QUERY
 
+directive @contentfulSchemaMetadata(contentTypePublishedCounters: JSON) on SCHEMA
+
 directive @delegatedResourceLink(contentTypeId: String, field: JSON) on FIELD_DEFINITION | OBJECT
 
 directive @enumMapper(value: JSON) on ENUM_VALUE
@@ -7,6 +9,13 @@ directive @enumMapper(value: JSON) on ENUM_VALUE
 directive @featureFlag(featureName: String) on FIELD
 
 directive @fieldResolver(data: JSON, kind: String) on FIELD_DEFINITION
+
+"""
+Indicates exactly one field must be supplied and this field must not be `null`.
+"""
+directive @oneOf on INPUT_OBJECT
+
+directive @timeline(where: TimelineFilterInput!) on QUERY
 
 directive @typeIdentifier(contentTypeId: String) on OBJECT
 
@@ -427,6 +436,10 @@ enum ComponentFaqQuestionLinkingCollectionsPageFaqCollectionOrder {
   internalName_DESC
   intro_ASC
   intro_DESC
+  pageDescription_ASC
+  pageDescription_DESC
+  pageTitle_ASC
+  pageTitle_DESC
   sys_firstPublishedAt_ASC
   sys_firstPublishedAt_DESC
   sys_id_ASC
@@ -1198,6 +1211,75 @@ The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://
 scalar JSON
 
 """
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/landingMetadata)
+"""
+type LandingMetadata implements Entry & _Node {
+  _id: ID!
+  contentfulMetadata: ContentfulMetadata!
+  description(locale: String): String
+  internalName(locale: String): String
+  linkedFrom(allowedLocales: [String]): LandingMetadataLinkingCollections
+  sys: Sys!
+  title(locale: String): String
+}
+
+type LandingMetadataCollection {
+  items: [LandingMetadata]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+input LandingMetadataFilter {
+  AND: [LandingMetadataFilter]
+  OR: [LandingMetadataFilter]
+  contentfulMetadata: ContentfulMetadataFilter
+  description: String
+  description_contains: String
+  description_exists: Boolean
+  description_in: [String]
+  description_not: String
+  description_not_contains: String
+  description_not_in: [String]
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
+}
+
+type LandingMetadataLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+}
+
+enum LandingMetadataOrder {
+  description_ASC
+  description_DESC
+  internalName_ASC
+  internalName_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+"""
 [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageAbout)
 """
 type PageAbout implements Entry & _Node {
@@ -1207,6 +1289,8 @@ type PageAbout implements Entry & _Node {
   image(locale: String, preview: Boolean): Asset
   internalName(locale: String): String
   linkedFrom(allowedLocales: [String]): PageAboutLinkingCollections
+  pageDescription(locale: String): String
+  pageTitle(locale: String): String
   sys: Sys!
   title(locale: String): String
 }
@@ -1273,6 +1357,20 @@ input PageAboutFilter {
   internalName_not: String
   internalName_not_contains: String
   internalName_not_in: [String]
+  pageDescription: String
+  pageDescription_contains: String
+  pageDescription_exists: Boolean
+  pageDescription_in: [String]
+  pageDescription_not: String
+  pageDescription_not_contains: String
+  pageDescription_not_in: [String]
+  pageTitle: String
+  pageTitle_contains: String
+  pageTitle_exists: Boolean
+  pageTitle_in: [String]
+  pageTitle_not: String
+  pageTitle_not_contains: String
+  pageTitle_not_in: [String]
   sys: SysFilter
   title: String
   title_contains: String
@@ -1290,6 +1388,10 @@ type PageAboutLinkingCollections {
 enum PageAboutOrder {
   internalName_ASC
   internalName_DESC
+  pageDescription_ASC
+  pageDescription_DESC
+  pageTitle_ASC
+  pageTitle_DESC
   sys_firstPublishedAt_ASC
   sys_firstPublishedAt_DESC
   sys_id_ASC
@@ -1515,6 +1617,8 @@ type PageFaq implements Entry & _Node {
   internalName(locale: String): String
   intro(locale: String): String
   linkedFrom(allowedLocales: [String]): PageFaqLinkingCollections
+  pageDescription(locale: String): String
+  pageTitle(locale: String): String
   questionsCollection(limit: Int = 100, locale: String, order: [PageFaqQuestionsCollectionOrder], preview: Boolean, skip: Int = 0, where: ComponentFaqQuestionFilter): PageFaqQuestionsCollection
   sys: Sys!
   title(locale: String): String
@@ -1545,6 +1649,20 @@ input PageFaqFilter {
   intro_not: String
   intro_not_contains: String
   intro_not_in: [String]
+  pageDescription: String
+  pageDescription_contains: String
+  pageDescription_exists: Boolean
+  pageDescription_in: [String]
+  pageDescription_not: String
+  pageDescription_not_contains: String
+  pageDescription_not_in: [String]
+  pageTitle: String
+  pageTitle_contains: String
+  pageTitle_exists: Boolean
+  pageTitle_in: [String]
+  pageTitle_not: String
+  pageTitle_not_contains: String
+  pageTitle_not_in: [String]
   questions: cfComponentFaqQuestionNestedFilter
   questionsCollection_exists: Boolean
   sys: SysFilter
@@ -1566,6 +1684,10 @@ enum PageFaqOrder {
   internalName_DESC
   intro_ASC
   intro_DESC
+  pageDescription_ASC
+  pageDescription_DESC
+  pageTitle_ASC
+  pageTitle_DESC
   sys_firstPublishedAt_ASC
   sys_firstPublishedAt_DESC
   sys_id_ASC
@@ -2121,6 +2243,8 @@ type PagePolicies implements Entry & _Node {
   contentfulMetadata: ContentfulMetadata!
   internalName(locale: String): String
   linkedFrom(allowedLocales: [String]): PagePoliciesLinkingCollections
+  pageDescription(locale: String): String
+  pageTitle(locale: String): String
   sys: Sys!
   title(locale: String): String
 }
@@ -2186,6 +2310,20 @@ input PagePoliciesFilter {
   internalName_not: String
   internalName_not_contains: String
   internalName_not_in: [String]
+  pageDescription: String
+  pageDescription_contains: String
+  pageDescription_exists: Boolean
+  pageDescription_in: [String]
+  pageDescription_not: String
+  pageDescription_not_contains: String
+  pageDescription_not_in: [String]
+  pageTitle: String
+  pageTitle_contains: String
+  pageTitle_exists: Boolean
+  pageTitle_in: [String]
+  pageTitle_not: String
+  pageTitle_not_contains: String
+  pageTitle_not_in: [String]
   sys: SysFilter
   title: String
   title_contains: String
@@ -2201,6 +2339,113 @@ type PagePoliciesLinkingCollections {
 }
 
 enum PagePoliciesOrder {
+  internalName_ASC
+  internalName_DESC
+  pageDescription_ASC
+  pageDescription_DESC
+  pageTitle_ASC
+  pageTitle_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+"""
+[See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/pageTermsAndConditions)
+"""
+type PageTermsAndConditions implements Entry & _Node {
+  _id: ID!
+  content(locale: String): PageTermsAndConditionsContent
+  contentfulMetadata: ContentfulMetadata!
+  internalName(locale: String): String
+  linkedFrom(allowedLocales: [String]): PageTermsAndConditionsLinkingCollections
+  sys: Sys!
+  title(locale: String): String
+}
+
+type PageTermsAndConditionsCollection {
+  items: [PageTermsAndConditions]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+type PageTermsAndConditionsContent {
+  json: JSON!
+  links: PageTermsAndConditionsContentLinks!
+}
+
+type PageTermsAndConditionsContentAssets {
+  block: [Asset]!
+  hyperlink: [Asset]!
+}
+
+type PageTermsAndConditionsContentEntries {
+  block: [Entry]!
+  hyperlink: [Entry]!
+  inline: [Entry]!
+}
+
+type PageTermsAndConditionsContentLinks {
+  assets: PageTermsAndConditionsContentAssets!
+  entries: PageTermsAndConditionsContentEntries!
+  resources: PageTermsAndConditionsContentResources!
+}
+
+type PageTermsAndConditionsContentResources {
+  block: [PageTermsAndConditionsContentResourcesBlock!]!
+  hyperlink: [PageTermsAndConditionsContentResourcesHyperlink!]!
+  inline: [PageTermsAndConditionsContentResourcesInline!]!
+}
+
+type PageTermsAndConditionsContentResourcesBlock implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type PageTermsAndConditionsContentResourcesHyperlink implements ResourceLink {
+  sys: ResourceSys!
+}
+
+type PageTermsAndConditionsContentResourcesInline implements ResourceLink {
+  sys: ResourceSys!
+}
+
+input PageTermsAndConditionsFilter {
+  AND: [PageTermsAndConditionsFilter]
+  OR: [PageTermsAndConditionsFilter]
+  content_contains: String
+  content_exists: Boolean
+  content_not_contains: String
+  contentfulMetadata: ContentfulMetadataFilter
+  internalName: String
+  internalName_contains: String
+  internalName_exists: Boolean
+  internalName_in: [String]
+  internalName_not: String
+  internalName_not_contains: String
+  internalName_not_in: [String]
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
+}
+
+type PageTermsAndConditionsLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+}
+
+enum PageTermsAndConditionsOrder {
   internalName_ASC
   internalName_DESC
   sys_firstPublishedAt_ASC
@@ -2242,6 +2487,8 @@ type Query {
   entryCollection(limit: Int = 100, locale: String, order: [EntryOrder], preview: Boolean, skip: Int = 0, where: EntryFilter): EntryCollection
   footer(id: String!, locale: String, preview: Boolean): Footer
   footerCollection(limit: Int = 100, locale: String, order: [FooterOrder], preview: Boolean, skip: Int = 0, where: FooterFilter): FooterCollection
+  landingMetadata(id: String!, locale: String, preview: Boolean): LandingMetadata
+  landingMetadataCollection(limit: Int = 100, locale: String, order: [LandingMetadataOrder], preview: Boolean, skip: Int = 0, where: LandingMetadataFilter): LandingMetadataCollection
   pageAbout(id: String!, locale: String, preview: Boolean): PageAbout
   pageAboutCollection(limit: Int = 100, locale: String, order: [PageAboutOrder], preview: Boolean, skip: Int = 0, where: PageAboutFilter): PageAboutCollection
   pageBlogPost(id: String!, locale: String, preview: Boolean): PageBlogPost
@@ -2260,6 +2507,8 @@ type Query {
   pageLandingCollection(limit: Int = 100, locale: String, order: [PageLandingOrder], preview: Boolean, skip: Int = 0, where: PageLandingFilter): PageLandingCollection
   pagePolicies(id: String!, locale: String, preview: Boolean): PagePolicies
   pagePoliciesCollection(limit: Int = 100, locale: String, order: [PagePoliciesOrder], preview: Boolean, skip: Int = 0, where: PagePoliciesFilter): PagePoliciesCollection
+  pageTermsAndConditions(id: String!, locale: String, preview: Boolean): PageTermsAndConditions
+  pageTermsAndConditionsCollection(limit: Int = 100, locale: String, order: [PageTermsAndConditionsOrder], preview: Boolean, skip: Int = 0, where: PageTermsAndConditionsFilter): PageTermsAndConditionsCollection
 }
 
 interface ResourceLink {
@@ -2326,6 +2575,14 @@ Represents a taxonomy concept entity for finding and organizing content easily.
 """
 type TaxonomyConcept {
   id: String
+}
+
+input TimelineFilterInput {
+  """Preview content starting from a given release date"""
+  release_lte: String
+
+  """Preview content starting from a given timestamp"""
+  timestamp_lte: DateTime
 }
 
 interface _Node {

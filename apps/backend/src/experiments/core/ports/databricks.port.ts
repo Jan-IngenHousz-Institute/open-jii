@@ -1,7 +1,6 @@
 import type { UploadFileResponse } from "../../../common/modules/databricks/services/files/files.types";
 import type {
   DatabricksHealthCheck,
-  DatabricksJobTriggerParams,
   DatabricksJobRunResponse,
 } from "../../../common/modules/databricks/services/jobs/jobs.types";
 import type { DatabricksPipelineStartUpdateResponse } from "../../../common/modules/databricks/services/pipelines/pipelines.types";
@@ -33,9 +32,21 @@ export interface DatabricksPort {
   healthCheck(): Promise<Result<DatabricksHealthCheck>>;
 
   /**
-   * Trigger a Databricks job with the specified parameters
+   * Trigger the experiment provisioning Databricks job with the specified parameters
    */
-  triggerJob(params: DatabricksJobTriggerParams): Promise<Result<DatabricksJobRunResponse>>;
+  triggerExperimentProvisioningJob(
+    experimentId: string,
+    params: Record<string, string>,
+  ): Promise<Result<DatabricksJobRunResponse>>;
+
+  /**
+   * Trigger the ambyte processing Databricks job with the specified parameters
+   */
+  triggerAmbyteProcessingJob(
+    experimentId: string,
+    experimentName: string,
+    params: Record<string, string>,
+  ): Promise<Result<DatabricksJobRunResponse>>;
 
   /**
    * Execute a SQL query in a specific schema
@@ -68,6 +79,19 @@ export interface DatabricksPort {
     experimentName: string,
     experimentId: string,
   ): Promise<Result<boolean>>;
+
+  /**
+   * Returns table metadata for a specific table in an experiment
+   *
+   * @param experimentName - Name of the experiment
+   * @param experimentId - ID of the experiment
+   * @param tableName - Name of the table
+   */
+  getTableMetadata(
+    experimentName: string,
+    experimentId: string,
+    tableName: string,
+  ): Promise<Result<Map<string, string>>>;
 
   /**
    * Upload data to Databricks for a specific experiment.

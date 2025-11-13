@@ -2,7 +2,6 @@ import { NewMacroForm } from "@/components/new-macro/new-macro";
 import type { Metadata } from "next";
 import React from "react";
 
-import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
 export const metadata: Metadata = {
@@ -10,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 interface NewMacroPageProps {
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }
 
 export default async function NewMacroPage({ params }: NewMacroPageProps) {

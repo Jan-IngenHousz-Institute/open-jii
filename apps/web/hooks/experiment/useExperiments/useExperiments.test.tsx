@@ -25,6 +25,22 @@ vi.mock("../../useDebounce", () => ({
   useDebounce: vi.fn(),
 }));
 
+// Mock Next.js navigation hooks
+const mockPush = vi.fn();
+const mockSearchParams = {
+  get: vi.fn(),
+  toString: vi.fn(),
+};
+const mockPathname = "/platform/experiments";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+  useSearchParams: () => mockSearchParams,
+  usePathname: () => mockPathname,
+}));
+
 const mockTsr = tsr as ReturnType<typeof vi.mocked<typeof tsr>>;
 const mockUseDebounce = useDebounce as ReturnType<typeof vi.fn>;
 
@@ -50,6 +66,10 @@ describe("useExperiments", () => {
 
     // Default mock for useDebounce - returns the search term immediately
     mockUseDebounce.mockImplementation((value: string) => [value]);
+
+    // Default mock for searchParams - no filter in URL
+    mockSearchParams.get.mockReturnValue(null);
+    mockSearchParams.toString.mockReturnValue("");
   });
 
   it("should initialize with default values", () => {
@@ -64,7 +84,7 @@ describe("useExperiments", () => {
       wrapper: createWrapper(),
     });
 
-    expect(result.current.filter).toBe("my");
+    expect(result.current.filter).toBe("member");
     expect(result.current.status).toBeUndefined();
     expect(result.current.search).toBe("");
     expect(result.current.data).toBeUndefined();
@@ -110,12 +130,12 @@ describe("useExperiments", () => {
     expect(mockUseQuery).toHaveBeenCalledWith({
       queryData: {
         query: {
-          filter: "my",
+          filter: "member",
           status: undefined,
           search: undefined,
         },
       },
-      queryKey: ["experiments", "my", undefined, "", false],
+      queryKey: ["experiments", "member", undefined, "", false],
     });
   });
 
@@ -143,7 +163,7 @@ describe("useExperiments", () => {
     });
   });
 
-  it("should update filter state", () => {
+  it("should update filter state and URL", () => {
     const mockUseQuery = vi.fn().mockReturnValue({
       data: undefined,
       error: null,
@@ -154,31 +174,20 @@ describe("useExperiments", () => {
     const { result } = renderHook(() => useExperiments({}), {
       wrapper: createWrapper(),
     });
+
+    act(() => {
+      result.current.setFilter("all");
+    });
+
+    expect(result.current.filter).toBe("all");
+    expect(mockPush).toHaveBeenCalledWith("/platform/experiments?filter=all", { scroll: false });
 
     act(() => {
       result.current.setFilter("member");
     });
 
     expect(result.current.filter).toBe("member");
-  });
-
-  it("should update status state", () => {
-    const mockUseQuery = vi.fn().mockReturnValue({
-      data: undefined,
-      error: null,
-      isLoading: true,
-    });
-    mockTsr.experiments.listExperiments.useQuery = mockUseQuery;
-
-    const { result } = renderHook(() => useExperiments({}), {
-      wrapper: createWrapper(),
-    });
-
-    act(() => {
-      result.current.setStatus("draft" as ExperimentStatus);
-    });
-
-    expect(result.current.status).toBe("draft");
+    expect(mockPush).toHaveBeenCalledWith("/platform/experiments", { scroll: false });
   });
 
   it("should update search state", () => {
@@ -219,12 +228,12 @@ describe("useExperiments", () => {
     expect(mockUseQuery).toHaveBeenCalledWith({
       queryData: {
         query: {
-          filter: "my",
+          filter: "member",
           status: undefined,
           search: "debounced search",
         },
       },
-      queryKey: ["experiments", "my", undefined, "debounced search", false],
+      queryKey: ["experiments", "member", undefined, "debounced search", false],
     });
   });
 
@@ -245,12 +254,12 @@ describe("useExperiments", () => {
     expect(mockUseQuery).toHaveBeenCalledWith({
       queryData: {
         query: {
-          filter: "my",
+          filter: "member",
           status: undefined,
           search: undefined, // Should be undefined for empty string
         },
       },
-      queryKey: ["experiments", "my", undefined, "", false],
+      queryKey: ["experiments", "member", undefined, "", false],
     });
 
     // Test whitespace string
@@ -263,12 +272,12 @@ describe("useExperiments", () => {
     expect(mockUseQuery).toHaveBeenCalledWith({
       queryData: {
         query: {
-          filter: "my",
+          filter: "member",
           status: undefined,
           search: undefined, // Should be undefined for whitespace
         },
       },
-      queryKey: ["experiments", "my", undefined, "   ", false],
+      queryKey: ["experiments", "member", undefined, "   ", false],
     });
   });
 
@@ -354,8 +363,7 @@ describe("useExperiments", () => {
     renderHook(
       () =>
         useExperiments({
-          initialFilter: "my",
-          initialStatus: "active" as ExperimentStatus,
+          initialFilter: "member",
           initialSearch: "search1",
         }),
       { wrapper },
@@ -365,8 +373,7 @@ describe("useExperiments", () => {
     renderHook(
       () =>
         useExperiments({
-          initialFilter: "member",
-          initialStatus: "draft" as ExperimentStatus,
+          initialFilter: "all",
           initialSearch: "search2",
         }),
       { wrapper },
@@ -376,15 +383,15 @@ describe("useExperiments", () => {
     const calls = mockUseQuery.mock.calls;
     expect((calls[0]?.[0] as { queryKey: unknown[] }).queryKey).toEqual([
       "experiments",
-      "my",
-      "active",
+      "member",
+      undefined, // status
       "search1",
       false,
     ]);
     expect((calls[1]?.[0] as { queryKey: unknown[] }).queryKey).toEqual([
       "experiments",
-      "member",
-      "draft",
+      "all", // filter value in queryKey (transformed to undefined for API)
+      undefined, // status
       "search2",
       false,
     ]);
@@ -400,7 +407,7 @@ describe("useExperiments", () => {
 
     const wrapper = createWrapper();
 
-    const filterTypes = ["my", "member", "related", "all"] as const;
+    const filterTypes = ["member", "all"] as const;
 
     filterTypes.forEach((filter) => {
       mockUseQuery.mockClear();
@@ -418,5 +425,126 @@ describe("useExperiments", () => {
         queryKey: ["experiments", filter, undefined, "", false],
       });
     });
+  });
+
+  it("should initialize filter from URL query parameter", () => {
+    const mockUseQuery = vi.fn().mockReturnValue({
+      data: undefined,
+      error: null,
+      isLoading: true,
+    });
+    mockTsr.experiments.listExperiments.useQuery = mockUseQuery;
+
+    // Mock URL with filter=all
+    mockSearchParams.get.mockReturnValue("all");
+
+    const { result } = renderHook(() => useExperiments({}), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.filter).toBe("all");
+  });
+
+  it("should use initialFilter when no URL parameter is present", () => {
+    const mockUseQuery = vi.fn().mockReturnValue({
+      data: undefined,
+      error: null,
+      isLoading: true,
+    });
+    mockTsr.experiments.listExperiments.useQuery = mockUseQuery;
+
+    // Mock URL with no filter parameter
+    mockSearchParams.get.mockReturnValue(null);
+
+    const { result } = renderHook(() => useExperiments({ initialFilter: "member" }), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.filter).toBe("member");
+  });
+
+  it("should clean up invalid filter values from URL", () => {
+    const mockUseQuery = vi.fn().mockReturnValue({
+      data: undefined,
+      error: null,
+      isLoading: true,
+    });
+    mockTsr.experiments.listExperiments.useQuery = mockUseQuery;
+
+    // Mock URL with invalid filter value
+    mockSearchParams.get.mockReturnValue("invalid");
+    mockSearchParams.toString.mockReturnValue("filter=invalid");
+
+    renderHook(() => useExperiments({}), {
+      wrapper: createWrapper(),
+    });
+
+    // Should call router.push to clean up the URL
+    expect(mockPush).toHaveBeenCalledWith("/platform/experiments", { scroll: false });
+  });
+
+  it("should not clean up URL when filter is 'all'", () => {
+    const mockUseQuery = vi.fn().mockReturnValue({
+      data: undefined,
+      error: null,
+      isLoading: true,
+    });
+    mockTsr.experiments.listExperiments.useQuery = mockUseQuery;
+
+    // Mock URL with valid filter=all
+    mockSearchParams.get.mockReturnValue("all");
+    mockSearchParams.toString.mockReturnValue("filter=all");
+
+    renderHook(() => useExperiments({}), {
+      wrapper: createWrapper(),
+    });
+
+    // Should not call router.push for cleanup since 'all' is valid
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("should update URL when filter changes to 'all'", () => {
+    const mockUseQuery = vi.fn().mockReturnValue({
+      data: undefined,
+      error: null,
+      isLoading: true,
+    });
+    mockTsr.experiments.listExperiments.useQuery = mockUseQuery;
+
+    mockSearchParams.toString.mockReturnValue("");
+
+    const { result } = renderHook(() => useExperiments({}), {
+      wrapper: createWrapper(),
+    });
+
+    act(() => {
+      result.current.setFilter("all");
+    });
+
+    expect(mockPush).toHaveBeenCalledWith("/platform/experiments?filter=all", { scroll: false });
+  });
+
+  it("should remove filter from URL when changing to 'member'", () => {
+    const mockUseQuery = vi.fn().mockReturnValue({
+      data: undefined,
+      error: null,
+      isLoading: true,
+    });
+    mockTsr.experiments.listExperiments.useQuery = mockUseQuery;
+
+    // Start with filter=all in URL
+    mockSearchParams.get.mockReturnValue("all");
+    mockSearchParams.toString.mockReturnValue("filter=all");
+
+    const { result } = renderHook(() => useExperiments({}), {
+      wrapper: createWrapper(),
+    });
+
+    act(() => {
+      result.current.setFilter("member");
+    });
+
+    // Should remove the filter parameter from URL
+    expect(mockPush).toHaveBeenLastCalledWith("/platform/experiments", { scroll: false });
   });
 });

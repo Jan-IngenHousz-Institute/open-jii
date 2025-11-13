@@ -1,0 +1,206 @@
+{
+  "ui": {
+    "title": "Visualisaties",
+    "actions": {
+      "edit": "Bewerken",
+      "delete": "Verwijderen",
+      "deleting": "Verwijderen...",
+      "create": "Nieuwe maken",
+      "back": "Terug"
+    },
+    "messages": {
+      "noVisualizations": "Nog geen visualisaties",
+      "deleteSuccess": "Visualisatie succesvol verwijderd",
+      "createSuccess": "Visualisatie succesvol aangemaakt",
+      "updateSuccess": "Visualisatie succesvol bijgewerkt",
+      "loading": "Visualisatie laden...",
+      "loadingData": "Visualisatiegegevens laden...",
+      "failedToLoad": "Visualisatie laden mislukt"
+    },
+    "labels": {
+      "createdAt": "Aangemaakt",
+      "createdBy": "Aangemaakt door",
+      "updatedAt": "Laatst bijgewerkt"
+    }
+  },
+
+  "form": {
+    "details": {
+      "title": "Visualisatie Details",
+      "subtitle": "Geef basisinformatie over uw visualisatie op",
+      "name": "Naam",
+      "namePlaceholder": "Voer visualisatienaam in",
+      "description": "Beschrijving",
+      "descriptionPlaceholder": "Voer visualisatiebeschrijving in",
+      "descriptionHelp": "Optionele beschrijving om deze visualisatie te identificeren"
+    },
+    "dataSource": {
+      "title": "Gegevensbron",
+      "help": "Kies welke tabel te visualiseren",
+      "selectTable": "Selecteer tabel",
+      "tableInfo": "{{name}} ({{totalRows}} rijen)"
+    }
+  },
+
+  "wizard": {
+    "steps": {
+      "basicInfo": {
+        "title": "Basisinformatie",
+        "description": "Voer naam en beschrijving in voor uw visualisatie"
+      },
+      "chartType": {
+        "title": "Grafiektype",
+        "description": "Kies het type grafiek dat uw gegevens het beste weergeeft"
+      },
+      "dataSource": {
+        "title": "Gegevensconfiguratie",
+        "description": "Selecteer gegevenstabel en configureer kolomtoewijzingen"
+      },
+      "appearance": {
+        "title": "Uiterlijk & Stijl",
+        "description": "Pas het uiterlijk van uw grafiek aan"
+      }
+    }
+  },
+
+  "charts": {
+    "types": {
+      "line": "Lijndiagram",
+      "scatter": "Spreidingsdiagram",
+      "lineDescription": "Toont datapunten verbonden door rechte lijnsegmenten",
+      "scatterDescription": "Toont gegevens als punten uitgezet op x- en y-coördinaten"
+    },
+    "families": {
+      "basic": "Basisgrafieken"
+    },
+    "title": "Grafiektitel",
+    "preview": "Grafiek Voorvertoning",
+    "showLegend": "Legenda tonen"
+  },
+
+  "configuration": {
+    "columns": {
+      "select": "Selecteer Kolom",
+      "xAxis": "X-As",
+      "yAxis": "Y-As Configuratie",
+      "color": "Kleurkolom",
+      "selectColor": "Selecteer kleurkolom",
+      "noColorMapping": "Geen kleurtoewijzing",
+      "dataColumn": "Gegevenskolom"
+    },
+    "axes": {
+      "title": "As Titel",
+      "titlePosition": "Kleuras Titel Positie",
+      "type": "Astype"
+    },
+    "series": {
+      "add": "Serie toevoegen",
+      "name": "Serienaam",
+      "color": "Seriekleur",
+      "title": "Serie"
+    },
+    "color": {
+      "scale": "Kleurschaal",
+      "dimensionConfig": "Kleurdimensie Configuratie"
+    },
+    "chart": {
+      "showColorbar": "Kleurenbalk tonen",
+      "enterColorAxisTitle": "Voer kleuras titel in",
+      "selectPosition": "Selecteer positie"
+    },
+    "positions": {
+      "top": "Boven",
+      "right": "Rechts",
+      "bottom": "Onder"
+    },
+    "chartOptions": {
+      "lineChartOptions": "Lijndiagram Opties",
+      "scatterChartOptions": "Spreidingsdiagram Opties",
+      "displayOptions": "Weergave Opties",
+      "mode": "Tekenmodus",
+      "connectGaps": "Gaten verbinden",
+      "smoothing": "Lijn gladmaking",
+      "markerSize": "Markergrootte",
+      "markerShape": "Markervorm",
+      "title": "Grafiektitel",
+      "showLegend": "Legenda tonen",
+      "gridLines": "Rasterlijnen"
+    },
+    "modes": {
+      "lines": "Alleen lijnen",
+      "markers": "Alleen markeringen",
+      "linesMarkers": "Lijnen + Markeringen"
+    },
+    "placeholders": {
+      "selectLineMode": "Selecteer lijnmodus",
+      "selectScatterMode": "Selecteer spreidingsmodus",
+      "selectMode": "Selecteer modus",
+      "enterChartTitle": "Voer grafiektitel in",
+      "enterAxisTitle": "Voer astitel in",
+      "enterSeriesName": "Voer serienaam in"
+    },
+    "labels": {
+      "chartTitle": "Grafiektitel",
+      "showLegend": "Legenda tonen"
+    },
+    "markerSymbols": {
+      "circle": "Cirkel",
+      "square": "Vierkant",
+      "diamond": "Diamant",
+      "cross": "Kruis",
+      "x": "X"
+    },
+    "axisTypes": {
+      "linear": "Lineair",
+      "log": "Logaritmisch",
+      "date": "Datum"
+    },
+    "colorscales": {
+      "viridis": "Viridis",
+      "cividis": "Cividis",
+      "blues": "Blauw",
+      "reds": "Rood",
+      "greens": "Groen",
+      "greys": "Grijs",
+      "ylgnbu": "Geel-Groen-Blauw",
+      "ylord": "Geel-Oranje-Rood",
+      "rdbu": "Rood-Blauw",
+      "picnic": "Picknick",
+      "rainbow": "Regenboog",
+      "portland": "Portland",
+      "jet": "Jet",
+      "hot": "Heet",
+      "blackbody": "Zwarte lichaam",
+      "earth": "Aarde",
+      "electric": "Elektrisch",
+      "bluered": "Blauw-Rood"
+    }
+  },
+
+  "preview": {
+    "title": "Voorvertoning",
+    "description": "Live voorvertoning van uw grafiekconfiguratie",
+    "noDataSource": "Geen gegevensbron geselecteerd",
+    "selectTable": "Selecteer een gegevenstabel om de voorvertoning te zien",
+    "noColumns": "Geen kolommen geconfigureerd",
+    "configureColumns": "Configureer ten minste één gegevenskolom om de voorvertoning te zien"
+  },
+
+  "errors": {
+    "noData": "Geen gegevens beschikbaar",
+    "configuration": "Configuratiefout",
+    "invalidConfiguration": "Ongeldige grafiekconfiguratie",
+    "xAxisNotConfigured": "X-as kolom niet geconfigureerd",
+    "yAxisNotConfigured": "Y-as kolom niet geconfigureerd",
+    "loadingData": "Grafiekgegevens laden...",
+    "failedToLoadData": "Gegevens laden mislukt",
+    "failedToLoadDataDescription": "Kan experimentgegevens voor deze visualisatie niet ophalen",
+    "noDataFound": "Geen gegevens gevonden voor deze visualisatie",
+    "unsupportedChartType": "Niet ondersteund grafiektype",
+    "chartTypeNotSupported": "wordt niet ondersteund"
+  },
+
+  "selector": {
+    "noVisualizations": "Geen visualisaties beschikbaar voor dit experiment"
+  }
+}

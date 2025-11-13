@@ -1,10 +1,11 @@
 "use client";
 
-import { Languages } from "lucide-react";
+import { FEATURE_FLAGS } from "@/lib/posthog-config";
+import { Globe } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useFeatureFlagEnabled } from "posthog-js/react";
 
-import type { Locale } from "@repo/i18n";
 import {
   Button,
   DropdownMenu,
@@ -13,22 +14,31 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui/components";
 
-const locales = [
+const allLocales = [
   { code: "en-US" as const, name: "English", flag: "🇺🇸" },
   { code: "de-DE" as const, name: "Deutsch", flag: "🇩🇪" },
   // { code: "nl-NL" as const, name: "Nederlands", flag: "🇳🇱" },
 ];
 
 interface LanguageSwitcherProps {
-  locale: Locale;
+  locale: string;
 }
 
 export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
   const pathname = usePathname();
-  const currentLocale = locales.find((l) => l.code === locale) ?? locales[0];
+  const isMultiLanguageEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
+  // If feature flag is disabled, only show English
+  const locales = isMultiLanguageEnabled
+    ? allLocales
+    : allLocales.filter((l) => l.code === "en-US");
+
+  // Hide the language switcher if only one language is available
+  if (locales.length <= 1) {
+    return null;
+  }
 
   // Generate language switch URL
-  const getLanguageSwitchUrl = (newLocale: Locale) => {
+  const getLanguageSwitchUrl = (newLocale: string) => {
     // Remove current locale from pathname if present
     const pathWithoutLocale = pathname.replace(`/${locale}`, "") || "/";
 
@@ -39,9 +49,8 @@ export function LanguageSwitcher({ locale }: LanguageSwitcherProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-2" aria-label="Switch language">
-          <Languages className="h-4 w-4" />
-          <span>{currentLocale.flag}</span>
+        <Button variant="ghost" size="sm" aria-label="Switch language">
+          <Globe className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

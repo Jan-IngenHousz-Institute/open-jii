@@ -2,7 +2,6 @@ import { ListProtocols } from "@/components/list-protocols";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { Button } from "@repo/ui/components";
 
@@ -11,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 interface ProtocolPageProps {
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }
 
 export default async function ProtocolPage({ params }: ProtocolPageProps) {

@@ -4,8 +4,6 @@ import { X } from "lucide-react";
 import { ExperimentOverviewCards } from "~/components/experiment-overview-cards";
 import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments";
 
-import type { ExperimentStatus } from "@repo/api";
-import { zExperimentStatus } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
   Select,
@@ -21,7 +19,7 @@ interface ListExperimentsProps {
 }
 
 export function ListExperiments({ archived = false }: ListExperimentsProps) {
-  const { data, filter, setFilter, status, setStatus, search, setSearch } = useExperiments({
+  const { data, filter, setFilter, search, setSearch } = useExperiments({
     archived,
   });
   const { t } = useTranslation();
@@ -49,42 +47,15 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
           )}
         </div>
         <div className="flex w-full flex-col gap-4 md:w-auto md:flex-row md:items-center md:gap-8">
-          <Select
-            defaultValue="my"
-            value={filter}
-            onValueChange={(value: "my" | "member" | "related" | "all") => setFilter(value)}
-          >
+          <Select value={filter} onValueChange={setFilter}>
             <SelectTrigger className="w-full md:w-[180px]">
               <SelectValue placeholder="Filter experiments" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="my">{t("experiments.filterMy")}</SelectItem>
               <SelectItem value="member">{t("experiments.filterMember")}</SelectItem>
-              <SelectItem value="related">{t("experiments.filterRelated")}</SelectItem>
               <SelectItem value="all">{t("experiments.filterAll")}</SelectItem>
             </SelectContent>
           </Select>
-
-          {!archived && (
-            <Select
-              value={status ?? "all"}
-              onValueChange={(v) => setStatus(v === "all" ? undefined : (v as ExperimentStatus))}
-            >
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Filter status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("experiments.filterStatusAll")}</SelectItem>
-                {Object.values(zExperimentStatus.enum)
-                  .filter((s) => s !== "archived")
-                  .map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          )}
         </div>
       </div>
 

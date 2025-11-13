@@ -1,7 +1,7 @@
 import type { AccessorKeyColumnDef, Row } from "@tanstack/react-table";
 import { createColumnHelper } from "@tanstack/react-table";
 import type React from "react";
-import { useEffect } from "react";
+// import { useEffect } from "react";
 import { useMemo } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import type { AnnotationsRowIdentifier } from "~/components/experiment-data/annotations/utils";
@@ -12,7 +12,13 @@ import type { BulkSelectionFormType } from "~/components/experiment-data/experim
 //import { addDemoAnnotationData } from "~/hooks/experiment/useExperimentData/addDemoAnnotationData";
 import { tsr } from "~/lib/tsr";
 
-import type { Annotation, AnnotationFlagType, AnnotationType, ExperimentData } from "@repo/api";
+import type {
+  Annotation,
+  AnnotationFlagType,
+  AnnotationType,
+  DataColumn,
+  ExperimentData,
+} from "@repo/api";
 
 export type DataRow = Record<string, unknown>;
 export type DataRenderFunction = (
@@ -42,10 +48,12 @@ const ID_COLUMN_NAME = "id";
 export function getColumnWidth(typeName: string): number | undefined {
   // Set very small width for id column to accommodate checkboxes
   if (typeName === "ID") return 30;
+  // Set medium width for array of struct columns that contain collapsible content
+  if (typeName.startsWith("ARRAY<STRUCT<")) return 200;
   // Set smaller width for array columns that contain charts
   if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 120;
   // Set medium width for map columns that contain collapsible content
-  if (typeName === "MAP" || typeName.startsWith("MAP<STRING,")) return 200;
+  if (typeName === "MAP" || typeName.startsWith("MAP<")) return 200;
   return undefined;
 }
 
@@ -92,7 +100,12 @@ function createTableColumns({
       case "BIGINT":
         return 6;
       default:
-        if (typeName === "MAP" || typeName.startsWith("MAP<")) return 4;
+        if (
+          typeName === "MAP" ||
+          typeName.startsWith("MAP<") ||
+          typeName.startsWith("ARRAY<STRUCT<")
+        )
+          return 4;
         if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 7;
         return 8; // Other types at the end
     }
@@ -100,8 +113,8 @@ function createTableColumns({
 
   // Sort columns by type precedence
   const sortedColumns = [...data.columns].sort((a, b) => {
-    const precedenceA = getTypePrecedence(a.type_name);
-    const precedenceB = getTypePrecedence(b.type_name);
+    const precedenceA = getTypePrecedence(a.type_text);
+    const precedenceB = getTypePrecedence(b.type_text);
     return precedenceA - precedenceB;
   });
 
@@ -142,13 +155,13 @@ function createTableColumns({
   sortedColumns.forEach((dataColumn) => {
     columns.push(
       columnHelper.accessor(dataColumn.name, {
-        header: getHeader(dataColumn.type_name, dataColumn.name),
-        size: getColumnWidth(dataColumn.type_name),
+        header: getHeader(dataColumn.type_text, dataColumn.name),
+        size: getColumnWidth(dataColumn.type_text),
         meta: {
-          type: dataColumn.type_name,
+          type: dataColumn.type_text,
         },
         cell: ({ row }) => {
-          return getRow(dataColumn.type_name, dataColumn.name, row);
+          return getRow(dataColumn.type_text, dataColumn.name, row);
         },
       }),
     );
@@ -168,6 +181,8 @@ export interface TableMetadata {
  * @param tableName Name of the table to fetch
  * @param page Page to fetch; pages start with 1
  * @param pageSize Page size to fetch
+ * @param orderBy Optional column name to order results by
+ * @param orderDirection Optional sort direction for ordering (ASC or DESC)
  * @param formatFunction Function used to render the column value
  * @param onChartHover Event handler for when a chart is hovered
  * @param onChartLeave Event handler for when a chart is no longer hovered
@@ -180,6 +195,8 @@ export const useExperimentData = (
   page: number,
   pageSize: number,
   tableName: string,
+  orderBy?: string,
+  orderDirection?: "ASC" | "DESC",
   formatFunction?: DataRenderFunction,
   onChartHover?: (data: number[], columnName: string) => void,
   onChartLeave?: () => void,
@@ -189,9 +206,9 @@ export const useExperimentData = (
   const { data, isLoading, error } = tsr.experiments.getExperimentData.useQuery({
     queryData: {
       params: { id: experimentId },
-      query: { tableName, page, pageSize },
+      query: { tableName, page, pageSize, orderBy, orderDirection },
     },
-    queryKey: ["experiment", experimentId, page, pageSize, tableName],
+    queryKey: ["experiment", experimentId, page, pageSize, tableName, orderBy, orderDirection],
     staleTime: STALE_TIME,
   });
 
@@ -207,20 +224,20 @@ export const useExperimentData = (
   const tableData = data?.body[0];
 
   // Add all row id's to form
-  const allRowIds = useMemo(() => {
-    if (tableData?.data) {
-      if (tableData.data.columns.find((col) => col.name === ID_COLUMN_NAME)) {
-        // Extract all row IDs from the data
-        return tableData.data.rows.map((row) => row[ID_COLUMN_NAME] as string);
-      }
-      return [];
-    }
-  }, [tableData]);
-  useEffect(() => {
-    if (selectionForm) {
-      selectionForm.setValue("allRows", allRowIds ?? []);
-    }
-  }, [selectionForm, allRowIds]);
+  // const allRowIds = useMemo(() => {
+  //   if (tableData?.data) {
+  //     if (tableData.data.columns.find((col) => col.name === ID_COLUMN_NAME)) {
+  //       // Extract all row IDs from the data
+  //       return tableData.data.rows.map((row) => row[ID_COLUMN_NAME] as string);
+  //     }
+  //     return [];
+  //   }
+  // }, [tableData]);
+  // useEffect(() => {
+  //   if (selectionForm) {
+  //     selectionForm.setValue("allRows", allRowIds ?? []);
+  //   }
+  // }, [selectionForm, allRowIds]);
 
   const tableMetadata: TableMetadata | undefined = useMemo(() => {
     return tableData
@@ -258,6 +275,7 @@ export interface SampleTable {
   name: string;
   tableMetadata: TableMetadata;
   tableRows: DataRow[];
+  columns: DataColumn[]; // Add raw columns for easy access
 }
 
 /**
@@ -296,6 +314,7 @@ export const useExperimentSampleData = (
           totalRows: tableData.totalRows,
         } as TableMetadata,
         tableRows: tableData.data?.rows ?? [],
+        columns: tableData.data?.columns ?? [], // Add raw columns
       });
     });
     return tables;

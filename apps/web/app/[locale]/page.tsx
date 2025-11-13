@@ -1,4 +1,4 @@
-import { UnifiedNavbar } from "@/components/unified-navbar";
+import { UnifiedNavbar } from "@/components/unified-navbar/unified-navbar";
 import { auth } from "@/lib/auth";
 import { ChevronDown } from "lucide-react";
 import { draftMode } from "next/headers";
@@ -18,10 +18,9 @@ import type {
   PageHomePartnersFieldsFragment,
   FooterFieldsFragment,
 } from "@repo/cms/lib/__generated/sdk";
-import type { Locale } from "@repo/i18n";
 
 interface HomePageProps {
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }
 
 export default async function Home({ params }: HomePageProps) {

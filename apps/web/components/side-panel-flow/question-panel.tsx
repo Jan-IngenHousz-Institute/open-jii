@@ -3,8 +3,8 @@ import React from "react";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components";
 
-import type { QuestionUI } from "../question-card";
-import { QuestionCard } from "../question-card";
+import type { QuestionUI } from "../question-card/question-card";
+import { QuestionCard } from "../question-card/question-card";
 
 interface QuestionPanelProps {
   stepSpecification: QuestionUI;
@@ -65,7 +65,27 @@ export function QuestionPanel({
     if (stepSpecification.answerType === "SELECT" && stepSpecification.options) {
       onChange({
         ...stepSpecification,
-        options: stepSpecification.options.filter((_, i) => i !== optionIndex),
+        options: stepSpecification.options.filter((_: string, i: number) => i !== optionIndex),
+      });
+    }
+  };
+
+  const bulkAddOptions = (newOptions: string[]) => {
+    if (disabled) return;
+    if (stepSpecification.answerType === "SELECT") {
+      onChange({
+        ...stepSpecification,
+        options: [...(stepSpecification.options ?? []), ...newOptions],
+      });
+    }
+  };
+
+  const deleteAllOptions = () => {
+    if (disabled) return;
+    if (stepSpecification.answerType === "SELECT") {
+      onChange({
+        ...stepSpecification,
+        options: [],
       });
     }
   };
@@ -88,6 +108,8 @@ export function QuestionPanel({
             onAddOption={addOption}
             onUpdateOption={updateOption}
             onDeleteOption={deleteOption}
+            onBulkAddOptions={bulkAddOptions}
+            onDeleteAllOptions={deleteAllOptions}
             disabled={disabled}
           />
         </div>

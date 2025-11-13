@@ -67,6 +67,9 @@ export const useExperimentUpdate = () => {
         queryKey: ["experiment", variables.params.id],
       });
       await queryClient.invalidateQueries({
+        queryKey: ["experimentAccess", variables.params.id],
+      });
+      await queryClient.invalidateQueries({
         queryKey: ["experiments"],
       });
     },

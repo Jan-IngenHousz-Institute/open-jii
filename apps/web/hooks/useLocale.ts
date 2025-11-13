@@ -1,6 +1,5 @@
 "use client";
 
-import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n";
 
 /**
@@ -12,5 +11,5 @@ import { useTranslation } from "@repo/i18n";
  */
 export function useLocale() {
   const { i18n } = useTranslation();
-  return i18n.language as Locale;
+  return i18n.language;
 }

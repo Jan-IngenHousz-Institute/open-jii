@@ -20,6 +20,8 @@
   display: flex !important;
   align-items: center !important;
   padding: 2px !important;
+  right: 2.5rem !important;
+  top: -1.5rem !important;
 }
 
 .modebar-container .modebar-group {
@@ -112,14 +114,15 @@
     --highlight: 56 100% 75%;
     --highlight-foreground: 0 0% 0%;
 
-    --destructive: 0 72.22% 50.59%;
+    /* #f22020 = hsl(0 89% 53.73%) */
+    --destructive: 0 89% 53.73%;
     --destructive-foreground: 0 0% 98%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
     --ring: 180 100% 18.4%; /* Same as primary */
     --radius: 0.5rem;
 
-  /* Sidebar colors */
+    /* Sidebar colors */
     --sidebar-background: 180 100% 9%; /* #002F2F */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 136 74% 58%; /* Secondary bright green */
@@ -163,7 +166,7 @@
     --input: 240 3.7% 15.9%;
     --ring: 180 80% 15%;
 
-  /* Dark mode sidebar */
+    /* Dark mode sidebar */
     --sidebar-background: 180 100% 9%; /* #002F2F */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 136 60% 45%;

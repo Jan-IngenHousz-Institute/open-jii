@@ -1,4 +1,4 @@
-import { UnifiedNavbar } from "@/components/unified-navbar";
+import { UnifiedNavbar } from "@/components/unified-navbar/unified-navbar";
 import { auth } from "@/lib/auth";
 import { draftMode } from "next/headers";
 import React from "react";
@@ -7,16 +7,15 @@ import { getContentfulClients } from "~/lib/contentful";
 import { HomeFooter } from "@repo/cms";
 import { ContentfulPreviewProvider } from "@repo/cms/contentful";
 import type { FooterFieldsFragment } from "@repo/cms/lib/__generated/sdk";
-import type { Locale } from "@repo/i18n";
 
 const allowedOriginList = ["https://app.contentful.com", "https://app.eu.contentful.com"];
 
-interface LayoutProps {
+interface InfoLayoutProps {
   children: React.ReactNode;
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }
 
-export default async function InfoGroupLayout({ children, params }: LayoutProps) {
+export default async function InfoGroupLayout({ children, params }: InfoLayoutProps) {
   const { isEnabled: preview } = await draftMode();
   const { locale } = await params;
   const session = await auth();

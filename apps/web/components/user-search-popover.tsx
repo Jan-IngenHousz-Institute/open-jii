@@ -1,187 +1,128 @@
 "use client";
 
-import { SearchX, UserPlus } from "lucide-react";
-import React from "react";
+import { Search, X } from "lucide-react";
+import React, { useState } from "react";
 
 import type { UserProfile } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@repo/ui/components";
-import { PopoverContent } from "@repo/ui/components";
-
-// Props for the UserList component
-interface UserListProps {
-  users: UserProfile[];
-  onAddUser: (userId: string) => Promise<void> | void;
-  isAddingUser: boolean;
-  setOpen: (open: boolean) => void;
-  onSearchChange: (value: string) => void;
-}
-
-// Display a list of user items with add buttons
-function UserList({ users, onAddUser, isAddingUser, setOpen, onSearchChange }: UserListProps) {
-  return (
-    <>
-      {users.map((user) => (
-        <CommandItem
-          key={user.userId}
-          value={user.userId}
-          className="flex items-center justify-between"
-        >
-          <div className="flex-1 overflow-hidden">
-            <div className="flex flex-col">
-              <span className="overflow-hidden text-ellipsis whitespace-nowrap">
-                {user.firstName} {user.lastName}
-              </span>
-              <span className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
-                {user.email}
-              </span>
-            </div>
-          </div>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={async (e) => {
-              e.stopPropagation();
-              await onAddUser(user.userId);
-              setOpen(false);
-              onSearchChange("");
-            }}
-            disabled={isAddingUser}
-          >
-            <UserPlus className="h-4 w-4" />
-          </Button>
-        </CommandItem>
-      ))}
-    </>
-  );
-}
-
-// Props for the SearchStatus component
-interface SearchStatusProps {
-  loading: boolean;
-  hasUsers: boolean;
-  hasSearchQuery: boolean;
-  searchValue: string;
-}
-
-// Display appropriate message based on search status
-function SearchStatus({ loading, hasUsers, hasSearchQuery, searchValue }: SearchStatusProps) {
-  const { t } = useTranslation();
-
-  if (loading) {
-    return (
-      <div className="text-muted-foreground p-4 text-center text-sm">{t("common.loading")}</div>
-    );
-  }
-
-  if (!hasUsers && hasSearchQuery) {
-    return <CommandEmpty>{t("experiments.noUsersFound", { search: searchValue })}</CommandEmpty>;
-  }
-
-  if (!hasUsers && !hasSearchQuery) {
-    return (
-      <div className="text-muted-foreground p-4 text-center text-sm">
-        {t("experiments.startTypingToSearch")}
-      </div>
-    );
-  }
-
-  return null;
-}
-
-// Search field component with clear button
-interface SearchFieldProps {
-  searchValue: string;
-  onSearchChange: (value: string) => void;
-  isAddingUser: boolean;
-}
-
-function SearchField({ searchValue, onSearchChange, isAddingUser }: SearchFieldProps) {
-  const { t } = useTranslation();
-
-  return (
-    <div className="relative">
-      <CommandInput
-        placeholder={t("experiments.searchUsers")}
-        value={searchValue}
-        onValueChange={onSearchChange}
-        disabled={isAddingUser}
-      />
-      {searchValue && (
-        <button
-          type="button"
-          onClick={() => onSearchChange("")}
-          className="text-muted-foreground hover:text-foreground absolute right-3 top-1/2 -translate-y-1/2 text-xl"
-        >
-          <SearchX />
-        </button>
-      )}
-    </div>
-  );
-}
+import { Input, Popover, PopoverAnchor, PopoverContent, Button } from "@repo/ui/components";
 
 export interface UserSearchPopoverProps {
   availableUsers: UserProfile[];
   searchValue: string;
   onSearchChange: (value: string) => void;
-  onAddUser: (userId: string) => Promise<void> | void;
   isAddingUser: boolean;
   loading: boolean;
-  setOpen: (open: boolean) => void;
+  onSelectUser: (user: UserProfile) => void;
+  placeholder?: string;
+  selectedUser: UserProfile | null;
+  onClearSelection: () => void;
 }
 
 export function UserSearchPopover({
   availableUsers,
   searchValue,
   onSearchChange,
-  onAddUser,
   isAddingUser,
   loading,
-  setOpen,
+  onSelectUser,
+  placeholder,
+  selectedUser,
+  onClearSelection,
 }: UserSearchPopoverProps) {
-  const hasUsers = availableUsers.length > 0;
-  const hasSearchQuery = searchValue.length > 0;
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    onSearchChange(value);
+    setOpen(value.length > 0);
+  };
+
+  const handleSelectUser = (user: UserProfile) => {
+    onSelectUser(user);
+    onSearchChange("");
+    setOpen(false);
+  };
+
+  const handleClear = () => {
+    onClearSelection();
+    onSearchChange("");
+    setOpen(false);
+  };
+
+  // Show selected user name or search value
+  const displayValue = selectedUser
+    ? `${selectedUser.firstName} ${selectedUser.lastName}`
+    : searchValue;
 
   return (
-    <PopoverContent className="box-border w-fit p-0">
-      <Command shouldFilter={false}>
-        <SearchField
-          searchValue={searchValue}
-          onSearchChange={onSearchChange}
-          isAddingUser={isAddingUser}
-        />
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverAnchor className="min-w-[190px] flex-1" asChild>
+        <div className="relative">
+          <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <Input
+            type="text"
+            value={displayValue}
+            onChange={handleSearchChange}
+            placeholder={placeholder ?? t("experiments.searchUsers")}
+            disabled={isAddingUser}
+            className="pl-9 pr-9"
+            readOnly={!!selectedUser}
+            onClick={() => {
+              if (selectedUser) {
+                handleClear();
+              }
+            }}
+          />
+          {(searchValue || selectedUser) && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="text-muted-foreground hover:text-foreground absolute right-3 top-1/2 -translate-y-1/2"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </PopoverAnchor>
 
-        <CommandList>
-          <CommandGroup>
-            {/* Show users list if there are available users and not loading */}
-            {!loading && hasUsers && (
-              <UserList
-                users={availableUsers}
-                onAddUser={onAddUser}
-                isAddingUser={isAddingUser}
-                setOpen={setOpen}
-                onSearchChange={onSearchChange}
-              />
-            )}
-
-            {/* Show appropriate status message */}
-            <SearchStatus
-              loading={loading}
-              hasUsers={hasUsers}
-              hasSearchQuery={hasSearchQuery}
-              searchValue={searchValue}
-            />
-          </CommandGroup>
-        </CommandList>
-      </Command>
-    </PopoverContent>
+      <PopoverContent
+        className="max-h-[300px] w-[var(--radix-popover-trigger-width)] overflow-y-auto p-0"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        {loading ? (
+          <div className="text-muted-foreground p-4 text-center text-sm">{t("common.loading")}</div>
+        ) : availableUsers.length > 0 ? (
+          <div className="space-y-3 py-1">
+            {availableUsers.map((user) => (
+              <Button
+                key={user.userId}
+                variant="ghost"
+                type="button"
+                onClick={() => handleSelectUser(user)}
+                onMouseDown={(e) => e.preventDefault()}
+                className="hover:bg-accent flex w-full items-center px-3 text-left"
+              >
+                <div className="flex-1 overflow-hidden">
+                  <div className="overflow-hidden text-ellipsis whitespace-nowrap text-sm">
+                    {user.firstName} {user.lastName}
+                  </div>
+                  <div className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
+                    {user.email}
+                  </div>
+                </div>
+              </Button>
+            ))}
+          </div>
+        ) : (
+          <div className="text-muted-foreground p-4 text-center text-sm">
+            {searchValue
+              ? t("experiments.noUsersFound", { search: searchValue })
+              : t("experiments.startTypingToSearch")}
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -3,7 +3,6 @@ import { getContentfulClients } from "~/lib/contentful";
 
 import { ArticleTileGrid } from "@repo/cms/article";
 import { PageBlogPostOrder } from "@repo/cms/lib/__generated/sdk";
-import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
 interface BlogPostsSectionProps {
@@ -15,7 +14,7 @@ export async function BlogPostsSection({ locale }: BlogPostsSectionProps) {
   const { previewClient, client } = await getContentfulClients();
   const gqlClient = preview ? previewClient : client;
 
-  const { t } = await initTranslations({ locale: locale as Locale });
+  const { t } = await initTranslations({ locale });
   try {
     const blogPostsData = await gqlClient.pageBlogPostCollection({
       limit: 2,

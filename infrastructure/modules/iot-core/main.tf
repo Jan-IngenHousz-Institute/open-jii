@@ -35,13 +35,13 @@ locals {
   # Compute a friendly name for each IoT policy based on the static portion of the channel.
   iot_policy_names = {
     for channel in local.all_channels : channel =>
-    "open_jii_dev_iot_policy_${replace(trim(split("/{", channel)[0], "/"), "/", "_")}"
+    "open_jii_${var.environment}_iot_policy_${replace(trim(split("/{", channel)[0], "/"), "/", "_")}"
   }
 
   # Compute a friendly name for each IoT topic rule based on the static portion of the channel.
   iot_rule_names = {
     for channel in local.all_channels : channel =>
-    "open_jii_dev_iot_rule_${replace(trim(split("/{", channel)[0], "/"), "/", "_")}"
+    "open_jii_${var.environment}_iot_rule_${replace(trim(split("/{", channel)[0], "/"), "/", "_")}"
   }
 
   # Convert the channel into a topic filter by replacing any parameter segment with "+"

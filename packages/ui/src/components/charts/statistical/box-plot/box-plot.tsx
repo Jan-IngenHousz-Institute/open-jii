@@ -23,7 +23,7 @@ export interface BoxSeriesData extends BaseSeries {
   mean?: number[];
   sd?: number[];
   outliers?: number[];
-  boxpoints?: "all" | "outliers" | "suspectedoutliers" | false;
+  boxpoints?: "all" | "outliers" | "suspectedoutliers" | "false";
   jitter?: number;
   pointpos?: number;
   fillcolor?: string;
@@ -85,7 +85,10 @@ export function BoxPlot({
         sd: series.sd,
 
         // Outliers and points
-        boxpoints: series.boxpoints !== undefined ? series.boxpoints : "outliers",
+        boxpoints:
+          series.boxpoints !== undefined && series.boxpoints !== "false"
+            ? series.boxpoints
+            : "outliers",
         jitter: series.jitter || 0.3,
         pointpos: series.pointpos || -1.8,
 

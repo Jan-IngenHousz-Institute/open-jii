@@ -3,7 +3,6 @@ import { UserExperimentsSection } from "@/components/dashboard/user-experiments-
 import type { Metadata } from "next";
 import { BlogPostsSection } from "~/components/dashboard/blog-posts-section";
 
-import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
 export const metadata: Metadata = {
@@ -11,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 interface PlatformPageProps {
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }
 
 export default async function PlatformDashboard({ params }: PlatformPageProps) {
@@ -30,7 +29,7 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
       <DashboardSection
         title={t("dashboard.yourExperiments")}
         seeAllLabel={t("dashboard.seeAll")}
-        seeAllHref="/platform/experiments"
+        seeAllHref="/platform/experiments?filter=all"
         locale={locale}
       >
         <UserExperimentsSection />

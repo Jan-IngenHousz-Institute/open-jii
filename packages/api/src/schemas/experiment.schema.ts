@@ -464,6 +464,7 @@ export const zExperimentVisualization = z.object({
   config: zChartConfig,
   dataConfig: zChartDataConfig,
   createdBy: z.string().uuid(),
+  createdByName: z.string().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -666,11 +667,12 @@ export const zAddExperimentMembersBody = z.object({
   ),
 });
 
+export const zUpdateExperimentMemberRoleBody = z.object({
+  role: zExperimentMemberRole.describe("New role to assign to the member"),
+});
+
 export const zExperimentFilterQuery = z.object({
-  filter: z
-    .enum(["my", "member", "related"])
-    .optional()
-    .describe("Filter experiments by relationship to the user"),
+  filter: z.enum(["member"]).optional().describe("Filter experiments by relationship to the user"),
   status: zExperimentStatus.optional().describe("Filter experiments by their status"),
   search: z.string().optional().describe("Search term for experiment name"),
 });
@@ -688,6 +690,8 @@ export const zExperimentDataQuery = z.object({
     .describe(
       "Specific columns to fetch. If provided with tableName, fetches full data for these columns only",
     ),
+  orderBy: z.string().optional().describe("Column name to order results by"),
+  orderDirection: z.enum(["ASC", "DESC"]).optional().describe("Sort direction for ordering"),
 });
 
 export const zExperimentDataTableInfo = z.object({
@@ -806,6 +810,7 @@ export const zDownloadExperimentDataResponse = z.object({
 export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;
 export type UpdateExperimentBody = z.infer<typeof zUpdateExperimentBody>;
 export type AddExperimentMembersBody = z.infer<typeof zAddExperimentMembersBody>;
+export type UpdateExperimentMemberRoleBody = z.infer<typeof zUpdateExperimentMemberRoleBody>;
 export type AddExperimentLocationsBody = z.infer<typeof zAddExperimentLocationsBody>;
 export type UpdateExperimentLocationsBody = z.infer<typeof zUpdateExperimentLocationsBody>;
 export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;

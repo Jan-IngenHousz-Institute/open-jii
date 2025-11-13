@@ -1,9 +1,10 @@
 "use client";
 
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { TableIcon } from "lucide-react";
+import { Download, TableIcon } from "lucide-react";
 import Link from "next/link";
-import React from "react";
+import React, { useState } from "react";
+import { DataDownloadModal } from "~/components/experiment-data/data-download-modal/data-download-modal";
 import { formatValue } from "~/components/experiment-data/experiment-data-utils";
 import {
   ExperimentDataRows,
@@ -12,7 +13,6 @@ import {
 import type { DataRow, SampleTable } from "~/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentSampleData } from "~/hooks/experiment/useExperimentData/useExperimentData";
 
-import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n";
 import { Button, Table, TableBody } from "@repo/ui/components";
 
@@ -24,7 +24,7 @@ export function ExperimentDataSampleTables({
 }: {
   experimentId: string;
   sampleSize: number;
-  locale: Locale;
+  locale: string;
   archived?: boolean;
 }) {
   const { sampleTables, isLoading } = useExperimentSampleData(
@@ -41,7 +41,7 @@ export function ExperimentDataSampleTables({
       {sampleTables.map((sampleTable) => (
         <div key={sampleTable.name}>
           <ExperimentDataSampleTable sampleTable={sampleTable} />
-          <div className="text-muted-foreground mt-4">
+          <div className="text-muted-foreground mt-4 flex gap-2">
             <Link
               href={`/${locale}/platform/experiments${archived ? "-archive" : ""}/${experimentId}/data/${sampleTable.name}`}
             >
@@ -49,9 +49,35 @@ export function ExperimentDataSampleTables({
                 <TableIcon /> {t("experimentDataTable.details")}
               </Button>
             </Link>
+            <DownloadButton experimentId={experimentId} tableName={sampleTable.name} />
           </div>
         </div>
       ))}
+    </>
+  );
+}
+
+function DownloadButton({ experimentId, tableName }: { experimentId: string; tableName: string }) {
+  const { t } = useTranslation();
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setDownloadModalOpen(true)}
+        className="flex items-center gap-2"
+      >
+        <Download className="h-4 w-4" />
+        {t("experimentDataTable.download")}
+      </Button>
+      <DataDownloadModal
+        experimentId={experimentId}
+        tableName={tableName}
+        open={downloadModalOpen}
+        onOpenChange={setDownloadModalOpen}
+      />
     </>
   );
 }

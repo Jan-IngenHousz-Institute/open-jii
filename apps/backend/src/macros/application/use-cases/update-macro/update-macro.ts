@@ -14,10 +14,29 @@ export class UpdateMacroUseCase {
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
 
-  async execute(id: string, data: UpdateMacroDto): Promise<Result<MacroDto>> {
+  async execute(id: string, data: UpdateMacroDto, userId: string): Promise<Result<MacroDto>> {
     this.logger.log(`Updating macro with id: ${id}`);
 
-    // First, update the macro in the database
+    // First, fetch the macro to check access
+    const macroResult = await this.macroRepository.findById(id);
+
+    if (macroResult.isFailure()) {
+      return macroResult;
+    }
+
+    const existingMacro = macroResult.value;
+    if (!existingMacro) {
+      this.logger.warn(`Attempt to update non-existent macro with ID ${id}`);
+      return failure(AppError.notFound(`Macro with ID ${id} not found`));
+    }
+
+    // Check if user is the creator
+    if (existingMacro.createdBy !== userId) {
+      this.logger.warn(`User ${userId} attempted to update macro ${id} without permission`);
+      return failure(AppError.forbidden("Only the macro creator can update this macro"));
+    }
+
+    // Update the macro in the database
     const updateResult = await this.macroRepository.update(id, data);
 
     if (updateResult.isFailure()) {

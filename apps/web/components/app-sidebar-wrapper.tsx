@@ -1,6 +1,5 @@
 import * as React from "react";
 
-import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
 import { AppSidebar } from "./app-sidebar";
@@ -10,7 +9,7 @@ export async function AppSidebarWrapper({
   user,
   ...props
 }: Omit<React.ComponentProps<typeof AppSidebar>, "locale" | "navigationData" | "translations"> & {
-  locale: Locale;
+  locale: string;
 }) {
   // Get translations server-side
   const { t: tNavigation } = await initTranslations({

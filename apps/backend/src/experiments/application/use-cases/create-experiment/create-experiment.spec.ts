@@ -24,7 +24,7 @@ describe("CreateExperimentUseCase", () => {
     databricksAdapter = testApp.module.get(DatabricksAdapter);
 
     // Mock the Databricks service
-    vi.spyOn(databricksAdapter, "triggerJob").mockResolvedValue(
+    vi.spyOn(databricksAdapter, "triggerExperimentProvisioningJob").mockResolvedValue(
       success({ run_id: 12345, number_in_job: 1 }),
     );
   });
@@ -65,11 +65,13 @@ describe("CreateExperimentUseCase", () => {
 
     // Verify Databricks job was triggered
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksAdapter.triggerJob).toHaveBeenCalledWith({
-      experimentId: createdExperiment.id,
-      experimentName: experimentData.name,
-      userId: testUserId,
-    });
+    expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
+      createdExperiment.id,
+      {
+        experiment_id: createdExperiment.id,
+        experiment_name: experimentData.name,
+      },
+    );
   });
 
   it("should add the creating user as an admin member", async () => {
@@ -104,7 +106,7 @@ describe("CreateExperimentUseCase", () => {
 
   it("should create an experiment even if Databricks job trigger fails", async () => {
     // Mock Databricks job trigger failure
-    vi.spyOn(databricksAdapter, "triggerJob").mockResolvedValue(
+    vi.spyOn(databricksAdapter, "triggerExperimentProvisioningJob").mockResolvedValue(
       failure({
         name: "DatabricksError",
         code: "INTERNAL_ERROR",
@@ -127,11 +129,13 @@ describe("CreateExperimentUseCase", () => {
 
     // Verify Databricks job was triggered but failed
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksAdapter.triggerJob).toHaveBeenCalledWith({
-      experimentId: result.value.id,
-      experimentName: experimentData.name,
-      userId: testUserId,
-    });
+    expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
+      result.value.id,
+      {
+        experiment_id: result.value.id,
+        experiment_name: experimentData.name,
+      },
+    );
   });
 
   it("should create an experiment with minimal data", async () => {
@@ -156,11 +160,13 @@ describe("CreateExperimentUseCase", () => {
 
     // Verify Databricks job was triggered
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksAdapter.triggerJob).toHaveBeenCalledWith({
-      experimentId: createdExperiment.id,
-      experimentName: minimalData.name,
-      userId: testUserId,
-    });
+    expect(databricksAdapter.triggerExperimentProvisioningJob).toHaveBeenCalledWith(
+      createdExperiment.id,
+      {
+        experiment_id: createdExperiment.id,
+        experiment_name: minimalData.name,
+      },
+    );
   });
 
   it("should return error if name is not provided", async () => {
@@ -179,7 +185,7 @@ describe("CreateExperimentUseCase", () => {
 
     // Verify Databricks job was not triggered
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksAdapter.triggerJob).not.toHaveBeenCalled();
+    expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
   });
 
   it("should return error if userId is not provided", async () => {
@@ -198,7 +204,7 @@ describe("CreateExperimentUseCase", () => {
 
     // Verify Databricks job was not triggered
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksAdapter.triggerJob).not.toHaveBeenCalled();
+    expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
   });
 
   it("should return error if experiment name already exists", async () => {
@@ -222,6 +228,6 @@ describe("CreateExperimentUseCase", () => {
 
     // Verify Databricks job was not triggered
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(databricksAdapter.triggerJob).not.toHaveBeenCalled();
+    expect(databricksAdapter.triggerExperimentProvisioningJob).not.toHaveBeenCalled();
   });
 });

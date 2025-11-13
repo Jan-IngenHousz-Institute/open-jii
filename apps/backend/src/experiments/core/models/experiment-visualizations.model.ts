@@ -1,4 +1,5 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { z } from "zod";
 
 import { zChartConfig, zChartDataConfig } from "@repo/api";
 import { experimentVisualizations } from "@repo/database";
@@ -36,6 +37,7 @@ export const selectExperimentVisualizationSchema = createSelectSchema(
 ).extend({
   config: zChartConfig,
   dataConfig: zChartDataConfig,
+  createdByName: z.string().optional(),
 });
 
 // Define the types

@@ -3,8 +3,6 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import React from "react";
 
-import { defaultLocale, locales } from "@repo/i18n";
-import type { Locale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { Button, Card, CardContent } from "@repo/ui/components";
 
@@ -33,13 +31,11 @@ export default async function NotFound() {
 
   // Extract locale from pathname (e.g., /en-US/some-path -> en-US)
   const pathSegments = pathname.split("/").filter(Boolean);
-  const potentialLocale = pathSegments[0] as Locale;
+  const potentialLocale = pathSegments[0];
 
-  // Use detected locale if valid, otherwise fall back to default
-  const locale = locales.includes(potentialLocale) ? potentialLocale : defaultLocale;
   // Initialize translations for the detected locale
   const { t } = await initTranslations({
-    locale,
+    locale: potentialLocale,
     namespaces: ["common"],
   });
 

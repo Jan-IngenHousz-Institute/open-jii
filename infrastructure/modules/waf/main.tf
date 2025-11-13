@@ -343,7 +343,7 @@ resource "aws_wafv2_web_acl" "main" {
                     }
                   }
                 }
-                
+
                 # Match the URI path for the first route
                 statement {
                   byte_match_statement {
@@ -360,7 +360,7 @@ resource "aws_wafv2_web_acl" "main" {
                 }
               }
             }
-            
+
             # Handle multiple routes case with OR statement
             dynamic "or_statement" {
               for_each = length(var.large_body_bypass_routes) >= 2 ? [1] : []

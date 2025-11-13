@@ -7,8 +7,9 @@ terraform {
     databricks = {
       source                = "databricks/databricks"
       version               = ">= 1.13.0"
-      configuration_aliases = [databricks.workspace]
+      configuration_aliases = [databricks.mws]
     }
+
   }
 }
 
@@ -55,60 +56,55 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "encryption" {
   }
 }
 
-# Step 1: Create storage credential first to get the external ID
-resource "databricks_storage_credential" "external" {
-  provider = databricks.workspace
-  name     = "open-jii-db-external-access"
-
-  aws_iam_role {
-    role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.uc_iam_role}"
-  }
-
-  comment = "Managed by Terraform"
-}
-
-# Step 2: Get the Unity Catalog assume role policy for the IAM role with the external ID
-data "databricks_aws_unity_catalog_assume_role_policy" "this" {
-  aws_account_id = data.aws_caller_identity.current.account_id
-  role_name      = local.uc_iam_role
-  external_id    = databricks_storage_credential.external.aws_iam_role[0].external_id
-}
-
-# Step 3: Get the Unity Catalog IAM policy for the S3 bucket
+# Create a basic IAM policy template for Unity Catalog access to this bucket
+# This will be used by storage credentials created in individual workspaces
 data "databricks_aws_unity_catalog_policy" "this" {
   aws_account_id = data.aws_caller_identity.current.account_id
   bucket_name    = aws_s3_bucket.external.id
   role_name      = local.uc_iam_role
 }
 
-# Step 4: Create IAM policy using the Databricks-recommended policy
+# Create IAM policy using the Databricks-recommended policy
 resource "aws_iam_policy" "external_data_access" {
+  name   = "${local.uc_iam_role}-policy"
   policy = data.databricks_aws_unity_catalog_policy.this.json
   tags = {
     Name = "open-jii-unity-catalog external access IAM policy"
   }
 }
 
-# Step 5: Create IAM role for Unity Catalog with proper assume role policy including external_id
-resource "aws_iam_role" "external_data_access" {
-  name               = local.uc_iam_role
-  assume_role_policy = data.databricks_aws_unity_catalog_assume_role_policy.this.json
+# Cross-account bucket policy to allow workspace account roles to access this bucket
+resource "aws_s3_bucket_policy" "cross_account_access" {
+  count  = length(var.cross_account_role_arns) > 0 ? 1 : 0
+  bucket = aws_s3_bucket.external.id
 
-  tags = {
-    Name = "open-jii-unity-catalog external access IAM role"
-  }
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "CrossAccountUnityAccess"
+        Effect = "Allow"
+        Principal = {
+          AWS = var.cross_account_role_arns
+        }
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:ListBucket",
+          "s3:GetBucketLocation",
+          "s3:ListBucketMultipartUploads",
+          "s3:ListMultipartUploadParts",
+          "s3:AbortMultipartUpload"
+        ]
+        Resource = [
+          aws_s3_bucket.external.arn,
+          "${aws_s3_bucket.external.arn}/*"
+        ]
+      }
+    ]
+  })
 }
 
-# Step 6: Attach the policy to the role
-resource "aws_iam_role_policy_attachment" "unity_catalog_attachment" {
-  role       = aws_iam_role.external_data_access.name
-  policy_arn = aws_iam_policy.external_data_access.arn
-}
-
-resource "databricks_external_location" "external" {
-  provider        = databricks.workspace
-  name            = "external"
-  url             = "s3://${aws_s3_bucket.external.id}/external"
-  credential_name = databricks_storage_credential.external.id
-  comment         = "Managed by TF"
-}
+# Note: IAM role creation and storage credential creation are handled per-workspace
+# This module only creates the S3 bucket and base IAM policy that can be referenced by workspaces

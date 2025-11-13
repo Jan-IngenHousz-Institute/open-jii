@@ -11,14 +11,12 @@ import { useExperimentFlowUpdate } from "@/hooks/experiment/useExperimentFlowUpd
 import { notFound } from "next/navigation";
 import { use, useState, useRef, useCallback } from "react";
 
-// UpsertFlowBody type no longer needed directly (constructed on-demand by editor)
-import type { Locale } from "@repo/i18n";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components";
 import { toast } from "@repo/ui/hooks";
 
 interface ExperimentFlowPageProps {
-  params: Promise<{ id: string; locale: Locale }>;
+  params: Promise<{ id: string; locale: string }>;
 }
 
 export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) {

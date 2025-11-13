@@ -27,7 +27,12 @@ export class DatabricksConfigService {
       host: this.configService.getOrThrow<string>("databricks.host"),
       clientId: this.configService.getOrThrow<string>("databricks.clientId"),
       clientSecret: this.configService.getOrThrow<string>("databricks.clientSecret"),
-      jobId: this.configService.getOrThrow<string>("databricks.jobId"),
+      experimentProvisioningJobId: this.configService.getOrThrow<string>(
+        "databricks.experimentProvisioningJobId",
+      ),
+      ambyteProcessingJobId: this.configService.getOrThrow<string>(
+        "databricks.ambyteProcessingJobId",
+      ),
       warehouseId: this.configService.getOrThrow<string>("databricks.warehouseId"),
       catalogName: this.configService.getOrThrow<string>("databricks.catalogName"),
     };
@@ -75,17 +80,31 @@ export class DatabricksConfigService {
   }
 
   /**
-   * Returns the Databricks job ID
+   * Returns the Databricks experiment provisioning job ID
    */
-  getJobId(): string {
-    return this.config.jobId;
+  getExperimentProvisioningJobId(): string {
+    return this.config.experimentProvisioningJobId;
   }
 
   /**
-   * Returns the Databricks job ID as a number
+   * Returns the Databricks experiment provisioning job ID as a number
    */
-  getJobIdAsNumber(): number {
-    return parseInt(this.config.jobId, 10);
+  getExperimentProvisioningJobIdAsNumber(): number {
+    return parseInt(this.config.experimentProvisioningJobId, 10);
+  }
+
+  /**
+   * Returns the Databricks ambyte processing job ID
+   */
+  getAmbyteProcessingJobId(): string {
+    return this.config.ambyteProcessingJobId;
+  }
+
+  /**
+   * Returns the Databricks ambyte processing job ID as a number
+   */
+  getAmbyteProcessingJobIdAsNumber(): number {
+    return parseInt(this.config.ambyteProcessingJobId, 10);
   }
 
   /**

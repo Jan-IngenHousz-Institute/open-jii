@@ -118,6 +118,8 @@ export function ExperimentDataTable({
     pagination.pageIndex + 1,
     pagination.pageSize,
     tableName,
+    undefined,
+    undefined,
     formatValue,
     showChartOnHover,
     hideChartOnLeave,
@@ -210,10 +212,15 @@ export function ExperimentDataTable({
 
   const isBulkActionsEnabled = selectionForm.getValues("allRows").length > 0;
 
+  // Prevent form submission to avoid URL navigation
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+  };
+
   return (
     <Form {...selectionForm}>
-      <form>
-        <input type="hidden" name="allRows" />
+      <form onSubmit={handleSubmit}>
+        {/* <input type="hidden" name="allRows" /> */}
         {/*TODO: The option with bulk actions will be removed as soon as the backend code is ready.*/}
         {!isBulkActionsEnabled && (
           <div className="mb-4 flex items-center justify-between">

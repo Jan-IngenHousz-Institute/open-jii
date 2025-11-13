@@ -3,8 +3,6 @@ import { render, screen, within } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { Locale } from "@repo/i18n";
-
 import AccountSettingsLayout from "../layout";
 
 // Global React for JSX in mocks
@@ -93,7 +91,7 @@ async function renderLayout({
   pathname = "/en-US/platform/account/settings",
   children = <div>Child Content</div>,
 }: {
-  locale?: Locale;
+  locale?: string;
   pathname?: string;
   children?: React.ReactNode;
 } = {}) {

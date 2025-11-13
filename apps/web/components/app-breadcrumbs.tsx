@@ -1,6 +1,5 @@
 import React from "react";
 
-import type { Locale } from "@repo/i18n/config";
 import initTranslations from "@repo/i18n/server";
 import {
   Breadcrumb,
@@ -13,7 +12,7 @@ import {
 interface BreadcrumbsProps {
   pathname: string;
   pageTitle?: string;
-  locale: Locale;
+  locale: string;
 }
 
 // Translation key mapping for breadcrumb items

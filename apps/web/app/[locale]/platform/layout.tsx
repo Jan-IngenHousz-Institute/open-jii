@@ -6,7 +6,6 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
 
-import type { Locale } from "@repo/i18n";
 import {
   Separator,
   SidebarInset,
@@ -31,7 +30,7 @@ export default async function AppLayout({
 }: Readonly<{
   children: React.ReactNode;
   pageTitle?: string;
-  params: Promise<{ locale: Locale }>;
+  params: Promise<{ locale: string }>;
 }>) {
   const { locale } = await params;
   const session = await auth();

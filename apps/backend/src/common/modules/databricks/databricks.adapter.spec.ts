@@ -72,12 +72,13 @@ describe("DatabricksAdapter", () => {
     });
   });
 
-  describe("triggerJob", () => {
-    it("should successfully trigger a job", async () => {
+  describe("triggerExperimentProvisioningJob", () => {
+    it("should successfully trigger experiment provisioning job", async () => {
+      const experimentId = "exp-123";
       const mockParams = {
-        experimentId: "exp-123",
-        experimentName: "Test Experiment",
-        userId: "user-456",
+        EXPERIMENT_ID: "exp-123",
+        EXPERIMENT_SCHEMA: "Test Experiment",
+        USER_ID: "user-456",
       };
 
       const mockResponse = {
@@ -97,8 +98,57 @@ describe("DatabricksAdapter", () => {
         .post(`${DatabricksJobsService.JOBS_ENDPOINT}/run-now`)
         .reply(200, mockResponse);
 
-      // Execute trigger job
-      const result = await databricksAdapter.triggerJob(mockParams);
+      // Execute trigger experiment provisioning job
+      const result = await databricksAdapter.triggerExperimentProvisioningJob(
+        experimentId,
+        mockParams,
+      );
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual(mockResponse);
+    });
+  });
+
+  describe("triggerAmbyteProcessingJob", () => {
+    it("should successfully trigger ambyte processing job", async () => {
+      const experimentId = "exp-123";
+      const experimentName = "Test Experiment";
+      const mockParams = {
+        EXPERIMENT_ID: "exp-123",
+        YEAR_PREFIX: "2025",
+      };
+
+      const mockResponse = {
+        run_id: 54321,
+        number_in_job: 1,
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock job run-now request - expect the constructed schema in the params
+      nock(databricksHost)
+        .post(
+          `${DatabricksJobsService.JOBS_ENDPOINT}/run-now`,
+          (body: { job_parameters?: Record<string, string> }) => {
+            const expectedSchema = "exp_test_experiment_exp-123";
+            return body.job_parameters?.EXPERIMENT_SCHEMA === expectedSchema;
+          },
+        )
+        .reply(200, mockResponse);
+
+      // Execute trigger ambyte processing job
+      const result = await databricksAdapter.triggerAmbyteProcessingJob(
+        experimentId,
+        experimentName,
+        mockParams,
+      );
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
@@ -350,8 +400,8 @@ describe("DatabricksAdapter", () => {
       const dataConfig = {
         tableName: "sensor_data",
         dataSources: [
-          { tableName: "sensor_data", columnName: "timestamp" },
-          { tableName: "sensor_data", columnName: "temperature" },
+          { tableName: "sensor_data", columnName: "timestamp", role: "x" },
+          { tableName: "sensor_data", columnName: "temperature", role: "y" },
         ],
       };
 
@@ -385,8 +435,8 @@ describe("DatabricksAdapter", () => {
       const dataConfig = {
         tableName: "non_existent_table",
         dataSources: [
-          { tableName: "non_existent_table", columnName: "timestamp" },
-          { tableName: "non_existent_table", columnName: "temperature" },
+          { tableName: "non_existent_table", columnName: "timestamp", role: "x" },
+          { tableName: "non_existent_table", columnName: "temperature", role: "y" },
         ],
       };
 
@@ -461,8 +511,8 @@ describe("DatabricksAdapter", () => {
       const dataConfig = {
         tableName: "sensor_data",
         dataSources: [
-          { tableName: "sensor_data", columnName: "timestamp" },
-          { tableName: "sensor_data", columnName: "pressure" }, // Non-existent column
+          { tableName: "sensor_data", columnName: "timestamp", role: "x" },
+          { tableName: "sensor_data", columnName: "pressure", role: "y" }, // Non-existent column
         ],
       };
 
@@ -497,8 +547,8 @@ describe("DatabricksAdapter", () => {
       const dataConfig = {
         tableName: "sensor_data",
         dataSources: [
-          { tableName: "sensor_data", columnName: "timestamp" },
-          { tableName: "sensor_data", columnName: "temperature" },
+          { tableName: "sensor_data", columnName: "timestamp", role: "x" },
+          { tableName: "sensor_data", columnName: "temperature", role: "y" },
         ],
       };
 
@@ -548,8 +598,8 @@ describe("DatabricksAdapter", () => {
       const dataConfig = {
         tableName: "sensor_data",
         dataSources: [
-          { tableName: "sensor_data", columnName: "timestamp" },
-          { tableName: "sensor_data", columnName: "temperature" },
+          { tableName: "sensor_data", columnName: "timestamp", role: "x" },
+          { tableName: "sensor_data", columnName: "temperature", role: "y" },
         ],
       };
 
@@ -619,10 +669,10 @@ describe("DatabricksAdapter", () => {
       const dataConfig = {
         tableName: "sensor_data",
         dataSources: [
-          { tableName: "sensor_data", columnName: "timestamp" }, // Exists
-          { tableName: "sensor_data", columnName: "pressure" }, // Missing
-          { tableName: "sensor_data", columnName: "humidity" }, // Missing
-          { tableName: "sensor_data", columnName: "pressure" }, // Duplicate missing
+          { tableName: "sensor_data", columnName: "timestamp", role: "x" }, // Exists
+          { tableName: "sensor_data", columnName: "pressure", role: "y" }, // Missing
+          { tableName: "sensor_data", columnName: "humidity", role: "z" }, // Missing
+          { tableName: "sensor_data", columnName: "pressure", role: "y" }, // Duplicate missing
         ],
       };
 
@@ -1241,6 +1291,128 @@ describe("DatabricksAdapter", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value.full_name).toEqual(expectedFullVolumeName);
+    });
+  });
+
+  describe("getTableMetadata", () => {
+    const experimentName = "test_experiment";
+    const experimentId = "123";
+    const schemaName = `exp_${experimentName}_${experimentId}`;
+    const tableName = "sensor_data";
+
+    it("should return metadata successfully", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock tables list API call
+      nock(databricksHost)
+        .get(DatabricksTablesService.TABLES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          tables: [
+            {
+              name: "sensor_data",
+              catalog_name: "main",
+              schema_name: schemaName,
+              table_type: "MANAGED",
+            },
+          ],
+        });
+
+      // Mock DESCRIBE table query to get column schema
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "mock-describe-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 3,
+              columns: [
+                { name: "col_name", type_name: "STRING", type_text: "STRING", position: 0 },
+                { name: "data_type", type_name: "STRING", type_text: "STRING", position: 1 },
+                { name: "comment", type_name: "STRING", type_text: "STRING", position: 2 },
+              ],
+            },
+            total_row_count: 3,
+            truncated: false,
+          },
+          result: {
+            data_array: [
+              ["timestamp", "TIMESTAMP", "Timestamp column"],
+              ["temperature", "DOUBLE", "Temperature readings"],
+              ["humidity", "DOUBLE", "Humidity readings"],
+            ],
+            chunk_index: 0,
+            row_count: 3,
+            row_offset: 0,
+          },
+        });
+
+      // Expected metadata
+      const expectedMetadata = new Map<string, string>([
+        ["timestamp", "TIMESTAMP"],
+        ["temperature", "DOUBLE"],
+        ["humidity", "DOUBLE"],
+      ]);
+
+      // Execute the method
+      const result = await databricksAdapter.getTableMetadata(
+        experimentName,
+        experimentId,
+        tableName,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toStrictEqual(expectedMetadata);
+    });
+
+    it("should handle error when getting table metadata fails", async () => {
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock tables list API call
+      nock(databricksHost)
+        .get(DatabricksTablesService.TABLES_ENDPOINT)
+        .query(true)
+        .reply(200, {
+          tables: [
+            {
+              name: "sensor_data",
+              catalog_name: "main",
+              schema_name: schemaName,
+              table_type: "MANAGED",
+            },
+          ],
+        });
+
+      // Mock DESCRIBE table query with error
+      nock(databricksHost).post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`).reply(500, {
+        error_code: "INTERNAL_ERROR",
+        message: "Failed to get metadata",
+      });
+
+      // Execute the method
+      const result = await databricksAdapter.getTableMetadata(
+        experimentName,
+        experimentId,
+        tableName,
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to get metadata");
     });
   });
 

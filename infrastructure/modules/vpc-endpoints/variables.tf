@@ -3,6 +3,11 @@ variable "aws_region" {
   type        = string
 }
 
+variable "environment" {
+  description = "Deployment environment (e.g., dev, staging, production)"
+  type        = string
+}
+
 variable "vpc_id" {
   description = "The VPC ID in which to create the endpoints"
   type        = string
@@ -27,4 +32,3 @@ variable "security_group_ids" {
   description = "List of security group IDs to attach to interface endpoints (e.g., the default VPC SG)"
   type        = list(string)
 }
-

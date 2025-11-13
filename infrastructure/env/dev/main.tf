@@ -33,7 +33,7 @@ module "logs_bucket" {
   enable_versioning = false
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "Terraform"
     Component   = "logging"
@@ -61,7 +61,8 @@ module "kinesis" {
 }
 
 module "iot_core" {
-  source = "../../modules/iot-core"
+  source      = "../../modules/iot-core"
+  environment = var.environment
 
   timestream_table           = "measurements"
   timestream_database        = "open_jii_${var.environment}_data_ingest_db"
@@ -83,12 +84,16 @@ module "cognito" {
 }
 
 module "vpc" {
-  source = "../../modules/vpc"
+  source      = "../../modules/vpc"
+  environment = var.environment
 }
 
 module "vpc_endpoints" {
-  source                  = "../../modules/vpc-endpoints"
-  aws_region              = var.aws_region
+  source = "../../modules/vpc-endpoints"
+
+  aws_region  = var.aws_region
+  environment = var.environment
+
   vpc_id                  = module.vpc.vpc_id
   private_route_table_ids = module.vpc.private_rt_ids
   public_route_table_ids  = module.vpc.public_rt_ids
@@ -108,23 +113,17 @@ module "databricks_workspace_s3" {
   custom_policy_json = module.databricks_workspace_s3_policy.policy_json
 }
 
-module "metastore_s3" {
-  source      = "../../modules/metastore-s3"
-  bucket_name = "open-jii-databricks-uc-root-bucket"
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-}
-
 module "databricks_workspace" {
-  source                = "../../modules/databricks/workspace"
+  source = "../../modules/databricks/workspace"
+
   aws_region            = var.aws_region
+  environment           = var.environment
   databricks_account_id = var.databricks_account_id
-  bucket_name           = module.databricks_workspace_s3.bucket_id
-  vpc_id                = module.vpc.vpc_id
-  private_subnets       = module.vpc.private_subnets
-  sg_id                 = module.vpc.default_sg_id
+
+  bucket_name     = module.databricks_workspace_s3.bucket_id
+  vpc_id          = module.vpc.vpc_id
+  private_subnets = module.vpc.private_subnets
+  sg_id           = module.vpc.default_sg_id
 
   kinesis_role_arn  = module.kinesis.role_arn
   kinesis_role_name = module.kinesis.role_name
@@ -137,20 +136,6 @@ module "databricks_workspace" {
   }
 }
 
-module "databricks_metastore" {
-  source         = "../../modules/databricks/metastore"
-  metastore_name = "open_jii_metastore_aws_eu_central_1"
-  region         = var.aws_region
-  owner          = "account users"
-  workspace_ids  = [module.databricks_workspace.workspace_id]
-
-  providers = {
-    databricks.mws = databricks.mws
-  }
-
-  depends_on = [module.databricks_workspace]
-}
-
 module "node_service_principal" {
   source = "../../modules/databricks/service_principal"
 
@@ -160,6 +145,42 @@ module "node_service_principal" {
   providers = {
     databricks.mws = databricks.mws
   }
+}
+
+# Create storage credential for accessing centralized metastore
+module "storage_credential" {
+  source = "../../modules/databricks/workspace-storage-credential"
+
+  credential_name = "open-jii-${var.environment}-metastore-access"
+  role_name       = "open-jii-${var.environment}-uc-access"
+  environment     = var.environment
+  bucket_name     = var.centralized_metastore_bucket_name
+  isolation_mode  = "ISOLATION_MODE_OPEN"
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_workspace]
+}
+
+# Create external location for this environment
+module "external_location" {
+  source = "../../modules/databricks/external-location"
+
+  external_location_name  = "external-${var.environment}"
+  bucket_name             = var.centralized_metastore_bucket_name
+  external_location_path  = "external/${var.environment}"
+  storage_credential_name = module.storage_credential.storage_credential_name
+  environment             = var.environment
+  comment                 = "External location for ${var.environment} environment data"
+  isolation_mode          = "ISOLATION_MODE_ISOLATED"
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.storage_credential]
 }
 
 module "experiment_secret_scope" {
@@ -180,9 +201,12 @@ module "experiment_secret_scope" {
 }
 
 module "databricks_catalog" {
-  source             = "../../modules/databricks/catalog"
-  catalog_name       = "open_jii_${var.environment}"
-  external_bucket_id = module.metastore_s3.bucket_name
+  source       = "../../modules/databricks/catalog"
+  catalog_name = "open_jii_${var.environment}"
+
+  external_bucket_id     = var.centralized_metastore_bucket_name
+  external_location_path = "external/${var.environment}"
+  isolation_mode         = "ISOLATED"
 
   grants = {
     node_service_principal = {
@@ -208,7 +232,7 @@ module "databricks_catalog" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.databricks_metastore, module.node_service_principal]
+  depends_on = [module.node_service_principal]
 }
 
 module "centrum_pipeline" {
@@ -227,7 +251,7 @@ module "centrum_pipeline" {
     "SILVER_TABLE"            = "clean_data"
     "RAW_KINESIS_TABLE"       = "raw_kinesis_data"
     "KINESIS_STREAM_NAME"     = module.kinesis.kinesis_stream_name
-    "SERVICE_CREDENTIAL_NAME" = module.kinesis.role_name
+    "SERVICE_CREDENTIAL_NAME" = "unity-catalog-kinesis-role-${var.environment}"
     "CHECKPOINT_PATH"         = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
   }
 
@@ -255,11 +279,11 @@ module "pipeline_scheduler" {
   source = "../../modules/databricks/job"
 
   name        = "Pipeline-Scheduler-DEV"
-  description = "Orchestrates central pipeline execution followed by all experiment pipelines every 15 minutes between 9am and 9pm"
+  description = "Orchestrates central pipeline execution followed by all experiment pipelines every 15 minutes between 6am and 6pm"
 
-  # Schedule: Every 15 minutes after the hour (0, 15, 30, 45) between 9am and 9pm (UTC)
+  # Schedule: Every 15 minutes after the hour (0, 15, 30, 45) between 6am and 6pm (UTC)
   # Format: "seconds minutes hours day-of-month month day-of-week"
-  schedule = "0 0,15,30,45 9-21 * * ?"
+  schedule = "0 0,15,30,45 6-18 * * ?"
 
   max_concurrent_runs           = 1
   use_serverless                = true
@@ -279,21 +303,24 @@ module "pipeline_scheduler" {
 
   tasks = [
     {
-      key           = "trigger_centrum_pipeline"
-      task_type     = "pipeline"
-      compute_type  = "serverless"
-      pipeline_id   = module.centrum_pipeline.pipeline_id
+      key          = "trigger_centrum_pipeline"
+      task_type    = "pipeline"
+      compute_type = "serverless"
+      pipeline_id  = module.centrum_pipeline.pipeline_id
     },
     {
       key           = "trigger_experiment_pipelines"
       task_type     = "notebook"
       compute_type  = "serverless"
       notebook_path = "/Workspace/Shared/notebooks/tasks/experiment_pipelines_orchestrator_task"
-      
+
       parameters = {
-        "catalog_name" = module.databricks_catalog.catalog_name
+        "catalog_name"            = module.databricks_catalog.catalog_name,
+        "central_schema"          = "centrum",
+        "experiment_status_table" = "experiment_status",
+        "environment"             = upper(var.environment)
       }
-      
+
       depends_on = "trigger_centrum_pipeline"
     },
   ]
@@ -312,6 +339,64 @@ module "pipeline_scheduler" {
   depends_on = [module.centrum_pipeline]
 }
 
+module "ambyte_processing_job" {
+  source = "../../modules/databricks/job"
+
+  name        = "Ambyte-Processing-Job-DEV"
+  description = "Processes raw ambyte trace files and saves them in the respective volume in parquet format"
+
+  max_concurrent_runs           = 1 # Limit concurrent runs when queueing is enabled
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  # Enable job queueing
+  queue = {
+    enabled = true
+  }
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key           = "process_ambyte_data"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/ambyte_processing_task"
+
+      parameters = {
+        EXPERIMENT_ID     = "{{EXPERIMENT_ID}}"
+        EXPERIMENT_NAME   = "{{EXPERIMENT_NAME}}"
+        EXPERIMENT_SCHEMA = "{{EXPERIMENT_SCHEMA}}"
+        UPLOAD_DIRECTORY  = "{{UPLOAD_DIRECTORY}}"
+        YEAR_PREFIX       = "{{YEAR_PREFIX}}"
+        CATALOG_NAME      = module.databricks_catalog.catalog_name
+        ENVIRONMENT       = upper(var.environment)
+      }
+    }
+  ]
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
 module "experiment_provisioning_job" {
   source = "../../modules/databricks/job"
 
@@ -322,6 +407,11 @@ module "experiment_provisioning_job" {
   use_serverless                = true
   continuous                    = false
   serverless_performance_target = "STANDARD"
+
+  # Enable job queueing
+  queue = {
+    enabled = true
+  }
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
@@ -347,6 +437,7 @@ module "experiment_provisioning_job" {
         "experiment_pipeline_path" = "/Workspace/Shared/notebooks/pipelines/experiment_pipeline"
         "catalog_name"             = module.databricks_catalog.catalog_name
         "central_schema"           = "centrum"
+        "environment"              = upper(var.environment)
       }
     },
     {
@@ -382,12 +473,13 @@ module "experiment_provisioning_job" {
 
 module "aurora_db" {
   source                 = "../../modules/aurora_db"
-  cluster_identifier     = "open-jii-dev-db-cluster"
-  database_name          = "openjii_dev_db"
-  master_username        = "openjii_dev_admin"
+  cluster_identifier     = "open-jii-${var.environment}-db-cluster"
+  database_name          = "openjii_${var.environment}_db"
+  master_username        = "openjii_${var.environment}_admin"
   db_subnet_group_name   = module.vpc.db_subnet_group_name
   vpc_security_group_ids = [module.vpc.aurora_security_group_id]
 
+  environment              = var.environment
   max_capacity             = 1.0  # Conservative max for dev
   min_capacity             = 0    # Minimum cost-effective setting (at 0, auto-pause feature is enabled)
   seconds_until_auto_pause = 1800 # Auto-pause after 30 minutes of inactivity
@@ -399,7 +491,7 @@ module "aurora_db" {
 module "auth_secrets" {
   source = "../../modules/secrets-manager"
 
-  name        = "openjii-auth-secrets-dev"
+  name        = "openjii-auth-secrets-${var.environment}"
   description = "Authentication and OAuth secrets for the OpenJII services"
 
   # Store secrets as JSON using variables
@@ -412,7 +504,7 @@ module "auth_secrets" {
   })
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "backend"
@@ -424,23 +516,24 @@ module "auth_secrets" {
 module "databricks_secrets" {
   source = "../../modules/secrets-manager"
 
-  name        = "openjii-databricks-secrets-dev"
+  name        = "openjii-databricks-secrets-${var.environment}"
   description = "Databricks connection secrets for the OpenJII services"
 
   # Store secrets as JSON using variables
   secret_string = jsonencode({
-    DATABRICKS_HOST               = module.databricks_workspace.workspace_url
-    DATABRICKS_CLIENT_ID          = module.node_service_principal.service_principal_application_id
-    DATABRICKS_CLIENT_SECRET      = module.node_service_principal.service_principal_secret_value
-    DATABRICKS_JOB_ID             = module.experiment_provisioning_job.job_id
-    DATABRICKS_WAREHOUSE_ID       = var.backend_databricks_warehouse_id
-    DATABRICKS_WEBHOOK_API_KEY_ID = var.backend_webhook_api_key_id
-    DATABRICKS_WEBHOOK_SECRET     = var.backend_webhook_secret
-    DATABRICKS_WEBHOOK_API_KEY    = var.backend_webhook_api_key
+    DATABRICKS_HOST                           = module.databricks_workspace.workspace_url
+    DATABRICKS_CLIENT_ID                      = module.node_service_principal.service_principal_application_id
+    DATABRICKS_CLIENT_SECRET                  = module.node_service_principal.service_principal_secret_value
+    DATABRICKS_EXPERIMENT_PROVISIONING_JOB_ID = module.experiment_provisioning_job.job_id
+    DATABRICKS_AMBYTE_PROCESSING_JOB_ID       = module.ambyte_processing_job.job_id
+    DATABRICKS_WAREHOUSE_ID                   = var.backend_databricks_warehouse_id
+    DATABRICKS_WEBHOOK_API_KEY_ID             = var.backend_webhook_api_key_id
+    DATABRICKS_WEBHOOK_SECRET                 = var.backend_webhook_secret
+    DATABRICKS_WEBHOOK_API_KEY                = var.backend_webhook_api_key
   })
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "backend"
@@ -452,7 +545,7 @@ module "databricks_secrets" {
 module "contentful_secrets" {
   source = "../../modules/secrets-manager"
 
-  name        = "openjii-contentful-secrets-dev"
+  name        = "openjii-contentful-secrets-${var.environment}"
   description = "Contentful API secrets for the OpenJII services"
 
   # Store secrets as JSON using variables
@@ -464,7 +557,7 @@ module "contentful_secrets" {
   })
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "web"
@@ -492,7 +585,7 @@ module "ses" {
   dmarc_report_retention_days = 90
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "email"
@@ -504,7 +597,7 @@ module "ses" {
 module "ses_secrets" {
   source = "../../modules/secrets-manager"
 
-  name        = "openjii-ses-secrets-dev"
+  name        = "openjii-ses-secrets-${var.environment}"
   description = "SES SMTP credentials for transactional email sending"
 
   # Store SES SMTP credentials as JSON
@@ -514,7 +607,7 @@ module "ses_secrets" {
   })
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "email"
@@ -527,7 +620,7 @@ module "opennext_waf" {
   source = "../../modules/waf"
 
   service_name       = "opennext"
-  environment        = "dev"
+  environment        = var.environment
   rate_limit         = 500
   log_retention_days = 30
 
@@ -541,7 +634,7 @@ module "opennext_waf" {
   ]
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "frontend"
@@ -582,11 +675,13 @@ module "opennext" {
   ses_secret_arn            = module.ses_secrets.secret_arn
 
   server_environment_variables = {
-    COOKIE_DOMAIN = ".${var.environment}.${var.domain_name}"
-    DB_HOST       = module.aurora_db.cluster_endpoint
-    DB_PORT       = module.aurora_db.cluster_port
-    DB_NAME       = module.aurora_db.database_name
-    NODE_ENV      = "production"
+    COOKIE_DOMAIN             = ".${var.environment}.${var.domain_name}"
+    DB_HOST                   = module.aurora_db.cluster_endpoint
+    DB_PORT                   = module.aurora_db.cluster_port
+    DB_NAME                   = module.aurora_db.database_name
+    NODE_ENV                  = "production"
+    NEXT_PUBLIC_POSTHOG_KEY   = var.posthog_key
+    NEXT_PUBLIC_POSTHOG_HOST  = var.posthog_host
   }
 
   # Performance configuration
@@ -614,7 +709,7 @@ module "opennext" {
 
   tags = {
     Project     = "open-jii"
-    Environment = "dev"
+    Environment = var.environment
     Component   = "nextjs-app"
     ManagedBy   = "terraform"
   }
@@ -624,7 +719,7 @@ module "migration_runner_ecr" {
   source = "../../modules/ecr"
 
   aws_region  = var.aws_region
-  environment = "dev"
+  environment = var.environment
 
   repository_name               = "db-migration-runner-ecr"
   service_name                  = "db-migration-runner"
@@ -635,7 +730,7 @@ module "migration_runner_ecr" {
   ci_cd_role_arn = module.iam_oidc.role_arn
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "database-migrations"
@@ -646,7 +741,7 @@ module "migration_runner_ecs" {
   source = "../../modules/ecs"
 
   region      = var.aws_region
-  environment = "dev"
+  environment = var.environment
 
   create_ecs_service = false
   service_name       = "db-migration-runner"
@@ -667,7 +762,7 @@ module "migration_runner_ecs" {
   enable_container_healthcheck = false
   enable_circuit_breaker       = true
 
-  log_group_name     = "/aws/ecs/db-migration-runner-dev"
+  log_group_name     = "/aws/ecs/db-migration-runner-${var.environment}"
   log_retention_days = 30
 
 
@@ -700,7 +795,7 @@ module "migration_runner_ecs" {
   ]
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "database-migrations"
@@ -711,18 +806,18 @@ module "backend_ecr" {
   source = "../../modules/ecr"
 
   aws_region                    = var.aws_region
-  environment                   = "dev"
+  environment                   = var.environment
   repository_name               = "open-jii-backend"
   service_name                  = "backend"
   max_image_count               = 10
   enable_vulnerability_scanning = true
   encryption_type               = "KMS"
-  image_tag_mutability          = "MUTABLE" # Set to MUTABLE for dev, but should be IMMUTABLE for prod
+  image_tag_mutability          = "MUTABLE"
 
   ci_cd_role_arn = module.iam_oidc.role_arn
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "backend"
@@ -737,7 +832,7 @@ module "backend_alb" {
   public_subnet_ids = module.vpc.public_subnets
   container_port    = var.backend_container_port
   security_groups   = [module.vpc.alb_security_group_id]
-  environment       = "dev"
+  environment       = var.environment
 
   # Health check configuration
   health_check_path                = "/health"
@@ -756,7 +851,7 @@ module "backend_alb" {
   access_logs_bucket = module.logs_bucket.bucket_id
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "backend"
@@ -767,7 +862,7 @@ module "backend_ecs" {
   source = "../../modules/ecs"
 
   region      = var.aws_region
-  environment = "dev"
+  environment = var.environment
 
   # Unlike migration runner, we want a long-running service
   create_ecs_service = true
@@ -815,7 +910,7 @@ module "backend_ecs" {
   enable_circuit_breaker_with_rollback = true
 
   # Logs configuration
-  log_group_name     = "/aws/ecs/backend-service-dev"
+  log_group_name     = "/aws/ecs/backend-service-${var.environment}"
   log_retention_days = 30
 
   # Secrets configuration
@@ -845,8 +940,12 @@ module "backend_ecs" {
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_HOST::"
     },
     {
-      name      = "DATABRICKS_JOB_ID"
-      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_JOB_ID::"
+      name      = "DATABRICKS_EXPERIMENT_PROVISIONING_JOB_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_EXPERIMENT_PROVISIONING_JOB_ID::"
+    },
+    {
+      name      = "DATABRICKS_AMBYTE_PROCESSING_JOB_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_AMBYTE_PROCESSING_JOB_ID::"
     },
     {
       name      = "DATABRICKS_WAREHOUSE_ID"
@@ -920,7 +1019,7 @@ module "backend_ecs" {
   ]
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "backend"
@@ -931,7 +1030,7 @@ module "backend_waf" {
   source = "../../modules/waf"
 
   service_name       = "backend"
-  environment        = "dev"
+  environment        = var.environment
   rate_limit         = 500
   log_retention_days = 30
 
@@ -949,7 +1048,7 @@ module "backend_waf" {
   ]
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "backend"
@@ -961,7 +1060,7 @@ module "backend_cloudfront" {
   source = "../../modules/backend-cloudfront"
 
   service_name    = "backend"
-  environment     = "dev"
+  environment     = var.environment
   alb_domain_name = module.backend_alb.alb_dns_name
 
   # Custom header for ALB protection
@@ -982,7 +1081,7 @@ module "backend_cloudfront" {
   log_bucket     = module.logs_bucket.bucket_id
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "backend"
@@ -994,18 +1093,19 @@ module "docs_waf" {
   source = "../../modules/waf"
 
   service_name       = "docs"
-  environment        = "dev"
+  environment        = var.environment
   rate_limit         = 500
   log_retention_days = 30
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "Terraform"
     Component   = "documentation-waf"
   }
 }
 
+# CloudFront distribution for documentation site
 module "docs_cloudfront" {
   source          = "../../modules/cloudfront"
   aws_region      = var.aws_region
@@ -1021,8 +1121,9 @@ module "docs_cloudfront" {
 module "route53" {
   source = "../../modules/route53"
 
-  domain_name = var.domain_name
-  environment = var.environment
+  domain_name            = var.domain_name
+  environment            = var.environment
+  use_environment_prefix = true # Creates dev.domain_name hosted zone
 
   # Input for CloudFront domains that need us-east-1 certificates
   cloudfront_domain_configs = {
@@ -1050,7 +1151,7 @@ module "route53" {
   }
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     ManagedBy   = "Terraform"
   }
 }
@@ -1066,7 +1167,7 @@ module "location_service" {
   iam_policy_name  = "OpenJII-${var.environment}-LocationServicePolicy"
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = "open-jii"
     ManagedBy   = "terraform"
     Component   = "location-service"

@@ -1,10 +1,15 @@
-import { formatDate } from "@/util/date";
-import { Trash2, Mail, Calendar } from "lucide-react";
-import { useMemo } from "react";
+import { useLocale } from "@/hooks/useLocale";
+import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { parseApiError } from "~/util/apiError";
 
-import type { UserProfile } from "@repo/api";
+import type { UserProfile, ExperimentMemberRole } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Button, Badge } from "@repo/ui/components";
+import { toast } from "@repo/ui/hooks";
+
+import { useExperimentMemberRoleUpdate } from "../../hooks/experiment/useExperimentMemberRoleUpdate/useExperimentMemberRoleUpdate";
+import { MemberDialogs } from "./member-dialogs";
+import { MemberItem } from "./member-item";
 
 interface MemberWithUserInfo {
   role: string;
@@ -26,6 +31,11 @@ interface MemberListProps {
   isRemovingMember: boolean;
   removingMemberId: string | null;
   adminCount?: number;
+  experimentId?: string;
+  currentUserRole?: ExperimentMemberRole;
+  currentUserId?: string;
+  newExperiment?: boolean;
+  onUpdateMemberRole?: (userId: string, role: ExperimentMemberRole) => Promise<void> | void;
 }
 
 export function MemberList({
@@ -36,32 +46,154 @@ export function MemberList({
   isRemovingMember,
   removingMemberId,
   adminCount = 0,
+  experimentId,
+  currentUserRole = "member",
+  currentUserId,
+  newExperiment = false,
+  onUpdateMemberRole,
 }: MemberListProps) {
   const { t } = useTranslation();
+  const router = useRouter();
+  const locale = useLocale();
+  const [updatingMemberId, setUpdatingMemberId] = useState<string | null>(null);
+  const [showLastAdminDialog, setShowLastAdminDialog] = useState(false);
+  const [lastAdminAction, setLastAdminAction] = useState<"leave" | "demote">("leave");
+  const [showLeaveConfirmDialog, setShowLeaveConfirmDialog] = useState(false);
+  const [showDemoteConfirmDialog, setShowDemoteConfirmDialog] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const { mutate: updateMemberRole } = useExperimentMemberRoleUpdate();
+  const isCurrentUserAdmin = currentUserRole === "admin";
+
+  // Handle role change
+  const handleRoleChange = async (
+    userId: string,
+    newRole: ExperimentMemberRole,
+    isLastAdmin: boolean,
+  ) => {
+    // Check if last admin is trying to demote themselves to member
+    if (isLastAdmin && userId === currentUserId && newRole === "member") {
+      setLastAdminAction("demote");
+      setShowLastAdminDialog(true);
+      return;
+    }
+
+    // Check if current user is trying to demote themselves to member
+    if (userId === currentUserId && newRole === "member" && currentUserRole === "admin") {
+      setPendingUserId(userId);
+      setShowDemoteConfirmDialog(true);
+      return;
+    }
+
+    await performRoleChange(userId, newRole);
+  };
+
+  // Perform the actual role change
+  const performRoleChange = async (userId: string, newRole: ExperimentMemberRole) => {
+    if (newExperiment && onUpdateMemberRole) {
+      setUpdatingMemberId(userId);
+      await onUpdateMemberRole(userId, newRole);
+      setUpdatingMemberId(null);
+
+      return;
+    }
+
+    if (!experimentId) return;
+
+    setUpdatingMemberId(userId);
+    updateMemberRole(
+      {
+        params: { id: experimentId, memberId: userId },
+        body: { role: newRole },
+      },
+      {
+        onSuccess: () => {
+          toast({ description: t("experimentSettings.roleUpdated") });
+        },
+        onError: (err) => {
+          toast({ description: parseApiError(err)?.message, variant: "destructive" });
+        },
+        onSettled: () => {
+          setUpdatingMemberId(null);
+        },
+      },
+    );
+  };
+
+  // Handle confirmed demotion
+  const handleConfirmDemote = async () => {
+    if (pendingUserId) {
+      setShowDemoteConfirmDialog(false);
+      await performRoleChange(pendingUserId, "member");
+      setPendingUserId(null);
+    }
+  };
+
+  // Handle confirmed leave
+  const handleConfirmLeave = () => {
+    if (pendingUserId) {
+      setShowLeaveConfirmDialog(false);
+      onRemoveMember(pendingUserId);
+      setPendingUserId(null);
+
+      // Redirect to experiments page after leaving
+      router.push(`/${locale}/platform/experiments`);
+    }
+  };
+
+  // Handle value change for member role/action selection
+  const handleMemberValueChange = async (
+    userId: string,
+    value: string,
+    isLastAdmin: boolean,
+    isCurrentUser: boolean,
+  ) => {
+    if (value === "leave") {
+      // If user is last admin, show warning dialog
+      if (isLastAdmin && isCurrentUser) {
+        setLastAdminAction("leave");
+        setShowLastAdminDialog(true);
+      } else if (isCurrentUser) {
+        // Show confirmation dialog for leaving
+        setPendingUserId(userId);
+        setShowLeaveConfirmDialog(true);
+      } else {
+        onRemoveMember(userId);
+      }
+    } else if (value === "remove") {
+      onRemoveMember(userId);
+    } else {
+      await handleRoleChange(userId, value as ExperimentMemberRole, isLastAdmin);
+    }
+  };
 
   // Convert members and users to membersWithUserInfo if needed
   const membersWithUserInfo = useMemo(() => {
-    if (providedMembersWithUserInfo) return providedMembersWithUserInfo;
+    const baseMembers = providedMembersWithUserInfo
+      ? [...providedMembersWithUserInfo]
+      : (members ?? []).map((member) => {
+          const user = users?.find((u) => u.userId === member.userId) ?? {
+            userId: member.userId,
+            firstName: "",
+            lastName: "",
+            email: null,
+            bio: null,
+            organization: undefined,
+          };
 
-    if (!members) return [];
+          return {
+            role: member.role ?? "member",
+            joinedAt: new Date().toISOString(),
+            user,
+          };
+        });
 
-    return members.map((member) => {
-      const user = users?.find((u) => u.userId === member.userId) ?? {
-        userId: member.userId,
-        firstName: "",
-        lastName: "",
-        email: null,
-        bio: null,
-        organization: undefined,
-      };
-
-      return {
-        role: member.role ?? t("experimentSettings.defaultRole", "member"),
-        joinedAt: new Date().toISOString(),
-        user,
-      };
+    // Sort so current user appears first
+    return baseMembers.sort((a, b) => {
+      if (a.user.userId === currentUserId) return -1;
+      if (b.user.userId === currentUserId) return 1;
+      return 0;
     });
-  }, [providedMembersWithUserInfo, members, users, t]);
+  }, [providedMembersWithUserInfo, members, users, currentUserId]);
 
   if (membersWithUserInfo.length === 0) {
     return (
@@ -77,64 +209,43 @@ export function MemberList({
   }
 
   return (
-    <div className="max-h-[200px] space-y-3 overflow-y-auto pr-2">
-      {membersWithUserInfo.map((member) => {
-        const isLastAdmin = member.role === "admin" && adminCount === 1;
-        return (
-          <div
-            key={member.user.userId}
-            className="flex items-center justify-between rounded border p-3"
-          >
-            <div className="flex min-w-0 flex-1 flex-col space-y-1">
-              <div className="flex min-w-0 flex-1">
-                <div className="flex min-w-0 flex-wrap items-center gap-x-2">
-                  <h4 className="text-foreground truncate text-sm font-medium md:text-base">
-                    {`${member.user.firstName} ${member.user.lastName}`}
-                  </h4>
-                  <span
-                    className="flex min-w-0 items-center gap-x-1"
-                    title={member.user.email ?? t("experimentSettings.noEmail")}
-                  >
-                    <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
-                    <span className="text-muted-foreground truncate text-xs md:max-w-[200px] md:text-sm">
-                      {member.user.email ?? t("experimentSettings.noEmail")}
-                    </span>
-                  </span>
-                </div>
-              </div>
+    <>
+      <div className="max-h-[200px] space-y-3 overflow-y-auto pr-2">
+        {membersWithUserInfo.map((member) => {
+          const isLastAdmin = member.role === "admin" && adminCount === 1;
+          const isCurrentUser = member.user.userId === currentUserId;
 
-              <div className="text-muted-foreground flex items-center space-x-1 text-[11px] md:text-xs">
-                <Calendar className="relative top-[-1.5px] h-3 w-3 flex-shrink-0" />
-                <span className="whitespace-nowrap">
-                  {t("experimentSettings.joined")} {formatDate(member.joinedAt)}
-                </span>
-              </div>
-            </div>
+          return (
+            <MemberItem
+              key={member.user.userId}
+              member={member}
+              isLastAdmin={isLastAdmin}
+              currentUserId={currentUserId}
+              isCurrentUserAdmin={isCurrentUserAdmin}
+              updatingMemberId={updatingMemberId}
+              experimentId={experimentId}
+              newExperiment={newExperiment}
+              isRemovingMember={isRemovingMember}
+              removingMemberId={removingMemberId}
+              onValueChange={(value) =>
+                handleMemberValueChange(member.user.userId, value, isLastAdmin, isCurrentUser)
+              }
+            />
+          );
+        })}
+      </div>
 
-            <div className="flex flex-shrink-0 items-center space-x-3 pl-4">
-              <Badge variant="default" className="whitespace-nowrap">
-                {member.role}
-              </Badge>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onRemoveMember(member.user.userId)}
-                disabled={
-                  (isRemovingMember && removingMemberId === member.user.userId) || isLastAdmin
-                }
-                title={
-                  isLastAdmin
-                    ? t("experimentSettings.cannotRemoveLastAdmin")
-                    : t("experimentSettings.removeMember")
-                }
-                className="hover:bg-destructive/10 h-8 w-8 p-0"
-              >
-                <Trash2 className="text-destructive h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        );
-      })}
-    </div>
+      <MemberDialogs
+        showLastAdminDialog={showLastAdminDialog}
+        showLeaveConfirmDialog={showLeaveConfirmDialog}
+        showDemoteConfirmDialog={showDemoteConfirmDialog}
+        lastAdminAction={lastAdminAction}
+        onLastAdminDialogChange={setShowLastAdminDialog}
+        onLeaveConfirmDialogChange={setShowLeaveConfirmDialog}
+        onDemoteConfirmDialogChange={setShowDemoteConfirmDialog}
+        onConfirmLeave={handleConfirmLeave}
+        onConfirmDemote={handleConfirmDemote}
+      />
+    </>
   );
 }

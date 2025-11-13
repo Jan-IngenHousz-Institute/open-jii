@@ -47,10 +47,12 @@ resource "databricks_job" "this" {
     }
   }
 
-  lifecycle {
-    ignore_changes = [
-      task,
-    ]
+  # Queue configuration
+  dynamic "queue" {
+    for_each = var.queue != null ? [1] : []
+    content {
+      enabled = var.queue.enabled
+    }
   }
 
   dynamic "task" {
@@ -115,6 +117,7 @@ resource "databricks_job" "this" {
   dynamic "schedule" {
     for_each = var.schedule != null ? [1] : []
     content {
+      pause_status           = "UNPAUSED"
       quartz_cron_expression = var.schedule
       timezone_id            = "UTC"
     }

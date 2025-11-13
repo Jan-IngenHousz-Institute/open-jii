@@ -169,6 +169,10 @@ export interface WizardFormProps<T extends FieldValues = FieldValues> {
    * Additional form props to pass to react-hook-form
    */
   formProps?: Omit<UseFormProps<T>, "defaultValues" | "resolver">;
+  /**
+   * Initial step index to start the wizard at (0-based)
+   */
+  initialStep?: number;
 }
 
 export function WizardForm<T extends FieldValues>({
@@ -180,6 +184,7 @@ export function WizardForm<T extends FieldValues>({
   showStepIndicator = true,
   showStepTitles = true,
   formProps = {},
+  initialStep = 0,
 }: WizardFormProps<T>) {
   // CVA variants for the step indicator circle and title
   const stepCircle = cva(
@@ -224,7 +229,7 @@ export function WizardForm<T extends FieldValues>({
   );
 
   // Current step index
-  const [currentStepIndex, setCurrentStepIndex] = React.useState(0);
+  const [currentStepIndex, setCurrentStepIndex] = React.useState(initialStep);
 
   // Create combined validation schema for the entire form
   const combinedSchema = React.useMemo(() => {

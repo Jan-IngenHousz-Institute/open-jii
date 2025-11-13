@@ -8,6 +8,10 @@ export const locales = [
 
 export type Locale = (typeof locales)[number];
 
+export const isKnownLocale = (locale: string): locale is Locale => {
+  return locales.includes(locale as Locale);
+};
+
 // i18n routing configuration for Next.js
 export const i18nConfig = {
   locales,
@@ -26,6 +30,7 @@ export const namespaces = [
   "account",
   "macro",
   "experimentData",
+  "experimentVisualizations",
 ] as const;
 
 export type Namespace = (typeof namespaces)[number];

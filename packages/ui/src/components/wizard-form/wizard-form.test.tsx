@@ -108,7 +108,10 @@ describe("WizardForm", () => {
   let user: ReturnType<typeof userEvent.setup>;
 
   const renderWizardForm = (options = {}) => {
-    const { isSubmitting = false } = options as { isSubmitting?: boolean };
+    const { isSubmitting = false, initialStep } = options as {
+      isSubmitting?: boolean;
+      initialStep?: number;
+    };
 
     return render(
       <WizardForm
@@ -139,6 +142,7 @@ describe("WizardForm", () => {
         }}
         onSubmit={onSubmitMock}
         isSubmitting={isSubmitting}
+        initialStep={initialStep}
       />,
     );
   };
@@ -155,6 +159,61 @@ describe("WizardForm", () => {
     expect(screen.getByTestId("step-1")).toBeInTheDocument();
     expect(screen.getByTestId("firstName")).toBeInTheDocument();
     expect(screen.queryByTestId("step-2")).not.toBeInTheDocument();
+  });
+
+  it("starts at specified initial step", () => {
+    render(
+      <WizardForm
+        steps={[
+          {
+            title: "Personal Info",
+            description: "Enter your name",
+            validationSchema: step1Schema,
+            component: Step1,
+          },
+          {
+            title: "Contact",
+            description: "Enter your email",
+            validationSchema: step2Schema,
+            component: Step2,
+          },
+          {
+            title: "Terms",
+            description: "Accept terms",
+            validationSchema: step3Schema,
+            component: Step3,
+          },
+        ]}
+        defaultValues={{
+          firstName: "John",
+          email: "john@example.com",
+          agreeTerms: false,
+        }}
+        onSubmit={onSubmitMock}
+        initialStep={1}
+      />,
+    );
+
+    // Should start at step 2 (index 1)
+    expect(screen.getByTestId("step-2")).toBeInTheDocument();
+    expect(screen.queryByTestId("step-1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("step-3")).not.toBeInTheDocument();
+  });
+
+  it("shows correct step indicators when starting at initial step", () => {
+    renderWizardForm({ initialStep: 2 });
+
+    const indicators = screen
+      .getAllByText(/[1-3]/)
+      .filter((el) => el.className && el.className.includes("rounded-full"));
+    expect(indicators.length).toBe(3);
+
+    // First two indicators should be completed
+    expect(indicators[0]?.className).toContain("bg-primary");
+    expect(indicators[1]?.className).toContain("bg-primary");
+
+    // Third indicator should be active (current step)
+    expect(indicators[2]?.className).toContain("bg-primary");
   });
 
   it("renders step indicators", () => {

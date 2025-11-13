@@ -60,7 +60,7 @@
     "@repo/typescript-config": "workspace:*",
     "@types/node": "catalog:",
     "dotenv-cli": "^8.0.0",
-    "drizzle-kit": "^0.30.6",
+    "drizzle-kit": "^0.31.6",
     "eslint": "catalog:",
     "tsx": "^4.19.3",
     "typescript": "catalog:"

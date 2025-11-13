@@ -46,7 +46,7 @@
     "title": "Measurement Flow",
     "legend": "Legend",
     "description": "Design and visualize your measurement workflow by connecting different steps and operations.",
-    "editDescription": "Design and visualize your measurement workflow by connecting different steps and operations.",
+    "editDescription": "Design and visualize your measurement workflow by connecting different steps and operations. Please make sure every block has a uniquely named 'label' and the flow has 1 Measurement block and 1 Analysis block.",
     "staticDescription": "Visual overview of the measurement workflow",
     "tabLabel": "Flow",
     "saving": "Saving...",
@@ -60,9 +60,15 @@
   },
   "overview": "Overview",
   "data": "Data",
+  "analysis": {
+    "title": "Analysis",
+    "description": "Analyze your experiment data with visualizations and notebooks",
+    "visualizations": "Visualizations",
+    "notebooks": "Notebooks"
+  },
   "experimentData": {
     "title": "Experiment Data",
-    "description": "View and manage data associated with this experiment. New data is processed every 15 minutes",
+    "description": "View, download and manage data associated with this experiment. New data is processed every 15 minutes. Timestamps are in UTC (Coordinated Universal Time)",
     "uploadData": "Upload Data",
     "provisioning": {
       "title": "Experiment is Being Prepared",
@@ -80,6 +86,11 @@
   "updated": "Updated",
   "descriptionTitle": "Description",
   "details": {
+    "location": {
+      "locationsTitle": "Experiment Locations",
+      "noLocations": "No locations",
+      "noLocationsDescription": "This experiment doesn't have any locations configured."
+    },
     "locations": {
       "locationsTitle": "Experiment Locations",
       "locationsCount": "{{count}} location",
@@ -173,12 +184,28 @@
     "noAnswerOptions": "No answer options yet",
     "addOption": "Add Option",
     "removeOption": "Remove option",
+    "bulkAddOptions": "Bulk Add",
+    "deleteAllOptions": "Delete All",
     "textResponseLabel": "Text Response",
     "textResponseDescription": "Participants can write their own answer",
     "numberResponseLabel": "Number Response",
     "numberResponseDescription": "Participants will enter a numeric value",
     "booleanResponseLabel": "Yes/No Response",
-    "booleanResponseDescription": "Participants will choose Yes or No"
+    "booleanResponseDescription": "Participants will choose Yes or No",
+    "bulkAdd": {
+      "title": "Bulk Add Answer Options",
+      "description": "Paste a list of options below. Each option should be on a new line. Great for copying from Excel or CSV files!",
+      "placeholder": "Plot 1\nPlot 2\nPlot 3\n...",
+      "hint": "Tip: Copy the column from your Excel/CSV file and paste it here",
+      "cancel": "Cancel",
+      "add": "Add Options"
+    },
+    "deleteAll": {
+      "title": "Delete All Options?",
+      "description": "Are you sure you want to delete all {{count}} options? This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete All"
+    }
   },
   "uploadModal": {
     "title": "Upload Sensor Data",
@@ -194,7 +221,7 @@
         "comingSoon": "Coming Soon"
       },
       "ambyte": {
-        "label": "Ambyte",
+        "label": "Ambyte (Coming soon)",
         "description": "Upload Ambyte sensor folders containing measurement data"
       }
     },
