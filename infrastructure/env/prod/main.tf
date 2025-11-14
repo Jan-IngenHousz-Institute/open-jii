@@ -169,6 +169,8 @@ module "event_hooks_secret_scope" {
 
   secrets = {
     "slack-webhook-url" = var.slack_webhook_url
+    "databricks-host"   = module.databricks_workspace.workspace_url
+
   }
 
   # Grant access to service principal for Event Hooks
@@ -282,13 +284,13 @@ module "centrum_pipeline" {
   ]
 
   configuration = {
-    "BRONZE_TABLE"            = "raw_data"
-    "SILVER_TABLE"            = "clean_data"
-    "RAW_KINESIS_TABLE"       = "raw_kinesis_data"
-    "KINESIS_STREAM_NAME"     = module.kinesis.kinesis_stream_name
-    "SERVICE_CREDENTIAL_NAME" = "unity-catalog-kinesis-role-${var.environment}"
-    "CHECKPOINT_PATH"         = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
-    "ENVIRONMENT"             = upper(var.environment)
+    "BRONZE_TABLE"             = "raw_data"
+    "SILVER_TABLE"             = "clean_data"
+    "RAW_KINESIS_TABLE"        = "raw_kinesis_data"
+    "KINESIS_STREAM_NAME"      = module.kinesis.kinesis_stream_name
+    "SERVICE_CREDENTIAL_NAME"  = "unity-catalog-kinesis-role-${var.environment}"
+    "CHECKPOINT_PATH"          = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
+    "ENVIRONMENT"              = upper(var.environment)
     "MONITORING_SLACK_CHANNEL" = var.slack_channel
   }
 
@@ -734,14 +736,14 @@ module "opennext" {
   ses_secret_arn            = module.ses_secrets.secret_arn
 
   server_environment_variables = {
-    COOKIE_DOMAIN             = ".${var.domain_name}"
-    DB_HOST                   = module.aurora_db.cluster_endpoint
-    DB_PORT                   = module.aurora_db.cluster_port
-    DB_NAME                   = module.aurora_db.database_name
-    NODE_ENV                  = "production"
-    ENVIRONMENT_PREFIX        = var.environment
-    NEXT_PUBLIC_POSTHOG_KEY   = var.posthog_key
-    NEXT_PUBLIC_POSTHOG_HOST  = var.posthog_host
+    COOKIE_DOMAIN            = ".${var.domain_name}"
+    DB_HOST                  = module.aurora_db.cluster_endpoint
+    DB_PORT                  = module.aurora_db.cluster_port
+    DB_NAME                  = module.aurora_db.database_name
+    NODE_ENV                 = "production"
+    ENVIRONMENT_PREFIX       = var.environment
+    NEXT_PUBLIC_POSTHOG_KEY  = var.posthog_key
+    NEXT_PUBLIC_POSTHOG_HOST = var.posthog_host
   }
 
   # Performance configuration
