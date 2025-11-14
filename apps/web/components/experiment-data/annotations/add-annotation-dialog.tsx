@@ -3,8 +3,15 @@ import { Flag, MessageSquare } from "lucide-react";
 import React from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
+import { useExperimentAddAnnotation } from "~/hooks/experiment/useExperimentAddAnnotation/useExperimentAddAnnotation";
+import { useExperimentAddAnnotationsBulk } from "~/hooks/experiment/useExperimentAddAnnotationsBulk/useExperimentAddAnnotationsBulk";
 
-import type { AnnotationType } from "@repo/api";
+import type {
+  AddAnnotationBody,
+  AddAnnotationsBulkBody,
+  AnnotationContent,
+  AnnotationType,
+} from "@repo/api";
 import { zAnnotationFlagType } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -60,6 +67,8 @@ export function AddAnnotationDialog({
   setBulkOpen,
   clearSelection,
 }: AddAnnotationDialogProps) {
+  const { mutateAsync: addAnnotation } = useExperimentAddAnnotation();
+  const { mutateAsync: addAnnotationsBulk } = useExperimentAddAnnotationsBulk();
   const { t } = useTranslation();
   const [open, setOpen] = React.useState(false);
 
@@ -75,9 +84,43 @@ export function AddAnnotationDialog({
     defaultValues: type === "flag" ? { text: "", flag: undefined } : { text: "" },
   });
 
-  function onSubmit(formData: AddAnnotationDialogFormType) {
-    // TODO: Implement API call to add annotation and remove logging statement
-    console.log("onSubmit", { formData, experimentId, tableName, rowIds, type });
+  async function onSubmit(formData: AddAnnotationDialogFormType) {
+    const content: AnnotationContent =
+      type === "flag" && formData.flag
+        ? {
+            reason: formData.text,
+            flagType: formData.flag,
+          }
+        : {
+            text: formData.text,
+          };
+    if (bulk) {
+      const data: AddAnnotationsBulkBody = {
+        tableName,
+        rowIds,
+        annotation: {
+          type,
+          content,
+        },
+      };
+      await addAnnotationsBulk({
+        params: { id: experimentId },
+        body: data,
+      });
+    } else {
+      const data: AddAnnotationBody = {
+        tableName,
+        rowId: rowIds[0],
+        annotation: {
+          type,
+          content,
+        },
+      };
+      await addAnnotation({
+        params: { id: experimentId },
+        body: data,
+      });
+    }
     toast({ description: t("experimentDataAnnotations.updated") });
     if (setBulkOpen !== undefined) {
       setBulkOpen(false);
