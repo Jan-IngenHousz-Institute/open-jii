@@ -169,6 +169,7 @@ module "event_hooks_secret_scope" {
 
   secrets = {
     "slack-webhook-url" = var.slack_webhook_url
+    "databricks-host"   = module.databricks_workspace.workspace_url
   }
 
   # Grant access to service principal for Event Hooks
