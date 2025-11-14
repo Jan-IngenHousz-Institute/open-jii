@@ -4,7 +4,7 @@ import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtoco
 import { useLocale } from "@/hooks/useLocale";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import type { CreateProtocolRequestBody } from "@repo/api";
@@ -51,6 +51,9 @@ export function NewProtocolForm() {
     });
     toast({ description: t("protocols.protocolCreated") });
   }
+  const isDisabled = useMemo(() => {
+    return isPending || !form.formState.isDirty || !form.formState.isValid || !isCodeValid;
+  }, [isPending, form.formState.isDirty, form.formState.isValid, isCodeValid]);
 
   return (
     <Form {...form}>
@@ -82,23 +85,7 @@ export function NewProtocolForm() {
           <Button type="button" onClick={cancel}>
             {t("newProtocol.cancel")}
           </Button>
-          <Button
-            type="submit"
-            disabled={
-              isPending || !form.formState.isDirty || !form.formState.isValid || !isCodeValid
-            }
-            aria-label={
-              isPending
-                ? t("newProtocol.creating")
-                : !form.formState.isDirty
-                  ? "No changes to save"
-                  : !isCodeValid
-                    ? "Cannot save: Invalid JSON or protocol code"
-                    : !form.formState.isValid
-                      ? "Cannot save: Form has validation errors"
-                      : t("newProtocol.finalizeSetup")
-            }
-          >
+          <Button type="submit" disabled={isDisabled}>
             {isPending ? t("newProtocol.creating") : t("newProtocol.finalizeSetup")}
           </Button>
         </div>
