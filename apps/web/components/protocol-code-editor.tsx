@@ -123,59 +123,66 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
       const parsedValue = JSON.parse(debouncedEditorCode) as unknown;
       setIsValidJson(true);
 
-      // If feature flag is enabled (validation as warning), skip protocol validation
-      // If feature flag is disabled (strict mode), do full protocol validation
-      if (!validationAsWarning) {
-        // Strict mode: validate protocol and show as errors (block save)
-        const result = validateProtocolJson(parsedValue);
-        if (!result.success && result.error) {
-          setValidationWarnings(result.error.map((e) => getErrorMessage(e)));
-          const warningDetails = result.error.map((e) => {
-            return findProtocolErrorLine(debouncedEditorCode, e);
-          });
-          setMarkers(
-            result.error.map((e) => e.message),
-            warningDetails,
-            true, // Show as errors (red) in strict mode
-          );
-          // Block save in strict mode
+      // Validate protocol schema
+      const result = validateProtocolJson(parsedValue);
+
+      if (!result.success && result.error) {
+        // Set validation warnings
+        setValidationWarnings(result.error.map((e) => getErrorMessage(e)));
+        const warningDetails = result.error.map((e) => {
+          return findProtocolErrorLine(debouncedEditorCode, e);
+        });
+
+        // Show as errors (red) in strict mode, warnings (yellow) in warning mode
+        const asError = !validationAsWarning;
+        setMarkers(
+          result.error.map((e) => e.message),
+          warningDetails,
+          asError,
+        );
+
+        // Block save only in strict mode
+        if (!validationAsWarning) {
           onChange(undefined);
           onValidationChange?.(false);
           return;
-        } else {
-          setValidationWarnings([]);
-          setMarkers([]);
-          onValidationChange?.(true);
         }
       } else {
-        // Warning mode: show protocol validation as warnings but allow save
-        const result = validateProtocolJson(parsedValue);
-        if (!result.success && result.error) {
-          setValidationWarnings(result.error.map((e) => getErrorMessage(e)));
-          const warningDetails = result.error.map((e) => {
-            return findProtocolErrorLine(debouncedEditorCode, e);
-          });
-          setMarkers(
-            result.error.map((e) => e.message),
-            warningDetails,
-            false, // Show as warnings (yellow) in warning mode
-          );
-        } else {
-          setValidationWarnings([]);
-          setMarkers([]);
-        }
-        onValidationChange?.(true);
+        // Clear validation state when protocol is valid
+        setValidationWarnings([]);
+        setMarkers([]);
       }
 
+      // Always set valid in warning mode, or when validation passes
+      onValidationChange?.(true);
+
+      // Return parsed value
       if (Array.isArray(parsedValue)) {
         onChange(parsedValue as Record<string, unknown>[]);
       } else {
         onChange(debouncedEditorCode);
       }
-    } catch {
+    } catch (e) {
       setIsValidJson(false);
       setValidationWarnings(["Invalid JSON syntax"]);
-      setMarkers(["Invalid JSON syntax"], [{ line: 1, message: "Invalid JSON syntax" }]);
+
+      // Try to find the actual line number where JSON parsing failed
+      let errorLine = 1;
+      if (e instanceof SyntaxError && e.message) {
+        const lineRegex = /position (\d+)/;
+        const lineMatch = lineRegex.exec(e.message);
+        if (lineMatch) {
+          const position = parseInt(lineMatch[1], 10);
+          // Calculate line number from position
+          errorLine = debouncedEditorCode.substring(0, position).split("\n").length;
+        }
+      }
+
+      setMarkers(
+        ["Invalid JSON syntax"],
+        [{ line: errorLine, message: "Invalid JSON syntax" }],
+        true, // Always show JSON errors as errors (red)
+      );
       onChange(undefined); // Don't save invalid JSON
       onValidationChange?.(false);
     }
