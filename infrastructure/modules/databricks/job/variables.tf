@@ -122,3 +122,28 @@ variable "queue" {
   })
   default = null
 }
+
+variable "webhook_notifications" {
+  description = "Webhook notifications for job events (Slack, etc.)"
+  type = object({
+    on_start                               = optional(list(string))
+    on_success                             = optional(list(string))
+    on_failure                             = optional(list(string))
+    on_duration_warning_threshold_exceeded = optional(list(string))
+    on_streaming_backlog_exceeded          = optional(list(string))
+  })
+  default = null
+}
+
+variable "email_notifications" {
+  description = "Email addresses to notify on job events"
+  type = object({
+    on_start                               = optional(list(string), [])
+    on_success                             = optional(list(string), [])
+    on_failure                             = optional(list(string), [])
+    on_duration_warning_threshold_exceeded = optional(list(string), [])
+    on_streaming_backlog_exceeded          = optional(list(string), [])
+    no_alert_for_skipped_runs              = optional(bool, false)
+  })
+  default = null
+}

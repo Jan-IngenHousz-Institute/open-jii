@@ -15,10 +15,12 @@ from pyspark.sql.types import StringType, TimestampType, DoubleType, StructType,
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import pandas_udf
 from delta.tables import DeltaTable
+from pyspark import pipelines as dp
 import pandas as pd
 import os
 import json
 import sys
+import requests
 from typing import Dict, Any, List
 
 # Import our macro processing library
@@ -28,6 +30,7 @@ from multispeq import execute_macro_script, get_available_macros, process_macro_
 
 # DBTITLE 1,Pipeline Configuration
 EXPERIMENT_ID = spark.conf.get("EXPERIMENT_ID")  # Experiment identifier
+EXPERIMENT_NAME = spark.conf.get("EXPERIMENT_NAME")  # Experiment name for display
 EXPERIMENT_SCHEMA = spark.conf.get("EXPERIMENT_SCHEMA")  # Target schema for output
 CATALOG_NAME = spark.conf.get("CATALOG_NAME")
 CENTRAL_SCHEMA = spark.conf.get("CENTRAL_SCHEMA")
@@ -44,6 +47,10 @@ ENABLE_MACRO_PROCESSING = spark.conf.get("ENABLE_MACRO_PROCESSING", "true").lowe
 DEVICE_TABLE = "device"
 SAMPLE_TABLE = "sample"
 RAW_AMBYTE_TABLE = "raw_ambyte_data"
+
+# Slack notification configuration
+ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
+MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
 
 spark = SparkSession.builder.getOrCreate()
 
@@ -458,3 +465,132 @@ if ENABLE_MACRO_PROCESSING:
         print("Continuing without macro processing...")
 else:
     print("Macro processing disabled")
+
+# COMMAND ----------
+
+# DBTITLE 1,Event Hook - Slack Notifications
+@dlt.on_event_hook(max_allowable_consecutive_failures=3)
+def send_slack_notifications(event):
+    """Send Slack notifications for pipeline failures and stops."""
+
+    # Get the webhook URL from the secret scope
+    SLACK_WEBHOOK_URL = dbutils.secrets.get(scope=f"event-hooks-{ENVIRONMENT}", key="slack-webhook-url")
+    SLACK_HEADERS = {
+        'Content-Type': 'application/json'
+    }
+
+    # Check for failure/stop events in progress updates
+    if (
+        event['event_type'] in ['update_progress', 'flow_progress', 'operation_progress']
+        and event['details'].get(event['event_type'], {}).get('state') in ['FAILED', 'STOPPED']
+    ):
+        # Send structured Slack notification
+        event_type = event['event_type']
+        state = event['details'].get(event['event_type'], {}).get('state')
+        pipeline_id = event['origin'].get('pipeline_id')
+        pipeline_name = event['origin'].get('pipeline_name')
+        update_id = event['origin'].get('update_id')
+        
+        # Color coding for visual distinction
+        color = "#FF0000" if state == 'FAILED' else "#FFA500"  # Red for failed, orange for stopped
+        
+        # Get Databricks host from secret scope
+        try:
+            databricks_host = dbutils.secrets.get(scope=f"event-hooks-{ENVIRONMENT}", key="databricks-host")
+        except Exception:
+            databricks_host = None
+        
+        # Construct URLs once
+        if databricks_host:
+            workspace_url = databricks_host
+            pipeline_url = f"{databricks_host}/pipelines/{pipeline_id}"
+            update_url = f"{databricks_host}/pipelines/{pipeline_id}/updates/{update_id}"
+        else:
+            # Fallback when databricks host is not available
+            workspace_url = None
+            pipeline_url = None
+            update_url = None
+        
+        # Format timestamp if available
+        timestamp = event.get('timestamp')
+        if timestamp:
+            try:
+                from datetime import datetime
+                # Convert to readable format if it's a timestamp
+                if isinstance(timestamp, (int, float)):
+                    timestamp = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S UTC')
+            except:
+                pass
+        
+        # Helper function to format Slack links
+        def slack_link(url, text):
+            return f"<{url}|{text}>" if url else text
+        
+        payload = {
+            "channel": MONITORING_SLACK_CHANNEL,
+            "text": f"{pipeline_name} — a run has {state.lower()}.",
+            "attachments": [
+                {
+                    "color": color,
+                    "fields": [
+                        {
+                            "title": "Workspace:",
+                            "value": slack_link(workspace_url, f"open-jii-databricks-workspace-{ENVIRONMENT}"),
+                            "short": True
+                        },
+                        {
+                            "title": "Job:",
+                            "value": slack_link(pipeline_url, pipeline_name),
+                            "short": True
+                        },
+                        {
+                            "title": "Update:",
+                            "value": slack_link(update_url, update_id),
+                            "short": True
+                        },
+                        {
+                            "title": "State:",
+                            "value": state,
+                            "short": True
+                        },
+                        {
+                            "title": "Experiment Name:",
+                            "value": EXPERIMENT_NAME or "Not specified",
+                            "short": True
+                        },
+                        {
+                            "title": "Environment:",
+                            "value": ENVIRONMENT.upper(),
+                            "short": True
+                        },
+                        {
+                            "title": "Event Type:",
+                            "value": event_type,
+                            "short": True
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "type": "button",
+                            "text": "View Pipeline",
+                            "url": pipeline_url
+                        },
+                        {
+                            "type": "button", 
+                            "text": "View Workspace",
+                            "url": workspace_url
+                        }
+                    ]
+                }
+            ]
+        }
+        
+        try:
+            response = requests.post(
+                url=SLACK_WEBHOOK_URL,
+                headers=SLACK_HEADERS,
+                json=payload
+            )
+            print(f"Slack notification sent: {event_type} - {state}")
+        except Exception as e:
+            print(f"Failed to send Slack notification: {e}")

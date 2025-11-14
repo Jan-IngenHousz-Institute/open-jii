@@ -122,6 +122,60 @@ resource "databricks_job" "this" {
       timezone_id            = "UTC"
     }
   }
+
+  # Email notifications
+  dynamic "email_notifications" {
+    for_each = var.email_notifications != null ? [1] : []
+    content {
+      on_start                               = var.email_notifications.on_start
+      on_success                             = var.email_notifications.on_success
+      on_failure                             = var.email_notifications.on_failure
+      on_duration_warning_threshold_exceeded = var.email_notifications.on_duration_warning_threshold_exceeded
+      on_streaming_backlog_exceeded          = var.email_notifications.on_streaming_backlog_exceeded
+      no_alert_for_skipped_runs              = var.email_notifications.no_alert_for_skipped_runs
+    }
+  }
+
+  # Webhook notifications (Slack, etc.)
+  dynamic "webhook_notifications" {
+    for_each = var.webhook_notifications != null ? [1] : []
+    content {
+      dynamic "on_start" {
+        for_each = var.webhook_notifications.on_start != null ? var.webhook_notifications.on_start : []
+        content {
+          id = on_start.value
+        }
+      }
+
+      dynamic "on_success" {
+        for_each = var.webhook_notifications.on_success != null ? var.webhook_notifications.on_success : []
+        content {
+          id = on_success.value
+        }
+      }
+
+      dynamic "on_failure" {
+        for_each = var.webhook_notifications.on_failure != null ? var.webhook_notifications.on_failure : []
+        content {
+          id = on_failure.value
+        }
+      }
+
+      dynamic "on_duration_warning_threshold_exceeded" {
+        for_each = var.webhook_notifications.on_duration_warning_threshold_exceeded != null ? var.webhook_notifications.on_duration_warning_threshold_exceeded : []
+        content {
+          id = on_duration_warning_threshold_exceeded.value
+        }
+      }
+
+      dynamic "on_streaming_backlog_exceeded" {
+        for_each = var.webhook_notifications.on_streaming_backlog_exceeded != null ? var.webhook_notifications.on_streaming_backlog_exceeded : []
+        content {
+          id = on_streaming_backlog_exceeded.value
+        }
+      }
+    }
+  }
 }
 
 # Grant job permissions to principals if provided
