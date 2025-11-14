@@ -44,7 +44,7 @@
   "engines": {
     "node": ">=22"
   },
-   "pnpm": {
+  "pnpm": {
     "overrides": {
       "react": "catalog:react19",
       "react-dom": "catalog:react19",
@@ -53,4 +53,3 @@
     }
   }
 }
-
