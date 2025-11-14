@@ -1,0 +1,98 @@
+{
+  "_protocol_set_": [
+    {
+      "label": "spad_card_cal",
+      "print_spad_cal": 1
+    },
+    {
+      "label": "gain",
+      "alert": "Clamp panel #9 of the Chlorophyll calibration cards and enter the corresponding SPAD value or leave it empty if a Calibration Card envelope serial number was entered before.",
+      "auto_blank": [
+        [2, 2, 3, 100, 10000],
+        [6, 6, 1, 100, 10000],
+        [3, 3, 3, 100, 10000]
+      ]
+    },
+    {
+      "label": "spad",
+      "prompt": "Clamp panel #2 of the Chlorophyll calibration cards and enter the corresponding SPAD value or leave it empty if a Calibration Card envelope serial number was entered before.",
+      "spad": [
+        [2, 3, 6],
+        [-1]
+      ],
+      "protocol_repeats": 1
+    },
+    {
+      "label": "spad",
+      "prompt": "Clamp panel #3 of the Chlorophyll calibration cards and enter the corresponding SPAD value or leave it empty if a Calibration Card envelope serial number was entered before.",
+      "spad": [
+        [2, 3, 6],
+        [-1]
+      ],
+      "protocol_repeats": 1
+    },
+    {
+      "label": "spad",
+      "prompt": "Clamp panel #4 of the Chlorophyll calibration cards and enter the corresponding SPAD value or leave it empty if a Calibration Card envelope serial number was entered before.",
+      "spad": [
+        [2, 3, 6],
+        [-1]
+      ],
+      "protocol_repeats": 1
+    },
+    {
+      "label": "spad",
+      "prompt": "Clamp panel #6 of the Chlorophyll calibration cards and enter the corresponding SPAD value or leave it empty if a Calibration Card envelope serial number was entered before.",
+      "spad": [
+        [2, 3, 6],
+        [-1]
+      ],
+      "protocol_repeats": 1
+    },
+    {
+      "label": "spad",
+      "prompt": "Clamp panel #7 of the Chlorophyll calibration cards and enter the corresponding SPAD value or leave it empty if a Calibration Card envelope serial number was entered before.",
+      "spad": [
+        [2, 3, 6],
+        [-1]
+      ],
+      "protocol_repeats": 1
+    },
+    {
+      "label": "spad",
+      "prompt": "Clamp panel #8 of the Chlorophyll calibration cards and enter the corresponding SPAD value or leave it empty if a Calibration Card envelope serial number was entered before.",
+      "spad": [
+        [2, 3, 6],
+        [-1]
+      ],
+      "protocol_repeats": 1
+    },
+    {
+      "label": "spad",
+      "prompt": "Clamp panel #10 of the Chlorophyll calibration cards and enter the corresponding SPAD value or leave it empty if a Calibration Card envelope serial number was entered before.",
+      "spad": [
+        [2, 3, 6],
+        [-1]
+      ],
+      "protocol_repeats": 1
+    },
+    {
+      "label": "spad",
+      "prompt": "Clamp panel #11 of the Chlorophyll calibration cards and enter the corresponding SPAD value or leave it empty if a Calibration Card envelope serial number was entered before.",
+      "spad": [
+        [2, 3, 6],
+        [-1]
+      ],
+      "protocol_repeats": 1
+    },
+    {
+      "label": "spad",
+      "prompt": "Clamp panel #12 of the Chlorophyll calibration cards and enter the corresponding SPAD value or leave it empty if a Calibration Card envelope serial number was entered before.",
+      "spad": [
+        [2, 3, 6],
+        [-1]
+      ],
+      "protocol_repeats": 1
+    }
+  ]
+}

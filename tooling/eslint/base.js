@@ -5,6 +5,7 @@ import importPlugin from "eslint-plugin-import";
 import prettierPlugin from "eslint-plugin-prettier";
 import turboPlugin from "eslint-plugin-turbo";
 import path from "path";
+import { fileURLToPath } from "url";
 import * as tseslint from "typescript-eslint";
 
 /**
@@ -35,8 +36,12 @@ export const restrictEnvAccess = tseslint.config(
   },
 );
 
+// Compat for Node versions where import.meta.dirname may be undefined
+const __filename = typeof import.meta !== "undefined" && import.meta.url ? fileURLToPath(import.meta.url) : __filename;
+const __dirname = path.dirname(__filename);
+
 export default tseslint.config(
-  includeIgnoreFile(path.join(import.meta.dirname, "../../.gitignore")),
+  includeIgnoreFile(path.join(__dirname, "../../.gitignore")),
 
   { ignores: ["**/*.config.*"] },
 

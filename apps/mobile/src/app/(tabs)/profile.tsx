@@ -1,19 +1,16 @@
+import "expo-application";
+import * as Application from "expo-application";
 import { useRouter } from "expo-router";
 import { User, ExternalLink, LogOut } from "lucide-react-native";
-import React, { useState } from "react";
+import React from "react";
 import { View, Text, StyleSheet, ScrollView, Alert, Linking } from "react-native";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
-import { Toast } from "~/components/Toast";
 import { colors } from "~/constants/colors";
 import { useSessionStore } from "~/hooks/use-session-store";
 import { useTheme } from "~/hooks/use-theme";
-import { assertEnvVariables } from "~/utils/assert";
-import { formatIsoDateString } from "~/utils/format-iso-date-string";
-
-import packageJson from "../../../package.json";
-
-const { NEXT_AUTH_URI } = assertEnvVariables({ NEXT_AUTH_URI: process.env.NEXT_AUTH_URI });
+import { getEnvVar } from "~/stores/environment-store";
+import { formatRelativeTime } from "~/utils/format-relative-time";
 
 export default function ProfileScreen() {
   const { clearSession, session } = useSessionStore();
@@ -21,19 +18,13 @@ export default function ProfileScreen() {
   const theme = useTheme();
   const { colors } = theme;
 
-  const [toast, setToast] = useState({
-    visible: false,
-    message: "",
-    type: "info" as "success" | "error" | "info" | "warning",
-  });
-
   const handleLogout = () => {
     clearSession();
     router.replace("/callback");
   };
 
   const handleOpenWebProfile = async () => {
-    const url = NEXT_AUTH_URI + "/en-US/platform/experiments";
+    const url = getEnvVar("NEXT_AUTH_URI") + "/en-US/platform/experiments";
     const canOpen = await Linking.canOpenURL(url);
 
     if (canOpen) {
@@ -153,7 +144,7 @@ export default function ProfileScreen() {
               },
             ]}
           >
-            {formatIsoDateString(expires)}
+            {formatRelativeTime(expires)}
           </Text>
         </View>
       </Card>
@@ -185,15 +176,8 @@ export default function ProfileScreen() {
           },
         ]}
       >
-        MultiSpeq App v{packageJson.version}
+        openJII v{Application.nativeApplicationVersion}
       </Text>
-
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        type={toast.type}
-        onDismiss={() => setToast({ ...toast, visible: false })}
-      />
     </ScrollView>
   );
 }

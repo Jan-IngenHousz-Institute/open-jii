@@ -1,32 +1,59 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import { QueryClient, QueryCache } from "@tanstack/react-query";
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import React, { useRef } from "react";
-import { useToast } from "~/context/toast-context";
+import { QueryClient, QueryCache, QueryClientProvider, onlineManager } from "@tanstack/react-query";
+import axios from "axios";
+import React, { useEffect, useRef } from "react";
+import { toast } from "sonner-native";
+
+const PING_URL = "https://clients3.google.com/generate_204";
+const CHECK_INTERVAL = 10 * 1000;
+
+function startConnectivityWatcher() {
+  let lastOnline = true;
+
+  async function checkOnline() {
+    try {
+      await axios.head(PING_URL, { timeout: 3000 });
+      if (!lastOnline) {
+        lastOnline = true;
+        onlineManager.setOnline(true);
+      }
+    } catch {
+      if (lastOnline) {
+        lastOnline = false;
+        onlineManager.setOnline(false);
+      }
+    }
+  }
+
+  checkOnline(); // run immediately
+  const id = setInterval(() => void checkOnline(), CHECK_INTERVAL);
+  return () => clearInterval(id);
+}
 
 const defaultOptions = {
   queries: {
-    staleTime: Infinity,
+    staleTime: 0,
     gcTime: Infinity,
     refetchOnMount: false,
-    refetchOnReconnect: false,
+    refetchOnReconnect: true,
     refetchOnWindowFocus: false,
     retry: 1,
   },
 };
 
 export function ConfiguredQueryClientProvider({ children }) {
-  const { showToast } = useToast();
-
   const queryClientRef = useRef<QueryClient>(undefined);
-  const persistorRef = useRef<any>(undefined);
+
+  useEffect(() => {
+    const stop = startConnectivityWatcher();
+    return stop;
+  }, []);
 
   if (!queryClientRef.current) {
     const queryCache = new QueryCache({
       onError: (error: any) => {
+        console.log("error", error);
         const message = error?.body?.message ?? error?.message ?? "Something went wrong";
-        showToast(message, "error");
+        toast.error(message);
       },
     });
 
@@ -34,18 +61,7 @@ export function ConfiguredQueryClientProvider({ children }) {
       queryCache,
       defaultOptions,
     });
-
-    persistorRef.current = createAsyncStoragePersister({
-      storage: AsyncStorage,
-    });
   }
 
-  return (
-    <PersistQueryClientProvider
-      client={queryClientRef.current}
-      persistOptions={{ persister: persistorRef.current }}
-    >
-      {children}
-    </PersistQueryClientProvider>
-  );
+  return <QueryClientProvider client={queryClientRef.current}>{children}</QueryClientProvider>;
 }

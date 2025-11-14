@@ -1,8 +1,8 @@
+import { cva } from "class-variance-authority";
 import React from "react";
 import {
   TouchableOpacity,
   Text,
-  StyleSheet,
   ActivityIndicator,
   ViewStyle,
   TextStyle,
@@ -22,6 +22,63 @@ interface ButtonProps extends TouchableOpacityProps {
   icon?: React.ReactNode;
 }
 
+const buttonVariants = cva("rounded-lg items-center justify-center", {
+  variants: {
+    variant: {
+      primary: "bg-[#005e5e]",
+      secondary: "bg-[#afd7f4]",
+      outline: "bg-transparent border border-[#005e5e]",
+      ghost: "bg-transparent",
+    },
+    size: {
+      sm: "py-1.5 px-3",
+      md: "py-2.5 px-4",
+      lg: "py-3.5 px-6",
+    },
+    disabled: {
+      true: "opacity-60",
+      false: "",
+    },
+  },
+  compoundVariants: [
+    {
+      variant: "primary",
+      disabled: true,
+      class: "bg-gray-400",
+    },
+    {
+      variant: "secondary",
+      disabled: true,
+      class: "bg-gray-400",
+    },
+    {
+      variant: "outline",
+      disabled: true,
+      class: "border-gray-400",
+    },
+  ],
+});
+
+const textVariants = cva("font-semibold text-center", {
+  variants: {
+    variant: {
+      primary: "text-white",
+      secondary: "text-black",
+      outline: "text-[#005e5e]",
+      ghost: "text-[#005e5e]",
+    },
+    size: {
+      sm: "text-sm",
+      md: "text-base",
+      lg: "text-lg",
+    },
+    disabled: {
+      true: "text-gray-400",
+      false: "",
+    },
+  },
+});
+
 export function Button({
   title,
   variant = "primary",
@@ -33,107 +90,34 @@ export function Button({
   icon,
   ...props
 }: ButtonProps) {
-  const theme = useTheme();
-  const { colors } = theme;
+  const { colors } = useTheme();
 
-  const getBackgroundColor = () => {
-    if (isDisabled) return theme.isDark ? colors.dark.inactive : colors.light.inactive;
-
-    switch (variant) {
-      case "primary":
-        return colors.primary.dark;
-      case "secondary":
-        return colors.secondary.blue;
-      case "outline":
-      case "ghost":
-        return "transparent";
-      default:
-        return colors.primary.dark;
+  const getLoadingColor = () => {
+    if (variant === "primary") {
+      return colors.onPrimary;
     }
+    return colors.primary.dark;
   };
 
-  const getBorderColor = () => {
-    if (isDisabled) return theme.isDark ? colors.dark.inactive : colors.light.inactive;
-
-    switch (variant) {
-      case "outline":
-        return colors.primary.dark;
-      default:
-        return "transparent";
-    }
-  };
-
-  const getTextColor = () => {
-    if (isDisabled)
-      return theme.isDark ? colors.dark.onSurface + "80" : colors.light.onSurface + "80";
-
-    switch (variant) {
-      case "primary":
-        return theme.isDark ? colors.dark.onPrimary : colors.light.onPrimary;
-      case "secondary":
-        return theme.isDark ? colors.dark.onSecondary : colors.light.onSecondary;
-      case "outline":
-      case "ghost":
-        return colors.primary.dark;
-      default:
-        return theme.isDark ? colors.dark.onPrimary : colors.light.onPrimary;
-    }
-  };
-
-  const getPadding = () => {
-    switch (size) {
-      case "sm":
-        return { paddingVertical: 6, paddingHorizontal: 12 };
-      case "lg":
-        return { paddingVertical: 14, paddingHorizontal: 24 };
-      default:
-        return { paddingVertical: 10, paddingHorizontal: 16 };
-    }
-  };
-
-  const getFontSize = () => {
-    switch (size) {
-      case "sm":
-        return 14;
-      case "lg":
-        return 18;
-      default:
-        return 16;
-    }
-  };
-
+  // WORKAROUND: Key with timestamp to force remount on every render
+  // This bypasses React Native's native style caching bug in Expo SDK 54
+  // The timestamp ensures remount even when props stay the same (which was causing the issue)
+  const renderId = Date.now();
   return (
     <TouchableOpacity
-      style={[
-        styles.button,
-        { backgroundColor: getBackgroundColor() },
-        { borderColor: getBorderColor() },
-        variant === "outline" && styles.outline,
-        getPadding(),
-        isDisabled && styles.disabled,
-        style,
-      ]}
+      key={renderId}
+      className={buttonVariants({ variant, size, disabled: isDisabled })}
+      style={style}
       disabled={isDisabled || isLoading}
       activeOpacity={0.7}
       {...props}
     >
       {isLoading ? (
-        <ActivityIndicator
-          size="small"
-          color={
-            variant === "primary"
-              ? theme.isDark
-                ? colors.dark.onPrimary
-                : colors.light.onPrimary
-              : colors.primary.dark
-          }
-        />
+        <ActivityIndicator size="small" color={getLoadingColor()} />
       ) : (
-        <View style={styles.buttonContent}>
-          {icon && <View style={styles.iconContainer}>{icon}</View>}
-          <Text
-            style={[styles.text, { color: getTextColor(), fontSize: getFontSize() }, textStyle]}
-          >
+        <View className="flex-row items-center justify-center">
+          {icon && <View className="mr-2">{icon}</View>}
+          <Text className={textVariants({ variant, size, disabled: isDisabled })} style={textStyle}>
             {title}
           </Text>
         </View>
@@ -141,30 +125,3 @@ export function Button({
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  button: {
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 0,
-  },
-  outline: {
-    borderWidth: 1,
-  },
-  disabled: {
-    opacity: 0.6,
-  },
-  text: {
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  buttonContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconContainer: {
-    marginRight: 8,
-  },
-});

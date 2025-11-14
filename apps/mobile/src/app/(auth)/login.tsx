@@ -1,6 +1,6 @@
 import { CommonActions, useNavigation } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React from "react";
 import { useAsync } from "react-async-hook";
 import {
   View,
@@ -8,26 +8,22 @@ import {
   StyleSheet,
   SafeAreaView,
   Image,
+  Pressable,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from "react-native";
 import { getSessionData } from "~/api/get-session-data";
 import { Button } from "~/components/Button";
-import { Toast } from "~/components/Toast";
 import { useLoginFlow } from "~/hooks/use-login";
+import { useMultiTapReveal } from "~/hooks/use-multi-tap-reveal";
 import { useSessionStore } from "~/hooks/use-session-store";
 import { useTheme } from "~/hooks/use-theme";
+import { EnvironmentSelector } from "~/widgets/environment-selector";
 
 export default function LoginScreen() {
   const theme = useTheme();
   const { colors } = theme;
-
-  const [toast, setToast] = useState({
-    visible: false,
-    message: "",
-    type: "error" as "success" | "error" | "info" | "warning",
-  });
 
   const router = useRouter();
   const { startLoginFlow } = useLoginFlow();
@@ -35,6 +31,11 @@ export default function LoginScreen() {
   const { session_token: token } = useLocalSearchParams();
 
   const navigation = useNavigation();
+
+  const { isVisible: showEnvSelector, handleTap: handleHeaderTap } = useMultiTapReveal({
+    tapsRequired: 4,
+    intervalMs: 600,
+  });
 
   // this one is for Android
   useAsync(async () => {
@@ -78,12 +79,14 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.logoContainer}>
-            <Image
-              source={{
-                uri: "https://images.unsplash.com/photo-1507668339897-8a035aa9527d?q=80&w=200&auto=format&fit=crop",
-              }}
-              style={styles.logo}
-            />
+            <Pressable onPress={handleHeaderTap} hitSlop={10}>
+              <Image
+                source={{
+                  uri: "https://images.unsplash.com/photo-1507668339897-8a035aa9527d?q=80&w=200&auto=format&fit=crop",
+                }}
+                style={styles.logo}
+              />
+            </Pressable>
             <Text
               style={[
                 styles.appName,
@@ -92,7 +95,7 @@ export default function LoginScreen() {
                 },
               ]}
             >
-              MultiSpeq
+              openJII
             </Text>
             <Text
               style={[
@@ -107,9 +110,10 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.formContainer}>
+            {showEnvSelector && <EnvironmentSelector />}
             <View style={styles.divider}></View>
             <Button
-              title="Sign in with SSO"
+              title="Sign in"
               variant="outline"
               onPress={handleLogin}
               style={styles.ssoButton}
@@ -117,13 +121,6 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        type={toast.type}
-        onDismiss={() => setToast({ ...toast, visible: false })}
-      />
     </SafeAreaView>
   );
 }

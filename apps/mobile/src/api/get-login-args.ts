@@ -1,14 +1,10 @@
 import { createURL } from "expo-linking";
-import { assertEnvVariables } from "~/utils/assert";
-
-const { NEXT_AUTH_URI } = assertEnvVariables({
-  NEXT_AUTH_URI: process.env.NEXT_AUTH_URI,
-});
-
-const nextRedirectUri = NEXT_AUTH_URI + "/api/auth/mobile-redirect";
+import { getEnvVar } from "~/stores/environment-store";
 
 export function getLoginArgs() {
-  const signInUrl = `${NEXT_AUTH_URI}/api/auth/signin`;
+  const nextRedirectUri = getEnvVar("NEXT_AUTH_URI") + "/api/auth/mobile-redirect";
+
+  const signInUrl = `${getEnvVar("NEXT_AUTH_URI")}/api/auth/signin`;
   const loginUrl = `${signInUrl}?callbackUrl=${encodeURIComponent(nextRedirectUri)}`;
   const expectedRedirectUrl = createURL("/callback");
   return { loginUrl, expectedRedirectUrl };

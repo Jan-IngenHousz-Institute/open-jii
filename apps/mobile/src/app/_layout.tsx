@@ -6,9 +6,9 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Toaster } from "sonner-native";
 import { ConfiguredQueryClientProvider } from "~/components/configured-query-client-provider";
 import { ThemeProvider } from "~/context/ThemeContext";
-import { ToastProvider } from "~/context/toast-context";
 import { useTheme } from "~/hooks/use-theme";
 
 function RootLayoutNav() {
@@ -88,14 +88,13 @@ function RootLayoutContent() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ToastProvider>
-        <ConfiguredQueryClientProvider>
-          <SafeAreaProvider>
-            <StatusBar style={theme.isDark ? "light" : "dark"} />
-            <RootLayoutNav />
-          </SafeAreaProvider>
-        </ConfiguredQueryClientProvider>
-      </ToastProvider>
+      <ConfiguredQueryClientProvider>
+        <SafeAreaProvider>
+          <StatusBar style={theme.isDark ? "light" : "dark"} />
+          <RootLayoutNav />
+          <Toaster />
+        </SafeAreaProvider>
+      </ConfiguredQueryClientProvider>
     </GestureHandlerRootView>
   );
 }

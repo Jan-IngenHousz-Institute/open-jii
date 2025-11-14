@@ -24,7 +24,7 @@ export class Emitter<Events extends Record<string, any>> {
 
     const promises: Promise<void>[] = [];
 
-    for (const handler of listeners) {
+    for (const handler of listeners as any) {
       try {
         const result = (handler as Handler<Events[K]>)(payload);
         if (result instanceof Promise) {

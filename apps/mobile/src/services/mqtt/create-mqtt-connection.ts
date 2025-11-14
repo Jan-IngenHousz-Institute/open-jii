@@ -6,7 +6,7 @@ import {
 import { HmacSHA256, SHA256, enc, lib } from "crypto-js";
 import { Client, Message, MQTTError } from "paho-mqtt";
 import "react-native-get-random-values";
-import { assertEnvVariables } from "~/utils/assert";
+import { getEnvVar } from "~/stores/environment-store";
 import { Emitter } from "~/utils/emitter";
 import { generateRandomString } from "~/utils/generate-random-string";
 
@@ -130,15 +130,6 @@ function connectToMqtt(url: string, clientId: string) {
   });
 }
 
-const { CLIENT_ID, REGION, IOT_ENDPOINT, IDENTITY_POOL_ID } = assertEnvVariables({
-  REGION: process.env.REGION,
-  IDENTITY_POOL_ID: process.env.IDENTITY_POOL_ID,
-  IOT_ENDPOINT: process.env.IOT_ENDPOINT,
-  CLIENT_ID: process.env.CLIENT_ID,
-});
-
-const clientId = CLIENT_ID + " - " + generateRandomString();
-
 export interface ReceivedMessage {
   payload: string;
   destinationName: string;
@@ -154,17 +145,19 @@ export interface MqttEmitterEvents {
 
 export async function createMqttConnection() {
   const { accessKeyId, secretAccessKey, sessionToken } = await getCredentials({
-    identityPoolId: IDENTITY_POOL_ID,
-    region: REGION,
+    identityPoolId: getEnvVar("IDENTITY_POOL_ID"),
+    region: getEnvVar("REGION"),
   });
+
+  const clientId = getEnvVar("CLIENT_ID") + " - " + generateRandomString();
 
   const signedUrl = createSignedUrl({
     clientId,
     accessKeyId,
     secretAccessKey,
     sessionToken,
-    region: REGION,
-    endpoint: IOT_ENDPOINT,
+    region: getEnvVar("REGION"),
+    endpoint: getEnvVar("IOT_ENDPOINT"),
   });
 
   const client = await connectToMqtt(signedUrl, clientId);

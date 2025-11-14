@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAsyncCallback } from "react-async-hook";
-import { useToast } from "~/context/toast-context";
+import { toast } from "sonner-native";
 import {
   getFailedUploadsWithKeys,
   removeFailedUpload,
@@ -11,7 +11,6 @@ import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
 
 export function useFailedUploads() {
   const queryClient = useQueryClient();
-  const { showToast } = useToast();
 
   const { data: uploads = [] } = useQuery({
     queryKey: ["failedUploads"],
@@ -48,7 +47,7 @@ export function useFailedUploads() {
       await removeFailedUpload(key);
     } catch (error) {
       console.warn(`Failed to upload item with key ${key}:`, error);
-      showToast("Failed to upload, try again later", "info");
+      toast.info("Failed to upload, try again later");
     }
 
     await queryClient.invalidateQueries({ queryKey: ["failedUploads"] });

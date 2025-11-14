@@ -1,6 +1,5 @@
-import { promiseWithTimeout } from "~/utils/promise-with-timeout";
+import type { Emitter } from "~/utils/emitter";
 
-import type { Emitter } from "../../utils/emitter";
 import type { MultispeqStreamEvents } from "./multispeq-stream-events";
 
 export interface IMultispeqCommandExecutor {
@@ -8,23 +7,19 @@ export interface IMultispeqCommandExecutor {
   destroy(): Promise<void>;
 }
 
-const seconds = 1000;
-
 export class MultispeqCommandExecutor implements IMultispeqCommandExecutor {
   constructor(private readonly emitter: Emitter<MultispeqStreamEvents>) {}
 
   async execute(command: string | object) {
     await this.emitter.emit("sendCommandToDevice", command);
 
-    const executePromise = new Promise<object | string>((resolve) => {
+    return new Promise<object | string>((resolve) => {
       const handler = (payload: { data: object | string; checksum: string }) => {
         resolve(payload.data);
         this.emitter.off("receivedReplyFromDevice", handler);
       };
       this.emitter.on("receivedReplyFromDevice", handler);
     });
-
-    return promiseWithTimeout(executePromise, 120 * seconds);
   }
 
   destroy() {

@@ -4,7 +4,7 @@ import { useTheme } from "~/hooks/use-theme";
 
 interface CardProps {
   children: ReactNode;
-  style?: ViewStyle;
+  style?: ViewStyle | ViewStyle[];
 }
 
 export function Card({ children, style }: CardProps) {

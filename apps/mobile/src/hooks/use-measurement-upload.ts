@@ -1,30 +1,93 @@
 import { useAsyncCallback } from "react-async-hook";
-import { useToast } from "~/context/toast-context";
+import { toast } from "sonner-native";
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
+import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
 
-export function useMeasurementUpload({ experimentName, experimentId, protocolName }) {
-  const { showToast } = useToast();
+interface PrepareMeasurementArgs {
+  rawMeasurement: any;
+  userId: string;
+  macroFilename: string;
+  timestamp: string;
+  questions: AnswerData[];
+}
+
+function prepareMeasurementForUpload({
+  rawMeasurement,
+  userId,
+  macroFilename,
+  timestamp,
+  questions,
+}: PrepareMeasurementArgs) {
+  if ("sample" in rawMeasurement && rawMeasurement.sample) {
+    const samples = Array.isArray(rawMeasurement.sample)
+      ? rawMeasurement.sample
+      : [rawMeasurement.sample];
+
+    for (const sample of samples) {
+      sample.macros = macroFilename ? [macroFilename] : [];
+    }
+  }
+
+  return {
+    questions,
+    timestamp,
+    userId,
+    ...rawMeasurement,
+  };
+}
+
+export function useMeasurementUpload() {
   const { saveFailedUpload } = useFailedUploads();
 
   const { loading: isUploading, execute: uploadMeasurement } = useAsyncCallback(
-    async (measurementResult: any) => {
-      if (typeof measurementResult !== "object") return;
-      const topic = getMultispeqMqttTopic({ experimentId, protocolName });
+    async ({
+      rawMeasurement,
+      timestamp,
+      experimentName,
+      experimentId,
+      protocolId,
+      userId,
+      macroFilename,
+      questions,
+    }: {
+      rawMeasurement: any;
+      timestamp: string;
+      experimentName: string;
+      experimentId: string;
+      protocolId: string;
+      userId: string;
+      macroFilename: string;
+      questions: AnswerData[];
+    }) => {
+      if (typeof rawMeasurement !== "object") {
+        return;
+      }
+
+      const measurementData = prepareMeasurementForUpload({
+        rawMeasurement,
+        userId,
+        macroFilename,
+        timestamp,
+        questions,
+      });
+
+      const topic = getMultispeqMqttTopic({ experimentId, protocolId });
+
       try {
-        await sendMqttEvent(topic, measurementResult);
-        showToast("Measurement uploaded!", "success");
+        await sendMqttEvent(topic, measurementData);
+        toast.success("Measurement uploaded!");
       } catch (e: any) {
         console.log("Upload failed", e);
-        showToast("Upload not available, upload it later from Home screen", "error");
+        toast.error("Upload not available, upload it later from Home screen");
         await saveFailedUpload({
           topic,
-          measurementResult,
+          measurementResult: measurementData,
           metadata: {
             experimentName,
-            protocolName,
-            timestamp: measurementResult.timestamp,
+            protocolName: protocolId,
+            timestamp: measurementData.timestamp,
           },
         });
       }

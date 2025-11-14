@@ -1,6 +1,6 @@
 # 📸 PhotosynQ
 
-PhotosynQ is a mobile application developed using [Expo](https://expo.dev/), enabling fast development and deployment for both Android and iOS platforms. This guide will help you get started with running and building the app locally.
+openJII is a mobile application developed using [Expo](https://expo.dev/), enabling fast development and deployment for both Android and iOS platforms. This guide will help you get started with running and building the app locally.
 
 ---
 
@@ -69,7 +69,7 @@ This uses the `preview` profile in your `eas.json` and creates a local build.
 ## 📂 Project Structure
 
 ```
-photosynq/
+mobile/
 ├── index.ts
 ├── package.json
 ├── app/

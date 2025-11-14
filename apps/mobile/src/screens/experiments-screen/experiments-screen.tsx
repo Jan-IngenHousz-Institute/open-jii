@@ -1,46 +1,46 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, FlatList, RefreshControl } from "react-native";
+import { RefreshCw } from "lucide-react-native";
+import React from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from "react-native";
 import { Dropdown } from "~/components/Dropdown";
-import { useExperimentsData } from "~/hooks/use-experiments-data";
-import { useExperimentsDropdownOptions } from "~/hooks/use-experiments-dropdown-options";
+import { useExperimentMeasurements } from "~/hooks/use-experiment-measurements";
+import { useExperiments } from "~/hooks/use-experiments";
 import { useTheme } from "~/hooks/use-theme";
-import { formatShortDate } from "~/utils/format-short-date";
-import { MeasurementRecord } from "~/utils/map-rows-to-measurements";
+import { useExperimentSelectionStore } from "~/stores/use-experiment-selection-store";
+import { parseExperimentData } from "~/utils/parse-experiment-data";
+
+import { ExperimentTables } from "./components";
 
 export function ExperimentsScreen() {
   const theme = useTheme();
   const { colors } = theme;
+  const rotateValue = React.useRef(new Animated.Value(0)).current;
 
-  const [selectedExperimentId, setSelectedExperimentId] = useState<string>();
+  const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
 
-  const { measurements, isFetching, refetch } = useExperimentsData(
-    selectedExperimentId,
-    "bronze_data_exp",
-  );
+  const { data, isFetching, refetch } = useExperimentMeasurements(selectedExperimentId);
+  const { experiments } = useExperiments();
 
-  const { options } = useExperimentsDropdownOptions();
+  const parsedTables = data?.body ? parseExperimentData(data.body) : [];
 
-  const renderTableHeader = () => (
-    <View style={styles.tableRow}>
-      <Text style={[styles.headerCell, styles.flex2]}>Type</Text>
-      <Text style={[styles.headerCell, styles.flex3]}>Protocol</Text>
-      <Text style={[styles.headerCell, styles.flex3]}>Timestamp</Text>
-    </View>
-  );
+  React.useEffect(() => {
+    if (isFetching) {
+      const rotation = Animated.loop(
+        Animated.timing(rotateValue, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      );
+      rotation.start();
+      return () => rotation.stop();
+    } else {
+      rotateValue.setValue(0);
+    }
+  }, [isFetching, rotateValue]);
 
-  const renderTableRow = ({ item }: { item: MeasurementRecord }) => (
-    <View style={styles.tableRow}>
-      <Text style={[styles.cell, styles.flex2]} numberOfLines={1} ellipsizeMode="tail">
-        {item.measurement_type}
-      </Text>
-      <Text style={[styles.cell, styles.flex3]} numberOfLines={1} ellipsizeMode="tail">
-        {item.plant_name}
-      </Text>
-      <Text style={[styles.cell, styles.flex3]} numberOfLines={1} ellipsizeMode="tail">
-        {formatShortDate(item.timestamp)}
-      </Text>
-    </View>
-  );
+  const handleRefresh = () => {
+    refetch();
+  };
 
   return (
     <View
@@ -51,57 +51,52 @@ export function ExperimentsScreen() {
         },
       ]}
     >
-      <View style={styles.dropdownContainer}>
-        <Dropdown
-          options={options}
-          selectedValue={selectedExperimentId ?? undefined}
-          onSelect={(experimentId) => setSelectedExperimentId(experimentId)}
-          placeholder="Choose an experiment"
-        />
+      <View style={styles.headerContainer}>
+        <View style={styles.dropdownContainer}>
+          <Dropdown
+            options={experiments}
+            selectedValue={selectedExperimentId ?? undefined}
+            onSelect={(experimentId) => setSelectedExperimentId(experimentId)}
+            placeholder="Choose an experiment"
+          />
+        </View>
+
+        {selectedExperimentId && (
+          <TouchableOpacity
+            style={[
+              styles.refreshButton,
+              {
+                backgroundColor: theme.isDark ? colors.dark.surface : colors.light.surface,
+                borderColor: theme.isDark ? colors.dark.border : colors.light.border,
+              },
+            ]}
+            onPress={handleRefresh}
+            disabled={isFetching}
+          >
+            <Animated.View
+              style={{
+                transform: [
+                  {
+                    rotate: rotateValue.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ["0deg", "360deg"],
+                    }),
+                  },
+                ],
+              }}
+            >
+              <RefreshCw
+                size={20}
+                color={theme.isDark ? colors.dark.onSurface : colors.light.onSurface}
+              />
+            </Animated.View>
+          </TouchableOpacity>
+        )}
       </View>
 
       {selectedExperimentId ? (
         <View style={styles.measurementsContainer}>
-          <Text
-            style={[
-              styles.sectionTitle,
-              {
-                color: theme.isDark ? colors.dark.onSurface : colors.light.onSurface,
-              },
-            ]}
-          >
-            Measurements
-          </Text>
-
-          <FlatList
-            data={measurements}
-            keyExtractor={(item) => item.id}
-            ListHeaderComponent={renderTableHeader}
-            renderItem={renderTableRow}
-            contentContainerStyle={styles.measurementsList}
-            refreshControl={
-              <RefreshControl
-                refreshing={isFetching}
-                onRefresh={refetch}
-                tintColor={colors.primary.dark}
-                colors={[colors.primary.dark]}
-              />
-            }
-            ListEmptyComponent={
-              isFetching ? null : (
-                <Text
-                  style={[
-                    styles.emptyText,
-                    {
-                      color: theme.isDark ? colors.dark.inactive : colors.light.inactive,
-                    },
-                  ]}
-                >
-                  No measurements found for this experiment
-                </Text>
-              )
-            }
-          />
+          <ExperimentTables tables={parsedTables} isLoading={isFetching} />
         </View>
       ) : (
         <View style={styles.placeholderContainer}>
@@ -113,7 +108,7 @@ export function ExperimentsScreen() {
               },
             ]}
           >
-            Select an experiment to view measurements
+            Select an experiment to view data
           </Text>
         </View>
       )}
@@ -126,19 +121,30 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
-  dropdownContainer: {
+  headerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 24,
+    gap: 12,
+  },
+  dropdownContainer: {
+    flex: 1,
+  },
+  refreshButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   measurementsContainer: {
     flex: 1,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 16,
-  },
-  measurementsList: {
-    flexGrow: 1,
   },
   placeholderContainer: {
     flex: 1,
@@ -148,29 +154,5 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: 16,
     textAlign: "center",
-  },
-  emptyText: {
-    textAlign: "center",
-    padding: 24,
-  },
-  tableRow: {
-    flexDirection: "row",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderColor: "#ccc",
-  },
-  headerCell: {
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  cell: {
-    fontSize: 13,
-    overflow: "hidden",
-  },
-  flex2: {
-    flex: 2,
-  },
-  flex3: {
-    flex: 3,
   },
 });

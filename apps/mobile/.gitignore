@@ -40,3 +40,5 @@ android
 ios
 .cache
 *.aab
+src/env.ts
+.cursorrules
