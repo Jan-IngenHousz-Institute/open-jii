@@ -175,23 +175,12 @@ def check_ambyte_volume_exists():
     Check if the ambyte volume directory exists by trying to read from it.
     Returns True if the volume and processed-ambyte directory exist and contain data.
     """
-    processed_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/processed-ambyte"
+    processed_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/processed-ambyte"
     
     try:
-        # Try to create a streaming read on the path - this will fail if path doesn't exist
-        # Use cloudFiles format which is what we'll use in the actual table
-        test_stream = (
-            spark.readStream
-            .format("cloudFiles")
-            .option("cloudFiles.format", "parquet")
-            .option("cloudFiles.maxFilesPerTrigger", "1")
-            .load(processed_path)
-        )
-        
-        # If we can create the stream definition without error, the path exists
-        # We don't need to actually start the stream, just validate the path
-        print(f"Ambyte volume found: {processed_path}")
-        return True
+        files = dbutils.fs.ls(path)
+        # Check if there are any files or subdirectories
+        return len(files) > 0
         
     except Exception as e:
         print(f"Ambyte volume not available: {processed_path} - {str(e)}")
@@ -219,10 +208,10 @@ def raw_ambyte_data():
     The ambyte_processing_task must be run first to generate the parquet files.
     """
     # Path to processed parquet files
-    processed_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/processed-ambyte"
+    processed_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/processed-ambyte"
     
     # Path for schema metadata (persistent location in volumes)
-    schema_location = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/_schemas/ambyte_schema"
+    schema_location = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/_schemas/ambyte_schema"
     
     # Read all parquet files recursively using cloudFiles for auto loader (streaming)
     # This will automatically detect new files as they are added
