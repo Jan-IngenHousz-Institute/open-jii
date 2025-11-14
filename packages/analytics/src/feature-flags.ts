@@ -15,5 +15,5 @@ export type FeatureFlagKey = (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS];
  */
 export const FEATURE_FLAG_DEFAULTS: Record<FeatureFlagKey, boolean> = {
   [FEATURE_FLAGS.MULTI_LANGUAGE]: false, // Default to single language
-  [FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING]: false, // Default to strict validation (block on errors)
+  [FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING]: true, // Default to warnings enabled
 };
