@@ -10,7 +10,6 @@ from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType, MapType, ArrayType, IntegerType
 from delta.tables import DeltaTable
-from pyspark import pipelines as dp
 import requests
 
 # COMMAND ----------
@@ -39,7 +38,6 @@ sensor_schema = StructType([
 # COMMAND ----------
 
 # DBTITLE 1,Configuration
-ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
 
 BRONZE_TABLE = spark.conf.get("BRONZE_TABLE", "raw_data")
 SILVER_TABLE = spark.conf.get("SILVER_TABLE", "clean_data")
@@ -50,6 +48,7 @@ CHECKPOINT_PATH = spark.conf.get("CHECKPOINT_PATH")
 SERVICE_CREDENTIAL_NAME = spark.conf.get("SERVICE_CREDENTIAL_NAME")
 
 # Slack notification configuration
+ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
 MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
 
 # COMMAND ----------
