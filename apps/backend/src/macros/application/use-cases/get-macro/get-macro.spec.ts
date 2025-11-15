@@ -1,6 +1,5 @@
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import type { CreateMacroDto } from "../../../../macros/core/models/macro.model";
-import { deriveFilenameFromName } from "../../../../macros/core/models/macro.model";
 import { TestHarness } from "../../../../test/test-harness";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 import { GetMacroUseCase } from "./get-macro";
@@ -54,7 +53,7 @@ describe("GetMacroUseCase", () => {
     expect(result.value).toMatchObject({
       id: createdMacro.id,
       name: macroData.name,
-      filename: deriveFilenameFromName(macroData.name),
+      filename: createdMacro.filename,
       description: macroData.description,
       language: macroData.language,
       createdBy: testUserId,
