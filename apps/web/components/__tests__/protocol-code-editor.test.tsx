@@ -53,7 +53,7 @@ describe("ProtocolCodeEditor", () => {
     // 1. Complex mocks that duplicate component logic
     // 2. Full integration tests with Monaco loaded
     // 3. E2E tests with a real browser environment
-    // 
+    //
     // Current coverage focuses on:
     // - Component rendering and props handling
     // - Display of labels, stats, and error messages

@@ -162,7 +162,7 @@ describe("NewProtocolForm", () => {
     const codeEditor = screen.getByTestId("code-editor");
     // Use fireEvent for JSON strings with curly braces
     fireEvent.input(codeEditor, { target: { value: JSON.stringify([{ averages: 1 }]) } });
-    
+
     // Wait for form validation to complete
     await waitFor(() => {
       const submitButton = screen.getByRole("button", { name: /finalizeSetup/i });
@@ -184,7 +184,7 @@ describe("NewProtocolForm", () => {
     const { useProtocolCreate } = await import(
       "@/hooks/protocol/useProtocolCreate/useProtocolCreate"
     );
-    
+
     const mockMutate = vi.fn((_data) => {
       const onSuccess = vi.mocked(useProtocolCreate).mock.calls[0]?.[0]?.onSuccess;
       if (onSuccess) {
@@ -201,10 +201,10 @@ describe("NewProtocolForm", () => {
 
     const nameInput = screen.getByTestId("name-input");
     await userEvent.type(nameInput, "Test Protocol");
-    
+
     const codeEditor = screen.getByTestId("code-editor");
     fireEvent.input(codeEditor, { target: { value: JSON.stringify([{ averages: 1 }]) } });
-    
+
     // Wait for form validation
     await waitFor(() => {
       const submitButton = screen.getByRole("button", { name: /finalizeSetup/i });
