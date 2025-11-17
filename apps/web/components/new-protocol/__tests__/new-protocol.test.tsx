@@ -250,7 +250,7 @@ describe("NewProtocolForm", () => {
     expect(screen.getByText("newProtocol.codeDescription")).toBeInTheDocument();
   });
 
-  it("should handle code editor changes", async () => {
+  it("should handle code editor changes", () => {
     render(<NewProtocolForm />);
 
     const codeEditor = screen.getByTestId("code-editor");
@@ -262,7 +262,7 @@ describe("NewProtocolForm", () => {
     expect(codeEditor).toHaveValue(newCode);
   });
 
-  it("should validate code changes", async () => {
+  it("should validate code changes", () => {
     render(<NewProtocolForm />);
 
     const codeEditor = screen.getByTestId("code-editor");
