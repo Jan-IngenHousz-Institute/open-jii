@@ -198,7 +198,7 @@ describe("ProtocolDetailsCard", () => {
     expect(descriptionInput).toHaveValue("New description");
   });
 
-  it("should update code field", async () => {
+  it("should update code field", () => {
     render(<ProtocolDetailsCard {...defaultProps} />);
 
     const codeEditor = screen.getByTestId("code-editor");
