@@ -60,7 +60,6 @@ MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
 spark = SparkSession.builder.getOrCreate()
 
 
-
 print(f"Processing experiment: {EXPERIMENT_ID}")
 print(f"Using experiment schema: {EXPERIMENT_SCHEMA}")
 print(f"Reading from central schema: {CENTRAL_SCHEMA}.{CENTRAL_SILVER_TABLE}")

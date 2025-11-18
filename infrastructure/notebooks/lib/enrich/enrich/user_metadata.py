@@ -84,4 +84,3 @@ def add_user_data_column(df, environment: str):
     result_df = df.withColumn("user_name", get_user_name(F.col("user_id")))
     
     return result_df
-
