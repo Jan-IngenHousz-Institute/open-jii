@@ -107,6 +107,7 @@ describe("GetExperimentDataUseCase", () => {
             catalog_name: MOCK_CATALOG_NAME,
             schema_name: `exp_${cleanName}_${experiment.id}`,
             properties: {
+              display_name: "Sensor Measurements",
               downstream: "false",
             },
           },
@@ -282,6 +283,7 @@ describe("GetExperimentDataUseCase", () => {
             catalog_name: MOCK_CATALOG_NAME,
             schema_name: `exp_test_experiment_${experiment.id}`,
             properties: {
+              display_name: "Test Table Data",
               downstream: "false",
             },
           },
