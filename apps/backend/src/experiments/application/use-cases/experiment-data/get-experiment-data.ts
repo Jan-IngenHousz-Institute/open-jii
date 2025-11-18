@@ -9,20 +9,8 @@ import { ExperimentDto } from "../../../core/models/experiment.model";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-
-/**
- * Data structure based on DataBricks
- */
-export interface SchemaDataDto {
-  columns: {
-    name: string;
-    type_name: string;
-    type_text: string;
-  }[];
-  rows: Record<string, string | null>[];
-  totalRows: number;
-  truncated: boolean;
-}
+import type { SchemaDataDto } from "../../services/data-enrichment/data-enrichment.service";
+import { UserEnrichmentService } from "../../services/data-enrichment/user-metadata/user-enrichment.service";
 
 /**
  * Single table data structure that forms our array response
@@ -50,6 +38,7 @@ export class GetExperimentDataUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+    private readonly userEnrichmentService: UserEnrichmentService,
   ) {}
 
   async execute(
@@ -228,7 +217,7 @@ export class GetExperimentDataUseCase {
         name: tableName,
         catalog_name: experiment.name,
         schema_name: schemaName,
-        data: this.transformSchemaData(dataResult.value),
+        data: await this.transformSchemaData(dataResult.value),
         page: 1,
         pageSize: totalRows,
         totalRows,
@@ -303,7 +292,7 @@ export class GetExperimentDataUseCase {
         name: tableName,
         catalog_name: experiment.name,
         schema_name: schemaName,
-        data: this.transformSchemaData(dataResult.value),
+        data: await this.transformSchemaData(dataResult.value),
         page,
         pageSize,
         totalRows,
@@ -329,10 +318,15 @@ export class GetExperimentDataUseCase {
       return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
     }
 
-    // Make sure 'device' table is last
+    // Filter tables to only include those with downstream: "false" (final/enriched tables for user consumption)
+    const finalTables = tablesResult.value.tables.filter(
+      (table) => table.properties?.downstream === "false",
+    );
+
+    // Make sure 'device' table is last if it exists and is marked as final
     const tables: Table[] = [];
     let deviceTable: Table | undefined;
-    for (const table of tablesResult.value.tables) {
+    for (const table of finalTables) {
       if (table.name === "device") deviceTable = table;
       else tables.push(table);
     }
@@ -369,7 +363,7 @@ export class GetExperimentDataUseCase {
       };
 
       if (dataResult.isSuccess()) {
-        tableInfo.data = this.transformSchemaData(dataResult.value);
+        tableInfo.data = await this.transformSchemaData(dataResult.value);
       } else {
         this.logger.warn(
           `Failed to get sample data for table ${table.name}: ${dataResult.error.message}`,
@@ -383,7 +377,7 @@ export class GetExperimentDataUseCase {
   }
 
   /**
-   * Validate that a table exists in the experiment
+   * Validate that a table exists in the experiment and is accessible (downstream: "false")
    */
   private async validateTableExists(
     tableName: string,
@@ -396,30 +390,49 @@ export class GetExperimentDataUseCase {
       return failure(AppError.internal(`Failed to list tables: ${tablesResult.error.message}`));
     }
 
-    const tableExists = tablesResult.value.tables.some((table: Table) => table.name === tableName);
+    const table = tablesResult.value.tables.find((table: Table) => table.name === tableName);
 
-    if (!tableExists) {
+    if (!table) {
       this.logger.warn(`Table ${tableName} not found in experiment ${experimentId}`);
       return failure(AppError.notFound(`Table '${tableName}' not found in this experiment`));
+    }
+
+    // Check if table is marked as accessible to users (downstream: "false")
+    if (table.properties?.downstream !== "false") {
+      this.logger.warn(
+        `Table ${tableName} in experiment ${experimentId} is not accessible (intermediate processing table)`,
+      );
+      return failure(
+        AppError.forbidden(
+          `Table '${tableName}' is not accessible. Only final processed tables are available.`,
+        ),
+      );
     }
 
     return success(true);
   }
 
-  private transformSchemaData(schemaData: SchemaData) {
-    const result: SchemaDataDto = {
+  /**
+   * Transform schema data using enrichment services
+   */
+  private async transformSchemaData(schemaData: SchemaData): Promise<SchemaDataDto> {
+    // Check if user enrichment can be applied
+    if (this.userEnrichmentService.canEnrich(schemaData)) {
+      return await this.userEnrichmentService.enrichData(schemaData);
+    }
+
+    // If no enrichment services apply, convert to DTO format
+    return {
       columns: schemaData.columns,
-      rows: [],
+      rows: schemaData.rows.map((row) => {
+        const dataRow: Record<string, string | null> = {};
+        row.forEach((value, index) => {
+          dataRow[schemaData.columns[index].name] = value;
+        });
+        return dataRow;
+      }),
       totalRows: schemaData.totalRows,
       truncated: schemaData.truncated,
     };
-    schemaData.rows.forEach((row) => {
-      const dataRow: Record<string, string | null> = {};
-      row.forEach((dataColumn, index) => {
-        dataRow[schemaData.columns[index].name] = dataColumn;
-      });
-      result.rows.push(dataRow);
-    });
-    return result;
   }
 }

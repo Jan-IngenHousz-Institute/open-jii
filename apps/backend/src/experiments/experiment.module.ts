@@ -7,7 +7,9 @@ import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapt
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
 import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { EmailModule } from "../common/modules/email/services/email.module";
+import { UserModule } from "../users/user.module";
 // Services
+import { UserEnrichmentService } from "./application/services/data-enrichment/user-metadata/user-enrichment.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
 // Use Cases
 import { CreateExperimentUseCase } from "./application/use-cases/create-experiment/create-experiment";
@@ -62,7 +64,7 @@ import { ExperimentWebhookController } from "./presentation/experiment-webhook.c
 import { ExperimentController } from "./presentation/experiment.controller";
 
 @Module({
-  imports: [DatabricksModule, AwsModule, EmailModule],
+  imports: [DatabricksModule, AwsModule, EmailModule, UserModule],
   controllers: [
     ExperimentController,
     ExperimentDataController,
@@ -98,6 +100,7 @@ import { ExperimentController } from "./presentation/experiment.controller";
 
     // Services
     EmbargoProcessorService,
+    UserEnrichmentService,
 
     // General experiment use cases
     CreateExperimentUseCase,

@@ -115,6 +115,19 @@ vi.mock("@repo/ui/components", () => ({
       {children}
     </button>
   ),
+  Avatar: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="avatar" className={className}>
+      {children}
+    </div>
+  ),
+  AvatarImage: ({ src: _src, alt }: { src?: string; alt?: string }) => (
+    <div data-testid="avatar-image" aria-label={alt} />
+  ),
+  AvatarFallback: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="avatar-fallback" className={className}>
+      {children}
+    </div>
+  ),
 }));
 
 // Mock experiment data table components
@@ -191,6 +204,24 @@ describe("experiment-data-utils", () => {
     it("should format TIMESTAMP values by truncating and replacing T", () => {
       const result = formatValue("2023-01-01T10:30:45.123Z", "TIMESTAMP");
       expect(result).toBe("2023-01-01 10:30:45");
+    });
+
+    it("should render ExperimentDataTableUserCell for USER type", () => {
+      const userData = JSON.stringify({
+        id: "user-123",
+        name: "John Doe",
+        image: "https://example.com/avatar.jpg",
+      });
+      const result = formatValue(userData, "USER", "test-column");
+
+      // The result should be a React element (ExperimentDataTableUserCell)
+      expect(React.isValidElement(result)).toBe(true);
+
+      // Render it to check the component
+      render(<div>{result}</div>);
+      expect(screen.getByText("John Doe")).toBeInTheDocument();
+      // Avatar initials should be shown as fallback in test environment
+      expect(screen.getByText("JD")).toBeInTheDocument();
     });
 
     it("should return string values as-is for other types", () => {
