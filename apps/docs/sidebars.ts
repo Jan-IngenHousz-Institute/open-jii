@@ -49,6 +49,7 @@ const sidebars: SidebarsConfig = {
       id: "introduction/glossary-terminology",
       label: "Glossary & Terminology",
     },
+    /*
     {
       type: "html",
       value: `
@@ -80,8 +81,8 @@ const sidebars: SidebarsConfig = {
         "getting-started/hardware-device-linking/device-registration-linking",
         "getting-started/hardware-device-linking/network-mqtt-configuration",
       ],
-    },
-
+    },*/
+    
     {
       type: "html",
       value: `
@@ -99,6 +100,21 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: "doc",
+      id: "data-platform/web-platform",
+      label: "Web platform",
+    },
+    {
+      type: "doc",
+      id: "data-platform/mobile-app",
+      label: "Mobile App",
+    },
+    {
+      type: "doc",
+      id: "data-platform/multispeq",
+      label: "Multispeq",
+    },
+    {
+      type: "doc",
       id: "data-platform/data-governance",
       label: "Data Governance",
     },
@@ -107,7 +123,7 @@ const sidebars: SidebarsConfig = {
       id: "data-platform/ingestion-architecture",
       label: "Ingestion Architecture",
     },
-    {
+    /*{
       type: "category",
       label: "Usage",
       link: { type: "generated-index" },
@@ -170,7 +186,7 @@ const sidebars: SidebarsConfig = {
       `,
       defaultStyle: false,
     },
-    {
+    /*{
       type: "category",
       label: "Sensor Calibration & Measurement",
       link: { type: "generated-index" },
@@ -189,7 +205,7 @@ const sidebars: SidebarsConfig = {
         "methodology-analysis/data-analysis/analytical-tools",
         "methodology-analysis/data-analysis/statistical-models",
       ],
-    },
+    },*/
     {
       type: "html",
       value: `
@@ -312,7 +328,7 @@ const sidebars: SidebarsConfig = {
       id: "faq-support/frequently-asked-questions",
       label: "Frequently Asked Questions",
     },
-    {
+    /*{
       type: "category",
       label: "Support Channels",
       link: { type: "generated-index" },
@@ -321,7 +337,7 @@ const sidebars: SidebarsConfig = {
         "faq-support/support-channels/email-ticket-support",
         "faq-support/support-channels/live-chat-social-media",
       ],
-    },
+    }, */
   ],
 };
 

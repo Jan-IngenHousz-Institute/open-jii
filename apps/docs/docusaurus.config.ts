@@ -5,7 +5,7 @@ import { themes as prismThemes } from "prism-react-renderer";
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: "OpenJII",
+  title: "openJII",
   tagline: "Documentation Hub",
   favicon: "img/favicon.ico",
 
@@ -57,7 +57,7 @@ const config: Config = {
     // Replace with your project's social card
     image: "img/logo.png",
     navbar: {
-      title: "OpenJII Documentation Hub",
+      title: "openJII Docs",
       logo: {
         alt: "JII Logo",
         src: "img/logo.png",
@@ -161,7 +161,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} OpenJII - OpenJII Documentation Hub - Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} openJII - openJII Documentation Hub - Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,
