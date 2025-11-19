@@ -639,6 +639,7 @@ module "ses" {
 
   allowed_from_addresses = [
     "auth@mail.${var.domain_name}",
+    "notifications@mail.${var.domain_name}",
   ]
 
   create_smtp_user            = true
@@ -663,8 +664,10 @@ module "ses_secrets" {
 
   # Store SES SMTP credentials as JSON
   secret_string = jsonencode({
-    AUTH_EMAIL_SERVER = module.ses.auth_email_server
-    AUTH_EMAIL_FROM   = "auth@mail.${var.domain_name}"
+    AUTH_EMAIL_SERVER    = module.ses.auth_email_server
+    AUTH_EMAIL_FROM      = "auth@mail.${var.domain_name}"
+    BACKEND_EMAIL_SERVER = module.ses.auth_email_server
+    BACKEND_EMAIL_FROM   = "experiments@mail.${var.domain_name}"
   })
 
   tags = {
@@ -1029,6 +1032,14 @@ module "backend_ecs" {
       name      = "DB_CREDENTIALS"
       valueFrom = module.aurora_db.master_user_secret_arn
     },
+    {
+      name      = "EMAIL_SERVER"
+      valueFrom = "${module.ses_secrets.secret_arn}:BACKEND_EMAIL_SERVER::"
+    },
+    {
+      name      = "EMAIL_FROM"
+      valueFrom = "${module.ses_secrets.secret_arn}:BACKEND_EMAIL_FROM::"
+    },
   ]
 
   # Environment variables for the backend service
@@ -1072,6 +1083,10 @@ module "backend_ecs" {
     {
       name  = "AWS_LOCATION_PLACE_INDEX_NAME"
       value = module.location_service.place_index_name
+    },
+    {
+      name  = "EMAIL_BASE_URL"
+      value = "https://${module.route53.environment_domain}"
     },
     {
       name  = "AWS_REGION"

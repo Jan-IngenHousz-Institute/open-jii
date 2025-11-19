@@ -7,7 +7,6 @@ import databaseConfig from "./common/config/database.config";
 import databricksConfig from "./common/config/databricks.config";
 import emailConfig from "./common/config/email.config";
 import { DatabaseModule } from "./common/database/database.module";
-import { EmailModule } from "./common/modules/email/services/email.module";
 import { ExperimentModule } from "./experiments/experiment.module";
 import { HealthModule } from "./health/health.module";
 import { MacroModule } from "./macros/macro.module";
@@ -27,7 +26,6 @@ import { UserModule } from "./users/user.module";
     ProtocolModule,
     UserModule,
     HealthModule,
-    EmailModule,
   ],
 })
 export class AppModule {}

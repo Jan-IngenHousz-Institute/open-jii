@@ -19,9 +19,8 @@ describe("AddExperimentMembersUseCase", () => {
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(AddExperimentMembersUseCase);
 
-    // Mock email sending
-    emailPort = testApp.module.get(EMAIL_PORT);
-    vi.spyOn(emailPort, "sendAddedUserNotification").mockResolvedValue(success(undefined));
+    // Reset any mocks before each test
+    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -46,6 +45,10 @@ describe("AddExperimentMembersUseCase", () => {
     const member2Id = await testApp.createTestUser({
       email: "member2@example.com",
     });
+
+    // Mock email sending
+    emailPort = testApp.module.get(EMAIL_PORT);
+    vi.spyOn(emailPort, "sendAddedUserNotification").mockResolvedValue(success(undefined));
 
     // Add the members through the use case
     const result = await useCase.execute(

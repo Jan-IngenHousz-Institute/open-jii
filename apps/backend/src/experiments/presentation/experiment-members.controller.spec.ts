@@ -26,10 +26,6 @@ describe("ExperimentMembersController", () => {
 
     // Reset any mocks before each test
     vi.restoreAllMocks();
-
-    // Mock email sending
-    emailPort = testApp.module.get(EMAIL_PORT);
-    vi.spyOn(emailPort, "sendAddedUserNotification").mockResolvedValue(success(undefined));
   });
 
   afterEach(() => {
@@ -135,6 +131,10 @@ describe("ExperimentMembersController", () => {
       const newMemberId = await testApp.createTestUser({
         email: "new-member@example.com",
       });
+
+      // Mock email sending
+      emailPort = testApp.module.get(EMAIL_PORT);
+      vi.spyOn(emailPort, "sendAddedUserNotification").mockResolvedValue(success(undefined));
 
       // Construct the path
       const path = testApp.resolvePath(contract.experiments.addExperimentMembers.path, {

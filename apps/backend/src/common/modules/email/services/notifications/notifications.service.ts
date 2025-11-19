@@ -1,16 +1,12 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { render } from "@react-email/components";
-import { createTransport, SentMessageInfo } from "nodemailer";
+import { createTransport } from "nodemailer";
+import Mail from "nodemailer/lib/mailer";
 
 import { AddedUserNotification } from "@repo/transactional/emails/added-user-notification";
 
 import { apiErrorMapper, tryCatch } from "../../../../utils/fp-utils";
 import { EmailConfigService } from "../config/config.service";
-
-interface ExtendedSentMessageInfo extends SentMessageInfo {
-  rejected?: string[];
-  pending?: string[];
-}
 
 @Injectable()
 export class NotificationsService {
@@ -49,7 +45,7 @@ export class NotificationsService {
           },
         );
 
-        const result = transport.sendMail({
+        const result = await transport.sendMail({
           to: email,
           from: {
             name: "openJII",
@@ -60,17 +56,18 @@ export class NotificationsService {
           text: emailText,
         });
 
-        // Cast result to extended type to handle optional rejected/pending properties
-        const extendedResult = result as ExtendedSentMessageInfo;
-        const rejected: string[] = extendedResult.rejected ?? [];
-        const pending: string[] = extendedResult.pending ?? [];
-        const failed: string[] = rejected.concat(pending).filter(Boolean);
+        // Handle rejected and pending addresses
+        const rejected: (string | Mail.Address)[] = result.rejected;
+        const pending: (string | Mail.Address)[] = result.pending;
+        const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
+
+        const isAddress = (addr: string | Mail.Address): addr is Mail.Address => {
+          return typeof addr === "object" && "address" in addr;
+        };
 
         if (failed.length > 0) {
-          const failedAddresses = failed.map((failedAddress: string) =>
-            typeof failedAddress === "object" && "address" in failedAddress
-              ? (failedAddress as { address: string }).address
-              : failedAddress,
+          const failedAddresses = failed.map((failedAddress) =>
+            isAddress(failedAddress) ? failedAddress.address : failedAddress,
           );
           throw new Error(`Email (${failedAddresses.join(", ")}) could not be sent`);
         }

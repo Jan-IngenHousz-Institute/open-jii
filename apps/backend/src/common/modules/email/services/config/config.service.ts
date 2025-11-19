@@ -10,7 +10,6 @@ export class EmailConfigService {
 
   constructor(private readonly configService: ConfigService) {
     this.config = this.loadConfig();
-    this.logger.log("ConfigService", this.config);
     this.validateConfig();
   }
 
