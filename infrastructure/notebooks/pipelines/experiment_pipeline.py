@@ -28,7 +28,7 @@ from typing import Dict, Any, List
 from multispeq import execute_macro_script, get_available_macros, process_macro_output_for_spark, infer_macro_schema
 
 # Import our enrichment library  
-from enrich import add_user_data_column, create_backend_client_from_secrets
+from enrich import add_user_data_column
 
 # COMMAND ----------
 
@@ -59,8 +59,7 @@ MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
 
 spark = SparkSession.builder.getOrCreate()
 
-# Initialize backend client for user enrichment (resolve secrets once at pipeline level)
-BACKEND_CLIENT = create_backend_client_from_secrets(dbutils, ENVIRONMENT)
+
 
 print(f"Processing experiment: {EXPERIMENT_ID}")
 print(f"Using experiment schema: {EXPERIMENT_SCHEMA}")
@@ -192,7 +191,7 @@ def check_ambyte_volume_exists():
     processed_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/processed-ambyte"
     
     try:
-        files = dbutils.fs.ls(path)
+        files = dbutils.fs.ls(processed_path)
         # Check if there are any files or subdirectories
         return len(files) > 0
         
@@ -476,9 +475,9 @@ def enriched_macro_{macro_name}_table():
     # Read from the silver macro table (this creates the dependency)
     macro_df = dlt.read_stream("macro_{macro_name}")
     
-    # Add user metadata column using pre-initialized client
+    # Add user metadata column
     from enrich import add_user_data_column
-    enriched_df = add_user_data_column(macro_df, BACKEND_CLIENT)
+    enriched_df = add_user_data_column(macro_df, ENVIRONMENT)
     
     return enriched_df
 '''
@@ -531,8 +530,8 @@ def enriched_sample():
     # Read from the bronze sample table (this creates the dependency)
     sample_df = dlt.read_stream(SAMPLE_TABLE)
     
-    # Add user metadata column using pre-initialized client
-    enriched_df = add_user_data_column(sample_df, BACKEND_CLIENT)
+    # Add user metadata column
+    enriched_df = add_user_data_column(sample_df, ENVIRONMENT)
     
     return enriched_df
 

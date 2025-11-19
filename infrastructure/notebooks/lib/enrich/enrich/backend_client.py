@@ -201,31 +201,3 @@ class BackendClient:
         return user_metadata
 
 
-def create_backend_client_from_secrets(dbutils, environment: str, base_url: Optional[str] = None) -> BackendClient:
-    """
-    Create BackendClient using secrets from Databricks secret scope.
-    
-    Args:
-        dbutils: Databricks utilities object
-        environment: Environment name (dev, prod, etc.)
-        base_url: Optional base URL override
-        
-    Returns:
-        Configured BackendClient instance
-    """
-    from pyspark.sql import SparkSession
-    
-    scope = f"node-webhook-secret-scope-{environment}"
-    
-    # Get configuration from secrets and spark config
-    if base_url is None:
-        spark = SparkSession.builder.getOrCreate()
-        base_url = spark.conf.get("BACKEND_WEBHOOK_URL")
-    api_key_id = dbutils.secrets.get(scope=scope, key="webhook_api_key_id")
-    webhook_secret = dbutils.secrets.get(scope=scope, key="webhook_secret")
-    
-    return BackendClient(
-        base_url=base_url,
-        api_key_id=api_key_id,
-        webhook_secret=webhook_secret
-    )

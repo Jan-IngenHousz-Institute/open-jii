@@ -33,32 +33,32 @@ def _fetch_user_metadata(user_ids: List[str], backend_client: BackendClient) -> 
 
 
 
-def add_user_data_column(df, backend_client: BackendClient):
+def add_user_data_column(df, environment: str):
     """
     Add user metadata columns to DataFrame by calling backend API.
     
     Args:
         df: PySpark DataFrame with 'user_id' column containing user IDs
-        backend_client: Pre-configured BackendClient instance
+        environment: Environment name (dev, prod, etc.)
         
     Returns:
-        DataFrame with additional user columns: user_id, user_name (removes user column if present)
+        DataFrame with additional user columns: user_id, user_name
     """
     from .backend_client import BackendClient
     from pyspark.sql import functions as F
     from pyspark.sql.types import StringType
     
-    # Extract the configuration for serialization to worker nodes
-    base_url = backend_client.base_url
-    api_key_id = backend_client.api_key_id
-    webhook_secret = backend_client.webhook_secret
-    timeout = backend_client.timeout
+    # Get secrets on driver node to pass to workers (dbutils is globally available)
+    scope = f"node-webhook-secret-scope-{environment}"
+    base_url = dbutils.secrets.get(scope=scope, key="backend_url")  # type: ignore
+    api_key_id = dbutils.secrets.get(scope=scope, key="webhook_api_key_id")  # type: ignore
+    webhook_secret = dbutils.secrets.get(scope=scope, key="webhook_secret")  # type: ignore
     
     @F.pandas_udf(StringType())
     def get_user_name(user_ids: pd.Series) -> pd.Series:
         """Get full names for user IDs"""
-        # Recreate client on worker node using serialized config
-        worker_client = BackendClient(base_url, api_key_id, webhook_secret, timeout)
+        # Create client on worker node using passed secrets
+        worker_client = BackendClient(base_url, api_key_id, webhook_secret)
         
         unique_users = user_ids.dropna().unique().tolist()
         user_metadata = _fetch_user_metadata(unique_users, worker_client)
@@ -84,3 +84,4 @@ def add_user_data_column(df, backend_client: BackendClient):
     result_df = df.withColumn("user_name", get_user_name(F.col("user_id")))
     
     return result_df
+
