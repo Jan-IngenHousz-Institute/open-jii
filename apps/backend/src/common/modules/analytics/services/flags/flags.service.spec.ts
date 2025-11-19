@@ -1,9 +1,10 @@
 import { Logger } from "@nestjs/common";
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 
-import { AnalyticsService } from "./analytics.service";
+import type { AnalyticsConfigService } from "../config/config.service";
+import { FlagsService } from "./flags.service";
 
 // Mock the analytics/server module with inline functions
 vi.mock("@repo/analytics/server", () => ({
@@ -15,32 +16,33 @@ vi.mock("@repo/analytics/server", () => ({
   shutdownPostHog: vi.fn().mockResolvedValue(undefined),
 }));
 
-describe("AnalyticsService", () => {
-  let service: AnalyticsService;
-  let originalEnv: NodeJS.ProcessEnv;
+// Mock the config service
+vi.mock("../config/config.service");
+
+describe("FlagsService", () => {
+  let service: FlagsService;
+  let mockConfigService: AnalyticsConfigService;
 
   beforeEach(() => {
-    // Save original environment
-    originalEnv = { ...process.env };
-
     // Reset mocks
     vi.clearAllMocks();
 
-    // Set up test environment variables
-    process.env.POSTHOG_KEY = "test-api-key";
-    process.env.POSTHOG_HOST = "https://test-posthog.com";
+    // Create mock config service
+    mockConfigService = {
+      posthogKey: "test-api-key",
+      posthogHost: "https://test-posthog.com",
+      isConfigured: vi.fn().mockReturnValue(true),
+      getPostHogServerConfig: vi.fn().mockReturnValue({
+        host: "https://test-posthog.com",
+      }),
+    } as unknown as AnalyticsConfigService;
 
     // Create service instance
-    service = new AnalyticsService();
-  });
-
-  afterEach(() => {
-    // Restore original environment
-    process.env = originalEnv;
+    service = new FlagsService(mockConfigService);
   });
 
   describe("onModuleInit", () => {
-    it("should initialize PostHog with environment variables", async () => {
+    it("should initialize PostHog with config from AnalyticsConfigService", async () => {
       const { initializePostHogServer } = await import("@repo/analytics/server");
 
       await service.onModuleInit();
@@ -63,14 +65,12 @@ describe("AnalyticsService", () => {
       expect(loggerSpy).toHaveBeenCalledWith("PostHog initialized successfully");
     });
 
-    it("should log warning when PostHog key is not configured", async () => {
+    it("should log warning when PostHog is not configured", async () => {
       const { initializePostHogServer } = await import("@repo/analytics/server");
       const loggerSpy = vi.spyOn(Logger.prototype, "warn");
-      delete process.env.POSTHOG_KEY;
-      delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+      mockConfigService.isConfigured = vi.fn().mockReturnValueOnce(false);
 
-      const newService = new AnalyticsService();
-      await newService.onModuleInit();
+      await service.onModuleInit();
 
       expect(loggerSpy).toHaveBeenCalledWith(expect.stringContaining("PostHog not configured"));
       expect(initializePostHogServer).not.toHaveBeenCalled();
@@ -98,43 +98,18 @@ describe("AnalyticsService", () => {
       expect(loggerSpy).toHaveBeenCalledWith("Failed to initialize PostHog", expect.any(Error));
     });
 
-    it("should skip initialization for placeholder keys", async () => {
+    it("should handle missing PostHog key after configuration check", async () => {
       const { initializePostHogServer } = await import("@repo/analytics/server");
       const loggerSpy = vi.spyOn(Logger.prototype, "warn");
-      process.env.POSTHOG_KEY = "phc_0000";
+      const serviceWithNoKey = new FlagsService({
+        ...mockConfigService,
+        posthogKey: undefined,
+      } as AnalyticsConfigService);
 
-      const newService = new AnalyticsService();
-      await newService.onModuleInit();
+      await serviceWithNoKey.onModuleInit();
 
-      expect(loggerSpy).toHaveBeenCalledWith(expect.stringContaining("PostHog not configured"));
+      expect(loggerSpy).toHaveBeenCalledWith("PostHog key is missing after configuration check");
       expect(initializePostHogServer).not.toHaveBeenCalled();
-    });
-
-    it("should use NEXT_PUBLIC_POSTHOG_KEY as fallback", async () => {
-      const { initializePostHogServer } = await import("@repo/analytics/server");
-      delete process.env.POSTHOG_KEY;
-      process.env.NEXT_PUBLIC_POSTHOG_KEY = "fallback-key";
-
-      const newService = new AnalyticsService();
-      await newService.onModuleInit();
-
-      expect(initializePostHogServer).toHaveBeenCalledWith("fallback-key", expect.any(Object));
-    });
-
-    it("should use default host when not configured", async () => {
-      const { initializePostHogServer } = await import("@repo/analytics/server");
-      delete process.env.POSTHOG_HOST;
-      delete process.env.NEXT_PUBLIC_POSTHOG_HOST;
-
-      const newService = new AnalyticsService();
-      await newService.onModuleInit();
-
-      expect(initializePostHogServer).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          host: "https://eu.i.posthog.com",
-        }),
-      );
     });
   });
 
@@ -157,10 +132,9 @@ describe("AnalyticsService", () => {
 
     it("should not call shutdown if not initialized", async () => {
       const { shutdownPostHog } = await import("@repo/analytics/server");
-      delete process.env.POSTHOG_KEY;
-      const newService = new AnalyticsService();
-      await newService.onModuleInit();
-      await newService.onModuleDestroy();
+      mockConfigService.isConfigured = vi.fn().mockReturnValueOnce(false);
+      await service.onModuleInit();
+      await service.onModuleDestroy();
 
       expect(shutdownPostHog).not.toHaveBeenCalled();
     });
@@ -196,7 +170,7 @@ describe("AnalyticsService", () => {
       expect(typeof result).toBe("boolean");
     });
 
-    it("should handle errors gracefully", async () => {
+    it("should handle errors gracefully and return default", async () => {
       const { getPostHogServerClient } = await import("@repo/analytics/server");
       vi.mocked(getPostHogServerClient).mockReturnValueOnce(null);
 
@@ -219,11 +193,10 @@ describe("AnalyticsService", () => {
     });
 
     it("should return false when initialization fails", async () => {
-      delete process.env.POSTHOG_KEY;
-      const newService = new AnalyticsService();
-      await newService.onModuleInit();
+      mockConfigService.isConfigured = vi.fn().mockReturnValueOnce(false);
+      await service.onModuleInit();
 
-      expect(newService.isInitialized()).toBe(false);
+      expect(service.isInitialized()).toBe(false);
     });
   });
 });

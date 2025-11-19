@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 
-import { AnalyticsModule } from "../common/analytics/analytics.module";
+import { AnalyticsModule } from "../common/modules/analytics/analytics.module";
 // Use Cases
 import { CreateProtocolUseCase } from "./application/use-cases/create-protocol/create-protocol";
 import { DeleteProtocolUseCase } from "./application/use-cases/delete-protocol/delete-protocol";
@@ -9,6 +9,8 @@ import { ListProtocolsUseCase } from "./application/use-cases/list-protocols/lis
 import { UpdateProtocolUseCase } from "./application/use-cases/update-protocol/update-protocol";
 // Repositories
 import { ProtocolRepository } from "./core/repositories/protocol.repository";
+// Adapters
+import { AnalyticsAdapter } from "./infrastructure/analytics.adapter";
 // Controllers
 import { ProtocolController } from "./presentation/protocol.controller";
 
@@ -18,6 +20,9 @@ import { ProtocolController } from "./presentation/protocol.controller";
   providers: [
     // Repositories
     ProtocolRepository,
+
+    // Adapters
+    AnalyticsAdapter,
 
     // Protocol use cases
     CreateProtocolUseCase,
