@@ -341,7 +341,8 @@ describe("NotificationsService", () => {
       const mockSendMail = vi.fn().mockReturnValue({
         messageId: "test-message-id",
         accepted: [MOCK_EMAIL],
-        // rejected and pending properties are undefined
+        rejected: [],
+        pending: [],
       });
 
       const mockTransport = {
