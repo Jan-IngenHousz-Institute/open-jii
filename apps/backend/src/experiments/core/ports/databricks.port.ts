@@ -49,6 +49,14 @@ export interface DatabricksPort {
   ): Promise<Result<DatabricksJobRunResponse>>;
 
   /**
+   * Trigger the enriched tables refresh Databricks job with the specified parameters
+   */
+  triggerEnrichedTablesRefreshJob(
+    metadataKey: string,
+    metadataValue: string,
+  ): Promise<Result<DatabricksJobRunResponse>>;
+
+  /**
    * Execute a SQL query in a specific schema
    */
   executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>>;

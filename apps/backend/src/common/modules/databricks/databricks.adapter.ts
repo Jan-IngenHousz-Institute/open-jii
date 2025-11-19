@@ -82,6 +82,26 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   }
 
   /**
+   * Trigger the enriched tables refresh Databricks job with the specified parameters
+   */
+  async triggerEnrichedTablesRefreshJob(
+    metadataKey: string,
+    metadataValue: string,
+  ): Promise<Result<DatabricksJobRunResponse>> {
+    this.logger.log(
+      `Triggering enriched tables refresh for metadata: ${metadataKey}=${metadataValue}`,
+    );
+
+    const jobParams = {
+      metadata_key: metadataKey,
+      metadata_value: metadataValue,
+    };
+
+    const jobId = this.configService.getEnrichedTablesRefreshJobIdAsNumber();
+    return this.jobsService.triggerJob(jobId, jobParams);
+  }
+
+  /**
    * Execute a SQL query in a specific schema
    */
   async executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {
