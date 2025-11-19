@@ -1,30 +1,27 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 
 import type { FeatureFlagKey } from "@repo/analytics";
-import { FEATURE_FLAG_DEFAULTS, createPostHogServerConfig } from "@repo/analytics";
+import { FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
 import {
   getPostHogServerClient,
   initializePostHogServer,
   shutdownPostHog,
 } from "@repo/analytics/server";
 
+import { AnalyticsConfigService } from "../config/config.service";
+
 /**
- * Analytics service for feature flags and event tracking
- * Wraps PostHog functionality in a NestJS-friendly way
+ * Service for managing feature flags via PostHog
  */
 @Injectable()
-export class AnalyticsService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(AnalyticsService.name);
+export class FlagsService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(FlagsService.name);
   private initialized = false;
 
-  async onModuleInit() {
-    const posthogKey = process.env.POSTHOG_KEY ?? process.env.NEXT_PUBLIC_POSTHOG_KEY;
-    const posthogHost =
-      process.env.POSTHOG_HOST ??
-      process.env.NEXT_PUBLIC_POSTHOG_HOST ??
-      "https://eu.i.posthog.com";
+  constructor(private readonly configService: AnalyticsConfigService) {}
 
-    if (!posthogKey || posthogKey === "phc_0000" || posthogKey.startsWith("phc_0000")) {
+  async onModuleInit() {
+    if (!this.configService.isConfigured()) {
       this.logger.warn(
         "PostHog not configured - feature flags will use default values. Set POSTHOG_KEY environment variable to enable.",
       );
@@ -32,9 +29,15 @@ export class AnalyticsService implements OnModuleInit, OnModuleDestroy {
     }
 
     try {
+      const posthogKey = this.configService.posthogKey;
+      if (!posthogKey) {
+        this.logger.warn("PostHog key is missing after configuration check");
+        return;
+      }
+
       this.initialized = await initializePostHogServer(
         posthogKey,
-        createPostHogServerConfig(posthogHost),
+        this.configService.getPostHogServerConfig(),
       );
       if (this.initialized) {
         this.logger.log("PostHog initialized successfully");

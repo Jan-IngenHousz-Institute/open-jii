@@ -6,7 +6,6 @@ import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract, validateProtocolJson } from "@repo/api";
 import type { User } from "@repo/auth/types";
 
-import { AnalyticsService } from "../../common/analytics/analytics.service";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
@@ -17,6 +16,8 @@ import { GetProtocolUseCase } from "../application/use-cases/get-protocol/get-pr
 import { ListProtocolsUseCase } from "../application/use-cases/list-protocols/list-protocols";
 import { UpdateProtocolUseCase } from "../application/use-cases/update-protocol/update-protocol";
 import { CreateProtocolDto } from "../core/models/protocol.model";
+import type { AnalyticsPort } from "../core/ports/analytics.port";
+import { AnalyticsAdapter } from "../infrastructure/analytics.adapter";
 
 /**
  * Safely parses the protocol code field, ensuring it's a proper Record<string, unknown>
@@ -76,17 +77,17 @@ function validateJsonStructure(code: unknown, logger: Logger) {
  * Validates the protocol code fields with full schema validation
  * @param code The code field from the protocol, which could be a string, object, or null/undefined
  * @param logger Logger function
- * @param analyticsService Analytics service to check feature flags
+ * @param analyticsPort Analytics port to check feature flags
  * @param useStrictValidation Whether to use strict protocol validation (default: false)
  */
 async function validateProtocolCode(
   code: unknown,
   logger: Logger,
-  analyticsService: AnalyticsService,
+  analyticsPort: AnalyticsPort,
   useStrictValidation = false,
 ) {
   // Check feature flag to determine validation strategy
-  const validationAsWarning = await analyticsService.isFeatureFlagEnabled(
+  const validationAsWarning = await analyticsPort.isFeatureFlagEnabled(
     FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
   );
 
@@ -110,7 +111,7 @@ export class ProtocolController {
   private readonly logger = new Logger(ProtocolController.name);
 
   constructor(
-    private readonly analyticsService: AnalyticsService,
+    private readonly analyticsAdapter: AnalyticsAdapter,
     private readonly createProtocolUseCase: CreateProtocolUseCase,
     private readonly getProtocolUseCase: GetProtocolUseCase,
     private readonly listProtocolsUseCase: ListProtocolsUseCase,
@@ -168,7 +169,7 @@ export class ProtocolController {
       const validationResult = await validateProtocolCode(
         body.code,
         this.logger,
-        this.analyticsService,
+        this.analyticsAdapter,
       );
       if (validationResult.isFailure()) {
         return handleFailure(validationResult, this.logger);
@@ -225,7 +226,7 @@ export class ProtocolController {
         const validationResult = await validateProtocolCode(
           body.code,
           this.logger,
-          this.analyticsService,
+          this.analyticsAdapter,
         );
         if (validationResult.isFailure()) {
           return handleFailure(validationResult, this.logger);
