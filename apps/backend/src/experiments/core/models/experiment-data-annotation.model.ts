@@ -1,30 +1,28 @@
-import type { AnnotationContent, AnnotationType } from "@repo/api";
+/**
+ * Experiment annotation interfaces for storing comments and flags on experiment data
+ */
 
-export interface ExperimentDataAnnotation {
+// Base annotation interface
+export interface BaseAnnotation {
   id: string;
-  experimentId: string;
   userId: string;
-  dataReference: DataReference;
-  type: AnnotationType;
-  content: AnnotationContent;
+  tableName: string;
+  rowId: string;
+  type: string; // 'comment' or 'flag'
+  contentText?: string | null; // For comment annotations
+  flagType?: string | null; // 'outlier' or 'needs_review'
+  flagReason?: string | null; // Reason for flag
   createdAt: Date;
   updatedAt: Date;
-  isDeleted: boolean;
 }
 
-export interface DataReference {
-  tableName?: string;
-  rowId?: string;
-}
+// Input type for creating annotations
+export type CreateAnnotationDto = Omit<BaseAnnotation, "id" | "createdAt" | "updatedAt">;
 
-// Validation schemas
+// Input type for updating annotations
+export type UpdateAnnotationDto = Partial<
+  Pick<BaseAnnotation, "contentText" | "flagType" | "flagReason">
+>;
 
-export interface AnnotationFilters {
-  types?: AnnotationType[];
-  userId?: string;
-  dateRange?: { from: Date; to: Date };
-  page?: number;
-  pageSize?: number;
-  sortBy?: string;
-  sortOrder?: "asc" | "desc";
-}
+// Output type from database
+export type AnnotationDto = BaseAnnotation;

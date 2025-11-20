@@ -517,18 +517,6 @@ export const experimentContract = c.router({
     summary: "Add multiple annotations to experiment data",
   },
 
-  listAnnotations: {
-    method: "GET",
-    path: "/api/v1/experiments/:id/data/annotations",
-    pathParams: zIdPathParam,
-    query: zListAnnotationsQuery,
-    responses: {
-      200: zAnnotationList,
-      403: zErrorResponse,
-    },
-    summary: "List experiment data annotations",
-  },
-
   updateAnnotation: {
     method: "PATCH",
     path: "/api/v1/experiments/:id/data/annotations/:annotationId",
