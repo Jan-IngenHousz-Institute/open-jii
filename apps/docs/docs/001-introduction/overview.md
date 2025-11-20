@@ -1,3 +1,5 @@
+import DocButton from '@site/src/components/DocButton';
+
 # Overview
 
 Our mission is to advance open science by sharing, integrating, and interpreting complex, large-scale datasets to uncover genetic linkages that influence photosynthesis.
@@ -13,3 +15,6 @@ Through this collaborative platform, we empower researchers to:
 - Store and manage photosynthesis data
 - Provide tools to analyze photosynthesis
 - Link real-world sensor data to genomics, novel analytics, and modeling
+
+Excited?
+<DocButton href="./quick-start-guide" variant="primary"> Follow our Quick Start Guide to try it out</DocButton>

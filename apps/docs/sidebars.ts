@@ -88,7 +88,7 @@ const sidebars: SidebarsConfig = {
       value: `
         <div class="sidebar-divider">
           <hr class="sidebar-divider-line" />
-          <div class="sidebar-divider-label">Data Platform</div>
+          <div class="sidebar-divider-label">openJII Platform</div>
         </div>
       `,
       defaultStyle: false,
@@ -99,9 +99,14 @@ const sidebars: SidebarsConfig = {
       label: "Overview",
     },
     {
-      type: "doc",
-      id: "data-platform/web-platform",
+      type: "category",
       label: "Web platform",
+      link: { type: "generated-index" },
+      items: [
+        "data-platform/web-platform/overview",
+        "data-platform/web-platform/register",
+        "data-platform/web-platform/create-add-experiment",
+      ],
     },
     {
       type: "doc",
@@ -111,7 +116,7 @@ const sidebars: SidebarsConfig = {
     {
       type: "doc",
       id: "data-platform/multispeq",
-      label: "Multispeq",
+      label: "MultispeQ",
     },
     {
       type: "doc",
