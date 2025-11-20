@@ -9,8 +9,6 @@ import { ListProtocolsUseCase } from "./application/use-cases/list-protocols/lis
 import { UpdateProtocolUseCase } from "./application/use-cases/update-protocol/update-protocol";
 // Repositories
 import { ProtocolRepository } from "./core/repositories/protocol.repository";
-// Adapters
-import { AnalyticsAdapter } from "./infrastructure/analytics.adapter";
 // Controllers
 import { ProtocolController } from "./presentation/protocol.controller";
 
@@ -20,9 +18,6 @@ import { ProtocolController } from "./presentation/protocol.controller";
   providers: [
     // Repositories
     ProtocolRepository,
-
-    // Adapters
-    AnalyticsAdapter,
 
     // Protocol use cases
     CreateProtocolUseCase,

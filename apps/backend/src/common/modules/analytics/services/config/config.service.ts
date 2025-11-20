@@ -21,15 +21,8 @@ export class AnalyticsConfigService {
   private loadConfig(): AnalyticsConfig {
     this.logger.debug("Loading analytics configuration");
     return {
-      posthogKey:
-        this.configService.get<string>("analytics.posthogKey") ??
-        this.configService.get<string>("POSTHOG_KEY") ??
-        this.configService.get<string>("NEXT_PUBLIC_POSTHOG_KEY"),
-      posthogHost:
-        this.configService.get<string>("analytics.posthogHost") ??
-        this.configService.get<string>("POSTHOG_HOST") ??
-        this.configService.get<string>("NEXT_PUBLIC_POSTHOG_HOST") ??
-        "https://eu.i.posthog.com",
+      posthogKey: this.configService.getOrThrow("analytics.posthogKey"),
+      posthogHost: this.configService.getOrThrow("analytics.posthogHost"),
     };
   }
 

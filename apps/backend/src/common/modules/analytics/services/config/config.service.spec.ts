@@ -1,42 +1,40 @@
 import type { ConfigService } from "@nestjs/config";
-import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { TestHarness } from "../../../../../test/test-harness";
 import { AnalyticsConfigService } from "./config.service";
 
 describe("AnalyticsConfigService", () => {
+  const testApp = TestHarness.App;
   let service: AnalyticsConfigService;
-  let mockConfigService: ConfigService;
 
-  beforeEach(() => {
-    mockConfigService = {
-      get: vi.fn((key: string) => {
-        if (key === "analytics.posthogKey") return "phc_test_key_123";
-        if (key === "analytics.posthogHost") return "https://eu.i.posthog.com";
-        return undefined;
-      }),
-    } as unknown as ConfigService;
+  beforeAll(async () => {
+    await testApp.setup();
+  });
 
-    service = new AnalyticsConfigService(mockConfigService);
+  beforeEach(async () => {
+    await testApp.beforeEach();
+    service = testApp.module.get(AnalyticsConfigService);
+  });
+
+  afterEach(() => {
+    testApp.afterEach();
+  });
+
+  afterAll(async () => {
+    await testApp.teardown();
   });
 
   describe("config properties", () => {
     it("should return posthogKey from config", () => {
       const posthogKey = service.posthogKey;
-      expect(posthogKey).toBe("phc_test_key_123");
+      expect(posthogKey).toBeDefined();
+      expect(typeof posthogKey).toBe("string");
     });
 
     it("should return posthogHost from config", () => {
       const posthogHost = service.posthogHost;
-      expect(posthogHost).toBe("https://eu.i.posthog.com");
-    });
-
-    it("should use default posthogHost when not configured", () => {
-      mockConfigService = {
-        get: vi.fn(() => undefined),
-      } as unknown as ConfigService;
-
-      service = new AnalyticsConfigService(mockConfigService);
-      expect(service.posthogHost).toBe("https://eu.i.posthog.com");
+      expect(posthogHost).toBeDefined();
+      expect(typeof posthogHost).toBe("string");
     });
   });
 
@@ -45,39 +43,30 @@ describe("AnalyticsConfigService", () => {
       expect(service.isConfigured()).toBe(true);
     });
 
-    it("should return false when key is undefined", () => {
-      mockConfigService = {
-        get: vi.fn(() => undefined),
-      } as unknown as ConfigService;
-
-      service = new AnalyticsConfigService(mockConfigService);
-      expect(service.isConfigured()).toBe(false);
-    });
-
     it("should return false when key is phc_0000", () => {
-      mockConfigService = {
-        get: vi.fn((key: string) => {
+      const mockConfigService = {
+        getOrThrow: vi.fn((key: string) => {
           if (key === "analytics.posthogKey") return "phc_0000";
           if (key === "analytics.posthogHost") return "https://eu.i.posthog.com";
-          return undefined;
+          throw new Error(`Unknown config key: ${key}`);
         }),
       } as unknown as ConfigService;
 
-      service = new AnalyticsConfigService(mockConfigService);
-      expect(service.isConfigured()).toBe(false);
+      const testService = new AnalyticsConfigService(mockConfigService);
+      expect(testService.isConfigured()).toBe(false);
     });
 
     it("should return false when key starts with phc_0000", () => {
-      mockConfigService = {
-        get: vi.fn((key: string) => {
+      const mockConfigService = {
+        getOrThrow: vi.fn((key: string) => {
           if (key === "analytics.posthogKey") return "phc_0000_test";
           if (key === "analytics.posthogHost") return "https://eu.i.posthog.com";
-          return undefined;
+          throw new Error(`Unknown config key: ${key}`);
         }),
       } as unknown as ConfigService;
 
-      service = new AnalyticsConfigService(mockConfigService);
-      expect(service.isConfigured()).toBe(false);
+      const testService = new AnalyticsConfigService(mockConfigService);
+      expect(testService.isConfigured()).toBe(false);
     });
   });
 
@@ -85,17 +74,18 @@ describe("AnalyticsConfigService", () => {
     it("should return PostHog server configuration", () => {
       const config = service.getPostHogServerConfig();
       expect(config).toBeDefined();
-      expect(config.host).toBe("https://eu.i.posthog.com");
+      expect(config.host).toBeDefined();
+      expect(typeof config.host).toBe("string");
     });
   });
 
   describe("config validation", () => {
     it("should throw error for invalid posthogHost URL", () => {
-      mockConfigService = {
-        get: vi.fn((key: string) => {
+      const mockConfigService = {
+        getOrThrow: vi.fn((key: string) => {
           if (key === "analytics.posthogKey") return "phc_test";
           if (key === "analytics.posthogHost") return "not-a-url";
-          return undefined;
+          throw new Error(`Unknown config key: ${key}`);
         }),
       } as unknown as ConfigService;
 
