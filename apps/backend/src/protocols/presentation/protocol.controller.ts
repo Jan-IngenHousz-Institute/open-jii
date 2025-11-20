@@ -8,6 +8,7 @@ import type { User } from "@repo/auth/types";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "../../common/guards/auth.guard";
+import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { AppError, failure, handleFailure, success } from "../../common/utils/fp-utils";
 import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
@@ -17,7 +18,6 @@ import { ListProtocolsUseCase } from "../application/use-cases/list-protocols/li
 import { UpdateProtocolUseCase } from "../application/use-cases/update-protocol/update-protocol";
 import { CreateProtocolDto } from "../core/models/protocol.model";
 import type { AnalyticsPort } from "../core/ports/analytics.port";
-import { AnalyticsAdapter } from "../infrastructure/analytics.adapter";
 
 /**
  * Safely parses the protocol code field, ensuring it's a proper Record<string, unknown>

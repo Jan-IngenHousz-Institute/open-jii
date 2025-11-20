@@ -90,7 +90,7 @@ describe("FlagsService", () => {
 
     it("should handle initialization errors", async () => {
       const { initializePostHogServer } = await import("@repo/analytics/server");
-      const loggerSpy = vi.spyOn(Logger.prototype, "error");
+      const loggerSpy = vi.spyOn(Logger.prototype, "error").mockImplementation(() => {});
       vi.mocked(initializePostHogServer).mockRejectedValueOnce(new Error("Init failed"));
 
       await service.onModuleInit();
