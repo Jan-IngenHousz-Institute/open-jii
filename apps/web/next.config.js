@@ -7,7 +7,14 @@ const __dirname = dirname(__filename);
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   devIndicators: process.env.NEXT_PUBLIC_ENABLE_DEVTOOLS === "true",
-  transpilePackages: ["@repo/api", "@repo/auth", "@repo/database", "@repo/ui", "@repo/cms"],
+  transpilePackages: [
+    "@repo/api",
+    "@repo/auth",
+    "@repo/database",
+    "@repo/ui",
+    "@repo/cms",
+    "@repo/analytics",
+  ],
 
   output: "standalone",
   outputFileTracingRoot: join(__dirname, "../../"),

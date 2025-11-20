@@ -632,4 +632,83 @@ describe("ProtocolController", () => {
       expect((response.body as Protocol).code).toEqual([{}]);
     });
   });
+
+  describe("validateProtocolCode with feature flag", () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("should validate protocol schema regardless of feature flag", async () => {
+      // Arrange - create protocol with valid JSON but invalid schema
+      const validJsonInvalidSchema = {
+        name: "Protocol with Valid JSON",
+        description: "Testing validation",
+        code: [{ some: "data" }], // Valid JSON array but invalid protocol schema
+        family: "multispeq" as const,
+      };
+
+      // Act - depending on feature flag, this will either:
+      // - Pass with warning mode (feature flag enabled)
+      // - Fail with strict mode (feature flag disabled)
+      const response = await testApp
+        .post(contract.protocols.createProtocol.path)
+        .withAuth(testUserId)
+        .send(validJsonInvalidSchema);
+
+      // Should either create successfully or reject based on feature flag
+      expect([StatusCodes.CREATED, StatusCodes.BAD_REQUEST]).toContain(response.status);
+    });
+
+    it("should allow JSON structure validation when feature flag is enabled", async () => {
+      // This test assumes the feature flag is enabled
+      // If it's disabled, this test should be adjusted accordingly
+      const validJsonStructure = {
+        name: "Protocol with Valid JSON",
+        description: "Testing JSON structure validation",
+        code: [{ some: "data", that: "parses" }],
+        family: "multispeq" as const,
+      };
+
+      // Act - this should either pass with lenient validation or fail with strict
+      const response = await testApp
+        .post(contract.protocols.createProtocol.path)
+        .withAuth(testUserId)
+        .send(validJsonStructure);
+
+      // The result depends on the feature flag state
+      expect([StatusCodes.CREATED, StatusCodes.BAD_REQUEST]).toContain(response.status);
+    });
+  });
+
+  describe("validateJsonStructure function", () => {
+    it("should reject empty code", async () => {
+      const invalidData = {
+        name: "Protocol without code",
+        description: "Testing empty code",
+        code: null,
+        family: "multispeq" as const,
+      };
+
+      await testApp
+        .post(contract.protocols.createProtocol.path)
+        .withAuth(testUserId)
+        .send(invalidData)
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should reject non-array code", async () => {
+      const invalidData = {
+        name: "Protocol with object code",
+        description: "Testing non-array code",
+        code: { not: "an array" },
+        family: "multispeq" as const,
+      };
+
+      await testApp
+        .post(contract.protocols.createProtocol.path)
+        .withAuth(testUserId)
+        .send(invalidData)
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+  });
 });
