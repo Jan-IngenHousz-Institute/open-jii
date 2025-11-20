@@ -16,7 +16,7 @@
     "macroCreated": "Macro created successfully",
     "macroUpdated": "Macro updated successfully",
     "macroDeleted": "Macro deleted successfully",
-    "listDescription": "View and manage your code macros for data processing.",
+    "listDescription": "View and manage your code macros for data processing. Each macro belongs to a specific protocol, which typically holds the same name. Creating/editing macros is a task for specialized developers.",
     "manageMacroDescription": "View and manage your macro's details and settings.",
     "settings": "Macro Settings",
     "settingsDescription": "Manage settings for this macro.",
