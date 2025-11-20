@@ -26,6 +26,7 @@ export * from "./input-otp";
 export * from "./input";
 export * from "./label";
 export * from "./menubar";
+export * from "./nav-tabs";
 export * from "./navigation-menu";
 export * from "./pagination";
 export * from "./popover";

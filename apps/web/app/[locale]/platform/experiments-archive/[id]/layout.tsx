@@ -5,9 +5,10 @@ import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useE
 import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
+import { ExperimentTitle } from "~/components/experiment-overview/experiment-title";
 
 import { useTranslation } from "@repo/i18n";
-import { Tabs, TabsList, TabsTrigger } from "@repo/ui/components";
+import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components";
 
 interface ExperimentLayoutProps {
   children: React.ReactNode;
@@ -18,17 +19,15 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation("experiments");
   const { t: tCommon } = useTranslation("common");
-  const { t: tNav } = useTranslation("navigation");
   const locale = useLocale();
 
-  // Check user access to this experiment
+  // Access check
   const { data: accessData, error, isLoading } = useExperimentAccess(id);
+  const apiBody = accessData?.body;
+  const experiment = apiBody?.experiment;
+  const hasAccess = apiBody?.hasAccess;
 
-  const experiment = accessData?.body;
-  const hasAccess = accessData?.body.hasAccess;
-  const isAdmin = accessData?.body.isAdmin;
-
-  // Show loading state
+  // Loading
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -80,64 +79,46 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
 
   // Determine active tab from URL
   const getActiveTab = () => {
-    if (pathname.endsWith("/settings")) return "settings";
     if (pathname.endsWith("/flow")) return "flow";
-    if (pathname.startsWith(`/${locale}/platform/experiments-archive/${id}/data`)) return "data";
-    if (pathname.startsWith(`/${locale}/platform/experiments-archive/${id}/analysis`))
-      return "analysis";
-    if (pathname.endsWith(`/experiments-archive/${id}`)) return "overview";
+    if (pathname.startsWith(`/${locale}/platform/experiments/${id}/data`)) return "data";
+    if (pathname.includes("/analysis")) return "analysis";
+    if (pathname.endsWith(`/experiments/${id}`)) return "overview";
     return "overview";
   };
 
   const activeTab = getActiveTab();
-  // Reusable renderer for tabs requiring member access
-  function renderAccessControlledLink(href: string, label: string) {
-    return hasAccess ? (
-      <Link href={href}>{label}</Link>
-    ) : (
-      <span className="cursor-not-allowed opacity-50">{label}</span>
-    );
-  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">{t("experiment")}</h3>
-        <p className="text-muted-foreground text-sm">{t("manageExperimentDescription")}</p>
-      </div>
+      <ExperimentTitle
+        experimentId={id}
+        name={experiment.name}
+        status={experiment.status}
+        visibility={experiment.visibility}
+        hasAccess={hasAccess}
+        isArchived
+      />
 
-      <Tabs value={activeTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview" asChild>
-            <Link href={`/${locale}/platform/experiments-archive/${id}`}>{t("overview")}</Link>
-          </TabsTrigger>
-          <TabsTrigger value="data" asChild>
-            <Link href={`/${locale}/platform/experiments-archive/${id}/data`}>{t("data")}</Link>
-          </TabsTrigger>
-          <TabsTrigger value="analysis" asChild>
-            <Link href={`/${locale}/platform/experiments-archive/${id}/analysis/visualizations`}>
+      <NavTabs value={activeTab} className="w-full">
+        <NavTabsList>
+          <NavTabsTrigger value="overview">
+            <Link href={`/${locale}/platform/experiments/${id}`}>{t("overview")}</Link>
+          </NavTabsTrigger>
+          <NavTabsTrigger value="data">
+            <Link href={`/${locale}/platform/experiments/${id}/data`}>{t("data")}</Link>
+          </NavTabsTrigger>
+          <NavTabsTrigger value="analysis">
+            <Link href={`/${locale}/platform/experiments/${id}/analysis`}>
               {t("analysis.title")}
             </Link>
-          </TabsTrigger>
-          <TabsTrigger
-            value="settings"
-            disabled={!isAdmin}
-            aria-label={!isAdmin ? t("needAdminAccess") : undefined}
-            asChild={isAdmin}
-          >
-            {renderAccessControlledLink(
-              `/${locale}/platform/experiments-archive/${id}/settings`,
-              tNav("main.settings"),
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="flow" asChild>
-            <Link href={`/${locale}/platform/experiments-archive/${id}/flow`}>
-              {t("flow.tabLabel")}
-            </Link>
-          </TabsTrigger>
-        </TabsList>
+          </NavTabsTrigger>
+          <NavTabsTrigger value="flow">
+            <Link href={`/${locale}/platform/experiments/${id}/flow`}>{t("flow.tabLabel")}</Link>
+          </NavTabsTrigger>
+        </NavTabsList>
 
-        <div className="mx-4 mt-6">{children}</div>
-      </Tabs>
+        <div className="mt-6">{children}</div>
+      </NavTabs>
     </div>
   );
 }

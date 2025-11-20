@@ -16,11 +16,6 @@ import {
   CardDescription,
   CardContent,
   Button,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from "@repo/ui/components";
 
 import { MemberList } from "../current-members-list/current-members-list";
@@ -138,8 +133,9 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
         <CardTitle>{t("newExperiment.addMembersTitle")}</CardTitle>
         <CardDescription>{t("newExperiment.addMembersDescription")}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap gap-2">
+      <CardContent className="space-y-6">
+        {/* Add member section */}
+        <div className="flex gap-2">
           <UserSearchPopover
             availableUsers={availableProfiles}
             searchValue={userSearch}
@@ -147,31 +143,24 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
             isAddingUser={false}
             loading={!isDebounced || isFetchingUsers}
             onSelectUser={setSelectedUser}
-            placeholder={t("newExperiment.addMemberPlaceholder")}
+            placeholder="Enter name or email..."
             selectedUser={selectedUser}
             onClearSelection={() => setSelectedUser(null)}
+            selectedRole={selectedRole}
+            onRoleChange={(val) => setSelectedRole(val as ExperimentMemberRole)}
           />
-          <Select
-            value={selectedRole}
-            onValueChange={(val) => setSelectedRole(val as ExperimentMemberRole)}
-          >
-            <SelectTrigger className="w-[100px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="member">{t("experimentSettings.roleMember")}</SelectItem>
-              <SelectItem value="admin">{t("experimentSettings.roleAdmin")}</SelectItem>
-            </SelectContent>
-          </Select>
           <Button
             onClick={handleAddMember}
+            variant="outline"
             disabled={!selectedUser}
             size="default"
-            className="flex-1 md:flex-none"
+            className="bg-surface-dark"
           >
             {t("common.add")}
           </Button>
         </div>
+
+        {/* Current members section */}
         <MemberList
           members={members}
           users={combinedProfiles}

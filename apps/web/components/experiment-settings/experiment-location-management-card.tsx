@@ -1,17 +1,10 @@
 "use client";
 
 import { MapPinIcon } from "lucide-react";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  Button,
-} from "@repo/ui/components";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components";
 import type { LocationPoint } from "@repo/ui/components/map";
 import { toast } from "@repo/ui/hooks";
 
@@ -24,9 +17,15 @@ import { Map } from "../map";
 
 interface ExperimentLocationManagementProps {
   experimentId: string;
+  hasAccess?: boolean;
+  isArchived?: boolean;
 }
 
-export function ExperimentLocationManagement({ experimentId }: ExperimentLocationManagementProps) {
+export function ExperimentLocationManagement({
+  experimentId,
+  hasAccess = false,
+  isArchived = false,
+}: ExperimentLocationManagementProps) {
   const { t } = useTranslation("experiments");
   const [searchQuery, setSearchQuery] = useState("");
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -54,6 +53,7 @@ export function ExperimentLocationManagement({ experimentId }: ExperimentLocatio
   );
 
   const [editedLocations, setEditedLocations] = useState<LocationPoint[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Geocoding hook for when locations are added via map click
   const { data: geocodeData, isLoading: geocodeLoading } = useLocationGeocode(
@@ -84,31 +84,37 @@ export function ExperimentLocationManagement({ experimentId }: ExperimentLocatio
 
   const searchResults = searchData?.body ?? [];
 
-  const handleSave = async () => {
-    const locationsToSave = editedLocations.map((location) => ({
-      name: location.name,
-      latitude: location.latitude,
-      longitude: location.longitude,
-      country: location.country,
-      region: location.region,
-      municipality: location.municipality,
-      postalCode: location.postalCode,
-      addressLabel: location.address,
-    }));
+  const saveLocations = useCallback(
+    async (locationsToUpdate: LocationPoint[]) => {
+      setIsSaving(true);
+      try {
+        const locationsToSave = locationsToUpdate.map((location) => ({
+          name: location.name,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          country: location.country,
+          region: location.region,
+          municipality: location.municipality,
+          postalCode: location.postalCode,
+          addressLabel: location.address,
+        }));
 
-    await updateLocationsMutation.mutateAsync({
-      params: { id: experimentId },
-      body: { locations: locationsToSave },
-    });
-    toast({ description: t("experiments.experimentUpdated") });
-  };
+        await updateLocationsMutation.mutateAsync({
+          params: { id: experimentId },
+          body: { locations: locationsToSave },
+        });
+        toast({ description: t("experiments.experimentUpdated") });
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [experimentId, updateLocationsMutation, t],
+  );
 
-  const handleCancel = () => {
-    setEditedLocations([...mapLocations]);
-  };
-
-  const handleLocationsChange = (newLocations: LocationPoint[]) => {
+  const handleLocationsChange = async (newLocations: LocationPoint[]) => {
     setEditedLocations(newLocations);
+    // Auto-save whenever locations change
+    await saveLocations(newLocations);
   };
 
   // Handle adding location from map click with geocoding
@@ -145,10 +151,13 @@ export function ExperimentLocationManagement({ experimentId }: ExperimentLocatio
       const updatedLocations = [...editedLocations, newLocation];
       setEditedLocations(updatedLocations);
 
+      // Auto-save the new location
+      void saveLocations(updatedLocations);
+
       // Clear pending location
       setPendingLocation(null);
     }
-  }, [geocodeData, pendingLocation, geocodeLoading, editedLocations]);
+  }, [geocodeData, pendingLocation, geocodeLoading, editedLocations, saveLocations]);
 
   if (isLoading) {
     return (
@@ -183,26 +192,6 @@ export function ExperimentLocationManagement({ experimentId }: ExperimentLocatio
       <CardContent className="space-y-4">
         {/* Edit Mode */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-medium">{t("settings.locations.editMode")}</h4>
-              <p className="text-sm text-gray-500">{t("settings.locations.editModeDescription")}</p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCancel}
-                disabled={updateLocationsMutation.isPending}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button size="sm" onClick={handleSave} disabled={updateLocationsMutation.isPending}>
-                {updateLocationsMutation.isPending ? t("common.saving") : t("common.save")}
-              </Button>
-            </div>
-          </div>
-
           {/* Interactive Map for Editing */}
 
           <div className="min-h-[400px] rounded border">
@@ -210,10 +199,11 @@ export function ExperimentLocationManagement({ experimentId }: ExperimentLocatio
               locations={editedLocations}
               onLocationsChange={handleLocationsChange}
               onLocationAdd={handleLocationAdd}
-              selectionMode={true}
+              selectionMode={hasAccess && !isArchived}
               onSearch={handleSearch}
               searchResults={searchResults}
               searchLoading={searchLoading}
+              disabled={!hasAccess || isSaving || isArchived}
               height="400px"
               center={
                 editedLocations.length > 0
@@ -237,11 +227,14 @@ export function ExperimentLocationManagement({ experimentId }: ExperimentLocatio
             />
           </div>
 
-          {editedLocations.length > 0 && (
-            <div className="text-sm text-gray-600">
-              {t("settings.locations.editingCount", { count: editedLocations.length })}
-            </div>
-          )}
+          <div className="flex items-center justify-between">
+            {editedLocations.length > 0 && (
+              <div className="text-sm text-gray-600">
+                {t("settings.locations.editingCount", { count: editedLocations.length })}
+              </div>
+            )}
+            {isSaving && <div className="text-sm text-gray-500">{t("common.saving")}...</div>}
+          </div>
         </div>
       </CardContent>
     </Card>

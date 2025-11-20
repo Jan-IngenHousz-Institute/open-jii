@@ -1,5 +1,4 @@
-import { formatDate } from "@/util/date";
-import { Mail, Calendar } from "lucide-react";
+import { Mail } from "lucide-react";
 
 import type { UserProfile } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
@@ -20,6 +19,7 @@ interface MemberItemProps {
   isRemovingMember: boolean;
   removingMemberId: string | null;
   onValueChange: (value: string) => void;
+  isArchived?: boolean;
 }
 
 export function MemberItem({
@@ -33,15 +33,16 @@ export function MemberItem({
   isRemovingMember,
   removingMemberId,
   onValueChange,
+  isArchived = false,
 }: MemberItemProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="flex items-center justify-between rounded border p-3">
+    <div className="flex items-center justify-between rounded">
       <div className="flex min-w-0 flex-1 flex-col space-y-1">
         <div className="flex min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2">
-            <h4 className="text-foreground truncate text-sm font-medium md:text-base">
+            <h4 className="text-foreground truncate text-sm font-medium">
               {`${member.user.firstName} ${member.user.lastName}`}
             </h4>
             <span
@@ -49,25 +50,21 @@ export function MemberItem({
               title={member.user.email ?? t("experimentSettings.noEmail")}
             >
               <Mail className="text-muted-foreground h-3 w-3 flex-shrink-0" />
-              <span className="text-muted-foreground truncate text-xs md:max-w-[200px] md:text-sm">
+              <span className="text-muted-foreground truncate text-sm md:max-w-[200px]">
                 {member.user.email ?? t("experimentSettings.noEmail")}
               </span>
             </span>
           </div>
-        </div>
-
-        <div className="text-muted-foreground flex items-center space-x-1 text-[11px] md:text-xs">
-          <Calendar className="relative top-[-1.5px] h-3 w-3 flex-shrink-0" />
-          <span className="whitespace-nowrap">
-            {t("experimentSettings.joined")} {formatDate(member.joinedAt)}
-          </span>
         </div>
       </div>
 
       <div className="flex flex-shrink-0 flex-col-reverse items-end space-x-3 pl-4 md:flex-row md:items-center">
         <Select
           value={member.role}
-          disabled={!newExperiment && !isCurrentUserAdmin && member.user.userId !== currentUserId}
+          disabled={
+            isArchived ||
+            (!newExperiment && !isCurrentUserAdmin && member.user.userId !== currentUserId)
+          }
           onValueChange={onValueChange}
         >
           <SelectTrigger className="w-[100px]">

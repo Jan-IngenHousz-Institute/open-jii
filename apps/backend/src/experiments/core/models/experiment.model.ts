@@ -56,7 +56,10 @@ export const updateExperimentSchema = createInsertSchema(experiments)
       )
       .optional(),
   });
-export const selectExperimentSchema = createSelectSchema(experiments);
+export const selectExperimentSchema = createSelectSchema(experiments).extend({
+  ownerFirstName: z.string().nullable().optional(),
+  ownerLastName: z.string().nullable().optional(),
+});
 
 // Define the types
 export type CreateExperimentDto = typeof createExperimentSchema._type;

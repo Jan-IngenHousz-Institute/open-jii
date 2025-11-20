@@ -36,6 +36,7 @@ interface MemberListProps {
   currentUserId?: string;
   newExperiment?: boolean;
   onUpdateMemberRole?: (userId: string, role: ExperimentMemberRole) => Promise<void> | void;
+  isArchived?: boolean;
 }
 
 export function MemberList({
@@ -51,6 +52,7 @@ export function MemberList({
   currentUserId,
   newExperiment = false,
   onUpdateMemberRole,
+  isArchived = false,
 }: MemberListProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -230,6 +232,7 @@ export function MemberList({
               onValueChange={(value) =>
                 handleMemberValueChange(member.user.userId, value, isLastAdmin, isCurrentUser)
               }
+              isArchived={isArchived}
             />
           );
         })}

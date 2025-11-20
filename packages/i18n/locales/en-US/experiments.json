@@ -19,6 +19,8 @@
     "cancelled": "Cancelled",
     "archived": "Archived",
     "stale": "Stale",
+    "provisioningFailed": "Provisioning Failed",
+    "published": "Published",
     "provisioning": "Provisioning"
   },
   "visibility": {
@@ -81,7 +83,9 @@
     }
   },
   "experiment": "Experiment",
+  "detailsTitle": "Details",
   "experimentId": "Experiment ID",
+  "createdBy": "Created By",
   "created": "Created",
   "updated": "Updated",
   "descriptionTitle": "Description",
