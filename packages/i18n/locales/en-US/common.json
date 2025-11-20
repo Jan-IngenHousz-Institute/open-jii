@@ -535,7 +535,7 @@
     "protocolCreated": "Protocol created successfully",
     "protocolUpdated": "Protocol updated successfully",
     "protocolDeleted": "Protocol deleted successfully",
-    "listDescription": "This page will show a list of existing protocols.",
+    "listDescription": "This page will show a list of existing protocols. A protocol is a set of instructions to the sensor/device on how to measure. Creating a protocol is a specialized task for an experienced protocol developer.",
     "protocol": "Protocol",
     "settings": "Protocol Settings",
     "settingsDescription": "Manage settings for this protocol.",
