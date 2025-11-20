@@ -107,6 +107,7 @@ describe("GetExperimentDataUseCase", () => {
             catalog_name: MOCK_CATALOG_NAME,
             schema_name: `exp_${cleanName}_${experiment.id}`,
             properties: {
+              display_name: "Sensor Measurements",
               downstream: "false",
             },
           },
@@ -211,7 +212,7 @@ describe("GetExperimentDataUseCase", () => {
     expect(Array.isArray(result.value)).toBe(true);
     expect(result.value).toHaveLength(1);
     expect(result.value[0]).toMatchObject({
-      name: "sensor_data",
+      name: "Sensor Measurements", // Should use display_name from properties
       catalog_name: experiment.name,
       schema_name: `exp_${cleanName}_${experiment.id}`,
       data: expectedColumnData,
@@ -282,6 +283,7 @@ describe("GetExperimentDataUseCase", () => {
             catalog_name: MOCK_CATALOG_NAME,
             schema_name: `exp_test_experiment_${experiment.id}`,
             properties: {
+              display_name: "Test Table Data",
               downstream: "false",
             },
           },
@@ -416,7 +418,7 @@ describe("GetExperimentDataUseCase", () => {
     expect(Array.isArray(result.value)).toBe(true);
     expect(result.value).toHaveLength(1);
     expect(result.value[0]).toMatchObject({
-      name: "test_table",
+      name: "Test Table Data", // Should use display_name from properties
       catalog_name: experiment.name,
       schema_name: `exp_test_experiment_${experiment.id}`,
       data: expectedTableData,

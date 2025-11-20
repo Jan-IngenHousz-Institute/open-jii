@@ -173,11 +173,12 @@ export class GetExperimentDataUseCase {
     orderBy?: string,
     orderDirection?: "ASC" | "DESC",
   ): Promise<Result<ExperimentDataDto>> {
-    // Validate table exists
-    const tableExists = await this.validateTableExists(tableName, experiment.name, experimentId);
-    if (tableExists.isFailure()) {
-      return tableExists;
+    // Validate table exists and get table metadata in one call
+    const tableResult = await this.validateTableExists(tableName, experiment.name, experimentId);
+    if (tableResult.isFailure()) {
+      return tableResult;
     }
+    const table = tableResult.value;
 
     // Build SQL query with specific columns
     const columnList = columns
@@ -214,7 +215,7 @@ export class GetExperimentDataUseCase {
     // Create response
     const response: ExperimentDataDto = [
       {
-        name: tableName,
+        name: this.getTableDisplayName(table),
         catalog_name: experiment.name,
         schema_name: schemaName,
         data: await this.transformSchemaData(dataResult.value),
@@ -241,11 +242,12 @@ export class GetExperimentDataUseCase {
     orderBy?: string,
     orderDirection?: "ASC" | "DESC",
   ): Promise<Result<ExperimentDataDto>> {
-    // Validate table exists
-    const tableExists = await this.validateTableExists(tableName, experiment.name, experimentId);
-    if (tableExists.isFailure()) {
-      return tableExists;
+    // Validate table exists and get table metadata in one call
+    const tableResult = await this.validateTableExists(tableName, experiment.name, experimentId);
+    if (tableResult.isFailure()) {
+      return tableResult;
     }
+    const table = tableResult.value;
 
     // Get total row count for pagination
     const countResult = await this.databricksPort.executeSqlQuery(
@@ -289,7 +291,7 @@ export class GetExperimentDataUseCase {
     // Create response
     const response: ExperimentDataDto = [
       {
-        name: tableName,
+        name: this.getTableDisplayName(table),
         catalog_name: experiment.name,
         schema_name: schemaName,
         data: await this.transformSchemaData(dataResult.value),
@@ -353,7 +355,7 @@ export class GetExperimentDataUseCase {
       const dataResult = await this.databricksPort.executeSqlQuery(schemaName, sqlQuery);
 
       const tableInfo: TableDataDto = {
-        name: table.name,
+        name: this.getTableDisplayName(table),
         catalog_name: table.catalog_name,
         schema_name: table.schema_name,
         page: 1,
@@ -378,12 +380,13 @@ export class GetExperimentDataUseCase {
 
   /**
    * Validate that a table exists in the experiment and is accessible (downstream: "false")
+   * Returns the table object if valid, allowing callers to use it without additional lookups
    */
   private async validateTableExists(
     tableName: string,
     experimentName: string,
     experimentId: string,
-  ): Promise<Result<boolean>> {
+  ): Promise<Result<Table>> {
     const tablesResult = await this.databricksPort.listTables(experimentName, experimentId);
 
     if (tablesResult.isFailure()) {
@@ -409,7 +412,14 @@ export class GetExperimentDataUseCase {
       );
     }
 
-    return success(true);
+    return success(table);
+  }
+
+  /**
+   * Get the display name for a table, using properties.display_name if available, otherwise fallback to table.name
+   */
+  private getTableDisplayName(table: Table): string {
+    return table.properties?.display_name ?? table.name;
   }
 
   /**
