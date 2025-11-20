@@ -32,7 +32,8 @@ sensor_schema = StructType([
     StructField("sample", StringType(), True),
     StructField("timestamp", TimestampType(), False),
     StructField("output", StringType(), True),
-    StructField("questions", ArrayType(question_schema), True)
+    StructField("questions", ArrayType(question_schema), True),
+    StructField("user_id", StringType(), True),
 ])
 
 # COMMAND ----------
@@ -146,6 +147,7 @@ def clean_data():
         .withColumn("device_firmware", F.col("parsed_data.device_firmware"))
         .withColumn("sample", F.col("parsed_data.sample"))
         .withColumn("output", F.col("parsed_data.output"))
+        .withColumn("user_id", F.col("parsed_data.user_id"))
         .withColumn("timestamp", F.col("parsed_data.timestamp"))
         .withColumn("processed_timestamp", F.current_timestamp())
         .withColumn("date", F.to_date("timestamp"))
@@ -207,6 +209,7 @@ def clean_data():
         "output",
         "macros",
         "questions",
+        "user_id",
         "experiment_id",
         "timestamp",
         "date",

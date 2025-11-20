@@ -170,7 +170,6 @@ module "event_hooks_secret_scope" {
   secrets = {
     "slack-webhook-url" = var.slack_webhook_url
     "databricks-host"   = module.databricks_workspace.workspace_url
-
   }
 
   # Grant access to service principal for Event Hooks
@@ -227,6 +226,7 @@ module "experiment_secret_scope" {
   secrets = {
     webhook_api_key_id = var.backend_webhook_api_key_id
     webhook_secret     = var.backend_webhook_secret
+    webhook_base_url   = "https://${module.route53.api_domain}"
   }
 
   acl_principals  = [module.node_service_principal.service_principal_application_id]

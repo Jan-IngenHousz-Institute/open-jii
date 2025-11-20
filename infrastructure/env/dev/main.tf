@@ -226,6 +226,7 @@ module "experiment_secret_scope" {
   secrets = {
     webhook_api_key_id = var.backend_webhook_api_key_id
     webhook_secret     = var.backend_webhook_secret
+    webhook_base_url   = "https://${module.route53.api_domain}"
   }
 
   acl_principals  = [module.node_service_principal.service_principal_application_id]

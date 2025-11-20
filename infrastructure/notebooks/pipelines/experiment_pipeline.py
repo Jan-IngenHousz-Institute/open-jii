@@ -5,6 +5,7 @@
 
 %pip install /Workspace/Shared/wheels/multispeq-0.1.0-py3-none-any.whl
 %pip install /Workspace/Shared/wheels/mini_racer-0.12.4-py3-none-manylinux_2_31_aarch64.whl
+%pip install /Workspace/Shared/wheels/enrich-0.1.0-py3-none-any.whl
 
 # COMMAND ----------
 
@@ -25,6 +26,9 @@ from typing import Dict, Any, List
 
 # Import our macro processing library
 from multispeq import execute_macro_script, get_available_macros, process_macro_output_for_spark, infer_macro_schema
+
+# Import our enrichment library  
+from enrich import add_user_data_column
 
 # COMMAND ----------
 
@@ -47,12 +51,15 @@ ENABLE_MACRO_PROCESSING = spark.conf.get("ENABLE_MACRO_PROCESSING", "true").lowe
 DEVICE_TABLE = "device"
 SAMPLE_TABLE = "sample"
 RAW_AMBYTE_TABLE = "raw_ambyte_data"
+ENRICHED_SAMPLE_TABLE = "enriched_sample"
 
 # Slack notification configuration
 ENVIRONMENT = spark.conf.get("ENVIRONMENT", "dev").lower()
 MONITORING_SLACK_CHANNEL = spark.conf.get("MONITORING_SLACK_CHANNEL")
 
 spark = SparkSession.builder.getOrCreate()
+
+
 
 print(f"Processing experiment: {EXPERIMENT_ID}")
 print(f"Using experiment schema: {EXPERIMENT_SCHEMA}")
@@ -69,7 +76,9 @@ if ENABLE_MACRO_PROCESSING:
     comment="Device metadata from MultispeQ measurements",
     table_properties={
         "quality": "bronze",
-        "pipelines.autoOptimize.managed": "true"
+        "pipelines.autoOptimize.managed": "true",
+        "display_name": "Device Metadata",
+        "downstream": "false"
     }
 )
 def device():
@@ -104,7 +113,9 @@ def device():
     table_properties={
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
-        "delta.enableChangeDataFeed": "true"
+        "delta.enableChangeDataFeed": "true",
+        "display_name": "Sample Data",
+        "downstream": "true"
     }
 )
 def sample():
@@ -123,6 +134,7 @@ def sample():
             F.col("device_name"),
             F.col("timestamp"),
             F.col("questions"),
+            F.col("user_id"),
             F.explode(F.from_json(F.col("sample"), "array<string>")).alias("sample_data_str")
         )
         .select(
@@ -131,6 +143,7 @@ def sample():
             F.col("device_name"),
             F.col("timestamp"),
             F.col("questions"),
+            F.col("user_id"),
             F.get_json_object(F.col("sample_data_str"), "$.v_arrays").alias("v_arrays"),
             F.get_json_object(F.col("sample_data_str"), "$.set_repeats").cast("int").alias("set_repeats"),
             F.get_json_object(F.col("sample_data_str"), "$.protocol_id").alias("protocol_id"),
@@ -178,7 +191,7 @@ def check_ambyte_volume_exists():
     processed_path = f"/Volumes/{CATALOG_NAME}/{EXPERIMENT_SCHEMA}/data-uploads/processed-ambyte"
     
     try:
-        files = dbutils.fs.ls(path)
+        files = dbutils.fs.ls(processed_path)
         # Check if there are any files or subdirectories
         return len(files) > 0
         
@@ -200,7 +213,11 @@ def create_ambyte_table():
     table_code = '''
 @dlt.table(
     name=RAW_AMBYTE_TABLE,
-    comment="ambyte trace data from processed parquet files (streaming table)"
+    comment="ambyte trace data from processed parquet files (streaming table)",
+    table_properties={
+        "display_name": "Raw Ambyte Data",
+        "downstream": "false"
+    }
 )
 def raw_ambyte_data():
     """
@@ -318,25 +335,28 @@ def create_macro_tables():
 
 def create_macro_table_code(macro_name: str, macro_schema: StructType) -> str:
     """
-    Generate Python code for a macro streaming table function.
+    Generate Python code for macro streaming tables function.
     UDF returns JSON string, then we parse it using the inferred StructType schema.
     """
     # Base schema for the UDF output (just the essential fields + JSON)
     udf_schema = (
         "id long, device_id string, device_name string, timestamp timestamp, questions array<struct<question_label:string,question_text:string,question_answer:string>>, "
-        "processed_timestamp timestamp, macro_output_json string"
+        "processed_timestamp timestamp, macro_output_json string, user_id string"
     )
     
     # Convert StructType to a string representation for the exec'd code
     schema_str = str(macro_schema)
     
     return f'''
+# Base macro table
 @dlt.table(
     name="macro_{macro_name}",
     comment="Output from macro: {macro_name}",
     table_properties={{
-        "quality": "silver",
-        "pipelines.autoOptimize.managed": "true"
+        "quality": "bronze",
+        "pipelines.autoOptimize.managed": "true",
+        "display_name": "Macro: {macro_name}",
+        "downstream": "true"
     }}
 )
 def macro_{macro_name}_table():
@@ -359,6 +379,7 @@ def macro_{macro_name}_table():
                 "sample": row.get("sample"),
                 "macros": row.get("macros"),
                 "questions": row.get("questions"),
+                "user_id": row.get("user_id")
             }}
             input_data = {{k: v for k, v in input_data.items() if v is not None}}
             try:
@@ -379,6 +400,7 @@ def macro_{macro_name}_table():
                 "device_name": row.get("device_name"),
                 "timestamp": row.get("timestamp"),
                 "questions": row.get("questions"),
+                "user_id": row.get("user_id"),
                 "processed_timestamp": pd.Timestamp.now(),
                 "macro_output_json": debug_str
             }}
@@ -390,7 +412,7 @@ def macro_{macro_name}_table():
         else:
             # Return empty DataFrame with correct columns
             return pd.DataFrame(columns=[
-                "id", "device_id", "device_name", "timestamp", "questions", "processed_timestamp", "macro_output_json"
+                "id", "device_id", "device_name", "timestamp", "questions", "processed_timestamp", "macro_output_json", "user_id"
             ])
 
     # Apply the pandas UDF to get the base data with JSON
@@ -421,6 +443,7 @@ def macro_{macro_name}_table():
             F.col("device_name"),
             F.col("timestamp"),
             F.col("questions"),
+            F.col("user_id"),
             F.col("processed_timestamp"),
             # Parsed macro fields
             *parsed_columns
@@ -431,6 +454,32 @@ def macro_{macro_name}_table():
     except Exception as e:
         print(f"JSON parsing failed for macro {macro_name}: {{e}}")
         return processed_df
+
+# Enriched macro table with user metadata
+@dlt.table(
+    name="enriched_macro_{macro_name}",
+    comment="Enriched output from macro: {macro_name} with user metadata",
+    table_properties={{
+        "quality": "silver",
+        "pipelines.autoOptimize.managed": "true",
+        "display_name": "Enriched Macro: {macro_name.title()}",
+        "downstream": "false"
+    }}
+)
+def enriched_macro_{macro_name}_table():
+    """
+    Create an enriched macro table by combining macro output with user metadata.
+    This creates a silver layer table with denormalized user information.
+    """
+    
+    # Read from the silver macro table (this creates the dependency)
+    macro_df = dlt.read_stream("macro_{macro_name}")
+    
+    # Add user metadata column
+    from enrich import add_user_data_column
+    enriched_df = add_user_data_column(macro_df, ENVIRONMENT)
+    
+    return enriched_df
 '''
 
 # Initialize macro processing by generating table functions at module level
@@ -439,7 +488,9 @@ if ENABLE_MACRO_PROCESSING:
         experiment_macros, available_macros, macro_schemas = create_macro_tables()
         for macro_name in experiment_macros:
             if macro_name in available_macros and macro_name in macro_schemas:
-                print(f"Creating DLT table function for macro: {macro_name}")
+                print(f"Creating DLT table functions for macro: {macro_name}")
+                print(f"  - macro_{macro_name} (silver layer)")
+                print(f"  - enriched_macro_{macro_name} (gold layer with user metadata)")
                 schema = macro_schemas[macro_name]
                 table_code = create_macro_table_code(macro_name, schema)
                 exec(table_code, globals())
@@ -454,6 +505,35 @@ if ENABLE_MACRO_PROCESSING:
         print("Continuing without macro processing...")
 else:
     print("Macro processing disabled")
+
+# COMMAND ----------
+
+# DBTITLE 1,Enriched Sample Table (Silver Layer)
+@dlt.table(
+    name=ENRICHED_SAMPLE_TABLE,
+    comment="Silver layer sample table enriched with user profile metadata",
+    table_properties={
+        "quality": "silver",
+        "pipelines.autoOptimize.managed": "true",
+        "delta.enableChangeDataFeed": "true",
+        "display_name": "Enriched Sample Data",
+        "downstream": "false"
+    }
+)
+def enriched_sample():
+    """
+    Create an enriched sample table by combining sample data with user metadata
+    from the OpenJII backend API. This creates a silver layer table with denormalized
+    user information for easier analytics.
+    """
+    
+    # Read from the bronze sample table (this creates the dependency)
+    sample_df = dlt.read_stream(SAMPLE_TABLE)
+    
+    # Add user metadata column
+    enriched_df = add_user_data_column(sample_df, ENVIRONMENT)
+    
+    return enriched_df
 
 # COMMAND ----------
 
