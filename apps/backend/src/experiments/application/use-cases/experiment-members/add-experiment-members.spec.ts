@@ -1,11 +1,14 @@
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import type { EmailPort } from "../../../core/ports/email.port";
+import { EMAIL_PORT } from "../../../core/ports/email.port";
 import { AddExperimentMembersUseCase } from "./add-experiment-members";
 
 describe("AddExperimentMembersUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: AddExperimentMembersUseCase;
+  let emailPort: EmailPort;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -15,6 +18,9 @@ describe("AddExperimentMembersUseCase", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(AddExperimentMembersUseCase);
+
+    // Reset any mocks before each test
+    vi.restoreAllMocks();
   });
 
   afterEach(() => {
@@ -39,6 +45,10 @@ describe("AddExperimentMembersUseCase", () => {
     const member2Id = await testApp.createTestUser({
       email: "member2@example.com",
     });
+
+    // Mock email sending
+    emailPort = testApp.module.get(EMAIL_PORT);
+    vi.spyOn(emailPort, "sendAddedUserNotification").mockResolvedValue(success(undefined));
 
     // Add the members through the use case
     const result = await useCase.execute(
