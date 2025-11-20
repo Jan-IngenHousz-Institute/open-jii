@@ -42,3 +42,4 @@ ios
 *.aab
 src/env.ts
 .cursorrules
+.gradle-tmp

@@ -40,7 +40,8 @@ export function QuestionNode({ node }: QuestionNodeProps) {
       if (isAutoincrement && answerValue) {
         const options = content.options ?? [];
         const currentIndex = options.indexOf(answerValue);
-        const nextValue = options[currentIndex + 1] ?? answerValue;
+        const nextIndex = (currentIndex + 1) % options.length;
+        const nextValue = options[nextIndex];
         setAnswer(iterationCount + 1, node.name, nextValue);
       } else if (!isAutoincrement) {
         setAnswer(iterationCount + 1, node.name, answerValue);
