@@ -7,6 +7,7 @@ import { DatabricksAuthService } from "./services/auth/auth.service";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
+import type { DatabricksRunNowRequest } from "./services/jobs/jobs.types";
 import { DatabricksPipelinesService } from "./services/pipelines/pipelines.service";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import { DatabricksTablesService } from "./services/tables/tables.service";
@@ -154,6 +155,118 @@ describe("DatabricksAdapter", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toEqual(mockResponse);
+    });
+  });
+
+  describe("triggerEnrichedTablesRefreshJob", () => {
+    it("should successfully trigger enriched tables refresh job", async () => {
+      const metadataKey = "user_id";
+      const metadataValue = "user-123-456-789";
+
+      const mockResponse = {
+        run_id: 98765,
+        number_in_job: 1,
+      };
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock job run-now request - expect metadata key/value in the params
+      nock(databricksHost)
+        .post(`${DatabricksJobsService.JOBS_ENDPOINT}/run-now`, (body: DatabricksRunNowRequest) => {
+          return (
+            body.job_parameters.metadata_key === metadataKey &&
+            body.job_parameters.metadata_value === metadataValue
+          );
+        })
+        .reply(200, mockResponse);
+
+      // Execute trigger enriched tables refresh job
+      const result = await databricksAdapter.triggerEnrichedTablesRefreshJob(
+        metadataKey,
+        metadataValue,
+      );
+
+      // Assert result is success
+      expect(result.isSuccess()).toBe(true);
+      assertSuccess(result);
+      expect(result.value).toEqual(mockResponse);
+    });
+
+    it("should handle different metadata key/value combinations", async () => {
+      const testCases = [
+        { key: "user_id", value: "user-abc-123" },
+        { key: "location_id", value: "loc-xyz-789" },
+        { key: "experiment_id", value: "exp-def-456" },
+      ];
+
+      for (const { key, value } of testCases) {
+        const mockResponse = {
+          run_id: Math.floor(Math.random() * 100000),
+          number_in_job: 1,
+        };
+
+        // Mock token request
+        nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+          access_token: MOCK_ACCESS_TOKEN,
+          expires_in: MOCK_EXPIRES_IN,
+          token_type: "Bearer",
+        });
+
+        // Mock job run-now request
+        nock(databricksHost)
+          .post(
+            `${DatabricksJobsService.JOBS_ENDPOINT}/run-now`,
+            (body: DatabricksRunNowRequest) => {
+              return (
+                body.job_parameters.metadata_key === key &&
+                body.job_parameters.metadata_value === value
+              );
+            },
+          )
+          .reply(200, mockResponse);
+
+        // Execute trigger enriched tables refresh job
+        const result = await databricksAdapter.triggerEnrichedTablesRefreshJob(key, value);
+
+        // Assert result is success
+        expect(result.isSuccess()).toBe(true);
+        assertSuccess(result);
+        expect(result.value).toEqual(mockResponse);
+      }
+    });
+
+    it("should handle failure when job trigger fails", async () => {
+      const metadataKey = "user_id";
+      const metadataValue = "user-123-456-789";
+
+      // Mock token request
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      // Mock job run-now request with failure
+      nock(databricksHost).post(`${DatabricksJobsService.JOBS_ENDPOINT}/run-now`).reply(500, {
+        error_code: "INTERNAL_ERROR",
+        message: "Failed to trigger job",
+      });
+
+      // Execute trigger enriched tables refresh job
+      const result = await databricksAdapter.triggerEnrichedTablesRefreshJob(
+        metadataKey,
+        metadataValue,
+      );
+
+      // Assert result is failure
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to trigger job");
     });
   });
 

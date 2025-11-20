@@ -132,6 +132,11 @@ export class TestHarness {
   }
 
   private async clearDatabase(): Promise<void> {
+    // Ensure the module is set up before attempting to clear the database
+    if (!this._module) {
+      return;
+    }
+
     // Clean up test data in correct order (respecting foreign key constraints)
     await this.database.delete(auditLogs).execute();
     await this.database.delete(experimentMembers).execute();

@@ -1,14 +1,19 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Inject } from "@nestjs/common";
 
 import { success, Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { UserDto } from "../../../core/models/user.model";
+import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import { UserRepository } from "../../../core/repositories/user.repository";
 
 @Injectable()
 export class DeleteUserUseCase {
   private readonly logger = new Logger(DeleteUserUseCase.name);
 
-  constructor(private readonly userRepository: UserRepository) {}
+  constructor(
+    private readonly userRepository: UserRepository,
+    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+  ) {}
 
   async execute(id: string): Promise<Result<void>> {
     // Check if user exists
@@ -44,6 +49,24 @@ export class DeleteUserUseCase {
         }
 
         this.logger.log(`Successfully soft-deleted user ${id}`);
+
+        // Trigger enriched tables refresh for user deletion
+        this.logger.log(`Triggering enriched tables refresh for user deletion: ${id}`);
+        const refreshResult = await this.databricksPort.triggerEnrichedTablesRefreshJob(
+          "user_id",
+          id,
+        );
+
+        if (refreshResult.isFailure()) {
+          this.logger.warn(
+            `Failed to trigger enriched tables refresh for deleted user ${id}: ${refreshResult.error.message}`,
+          );
+          // Note: We don't fail the entire operation if the refresh trigger fails
+          // The user deletion was successful and should be returned
+        } else {
+          this.logger.log(`Successfully triggered enriched tables refresh for deleted user ${id}`);
+        }
+
         return success(undefined);
       });
     });

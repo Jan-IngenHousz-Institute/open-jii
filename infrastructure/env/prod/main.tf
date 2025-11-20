@@ -468,6 +468,69 @@ module "experiment_provisioning_job" {
   }
 }
 
+module "enriched_tables_refresh_job" {
+  source = "../../modules/databricks/job"
+
+  name        = "Enriched-Tables-Refresh-Job-PROD"
+  description = "Refreshes enriched tables across experiment pipelines when metadata changes (e.g., user profile updates)"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  # Enable job queueing
+  queue = {
+    enabled = true
+  }
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  # Configure task retries
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key           = "refresh_enriched_tables"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/notebooks/tasks/enriched_tables_refresh_task"
+
+      parameters = {
+        metadata_key         = "{{job.parameters.metadata_key}}"
+        metadata_value       = "{{job.parameters.metadata_value}}"
+        catalog_name         = module.databricks_catalog.catalog_name
+        central_schema       = "centrum"
+        central_silver_table = "clean_data"
+        environment          = upper(var.environment)
+      }
+    }
+  ]
+
+  # Configure Slack notifications
+  webhook_notifications = {
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
 
 module "ambyte_processing_job" {
   source = "../../modules/databricks/job"
@@ -587,6 +650,7 @@ module "databricks_secrets" {
     DATABRICKS_CLIENT_SECRET                  = module.node_service_principal.service_principal_secret_value
     DATABRICKS_EXPERIMENT_PROVISIONING_JOB_ID = module.experiment_provisioning_job.job_id
     DATABRICKS_AMBYTE_PROCESSING_JOB_ID       = module.ambyte_processing_job.job_id
+    DATABRICKS_ENRICHED_TABLES_REFRESH_JOB_ID = module.enriched_tables_refresh_job.job_id
     DATABRICKS_WAREHOUSE_ID                   = var.backend_databricks_warehouse_id
     DATABRICKS_WEBHOOK_API_KEY_ID             = var.backend_webhook_api_key_id
     DATABRICKS_WEBHOOK_SECRET                 = var.backend_webhook_secret
@@ -1011,6 +1075,10 @@ module "backend_ecs" {
     {
       name      = "DATABRICKS_AMBYTE_PROCESSING_JOB_ID"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_AMBYTE_PROCESSING_JOB_ID::"
+    },
+    {
+      name      = "DATABRICKS_ENRICHED_TABLES_REFRESH_JOB_ID"
+      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_ENRICHED_TABLES_REFRESH_JOB_ID::"
     },
     {
       name      = "DATABRICKS_WAREHOUSE_ID"
