@@ -1,15 +1,29 @@
 import { Battery, Unplug } from "lucide-react-native";
-import { View, Text, StyleSheet, Dimensions } from "react-native";
+import { useAsync } from "react-async-hook";
+import { View, Text, Dimensions } from "react-native";
 import { useDeviceConnectionStore } from "~/hooks/use-device-connection-store";
 import { useTheme } from "~/hooks/use-theme";
-import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-manager";
+import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-hooks";
+import { useScannerCommandExecutor } from "~/services/scan-manager/use-scanner-command-executor";
 
 export function DeviceConnectionWidget() {
-  const theme = useTheme();
-  const { colors, typography } = theme;
-  const { batteryLevel } = useDeviceConnectionStore();
-
+  const { colors } = useTheme();
+  const { batteryLevel, setBatteryLevel } = useDeviceConnectionStore();
+  const { executeCommand } = useScannerCommandExecutor();
   const { data: connectedDevice } = useConnectedDevice();
+
+  useAsync(async () => {
+    const batteryResponse = await executeCommand("battery");
+    if (typeof batteryResponse !== "string") {
+      return;
+    }
+
+    const batteryPercentage = parseInt(batteryResponse.replace("battery:", ""));
+    if (isNaN(batteryPercentage)) {
+      return;
+    }
+    setBatteryLevel(batteryPercentage);
+  }, [connectedDevice?.id]);
 
   const screenWidth = Dimensions.get("window").width;
 
@@ -37,17 +51,16 @@ export function DeviceConnectionWidget() {
   };
 
   return (
-    <View style={[styles.container, { maxWidth: screenWidth / 2 }]}>
+    <View className="mr-4 items-end" style={{ maxWidth: screenWidth / 2 }}>
       <View
-        style={[
-          styles.connectionStatus,
-          {
-            backgroundColor: isConnected
-              ? colors.semantic.success + "20"
-              : colors.semantic.error + "20",
-            borderColor: isConnected ? colors.semantic.success : colors.semantic.error,
-          },
-        ]}
+        className="flex-row items-center gap-0.5 rounded-lg border px-1.5 py-0.5"
+        style={{
+          backgroundColor: isConnected
+            ? colors.semantic.success + "20"
+            : colors.semantic.error + "20",
+          borderColor: isConnected ? colors.semantic.success : colors.semantic.error,
+          minHeight: 24,
+        }}
       >
         {isConnected ? (
           <Battery size={16} color={getBatteryColor()} />
@@ -56,28 +69,20 @@ export function DeviceConnectionWidget() {
         )}
 
         <Text
-          style={[
-            styles.connectionText,
-            typography.caption,
-            {
-              color: isConnected ? colors.semantic.success : colors.semantic.error,
-              fontSize: 11,
-            },
-          ]}
+          className="text-[11px] font-semibold"
+          style={{
+            color: isConnected ? colors.semantic.success : colors.semantic.error,
+          }}
         >
           {isConnected ? "Connected" : "Not connected"}
         </Text>
 
         {isConnected && (
           <Text
-            style={[
-              styles.batteryText,
-              typography.caption,
-              {
-                color: getBatteryColor(),
-                fontSize: 10,
-              },
-            ]}
+            className="ml-0.5 text-[10px] font-medium"
+            style={{
+              color: getBatteryColor(),
+            }}
           >
             {getBatteryText()}
           </Text>
@@ -86,27 +91,3 @@ export function DeviceConnectionWidget() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: "flex-end",
-    marginRight: 16,
-  },
-  connectionStatus: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 3,
-    minHeight: 24,
-  },
-  connectionText: {
-    fontWeight: "600",
-  },
-  batteryText: {
-    fontWeight: "500",
-    marginLeft: 3,
-  },
-});

@@ -5,7 +5,7 @@ import { toast } from "sonner-native";
 import { Button } from "~/components/Button";
 import { useProtocol } from "~/hooks/use-protocol";
 import { useTheme } from "~/hooks/use-theme";
-import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-manager";
+import { useConnectedDevice } from "~/services/device-connection-manager/device-connection-hooks";
 import { useScanner } from "~/services/scan-manager/scan-manager";
 import { useMeasurementFlowStore } from "~/stores/use-measurement-flow-store";
 import { playSound } from "~/utils/play-sound";
