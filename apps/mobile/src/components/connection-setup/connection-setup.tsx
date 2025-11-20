@@ -9,7 +9,7 @@ import {
   useConnectToDevice,
   usePairedDevices,
   useSerialDevices,
-} from "~/services/device-connection-manager/device-connection-manager";
+} from "~/services/device-connection-manager/device-connection-hooks";
 
 import { ConnectedDevice } from "./components/connected-device";
 import { DeviceList } from "./components/device-list";

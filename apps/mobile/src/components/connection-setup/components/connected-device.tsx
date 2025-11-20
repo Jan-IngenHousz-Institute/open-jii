@@ -4,6 +4,7 @@ import { View, Text } from "react-native";
 import { Button } from "~/components/Button";
 import { Card } from "~/components/Card";
 import { useTheme } from "~/hooks/use-theme";
+import { useScannerCommandExecutor } from "~/services/scan-manager/use-scanner-command-executor";
 import type { Device } from "~/types/device";
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
 export function ConnectedDevice(props: Props) {
   const { device, onDisconnect } = props;
   const { classes, colors, isDark } = useTheme();
+  const { executeCommand, isExecuting } = useScannerCommandExecutor();
 
   const accent = isDark ? colors.primary.bright : colors.primary.dark;
 
@@ -35,8 +37,12 @@ export function ConnectedDevice(props: Props) {
         <View className="mt-3 flex-row items-stretch gap-2">
           <Button title="Disconnect" onPress={() => onDisconnect(device)} style={{ flex: 1 }} />
           <Button
+            isLoading={isExecuting}
             title="Turn off MultispeQ"
-            onPress={() => {}}
+            onPress={async () => {
+              await executeCommand("sleep");
+              onDisconnect(device);
+            }}
             variant="ghost"
             style={{ backgroundColor: "#E2FCFC", minWidth: 120 }}
             textStyle={{ color: "#005E5E" }}
