@@ -14,11 +14,6 @@ import type {
   VolumeResponse,
 } from "../../../common/modules/databricks/services/volumes/volumes.types";
 import type { Result } from "../../../common/utils/fp-utils";
-import type {
-  AnnotationFilters,
-  DataReference,
-  ExperimentDataAnnotation,
-} from "../models/experiment-data-annotation.model";
 import type { ExperimentVisualizationDto } from "../models/experiment-visualizations.model";
 
 /**
@@ -178,48 +173,15 @@ export interface DatabricksPort {
   ): Promise<Result<VolumeResponse>>;
 
   /**
-   * Store annotations in Databricks Delta table
+   * Execute a SQL query in an experiment schema
+   *
+   * @param experimentName - Name of the experiment
+   * @param experimentId - ID of the experiment
+   * @param sqlStatement - The SQL statement to execute
    */
-  storeExperimentAnnotations(
-    experimentId: string,
+  executeExperimentSqlQuery(
     experimentName: string,
-    annotations: ExperimentDataAnnotation[],
-  ): Promise<Result<ExperimentDataAnnotation[]>>;
-
-  /**
-   * Retrieve annotations with filtering and pagination
-   */
-  getExperimentAnnotations(
     experimentId: string,
-    experimentName: string,
-    filters: AnnotationFilters,
-  ): Promise<Result<ExperimentDataAnnotation[]>>;
-
-  /**
-   * Update existing annotations
-   */
-  updateExperimentAnnotations(
-    experimentId: string,
-    experimentName: string,
-    annotationIds: string[],
-    updates: Partial<ExperimentDataAnnotation>,
-  ): Promise<Result<ExperimentDataAnnotation[]>>;
-
-  /**
-   * Soft delete annotations
-   */
-  deleteExperimentAnnotations(
-    experimentId: string,
-    experimentName: string,
-    annotationIds: string[],
-  ): Promise<Result<void>>;
-
-  /**
-   * Validate annotation data references against experiment schema
-   */
-  validateAnnotationDataReferences(
-    experimentId: string,
-    experimentName: string,
-    dataReferences: DataReference[],
-  ): Promise<Result<boolean>>;
+    sqlStatement: string,
+  ): Promise<Result<SchemaData>>;
 }

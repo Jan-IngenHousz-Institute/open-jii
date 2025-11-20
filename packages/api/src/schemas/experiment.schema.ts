@@ -203,9 +203,7 @@ export const zAnnotationDeleteBulkPathParam = z.object({
 });
 
 export const zAnnotationDeleteBulkBody = z.object({
-  tableName: z.string().describe("Name of the data table"),
-  rowIds: z.array(z.string().uuid().min(1)).min(1).describe("Row id's to delete annotations for"),
-  type: zAnnotationType.describe("Type of annotations to delete"),
+  annotationIds: z.array(z.string().uuid().min(1)).min(1).describe("Annotation IDs to delete"),
 });
 
 // Experiment data schema
@@ -904,3 +902,5 @@ export type AnnotationFlagContent = z.infer<typeof zAnnotationFlagContent>;
 export type Annotation = z.infer<typeof zAnnotation>;
 export type AddAnnotationBody = z.infer<typeof zAddAnnotationBody>;
 export type AddAnnotationsBulkBody = z.infer<typeof zAddAnnotationsBulkBody>;
+export type UpdateAnnotationBody = z.infer<typeof zUpdateAnnotationBody>;
+export type DeleteAnnotationsBulkBody = z.infer<typeof zAnnotationDeleteBulkBody>;

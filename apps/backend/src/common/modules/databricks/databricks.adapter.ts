@@ -1,15 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import {
-  AnnotationFilters,
-  DataReference,
-  ExperimentDataAnnotation,
-} from "../../../experiments/core/models/experiment-data-annotation.model";
 import { ExperimentVisualizationDto } from "../../../experiments/core/models/experiment-visualizations.model";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { MacroDto } from "../../../macros/core/models/macro.model";
 import { DatabricksPort as MacrosDatabricksPort } from "../../../macros/core/ports/databricks.port";
-import { Result, success, failure, AppError, tryCatch } from "../../utils/fp-utils";
+import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
 import type { UploadFileResponse } from "./services/files/files.types";
@@ -109,9 +104,30 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   /**
    * Execute a SQL query in a specific schema
    */
-  async executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {
+  async executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+    tableName?: string,
+  ): Promise<Result<SchemaData>> {
+    // tableName parameter is available for future use (e.g., logging, validation)
+    if (tableName) {
+      this.logger.debug(`Executing SQL query on table ${tableName} in schema ${schemaName}`);
+    }
     const result = await this.sqlService.executeSqlQuery(schemaName, sqlStatement, "INLINE");
     return result as Result<SchemaData>;
+  }
+
+  /**
+   * Execute a SQL query in an experiment schema with table name convenience
+   */
+  async executeExperimentSqlQuery(
+    experimentName: string,
+    experimentId: string,
+    sqlStatement: string,
+  ): Promise<Result<SchemaData>> {
+    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+    const schemaName = `exp_${cleanName}_${experimentId}`;
+    return this.executeSqlQuery(schemaName, sqlStatement);
   }
 
   /**
@@ -478,97 +494,5 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
       path: `/Shared/macros/${filename}`,
       recursive: false,
     });
-  }
-
-  /**
-   * Store annotations in Databricks Delta table
-   */
-  async storeExperimentAnnotations(
-    experimentId: string,
-    experimentName: string,
-    annotations: ExperimentDataAnnotation[],
-  ): Promise<Result<ExperimentDataAnnotation[]>> {
-    this.logger.log(
-      `Storing '${annotations.length}' annotation(s) for experiment ${experimentName} (${experimentId})`,
-    );
-    // TODO: Implement storing annotations in Databricks
-    await tryCatch(() => {
-      return;
-    });
-    return success(annotations);
-  }
-
-  /**
-   * Retrieve annotations with filtering and pagination
-   */
-  async getExperimentAnnotations(
-    experimentId: string,
-    experimentName: string,
-    filters: AnnotationFilters,
-  ): Promise<Result<ExperimentDataAnnotation[]>> {
-    this.logger.log(
-      `Getting annotation for experiment ${experimentName} (${experimentId}) with filters`,
-      filters,
-    );
-    // TODO: Implement retrieving annotations from Databricks with filtering and pagination
-    await tryCatch(() => {
-      return;
-    });
-    return success([]);
-  }
-
-  /**
-   * Update existing annotations
-   */
-  async updateExperimentAnnotations(
-    experimentId: string,
-    experimentName: string,
-    annotationIds: string[],
-    updates: Partial<ExperimentDataAnnotation>,
-  ): Promise<Result<ExperimentDataAnnotation[]>> {
-    this.logger.log(
-      `Updating '${annotationIds.length}' annotation(s) for experiment ${experimentName} (${experimentId}) with updates`,
-      updates,
-    );
-    // TODO: Implement updating annotations in Databricks
-    await tryCatch(() => {
-      return;
-    });
-    return success([]);
-  }
-
-  /**
-   * Soft delete annotations
-   */
-  async deleteExperimentAnnotations(
-    experimentId: string,
-    experimentName: string,
-    annotationIds: string[],
-  ): Promise<Result<void>> {
-    this.logger.log(
-      `Deleting '${annotationIds.length}' annotation(s) for experiment ${experimentName} (${experimentId})`,
-    );
-    // TODO: Implement soft deleting annotations in Databricks
-    return await tryCatch(() => {
-      return;
-    });
-  }
-
-  /**
-   * Validate annotation data references against experiment schema
-   */
-  async validateAnnotationDataReferences(
-    experimentId: string,
-    experimentName: string,
-    dataReferences: DataReference[],
-  ): Promise<Result<boolean>> {
-    this.logger.log(
-      `Validating ${dataReferences.length} data reference(s) for experiment ${experimentName} (${experimentId})`,
-    );
-    // TODO: Implement validation of data references against Databricks schema
-    await tryCatch(() => {
-      return;
-    });
-    return success(true);
   }
 }
