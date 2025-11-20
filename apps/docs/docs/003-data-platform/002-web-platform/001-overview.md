@@ -1,4 +1,4 @@
-# Web platform
+# Overview
 
 
 
@@ -7,3 +7,6 @@
 - secure authentication via email, ORCHID or GitHub
 - create and edit Experiments
 - view Experiment data
+
+### Register
+[Register](./0012-register.md)
