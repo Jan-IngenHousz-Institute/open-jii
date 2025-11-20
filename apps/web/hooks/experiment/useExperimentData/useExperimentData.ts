@@ -48,6 +48,8 @@ const ID_COLUMN_NAME = "id";
 export function getColumnWidth(typeName: string): number | undefined {
   // Set very small width for id column to accommodate checkboxes
   if (typeName === "ID") return 30;
+  // Set medium width for user columns that contain avatar + name
+  if (typeName === "USER") return 180;
   // Set medium width for array of struct columns that contain collapsible content
   if (typeName.startsWith("ARRAY<STRUCT<")) return 200;
   // Set smaller width for array columns that contain charts
@@ -92,13 +94,15 @@ function createTableColumns({
         return 2;
       case "TIMESTAMP":
         return 3;
-      case "STRING":
+      case "USER":
         return 5;
+      case "STRING":
+        return 6;
       case "DOUBLE":
       case "INT":
       case "LONG":
       case "BIGINT":
-        return 6;
+        return 7;
       default:
         if (
           typeName === "MAP" ||
@@ -106,8 +110,8 @@ function createTableColumns({
           typeName.startsWith("ARRAY<STRUCT<")
         )
           return 4;
-        if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 7;
-        return 8; // Other types at the end
+        if (typeName === "ARRAY" || typeName.startsWith("ARRAY<")) return 8;
+        return 9; // Other types at the end
     }
   };
 

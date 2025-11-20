@@ -33,6 +33,15 @@ export const selectUserProfileSchema = createSelectSchema(profiles)
     organization: z.string().optional(),
     email: z.string().email().nullable(),
   });
+export const userProfileMetadataSchema = createSelectSchema(profiles)
+  .pick({
+    userId: true,
+    firstName: true,
+    lastName: true,
+  })
+  .extend({
+    image: z.string().nullable(),
+  });
 
 // Define the types
 export type CreateUserDto = typeof createUserSchema._type;
@@ -40,6 +49,7 @@ export type UpdateUserDto = typeof updateUserSchema._type;
 export type UserDto = typeof selectUserSchema._type;
 export type CreateUserProfileDto = typeof createUserProfileSchema._type;
 export type UserProfileDto = typeof selectUserProfileSchema._type;
+export type UserProfileMetadata = typeof userProfileMetadataSchema._type;
 
 // Define search parameters type
 export interface SearchUsersParams {

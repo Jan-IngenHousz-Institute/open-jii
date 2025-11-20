@@ -5,6 +5,12 @@ export interface Table {
   table_type: string;
   comment?: string;
   created_at: number;
+  properties?: {
+    display_name?: string;
+    downstream?: "true" | "false";
+    quality?: "bronze" | "silver" | "gold";
+    [key: string]: string | undefined;
+  };
 }
 
 export interface ListTablesResponse {
