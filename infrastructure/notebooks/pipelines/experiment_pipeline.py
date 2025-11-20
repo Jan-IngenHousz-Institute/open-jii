@@ -114,7 +114,7 @@ def device():
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
         "delta.enableChangeDataFeed": "true",
-        "display_name": "Sample Data",
+        "display_name": "Raw Base Data",
         "downstream": "true"
     }
 )
@@ -355,7 +355,7 @@ def create_macro_table_code(macro_name: str, macro_schema: StructType) -> str:
     table_properties={{
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
-        "display_name": "Macro: {macro_name}",
+        "display_name": "Raw {macro_name} Data",
         "downstream": "true"
     }}
 )
@@ -462,7 +462,7 @@ def macro_{macro_name}_table():
     table_properties={{
         "quality": "silver",
         "pipelines.autoOptimize.managed": "true",
-        "display_name": "Enriched Macro: {macro_name.title()}",
+        "display_name": "{macro_name} Data",
         "downstream": "false"
     }}
 )
@@ -516,7 +516,7 @@ else:
         "quality": "silver",
         "pipelines.autoOptimize.managed": "true",
         "delta.enableChangeDataFeed": "true",
-        "display_name": "Enriched Sample Data",
+        "display_name": "Raw Data",
         "downstream": "false"
     }
 )
