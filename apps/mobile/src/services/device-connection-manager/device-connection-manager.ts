@@ -7,6 +7,7 @@ import {
 } from "~/services/multispeq-communication/android-serial-port-connection/open-serial-port-connection";
 import type { SerialPortEvents } from "~/services/multispeq-communication/android-serial-port-connection/serial-port-events";
 import { requestBluetoothPermission } from "~/services/request-bluetooth-permissions";
+import { useScannerCommandExecutorStore } from "~/stores/use-scanner-command-executor-store";
 import { Device } from "~/types/device";
 import { Emitter } from "~/utils/emitter";
 
@@ -107,9 +108,15 @@ export async function disconnectFromDevice(device: Device) {
 }
 
 export function useConnectedDevice() {
+  const { setDevice } = useScannerCommandExecutorStore();
   const { data, isLoading, error } = useQuery({
     queryKey: ["connected-device"],
-    queryFn: () => getConnectedDevice(),
+    queryFn: getConnectedDevice,
+    onSuccess: async (device) => {
+      // Set device in scanner command executor store when device is detected
+      // This handles the case where app starts with a device already connected
+      await setDevice(device ?? undefined);
+    },
   });
 
   return { data, isLoading, error };
@@ -118,6 +125,7 @@ export function useConnectedDevice() {
 export function useConnectToDevice() {
   const client = useQueryClient();
   const [connectingDeviceId, setConnectingDeviceId] = useState<string>();
+  const { setDevice } = useScannerCommandExecutorStore();
 
   return {
     connectingDeviceId,
@@ -125,6 +133,7 @@ export function useConnectToDevice() {
       setConnectingDeviceId(device.id);
       try {
         await connectToDevice(device);
+        await setDevice(device);
         await client.invalidateQueries({
           queryKey: ["connected-device"],
         });
@@ -137,6 +146,7 @@ export function useConnectToDevice() {
     },
     async disconnectFromDevice(device: Device) {
       await disconnectFromDevice(device);
+      await setDevice(undefined);
       await client.invalidateQueries({
         queryKey: ["connected-device"],
       });
@@ -151,6 +161,10 @@ export function useConnectToDevice() {
       await client.invalidateQueries({
         queryKey: ["paired-devices"],
       });
+      // Update scanner command executor store based on current connected device state
+      // (in case the unpaired device was the connected one)
+      const connectedDevice = await getConnectedDevice();
+      await setDevice(connectedDevice ?? undefined);
     },
   };
 }
