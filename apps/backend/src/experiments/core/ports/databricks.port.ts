@@ -163,4 +163,17 @@ export interface DatabricksPort {
     experimentId: string,
     volumeName: string,
   ): Promise<Result<VolumeResponse>>;
+
+  /**
+   * Execute a SQL query in an experiment schema
+   *
+   * @param experimentName - Name of the experiment
+   * @param experimentId - ID of the experiment
+   * @param sqlStatement - The SQL statement to execute
+   */
+  executeExperimentSqlQuery(
+    experimentName: string,
+    experimentId: string,
+    sqlStatement: string,
+  ): Promise<Result<SchemaData>>;
 }

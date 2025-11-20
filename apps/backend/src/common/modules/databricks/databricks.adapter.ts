@@ -84,9 +84,30 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MacrosDatabr
   /**
    * Execute a SQL query in a specific schema
    */
-  async executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {
+  async executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+    tableName?: string,
+  ): Promise<Result<SchemaData>> {
+    // tableName parameter is available for future use (e.g., logging, validation)
+    if (tableName) {
+      this.logger.debug(`Executing SQL query on table ${tableName} in schema ${schemaName}`);
+    }
     const result = await this.sqlService.executeSqlQuery(schemaName, sqlStatement, "INLINE");
     return result as Result<SchemaData>;
+  }
+
+  /**
+   * Execute a SQL query in an experiment schema with table name convenience
+   */
+  async executeExperimentSqlQuery(
+    experimentName: string,
+    experimentId: string,
+    sqlStatement: string,
+  ): Promise<Result<SchemaData>> {
+    const cleanName = experimentName.toLowerCase().trim().replace(/ /g, "_");
+    const schemaName = `exp_${cleanName}_${experimentId}`;
+    return this.executeSqlQuery(schemaName, sqlStatement);
   }
 
   /**
