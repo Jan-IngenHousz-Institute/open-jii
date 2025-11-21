@@ -23,7 +23,7 @@ from pyspark.sql.types import (
 # Import the executor modules using relative imports
 from .executors.js_executor import execute_javascript_macro
 from .executors.py_executor import execute_python_macro
-
+from .executors.r_executor import execute_r_macro
 
 def execute_macro_script(
     macro_name: str, 
@@ -32,7 +32,8 @@ def execute_macro_script(
     helpers_path: str = None
 ) -> Dict[str, Any]:
     """
-    Execute a macro script (JS or Python) and return the output object
+    Execute a macro script and return the output object.
+    Searches for the first file with the macro name and a recognized extension.
     
     Args:
         macro_name: Name of the macro script (without extension)
@@ -47,34 +48,43 @@ def execute_macro_script(
     print(f"[MACRO] Macros path: {macros_path}")
     print(f"[MACRO] Input data keys: {list(input_data.keys()) if input_data else 'None'}")
     
-    # The macro_name should now be the full filename (e.g., "macro_8f400c257611.py")
-    script_path = f"{macros_path}/{macro_name}"
+    # Define supported extensions and their executors
+    executors = {
+        '.py': ('python', execute_python_macro),
+        '.js': ('javascript', execute_javascript_macro),
+        '.r': ('r', execute_r_macro)
+    }
     
-    print(f"[MACRO] Checking for script at: {script_path}")
-    if not os.path.exists(script_path):
-        print(f"[MACRO] ERROR: Macro script not found: {script_path}")
+    # Find the first existing file with a recognized extension
+    script_path = None
+    script_type = None
+    executor_func = None
+    
+    for extension, (lang_type, func) in executors.items():
+        candidate_path = f"{macros_path}/{macro_name}{extension}"
+        if os.path.exists(candidate_path):
+            script_path = candidate_path
+            script_type = lang_type
+            executor_func = func
+            print(f"[MACRO] Found {script_type} script: {script_path}")
+            break
+    
+    if script_path is None:
+        supported_extensions = list(executors.keys())
+        print(f"[MACRO] ERROR: No macro script found for '{macro_name}' with supported extensions: {supported_extensions}")
         return {}
-    
-    # Determine script type from file extension
-    if macro_name.endswith('.py'):
-        script_type = 'python'
-    elif macro_name.endswith('.js'):
-        script_type = 'javascript'
-    else:
-        print(f"[MACRO] ERROR: Unsupported file extension for macro: {macro_name}")
-        return {}
-    
-    print(f"[MACRO] Found {script_type} script: {script_path}")
     
     try:
         print(f"[MACRO] Executing {script_type} macro: {macro_name}")
-        if script_type == 'python':
-            result = execute_python_macro(script_path, input_data.get("sample"))
-        else:  # JavaScript
-            result = execute_javascript_macro(script_path, input_data.get("sample"), macro_name, helpers_path)
+        
+        # Execute based on script type
+        sample_data = input_data.get("sample")
+        if script_type == 'javascript':
+            result = executor_func(script_path, sample_data, macro_name, helpers_path)
+        else:
+            result = executor_func(script_path, sample_data)
         
         print(f"[MACRO] Successfully executed macro {macro_name}, output keys: {list(result.keys()) if result else 'None'}")
-
         return result
             
     except Exception as e:
@@ -104,7 +114,7 @@ def get_available_macros(macros_path: str = "/Shared/Workspace/macros") -> List[
         print(f"[MACRO] Found {len(files)} files in macros directory")
         
         for file in files:
-            if file.endswith(('.py', '.js')):
+            if file.endswith(('.py', '.js', '.r')):
                 macro_name = os.path.splitext(file)[0]
                 macros.add(macro_name)
                 print(f"[MACRO] Found macro: {macro_name} ({file})")
