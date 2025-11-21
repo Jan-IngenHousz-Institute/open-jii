@@ -1,7 +1,9 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useAsyncCallback } from "react-async-hook";
 import { toast } from "sonner-native";
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { sendMqttEvent } from "~/services/mqtt/send-mqtt-event";
+import { saveSuccessfulUpload } from "~/services/successful-uploads-storage";
 import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
 
@@ -39,6 +41,7 @@ function prepareMeasurementForUpload({
 }
 
 export function useMeasurementUpload() {
+  const queryClient = useQueryClient();
   const { saveFailedUpload } = useFailedUploads();
 
   const { loading: isUploading, execute: uploadMeasurement } = useAsyncCallback(
@@ -78,6 +81,17 @@ export function useMeasurementUpload() {
       try {
         await sendMqttEvent(topic, measurementData);
         toast.success("Measurement uploaded!");
+        // Save successful upload for history
+        await saveSuccessfulUpload({
+          topic,
+          measurementResult: measurementData,
+          metadata: {
+            experimentName,
+            protocolName: protocolId,
+            timestamp: measurementData.timestamp,
+          },
+        });
+        await queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
       } catch (e: any) {
         console.log("Upload failed", e);
         toast.error("Upload not available, upload it later from Recent");
@@ -90,6 +104,7 @@ export function useMeasurementUpload() {
             timestamp: measurementData.timestamp,
           },
         });
+        await queryClient.invalidateQueries({ queryKey: ["allMeasurements"] });
       }
     },
   );
