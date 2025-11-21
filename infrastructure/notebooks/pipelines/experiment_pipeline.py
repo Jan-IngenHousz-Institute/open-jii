@@ -5,6 +5,7 @@
 
 %pip install /Workspace/Shared/wheels/multispeq-0.1.0-py3-none-any.whl
 %pip install /Workspace/Shared/wheels/mini_racer-0.12.4-py3-none-manylinux_2_31_aarch64.whl
+%pip install /Workspace/Shared/wheels/rpy2-3.6.4-py3-none-any.whl
 %pip install /Workspace/Shared/wheels/enrich-0.1.0-py3-none-any.whl
 
 # COMMAND ----------
