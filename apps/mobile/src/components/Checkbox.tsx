@@ -12,8 +12,17 @@ interface CheckboxProps {
 export function Checkbox({ value, text, onChange }: CheckboxProps) {
   const { classes } = useTheme();
 
+  // WORKAROUND: Key with timestamp to force remount on every render
+  // This bypasses React Native's native style caching bug in Expo SDK 54
+  // The timestamp ensures remount even when props stay the same (which was causing the issue)
+  const renderId = Date.now();
+
   return (
-    <TouchableOpacity className="flex-row items-center" onPress={() => onChange(!value)}>
+    <TouchableOpacity
+      key={renderId}
+      className="flex-row items-center"
+      onPress={() => onChange(!value)}
+    >
       <View
         className={clsx("mr-3 h-8 w-8 items-center justify-center rounded border-2")}
         style={{
