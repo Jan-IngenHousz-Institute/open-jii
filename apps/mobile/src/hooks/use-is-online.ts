@@ -7,5 +7,6 @@ export function useIsOnline() {
     queryFn: isOnline,
     refetchInterval: 2000,
     staleTime: 0,
+    networkMode: "always",
   });
 }

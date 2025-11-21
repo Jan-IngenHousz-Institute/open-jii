@@ -18,6 +18,7 @@ export function useFailedUploads() {
       const entries = await getFailedUploadsWithKeys();
       return entries.map(([key, data]) => ({ key, data }));
     },
+    networkMode: "always",
   });
 
   const uploadAsync = useAsyncCallback(async () => {

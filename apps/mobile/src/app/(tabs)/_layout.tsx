@@ -1,8 +1,9 @@
 import { Tabs, useRouter } from "expo-router";
-import { User, FlaskConical, Settings, Workflow, Bluetooth, Clock } from "lucide-react-native";
+import { User, FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-native";
 import { useEffect } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { RecentTabIcon } from "~/components/recent-tab-icon";
 import { useSessionStore } from "~/hooks/use-session-store";
 import { useTheme } from "~/hooks/use-theme";
 import { DeviceConnectionWidget } from "~/widgets/device-connection-widget";
@@ -64,7 +65,7 @@ export default function TabLayout() {
           name="recent-measurements"
           options={{
             title: "Recent",
-            tabBarIcon: ({ color, size }) => <Clock size={size} color={color} />,
+            tabBarIcon: ({ color, size }) => <RecentTabIcon color={color} size={size} />,
           }}
         />
         <Tabs.Screen
