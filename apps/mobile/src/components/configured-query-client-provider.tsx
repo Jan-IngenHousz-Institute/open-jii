@@ -1,4 +1,7 @@
-import { QueryClient, QueryCache, QueryClientProvider, onlineManager } from "@tanstack/react-query";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import { QueryClient, QueryCache, onlineManager } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import axios from "axios";
 import React, { useEffect, useRef } from "react";
 import { toast } from "sonner-native";
@@ -40,6 +43,10 @@ const defaultOptions = {
   },
 };
 
+const asyncStoragePersister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+});
+
 export function ConfiguredQueryClientProvider({ children }) {
   const queryClientRef = useRef<QueryClient>(undefined);
 
@@ -63,5 +70,15 @@ export function ConfiguredQueryClientProvider({ children }) {
     });
   }
 
-  return <QueryClientProvider client={queryClientRef.current}>{children}</QueryClientProvider>;
+  return (
+    <PersistQueryClientProvider
+      client={queryClientRef.current}
+      persistOptions={{
+        persister: asyncStoragePersister,
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      }}
+    >
+      {children}
+    </PersistQueryClientProvider>
+  );
 }
