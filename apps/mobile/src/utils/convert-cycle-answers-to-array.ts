@@ -15,11 +15,15 @@ export function convertCycleAnswersToArray(
   }
 
   const rows: AnswerData[] = [];
-  for (const [questionLabel, questionAnswer] of Object.entries(cycleAnswers)) {
-    const matchingNode = flowNodes.find((n) => n.name === questionLabel);
-    const questionText = matchingNode?.content?.text ?? "question text";
+  for (const [nodeId, questionAnswer] of Object.entries(cycleAnswers)) {
+    const matchingNode = flowNodes.find((n) => n.id === nodeId);
+    if (!matchingNode) {
+      continue;
+    }
+
+    const questionText = matchingNode.content?.text ?? "question text";
     rows.push({
-      question_label: questionLabel,
+      question_label: matchingNode.name,
       question_text: questionText,
       question_answer: questionAnswer,
     });

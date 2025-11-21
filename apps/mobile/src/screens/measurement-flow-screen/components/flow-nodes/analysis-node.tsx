@@ -108,6 +108,18 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       throw new Error("Missing macro filename");
     }
 
+    const cycleAnswers = getCycleAnswers(iterationCount);
+    const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
+
+    console.log("=== Upload Data ===");
+    console.log("Cycle Answers (raw):", cycleAnswers);
+    console.log("Questions (converted):", questions);
+    console.log("Raw Measurement:", scanResult);
+    console.log("Experiment ID:", experimentId);
+    console.log("Protocol ID:", protocolId);
+    console.log("Macro Filename:", macro?.filename);
+    console.log("Timestamp:", analysisTimestampRef.current);
+
     await uploadMeasurement({
       rawMeasurement: scanResult,
       timestamp: analysisTimestampRef.current,
@@ -116,7 +128,7 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       protocolId,
       userId: session?.data?.user?.id,
       macroFilename: macro?.filename,
-      questions: convertCycleAnswersToArray(getCycleAnswers(iterationCount), flowNodes),
+      questions,
     });
     finishFlow();
   };
