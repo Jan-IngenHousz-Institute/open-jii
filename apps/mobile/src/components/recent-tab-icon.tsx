@@ -43,4 +43,3 @@ export function RecentTabIcon({ color, size }: { color: string; size: number }) 
     </View>
   );
 }
-
