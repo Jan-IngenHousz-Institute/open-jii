@@ -106,8 +106,8 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       throw new Error("Missing user id");
     }
 
-    if (!macro?.filename) {
-      throw new Error("Missing macro filename");
+    if (!macro?.id || !macro?.name || !macro?.filename) {
+      throw new Error("Missing macro information");
     }
 
     const cycleAnswers = getCycleAnswers(iterationCount);
@@ -120,7 +120,11 @@ export function AnalysisNode({ content }: AnalysisNodeProps) {
       experimentId,
       protocolId,
       userId: session?.data?.user?.id,
-      macroFilename: macro?.filename,
+      macro: {
+        id: macro.id,
+        name: macro.name,
+        filename: macro.filename,
+      },
       questions,
     });
     finishFlow();
