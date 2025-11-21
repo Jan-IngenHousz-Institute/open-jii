@@ -1,10 +1,9 @@
 "use client";
 
-import { MapPinIcon } from "lucide-react";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components";
+import { CardTitle, CardDescription } from "@repo/ui/components";
 import type { LocationPoint } from "@repo/ui/components/map";
 import { toast } from "@repo/ui/hooks";
 
@@ -161,84 +160,68 @@ export function ExperimentLocationManagement({
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPinIcon className="h-5 w-5" />
-            {t("settings.locations.title")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="animate-pulse space-y-2">
-            <div className="h-4 w-3/4 rounded bg-gray-200"></div>
-            <div className="h-32 rounded bg-gray-200"></div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4 p-0">
+        <div>
+          <CardTitle className="flex items-center gap-2">{t("settings.locations.title")}</CardTitle>
+          <CardDescription>{t("settings.locations.description")}</CardDescription>
+        </div>
+        <div className="animate-pulse space-y-2">
+          <div className="h-[460px] rounded bg-gray-200"></div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div>
-          <CardTitle className="flex items-center gap-2">
-            <MapPinIcon className="h-5 w-5" />
-            {t("settings.locations.title")}
-          </CardTitle>
-          <CardDescription>{t("settings.locations.description")}</CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Edit Mode */}
-        <div className="space-y-4">
-          {/* Interactive Map for Editing */}
+    <div className="space-y-4 p-0">
+      <div>
+        <CardTitle className="flex items-center gap-2">{t("settings.locations.title")}</CardTitle>
+        <CardDescription>{t("settings.locations.description")}</CardDescription>
+      </div>
+      {/* Interactive Map for Editing */}
+      <div className="min-h-[460px]">
+        <Map
+          locations={editedLocations}
+          onLocationsChange={handleLocationsChange}
+          onLocationAdd={handleLocationAdd}
+          selectionMode={hasAccess && !isArchived}
+          onSearch={handleSearch}
+          searchResults={searchResults}
+          searchLoading={searchLoading}
+          disabled={!hasAccess || isSaving || isArchived}
+          height="460px"
+          center={
+            editedLocations.length > 0
+              ? [
+                  editedLocations.reduce((sum, loc) => sum + loc.latitude, 0) /
+                    editedLocations.length,
+                  editedLocations.reduce((sum, loc) => sum + loc.longitude, 0) /
+                    editedLocations.length,
+                ]
+              : [52.52, 13.405] // Default to Berlin
+          }
+          zoom={editedLocations.length === 1 ? 12 : 8}
+          minZoom={2}
+          maxZoom={18}
+          showZoomControl={true}
+          showScale={true}
+          showSidebar={true}
+          showLocationSearch={true}
+          showDistances={false}
+          sidebarTitle={t("settings.locations.editMode")}
+        />
+      </div>
 
-          <div className="min-h-[400px] rounded border">
-            <Map
-              locations={editedLocations}
-              onLocationsChange={handleLocationsChange}
-              onLocationAdd={handleLocationAdd}
-              selectionMode={hasAccess && !isArchived}
-              onSearch={handleSearch}
-              searchResults={searchResults}
-              searchLoading={searchLoading}
-              disabled={!hasAccess || isSaving || isArchived}
-              height="400px"
-              center={
-                editedLocations.length > 0
-                  ? [
-                      editedLocations.reduce((sum, loc) => sum + loc.latitude, 0) /
-                        editedLocations.length,
-                      editedLocations.reduce((sum, loc) => sum + loc.longitude, 0) /
-                        editedLocations.length,
-                    ]
-                  : [52.52, 13.405] // Default to Berlin
-              }
-              zoom={editedLocations.length === 1 ? 12 : 8}
-              minZoom={2}
-              maxZoom={18}
-              showZoomControl={true}
-              showScale={true}
-              showSidebar={true}
-              showLocationSearch={true}
-              showDistances={false}
-              sidebarTitle={t("settings.locations.editMode")}
-            />
+      <div className="flex items-center justify-between">
+        {editedLocations.length > 0 && (
+          <div className="text-muted-foreground text-sm">
+            {t("settings.locations.editingCount", { count: editedLocations.length })}
           </div>
-
-          <div className="flex items-center justify-between">
-            {editedLocations.length > 0 && (
-              <div className="text-muted-foreground text-sm">
-                {t("settings.locations.editingCount", { count: editedLocations.length })}
-              </div>
-            )}
-            {isSaving && (
-              <div className="text-muted-foreground text-sm">{t("experimentSettings.saving")}</div>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        )}
+        {isSaving && (
+          <div className="text-muted-foreground text-sm">{t("experimentSettings.saving")}</div>
+        )}
+      </div>
+    </div>
   );
 }

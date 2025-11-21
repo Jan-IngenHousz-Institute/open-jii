@@ -69,11 +69,15 @@ export default function ExperimentVisualizationsDisplay({
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-muted-foreground text-sm">{t("ui.messages.loading")}</div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4 p-0">
+        <div>
+          <CardTitle>Visualizations</CardTitle>
+          <CardDescription>{t("selector.noVisualizations")}</CardDescription>
+        </div>
+        <div className="animate-pulse space-y-2">
+          <div className="h-[250px] rounded bg-gray-200"></div>
+        </div>
+      </div>
     );
   }
 

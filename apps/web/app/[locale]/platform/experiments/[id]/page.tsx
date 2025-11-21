@@ -6,18 +6,14 @@ import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useE
 import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
 import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
 import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
-import { formatDate } from "@/util/date";
 import { notFound } from "next/navigation";
 import { use, useRef } from "react";
 import { ExperimentDescription } from "~/components/experiment-overview/experiment-description";
-import { ExperimentInfoCard } from "~/components/experiment-settings/experiment-info-card";
+import { ExperimentDetailsCard } from "~/components/experiment-overview/experiment-details-card";
 import { ExperimentLocationManagement } from "~/components/experiment-settings/experiment-location-management-card";
-import { ExperimentMemberManagement } from "~/components/experiment-settings/experiment-member-management-card";
-import { ExperimentVisibilityCard } from "~/components/experiment-settings/experiment-visibility-card";
 
 import type { Experiment } from "@repo/api";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardContent, Button } from "@repo/ui/components";
 
 interface ExperimentOverviewPageProps {
   params: Promise<{ id: string }>;
@@ -34,6 +30,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
 
   // Locations
   const { data: locationsData } = useExperimentLocations(id);
+  const locations = locationsData?.body ?? [];
 
   // Members
   const {
@@ -65,8 +62,18 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
 
   return (
     <div className="flex flex-col gap-6 md:flex-row">
-      {/* LEFT SIDE CONTENT */}
-      <div className="flex-1 space-y-8">
+      {/* RIGHT SIDE — EXPERIMENT DETAILS CARD (First on mobile) */}
+      <ExperimentDetailsCard
+        experimentId={id}
+        experiment={experiment}
+        locations={locations}
+        members={members}
+        isMembersLoading={isMembersLoading}
+        isMembersError={isMembersError}
+      />
+
+      {/* LEFT SIDE CONTENT (Second on mobile) */}
+      <div className="flex-1 space-y-8 md:order-1">
         <ExperimentDescription
           experimentId={id}
           description={experiment.description ?? ""}
@@ -81,86 +88,6 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
         />
 
         <ExperimentLocationManagement experimentId={experiment.id} hasAccess={hasAccess} />
-      </div>
-
-      {/* RIGHT SIDE — EXPERIMENT DETAILS CARD */}
-      <div className="w-full md:w-96">
-        <Card className="top-6">
-          <CardHeader>
-            <h3 className="text-lg font-semibold">{t("detailsTitle")}</h3>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h4 className="text-sm font-medium">{t("experimentId")}</h4>
-              <p className="text-muted-foreground">{experiment.id}</p>
-            </div>
-
-            {locationsData?.body && locationsData.body.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium">Experiment location(s)</h4>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label="locations-action"
-                    className="text-primary"
-                  >
-                    Add
-                  </Button>
-                </div>
-                <div className="text-muted-foreground">
-                  {locationsData.body.map((location) => (
-                    <p key={location.id} className="truncate">
-                      {location.name}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div>
-              <h4 className="text-sm font-medium">{t("updated")}</h4>
-              <p className="text-muted-foreground">{formatDate(experiment.updatedAt)}</p>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-medium">{t("created")}</h4>
-              <p className="text-muted-foreground">{formatDate(experiment.createdAt)}</p>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-medium">{t("createdBy")}</h4>
-              <p className="text-muted-foreground">
-                {experiment.ownerFirstName} {experiment.ownerLastName}
-              </p>
-            </div>
-          </CardContent>
-
-          <div
-            role="separator"
-            aria-orientation="horizontal"
-            className="text-muted-foreground mx-4 border-t"
-          />
-          <ExperimentVisibilityCard
-            experimentId={id}
-            initialVisibility={experiment.visibility}
-            embargoUntil={experiment.embargoUntil}
-          />
-
-          <div
-            role="separator"
-            aria-orientation="horizontal"
-            className="text-muted-foreground mx-4 border-t"
-          />
-
-          <ExperimentMemberManagement
-            experimentId={id}
-            members={members}
-            isLoading={isMembersLoading}
-            isError={isMembersError}
-          />
-        </Card>
-        <ExperimentInfoCard experimentId={id} experiment={experiment} members={members} />
       </div>
     </div>
   );
