@@ -7,10 +7,16 @@ import { saveSuccessfulUpload } from "~/services/successful-uploads-storage";
 import { AnswerData } from "~/utils/convert-cycle-answers-to-array";
 import { getMultispeqMqttTopic } from "~/utils/get-multispeq-mqtt-topic";
 
+interface MacroInfo {
+  id: string;
+  name: string;
+  filename: string;
+}
+
 interface PrepareMeasurementArgs {
   rawMeasurement: any;
   userId: string;
-  macroFilename: string;
+  macro: MacroInfo | null;
   timestamp: string;
   questions: AnswerData[];
 }
@@ -18,7 +24,7 @@ interface PrepareMeasurementArgs {
 function prepareMeasurementForUpload({
   rawMeasurement,
   userId,
-  macroFilename,
+  macro,
   timestamp,
   questions,
 }: PrepareMeasurementArgs) {
@@ -28,12 +34,15 @@ function prepareMeasurementForUpload({
       : [rawMeasurement.sample];
 
     for (const sample of samples) {
-      sample.macros = macroFilename ? [macroFilename] : [];
+      sample.macros = macro?.filename ? [macro.filename] : [];
     }
   }
 
+  const macros: MacroInfo[] = macro ? [macro] : [];
+
   return {
     questions,
+    macros,
     timestamp,
     user_id: userId,
     ...rawMeasurement,
@@ -52,7 +61,7 @@ export function useMeasurementUpload() {
       experimentId,
       protocolId,
       userId,
-      macroFilename,
+      macro,
       questions,
     }: {
       rawMeasurement: any;
@@ -61,7 +70,7 @@ export function useMeasurementUpload() {
       experimentId: string;
       protocolId: string;
       userId: string;
-      macroFilename: string;
+      macro: { id: string; name: string; filename: string } | null;
       questions: AnswerData[];
     }) => {
       if (typeof rawMeasurement !== "object") {
@@ -71,7 +80,7 @@ export function useMeasurementUpload() {
       const measurementData = prepareMeasurementForUpload({
         rawMeasurement,
         userId,
-        macroFilename,
+        macro,
         timestamp,
         questions,
       });
