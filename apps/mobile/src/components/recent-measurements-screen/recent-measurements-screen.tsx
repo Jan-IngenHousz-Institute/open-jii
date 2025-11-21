@@ -5,8 +5,12 @@ import { View, Text, FlatList, TouchableOpacity, Alert } from "react-native";
 import { toast } from "sonner-native";
 import { Button } from "~/components/Button";
 import { MeasurementItem } from "~/components/measurement-item";
+import { MeasurementQuestionsModal } from "~/components/recent-measurements-screen/measurement-questions-modal";
 import { useAllMeasurements } from "~/hooks/use-all-measurements";
-import type { MeasurementFilter } from "~/hooks/use-all-measurements";
+import type {
+  MeasurementFilter,
+  MeasurementItem as MeasurementItemType,
+} from "~/hooks/use-all-measurements";
 import { useFailedUploads } from "~/hooks/use-failed-uploads";
 import { useTheme } from "~/hooks/use-theme";
 import { removeFailedUpload as removeFailedUploadFromStorage } from "~/services/failed-uploads-storage";
@@ -15,6 +19,7 @@ import { removeSuccessfulUpload } from "~/services/successful-uploads-storage";
 export function RecentMeasurementsScreen() {
   const { colors, classes } = useTheme();
   const [filter, setFilter] = useState<MeasurementFilter>("all");
+  const [selectedMeasurement, setSelectedMeasurement] = useState<MeasurementItemType | null>(null);
   const { measurements, invalidate } = useAllMeasurements(filter);
   const { uploadAll, isUploading, uploadOne } = useFailedUploads();
 
@@ -86,6 +91,10 @@ export function RecentMeasurementsScreen() {
   };
 
   const unsyncedCount = measurements?.filter((m) => m.status === "unsynced").length ?? 0;
+
+  const handleItemPress = (measurement: NonNullable<typeof measurements>[number]) => {
+    setSelectedMeasurement(measurement);
+  };
 
   return (
     <View className={clsx("flex-1", classes.background)}>
@@ -187,6 +196,7 @@ export function RecentMeasurementsScreen() {
               timestamp={measurement.timestamp}
               experimentName={measurement.experimentName}
               status={measurement.status}
+              onPress={() => handleItemPress(measurement)}
               onDelete={() =>
                 handleDelete(measurement.key, measurement.status, measurement.experimentName)
               }
@@ -197,6 +207,14 @@ export function RecentMeasurementsScreen() {
               }
             />
           )}
+        />
+      )}
+
+      {selectedMeasurement && (
+        <MeasurementQuestionsModal
+          visible={!!selectedMeasurement}
+          measurement={selectedMeasurement}
+          onClose={() => setSelectedMeasurement(null)}
         />
       )}
     </View>
