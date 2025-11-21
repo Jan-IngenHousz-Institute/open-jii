@@ -71,7 +71,6 @@ export function DeviceConnectionWidget() {
     setIsRefreshing(true);
     try {
       await queryClient.resetQueries();
-      await queryClient.refetchQueries();
     } catch (error) {
       console.error("Error refreshing data:", error);
       toast.error("Failed to refresh data");
