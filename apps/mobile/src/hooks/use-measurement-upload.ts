@@ -33,7 +33,7 @@ function prepareMeasurementForUpload({
   return {
     questions,
     timestamp,
-    userId,
+    user_id: userId,
     ...rawMeasurement,
   };
 }
