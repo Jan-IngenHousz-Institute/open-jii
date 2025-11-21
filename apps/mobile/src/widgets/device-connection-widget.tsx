@@ -13,6 +13,10 @@ export function DeviceConnectionWidget() {
   const { data: connectedDevice } = useConnectedDevice();
 
   useAsync(async () => {
+    if (!connectedDevice) {
+      return;
+    }
+
     const batteryResponse = await executeCommand("battery");
     if (typeof batteryResponse !== "string") {
       return;
