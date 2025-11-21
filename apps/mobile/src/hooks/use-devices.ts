@@ -54,6 +54,7 @@ export function useDevices(type: DeviceType | undefined) {
     queryKey: ["getDevices", type],
     queryFn: () => type && getDevices(type),
     enabled: false,
+    networkMode: "always",
   });
 
   return { devices: isLoading ? undefined : devices, isLoading, startScan, error };

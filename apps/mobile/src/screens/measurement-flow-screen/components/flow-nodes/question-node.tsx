@@ -25,25 +25,26 @@ export function QuestionNode({ node }: QuestionNodeProps) {
 
   const content = node.content;
 
-  // Get current answer from store
-  const answerValue = getAnswer(iterationCount, node.name) ?? "";
+  // Get current answer from store (using node.id as key)
+  const answerValue = getAnswer(iterationCount, node.id) ?? "";
 
   // Handler to update answer in store
   const handleAnswerChange = (value: string) => {
-    setAnswer(iterationCount, node.name, value);
+    setAnswer(iterationCount, node.id, value);
   };
 
   const handleNextStep = () => {
     // Handle autoincrement for multi_choice questions
     if (content.kind === "multi_choice") {
-      const isAutoincrement = isAutoincrementEnabled(node.name);
+      const isAutoincrement = isAutoincrementEnabled(node.id);
       if (isAutoincrement && answerValue) {
         const options = content.options ?? [];
         const currentIndex = options.indexOf(answerValue);
-        const nextValue = options[currentIndex + 1] ?? answerValue;
-        setAnswer(iterationCount + 1, node.name, nextValue);
+        const nextIndex = (currentIndex + 1) % options.length;
+        const nextValue = options[nextIndex];
+        setAnswer(iterationCount + 1, node.id, nextValue);
       } else if (!isAutoincrement) {
-        setAnswer(iterationCount + 1, node.name, answerValue);
+        setAnswer(iterationCount + 1, node.id, answerValue);
       }
     }
     nextStep();

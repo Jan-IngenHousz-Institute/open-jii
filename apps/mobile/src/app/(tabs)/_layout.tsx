@@ -3,6 +3,7 @@ import { User, FlaskConical, Settings, Workflow, Bluetooth } from "lucide-react-
 import { useEffect } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { RecentTabIcon } from "~/components/recent-tab-icon";
 import { useSessionStore } from "~/hooks/use-session-store";
 import { useTheme } from "~/hooks/use-theme";
 import { DeviceConnectionWidget } from "~/widgets/device-connection-widget";
@@ -58,6 +59,13 @@ export default function TabLayout() {
           options={{
             title: "Measure",
             tabBarIcon: ({ color, size }) => <Workflow size={size} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="recent-measurements"
+          options={{
+            title: "Recent",
+            tabBarIcon: ({ color, size }) => <RecentTabIcon color={color} size={size} />,
           }}
         />
         <Tabs.Screen

@@ -5,6 +5,7 @@ export function useMacro(macroId: string | undefined) {
     queryKey: ["macro", macroId],
     queryData: { params: { id: macroId ?? "" } },
     enabled: !!macroId,
+    networkMode: "offlineFirst",
   });
 
   const macro = data?.body;
