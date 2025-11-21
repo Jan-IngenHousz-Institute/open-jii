@@ -81,9 +81,7 @@ export default function LoginScreen() {
           <View style={styles.logoContainer}>
             <Pressable onPress={handleHeaderTap} hitSlop={10}>
               <Image
-                source={{
-                  uri: "https://images.unsplash.com/photo-1507668339897-8a035aa9527d?q=80&w=200&auto=format&fit=crop",
-                }}
+                source={require("../../../assets/splash-icon.png")}
                 style={styles.logo}
               />
             </Pressable>
@@ -134,12 +132,13 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    justifyContent: "center",
     padding: 24,
   },
   logoContainer: {
     alignItems: "center",
-    marginTop: 40,
-    marginBottom: 40,
+    marginTop: 0,
+    marginBottom: 72,
   },
   logo: {
     width: 100,
@@ -161,7 +160,7 @@ const styles = StyleSheet.create({
   divider: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 24,
+    marginVertical: 12,
   },
   ssoButton: {
     marginBottom: 16,
