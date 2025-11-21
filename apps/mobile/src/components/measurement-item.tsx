@@ -11,6 +11,7 @@ interface MeasurementItemProps {
   timestamp: string;
   experimentName: string;
   status: MeasurementStatus;
+  onPress?: () => void;
   onSync?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
@@ -20,6 +21,7 @@ export function MeasurementItem({
   timestamp,
   experimentName,
   status,
+  onPress,
   onSync,
   onDelete,
 }: MeasurementItemProps) {
@@ -27,7 +29,11 @@ export function MeasurementItem({
   const isSynced = status === "synced";
 
   return (
-    <View className={clsx("min-h-[60px] flex-row items-center rounded-lg p-2", classes.card)}>
+    <TouchableOpacity
+      className={clsx("min-h-[60px] flex-row items-center rounded-lg p-2", classes.card)}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
       <View className="mr-2 justify-center">
         {isSynced ? (
           <CheckCircle2 size={24} color={colors.semantic.success} />
@@ -44,7 +50,10 @@ export function MeasurementItem({
       <View className="ml-1.5 flex-row gap-1">
         {!isSynced && (
           <TouchableOpacity
-            onPress={() => onSync?.(id)}
+            onPress={(e) => {
+              e.stopPropagation();
+              onSync?.(id);
+            }}
             className="h-10 w-10 items-center justify-center rounded-lg"
             style={{ backgroundColor: colors.semantic.info }}
             activeOpacity={0.8}
@@ -54,7 +63,10 @@ export function MeasurementItem({
         )}
         {onDelete && (
           <TouchableOpacity
-            onPress={() => onDelete(id)}
+            onPress={(e) => {
+              e.stopPropagation();
+              onDelete(id);
+            }}
             className="h-10 w-10 items-center justify-center rounded-lg"
             style={{ backgroundColor: colors.semantic.error }}
             activeOpacity={0.8}
@@ -63,6 +75,6 @@ export function MeasurementItem({
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
