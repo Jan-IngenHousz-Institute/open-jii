@@ -353,8 +353,8 @@ def create_macro_table_code(macro_id: str, macro_name: str, macro_filename: str,
     Generate Python code for macro streaming tables function.
     UDF returns JSON string, then we parse it using the inferred StructType schema.
     """
-    # Normalize macro name for table creation (same as backend logic)
-    normalized_name = macro_name.lower().strip().replace(" ", "_")
+    # Use filename directly for table creation
+    macro_table_name = macro_filename
     # Base schema for the UDF output (just the essential fields + JSON)
     udf_schema = (
         "id long, device_id string, device_name string, timestamp timestamp, questions array<struct<question_label:string,question_text:string,question_answer:string>>, "
@@ -367,7 +367,7 @@ def create_macro_table_code(macro_id: str, macro_name: str, macro_filename: str,
     return f'''
 # Base macro table
 @dlt.table(
-    name="macro_{normalized_name}",
+    name="{macro_table_name}",
     comment="Output from macro: {macro_name}",
     table_properties={{
         "quality": "bronze",
@@ -376,7 +376,7 @@ def create_macro_table_code(macro_id: str, macro_name: str, macro_filename: str,
         "downstream": "true"
     }}
 )
-def macro_{normalized_name}_table():
+def {macro_table_name}_table():
     base_df = (
         spark.readStream.table(f"{{CATALOG_NAME}}.{{CENTRAL_SCHEMA}}.{{CENTRAL_SILVER_TABLE}}")
         .filter(F.col("experiment_id") == EXPERIMENT_ID)
@@ -474,7 +474,7 @@ def macro_{normalized_name}_table():
 
 # Enriched macro table with user metadata
 @dlt.table(
-    name="enriched_macro_{macro_name}",
+    name="enriched_{macro_table_name}",
     comment="Enriched output from macro: {macro_name} with user metadata",
     table_properties={{
         "quality": "silver",
@@ -483,14 +483,14 @@ def macro_{normalized_name}_table():
         "downstream": "false"
     }}
 )
-def enriched_macro_{macro_name}_table():
+def enriched_{macro_table_name}_table():
     """
     Create an enriched macro table by combining macro output with user metadata.
     This creates a silver layer table with denormalized user information.
     """
     
     # Read from the silver macro table (this creates the dependency)
-    macro_df = dlt.read_stream("macro_{macro_name}")
+    macro_df = dlt.read_stream("{macro_table_name}")
     
     # Add user metadata column
     from enrich import add_user_data_column
