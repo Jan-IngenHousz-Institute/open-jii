@@ -137,8 +137,8 @@ export function ExperimentMemberManagement({
   return (
     <>
       <CardHeader>
-        <CardTitle>Collaborators</CardTitle>
-        <CardDescription>Manage who has access to this experiment</CardDescription>
+        <CardTitle>{t("experimentSettings.collaborators")}</CardTitle>
+        <CardDescription>{t("experimentSettings.collaboratorsDescription")}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
@@ -151,7 +151,7 @@ export function ExperimentMemberManagement({
             isAddingUser={isAddingMember}
             loading={!isDebounced || isFetchingUsers}
             onSelectUser={setSelectedUser}
-            placeholder="Enter name or email..."
+            placeholder={t("experiments.searchUsersPlaceholder")}
             selectedUser={selectedUser}
             onClearSelection={() => setSelectedUser(null)}
             disabled={isArchived || currentUserRole !== "admin"}

@@ -143,7 +143,7 @@ export function NewExperimentMembersCard({ form }: NewExperimentMembersCardProps
             isAddingUser={false}
             loading={!isDebounced || isFetchingUsers}
             onSelectUser={setSelectedUser}
-            placeholder="Enter name or email..."
+            placeholder={t("experiments.searchUsersPlaceholder")}
             selectedUser={selectedUser}
             onClearSelection={() => setSelectedUser(null)}
             selectedRole={selectedRole}

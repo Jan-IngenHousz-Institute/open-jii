@@ -71,7 +71,7 @@ export default function ExperimentVisualizationsDisplay({
     return (
       <div className="space-y-4 p-0">
         <div>
-          <CardTitle>Visualizations</CardTitle>
+          <CardTitle>{t("ui.title")}</CardTitle>
           <CardDescription>{t("selector.noVisualizations")}</CardDescription>
         </div>
         <div className="animate-pulse space-y-2">
@@ -85,7 +85,7 @@ export default function ExperimentVisualizationsDisplay({
     return (
       <div className="space-y-4">
         <div className="p-0">
-          <CardTitle>Visualizations</CardTitle>
+          <CardTitle>{t("ui.title")}</CardTitle>
           <CardDescription>{t("selector.noVisualizations")}</CardDescription>
         </div>
         <Card>
@@ -108,7 +108,7 @@ export default function ExperimentVisualizationsDisplay({
             </div>
             {isArchived || !hasAccess ? (
               <Button variant="outline" className="bg-surface-dark" disabled>
-                Create visualization
+                {t("selector.createVisualization")}
               </Button>
             ) : (
               <Link
@@ -116,7 +116,7 @@ export default function ExperimentVisualizationsDisplay({
                 passHref
               >
                 <Button variant="outline" className="bg-surface-dark">
-                  Create visualization
+                  {t("selector.createVisualization")}
                 </Button>
               </Link>
             )}
@@ -136,7 +136,7 @@ export default function ExperimentVisualizationsDisplay({
                 <span className="text-xl font-semibold">{selectedVisualization.name}</span>
               ) : (
                 <span className="text-muted-foreground text-xl font-semibold">
-                  Select a visualization
+                  {t("selector.selectVisualization")}
                 </span>
               )}
             </SelectTrigger>
@@ -166,7 +166,7 @@ export default function ExperimentVisualizationsDisplay({
           <div className="mt-6 flex flex-col">
             {isDataLoading ? (
               <div className="flex h-full items-center justify-center">
-                <div className="text-muted-foreground">Loading visualization data...</div>
+                <div className="text-muted-foreground">{t("ui.messages.loadingData")}</div>
               </div>
             ) : (
               <ExperimentVisualizationRenderer

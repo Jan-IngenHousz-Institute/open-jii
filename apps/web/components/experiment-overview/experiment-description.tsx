@@ -84,7 +84,7 @@ export function ExperimentDescription({
       },
       {
         onSuccess: () => {
-          toast({ description: t("experimentUpdated") });
+          toast({ description: t("experiments.experimentUpdated") });
         },
         onError: (err) => {
           toast({ description: parseApiError(err)?.message, variant: "destructive" });

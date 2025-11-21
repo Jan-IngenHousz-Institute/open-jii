@@ -95,6 +95,7 @@
     "experimentId": "Experiment ID",
     "descriptionTitle": "Description",
     "searchUsers": "Search users",
+    "searchUsersPlaceholder": "Enter name or email...",
     "noUsersFound": "No users found for \"{{search}}\"",
     "searchExperiments": "Search experiments...",
     "startTypingToSearch": "Start typing to search",
@@ -261,7 +262,10 @@
     "confirmDemoteMessage": "Are you sure you want to change your role to member? You will lose administrator privileges and will not be able to manage experiment members.",
     "confirmDemote": "Change to Member",
     "leave": "Leave",
-    "remove": "Remove"
+    "remove": "Remove",
+    "collaborators": "Collaborators",
+    "collaboratorsDescription": "Manage who has access to this experiment",
+    "archiveNote": "Once you archive an experiment, this means your experiment will be read-only and no longer editable."
   },
 
   "dashboard": {

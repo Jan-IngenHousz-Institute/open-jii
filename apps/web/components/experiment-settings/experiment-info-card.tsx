@@ -81,10 +81,7 @@ export function ExperimentInfoCard({ experimentId, experiment, members }: Experi
   return (
     <>
       <div className="mt-8">
-        <p className="text-muted-foreground mb-2 text-sm">
-          Once you archive an experiment, this means your experiment will be read-only and no longer
-          editable.
-        </p>
+        <p className="text-muted-foreground mb-2 text-sm">{t("experimentSettings.archiveNote")}</p>
 
         <div className="flex flex-col gap-3 md:flex-row">
           {/* Archive/Unarchive Experiment */}
