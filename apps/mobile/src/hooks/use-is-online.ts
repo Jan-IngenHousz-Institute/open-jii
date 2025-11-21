@@ -9,4 +9,3 @@ export function useIsOnline() {
     staleTime: 0,
   });
 }
-

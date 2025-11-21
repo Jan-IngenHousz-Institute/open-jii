@@ -80,7 +80,7 @@ export function useMeasurementUpload() {
         toast.success("Measurement uploaded!");
       } catch (e: any) {
         console.log("Upload failed", e);
-        toast.error("Upload not available, upload it later from Home screen");
+        toast.error("Upload not available, upload it later from Recent");
         await saveFailedUpload({
           topic,
           measurementResult: measurementData,
